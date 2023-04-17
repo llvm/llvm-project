@@ -18,8 +18,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze runge_kutta \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: runge_kutta_4_ac.ll
 	$(LLI) runge_kutta_4_ac.ll
@@ -34,4 +33,5 @@ build_original:
 	gcc runge_kutta_4.c -lm -o runge_kutta_4.out
 
 clean:
-	rm -rf runge_kutta_4.ll runge_kutta_4_ac.ll .fAF_logs runge_kutta_4_ac.out runge_kutta_4.out *.txt
+	rm -rf runge_kutta_4.ll runge_kutta_4_ac.ll runge_kutta_4_ac.out runge_kutta_4.out *.txt
+	#.fAF_logs

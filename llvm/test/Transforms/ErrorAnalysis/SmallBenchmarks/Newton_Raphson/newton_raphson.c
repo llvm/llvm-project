@@ -3,16 +3,20 @@
 
 #define TYPE double
 #define PRINT_PRECISION_FORMAT "%0.15lf"
-
-#define TOLERANCE 0.1
 #define FABS fabs
+
+// Inputs
+#define x 0.0
+#define TOLERANCE 0.000001
+#define n 1000
 
 __attribute__((noinline))
 TYPE newton_raphson(TYPE x_I) {
   TYPE x_I_1 = 0.0;
   TYPE e = 1.0;
-  
-  for (int I = 0; (e > TOLERANCE) && (I < 100000); ++I) {
+  int I = 0;
+
+  for (I = 0; (e > TOLERANCE) && (I < n); ++I) {
     // Compute powers of x_I to be used for Newtons method.
     TYPE pow_2 = x_I * x_I;
     TYPE pow_3 = pow_2 * x_I;
@@ -32,11 +36,12 @@ TYPE newton_raphson(TYPE x_I) {
     printf("x = "PRINT_PRECISION_FORMAT"\n", x_I);
   }
 
+  printf("Iterations = %d\n", I);
+
   return x_I;
 }
 
 int main() {
-  TYPE x = 0.0;
   printf("x = "PRINT_PRECISION_FORMAT"\n", newton_raphson(x));
 
   return 0;

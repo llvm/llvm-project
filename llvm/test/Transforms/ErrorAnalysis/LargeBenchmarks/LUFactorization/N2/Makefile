@@ -17,8 +17,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze lu_factorization \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: lu_factorization_ac.ll
 	$(LLI) lu_factorization_ac.ll

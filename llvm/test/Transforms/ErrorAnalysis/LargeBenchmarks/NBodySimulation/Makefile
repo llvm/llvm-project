@@ -34,4 +34,5 @@ build_original:
 	gcc n_body_simulation.c -lm -o n_body_simulation.out
 
 clean:
-	rm -rf n_body_simulation.ll n_body_simulation_ac.ll .fAF_logs n_body_simulation_ac.out *.txt
+	rm -rf n_body_simulation.ll n_body_simulation_ac.ll n_body_simulation_ac.out n_body_simulation.out *.txt \
+#	.fAF_logs

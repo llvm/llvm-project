@@ -460,7 +460,7 @@ void fAFCreateAFTable(AFTable **AddressToAllocateAt) {
 
 // Gets the number of AFItems in the AFTable that are RootNodes (These will correspond
 // to the number of computation DAGs in the program)
-int getNumberOfComputationDAGs(AFTable *AFTable) {
+int fAFGetNumberOfComputationDAGs(AFTable *AFTable) {
   int NumberOfComputationDAGs = 0;
   for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
     if (AFTable->AFItems[I]->RootNode)
@@ -470,7 +470,7 @@ int getNumberOfComputationDAGs(AFTable *AFTable) {
 }
 
 // Gets the number of computation paths that start from some RootNode.
-int getNumberOfComputationPaths(AFTable *AFTable) {
+int fAFGetNumberOfComputationPaths(AFTable *AFTable) {
   int NumberOfComputationPaths = 0;
   for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
     if (AFTable->AFItems[I]->RootNode)
@@ -480,7 +480,7 @@ int getNumberOfComputationPaths(AFTable *AFTable) {
 }
 
 // Compute the Average Amplification Factor incrementally.
-double getAverageAmplificationFactor(AFTable *AFTable, int NumFunctionEvaluations) {
+double fAFGetAverageAmplificationFactor(AFTable *AFTable, int NumFunctionEvaluations) {
   double* AverageAmplificationFactor;
 
   if((AverageAmplificationFactor = (double *)malloc(sizeof(double)*NumFunctionEvaluations)) == NULL) {
@@ -515,12 +515,12 @@ double getAverageAmplificationFactor(AFTable *AFTable, int NumFunctionEvaluation
       GreatestAverageAmplificationFactor = AverageAmplificationFactor[I];
   }
 
-  assert(NumberOfComputationPaths == getNumberOfComputationPaths(AFTable));
+  assert(NumberOfComputationPaths == fAFGetNumberOfComputationPaths(AFTable));
   return GreatestAverageAmplificationFactor;
 }
 
 // Get Height of the longest computation path in the program.
-int getLongestComputationPathHeight(AFTable *AFTable) {
+int fAFGetLongestComputationPathHeight(AFTable *AFTable) {
   int LongestComputationPathHeight = 0;
   for (uint64_t I = 0; I < AFTable->ListLength; ++I) {
     if (AFTable->AFItems[I]->RootNode) {
@@ -561,7 +561,7 @@ void fAFfp64markForResult(double Res) {
 
 #pragma clang optimize on
 
-int min(int A, int B) {
+int fAFMin(int A, int B) {
   return (A > B)? B : A;
 }
 
@@ -724,7 +724,7 @@ void fAFInitialize() {
   AFs->ListLength = 0;
 
   // Allocating Memory for Stats
-  Stats = statisticsNew();
+  Stats = fSTStatisticsNew();
 
   return ;
 }
@@ -843,7 +843,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
       AFComponentCounter++;
 
       // Update the statistics.
-      updateStatistics(Stats,
+      fSTUpdateStatistics(Stats,
                        GreatestAF,
                        (*AC)->ACWRTOperands[OperandIndex],
                        GreatestAF/((*AFItemWRTOperands[OperandIndex])
@@ -862,7 +862,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
       AFComponentCounter++;
 
       // Update the statistics.
-      updateStatistics(Stats,
+      fSTUpdateStatistics(Stats,
                        (*AC)->ACWRTOperands[OperandIndex],
                        (*AC)->ACWRTOperands[OperandIndex],
                        (*AC)->ACWRTOperands[OperandIndex]);
@@ -1038,7 +1038,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
         AFItemComponentIndex++;
 
         // Update the statistics
-        updateStatistics(Stats,
+        fSTUpdateStatistics(Stats,
                          UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1],
                          (*AC)->ACWRTOperands[OperandIndex],
                          UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1]/UpdatingAFComponent->Height);
@@ -1079,7 +1079,7 @@ AFItem **fAFComputeAF(ACItem **AC, AFItem ***AFItemWRTOperands,
       AFItemComponentIndex++;
 
       // Update the statistics
-      updateStatistics(Stats,
+      fSTUpdateStatistics(Stats,
                        UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1],
                        (*AC)->ACWRTOperands[OperandIndex],
                        UpdatingAFComponent->AFs[UpdatingAFComponent->NumberOfInputs-1]);
@@ -1122,7 +1122,7 @@ void fAFPrintTopAmplificationPaths() {
   // Printing Results
   printf("\n");
   printf("The top Amplification Paths are:\n");
-  for (int I = 0; I < min(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
+  for (int I = 0; I < fAFMin(5, AFs->AFItems[AFs->ListLength-1]->NumAFComponents); ++I) {
     int M = findMaxIndex(Paths[I]->AFs, Paths[I]->NumberOfInputs);
 
     printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
@@ -1153,7 +1153,7 @@ void fAFPrintTopFromAllAmplificationPaths() {
   // Printing Results
   printf("\n");
   printf("The top Amplification Paths are:\n");
-  for (int I = 0; I < min(10, AFComponentCounter); ++I) {
+  for (int I = 0; I < fAFMin(10, AFComponentCounter); ++I) {
     int M = findMaxIndex(Paths[I]->AFs, Paths[I]->NumberOfInputs);
 
     printf("AF: %0.15lf (ULPErr: %lf; %lf digits) of Node with AFId:%d WRT Input:%s through path: [",
@@ -1190,16 +1190,16 @@ void fAFPrintStatistics(int NumFunctionEvaluations) {
   printf("\nPrinting Statistics\n");
 #endif
 
-  printf("Number of Computation DAGs\t\t\t: %d\n", getNumberOfComputationDAGs(AFs));
-  printf("Number of Computation Paths\t\t\t: %d\n", getNumberOfComputationPaths(AFs));
+  printf("Number of Computation DAGs\t\t\t: %d\n", fAFGetNumberOfComputationDAGs(AFs));
+  printf("Number of Computation Paths\t\t\t: %d\n", fAFGetNumberOfComputationPaths(AFs));
   printf("Number of Floating-Point Operations\t: %lu\n", AFs->ListLength);
-  printf("Average Amplification Factor\t\t: %0.15lf\n", getAverageAmplificationFactor(AFs, NumFunctionEvaluations));
+  printf("Average Amplification Factor\t\t: %0.15lf\n", fAFGetAverageAmplificationFactor(AFs, NumFunctionEvaluations));
 
-  printStatistics(Stats);
+  fSTPrintStatistics(Stats);
 
-  printf("Longest Path Length\t\t\t: %d\n", getLongestComputationPathHeight(AFs));
+  printf("Longest Path Length\t\t\t: %d\n", fAFGetLongestComputationPathHeight(AFs));
 
-  statisticsDelete(Stats);
+  fSTStatisticsDelete(Stats);
 
 #if FAF_DEBUG
   printf("\nPrinted Statistics\n");

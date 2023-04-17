@@ -16,8 +16,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze solve_lorenz \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: lorenz_ode_ac.ll
 	$(LLI) lorenz_ode_ac.ll

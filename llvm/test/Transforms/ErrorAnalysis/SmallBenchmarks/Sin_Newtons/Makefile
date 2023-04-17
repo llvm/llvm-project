@@ -18,8 +18,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze newtons_sin \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: sin_newtons_ac.ll
 	$(LLI) sin_newtons_ac.ll
@@ -28,10 +27,11 @@ sin_newtons_ac.ll: sin_newtons.ll
 	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) sin_newtons.ll -o sin_newtons_ac.ll
 
 sin_newtons.ll:
-	$(CXX) $(CXX_FLAGS) -DFAF_DEBUG=3 $(RUN_TIME_FILES) $(OP) sin_newtons.c -o sin_newtons.ll
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) sin_newtons.c -o sin_newtons.ll
 
 build_original:
 	gcc sin_newtons.c -lm -o sin_newtons.out
 
 clean:
-	rm -rf sin_newtons.ll sin_newtons_ac.ll .fAF_logs sin_newtons_ac.out sin_newtons.out *.txt
+	rm -rf sin_newtons.ll sin_newtons_ac.ll sin_newtons_ac.out sin_newtons.out *.txt \
+#	.fAF_logs

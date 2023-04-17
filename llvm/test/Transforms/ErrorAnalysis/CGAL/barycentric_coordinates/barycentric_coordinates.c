@@ -3,6 +3,21 @@
 #define TYPE double
 #define PRINT_PRECISION_FORMAT "%0.15lf"
 
+// Inputs
+#define ax0 -4.157
+#define ay0 4.93
+#define az0 -6.73
+#define bx0 7.393
+#define by0 -7.17
+#define bz0 8.42
+#define cx0 3.941
+#define cy0 7.84
+#define cz0 -3.85
+#define px0 1.5
+#define py0 2.5
+#define pz0 4.5
+
+__attribute__((noinline))
 TYPE compute_barycentric_coordinates(TYPE ax, TYPE ay, TYPE az,
                                        TYPE bx, TYPE by, TYPE bz,
                                        TYPE cx, TYPE cy, TYPE cz,
@@ -27,7 +42,7 @@ TYPE compute_barycentric_coordinates(TYPE ax, TYPE ay, TYPE az,
     nu = (py-by)*(bz-cz) - (by-cy)*(pz-bz);
     nv = (py-cy)*(cz-az) - (cy-ay)*(pz-cz);
     ood = 1.0/mx ;
-  }	else {
+  } else {
 
     if(( ((my >= 0) && (mx >= 0) && (my >= mx)) || ((my < 0) && (mx >= 0) && (my+mx <= 0)) ||
          ((my >= 0) && (mx < 0) && (my + mx >= 0)) || ((my < 0) && (mx < 0) && (my - mx <= 0))
@@ -54,37 +69,12 @@ TYPE compute_barycentric_coordinates(TYPE ax, TYPE ay, TYPE az,
 
 int main(void)
 {
-
-  TYPE ax;
-  TYPE ay;
-  TYPE az;
-  TYPE bx;
-  TYPE by;
-  TYPE bz;
-  TYPE cx;
-  TYPE cy;
-  TYPE cz;
-  TYPE px;
-  TYPE py;
-  TYPE pz;
-
-  ax = -4.157;
-  ay = 4.93;
-  az = -6.73;
-  bx = 7.393;
-  by = -7.17;
-  bz = 8.42;
-  cx = 3.941;
-  cy = 7.84;
-  cz = -3.85;
-  px = 1.5;
-  py = 2.5;
-  pz = 4.5;
-
-  TYPE w = compute_barycentric_coordinates(ax, ay, az, bx, by, bz, cx, cy, cz, px, py, pz);
+  TYPE w = compute_barycentric_coordinates(ax0, ay0, az0,
+                                           bx0, by0, bz0,
+                                           cx0, cy0, cz0,
+                                           px0, py0, pz0);
 
   printf("Result = "PRINT_PRECISION_FORMAT"\n", w);
 
   return 0;
-
 }

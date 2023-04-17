@@ -483,9 +483,11 @@ void ACInstrumentation::instrumentMarkedFunction(BasicBlock::iterator *Instructi
         Value *RandomFloat = InstructionBuilder.CreateFAdd(BaseInstruction->getOperand(ArgumentIterator->getArgNo()),
                                                            ConstantFP::get(Type::getFloatTy(ArgumentIterator->getContext()),
                                                                            static_cast<float >(rand()) /
-                                                                               static_cast<float>(RAND_MAX) * pow(2, -10)));
-        (*NumInstrumentedInstructions)++;
-        (*InstructionIterator)++;
+                                                                               static_cast<float>(RAND_MAX) * pow(2, -14)));
+        if(!isa<ConstantFP>(BaseInstruction->getOperand(ArgumentIterator->getArgNo()))) {
+          (*NumInstrumentedInstructions)++;
+          (*InstructionIterator)++;
+        }
 //        Value *RandomFloat = ConstantFP::get(Type::getFloatTy(ArgumentIterator->getContext()),
 //                                             static_cast<float >(rand()) /
 //                                                 static_cast<float>(RAND_MAX));
@@ -496,9 +498,11 @@ void ACInstrumentation::instrumentMarkedFunction(BasicBlock::iterator *Instructi
         Value *RandomFloat = InstructionBuilder.CreateFAdd(BaseInstruction->getOperand(ArgumentIterator->getArgNo()),
                                                            ConstantFP::get(Type::getDoubleTy(ArgumentIterator->getContext()),
                                                                            static_cast<double >(rand()) /
-                                                                               static_cast<double>(RAND_MAX) * pow(2, -10)));
-        (*NumInstrumentedInstructions)++;
-        (*InstructionIterator)++;
+                                                                               static_cast<double>(RAND_MAX) * pow(2, -14)));
+        if(!isa<ConstantFP>(BaseInstruction->getOperand(ArgumentIterator->getArgNo()))) {
+          (*NumInstrumentedInstructions)++;
+          (*InstructionIterator)++;
+        }
 //        Value *RandomFloat = ConstantFP::get(Type::getDoubleTy(ArgumentIterator->getContext()),
 //                                             static_cast<double>(rand()) /
 //                                                 static_cast<double>(RAND_MAX));
@@ -647,8 +651,8 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
   BasicBlock *BB = &(*(F->begin()));
   Instruction *Inst = BB->getFirstNonPHIOrDbg();
   IRBuilder<> InstructionBuilder(Inst);
-  std::vector<Value *> ACInitCallArgs, AFInitCallArgs, PrintAFPathsCallArgs;
-  std::vector<Value *> ACStoreCallArgs, AFStoreCallArgs, PrintStatisticsCallArgs;
+
+  std::vector<Value *> ACInitCallArgs, AFInitCallArgs;
 
   CallInst *AFInitCallInstruction, *PrintAFPathsCallInstruction,
       *PrintStatisticsCallInstruction;
@@ -667,6 +671,9 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
       Instruction *CurrentInstruction = &(*InstIter);
       if (isa<ReturnInst>(CurrentInstruction) ||
           isa<ResumeInst>(CurrentInstruction)) {
+        std::vector<Value *> PrintAFPathsCallArgs, ACStoreCallArgs, AFStoreCallArgs,
+            PrintStatisticsCallArgs;
+
         ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
         ArrayRef<Value *> AFStoreCallArgsRef(AFStoreCallArgs);
         ArrayRef<Value *> PrintAFPathsCallArgsRef(PrintAFPathsCallArgs);
@@ -821,6 +828,7 @@ bool ACInstrumentation::isUnwantedFunction(const Function *Func) {
          Func->getName().str().find("fAF") != std::string::npos ||
          Func->getName().str().find("fRS") != std::string::npos ||
          Func->getName().str().find("fURT") != std::string::npos ||
+         Func->getName().str().find("fST") != std::string::npos ||
          Func->getName().str().find("ACItem") != std::string::npos;
 }
 

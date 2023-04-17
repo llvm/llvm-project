@@ -14,7 +14,7 @@ struct Statistics {
 typedef struct Statistics Statistics;
 
 // Constructor for Statistics
-Statistics* statisticsNew() {
+Statistics* fSTStatisticsNew() {
   Statistics *NewObject;
   if((NewObject = (Statistics *)malloc(sizeof(Statistics))) == NULL) {
     printf("#fAF: Not enough memory for Statistics!");
@@ -29,42 +29,42 @@ Statistics* statisticsNew() {
 }
 
 // Destructor for Statistics
-void statisticsDelete(Statistics *Object) {
+void fSTStatisticsDelete(Statistics *Object) {
   free(Object);
 }
 
 // Update Highest Amplification Factor
-void updateHighestAmplificationFactor(Statistics *Object, double NewValue) {
+void fSTUpdateHighestAmplificationFactor(Statistics *Object, double NewValue) {
   if(NewValue > Object->HighestAmplificationFactor) {
     Object->HighestAmplificationFactor = NewValue;
   }
 }
 
 // Update Highest Condition Number
-void updateHighestConditionNumber(Statistics *Object, double NewValue) {
+void fSTUpdateHighestConditionNumber(Statistics *Object, double NewValue) {
   if(NewValue > Object->HighestConditionNumber) {
     Object->HighestConditionNumber = NewValue;
   }
 }
 
 // Update Highest Amplification Density
-void updateHighestAmplificationDensity(Statistics *Object, double NewValue) {
+void fSTUpdateHighestAmplificationDensity(Statistics *Object, double NewValue) {
   if(NewValue > Object->HighestAmplificationDensity) {
     Object->HighestAmplificationDensity = NewValue;
   }
 }
 
 // Update Statistics
-void updateStatistics(Statistics *Object, double NewAmplificationFactor,
+void fSTUpdateStatistics(Statistics *Object, double NewAmplificationFactor,
                       double NewConditionNumber,
                       double NewAmplificationDensity) {
-  updateHighestAmplificationFactor(Object, NewAmplificationFactor);
-  updateHighestConditionNumber(Object, NewConditionNumber);
-  updateHighestAmplificationDensity(Object, NewAmplificationDensity);
+  fSTUpdateHighestAmplificationFactor(Object, NewAmplificationFactor);
+  fSTUpdateHighestConditionNumber(Object, NewConditionNumber);
+  fSTUpdateHighestAmplificationDensity(Object, NewAmplificationDensity);
 }
 
 // Print Statistics
-void printStatistics(Statistics *Object) {
+void fSTPrintStatistics(Statistics *Object) {
   printf("Highest Amplification Factor: %0.15lf\n",
          Object->HighestAmplificationFactor);
   printf("Highest Condition Number: %0.15lf\n", Object->HighestConditionNumber);

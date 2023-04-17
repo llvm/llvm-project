@@ -18,8 +18,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze newton_raphson \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: newton_raphson_ac.ll
 	$(LLI) newton_raphson_ac.ll
@@ -34,4 +33,5 @@ build_original:
 	gcc newton_raphson.c -lm -o newton_raphson.out
 
 clean:
-	rm -rf newton_raphson.ll newton_raphson_ac.ll .fAF_logs newton_raphson_ac.out newton_raphson.out *.txt
+	rm -rf newton_raphson.ll newton_raphson_ac.ll newton_raphson_ac.out newton_raphson.out *.txt \
+#	.fAF_logs

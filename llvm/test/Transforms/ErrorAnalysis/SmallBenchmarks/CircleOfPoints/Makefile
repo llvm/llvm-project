@@ -16,8 +16,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze compute_center \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: circleofpts_ac.ll
 	$(LLI) circleofpts_ac.ll
@@ -32,4 +31,5 @@ build_original:
 	gcc circleofpts.cpp -lm -o circleofpts.out
 
 clean:
-	rm -rf circleofpts.ll circleofpts_ac.ll .fAF_logs a.out *.txt
+	rm -rf circleofpts.ll circleofpts_ac.ll a.out circleofpts.out *.txt \
+	.fAF_logs

@@ -18,8 +18,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze atomUExample \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: ex1_ac.ll
 	$(LLI) ex1_ac.ll
@@ -34,4 +33,5 @@ build_original:
 	gcc ex1.c -lm -o ex1.out
 
 clean:
-	rm -rf ex1.ll ex1_ac.ll .fAF_logs ex1_ac.out ex1.out *.txt
+	rm -rf ex1.ll ex1_ac.ll ex1_ac.out ex1.out *.txt \
+	.fAF_logs

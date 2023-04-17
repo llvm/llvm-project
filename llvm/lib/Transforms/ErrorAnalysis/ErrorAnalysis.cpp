@@ -41,7 +41,8 @@ PreservedAnalyses ErrorAnalysisPass::run(Function &F,
 
   if(F.getName().compare("main")==0)
     InstrumentationObject->instrumentMainFunction(&F);
-  else if(F.getName().compare(FunctionToAnalyze) == 0)
+  else if(F.getName().find(FunctionToAnalyze) !=
+           std::string::npos)
     InstrumentationObject->instrumentFunctionInitializationInsts(&F);
 
   for (Function::iterator CurrentBB = FunctionPointer->begin();
