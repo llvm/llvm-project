@@ -20,4 +20,8 @@ add_integration_test(
     rpc_test.cpp
   DEPENDS
     libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
+  LOADER_ARGS
+    --blocks 16
+    --threads 1
 )

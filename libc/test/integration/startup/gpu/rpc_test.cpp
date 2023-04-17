@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "test/IntegrationTest/test.h"
 
 using namespace __llvm_libc;
 
 static void test_add_simple() {
-  constexpr int num_additions = 10000;
+  uint32_t num_additions = 1000 + 10 * get_block_id_x();
   uint64_t cnt = 0;
-  for (int i = 0; i < num_additions; ++i) {
+  for (uint32_t i = 0; i < num_additions; ++i) {
     rpc::Port port = rpc::client.open(rpc::TEST_INCREMENT);
     port.send_and_recv(
         [=](rpc::Buffer *buffer) {
@@ -30,5 +31,6 @@ static void test_add_simple() {
 
 TEST_MAIN(int argc, char **argv, char **envp) {
   test_add_simple();
+
   return 0;
 }
