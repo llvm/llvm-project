@@ -158,7 +158,7 @@ static bool startsWithLocalScopePattern(StringView S) {
   // If it's not 0-9, then it's an encoded number terminated with an @
   if (Candidate.back() != '@')
     return false;
-  Candidate = Candidate.dropBack();
+  Candidate.remove_suffix(1);
 
   // An encoded number starts with B-P and all subsequent digits are in A-P.
   // Note that the reason the first digit cannot be A is two fold.  First, it
@@ -168,11 +168,11 @@ static bool startsWithLocalScopePattern(StringView S) {
   // ambiguity is also why single digit encoded numbers use 0-9 rather than A-J.
   if (Candidate[0] < 'B' || Candidate[0] > 'P')
     return false;
-  Candidate = Candidate.dropFront();
+  Candidate.remove_prefix(1);
   while (!Candidate.empty()) {
     if (Candidate[0] < 'A' || Candidate[0] > 'P')
       return false;
-    Candidate = Candidate.dropFront();
+    Candidate.remove_prefix(1);
   }
 
   return true;
@@ -486,7 +486,7 @@ SymbolNode *Demangler::demangleSpecialIntrinsic(StringView &MangledName) {
 IdentifierNode *
 Demangler::demangleFunctionIdentifierCode(StringView &MangledName) {
   assert(MangledName.startsWith('?'));
-  MangledName = MangledName.dropFront();
+  MangledName.remove_prefix(1);
   if (MangledName.empty()) {
     Error = true;
     return nullptr;
@@ -965,7 +965,7 @@ NamedIdentifierNode *Demangler::demangleBackRefName(StringView &MangledName) {
     return nullptr;
   }
 
-  MangledName = MangledName.dropFront();
+  MangledName.remove_prefix(1);
   return Backrefs.Names[I];
 }
 
@@ -1036,7 +1036,7 @@ uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
   if (!MangledName.startsWith('?'))
     return MangledName.popFront();
 
-  MangledName = MangledName.dropFront();
+  MangledName.remove_prefix(1);
   if (MangledName.empty())
     goto CharLiteralError;
 
@@ -1057,7 +1057,7 @@ uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
   if (startsWithDigit(MangledName)) {
     const char *Lookup = ",/\\:. \n\t'-";
     char C = Lookup[MangledName[0] - '0'];
-    MangledName = MangledName.dropFront();
+    MangledName.remove_prefix(1);
     return C;
   }
 
@@ -1067,7 +1067,7 @@ uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
                        '\xEF', '\xF0', '\xF1', '\xF2', '\xF3', '\xF4', '\xF5',
                        '\xF6', '\xF7', '\xF8', '\xF9', '\xFA'};
     char C = Lookup[MangledName[0] - 'a'];
-    MangledName = MangledName.dropFront();
+    MangledName.remove_prefix(1);
     return C;
   }
 
@@ -1077,7 +1077,7 @@ uint8_t Demangler::demangleCharLiteral(StringView &MangledName) {
                        '\xCF', '\xD0', '\xD1', '\xD2', '\xD3', '\xD4', '\xD5',
                        '\xD6', '\xD7', '\xD8', '\xD9', '\xDA'};
     char C = Lookup[MangledName[0] - 'A'];
-    MangledName = MangledName.dropFront();
+    MangledName.remove_prefix(1);
     return C;
   }
 
@@ -2124,7 +2124,7 @@ NodeArrayNode *Demangler::demangleFunctionParameterList(StringView &MangledName,
         Error = true;
         return nullptr;
       }
-      MangledName = MangledName.dropFront();
+      MangledName.remove_prefix(1);
 
       *Current = Arena.alloc<NodeList>();
       (*Current)->N = Backrefs.FunctionParams[N];
@@ -2206,7 +2206,7 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->IsMemberPointer = true;
 
-      MangledName = MangledName.dropFront();
+      MangledName.remove_prefix(1);
       // 1 - single inheritance       <name>
       // H - multiple inheritance     <name> <number>
       // I - virtual inheritance      <name> <number> <number>
@@ -2252,7 +2252,7 @@ Demangler::demangleTemplateParameterList(StringView &MangledName) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
 
       // Data member pointer.
-      MangledName = MangledName.dropFront();
+      MangledName.remove_prefix(1);
       char InheritanceSpecifier = MangledName.popFront();
 
       switch (InheritanceSpecifier) {
