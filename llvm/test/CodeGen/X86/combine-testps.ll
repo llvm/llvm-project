@@ -205,14 +205,11 @@ define i32 @testpsc_256_signbit_multiuse(<8 x float> %c, i32 %a, i32 %b) {
   ret i32 %t5
 }
 
-; FIXME: Foldable to vtestps(vcmpeqps(ymm0,ymm1),vcmpeqps(ymm0,ymm1))
 define i1 @PR62171(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: PR62171:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vtestps %xmm0, %xmm0
+; CHECK-NEXT:    vtestps %ymm0, %ymm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
