@@ -205,6 +205,29 @@ define i32 @testpsc_256_signbit_multiuse(<8 x float> %c, i32 %a, i32 %b) {
   ret i32 %t5
 }
 
+; FIXME: Foldable to vtestps(vcmpeqps(ymm0,ymm1),vcmpeqps(ymm0,ymm1))
+define i1 @PR62171(<8 x float> %a0, <8 x float> %a1) {
+; CHECK-LABEL: PR62171:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpeqps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vtestps %xmm0, %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %cmp = fcmp oeq <8 x float> %a0, %a1
+  %sext = sext <8 x i1> %cmp to <8 x i32>
+  %extract = shufflevector <8 x i32> %sext, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %extract1 = shufflevector <8 x i32> %sext, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %or = or <4 x i32> %extract, %extract1
+  %or1 = bitcast <4 x i32> %or to <16 x i8>
+  %msk = icmp slt <16 x i8> %or1, zeroinitializer
+  %msk1 = bitcast <16 x i1> %msk to i16
+  %not = icmp eq i16 %msk1, 0
+  ret i1 %not
+}
+
 declare i32 @llvm.x86.avx.vtestz.ps(<4 x float>, <4 x float>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestc.ps(<4 x float>, <4 x float>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestnzc.ps(<4 x float>, <4 x float>) nounwind readnone
