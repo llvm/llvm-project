@@ -174,6 +174,28 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   return success();
 }
 
+static LogicalResult convertRoundOp(math::RoundOp op,
+                                    PatternRewriter &rewriter) {
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Value operand = op.getOperand();
+  Type opType = operand.getType();
+
+  // Creating constants for later use.
+  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value negHalf = createFloatConst(op->getLoc(), opType, -0.5, rewriter);
+
+  Value posCheck =
+      b.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, operand, zero);
+  Value incrValue =
+      b.create<arith::SelectOp>(op->getLoc(), posCheck, half, negHalf);
+  Value add = b.create<arith::AddFOp>(opType, operand, incrValue);
+
+  Value fpFixedConvert = createTruncatedFPValue(add, b);
+  rewriter.replaceOp(op, fpFixedConvert);
+  return success();
+}
+
 // Converts math.ctlz to scf and arith operations. This is done
 // by performing a binary search on the bits.
 static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
@@ -240,6 +262,10 @@ void mlir::populateExpandCeilFPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandExp2FPattern(RewritePatternSet &patterns) {
   patterns.add(convertExp2fOp);
+}
+
+void mlir::populateExpandRoundFPattern(RewritePatternSet &patterns) {
+  patterns.add(convertRoundOp);
 }
 
 void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {

@@ -55,7 +55,54 @@ func.func @exp2f() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// round.
+// -------------------------------------------------------------------------- //
+func.func @func_roundf(%a : f32) {
+  %r = math.round %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @roundf() {
+  // CHECK: 4
+  %a = arith.constant 3.8 : f32
+  call @func_roundf(%a) : (f32) -> ()
+
+  // CHECK: -4
+  %b = arith.constant -3.8 : f32
+  call @func_roundf(%b) : (f32) -> ()
+
+  // CHECK: 0
+  %c = arith.constant 0.0 : f32
+  call @func_roundf(%c) : (f32) -> ()
+
+  // CHECK: -4
+  %d = arith.constant -4.2 : f32
+  call @func_roundf(%d) : (f32) -> ()
+
+  // CHECK: -495
+  %e = arith.constant -495.0 : f32
+  call @func_roundf(%e) : (f32) -> ()
+
+  // CHECK: 495
+  %f = arith.constant 495.0 : f32
+  call @func_roundf(%f) : (f32) -> ()
+
+  // CHECK: 9
+  %g = arith.constant 8.5 : f32
+  call @func_roundf(%g) : (f32) -> ()
+
+  // CHECK: -9
+  %h = arith.constant -8.5 : f32
+  call @func_roundf(%h) : (f32) -> ()
+
+  return
+}
+
+
 func.func @main() {
   call @exp2f() : () -> ()
+  call @roundf() : () -> ()
   return
 }
