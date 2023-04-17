@@ -1379,59 +1379,14 @@ bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
   return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
-template <Direction DIR>
-static bool DoDerivedTypeIo(Cookie cookie, const Descriptor &descriptor,
-    void (*procedure)(), bool isPolymorphic, const char *which) {
-  IoStatementState &io{*cookie};
-  IoErrorHandler &handler{io.GetIoErrorHandler()};
-  if (handler.InError()) {
-    return false;
-  }
-  const DescriptorAddendum *addendum{descriptor.Addendum()};
-  const typeInfo::DerivedType *type{
-      addendum ? addendum->derivedType() : nullptr};
-  RUNTIME_CHECK(handler, type != nullptr);
-  if (!procedure) {
-    if constexpr (DIR == Direction::Output) {
-      return IONAME(OutputDescriptor)(cookie, descriptor);
-    } else {
-      return IONAME(InputDescriptor)(cookie, descriptor);
-    }
-  }
-  if (!io.get_if<IoDirectionState<DIR>>()) {
-    handler.Crash("%s called for I/O statement that is not %s", which,
-        DIR == Direction::Output ? "output" : "input");
-  }
-  std::uint8_t isArgDesc{isPolymorphic};
-  if (io.get_if<FormattedIoStatementState<DIR>>()) {
-    if (std::optional<bool> wasDefined{
-            descr::DefinedFormattedIo(io, descriptor, *type,
-                typeInfo::SpecialBinding{DIR == Direction::Output
-                        ? typeInfo::SpecialBinding::Which::WriteFormatted
-                        : typeInfo::SpecialBinding::Which::ReadFormatted,
-                    procedure, isArgDesc})}) {
-      return *wasDefined;
-    }
-    return descr::DefaultComponentwiseIO<DIR>(io, descriptor, *type);
-  } else { // unformatted
-    return descr::DefinedUnformattedIo(io, descriptor, *type,
-        typeInfo::SpecialBinding{DIR == Direction::Output
-                ? typeInfo::SpecialBinding::Which::WriteUnformatted
-                : typeInfo::SpecialBinding::Which::ReadUnformatted,
-            procedure, isArgDesc});
-  }
-}
-
 bool IONAME(OutputDerivedType)(Cookie cookie, const Descriptor &descriptor,
-    void (*procedure)(), bool isPolymorphic) {
-  return DoDerivedTypeIo<Direction::Output>(
-      cookie, descriptor, procedure, isPolymorphic, "OutputDerivedType");
+    const NonTbpDefinedIoTable *table) {
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor, table);
 }
 
 bool IONAME(InputDerivedType)(Cookie cookie, const Descriptor &descriptor,
-    void (*procedure)(), bool isPolymorphic) {
-  return DoDerivedTypeIo<Direction::Output>(
-      cookie, descriptor, procedure, isPolymorphic, "InputDerivedType");
+    const NonTbpDefinedIoTable *table) {
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor, table);
 }
 
 std::size_t IONAME(GetSize)(Cookie cookie) {

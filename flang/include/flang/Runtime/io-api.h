@@ -23,6 +23,7 @@ class Descriptor;
 
 namespace Fortran::runtime::io {
 
+class NonTbpDefinedIoTable;
 class NamelistGroup;
 class IoStatementState;
 using Cookie = IoStatementState *;
@@ -275,21 +276,19 @@ bool IONAME(InputLogical)(Cookie, bool &);
 bool IONAME(OutputNamelist)(Cookie, const NamelistGroup &);
 bool IONAME(InputNamelist)(Cookie, const NamelistGroup &);
 
-// When an I/O list item has a derived type with a specific user-defined
+// When an I/O list item has a derived type with a specific defined
 // I/O subroutine of the appropriate generic kind for the active
 // I/O data transfer statement (read/write, formatted/unformatted)
-// and that I/O subroutine is a specific procedure for an explicit
-// generic INTERFACE or GENERIC statement that is *not* type-bound,
-// this data item transfer API enables the use of that procedure
-// for the item.  Pass 'true' for 'isPolymorphic' when the first ("dtv")
-// dummy argument of the specific procedure is CLASS(t), not TYPE(t).
-// If the procedure pointer is null, or when the next edit descriptor for
-// formatted I/O is not DT, the procedure will not be called and the
-// behavior will be as if (Output/Input)Descriptor had been called.
+// that pertains to the type or its components, and those subroutines
+// are dynamic or neither type-bound nor defined with interfaces
+// in the same scope as the derived type (or an IMPORT statement has
+// made such a generic interface inaccessible), these data item transfer
+// APIs enable the I/O runtime to make the right calls to defined I/O
+// subroutines.
 bool IONAME(OutputDerivedType)(
-    Cookie, const Descriptor &, void (*)(), bool isPolymorphic);
+    Cookie, const Descriptor &, const NonTbpDefinedIoTable *);
 bool IONAME(InputDerivedType)(
-    Cookie, const Descriptor &, void (*)(), bool isPolymorphic);
+    Cookie, const Descriptor &, const NonTbpDefinedIoTable *);
 
 // Additional specifier interfaces for the connection-list of
 // on OPEN statement (only).  SetBlank(), SetDecimal(),
