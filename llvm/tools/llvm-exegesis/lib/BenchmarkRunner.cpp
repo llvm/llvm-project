@@ -63,7 +63,7 @@ BenchmarkRunner::FunctionExecutor::runAndSample(const char *Counters) const {
     accumulateCounterValues(ValueOrError.get(), &CounterValues);
   }
   return CounterValues;
-};
+}
 
 namespace {
 class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
