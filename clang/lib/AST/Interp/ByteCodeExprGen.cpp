@@ -1562,7 +1562,11 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
   std::optional<PrimType> VarT = classify(VD->getType());
 
   if (shouldBeGloballyIndexed(VD)) {
-    std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(VD, Init);
+    // We've already seen and initialized this global.
+    if (P.getGlobal(VD))
+      return true;
+
+    std::optional<unsigned> GlobalIndex = P.createGlobal(VD, Init);
 
     if (!GlobalIndex)
       return this->bail(VD);
