@@ -784,6 +784,11 @@ template <> struct format_provider<lldb_private::ObjectFile::Strata> {
   static void format(const lldb_private::ObjectFile::Strata &strata,
                      raw_ostream &OS, StringRef Style);
 };
+
+namespace json {
+bool fromJSON(const llvm::json::Value &value, lldb_private::ObjectFile::Type &,
+              llvm::json::Path path);
+} // namespace json
 } // namespace llvm
 
 #endif // LLDB_SYMBOL_OBJECTFILE_H

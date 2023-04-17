@@ -777,3 +777,34 @@ uint32_t ObjectFile::GetCacheHash() {
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
 }
+
+namespace llvm {
+namespace json {
+
+bool fromJSON(const llvm::json::Value &value,
+              lldb_private::ObjectFile::Type &type, llvm::json::Path path) {
+  if (auto str = value.getAsString()) {
+    type = llvm::StringSwitch<ObjectFile::Type>(*str)
+               .Case("corefile", ObjectFile::eTypeCoreFile)
+               .Case("executable", ObjectFile::eTypeExecutable)
+               .Case("debuginfo", ObjectFile::eTypeDebugInfo)
+               .Case("dynamiclinker", ObjectFile::eTypeDynamicLinker)
+               .Case("objectfile", ObjectFile::eTypeObjectFile)
+               .Case("sharedlibrary", ObjectFile::eTypeSharedLibrary)
+               .Case("stublibrary", ObjectFile::eTypeStubLibrary)
+               .Case("jit", ObjectFile::eTypeJIT)
+               .Case("unknown", ObjectFile::eTypeUnknown)
+               .Default(ObjectFile::eTypeInvalid);
+
+    if (type == ObjectFile::eTypeInvalid) {
+      path.report("invalid object type");
+      return false;
+    }
+
+    return true;
+  }
+  path.report("expected string");
+  return false;
+}
+} // namespace json
+} // namespace llvm
