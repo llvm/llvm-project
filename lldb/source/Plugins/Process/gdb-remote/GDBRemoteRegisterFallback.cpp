@@ -19,7 +19,6 @@ namespace process_gdb_remote {
   }
 #define R64(name) REG(name, 8)
 #define R32(name) REG(name, 4)
-#define R16(name) REG(name, 2)
 
 static std::vector<DynamicRegisterInfo::Register> GetRegisters_aarch64() {
   ConstString empty_alt_name;
@@ -32,18 +31,6 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_aarch64() {
       R64(x21), R64(x22), R64(x23), R64(x24), R64(x25), R64(x26),  R64(x27),
       R64(x28), R64(x29), R64(x30), R64(sp),  R64(pc),  R32(cpsr),
   };
-
-  return registers;
-}
-
-static std::vector<DynamicRegisterInfo::Register> GetRegisters_msp430() {
-  ConstString empty_alt_name;
-  ConstString reg_set{"general purpose registers"};
-
-  std::vector<DynamicRegisterInfo::Register> registers{
-      R16(pc),  R16(sp),  R16(r2),  R16(r3), R16(fp),  R16(r5),
-      R16(r6),  R16(r7),  R16(r8),  R16(r9), R16(r10), R16(r11),
-      R16(r12), R16(r13), R16(r14), R16(r15)};
 
   return registers;
 }
@@ -84,8 +71,6 @@ GetFallbackRegisters(const ArchSpec &arch_to_use) {
   switch (arch_to_use.GetMachine()) {
   case llvm::Triple::aarch64:
     return GetRegisters_aarch64();
-  case llvm::Triple::msp430:
-    return GetRegisters_msp430();
   case llvm::Triple::x86:
     return GetRegisters_x86();
   case llvm::Triple::x86_64:
