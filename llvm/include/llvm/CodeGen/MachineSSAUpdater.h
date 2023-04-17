@@ -41,14 +41,14 @@ private:
   void *AV = nullptr;
 
   /// VRC - Register class of the current virtual register.
-  const TargetRegisterClass *VRC;
+  const TargetRegisterClass *VRC = nullptr;
 
   /// InsertedPHIs - If this is non-null, the MachineSSAUpdater adds all PHI
   /// nodes that it creates to the vector.
   SmallVectorImpl<MachineInstr*> *InsertedPHIs;
 
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
 public:
   /// MachineSSAUpdater constructor.  If InsertedPHIs is specified, it will be

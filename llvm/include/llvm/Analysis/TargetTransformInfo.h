@@ -404,16 +404,10 @@ public:
   /// branches.
   bool hasBranchDivergence() const;
 
-  /// Return true if the target prefers to use GPU divergence analysis to
-  /// replace the legacy version.
-  bool useGPUDivergenceAnalysis() const;
-
   /// Returns whether V is a source of divergence.
   ///
   /// This function provides the target-dependent information for
-  /// the target-independent LegacyDivergenceAnalysis. LegacyDivergenceAnalysis
-  /// first builds the dependency graph, and then runs the reachability
-  /// algorithm starting with the sources of divergence.
+  /// the target-independent UniformityAnalysis.
   bool isSourceOfDivergence(const Value *V) const;
 
   // Returns true for the target specific
@@ -1687,7 +1681,6 @@ public:
                                              TargetCostKind CostKind) = 0;
   virtual BranchProbability getPredictableBranchThreshold() = 0;
   virtual bool hasBranchDivergence() = 0;
-  virtual bool useGPUDivergenceAnalysis() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
   virtual bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const = 0;
@@ -2057,9 +2050,6 @@ public:
     return Impl.getPredictableBranchThreshold();
   }
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
-  bool useGPUDivergenceAnalysis() override {
-    return Impl.useGPUDivergenceAnalysis();
-  }
   bool isSourceOfDivergence(const Value *V) override {
     return Impl.isSourceOfDivergence(V);
   }

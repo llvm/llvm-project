@@ -95,12 +95,12 @@ namespace {
 
     Pass *const PASS;
     const char *Banner;
-    const MachineFunction *MF;
-    const TargetMachine *TM;
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    const MachineRegisterInfo *MRI;
-    const RegisterBankInfo *RBI;
+    const MachineFunction *MF = nullptr;
+    const TargetMachine *TM = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const MachineRegisterInfo *MRI = nullptr;
+    const RegisterBankInfo *RBI = nullptr;
 
     unsigned foundErrors;
 
@@ -115,8 +115,8 @@ namespace {
     using RegMap = DenseMap<Register, const MachineInstr *>;
     using BlockSet = SmallPtrSet<const MachineBasicBlock *, 8>;
 
-    const MachineInstr *FirstNonPHI;
-    const MachineInstr *FirstTerminator;
+    const MachineInstr *FirstNonPHI = nullptr;
+    const MachineInstr *FirstTerminator = nullptr;
     BlockSet FunctionBlocks;
 
     BitVector regsReserved;
@@ -208,10 +208,10 @@ namespace {
     }
 
     // Analysis information if available
-    LiveVariables *LiveVars;
-    LiveIntervals *LiveInts;
-    LiveStacks *LiveStks;
-    SlotIndexes *Indexes;
+    LiveVariables *LiveVars = nullptr;
+    LiveIntervals *LiveInts = nullptr;
+    LiveStacks *LiveStks = nullptr;
+    SlotIndexes *Indexes = nullptr;
 
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);

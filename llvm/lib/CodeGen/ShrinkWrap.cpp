@@ -110,26 +110,26 @@ namespace {
 class ShrinkWrap : public MachineFunctionPass {
   /// Hold callee-saved information.
   RegisterClassInfo RCI;
-  MachineDominatorTree *MDT;
-  MachinePostDominatorTree *MPDT;
+  MachineDominatorTree *MDT = nullptr;
+  MachinePostDominatorTree *MPDT = nullptr;
 
   /// Current safe point found for the prologue.
   /// The prologue will be inserted before the first instruction
   /// in this basic block.
-  MachineBasicBlock *Save;
+  MachineBasicBlock *Save = nullptr;
 
   /// Current safe point found for the epilogue.
   /// The epilogue will be inserted before the first terminator instruction
   /// in this basic block.
-  MachineBasicBlock *Restore;
+  MachineBasicBlock *Restore = nullptr;
 
   /// Hold the information of the basic block frequency.
   /// Use to check the profitability of the new points.
-  MachineBlockFrequencyInfo *MBFI;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
   /// Hold the loop information. Used to determine if Save and Restore
   /// are in the same loop.
-  MachineLoopInfo *MLI;
+  MachineLoopInfo *MLI = nullptr;
 
   // Emit remarks.
   MachineOptimizationRemarkEmitter *ORE = nullptr;
@@ -147,7 +147,7 @@ class ShrinkWrap : public MachineFunctionPass {
   Register SP;
 
   /// Entry block.
-  const MachineBasicBlock *Entry;
+  const MachineBasicBlock *Entry = nullptr;
 
   using SetOfRegs = SmallSetVector<unsigned, 16>;
 
@@ -155,7 +155,7 @@ class ShrinkWrap : public MachineFunctionPass {
   mutable SetOfRegs CurrentCSRs;
 
   /// Current MachineFunction.
-  MachineFunction *MachineFunc;
+  MachineFunction *MachineFunc = nullptr;
 
   /// Check if \p MI uses or defines a callee-saved register or
   /// a frame index. If this is the case, this means \p MI must happen

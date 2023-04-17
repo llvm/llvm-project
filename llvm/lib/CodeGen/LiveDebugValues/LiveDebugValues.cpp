@@ -84,7 +84,7 @@ private:
   std::unique_ptr<LDVImpl> InstrRefImpl;
   std::unique_ptr<LDVImpl> VarLocImpl;
   std::unique_ptr<LDVImpl> HeterogeneousImpl;
-  TargetPassConfig *TPC;
+  TargetPassConfig *TPC = nullptr;
   MachineDominatorTree MDT;
 };
 } // namespace
