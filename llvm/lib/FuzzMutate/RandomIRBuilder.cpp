@@ -393,3 +393,48 @@ Type *RandomIRBuilder::randomType() {
   uint64_t TyIdx = uniform<uint64_t>(Rand, 0, KnownTypes.size() - 1);
   return KnownTypes[TyIdx];
 }
+
+Function *RandomIRBuilder::createFunctionDeclaration(Module &M,
+                                                     uint64_t ArgNum) {
+  Type *RetType = randomType();
+
+  SmallVector<Type *, 2> Args;
+  for (uint64_t i = 0; i < ArgNum; i++) {
+    Args.push_back(randomType());
+  }
+
+  Function *F = Function::Create(FunctionType::get(RetType, Args,
+                                                   /*isVarArg=*/false),
+                                 GlobalValue::ExternalLinkage, "f", &M);
+  return F;
+}
+Function *RandomIRBuilder::createFunctionDeclaration(Module &M) {
+  return createFunctionDeclaration(
+      M, uniform<uint64_t>(Rand, MinArgNum, MaxArgNum));
+}
+
+Function *RandomIRBuilder::createFunctionDefinition(Module &M,
+                                                    uint64_t ArgNum) {
+  Function *F = this->createFunctionDeclaration(M, ArgNum);
+
+  // TODO: Some arguments and a return value would probably be more
+  // interesting.
+  LLVMContext &Context = M.getContext();
+  DataLayout DL(&M);
+  BasicBlock *BB = BasicBlock::Create(Context, "BB", F);
+  Type *RetTy = F->getReturnType();
+  if (RetTy != Type::getVoidTy(Context)) {
+    Instruction *RetAlloca =
+        new AllocaInst(RetTy, DL.getAllocaAddrSpace(), "RP", BB);
+    Instruction *RetLoad = new LoadInst(RetTy, RetAlloca, "", BB);
+    ReturnInst::Create(Context, RetLoad, BB);
+  } else {
+    ReturnInst::Create(Context, BB);
+  }
+
+  return F;
+}
+Function *RandomIRBuilder::createFunctionDefinition(Module &M) {
+  return createFunctionDefinition(
+      M, uniform<uint64_t>(Rand, MinArgNum, MaxArgNum));
+}
