@@ -327,7 +327,6 @@ public:
        subspan(size_type __offset, size_type __count = dynamic_extent) const noexcept
     {
         _LIBCPP_ASSERT(__offset <= size(), "span<T, N>::subspan(offset, count): offset out of range");
-        _LIBCPP_ASSERT(__count  <= size() || __count == dynamic_extent, "span<T, N>::subspan(offset, count): count out of range");
         if (__count == dynamic_extent)
             return {data() + __offset, size() - __offset};
         _LIBCPP_ASSERT(__count <= size() - __offset, "span<T, N>::subspan(offset, count): offset + count out of range");
@@ -493,7 +492,6 @@ public:
     subspan(size_type __offset, size_type __count = dynamic_extent) const noexcept
     {
         _LIBCPP_ASSERT(__offset <= size(), "span<T>::subspan(offset, count): offset out of range");
-        _LIBCPP_ASSERT(__count <= size() || __count == dynamic_extent, "span<T>::subspan(offset, count): count out of range");
         if (__count == dynamic_extent)
             return {data() + __offset, size() - __offset};
         _LIBCPP_ASSERT(__count <= size() - __offset, "span<T>::subspan(offset, count): offset + count out of range");
