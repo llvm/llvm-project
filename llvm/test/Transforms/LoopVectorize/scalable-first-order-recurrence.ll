@@ -165,7 +165,7 @@ for.end:
   ret void
 }
 
-define void @constant_folded_previous_value() {
+define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-LABEL: @constant_folded_previous_value
 ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VECTOR_RECUR:.*]] = phi <vscale x 4 x i64> [ %vector.recur.init, %vector.ph ], [ shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer), %vector.body ]
@@ -184,7 +184,7 @@ scalar.body:
   br i1 %cond, label %for.end, label %scalar.body, !llvm.loop !0
 
 for.end:
-  ret void
+  ret i64 %tmp2
 }
 
 ; We vectorize this first order recurrence, by generating two
