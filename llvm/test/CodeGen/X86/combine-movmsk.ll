@@ -24,8 +24,7 @@ define i1 @movmskps_noneof_bitcast_v2f64(<2 x double> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = fcmp oeq <2 x double> zeroinitializer, %a0
@@ -80,8 +79,7 @@ define i1 @pmovmskb_noneof_bitcast_v2i64(<2 x i64> %a0) {
 ;
 ; AVX-LABEL: pmovmskb_noneof_bitcast_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovmskpd %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = icmp sgt <2 x i64> zeroinitializer, %a0
@@ -136,8 +134,7 @@ define i1 @pmovmskb_noneof_bitcast_v4f32(<4 x float> %a0) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    vtestps %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = fcmp oeq <4 x float> %a0, zeroinitializer
