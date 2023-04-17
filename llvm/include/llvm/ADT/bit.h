@@ -44,11 +44,12 @@ namespace llvm {
 // This implementation of bit_cast is different from the C++20 one in two ways:
 //  - It isn't constexpr because that requires compiler support.
 //  - It requires trivially-constructible To, to avoid UB in the implementation.
-template <typename To, typename From,
-          typename = std::enable_if_t<sizeof(To) == sizeof(From)>,
-          typename = std::enable_if_t<std::is_trivially_constructible_v<To>>,
-          typename = std::enable_if_t<std::is_trivially_copyable_v<To>>,
-          typename = std::enable_if_t<std::is_trivially_copyable_v<From>>>
+template <
+    typename To, typename From,
+    typename = std::enable_if_t<sizeof(To) == sizeof(From)>,
+    typename = std::enable_if_t<std::is_trivially_constructible<To>::value>,
+    typename = std::enable_if_t<std::is_trivially_copyable<To>::value>,
+    typename = std::enable_if_t<std::is_trivially_copyable<From>::value>>
 [[nodiscard]] inline To bit_cast(const From &from) noexcept {
 #if __has_builtin(__builtin_bit_cast)
   return __builtin_bit_cast(To, from);

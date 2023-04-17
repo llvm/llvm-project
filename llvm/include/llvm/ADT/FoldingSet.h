@@ -830,7 +830,7 @@ struct FoldingSetTrait<std::pair<T1, T2>> {
 };
 
 template <typename T>
-struct FoldingSetTrait<T, std::enable_if_t<std::is_enum_v<T>>> {
+struct FoldingSetTrait<T, std::enable_if_t<std::is_enum<T>::value>> {
   static void Profile(const T &X, FoldingSetNodeID &ID) {
     ID.AddInteger(static_cast<std::underlying_type_t<T>>(X));
   }
