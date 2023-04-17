@@ -109,6 +109,14 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    default:
+      return true;
+    case VPInstruction::FirstOrderRecurrenceSplice:
+      return false;
+    }
+    llvm_unreachable("unhandled opcode above");
   case VPDerivedIVSC:
   case VPPredInstPHISC:
     return false;
@@ -116,6 +124,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();
   case VPWidenIntOrFpInductionSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPWidenPointerInductionSC:
   case VPWidenCanonicalIVSC:
   case VPWidenPHISC:
