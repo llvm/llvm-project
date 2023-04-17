@@ -281,12 +281,6 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
     return nullptr;
   }
 
-  llvm::TimeTraceScope TimeScope("ParseTemplate", [&]() {
-    return std::string(DeclaratorInfo.getIdentifier() != nullptr
-                           ? DeclaratorInfo.getIdentifier()->getName()
-                           : "<unknown>");
-  });
-
   LateParsedAttrList LateParsedAttrs(true);
   if (DeclaratorInfo.isFunctionDeclarator()) {
     if (Tok.is(tok::kw_requires)) {
