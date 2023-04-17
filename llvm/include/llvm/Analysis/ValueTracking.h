@@ -265,6 +265,19 @@ struct KnownFPClass {
   /// floating-point mode for the function interprets denormals as zero.
   bool isKnownNeverLogicalZero(const Function &F, Type *Ty) const;
 
+  /// Return true if we can prove that the analyzed floating-point value is
+  /// either NaN or never less than -0.0.
+  ///
+  ///      NaN --> true
+  ///       +0 --> true
+  ///       -0 --> true
+  ///   x > +0 --> true
+  ///   x < -0 --> false
+  bool cannotBeOrderedLessThanZero() const {
+    const FPClassTest OrderedNegMask = fcNegSubnormal | fcNegNormal | fcNegInf;
+    return (KnownFPClasses & OrderedNegMask) == fcNone;
+  }
+
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
     KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
 
