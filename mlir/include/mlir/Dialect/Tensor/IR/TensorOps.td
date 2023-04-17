@@ -1817,6 +1817,13 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
                                  Location loc,
                                  ArrayRef<int64_t> innerPermutation,
                                  ArrayRef<int64_t> outerPermutation);
+
+    /// Check if this PackOp is like a simple pad operation.
+    /// In other words, this operation:
+    /// 1. adds useless dimensions (dimension of size 1),
+    /// 2. pads the other ones, and
+    /// 3. doesn't shuffle the dimensions
+    bool isLikePad();
   }];
 
   let hasCanonicalizeMethod = 1;
@@ -1892,6 +1899,12 @@ def Tensor_UnPackOp : Tensor_RelayoutOp<"unpack"> {
                                    Value transposedSource,
                                    ArrayRef<int64_t> innerPermutation,
                                    ArrayRef<int64_t> outerPermutation);
+
+    /// Check if this UnPackOp is like a simple unpad operation.
+    /// In other words, this operation:
+    /// 1. drops useless dimensions (dimension of size 1), and
+    /// 2. reduces dimensions in place (i.e., no tranpose.)
+    bool isLikeUnPad();
   }];
 
   let hasCanonicalizeMethod = 1;
