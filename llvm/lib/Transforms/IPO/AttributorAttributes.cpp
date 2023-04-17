@@ -11201,11 +11201,10 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
     auto *AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-    OptimizationRemarkEmitter *ORE = nullptr;
 
     const DataLayout &DL = I.getModule()->getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
-    Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q, ORE);
+    Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q);
     if (!NewV || NewV == &I)
       return false;
 

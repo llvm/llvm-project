@@ -50,7 +50,6 @@ class Function;
 class Instruction;
 struct LoopStandardAnalysisResults;
 class MDNode;
-class OptimizationRemarkEmitter;
 class Pass;
 template <class T, unsigned n> class SmallSetVector;
 class TargetLibraryInfo;
@@ -325,15 +324,13 @@ Value *simplifyLoadInst(LoadInst *LI, Value *PtrOp, const SimplifyQuery &Q);
 
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.
-Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q,
-                           OptimizationRemarkEmitter *ORE = nullptr);
+Value *simplifyInstruction(Instruction *I, const SimplifyQuery &Q);
 
 /// Like \p simplifyInstruction but the operands of \p I are replaced with
 /// \p NewOps. Returns a simplified value, or null if none was found.
 Value *
 simplifyInstructionWithOperands(Instruction *I, ArrayRef<Value *> NewOps,
-                                const SimplifyQuery &Q,
-                                OptimizationRemarkEmitter *ORE = nullptr);
+                                const SimplifyQuery &Q);
 
 /// See if V simplifies when its operand Op is replaced with RepOp. If not,
 /// return null.
