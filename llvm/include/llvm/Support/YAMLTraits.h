@@ -506,9 +506,7 @@ struct has_CustomMappingTraits
 // has_FlowTraits<int> will cause an error with some compilers because
 // it subclasses int.  Using this wrapper only instantiates the
 // real has_FlowTraits only if the template type is a class.
-template <typename T, bool Enabled = std::is_class<T>::value>
-class has_FlowTraits
-{
+template <typename T, bool Enabled = std::is_class_v<T>> class has_FlowTraits {
 public:
    static const bool value = false;
 };
@@ -2011,8 +2009,7 @@ struct SequenceTraits<
 
 // Sequences of fundamental types use flow formatting.
 template <typename T>
-struct SequenceElementTraits<T,
-                             std::enable_if_t<std::is_fundamental<T>::value>> {
+struct SequenceElementTraits<T, std::enable_if_t<std::is_fundamental_v<T>>> {
   static const bool flow = true;
 };
 
