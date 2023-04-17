@@ -681,3 +681,127 @@ define <1 x i32> @test_builtin_column_major_load_multiuse(ptr %src, <4 x i32> %b
 }
 
 declare void @use.v4i32(<4 x i32>)
+
+define <1 x i32> @test_builtin_column_major_variable_stride(ptr %src, <4 x i32> %a, i64 %stride) {
+; CHECK-LABEL: @test_builtin_column_major_variable_stride(
+; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i64 [[VEC_START]]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
+; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START1]]
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
+; CHECK-NEXT:    [[VEC_START4:%.*]] = mul i64 2, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START4]]
+; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x i32>, ptr [[VEC_GEP5]], align 4
+; CHECK-NEXT:    [[VEC_START7:%.*]] = mul i64 3, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START7]]
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x i32>, ptr [[VEC_GEP8]], align 4
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[SPLIT]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <1 x i32> [[BLOCK]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[BLOCK10:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[SPLIT]], i64 1
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT11:%.*]] = insertelement <1 x i32> poison, i32 [[TMP3]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT11]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = mul <1 x i32> [[BLOCK10]], [[SPLAT_SPLAT12]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <1 x i32> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[BLOCK13:%.*]] = shufflevector <1 x i32> [[COL_LOAD6]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[SPLIT]], i64 2
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT14:%.*]] = insertelement <1 x i32> poison, i32 [[TMP6]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT14]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <1 x i32> [[BLOCK13]], [[SPLAT_SPLAT15]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <1 x i32> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[BLOCK16:%.*]] = shufflevector <1 x i32> [[COL_LOAD9]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[SPLIT]], i64 3
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT17:%.*]] = insertelement <1 x i32> poison, i32 [[TMP9]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT18:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT17]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = mul <1 x i32> [[BLOCK16]], [[SPLAT_SPLAT18]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add <1 x i32> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <1 x i32> [[TMP11]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x i32> undef, <1 x i32> [[TMP12]], <1 x i32> <i32 1>
+; CHECK-NEXT:    ret <1 x i32> [[TMP13]]
+;
+  %l = call <4 x i32> @llvm.matrix.column.major.load.v4i32.i64(ptr %src, i64 %stride, i1 false, i32 1, i32 4)
+  %r = call <1 x i32> @llvm.matrix.multiply.v1i32.v4i32.v4i32(<4 x i32> %l, <4 x i32> %a, i32 1, i32 4, i32 1)
+  ret <1 x i32> %r
+}
+
+define <1 x i32> @test_builtin_column_major_variable_stride_multiuse(ptr %src, <5 x i32> %a, i64 %stride) {
+; CHECK-LABEL: @test_builtin_column_major_variable_stride_multiuse(
+; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[SRC:%.*]], i64 [[VEC_START]]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x i32>, ptr [[VEC_GEP]], align 4
+; CHECK-NEXT:    [[VEC_START1:%.*]] = mul i64 1, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START1]]
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x i32>, ptr [[VEC_GEP2]], align 4
+; CHECK-NEXT:    [[VEC_START4:%.*]] = mul i64 2, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START4]]
+; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <1 x i32>, ptr [[VEC_GEP5]], align 4
+; CHECK-NEXT:    [[VEC_START7:%.*]] = mul i64 3, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START7]]
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x i32>, ptr [[VEC_GEP8]], align 4
+; CHECK-NEXT:    [[VEC_START10:%.*]] = mul i64 4, [[STRIDE]]
+; CHECK-NEXT:    [[VEC_GEP11:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[VEC_START10]]
+; CHECK-NEXT:    [[COL_LOAD12:%.*]] = load <1 x i32>, ptr [[VEC_GEP11]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i32> [[COL_LOAD]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <1 x i32> [[COL_LOAD3]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i32> [[COL_LOAD6]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x i32> [[TMP4]], i32 [[TMP5]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i32> [[COL_LOAD9]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <5 x i32> [[TMP6]], i32 [[TMP7]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <1 x i32> [[COL_LOAD12]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <5 x i32> [[TMP8]], i32 [[TMP9]], i64 4
+; CHECK-NEXT:    call void @use.v5i32(<5 x i32> [[TMP10]])
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <5 x i32> [[A:%.*]], <5 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <5 x i32> [[SPLIT]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x i32> poison, i32 [[TMP11]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = mul <1 x i32> [[BLOCK]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[BLOCK13:%.*]] = shufflevector <1 x i32> [[COL_LOAD3]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <5 x i32> [[SPLIT]], i64 1
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT14:%.*]] = insertelement <1 x i32> poison, i32 [[TMP13]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT14]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = mul <1 x i32> [[BLOCK13]], [[SPLAT_SPLAT15]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add <1 x i32> [[TMP12]], [[TMP14]]
+; CHECK-NEXT:    [[BLOCK16:%.*]] = shufflevector <1 x i32> [[COL_LOAD6]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <5 x i32> [[SPLIT]], i64 2
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT17:%.*]] = insertelement <1 x i32> poison, i32 [[TMP16]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT18:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT17]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = mul <1 x i32> [[BLOCK16]], [[SPLAT_SPLAT18]]
+; CHECK-NEXT:    [[TMP18:%.*]] = add <1 x i32> [[TMP15]], [[TMP17]]
+; CHECK-NEXT:    [[BLOCK19:%.*]] = shufflevector <1 x i32> [[COL_LOAD9]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <5 x i32> [[SPLIT]], i64 3
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT20:%.*]] = insertelement <1 x i32> poison, i32 [[TMP19]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT21:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT20]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = mul <1 x i32> [[BLOCK19]], [[SPLAT_SPLAT21]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add <1 x i32> [[TMP18]], [[TMP20]]
+; CHECK-NEXT:    [[BLOCK22:%.*]] = shufflevector <1 x i32> [[COL_LOAD12]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <5 x i32> [[SPLIT]], i64 4
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT23:%.*]] = insertelement <1 x i32> poison, i32 [[TMP22]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLAT24:%.*]] = shufflevector <1 x i32> [[SPLAT_SPLATINSERT23]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = mul <1 x i32> [[BLOCK22]], [[SPLAT_SPLAT24]]
+; CHECK-NEXT:    [[TMP24:%.*]] = add <1 x i32> [[TMP21]], [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <1 x i32> [[TMP24]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <1 x i32> undef, <1 x i32> [[TMP25]], <1 x i32> <i32 1>
+; CHECK-NEXT:    ret <1 x i32> [[TMP26]]
+;
+  %l = call <5 x i32> @llvm.matrix.column.major.load.v5i32.i64(ptr %src, i64 %stride, i1 false, i32 1, i32 5)
+  %t = call <5 x i32> @llvm.matrix.transpose.v5i32(<5 x i32> %l, i32 1, i32 5)
+  call void @use.v5i32(<5 x i32> %t)
+  %r = call <1 x i32> @llvm.matrix.multiply.v1i32.v5i32.v5i32(<5 x i32> %l, <5 x i32> %a, i32 1, i32 5, i32 1)
+  ret <1 x i32> %r
+}
+
+declare void @use.v5i32(<5 x i32>)
+
+declare <1 x i32> @llvm.matrix.multiply.v1i32.v5i32.v5i32(<5 x i32>, <5 x i32>, i32 immarg, i32 immarg, i32 immarg) #0
+
+declare <5 x i32> @llvm.matrix.column.major.load.v5i32.i64(ptr nocapture, i64, i1 immarg, i32 immarg, i32 immarg) #1
+
+declare <5 x i32> @llvm.matrix.transpose.v5i32(<5 x i32>, i32 immarg, i32 immarg) #0
