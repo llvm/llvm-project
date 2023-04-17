@@ -41,3 +41,9 @@ MachO Improvements
 WebAssembly Improvements
 ------------------------
 
+Fixes
+#####
+
+* Arm exception index tables (.ARM.exidx sections) are now ouptut
+  correctly when they are at a non zero offset within their output
+  section. (`D148033 <https://reviews.llvm.org/D148033>`_)
