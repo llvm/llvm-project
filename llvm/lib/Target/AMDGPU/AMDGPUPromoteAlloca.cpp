@@ -344,9 +344,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   // FIXME: We also reject alloca's of the form [ 2 x [ 2 x i32 ]] or
   // equivalent. Potentially these could also be promoted but we don't currently
   // handle this case
-  if (!VectorTy || VectorTy->getNumElements() > 16 ||
-      VectorTy->getNumElements() < 2) {
+  if (!VectorTy) {
     LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
+    return false;
+  }
+
+  if (VectorTy->getNumElements() > 16 || VectorTy->getNumElements() < 2) {
+    LLVM_DEBUG(dbgs() << "  " << *VectorTy
+                      << " has an unsupported number of elements\n");
     return false;
   }
 
@@ -356,8 +361,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   SmallVector<Use *, 8> Uses;
   DenseMap<MemTransferInst *, MemTransferInfo> TransferInfo;
 
+  const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
+    LLVM_DEBUG(dbgs() << "  Cannot promote alloca to vector: " << Msg << "\n"
+                      << "    " << *Inst << "\n");
+    return false;
+  };
+
   for (Use &U : Alloca.uses())
     Uses.push_back(&U);
+
+  LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
   unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
@@ -369,7 +382,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       // This is a store of the pointer, not to the pointer.
       if (isa<StoreInst>(Inst) &&
           U->getOperandNo() != StoreInst::getPointerOperandIndex())
-        return false;
+        return RejectUser(Inst, "pointer is being stored");
 
       Type *AccessTy = getLoadStoreType(Inst);
       Ptr = Ptr->stripPointerCasts();
@@ -384,7 +397,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
                                           : cast<StoreInst>(Inst)->isSimple();
       if (!IsSimple ||
           !CastInst::isBitOrNoopPointerCastable(VecEltTy, AccessTy, *DL))
-        return false;
+        return RejectUser(Inst, "not simple and/or vector element type not "
+                                "castable to access type");
 
       WorkList.push_back(Inst);
       continue;
@@ -401,11 +415,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
       Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL);
-      if (!Index) {
-        LLVM_DEBUG(dbgs() << "  Cannot compute vector index for GEP " << *GEP
-                          << '\n');
-        return false;
-      }
+      if (!Index)
+        return RejectUser(Inst, "cannot compute vector index for GEP");
 
       GEPVectorIdx[GEP] = Index;
       for (Use &U : Inst->uses())
@@ -421,11 +432,12 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
     if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst)) {
       if (TransferInst->isVolatile())
-        return false;
+        return RejectUser(Inst, "mem transfer inst is volatile");
 
       ConstantInt *Len = dyn_cast<ConstantInt>(TransferInst->getLength());
-      if (!Len || !!(Len->getZExtValue() % ElementSize))
-        return false;
+      if (!Len || (Len->getZExtValue() % ElementSize))
+        return RejectUser(Inst, "mem transfer inst length is non-constant or "
+                                "not a multiple of the vector element size");
 
       if (!TransferInfo.count(TransferInst)) {
         DeferredInsts.push_back(Inst);
@@ -447,14 +459,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         Value *Dest = TransferInst->getDest();
         ConstantInt *Index = getPointerIndexOfAlloca(Dest);
         if (!Index)
-          return false;
+          return RejectUser(Inst, "could not calculate constant dest index");
         TI->DestIndex = Index;
       } else {
         assert(OpNum == 1);
         Value *Src = TransferInst->getSource();
         ConstantInt *Index = getPointerIndexOfAlloca(Src);
         if (!Index)
-          return false;
+          return RejectUser(Inst, "could not calculate constant src index");
         TI->SrcIndex = Index;
       }
       continue;
@@ -469,8 +481,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
         }))
       continue;
 
-    // Unknown user.
-    return false;
+    return RejectUser(Inst, "unhandled alloca user");
   }
 
   while (!DeferredInsts.empty()) {
@@ -480,7 +491,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     // from different address spaces.
     MemTransferInfo &Info = TransferInfo[TransferInst];
     if (!Info.SrcIndex || !Info.DestIndex)
-      return false;
+      return RejectUser(
+          Inst, "mem transfer inst is missing constant src and/or dst index");
   }
 
   LLVM_DEBUG(dbgs() << "  Converting alloca to vector " << *AllocaTy << " -> "
