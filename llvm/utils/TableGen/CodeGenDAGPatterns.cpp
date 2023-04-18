@@ -4516,6 +4516,7 @@ static void CombineChildVariants(
 #endif
     // Create the variant and add it to the output list.
     std::vector<TreePatternNodePtr> NewChildren;
+    NewChildren.reserve(ChildVariants.size());
     for (unsigned i = 0, e = ChildVariants.size(); i != e; ++i)
       NewChildren.push_back(ChildVariants[i][Idxs[i]]);
     TreePatternNodePtr R = makeIntrusiveRefCnt<TreePatternNode>(
