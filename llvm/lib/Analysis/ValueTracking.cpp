@@ -4513,6 +4513,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcNan);
         break;
       }
+      case Intrinsic::arithmetic_fence: {
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, Known, Depth + 1, Q, TLI);
+        break;
+      }
       default:
         break;
       }
