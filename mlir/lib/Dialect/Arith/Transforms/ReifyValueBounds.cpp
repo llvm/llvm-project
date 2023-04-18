@@ -56,6 +56,7 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
                                buildExpr(binaryExpr.getRHS()));
     }
     }
+    llvm_unreachable("unsupported AffineExpr kind");
   };
   return buildExpr(map.getResult(0));
 }
