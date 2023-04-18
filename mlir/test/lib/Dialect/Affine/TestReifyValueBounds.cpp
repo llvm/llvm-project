@@ -130,8 +130,13 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
           reified =
               FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
       } else {
-        reified = reifyValueBound(rewriter, op->getLoc(), *boundType, value,
-                                  dim, stopCondition);
+        if (dim) {
+          reified = reifyShapedValueDimBound(rewriter, op->getLoc(), *boundType,
+                                             value, *dim, stopCondition);
+        } else {
+          reified = reifyIndexValueBound(rewriter, op->getLoc(), *boundType,
+                                         value, stopCondition);
+        }
       }
       if (failed(reified)) {
         op->emitOpError("could not reify bound");
