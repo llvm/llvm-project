@@ -14,16 +14,16 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_APPLE
 
-#include "sanitizer_allocator_internal.h"
-#include "sanitizer_mac.h"
-#include "sanitizer_symbolizer_mac.h"
+#  include <dlfcn.h>
+#  include <errno.h>
+#  include <stdlib.h>
+#  include <sys/wait.h>
+#  include <unistd.h>
+#  include <util.h>
 
-#include <dlfcn.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <util.h>
+#  include "sanitizer_allocator_internal.h"
+#  include "sanitizer_mac.h"
+#  include "sanitizer_symbolizer_mac.h"
 
 namespace __sanitizer {
 

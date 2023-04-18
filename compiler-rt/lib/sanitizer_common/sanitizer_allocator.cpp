@@ -146,12 +146,10 @@ void *LowLevelAllocator::Allocate(uptr size) {
   size = RoundUpTo(size, low_level_alloc_min_alignment);
   if (allocated_end_ - allocated_current_ < (sptr)size) {
     uptr size_to_allocate = RoundUpTo(size, GetPageSizeCached());
-    allocated_current_ =
-        (char*)MmapOrDie(size_to_allocate, __func__);
+    allocated_current_ = (char *)MmapOrDie(size_to_allocate, __func__);
     allocated_end_ = allocated_current_ + size_to_allocate;
     if (low_level_alloc_callback) {
-      low_level_alloc_callback((uptr)allocated_current_,
-                               size_to_allocate);
+      low_level_alloc_callback((uptr)allocated_current_, size_to_allocate);
     }
   }
   CHECK(allocated_end_ - allocated_current_ >= (sptr)size);
