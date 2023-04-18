@@ -820,6 +820,11 @@ struct BBAddrMap {
              HasReturn == Other.HasReturn && HasTailCall == Other.HasTailCall &&
              IsEHPad == Other.IsEHPad && CanFallThrough == Other.CanFallThrough;
     }
+
+    bool hasReturn() const { return HasReturn; }
+    bool hasTailCall() const { return HasTailCall; }
+    bool isEHPad() const { return IsEHPad; }
+    bool canFallThrough() const { return CanFallThrough; }
   };
   std::vector<BBEntry> BBEntries; // Basic block entries for this function.
 

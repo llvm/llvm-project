@@ -1101,29 +1101,29 @@ static SmallVector<const DIVariable *, 2> dependencies(DbgVariable *Var) {
   for (auto *El : Array->getElements()) {
     if (auto *Subrange = dyn_cast<DISubrange>(El)) {
       if (auto Count = Subrange->getCount())
-        if (auto *Dependency = Count.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(Count))
           Result.push_back(Dependency);
       if (auto LB = Subrange->getLowerBound())
-        if (auto *Dependency = LB.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(LB))
           Result.push_back(Dependency);
       if (auto UB = Subrange->getUpperBound())
-        if (auto *Dependency = UB.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(UB))
           Result.push_back(Dependency);
       if (auto ST = Subrange->getStride())
-        if (auto *Dependency = ST.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(ST))
           Result.push_back(Dependency);
     } else if (auto *GenericSubrange = dyn_cast<DIGenericSubrange>(El)) {
       if (auto Count = GenericSubrange->getCount())
-        if (auto *Dependency = Count.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(Count))
           Result.push_back(Dependency);
       if (auto LB = GenericSubrange->getLowerBound())
-        if (auto *Dependency = LB.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(LB))
           Result.push_back(Dependency);
       if (auto UB = GenericSubrange->getUpperBound())
-        if (auto *Dependency = UB.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(UB))
           Result.push_back(Dependency);
       if (auto ST = GenericSubrange->getStride())
-        if (auto *Dependency = ST.dyn_cast<DIVariable *>())
+        if (auto *Dependency = dyn_cast_if_present<DIVariable *>(ST))
           Result.push_back(Dependency);
     }
   }

@@ -737,7 +737,7 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
   // so visit pads in descendant-most to ancestor-most order.
   for (ClrEHUnwindMapEntry &Entry : llvm::reverse(FuncInfo.ClrEHUnwindMap)) {
     const Instruction *Pad =
-        Entry.Handler.get<const BasicBlock *>()->getFirstNonPHI();
+        cast<const BasicBlock *>(Entry.Handler)->getFirstNonPHI();
     // For most pads, the TryParentState is the state associated with the
     // unwind dest of exceptional exits from it.
     const BasicBlock *UnwindDest;
@@ -773,8 +773,8 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
           int UserUnwindState =
               FuncInfo.ClrEHUnwindMap[UserState].TryParentState;
           if (UserUnwindState != -1)
-            UserUnwindDest = FuncInfo.ClrEHUnwindMap[UserUnwindState]
-                                 .Handler.get<const BasicBlock *>();
+            UserUnwindDest = cast<const BasicBlock *>(
+                FuncInfo.ClrEHUnwindMap[UserUnwindState].Handler);
         }
 
         // Not having an unwind dest for this user might indicate that it

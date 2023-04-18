@@ -1,20 +1,10 @@
 add_library(
-  TestLogger
-  TestLogger.cpp
-  TestLogger.h
-)
-target_include_directories(TestLogger PUBLIC ${LIBC_SOURCE_DIR})
-add_dependencies(TestLogger
-  libc.src.__support.CPP.string
-  libc.src.__support.CPP.string_view
-  libc.src.__support.OSUtil.osutil
-)
-
-add_library(
   LibcUnitTest
   Test.h
   LibcTest.cpp
   LibcTest.h
+  TestLogger.cpp
+  TestLogger.h
 )
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(
@@ -22,8 +12,9 @@ add_dependencies(
   libc.src.__support.CPP.string
   libc.src.__support.CPP.string_view
   libc.src.__support.CPP.type_traits
-  libc.src.__support.uint128 TestLogger)
-target_link_libraries(LibcUnitTest PUBLIC libc_test_utils TestLogger)
+  libc.src.__support.OSUtil.osutil
+  libc.src.__support.uint128)
+target_link_libraries(LibcUnitTest PUBLIC libc_test_utils)
 
 add_library(
   LibcUnitTestMain
@@ -39,14 +30,14 @@ add_header_library(
   HDRS
   StringUtils.h
   DEPENDS
-  libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.type_traits
 )
 
 add_library(
   LibcFPTestHelpers
   FPExceptMatcher.cpp
   FPExceptMatcher.h
-  FPMatcher.cpp
   FPMatcher.h
 )
 target_include_directories(LibcFPTestHelpers PUBLIC ${LIBC_SOURCE_DIR})
@@ -57,6 +48,7 @@ add_dependencies(
   libc.test.UnitTest.string_utils
   libc.src.__support.FPUtil.fp_bits
   libc.src.__support.FPUtil.fenv_impl
+  libc.test.UnitTest.string_utils
 )
 
 add_library(

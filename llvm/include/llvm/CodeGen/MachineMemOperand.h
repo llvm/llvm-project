@@ -69,19 +69,19 @@ struct MachinePointerInfo {
     uint8_t ID = 0)
     : V(v), Offset(offset), StackID(ID) {
     if (V) {
-      if (const auto *ValPtr = V.dyn_cast<const Value*>())
+      if (const auto *ValPtr = dyn_cast_if_present<const Value *>(V))
         AddrSpace = ValPtr->getType()->getPointerAddressSpace();
       else
-        AddrSpace = V.get<const PseudoSourceValue*>()->getAddressSpace();
+        AddrSpace = cast<const PseudoSourceValue *>(V)->getAddressSpace();
     }
   }
 
   MachinePointerInfo getWithOffset(int64_t O) const {
     if (V.isNull())
       return MachinePointerInfo(AddrSpace, Offset + O);
-    if (V.is<const Value*>())
-      return MachinePointerInfo(V.get<const Value*>(), Offset + O, StackID);
-    return MachinePointerInfo(V.get<const PseudoSourceValue*>(), Offset + O,
+    if (isa<const Value *>(V))
+      return MachinePointerInfo(cast<const Value *>(V), Offset + O, StackID);
+    return MachinePointerInfo(cast<const PseudoSourceValue *>(V), Offset + O,
                               StackID);
   }
 
@@ -207,10 +207,12 @@ public:
   /// other PseudoSourceValue member functions which return objects which stand
   /// for frame/stack pointer relative references and other special references
   /// which are not representable in the high-level IR.
-  const Value *getValue() const { return PtrInfo.V.dyn_cast<const Value*>(); }
+  const Value *getValue() const {
+    return dyn_cast_if_present<const Value *>(PtrInfo.V);
+  }
 
   const PseudoSourceValue *getPseudoValue() const {
-    return PtrInfo.V.dyn_cast<const PseudoSourceValue*>();
+    return dyn_cast_if_present<const PseudoSourceValue *>(PtrInfo.V);
   }
 
   const void *getOpaqueValue() const { return PtrInfo.V.getOpaqueValue(); }

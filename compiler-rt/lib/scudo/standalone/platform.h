@@ -37,6 +37,12 @@
 #define SCUDO_TRUSTY 0
 #endif
 
+#if defined(__riscv) && (__riscv_xlen == 64)
+#define SCUDO_RISCV64 1
+#else
+#define SCUDO_RISCV64 0
+#endif
+
 #if defined(__LP64__)
 #define SCUDO_WORDSIZE 64U
 #else

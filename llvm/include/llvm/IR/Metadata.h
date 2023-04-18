@@ -865,18 +865,18 @@ public:
 
   /// Whether this contains RAUW support.
   bool hasReplaceableUses() const {
-    return Ptr.is<ReplaceableMetadataImpl *>();
+    return isa<ReplaceableMetadataImpl *>(Ptr);
   }
 
   LLVMContext &getContext() const {
     if (hasReplaceableUses())
       return getReplaceableUses()->getContext();
-    return *Ptr.get<LLVMContext *>();
+    return *cast<LLVMContext *>(Ptr);
   }
 
   ReplaceableMetadataImpl *getReplaceableUses() const {
     if (hasReplaceableUses())
-      return Ptr.get<ReplaceableMetadataImpl *>();
+      return cast<ReplaceableMetadataImpl *>(Ptr);
     return nullptr;
   }
 

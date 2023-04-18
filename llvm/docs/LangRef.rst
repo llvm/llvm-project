@@ -9590,7 +9590,13 @@ Overview:
 """""""""
 
 The '``frem``' instruction returns the remainder from the division of
-its two operands.
+its two operands. 
+
+.. note::
+
+	The instruction is implemented as a call to libm's '``fmod``'
+	for some targets, and using the instruction may thus require linking libm.
+
 
 Arguments:
 """"""""""

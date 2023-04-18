@@ -709,14 +709,14 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
 
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
-  auto PSV = MPO.V.dyn_cast<const PseudoSourceValue *>();
+  auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
   if (auto FSPV = dyn_cast_or_null<FixedStackPseudoSourceValue>(PSV)) {
     MachineFrameInfo &MFI = MF.getFrameInfo();
     return commonAlignment(MFI.getObjectAlign(FSPV->getFrameIndex()),
                            MPO.Offset);
   }
 
-  if (const Value *V = MPO.V.dyn_cast<const Value *>()) {
+  if (const Value *V = dyn_cast_if_present<const Value *>(MPO.V)) {
     const Module *M = MF.getFunction().getParent();
     return V->getPointerAlignment(M->getDataLayout());
   }

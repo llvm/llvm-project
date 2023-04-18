@@ -1026,15 +1026,14 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const PseudoSourceValue* PSV) {
 
 void ScheduleDAGInstrs::Value2SUsMap::dump() {
   for (const auto &[ValType, SUs] : *this) {
-    if (ValType.is<const Value*>()) {
-      const Value *V = ValType.get<const Value*>();
+    if (isa<const Value *>(ValType)) {
+      const Value *V = cast<const Value *>(ValType);
       if (isa<UndefValue>(V))
         dbgs() << "Unknown";
       else
         V->printAsOperand(dbgs());
-    }
-    else if (ValType.is<const PseudoSourceValue*>())
-      dbgs() << ValType.get<const PseudoSourceValue*>();
+    } else if (isa<const PseudoSourceValue *>(ValType))
+      dbgs() << cast<const PseudoSourceValue *>(ValType);
     else
       llvm_unreachable("Unknown Value type.");
 

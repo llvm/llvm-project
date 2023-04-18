@@ -863,10 +863,14 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
   for (const auto &entry : m_binary->export_directories()) {
     llvm::StringRef sym_name;
     if (auto err = entry.getSymbolName(sym_name)) {
-      LLDB_LOG(log,
-               "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
-               "table entry name: {0}",
-               llvm::fmt_consume(std::move(err)));
+      if (log)
+        log->Format(
+            __FILE__, __func__,
+            "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
+            "table entry name: {0}",
+            llvm::fmt_consume(std::move(err)));
+      else
+        llvm::consumeError(std::move(err));
       continue;
     }
     Symbol symbol;
@@ -884,10 +888,13 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
       // it in symtab and make a note using the symbol name.
       llvm::StringRef forwarder_name;
       if (auto err = entry.getForwardTo(forwarder_name)) {
-        LLDB_LOG(log,
-                 "ObjectFilePECOFF::AppendFromExportTable - failed to get "
-                 "forwarder name of forwarder export '{0}': {1}",
-                 sym_name, llvm::fmt_consume(std::move(err)));
+        if (log)
+          log->Format(__FILE__, __func__,
+                      "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                      "forwarder name of forwarder export '{0}': {1}",
+                      sym_name, llvm::fmt_consume(std::move(err)));
+        else
+          llvm::consumeError(std::move(err));
         continue;
       }
       llvm::SmallString<256> new_name = {symbol.GetDisplayName().GetStringRef(),
@@ -899,10 +906,13 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
 
     uint32_t function_rva;
     if (auto err = entry.getExportRVA(function_rva)) {
-      LLDB_LOG(log,
-               "ObjectFilePECOFF::AppendFromExportTable - failed to get "
-               "address of export entry '{0}': {1}",
-               sym_name, llvm::fmt_consume(std::move(err)));
+      if (log)
+        log->Format(__FILE__, __func__,
+                    "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                    "address of export entry '{0}': {1}",
+                    sym_name, llvm::fmt_consume(std::move(err)));
+      else
+        llvm::consumeError(std::move(err));
       continue;
     }
     // Skip the symbol if it doesn't look valid.

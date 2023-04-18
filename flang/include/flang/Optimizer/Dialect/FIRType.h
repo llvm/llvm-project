@@ -359,6 +359,8 @@ bool hasAbstractResult(mlir::FunctionType ty);
 mlir::Type fromRealTypeID(mlir::MLIRContext *context, llvm::Type::TypeID typeID,
                           fir::KindTy kind);
 
+int getTypeCode(mlir::Type ty, KindMapping &kindMap);
+
 inline bool BaseBoxType::classof(mlir::Type type) {
   return type.isa<fir::BoxType, fir::ClassType>();
 }

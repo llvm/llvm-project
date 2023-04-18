@@ -1424,9 +1424,9 @@ TEST_F(DISubrangeTest, get) {
   auto Lower = N->getLowerBound();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
   ASSERT_TRUE(Count);
-  ASSERT_TRUE(Count.is<ConstantInt*>());
-  EXPECT_EQ(5, Count.get<ConstantInt*>()->getSExtValue());
-  EXPECT_EQ(7, Lower.get<ConstantInt *>()->getSExtValue());
+  ASSERT_TRUE(isa<ConstantInt *>(Count));
+  EXPECT_EQ(5, cast<ConstantInt *>(Count)->getSExtValue());
+  EXPECT_EQ(7, cast<ConstantInt *>(Lower)->getSExtValue());
   EXPECT_EQ(N, DISubrange::get(Context, 5, 7));
   EXPECT_EQ(DISubrange::get(Context, 5, 0), DISubrange::get(Context, 5));
 
@@ -1440,9 +1440,9 @@ TEST_F(DISubrangeTest, getEmptyArray) {
   auto Lower = N->getLowerBound();
   EXPECT_EQ(dwarf::DW_TAG_subrange_type, N->getTag());
   ASSERT_TRUE(Count);
-  ASSERT_TRUE(Count.is<ConstantInt*>());
-  EXPECT_EQ(-1, Count.get<ConstantInt*>()->getSExtValue());
-  EXPECT_EQ(0, Lower.get<ConstantInt *>()->getSExtValue());
+  ASSERT_TRUE(isa<ConstantInt *>(Count));
+  EXPECT_EQ(-1, cast<ConstantInt *>(Count)->getSExtValue());
+  EXPECT_EQ(0, cast<ConstantInt *>(Lower)->getSExtValue());
   EXPECT_EQ(N, DISubrange::get(Context, -1, 0));
 }
 
@@ -1459,11 +1459,11 @@ TEST_F(DISubrangeTest, getVariableCount) {
   auto Count = N->getCount();
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Count);
-  ASSERT_TRUE(Count.is<DIVariable*>());
-  EXPECT_EQ(VlaExpr, Count.get<DIVariable*>());
+  ASSERT_TRUE(isa<DIVariable *>(Count));
+  EXPECT_EQ(VlaExpr, cast<DIVariable *>(Count));
   ASSERT_TRUE(isa<DIVariable>(N->getRawCountNode()));
-  EXPECT_EQ(0, Lower.get<ConstantInt *>()->getSExtValue());
-  EXPECT_EQ("vla_expr", Count.get<DIVariable*>()->getName());
+  EXPECT_EQ(0, cast<ConstantInt *>(Lower)->getSExtValue());
+  EXPECT_EQ("vla_expr", cast<DIVariable *>(Count)->getName());
   EXPECT_EQ(N, DISubrange::get(Context, VlaExpr, 0));
 }
 
@@ -1493,18 +1493,18 @@ TEST_F(DISubrangeTest, fortranAllocatableInt) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<ConstantInt *>());
-  EXPECT_EQ(cast<ConstantInt>(LI->getValue()), Lower.get<ConstantInt *>());
+  ASSERT_TRUE(isa<ConstantInt *>(Lower));
+  EXPECT_EQ(cast<ConstantInt>(LI->getValue()), cast<ConstantInt *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<ConstantInt *>());
-  EXPECT_EQ(cast<ConstantInt>(UI->getValue()), Upper.get<ConstantInt *>());
+  ASSERT_TRUE(isa<ConstantInt *>(Upper));
+  EXPECT_EQ(cast<ConstantInt>(UI->getValue()), cast<ConstantInt *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<ConstantInt *>());
-  EXPECT_EQ(cast<ConstantInt>(SI->getValue()), Stride.get<ConstantInt *>());
+  ASSERT_TRUE(isa<ConstantInt *>(Stride));
+  EXPECT_EQ(cast<ConstantInt>(SI->getValue()), cast<ConstantInt *>(Stride));
 
   EXPECT_EQ(N, DISubrange::get(Context, nullptr, LI, UI, SI));
 
@@ -1541,18 +1541,18 @@ TEST_F(DISubrangeTest, fortranAllocatableVar) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIVariable *>());
-  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Lower));
+  EXPECT_EQ(LV, cast<DIVariable *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIVariable *>());
-  EXPECT_EQ(UV, Upper.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Upper));
+  EXPECT_EQ(UV, cast<DIVariable *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIVariable *>());
-  EXPECT_EQ(SV, Stride.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Stride));
+  EXPECT_EQ(SV, cast<DIVariable *>(Stride));
 
   EXPECT_EQ(N, DISubrange::get(Context, nullptr, LV, UV, SV));
 
@@ -1580,18 +1580,18 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIExpression *>());
-  EXPECT_EQ(LE, Lower.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Lower));
+  EXPECT_EQ(LE, cast<DIExpression *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIExpression *>());
-  EXPECT_EQ(UE, Upper.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Upper));
+  EXPECT_EQ(UE, cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIExpression *>());
-  EXPECT_EQ(SE, Stride.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Stride));
+  EXPECT_EQ(SE, cast<DIExpression *>(Stride));
 
   EXPECT_EQ(N, DISubrange::get(Context, nullptr, LE, UE, SE));
 
@@ -1623,18 +1623,18 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankInt) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIExpression *>());
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(LI), Lower.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Lower));
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(LI), cast<DIExpression *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIExpression *>());
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(UI), Upper.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Upper));
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(UI), cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIExpression *>());
-  EXPECT_EQ(dyn_cast_or_null<DIExpression>(SI), Stride.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Stride));
+  EXPECT_EQ(dyn_cast_or_null<DIExpression>(SI), cast<DIExpression *>(Stride));
 
   EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LI, UI, SI));
 
@@ -1673,18 +1673,18 @@ TEST_F(DIGenericSubrangeTest, fortranAssumedRankVar) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIVariable *>());
-  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Lower));
+  EXPECT_EQ(LV, cast<DIVariable *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIVariable *>());
-  EXPECT_EQ(UV, Upper.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Upper));
+  EXPECT_EQ(UV, cast<DIVariable *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIVariable *>());
-  EXPECT_EQ(SV, Stride.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Stride));
+  EXPECT_EQ(SV, cast<DIVariable *>(Stride));
 
   EXPECT_EQ(N, DIGenericSubrange::get(Context, nullptr, LV, UV, SV));
 
@@ -1718,18 +1718,18 @@ TEST_F(DIGenericSubrangeTest, useDIBuilder) {
 
   auto Lower = N->getLowerBound();
   ASSERT_TRUE(Lower);
-  ASSERT_TRUE(Lower.is<DIVariable *>());
-  EXPECT_EQ(LV, Lower.get<DIVariable *>());
+  ASSERT_TRUE(isa<DIVariable *>(Lower));
+  EXPECT_EQ(LV, cast<DIVariable *>(Lower));
 
   auto Upper = N->getUpperBound();
   ASSERT_TRUE(Upper);
-  ASSERT_TRUE(Upper.is<DIExpression *>());
-  EXPECT_EQ(UE, Upper.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Upper));
+  EXPECT_EQ(UE, cast<DIExpression *>(Upper));
 
   auto Stride = N->getStride();
   ASSERT_TRUE(Stride);
-  ASSERT_TRUE(Stride.is<DIExpression *>());
-  EXPECT_EQ(SE, Stride.get<DIExpression *>());
+  ASSERT_TRUE(isa<DIExpression *>(Stride));
+  EXPECT_EQ(SE, cast<DIExpression *>(Stride));
 
   EXPECT_EQ(
       N, DIB.getOrCreateGenericSubrange(DIGenericSubrange::BoundType(nullptr),

@@ -10,15 +10,11 @@ cc_library(
     name = "libc_test_utils",
     srcs = [
         "ExecuteFunctionUnix.cpp",
-        "FDReaderUnix.cpp",
         "RoundingModeUtils.cpp",
-        "StreamWrapper.cpp",
     ],
     hdrs = [
         "ExecuteFunction.h",
-        "FDReader.h",
         "RoundingModeUtils.h",
-        "StreamWrapper.h",
     ],
     deps = [
         "//libc:libc_root",
