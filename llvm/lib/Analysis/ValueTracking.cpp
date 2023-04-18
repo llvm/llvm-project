@@ -6514,7 +6514,7 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
 }
 
 bool llvm::mustTriggerUB(const Instruction *I,
-                         const SmallSet<const Value *, 16>& KnownPoison) {
+                         const SmallPtrSetImpl<const Value *> &KnownPoison) {
   SmallVector<const Value *, 4> NonPoisonOps;
   getGuaranteedNonPoisonOps(I, NonPoisonOps);
 
