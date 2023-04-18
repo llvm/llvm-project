@@ -657,10 +657,7 @@ public:
 // Definition for isSuperRegister. Put it down here since it needs the
 // iterator defined above in addition to the MCRegisterInfo class itself.
 inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) const{
-  for (MCPhysReg I : superregs(RegA))
-    if (I == RegB)
-      return true;
-  return false;
+  return is_contained(superregs(RegA), RegB);
 }
 
 //===----------------------------------------------------------------------===//
