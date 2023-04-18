@@ -170,6 +170,14 @@ typedef enum SwiftModuleLoadingMode {
   eSwiftModuleLoadingModeOnlyInterface,    // Load via .swiftinterface only
 } SwiftModuleLoadingMode;
 
+// BEGIN SWIFT
+enum EnableSwiftCxxInterop {
+  eAutoDetectSwiftCxxInterop,
+  eEnableSwiftCxxInterop,
+  eDisableSwiftCxxInterop
+};
+// END SWIFT
+
 // Loading modules from memory
 enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelMinimal,  // Load sections only

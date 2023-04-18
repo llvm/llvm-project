@@ -10,7 +10,7 @@ class TestSwiftBackwardInteropFormatSwiftTypesInCxx(TestBase):
 
     def setup(self, bkpt_str):
         self.build()
-        self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
+        
         _, _, _, _= lldbutil.run_to_source_breakpoint(
             self, bkpt_str, lldb.SBFileSpec('main.cpp'))
 

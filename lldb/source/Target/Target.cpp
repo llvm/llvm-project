@@ -2868,6 +2868,37 @@ bool Target::IsSwiftREPL() {
          GetProcessLaunchInfo().GetArg0().endswith("repl_swift");
 }
 
+bool Target::IsSwiftCxxInteropEnabled() {
+  switch (m_is_swift_cxx_interop_enabled) {
+  case eLazyBoolYes:
+    return true;
+  case eLazyBoolNo:
+    return false;
+  case eLazyBoolCalculate:
+    break;
+  }
+
+  EnableSwiftCxxInterop interop_enabled = GetEnableSwiftCxxInterop();
+  switch (interop_enabled) {
+  case eEnableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolYes;
+    break;
+  case eDisableSwiftCxxInterop:
+    m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+    break;
+  case eAutoDetectSwiftCxxInterop: {
+    if (GetImages().IsEmpty())
+      m_is_swift_cxx_interop_enabled = eLazyBoolNo;
+    else
+      m_is_swift_cxx_interop_enabled =
+          GetImages().GetModuleAtIndex(0)->IsSwiftCxxInteropEnabled()
+              ? eLazyBoolYes
+              : eLazyBoolNo;
+  }
+  }
+  return m_is_swift_cxx_interop_enabled == eLazyBoolYes;
+}
+
 #endif // LLDB_ENABLE_SWIFT
 
 void Target::SettingsInitialize() { Process::SettingsInitialize(); }
@@ -4394,6 +4425,13 @@ static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_enable_swift_cxx_interop_values[] = {
+    {eAutoDetectSwiftCxxInterop, "auto",
+     "Automatically detect if C++ interop mode should be enabled."},
+    {eEnableSwiftCxxInterop, "true", "Enable C++ interop."},
+    {eDisableSwiftCxxInterop, "false", "Disable C++ interop."},
+};
+
 #define LLDB_PROPERTIES_target
 #include "TargetProperties.inc"
 
@@ -4614,16 +4652,14 @@ bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
   return true;
 }
 
-bool TargetProperties::GetSwiftEnableCxxInterop() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
-  OptionValueProperties *exp_values =
-      exp_property->GetValue()->GetAsProperties();
-  if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftEnableCxxInterop, false);
+EnableSwiftCxxInterop TargetProperties::GetEnableSwiftCxxInterop() const {
+  const uint32_t idx = ePropertySwiftEnableCxxInterop;
 
-  return false;
+  EnableSwiftCxxInterop enable_interop =
+      (EnableSwiftCxxInterop)m_experimental_properties_up->GetValueProperties()
+          ->GetPropertyAtIndexAsEnumeration(
+              nullptr, idx, g_target_properties[idx].default_uint_value);
+  return enable_interop;
 }
 
 bool TargetProperties::GetSwiftAutoImportFrameworks() const {
