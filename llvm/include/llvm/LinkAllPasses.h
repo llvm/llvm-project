@@ -90,7 +90,6 @@ namespace {
       (void) llvm::createGlobalsAAWrapperPass();
       (void) llvm::createGuardWideningPass();
       (void) llvm::createLoopGuardWideningPass();
-      (void) llvm::createInductiveRangeCheckEliminationPass();
       (void) llvm::createInstSimplifyLegacyPass();
       (void) llvm::createInstructionCombiningPass();
       (void) llvm::createJMCInstrumenterPass();
