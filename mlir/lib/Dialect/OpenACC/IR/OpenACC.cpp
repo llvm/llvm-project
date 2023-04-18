@@ -7,7 +7,9 @@
 // =============================================================================
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -20,6 +22,8 @@ using namespace mlir;
 using namespace acc;
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // OpenACC operations
@@ -34,6 +38,161 @@ void OpenACCDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc"
       >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
+      >();
+
+  // By attaching interfaces here, we make the OpenACC dialect dependent on
+  // the other dialects. This is probably better than having dialects like LLVM
+  // and memref be dependent on OpenACC.
+  LLVM::LLVMPointerType::attachInterface<PointerLikeType>(*getContext());
+  MemRefType::attachInterface<PointerLikeType>(*getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// DataBoundsOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DataBoundsOp::verify() {
+  auto extent = getExtent();
+  auto upperbound = getUpperbound();
+  if (!extent && !upperbound) {
+    return emitError("expected extent or upperbound.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DevicePtrOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DevicePtrOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_deviceptr) {
+    return emitError("data clause associated with deviceptr operation must "
+                     "match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PresentOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::PresentOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_present) {
+    return emitError(
+        "data clause associated with present operation must match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyinOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CopyinOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_copyin &&
+      getDataClause() != acc::DataClause::acc_copyin_readonly) {
+    return emitError(
+        "data clause associated with copyin operation must match its intent");
+  }
+  return success();
+}
+
+bool acc::CopyinOp::isCopyinReadonly() {
+  return getDataClause() == acc::DataClause::acc_copyin_readonly;
+}
+
+//===----------------------------------------------------------------------===//
+// CreateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CreateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_create &&
+      getDataClause() != acc::DataClause::acc_create_zero) {
+    return emitError(
+        "data clause associated with create operation must match its intent");
+  }
+  return success();
+}
+
+bool acc::CreateOp::isCreateZero() {
+  return getDataClause() == acc::DataClause::acc_create_zero;
+}
+
+//===----------------------------------------------------------------------===//
+// NoCreateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::NoCreateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_no_create) {
+    return emitError("data clause associated with no_create operation must "
+                     "match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AttachOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::AttachOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_attach) {
+    return emitError(
+        "data clause associated with attach operation must match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetDevicePtrOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::GetDevicePtrOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_getdeviceptr) {
+    return emitError("getDevicePtr mismatch");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyoutOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CopyoutOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_copyout &&
+      getDataClause() != acc::DataClause::acc_copyout_zero) {
+    return emitError(
+        "data clause associated with copyout operation must match its intent");
+  }
+  if (!getVarPtr() || !getAccPtr()) {
+    return emitError("must have both host and device pointers");
+  }
+  return success();
+}
+
+bool acc::CopyoutOp::isCopyoutZero() {
+  return getDataClause() == acc::DataClause::acc_copyout_zero;
+}
+
+//===----------------------------------------------------------------------===//
+// DeleteOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DeleteOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_delete) {
+    return emitError(
+        "data clause associated with delete operation must match its intent");
+  }
+  if (!getVarPtr() && !getAccPtr()) {
+    return emitError("must have either host or device pointer");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DetachOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DetachOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_detach) {
+    return emitError(
+        "data clause associated with detach operation must match its intent");
+  }
+  if (!getVarPtr() && !getAccPtr()) {
+    return emitError("must have either host or device pointer");
+  }
+  return success();
 }
 
 template <typename StructureOp>
@@ -95,7 +254,8 @@ unsigned ParallelOp::getNumDataOperands() {
          getCreateOperands().size() + getCreateZeroOperands().size() +
          getNoCreateOperands().size() + getPresentOperands().size() +
          getDevicePtrOperands().size() + getAttachOperands().size() +
-         getGangPrivateOperands().size() + getGangFirstPrivateOperands().size();
+         getGangPrivateOperands().size() +
+         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value ParallelOp::getDataOperand(unsigned i) {
@@ -119,7 +279,8 @@ unsigned SerialOp::getNumDataOperands() {
          getCreateOperands().size() + getCreateZeroOperands().size() +
          getNoCreateOperands().size() + getPresentOperands().size() +
          getDevicePtrOperands().size() + getAttachOperands().size() +
-         getGangPrivateOperands().size() + getGangFirstPrivateOperands().size();
+         getGangPrivateOperands().size() +
+         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value SerialOp::getDataOperand(unsigned i) {
@@ -139,7 +300,7 @@ unsigned KernelsOp::getNumDataOperands() {
          getCopyoutZeroOperands().size() + getCreateOperands().size() +
          getCreateZeroOperands().size() + getNoCreateOperands().size() +
          getPresentOperands().size() + getDevicePtrOperands().size() +
-         getAttachOperands().size();
+         getAttachOperands().size() + getDataClauseOperands().size();
 }
 
 Value KernelsOp::getDataOperand(unsigned i) {
@@ -290,7 +451,7 @@ unsigned DataOp::getNumDataOperands() {
          getCopyoutZeroOperands().size() + getCreateOperands().size() +
          getCreateZeroOperands().size() + getNoCreateOperands().size() +
          getPresentOperands().size() + getDeviceptrOperands().size() +
-         getAttachOperands().size();
+         getAttachOperands().size() + getDataClauseOperands().size();
 }
 
 Value DataOp::getDataOperand(unsigned i) {
@@ -307,7 +468,7 @@ LogicalResult acc::ExitDataOp::verify() {
   // At least one copyout, delete, or detach clause must appear on an exit data
   // directive.
   if (getCopyoutOperands().empty() && getDeleteOperands().empty() &&
-      getDetachOperands().empty())
+      getDetachOperands().empty() && getDataClauseOperands().empty())
     return emitError(
         "at least one operand in copyout, delete or detach must appear on the "
         "exit data operation");
@@ -330,7 +491,7 @@ LogicalResult acc::ExitDataOp::verify() {
 
 unsigned ExitDataOp::getNumDataOperands() {
   return getCopyoutOperands().size() + getDeleteOperands().size() +
-         getDetachOperands().size();
+         getDetachOperands().size() + getDataClauseOperands().size();
 }
 
 Value ExitDataOp::getDataOperand(unsigned i) {
@@ -354,7 +515,8 @@ LogicalResult acc::EnterDataOp::verify() {
   // At least one copyin, create, or attach clause must appear on an enter data
   // directive.
   if (getCopyinOperands().empty() && getCreateOperands().empty() &&
-      getCreateZeroOperands().empty() && getAttachOperands().empty())
+      getCreateZeroOperands().empty() && getAttachOperands().empty() &&
+      getDataClauseOperands().empty())
     return emitError(
         "at least one operand in copyin, create, "
         "create_zero or attach must appear on the enter data operation");
@@ -377,7 +539,8 @@ LogicalResult acc::EnterDataOp::verify() {
 
 unsigned EnterDataOp::getNumDataOperands() {
   return getCopyinOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getAttachOperands().size();
+         getCreateZeroOperands().size() + getAttachOperands().size() +
+         getDataClauseOperands().size();
 }
 
 Value EnterDataOp::getDataOperand(unsigned i) {
@@ -480,3 +643,6 @@ LogicalResult acc::WaitOp::verify() {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
