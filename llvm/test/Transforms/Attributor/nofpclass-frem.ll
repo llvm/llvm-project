@@ -82,7 +82,7 @@ define float @ret_frem_ieee_nonan_nozero__nonan_noinf(float nofpclass(nan zero) 
 }
 
 define float @ret_frem_ieee_nonan_noinf__nonan_nozero(float nofpclass(nan inf) %arg0, float nofpclass(nan zero) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_ieee_nonan_noinf__nonan_nozero
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_ieee_nonan_noinf__nonan_nozero
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], float nofpclass(nan zero) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -122,7 +122,7 @@ define float @ret_frem_daz_nonan_nozero_nosub__nonan_noinf(float nofpclass(nan z
 }
 
 define float @ret_frem_daz_nonan_noinf__nonan_nozero_nosub(float nofpclass(nan inf) %arg0, float nofpclass(nan zero sub) %arg1) #1 {
-; CHECK-LABEL: define float @ret_frem_daz_nonan_noinf__nonan_nozero_nosub
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_daz_nonan_noinf__nonan_nozero_nosub
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], float nofpclass(nan zero sub) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -142,7 +142,7 @@ define float @ret_frem_ieee_nonan_noinf__nonan_noinf(float nofpclass(nan) %arg0,
 }
 
 define float @ret_frem_ieee_nonan_noinf_nozero__nonan_noinf_nozero(float nofpclass(nan inf zero) %arg0, float nofpclass(nan inf zero) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_ieee_nonan_noinf_nozero__nonan_noinf_nozero
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_ieee_nonan_noinf_nozero__nonan_noinf_nozero
 ; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]], float nofpclass(nan inf zero) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -202,7 +202,7 @@ define float @ret_frem_ieee_nonan_noinf_nozero__nonan_noinf_noinf(float nofpclas
 }
 
 define float @ret_frem_ieee_nonan_noinf_noinf__nonan_noinf_nozero(float nofpclass(nan inf) %arg0, float nofpclass(nan inf zero) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_ieee_nonan_noinf_noinf__nonan_noinf_nozero
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_ieee_nonan_noinf_noinf__nonan_noinf_nozero
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], float nofpclass(nan inf zero) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -232,7 +232,7 @@ define float @ret_frem_ieee_nonan_noinf_noposzero__nonan_noinf_noinf(float nofpc
 }
 
 define float @ret_frem_ieee_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(float nofpclass(nan inf zero sub) %arg0, float nofpclass(nan inf zero sub) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_ieee_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_ieee_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
 ; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]], float nofpclass(nan inf zero sub) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -243,7 +243,7 @@ define float @ret_frem_ieee_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(f
 
 ; Denormal mode doesn't matter because sources are nofpclass(sub)
 define float @ret_frem_daz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(float nofpclass(nan inf zero sub) %arg0, float nofpclass(nan inf zero sub) %arg1) #1 {
-; CHECK-LABEL: define float @ret_frem_daz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_daz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
 ; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]], float nofpclass(nan inf zero sub) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -253,7 +253,7 @@ define float @ret_frem_daz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(fl
 }
 
 define float @ret_frem_dapz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(float nofpclass(nan inf zero sub) %arg0, float nofpclass(nan inf zero sub) %arg1) #2 {
-; CHECK-LABEL: define float @ret_frem_dapz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_dapz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
 ; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]], float nofpclass(nan inf zero sub) [[ARG1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -263,7 +263,7 @@ define float @ret_frem_dapz_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(f
 }
 
 define float @ret_frem_dynamic_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub(float nofpclass(nan inf zero sub) %arg0, float nofpclass(nan inf zero sub) %arg1) #3 {
-; CHECK-LABEL: define float @ret_frem_dynamic_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_dynamic_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosub
 ; CHECK-SAME: (float nofpclass(nan inf zero sub) [[ARG0:%.*]], float nofpclass(nan inf zero sub) [[ARG1:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -274,7 +274,7 @@ define float @ret_frem_dynamic_nonan_noinf_nozero_nosub__nonan_noinf_nozero_nosu
 
 ; Missing no-subnormal on lhs
 define float @ret_frem_daz_nonan_noinf_nozero__nonan_noinf_nozero_nosub(float nofpclass(nan inf zero) %arg0, float nofpclass(nan inf zero sub) %arg1) #1 {
-; CHECK-LABEL: define float @ret_frem_daz_nonan_noinf_nozero__nonan_noinf_nozero_nosub
+; CHECK-LABEL: define nofpclass(nan) float @ret_frem_daz_nonan_noinf_nozero__nonan_noinf_nozero_nosub
 ; CHECK-SAME: (float nofpclass(nan inf zero) [[ARG0:%.*]], float nofpclass(nan inf zero sub) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -356,7 +356,7 @@ define float @ret_frem_daz_noinf__nozero_nosub(float nofpclass(inf) %arg0, float
 }
 
 define float @ret_frem_same_operands(float %arg) #0 {
-; CHECK-LABEL: define float @ret_frem_same_operands
+; CHECK-LABEL: define nofpclass(inf sub norm) float @ret_frem_same_operands
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -366,7 +366,7 @@ define float @ret_frem_same_operands(float %arg) #0 {
 }
 
 define float @ret_frem_same_operands_nosnan(float nofpclass(snan) %arg) #0 {
-; CHECK-LABEL: define float @ret_frem_same_operands_nosnan
+; CHECK-LABEL: define nofpclass(inf sub norm) float @ret_frem_same_operands_nosnan
 ; CHECK-SAME: (float nofpclass(snan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -376,7 +376,7 @@ define float @ret_frem_same_operands_nosnan(float nofpclass(snan) %arg) #0 {
 }
 
 define float @ret_frem_same_operands_noqnan(float nofpclass(qnan) %arg) #0 {
-; CHECK-LABEL: define float @ret_frem_same_operands_noqnan
+; CHECK-LABEL: define nofpclass(inf sub norm) float @ret_frem_same_operands_noqnan
 ; CHECK-SAME: (float nofpclass(qnan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -386,7 +386,7 @@ define float @ret_frem_same_operands_noqnan(float nofpclass(qnan) %arg) #0 {
 }
 
 define float @ret_frem_same_operands_nonan(float nofpclass(nan) %arg) #0 {
-; CHECK-LABEL: define float @ret_frem_same_operands_nonan
+; CHECK-LABEL: define nofpclass(inf sub norm) float @ret_frem_same_operands_nonan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -436,7 +436,7 @@ define float @ret_frem_no_neg(float nofpclass(ninf nsub nnorm) %arg0, float nofp
 }
 
 define float @ret_frem_no_neg_nzero(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_neg_nzero
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_frem_no_neg_nzero
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -456,7 +456,7 @@ define float @ret_frem_no_neg_rhs_no_nzero(float nofpclass(ninf nsub nnorm) %arg
 }
 
 define float @ret_frem_no_neg_no_zero_rhs(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm zero) %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_neg_no_zero_rhs
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_frem_no_neg_no_zero_rhs
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf zero nsub nnorm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
@@ -466,7 +466,7 @@ define float @ret_frem_no_neg_no_zero_rhs(float nofpclass(ninf nsub nnorm nzero)
 }
 
 define float @ret_frem_no_pos_lhs(float nofpclass(pinf psub pnorm pzero) %arg0, float %arg1) #0 {
-; CHECK-LABEL: define float @ret_frem_no_pos_lhs
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_frem_no_pos_lhs
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FREM:%.*]] = frem float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FREM]]
