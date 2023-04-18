@@ -2911,10 +2911,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (Err)
         return std::move(Err);
 
-      if (!utils::isImageCompatibleWithEnv(Info, Target))
-        return false;
+      if (utils::isImageCompatibleWithEnv(Info, Target))
+        return true;
     }
-    return true;
+    return false;
   }
 
   /// This plugin does not support exchanging data between two devices.

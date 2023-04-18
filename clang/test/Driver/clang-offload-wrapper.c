@@ -34,9 +34,9 @@
 
 // CHECK-IR: [[DUMMY:@.+]] = hidden constant [0 x [[ENTTY]]] zeroinitializer, section "omp_offloading_entries"
 
-// CHECK-IR: [[BIN:@.+]] = internal unnamed_addr constant [[BINTY:\[[0-9]+ x i8\]]] c"Content of device file{{.+}}"
+// CHECK-IR: [[BIN:@.+]] = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}"
 
-// CHECK-IR: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[IMAGETY]]] [{{.+}} { ptr [[BIN]], ptr getelementptr inbounds ([[BINTY]], ptr [[BIN]], i64 1, i64 0), ptr [[ENTBEGIN]], ptr [[ENTEND]] }]
+// CHECK-IR: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[IMAGETY]]] [[[IMAGETY]] { ptr [[BIN]], ptr getelementptr inbounds ([[[SIZE]] x i8], ptr [[BIN]], i64 1, i64 0), ptr [[ENTBEGIN]], ptr [[ENTEND]] }]
 
 // CHECK-IR: [[DESC:@.+]] = internal constant [[DESCTY]] { i32 1, ptr [[IMAGES]], ptr [[ENTBEGIN]], ptr [[ENTEND]] }
 

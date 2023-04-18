@@ -25,6 +25,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Errc.h"
@@ -48,6 +49,22 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using OffloadingImage = OffloadBinary::OffloadingImage;
+
+namespace llvm {
+// Provide DenseMapInfo so that OffloadKind can be used in a DenseMap.
+template <> struct DenseMapInfo<OffloadKind> {
+  static inline OffloadKind getEmptyKey() { return OFK_LAST; }
+  static inline OffloadKind getTombstoneKey() {
+    return static_cast<OffloadKind>(OFK_LAST + 1);
+  }
+  static unsigned getHashValue(const OffloadKind &Val) { return Val; }
+
+  static bool isEqual(const OffloadKind &LHS, const OffloadKind &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
@@ -268,6 +285,8 @@ private:
                                        GlobalVariable::InternalLinkage, Data,
                                        ".omp_offloading.device_image");
       Image->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+      Image->setSection(".llvm.offloading");
+      Image->setAlignment(Align(object::OffloadBinary::getAlignment()));
 
       auto *Size = ConstantInt::get(getSizeTTy(), Buf.size());
       Constant *ZeroSize[] = {Zero, Size};
@@ -622,6 +641,15 @@ public:
   }
 };
 
+Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
+bundleImage(ArrayRef<OffloadingImage> Images) {
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  for (const OffloadingImage &Image : Images)
+    Buffers.emplace_back(OffloadBinary::write(Image));
+
+  return std::move(Buffers);
+}
+
 } // anonymous namespace
 
 int main(int argc, const char **argv) {
@@ -655,26 +683,12 @@ int main(int argc, const char **argv) {
 
   BinaryWrapper Wrapper(Target, argv[0]);
 
-  // Read device binaries.
-  SmallVector<std::unique_ptr<MemoryBuffer>, 4u> Buffers;
-  SmallVector<ArrayRef<char>, 4u> Images;
-  Buffers.reserve(Inputs.size());
-  Images.reserve(Inputs.size());
-  for (const std::string &File : Inputs) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-        MemoryBuffer::getFileOrSTDIN(File);
-    if (!BufOrErr) {
-      reportError(createFileError(File, BufOrErr.getError()));
-      return 1;
-    }
-    std::unique_ptr<MemoryBuffer> Buffer(std::move(*BufOrErr));
-    if (File != "-" && AddOpenMPOffloadNotes) {
-      // Adding ELF notes for STDIN is not supported yet.
-      Buffer = Wrapper.addELFNotes(std::move(Buffer), File);
-    }
-    const std::unique_ptr<MemoryBuffer> &Buf =
-        Buffers.emplace_back(std::move(Buffer));
-    Images.emplace_back(Buf->getBufferStart(), Buf->getBufferSize());
+  // Collect offload-archs.
+  SmallVector<ArrayRef<char>, 4u> OffloadArchs;
+  OffloadArchs.reserve(OffloadArch.size());
+  for (unsigned i = 0; i != OffloadArch.size(); ++i) {
+    OffloadArch[i].append("\0");
+    OffloadArchs.emplace_back(OffloadArch[i].data(), OffloadArch[i].size() + 1);
   }
 
   // Create the output file to write the resulting bitcode to.
@@ -685,22 +699,63 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  SmallVector<ArrayRef<char>, 4u> OffloadArchs;
-  OffloadArchs.reserve(OffloadArch.size());
-  for (unsigned i = 0; i != OffloadArch.size(); ++i) {
-    OffloadArch[i].append("\0");
-    OffloadArchs.emplace_back(OffloadArch[i].data(), OffloadArch[i].size() + 1);
+  // Read device binaries.
+  DenseMap<OffloadKind, SmallVector<OffloadingImage>> Images;
+  SmallVector<ArrayRef<char>, 4> BuffersToWrap;
+
+  int numOffloadArch = 0;
+  for (const std::string &File : Inputs) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(File);
+    if (!BufOrErr) {
+      reportError(createFileError(File, BufOrErr.getError()));
+      return 1;
+    }
+    std::unique_ptr<MemoryBuffer> Buffer(std::move(*BufOrErr));
+    if (File != "-" && AddOpenMPOffloadNotes) {
+      // Adding ELF notes for STDIN is not supported yet.
+      Buffer = Wrapper.addELFNotes(std::move(Buffer), File);
+    }
+
+   OffloadingImage TheImage{};
+   TheImage.TheImageKind = IMG_Bitcode;
+   TheImage.TheOffloadKind = OFK_OpenMP ;
+   TheImage.StringData["triple"] =
+     Triple(Target).isAMDGCN() ? "amdgcn-amd-amdhsa" : "nvptx64-nvidia-cuda";
+   if(OffloadArchs.size() != 0){
+     TheImage.StringData["arch"] =
+       OffloadArch[numOffloadArch].c_str();
+     numOffloadArch++;
+   } else
+     TheImage.StringData["arch"] = "";
+   TheImage.Image = std::move(Buffer);
+   Images[OFK_OpenMP].emplace_back(std::move(TheImage));
   }
 
-  // Create a wrapper for device binaries and write its bitcode to the file.
-  WriteBitcodeToFile(
-      Wrapper.wrapBinaries(ArrayRef(Images.data(), Images.size()),
+  // Bundle and wrap binaries
+  for (auto &[Kind, Input] : Images) {
+    // We sort the entries before bundling so they appear in a deterministic
+    // order in the final binary.
+    llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
+      return A.StringData["triple"] > B.StringData["triple"] ||
+             A.StringData["arch"] > B.StringData["arch"] ||
+             A.TheOffloadKind < B.TheOffloadKind;
+    });
+    auto BundledImagesOrErr = bundleImage(Input);
+    if (!BundledImagesOrErr)
+      return 1;
+    for (const auto &myImage : *BundledImagesOrErr)
+    BuffersToWrap.emplace_back(
+      ArrayRef<char>(myImage->getBufferStart(), myImage->getBufferSize()));
+    // Create a wrapper for device binaries and write its bitcode to the file.
+    WriteBitcodeToFile(
+      Wrapper.wrapBinaries(BuffersToWrap,
                            ArrayRef(OffloadArchs.data(), OffloadArchs.size())),
-      Out.os());
-
-  if (Out.os().has_error()) {
-    reportError(createFileError(Output, Out.os().error()));
-    return 1;
+                           Out.os());
+    if (Out.os().has_error()) {
+      reportError(createFileError(Output, Out.os().error()));
+      return 1;
+    }
   }
 
   // Success.
