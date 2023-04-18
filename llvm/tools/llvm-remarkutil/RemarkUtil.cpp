@@ -61,6 +61,15 @@ static cl::SubCommand
       cl::values(clEnumValN(Format::YAML, "yaml", "YAML"),                     \
                  clEnumValN(Format::Bitstream, "bitstream", "Bitstream")),     \
       cl::sub(SUBOPT));
+
+#define DEBUG_LOC_INFO_COMMAND_LINE_OPTIONS(SUBOPT)                            \
+  static cl::opt<bool> UseDebugLoc(                                            \
+      "use-debug-loc",                                                         \
+      cl::desc(                                                                \
+          "Add debug loc information when generating tables for "              \
+          "functions. The loc is represented as (path:line number:column "     \
+          "number)"),                                                          \
+      cl::init(false), cl::sub(SUBOPT));
 namespace yaml2bitstream {
 /// Remark format to parse.
 static constexpr Format InputFormat = Format::YAML;
@@ -80,6 +89,7 @@ INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::Bitstream2YAML)
 namespace instructioncount {
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(subopts::InstructionCount)
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::InstructionCount)
+DEBUG_LOC_INFO_COMMAND_LINE_OPTIONS(subopts::InstructionCount)
 } // namespace instructioncount
 
 namespace annotationcount {
@@ -88,6 +98,7 @@ static cl::opt<std::string> AnnotationTypeToCollect(
     "annotation-type", cl::desc("annotation-type remark to collect count for"),
     cl::sub(subopts::AnnotationCount));
 INPUT_OUTPUT_COMMAND_LINE_OPTIONS(subopts::AnnotationCount)
+DEBUG_LOC_INFO_COMMAND_LINE_OPTIONS(subopts::AnnotationCount)
 } // namespace annotationcount
 
 /// \returns A MemoryBuffer for the input file on success, and an Error
@@ -129,6 +140,10 @@ getOutputFileForRemarks(StringRef OutputFileName, Format OutputFormat) {
   return getOutputFileWithFlags(OutputFileName, OutputFormat == Format::YAML
                                                     ? sys::fs::OF_TextWithCRLF
                                                     : sys::fs::OF_None);
+}
+
+static bool shouldSkipRemark(bool UseDebugLoc, Remark &Remark) {
+  return UseDebugLoc && !Remark.Loc.has_value();
 }
 
 namespace yaml2bitstream {
@@ -245,6 +260,8 @@ static Error tryInstructionCount() {
   if (!MaybeParser)
     return MaybeParser.takeError();
   // Emit CSV header.
+  if (UseDebugLoc)
+    OF->os() << "Source,";
   OF->os() << "Function,InstructionCount\n";
   // Parse all remarks. Whenever we see an instruction count remark, output
   // the file name and the number of instructions.
@@ -254,11 +271,19 @@ static Error tryInstructionCount() {
     auto &Remark = **MaybeRemark;
     if (Remark.RemarkName != "InstructionCount")
       continue;
+    if (shouldSkipRemark(UseDebugLoc, Remark))
+      continue;
     auto *InstrCountArg = find_if(Remark.Args, [](const Argument &Arg) {
       return Arg.Key == "NumInstructions";
     });
     assert(InstrCountArg != Remark.Args.end() &&
            "Expected instruction count remarks to have a NumInstructions key?");
+    if (UseDebugLoc) {
+      std::string Loc = Remark.Loc->SourceFilePath.str() + ":" +
+                        std::to_string(Remark.Loc->SourceLine) + +":" +
+                        std::to_string(Remark.Loc->SourceColumn);
+      OF->os() << Loc << ",";
+    }
     OF->os() << Remark.FunctionName << "," << InstrCountArg->Val << "\n";
   }
   auto E = MaybeRemark.takeError();
@@ -286,6 +311,8 @@ static Error tryAnnotationCount() {
   if (!MaybeParser)
     return MaybeParser.takeError();
   // Emit CSV header.
+  if (UseDebugLoc)
+    OF->os() << "Source,";
   OF->os() << "Function,Count\n";
   // Parse all remarks. When we see the specified remark collect the count
   // information.
@@ -294,6 +321,8 @@ static Error tryAnnotationCount() {
   for (; MaybeRemark; MaybeRemark = Parser.next()) {
     auto &Remark = **MaybeRemark;
     if (Remark.RemarkName != "AnnotationSummary")
+      continue;
+    if (shouldSkipRemark(UseDebugLoc, Remark))
       continue;
     auto *RemarkNameArg = find_if(Remark.Args, [](const Argument &Arg) {
       return Arg.Key == "type" && Arg.Val == AnnotationTypeToCollect;
@@ -304,6 +333,12 @@ static Error tryAnnotationCount() {
         Remark.Args, [](const Argument &Arg) { return Arg.Key == "count"; });
     assert(CountArg != Remark.Args.end() &&
            "Expected annotation-type remark to have a count key?");
+    if (UseDebugLoc) {
+      std::string Loc = Remark.Loc->SourceFilePath.str() + ":" +
+                        std::to_string(Remark.Loc->SourceLine) + +":" +
+                        std::to_string(Remark.Loc->SourceColumn);
+      OF->os() << Loc << ",";
+    }
     OF->os() << Remark.FunctionName << "," << CountArg->Val << "\n";
   }
   auto E = MaybeRemark.takeError();
