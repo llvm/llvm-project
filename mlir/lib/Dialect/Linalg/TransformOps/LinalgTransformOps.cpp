@@ -208,7 +208,8 @@ transform::DecomposeOp::applyToOne(LinalgOp target,
 /// Apply a tiling transformation to all payload ops and store both the
 /// tiled operation as well as the created tile loops.
 static LogicalResult applyTilingToAll(
-    RewriterBase &rewriter, Operation *transformOp, ArrayRef<Operation *> payloadOps, unsigned numLoops,
+    RewriterBase &rewriter, Operation *transformOp,
+    ArrayRef<Operation *> payloadOps, unsigned numLoops,
     transform::TransformResults &transformResults,
     function_ref<FailureOr<scf::SCFTileAndFuseResult>(TilingInterface)>
         applyFn) {
@@ -1025,6 +1026,15 @@ void transform::MatchOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(MatchOp::getOpsAttrName(result.name),
                       builder.getStrArrayAttr(opNames));
   result.addTypes(pdl::OperationType::get(builder.getContext()));
+}
+
+void transform::MatchOp::build(OpBuilder &builder, OperationState &result,
+                               TypeRange resultTypes, Value target,
+                               ArrayRef<StringRef> opNames) {
+  result.addOperands(target);
+  result.addAttribute(MatchOp::getOpsAttrName(result.name),
+                      builder.getStrArrayAttr(opNames));
+  result.addTypes(resultTypes);
 }
 
 DiagnosedSilenceableFailure

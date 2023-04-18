@@ -387,7 +387,8 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
   let results = (outs TransformHandleTypeInterface:$results);
 
   let builders = [
-    OpBuilder<(ins "Value":$target, "ArrayRef<StringRef>":$opNames)>
+    OpBuilder<(ins "Value":$target, "ArrayRef<StringRef>":$opNames)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "Value":$target, "ArrayRef<StringRef>":$opNames)>
   ];
 
   let assemblyFormat = [{
