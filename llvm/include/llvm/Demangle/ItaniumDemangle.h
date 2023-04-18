@@ -2632,7 +2632,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
         assert(Res.startsWith("operator") &&
                "operator name does not start with 'operator'");
         Res.remove_prefix(sizeof("operator") - 1);
-        Res.consumeFront(' ');
+        if (Res.startsWith(' '))
+          Res.remove_prefix(1);
       }
       return Res;
     }
