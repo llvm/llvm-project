@@ -28,10 +28,8 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
-#include "llvm/ExecutionEngine/Orc/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -142,11 +140,6 @@ static cl::opt<bool>
                     cl::desc("Enable debugger suppport (default = !-noexec)"),
                     cl::init(true), cl::Hidden, cl::cat(JITLinkCategory));
 
-static cl::opt<bool> PerfSupport("perf-support",
-                                 cl::desc("Enable perf profiling support"),
-                                 cl::init(false), cl::Hidden,
-                                 cl::cat(JITLinkCategory));
-
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -255,14 +248,10 @@ static cl::opt<bool> UseSharedMemory(
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
-         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
-         << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
-         << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
-         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
+  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
 static bool UseTestResultOverride = false;
@@ -999,10 +988,6 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   if (DebuggerSupport && TT.isOSBinFormatMachO())
     ObjLayer.addPlugin(ExitOnErr(
         GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
-
-  if (PerfSupport && TT.isOSBinFormatELF())
-    ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
-        this->ES.getExecutorProcessControl(), *MainJD, true)));
 
   // Set up the platform.
   if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
