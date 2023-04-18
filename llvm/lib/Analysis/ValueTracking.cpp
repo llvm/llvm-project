@@ -2681,6 +2681,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth, Q);
     if (Known.One[0])
       return true;
+
+    if (!Known.isUnknown()) {
+      KnownBits KnownCnt =
+          computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+
+      if (KnownCnt.getMaxValue().ult(Known.getBitWidth()) &&
+          !Known.One.shl(KnownCnt.getMaxValue()).isZero())
+        return true;
+    }
+
     break;
   }
   case Instruction::LShr:
