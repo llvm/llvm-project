@@ -55,12 +55,6 @@ public:
     return npos;
   }
 
-  StringView dropFront(size_t N = 1) const {
-    if (N >= size())
-      N = size();
-    return StringView(First + N, Last);
-  }
-
   void remove_prefix(size_t N) {
     assert(size() >= N);
     First += N;
@@ -88,14 +82,14 @@ public:
   bool consumeFront(char C) {
     if (!startsWith(C))
       return false;
-    *this = dropFront(1);
+    remove_prefix(1);
     return true;
   }
 
   bool consumeFront(StringView S) {
     if (!startsWith(S))
       return false;
-    *this = dropFront(S.size());
+    remove_prefix(S.size());
     return true;
   }
 
