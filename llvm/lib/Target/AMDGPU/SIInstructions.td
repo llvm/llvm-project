@@ -195,21 +195,6 @@ def S_INVERSE_BALLOT_U32 : SPseudoInstSI <(outs SReg_32:$sdst), (ins SSrc_b32:$m
 def S_INVERSE_BALLOT_U64 : SPseudoInstSI <(outs SReg_64:$sdst), (ins SSrc_b64:$mask)>;
 } // End usesCustomInserter = 1
 
-// PSEUDO_WM is treated like STRICT_WWM/STRICT_WQM without exec changes.
-def ENTER_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
-  let Uses = [EXEC];
-  let Defs = [EXEC];
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
-
-def EXIT_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 0;
-}
-
 // Pseudo instructions used for @llvm.fptrunc.round upward
 // and @llvm.fptrunc.round downward.
 // These intrinsics will be legalized to G_FPTRUNC_ROUND_UPWARD
