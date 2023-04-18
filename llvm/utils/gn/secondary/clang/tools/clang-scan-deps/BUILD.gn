@@ -1,3 +1,4 @@
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("Opts") {
@@ -5,7 +6,7 @@ tablegen("Opts") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
-executable("clang-scan-deps") {
+driver_executable("clang-scan-deps") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     ":Opts",
