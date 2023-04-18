@@ -40,8 +40,9 @@ struct ProcessStatus {
   int get_fatal_signal();
 };
 
-ProcessStatus invoke_in_subprocess(FunctionCaller *func,
-                                   unsigned timeout_ms = ProcessStatus::TIMEOUT);
+ProcessStatus
+invoke_in_subprocess(FunctionCaller *func,
+                     unsigned timeout_ms = ProcessStatus::TIMEOUT);
 
 const char *signal_as_string(int signum);
 

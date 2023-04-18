@@ -11,8 +11,8 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"
+#include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
-#include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 
 namespace __llvm_libc {
