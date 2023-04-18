@@ -418,7 +418,7 @@ BitVector Merger::simplifyCond(LatSetId s0, LatPointId p0) {
     // Slice on dense level has `locate` property as well, and can be optimized.
     if (simple[b] && !isSparseLvlWithNonTrivialIdxExp(b)) {
       const auto dlt = getDimLevelType(b);
-      if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt)) {
+      if (!isCompressedDLT(dlt) && !isSingletonDLT(dlt) && !isCompressedWithHiDLT(dlt)) {
         if (reset)
           simple.reset(b);
         reset = true;
@@ -585,7 +585,7 @@ bool Merger::isSingleCondition(TensorId t, ExprId e) const {
 bool Merger::hasAnySparse(const BitVector &bits) const {
   for (TensorLoopId b : bits.set_bits()) {
     const auto dlt = getDimLevelType(b);
-    if (isCompressedDLT(dlt) || isSingletonDLT(dlt))
+    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) || isCompressedWithHiDLT(dlt))
       return true;
   }
   return hasSparseIdxReduction(bits);
