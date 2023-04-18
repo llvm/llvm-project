@@ -303,6 +303,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` to understand that there is a
   sequence point between designated initializers.
 
+- Fixed an issue in the :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` checker that was causing
+  false-positives when the move constructor or move assign operator were defaulted.
+
 - Fixed an issue in :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` when specifying an empty
   string for ``Prefix`` or ``Suffix`` options could result in the style not
