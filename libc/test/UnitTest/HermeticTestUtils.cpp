@@ -1,0 +1,91 @@
+//===-- Implementation of libc death test executors -----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include <stddef.h>
+#include <stdint.h>
+
+namespace __llvm_libc {
+
+int bcmp(const void *lhs, const void *rhs, size_t count);
+void bzero(void *ptr, size_t count);
+int memcmp(const void *lhs, const void *rhs, size_t count);
+void *memcpy(void *__restrict, const void *__restrict, size_t);
+void *memmove(void *dst, const void *src, size_t count);
+void *memset(void *ptr, int value, size_t count);
+
+} // namespace __llvm_libc
+
+namespace {
+
+// Integration tests cannot use the SCUDO standalone allocator as SCUDO pulls
+// various other parts of the libc. Since SCUDO development does not use
+// LLVM libc build rules, it is very hard to keep track or pull all that SCUDO
+// requires. Hence, as a work around for this problem, we use a simple allocator
+// which just hands out continuous blocks from a statically allocated chunk of
+// memory.
+static uint8_t memory[16384];
+static uint8_t *ptr = memory;
+
+} // anonymous namespace
+
+extern "C" {
+
+// Hermetic tests rely on the following memory functions. This is because the
+// compiler code generation can emit calls to them. We want to map the external
+// entrypoint to the internal implementation of the function used for testing.
+// This is done manually as not all targets support aliases.
+
+int bcmp(const void *lhs, const void *rhs, size_t count) {
+  return __llvm_libc::bcmp(lhs, rhs, count);
+}
+void bzero(void *ptr, size_t count) { __llvm_libc::bzero(ptr, count); }
+int memcmp(const void *lhs, const void *rhs, size_t count) {
+  return __llvm_libc::memcmp(lhs, rhs, count);
+}
+void *memcpy(void *__restrict dst, const void *__restrict src, size_t count) {
+  return __llvm_libc::memcpy(dst, src, count);
+}
+void *memmove(void *dst, const void *src, size_t count) {
+  return __llvm_libc::memmove(dst, src, count);
+}
+void *memset(void *ptr, int value, size_t count) {
+  return __llvm_libc::memset(ptr, value, count);
+}
+
+void *malloc(size_t s) {
+  void *mem = ptr;
+  ptr += s;
+  return mem;
+}
+
+void free(void *) {}
+
+void *realloc(void *ptr, size_t s) {
+  free(ptr);
+  return malloc(s);
+}
+
+// The unit test framework uses pure virtual functions. Since hermetic tests
+// cannot depend C++ runtime libraries, implement dummy functions to support
+// the virtual function runtime.
+void __cxa_pure_virtual() {
+  // A pure virtual being called is an error so we just trap.
+  __builtin_trap();
+}
+
+// Integration tests are linked with -nostdlib. BFD linker expects
+// __dso_handle when -nostdlib is used.
+void *__dso_handle = nullptr;
+
+} // extern "C"
+
+void operator delete(void *) {
+  // The libc runtime should not use the global delete operator. Hence,
+  // we just trap here to catch any such accidental usages.
+  __builtin_trap();
+}
