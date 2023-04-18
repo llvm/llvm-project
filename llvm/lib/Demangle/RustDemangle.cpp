@@ -1122,7 +1122,7 @@ static bool decodePunycode(StringView Input, OutputBuffer &Output) {
         return false;
       // Code points are padded with zeros while decoding is in progress.
       char UTF8[4] = {C};
-      Output += StringView(UTF8, UTF8 + 4);
+      Output += StringView(UTF8, 4);
     }
     // Skip over the delimiter.
     ++InputIdx;

@@ -64,7 +64,7 @@ class OutputBuffer {
     if (isNeg)
       *--TempPtr = '-';
 
-    return operator+=(StringView(TempPtr, Temp.data() + Temp.size()));
+    return operator+=(StringView(TempPtr, Temp.data() + Temp.size() - TempPtr));
   }
 
 public:

@@ -2349,7 +2349,7 @@ public:
 #endif
       char num[FloatData<Float>::max_demangled_size] = {0};
       int n = snprintf(num, sizeof(num), FloatData<Float>::spec, value);
-      OB += StringView(num, num + n);
+      OB += StringView(num, n);
     }
   }
 };
@@ -2477,7 +2477,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   }
 
   bool consumeIf(StringView S) {
-    if (StringView(First, Last).startsWith(S)) {
+    if (StringView(First, Last - First).startsWith(S)) {
       First += S.size();
       return true;
     }
@@ -2933,7 +2933,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSourceName(NameState *) {
     return nullptr;
   if (numLeft() < Length || Length == 0)
     return nullptr;
-  StringView Name(First, First + Length);
+  StringView Name(First, Length);
   First += Length;
   if (Name.startsWith("_GLOBAL__N"))
     return make<NameType>("(anonymous namespace)");
@@ -3470,7 +3470,7 @@ AbstractManglingParser<Alloc, Derived>::parseNumber(bool AllowNegative) {
     return StringView();
   while (numLeft() != 0 && std::isdigit(*First))
     ++First;
-  return StringView(Tmp, First);
+  return StringView(Tmp, First - Tmp);
 }
 
 // <positive length number> ::= [0-9]*
@@ -3491,7 +3491,7 @@ StringView AbstractManglingParser<Alloc, Derived>::parseBareSourceName() {
   size_t Int = 0;
   if (parsePositiveInteger(&Int) || numLeft() < Int)
     return StringView();
-  StringView R(First, First + Int);
+  StringView R(First, Int);
   First += Int;
   return R;
 }
@@ -5143,7 +5143,7 @@ Node *AbstractManglingParser<Alloc, Derived>::parseFloatingLiteral() {
   const size_t N = FloatData<Float>::mangled_size;
   if (numLeft() <= N)
     return nullptr;
-  StringView Data(First, First + N);
+  StringView Data(First, N);
   for (char C : Data)
     if (!std::isxdigit(C))
       return nullptr;
@@ -5463,7 +5463,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parse() {
     if (Encoding == nullptr)
       return nullptr;
     if (look() == '.') {
-      Encoding = make<DotSuffix>(Encoding, StringView(First, Last));
+      Encoding = make<DotSuffix>(Encoding, StringView(First, Last - First));
       First = Last;
     }
     if (numLeft() != 0)
