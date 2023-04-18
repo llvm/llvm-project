@@ -47349,9 +47349,10 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     if (SDValue NotOp1 = IsNOT(Op1, DAG)) {
       if (peekThroughBitcasts(NotOp1) == peekThroughBitcasts(Op0)) {
         SDLoc DL(EFLAGS);
-        return DAG.getNode(EFLAGS.getOpcode(), DL, VT,
-                           DAG.getBitcast(OpVT, NotOp1),
-                           DAG.getAllOnesConstant(DL, OpVT));
+        return DAG.getNode(
+            EFLAGS.getOpcode(), DL, VT, DAG.getBitcast(OpVT, NotOp1),
+            DAG.getBitcast(OpVT,
+                           DAG.getAllOnesConstant(DL, NotOp1.getValueType())));
       }
     }
   }
