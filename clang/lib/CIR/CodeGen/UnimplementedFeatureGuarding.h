@@ -55,6 +55,10 @@ struct UnimplementedFeature {
   // Debug info
   static bool generateDebugInfo() { return false; }
 
+  // LLVM Attributes
+  static bool attributeBuiltin() { return false; }
+  static bool attributeNoBuiltin() { return false; }
+
   // Coroutines
   static bool unhandledException() { return false; }
 
@@ -64,7 +68,6 @@ struct UnimplementedFeature {
   static bool requiresReturnValueCheck() { return false; }
   static bool shouldEmitLifetimeMarkers() { return false; }
   static bool peepholeProtection() { return false; }
-  static bool attributeNoBuiltin() { return false; }
   static bool CGCapturedStmtInfo() { return false; }
   static bool cxxABI() { return false; }
   static bool openCL() { return false; }

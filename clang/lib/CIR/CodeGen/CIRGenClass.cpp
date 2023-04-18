@@ -1079,13 +1079,11 @@ struct CallDtorDelete final : EHScopeStack::Cleanup {
   CallDtorDelete() {}
 
   void Emit(CIRGenFunction &CGF, Flags flags) override {
-    [[maybe_unused]] const CXXDestructorDecl *Dtor =
-        cast<CXXDestructorDecl>(CGF.CurCodeDecl);
-    [[maybe_unused]] const CXXRecordDecl *ClassDecl = Dtor->getParent();
-    llvm_unreachable("NYI");
-    // CGF.EmitDeleteCall(Dtor->getOperatorDelete(),
-    //                    LoadThisForDtorDelete(CGF, Dtor),
-    //                    CGF.getContext().getTagDeclType(ClassDecl));
+    const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
+    const CXXRecordDecl *ClassDecl = Dtor->getParent();
+    CGF.buildDeleteCall(Dtor->getOperatorDelete(),
+                        LoadThisForDtorDelete(CGF, Dtor),
+                        CGF.getContext().getTagDeclType(ClassDecl));
   }
 };
 } // namespace
