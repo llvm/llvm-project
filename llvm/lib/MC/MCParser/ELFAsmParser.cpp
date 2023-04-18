@@ -339,6 +339,11 @@ static unsigned parseSectionFlags(const Triple &TT, StringRef flagsStr,
     case 'G':
       flags |= ELF::SHF_GROUP;
       break;
+    case 'l':
+      if (TT.getArch() != Triple::x86_64)
+        return -1U;
+      flags |= ELF::SHF_X86_64_LARGE;
+      break;
     case 'R':
       if (TT.isOSSolaris())
         flags |= ELF::SHF_SUNW_NODISCARD;
