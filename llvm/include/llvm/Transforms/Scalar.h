@@ -26,13 +26,6 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// AlignmentFromAssumptions - Use assume intrinsics to set load/store
-// alignments.
-//
-FunctionPass *createAlignmentFromAssumptionsPass();
-
-//===----------------------------------------------------------------------===//
-//
 // RedundantDbgInstElimination - This pass removes redundant dbg intrinsics
 // without modifying the CFG of the function.  It is a FunctionPass.
 //
