@@ -43,7 +43,6 @@ cc_library(
         "//libc:__support_cpp_type_traits",
         "//libc:__support_uint128",
         "//libc:libc_root",
-        "//libc/utils/testutils:libc_test_utils",
         "//llvm:Support",
     ],
 )
@@ -52,10 +51,12 @@ cc_library(
     name = "fp_test_helpers",
     srcs = [
         "FPExceptMatcher.cpp",
+        "RoundingModeUtils.cpp",
     ],
     hdrs = [
         "FPExceptMatcher.h",
         "FPMatcher.h",
+        "RoundingModeUtils.h",
     ],
     deps = [
         ":LibcUnitTest",
@@ -67,7 +68,6 @@ cc_library(
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
         "//libc:libc_root",
-        "//libc/utils/testutils:libc_test_utils",
     ],
 )
 
