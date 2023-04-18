@@ -146,8 +146,8 @@ void Log::Printf(const char *format, ...) {
 // callback registered, then we call the logging callback. If we have a valid
 // file handle, we also log to the file.
 void Log::VAPrintf(const char *format, va_list args) {
-  llvm::SmallString<64> FinalMessage;
-  llvm::raw_svector_ostream Stream(FinalMessage);
+  std::string FinalMessage;
+  llvm::raw_string_ostream Stream(FinalMessage);
   WriteHeader(Stream, "", "");
 
   llvm::SmallString<64> Content;
@@ -155,7 +155,7 @@ void Log::VAPrintf(const char *format, va_list args) {
 
   Stream << Content << "\n";
 
-  WriteMessage(std::string(FinalMessage.str()));
+  WriteMessage(FinalMessage);
 }
 
 // Printing of errors that are not fatal.
@@ -344,7 +344,7 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
   }
 }
 
-void Log::WriteMessage(const std::string &message) {
+void Log::WriteMessage(llvm::StringRef message) {
   // Make a copy of our stream shared pointer in case someone disables our log
   // while we are logging and releases the stream
   auto handler_sp = GetHandler();
