@@ -4500,6 +4500,19 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::FPTrunc: {
+    if ((InterestedClasses & fcNan) == fcNone)
+      break;
+
+    KnownFPClass KnownSrc;
+    computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                        InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+    if (KnownSrc.isKnownNeverNaN())
+      Known.knownNot(fcNan);
+
+    // Infinity needs a range check.
+    break;
+  }
   case Instruction::SIToFP:
   case Instruction::UIToFP: {
     // Cannot produce nan
