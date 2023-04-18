@@ -227,9 +227,7 @@ define i1 @shl_non_zero_nsw(i8 %s, i8 %cnt) {
 ; CHECK-LABEL: @shl_non_zero_nsw(
 ; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[S:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
-; CHECK-NEXT:    [[V:%.*]] = shl nsw i8 [[S]], [[CNT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %nz = icmp ne i8 %s, 0
   call void @llvm.assume(i1 %nz)
