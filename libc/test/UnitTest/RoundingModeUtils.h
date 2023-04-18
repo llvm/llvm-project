@@ -12,7 +12,8 @@
 #include <stdint.h>
 
 namespace __llvm_libc {
-namespace testutils {
+namespace fputil {
+namespace testing {
 
 enum class RoundingMode : uint8_t { Upward, Downward, TowardZero, Nearest };
 
@@ -28,7 +29,8 @@ template <RoundingMode R> struct ForceRoundingModeTest : ForceRoundingMode {
   ForceRoundingModeTest() : ForceRoundingMode(R) {}
 };
 
-} // namespace testutils
+} // namespace testing
+} // namespace fputil
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_UTILS_TESTUTILS_ROUNDINGMODEUTILS_H
