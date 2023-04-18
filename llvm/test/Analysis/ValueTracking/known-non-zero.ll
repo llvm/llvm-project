@@ -167,3 +167,101 @@ define <2 x i1> @check_add_sat_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %w) {
   %r = or <2 x i1> %cmp0, %cmp1
   ret <2 x i1> %r
 }
+
+define <2 x i1> @shl_nz_bounded_cnt_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @shl_nz_bounded_cnt_vec(
+; CHECK-NEXT:    [[CNT:%.*]] = and <2 x i32> [[X:%.*]], <i32 16, i32 24>
+; CHECK-NEXT:    [[VAL:%.*]] = or <2 x i32> [[Y:%.*]], <i32 131088, i32 16>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[VAL]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[SHL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cnt = and <2 x i32> %x, <i32 16, i32 24>
+  %val = or <2 x i32> %y, <i32 131088, i32 16>
+  %shl = shl <2 x i32> %val, %cnt
+  %r = icmp eq <2 x i32> %shl, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define i1 @shl_nz_bounded_cnt(i32 %cnt, i32 %y) {
+; CHECK-LABEL: @shl_nz_bounded_cnt(
+; CHECK-NEXT:    [[CNT_ULT4:%.*]] = icmp ult i32 [[CNT:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CNT_ULT4]])
+; CHECK-NEXT:    [[VAL:%.*]] = or i32 [[Y:%.*]], 131072
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SHL]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cnt_ult4 = icmp ult i32 %cnt, 4
+  call void @llvm.assume(i1 %cnt_ult4)
+  %val = or i32 %y, 131072
+  %shl = shl i32 %val, %cnt
+  %r = icmp eq i32 %shl, 0
+  ret i1 %r
+}
+
+define <2 x i1> @shl_nz_bounded_cnt_vec_todo_no_common_bit(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @shl_nz_bounded_cnt_vec_todo_no_common_bit(
+; CHECK-NEXT:    [[CNT:%.*]] = and <2 x i32> [[X:%.*]], <i32 16, i32 32>
+; CHECK-NEXT:    [[VAL:%.*]] = or <2 x i32> [[Y:%.*]], <i32 16, i32 16>
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[VAL]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[SHL]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %cnt = and <2 x i32> %x, <i32 16, i32 32>
+  %val = or <2 x i32> %y, <i32 16, i32 16>
+  %shl = shl <2 x i32> %val, %cnt
+  %r = icmp eq <2 x i32> %shl, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define i1 @shl_maybe_zero_bounded_cnt_fail(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl_maybe_zero_bounded_cnt_fail(
+; CHECK-NEXT:    [[CNT:%.*]] = and i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[VAL:%.*]] = or i32 [[Y:%.*]], 65536
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL]], [[CNT]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SHL]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %cnt = and i32 %x, 16
+  %val = or i32 %y, 65536
+  %shl = shl i32 %val, %cnt
+  %r = icmp eq i32 %shl, 0
+  ret i1 %r
+}
+
+define i1 @shl_non_zero_nsw(i8 %s, i8 %cnt) {
+; CHECK-LABEL: @shl_non_zero_nsw(
+; CHECK-NEXT:    [[NZ:%.*]] = icmp ne i8 [[S:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NZ]])
+; CHECK-NEXT:    [[V:%.*]] = shl nsw i8 [[S]], [[CNT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %nz = icmp ne i8 %s, 0
+  call void @llvm.assume(i1 %nz)
+  %v = shl nsw i8 %s, %cnt
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @shl_maybe_zero_nsw_fail(i8 %s, i8 %cnt) {
+; CHECK-LABEL: @shl_maybe_zero_nsw_fail(
+; CHECK-NEXT:    [[V:%.*]] = shl nsw i8 [[S:%.*]], [[CNT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[V]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %v = shl nsw i8 %s, %cnt
+  %r = icmp eq i8 %v, 0
+  ret i1 %r
+}
+
+define i1 @shl_out_of_range_is_poison(i32 %v, i32 %c) {
+; CHECK-LABEL: @shl_out_of_range_is_poison(
+; CHECK-NEXT:    ret i1 poison
+;
+  %sval = or i32 %v, 32
+  %shl = shl i32 %c, %sval
+  %z = icmp eq i32 %shl, 0
+  ret i1 %z
+}
