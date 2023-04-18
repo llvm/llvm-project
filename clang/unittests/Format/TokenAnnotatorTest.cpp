@@ -1724,6 +1724,34 @@ TEST_F(TokenAnnotatorTest, UnderstandsConditionParens) {
   EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_ConditionLParen);
 }
 
+TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  auto Tokens = annotate("int? a;", Style);
+  EXPECT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::question, TT_CSharpNullable);
+
+  Tokens = annotate("int? a = 1;", Style);
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::question, TT_CSharpNullable);
+
+  Tokens = annotate("int?)", Style);
+  EXPECT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::question, TT_CSharpNullable);
+
+  Tokens = annotate("int?>", Style);
+  EXPECT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::question, TT_CSharpNullable);
+
+  Tokens = annotate("cond? id : id2", Style);
+  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
+
+  Tokens = annotate("cond ? cond2 ? : id1 : id2", Style);
+  EXPECT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
