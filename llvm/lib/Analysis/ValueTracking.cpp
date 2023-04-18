@@ -4494,6 +4494,25 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
         break;
       }
+      case Intrinsic::trunc: {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+
+        // Integer results cannot be subnormal.
+        Known.knownNot(fcSubnormal);
+
+        // trunc passes through infinities.
+        if (KnownSrc.isKnownNeverPosInfinity())
+          Known.knownNot(fcPosInf);
+        if (KnownSrc.isKnownNeverNegInfinity())
+          Known.knownNot(fcNegInf);
+
+        // Non-constrained intrinsics do not guarantee signaling nan quieting.
+        if (KnownSrc.isKnownNeverNaN())
+          Known.knownNot(fcNan);
+        break;
+      }
       default:
         break;
       }

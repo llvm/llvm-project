@@ -249,6 +249,16 @@ struct KnownFPClass {
     return (KnownFPClasses & fcInf) == fcNone;
   }
 
+  /// Return true if it's known this can never be +infinity.
+  bool isKnownNeverPosInfinity() const {
+    return (KnownFPClasses & fcPosInf) == fcNone;
+  }
+
+  /// Return true if it's known this can never be -infinity.
+  bool isKnownNeverNegInfinity() const {
+    return (KnownFPClasses & fcNegInf) == fcNone;
+  }
+
   /// Return true if it's known this can never be a subnormal
   bool isKnownNeverSubnormal() const {
     return (KnownFPClasses & fcSubnormal) == fcNone;
