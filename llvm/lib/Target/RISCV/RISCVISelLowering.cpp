@@ -3269,9 +3269,9 @@ static bool isDeinterleaveShuffle(MVT VT, MVT ContainerVT, SDValue V1,
 
 /// Is this shuffle interleaving contiguous elements from one vector into the
 /// even elements and contiguous elements from another vector into the odd
-/// elements. \p Src1 will contain the element that should be in the first even
-/// element. \p Src2 will contain the element that should be in the first odd
-/// element. These can be the first element in a source or the element half
+/// elements. \p EvenSrc will contain the element that should be in the first
+/// even element. \p OddSrc will contain the element that should be in the first
+/// odd element. These can be the first element in a source or the element half
 /// way through the source.
 static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
                                 int &OddSrc, const RISCVSubtarget &Subtarget) {
@@ -3280,7 +3280,8 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
     return false;
 
   int Size = Mask.size();
-  assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
+  int NumElts = VT.getVectorNumElements();
+  assert(Size == (int)NumElts && "Unexpected mask size");
 
   SmallVector<unsigned, 2> StartIndexes;
   if (!ShuffleVectorInst::isInterleaveMask(Mask, 2, Size * 2, StartIndexes))
@@ -3293,7 +3294,14 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
   if (EvenSrc != 0 && OddSrc != 0)
     return false;
 
-  return true;
+  // Subvectors will be subtracted from either at the start of the two input
+  // vectors, or at the start and middle of the first vector if it's an unary
+  // interleave.
+  // In both cases, HalfNumElts will be extracted.
+  // So make sure that EvenSrc/OddSrc are within range.
+  int HalfNumElts = NumElts / 2;
+  return (((EvenSrc % NumElts) + HalfNumElts) <= NumElts) &&
+         (((OddSrc % NumElts) + HalfNumElts) <= NumElts);
 }
 
 /// Match shuffles that concatenate two vectors, rotate the concatenation,
