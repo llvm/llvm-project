@@ -15253,13 +15253,10 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
           ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2() ||
            (Imm - 8).isPowerOf2()))
         return true;
-      // Omit the following optimization if the sub target has the M extension
-      // and the data size >= XLen.
-      if (HasExtMOrZmmul && VT.getSizeInBits() >= Subtarget.getXLen())
-        return false;
       // Break the MUL to two SLLI instructions and an ADD/SUB, if Imm needs
       // a pair of LUI/ADDI.
-      if (!Imm.isSignedIntN(12) && Imm.countr_zero() < 12) {
+      if (!Imm.isSignedIntN(12) && Imm.countr_zero() < 12 &&
+          ConstNode->hasOneUse()) {
         APInt ImmS = Imm.ashr(Imm.countr_zero());
         if ((ImmS + 1).isPowerOf2() || (ImmS - 1).isPowerOf2() ||
             (1 - ImmS).isPowerOf2())
