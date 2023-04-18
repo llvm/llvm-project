@@ -183,6 +183,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not
   define `value_type` type aliases.
 
+- Improved :doc:`bugprone-incorrect-roundings
+  <clang-tidy/checks/bugprone/incorrect-roundings>` check by adding support for
+  other floating point representations in float constant like ``0.5L``.
+
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check.
