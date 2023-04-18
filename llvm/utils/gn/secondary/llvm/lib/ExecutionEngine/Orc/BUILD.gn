@@ -50,7 +50,6 @@ static_library("Orc") {
     "ObjectTransformLayer.cpp",
     "OrcABISupport.cpp",
     "OrcV2CBindings.cpp",
-    "PerfSupportPlugin.cpp",
     "RTDyldObjectLinkingLayer.cpp",
     "SimpleRemoteEPC.cpp",
     "SpeculateAnalyses.cpp",
