@@ -30,7 +30,7 @@ class ExecTestCase(TestBase):
     @skipIfAsan # rdar://problem/43756823
     @skipIfWindows
     def test_skipping_exec (self):
-        self.do_test(False)
+        self.do_test(True)
 
     def do_test(self, skip_exec):
         self.build()
