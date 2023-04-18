@@ -165,6 +165,11 @@ template <typename First, typename... Ts> struct SupportedTypes {
   using TypeFor = typename details::Largest<Size, First, Ts...>::type;
 };
 
+// Returns the sum of the sizeof of all the TS types.
+template <typename... TS> static constexpr size_t sum_sizeof() {
+  return (... + sizeof(TS));
+}
+
 // Map from sizes to structures offering static load, store and splat methods.
 // Note: On platforms lacking vector support, we use the ArrayType below and
 // decompose the operation in smaller pieces.
@@ -208,8 +213,8 @@ using getTypeFor = cpp::conditional_t<
 // Memset
 ///////////////////////////////////////////////////////////////////////////////
 
-template <typename T> struct Memset {
-  static constexpr size_t SIZE = sizeof(T);
+template <typename T, typename... TS> struct Memset {
+  static constexpr size_t SIZE = sum_sizeof<T, TS...>();
 
   LIBC_INLINE static void block(Ptr dst, uint8_t value) {
     static_assert(is_element_type_v<T>);
@@ -221,6 +226,8 @@ template <typename T> struct Memset {
       for (size_t I = 0; I < array_size_v<T>; ++I)
         store<value_type>(dst + (I * sizeof(value_type)), Splat);
     }
+    if constexpr (sizeof...(TS))
+      Memset<TS...>::block(dst + sizeof(T), value);
   }
 
   LIBC_INLINE static void tail(Ptr dst, uint8_t value, size_t count) {
@@ -243,22 +250,12 @@ template <typename T> struct Memset {
   }
 };
 
-template <typename T, typename... TS> struct MemsetSequence {
-  static constexpr size_t SIZE = (sizeof(T) + ... + sizeof(TS));
-  LIBC_INLINE static void block(Ptr dst, uint8_t value) {
-    Memset<T>::block(dst, value);
-    if constexpr (sizeof...(TS)) {
-      return MemsetSequence<TS...>::block(dst + sizeof(T), value);
-    }
-  }
-};
-
 ///////////////////////////////////////////////////////////////////////////////
 // Memmove
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename T> struct Memmove {
-  static constexpr size_t SIZE = sizeof(T);
+  static constexpr size_t SIZE = sum_sizeof<T>();
 
   LIBC_INLINE static void block(Ptr dst, CPtr src) {
     store<T>(dst, load<T>(src));
