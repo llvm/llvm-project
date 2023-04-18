@@ -138,7 +138,6 @@ struct PackOpInterface
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     assert(op->getNumResults() == 1);
-    assert(isUniqueCOOType(op->getResultTypes()[0].cast<RankedTensorType>()));
     // PackOp reuses the input tensors as values/coordinates instead of
     // creating new ones when packing into a COO format.
     return {{op->getOpResult(0), BufferRelation::Equivalent}};
