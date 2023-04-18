@@ -555,6 +555,34 @@ public:
     return PIC;
   }
 
+  // Invoke the callbacks registered for the various extension points.
+  // Custom pipelines should use these to invoke the callbacks registered
+  // by TargetMachines and other clients.
+  void invokePeepholeEPCallbacks(FunctionPassManager &FPM,
+                                 OptimizationLevel Level);
+  void invokeLateLoopOptimizationsEPCallbacks(LoopPassManager &LPM,
+                                              OptimizationLevel Level);
+  void invokeLoopOptimizerEndEPCallbacks(LoopPassManager &LPM,
+                                         OptimizationLevel Level);
+  void invokeScalarOptimizerLateEPCallbacks(FunctionPassManager &FPM,
+                                            OptimizationLevel Level);
+  void invokeCGSCCOptimizerLateEPCallbacks(CGSCCPassManager &CGPM,
+                                           OptimizationLevel Level);
+  void invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
+                                        OptimizationLevel Level);
+  void invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
+                                       OptimizationLevel Level);
+  void invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
+                                      OptimizationLevel Level);
+  void invokeFullLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
+                                                      OptimizationLevel Level);
+  void invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
+                                                     OptimizationLevel Level);
+  void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
+                                      OptimizationLevel Level);
+  void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
+                                                    OptimizationLevel Level);
+
 private:
   // O1 pass pipeline
   FunctionPassManager
@@ -589,7 +617,6 @@ private:
                          std::string ProfileRemappingFile,
                          ThinOrFullLTOPhase LTOPhase,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
-  void invokePeepholeEPCallbacks(FunctionPassManager &, OptimizationLevel);
 
   // Extension Point callbacks
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
