@@ -599,6 +599,8 @@ public:
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
 
+  bool emitDebugComment(const MachineInstr *MI);
+
   /// Emit N NOP instructions.
   void emitNops(unsigned N);
 

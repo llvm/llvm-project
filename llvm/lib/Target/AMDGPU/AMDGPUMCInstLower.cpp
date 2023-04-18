@@ -211,7 +211,9 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MachineBasicBlock *MBB = MI->getParent();
     MachineBasicBlock::const_instr_iterator I = ++MI->getIterator();
     while (I != MBB->instr_end() && I->isInsideBundle()) {
-      emitInstruction(&*I);
+      bool HandledByEmitDbgComment = I->isDebugInstr() && emitDebugComment(&*I);
+      if(!HandledByEmitDbgComment)
+        emitInstruction(&*I);
       ++I;
     }
   } else {
