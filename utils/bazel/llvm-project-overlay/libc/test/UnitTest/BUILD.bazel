@@ -23,10 +23,12 @@ cc_library(
 cc_library(
     name = "LibcUnitTest",
     srcs = [
+        "ExecuteFunctionUnix.cpp",
         "LibcTest.cpp",
         "LibcTestMain.cpp",
     ],
     hdrs = [
+        "ExecuteFunction.h",
         "LibcTest.h",
         "PlatformDefs.h",
         "Test.h",

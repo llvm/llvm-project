@@ -9,11 +9,9 @@ licenses(["notice"])
 cc_library(
     name = "libc_test_utils",
     srcs = [
-        "ExecuteFunctionUnix.cpp",
         "RoundingModeUtils.cpp",
     ],
     hdrs = [
-        "ExecuteFunction.h",
         "RoundingModeUtils.h",
     ],
     deps = [
