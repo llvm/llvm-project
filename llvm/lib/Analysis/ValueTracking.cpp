@@ -4760,7 +4760,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.knownNot(fcSubnormal);
 
         if (IID == Intrinsic::experimental_constrained_uitofp)
-          Known.signBitIsZero();
+          Known.signBitMustBeZero();
 
         // TODO: Copy inf handling from instructions
         break;
@@ -4824,36 +4824,48 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::FDiv: {
+    // X / X is always exactly 1.0 or a NaN.
+    if (Op->getOperand(0) == Op->getOperand(1)) {
+      // TODO: Could filter out snan if we inspect the operand
+      Known.KnownFPClasses = fcNan | fcPosNormal;
+      break;
+    }
+
     const bool WantNan = (InterestedClasses & fcNan) != fcNone;
-    if (!WantNan)
+    const bool WantNegative = (InterestedClasses & fcNegative) != fcNone;
+    if (!WantNan && !WantNegative)
       break;
 
     // TODO: FRem
     KnownFPClass KnownLHS, KnownRHS;
 
     computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcSubnormal, KnownRHS,
+                        fcNan | fcInf | fcZero | fcNegative, KnownRHS,
                         Depth + 1, Q, TLI);
 
-    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
-                               KnownRHS.isKnownNeverInfinity() ||
-                               KnownRHS.isKnownNeverZero();
+    bool KnowSomethingUseful =
+        KnownRHS.isKnownNeverNaN() || KnownRHS.isKnownNever(fcNegative);
 
     if (KnowSomethingUseful) {
       computeKnownFPClass(Op->getOperand(0), DemandedElts,
-                          fcNan | fcInf | fcZero, KnownLHS, Depth + 1, Q, TLI);
+                          fcNan | fcInf | fcZero | fcNegative, KnownLHS,
+                          Depth + 1, Q, TLI);
     }
 
     const Function *F = cast<Instruction>(Op)->getFunction();
 
     // Only 0/0, Inf/Inf, Inf REM x and x REM 0 produce NaN.
-    // TODO: Track sign bit.
     if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
         (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
         (KnownLHS.isKnownNeverLogicalZero(*F, Op->getType()) ||
          KnownRHS.isKnownNeverLogicalZero(*F, Op->getType()))) {
       Known.knownNot(fcNan);
     }
+
+    // X / -0.0 is -Inf (or NaN).
+    // +X / +X is +X
+    if (KnownLHS.isKnownNever(fcNegative) && KnownRHS.isKnownNever(fcNegative))
+      Known.knownNot(fcNegative);
 
     break;
   }
@@ -4892,7 +4904,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
     if (Op->getOpcode() == Instruction::UIToFP)
-      Known.signBitIsZero();
+      Known.signBitMustBeZero();
 
     if (InterestedClasses & fcInf) {
       // Get width of largest magnitude integer (remove a bit if signed).
