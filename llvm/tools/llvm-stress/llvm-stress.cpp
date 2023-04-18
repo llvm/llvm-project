@@ -11,12 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mutator.h"
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/FuzzMutate/IRMutator.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
@@ -44,9 +47,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <system_error>
+#include <time.h>
+#include <unistd.h>
 #include <vector>
 
 namespace llvm {
@@ -61,6 +67,10 @@ static cl::opt<unsigned> SizeCL(
     cl::desc("The estimated size of the generated function (# of instrs)"),
     cl::init(100), cl::cat(StressCategory));
 
+static cl::opt<std::string>
+    InputFilename("i", cl::desc("Mutate an existing module from file"),
+                  cl::value_desc("filename"), cl::cat(StressCategory));
+
 static cl::opt<std::string> OutputFilename("o",
                                            cl::desc("Override output filename"),
                                            cl::value_desc("filename"),
@@ -73,9 +83,8 @@ static cl::list<StringRef> AdditionalScalarTypes(
 
 static cl::opt<bool> EnableScalableVectors(
     "enable-scalable-vectors",
-    cl::desc("Generate IR involving scalable vector types"),
-    cl::init(false), cl::cat(StressCategory));
-
+    cl::desc("Generate IR involving scalable vector types"), cl::init(false),
+    cl::cat(StressCategory));
 
 namespace {
 
@@ -86,7 +95,7 @@ namespace {
 class Random {
 public:
   /// C'tor
-  Random(unsigned _seed):Seed(_seed) {}
+  Random(unsigned _seed) : Seed(_seed) {}
 
   /// Return a random integer, up to a
   /// maximum of 2**19 - 1.
@@ -107,12 +116,10 @@ public:
   }
 
   /// Rand operator for STL algorithms.
-  ptrdiff_t operator()(ptrdiff_t y) {
-    return  Rand64() % y;
-  }
+  ptrdiff_t operator()(ptrdiff_t y) { return Rand64() % y; }
 
   /// Make this like a C++11 random device
-  using result_type = uint32_t ;
+  using result_type = uint32_t;
 
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return 0x7ffff; }
@@ -131,14 +138,9 @@ private:
 Function *GenEmptyFunction(Module *M) {
   // Define a few arguments
   LLVMContext &Context = M->getContext();
-  Type* ArgsTy[] = {
-    Type::getInt8PtrTy(Context),
-    Type::getInt32PtrTy(Context),
-    Type::getInt64PtrTy(Context),
-    Type::getInt32Ty(Context),
-    Type::getInt64Ty(Context),
-    Type::getInt8Ty(Context)
-  };
+  Type *ArgsTy[] = {Type::getInt8PtrTy(Context),  Type::getInt32PtrTy(Context),
+                    Type::getInt64PtrTy(Context), Type::getInt32Ty(Context),
+                    Type::getInt64Ty(Context),    Type::getInt8Ty(Context)};
 
   auto *FuncTy = FunctionType::get(Type::getVoidTy(Context), ArgsTy, false);
   // Pick a unique name to describe the input parameters
@@ -198,15 +200,13 @@ public:
 
   /// Add N new instructions,
   virtual void ActN(unsigned n) {
-    for (unsigned i=0; i<n; ++i)
+    for (unsigned i = 0; i < n; ++i)
       Act();
   }
 
 protected:
   /// Return a random integer.
-  uint32_t getRandom() {
-    return Ran->Rand();
-  }
+  uint32_t getRandom() { return Ran->Rand(); }
 
   /// Return a random value from the list of known values.
   Value *getRandomVal() {
@@ -230,7 +230,7 @@ protected:
   /// Return a random value with a known type.
   Value *getRandomValue(Type *Tp) {
     unsigned index = getRandom();
-    for (unsigned i=0; i<PT->size(); ++i) {
+    for (unsigned i = 0; i < PT->size(); ++i) {
       Value *V = PT->at((index + i) % PT->size());
       if (V->getType() == Tp)
         return V;
@@ -246,12 +246,12 @@ protected:
         return ConstantFP::getAllOnesValue(Tp);
       return ConstantFP::getNullValue(Tp);
     } else if (auto *VTp = dyn_cast<FixedVectorType>(Tp)) {
-      std::vector<Constant*> TempValues;
+      std::vector<Constant *> TempValues;
       TempValues.reserve(VTp->getNumElements());
       for (unsigned i = 0; i < VTp->getNumElements(); ++i)
         TempValues.push_back(getRandomConstant(VTp->getScalarType()));
 
-      ArrayRef<Constant*> VectorValue(TempValues);
+      ArrayRef<Constant *> VectorValue(TempValues);
       return ConstantVector::get(VectorValue);
     }
 
@@ -261,7 +261,7 @@ protected:
   /// Return a random value of any pointer type.
   Value *getRandomPointerValue() {
     unsigned index = getRandom();
-    for (unsigned i=0; i<PT->size(); ++i) {
+    for (unsigned i = 0; i < PT->size(); ++i) {
       Value *V = PT->at((index + i) % PT->size());
       if (V->getType()->isPointerTy())
         return V;
@@ -272,7 +272,7 @@ protected:
   /// Return a random value of any vector type.
   Value *getRandomVectorValue() {
     unsigned index = getRandom();
-    for (unsigned i=0; i<PT->size(); ++i) {
+    for (unsigned i = 0; i < PT->size(); ++i) {
       Value *V = PT->at((index + i) % PT->size());
       if (V->getType()->isVectorTy())
         return V;
@@ -310,7 +310,7 @@ protected:
     // Pick a random vector width in the range 2**0 to 2**4.
     // by adding two randoms we are generating a normal-like distribution
     // around 2**3.
-    unsigned width = 1<<((getRandom() % 3) + (getRandom() % 3));
+    unsigned width = 1 << ((getRandom() % 3) + (getRandom() % 3));
     return VectorType::get(Ty, width, Scalable);
   }
 
@@ -334,7 +334,7 @@ protected:
   std::vector<Type *> ScalarTypes;
 };
 
-struct LoadModifier: public Modifier {
+struct LoadModifier : public Modifier {
   LoadModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -349,7 +349,7 @@ struct LoadModifier: public Modifier {
   }
 };
 
-struct StoreModifier: public Modifier {
+struct StoreModifier : public Modifier {
   StoreModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -370,7 +370,7 @@ struct StoreModifier: public Modifier {
   }
 };
 
-struct BinModifier: public Modifier {
+struct BinModifier : public Modifier {
   BinModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -379,8 +379,7 @@ struct BinModifier: public Modifier {
     Value *Val1 = getRandomValue(Val0->getType());
 
     // Don't handle pointer types.
-    if (Val0->getType()->isPointerTy() ||
-        Val1->getType()->isPointerTy())
+    if (Val0->getType()->isPointerTy() || Val1->getType()->isPointerTy())
       return;
 
     // Don't handle i1 types.
@@ -388,25 +387,65 @@ struct BinModifier: public Modifier {
       return;
 
     bool isFloat = Val0->getType()->getScalarType()->isFloatingPointTy();
-    Instruction* Term = BB->getTerminator();
+    Instruction *Term = BB->getTerminator();
     unsigned R = getRandom() % (isFloat ? 7 : 13);
     Instruction::BinaryOps Op;
 
     switch (R) {
-    default: llvm_unreachable("Invalid BinOp");
-    case 0:{Op = (isFloat?Instruction::FAdd : Instruction::Add); break; }
-    case 1:{Op = (isFloat?Instruction::FSub : Instruction::Sub); break; }
-    case 2:{Op = (isFloat?Instruction::FMul : Instruction::Mul); break; }
-    case 3:{Op = (isFloat?Instruction::FDiv : Instruction::SDiv); break; }
-    case 4:{Op = (isFloat?Instruction::FDiv : Instruction::UDiv); break; }
-    case 5:{Op = (isFloat?Instruction::FRem : Instruction::SRem); break; }
-    case 6:{Op = (isFloat?Instruction::FRem : Instruction::URem); break; }
-    case 7: {Op = Instruction::Shl;  break; }
-    case 8: {Op = Instruction::LShr; break; }
-    case 9: {Op = Instruction::AShr; break; }
-    case 10:{Op = Instruction::And;  break; }
-    case 11:{Op = Instruction::Or;   break; }
-    case 12:{Op = Instruction::Xor;  break; }
+    default:
+      llvm_unreachable("Invalid BinOp");
+    case 0: {
+      Op = (isFloat ? Instruction::FAdd : Instruction::Add);
+      break;
+    }
+    case 1: {
+      Op = (isFloat ? Instruction::FSub : Instruction::Sub);
+      break;
+    }
+    case 2: {
+      Op = (isFloat ? Instruction::FMul : Instruction::Mul);
+      break;
+    }
+    case 3: {
+      Op = (isFloat ? Instruction::FDiv : Instruction::SDiv);
+      break;
+    }
+    case 4: {
+      Op = (isFloat ? Instruction::FDiv : Instruction::UDiv);
+      break;
+    }
+    case 5: {
+      Op = (isFloat ? Instruction::FRem : Instruction::SRem);
+      break;
+    }
+    case 6: {
+      Op = (isFloat ? Instruction::FRem : Instruction::URem);
+      break;
+    }
+    case 7: {
+      Op = Instruction::Shl;
+      break;
+    }
+    case 8: {
+      Op = Instruction::LShr;
+      break;
+    }
+    case 9: {
+      Op = Instruction::AShr;
+      break;
+    }
+    case 10: {
+      Op = Instruction::And;
+      break;
+    }
+    case 11: {
+      Op = Instruction::Or;
+      break;
+    }
+    case 12: {
+      Op = Instruction::Xor;
+      break;
+    }
     }
 
     PT->push_back(BinaryOperator::Create(Op, Val0, Val1, "B", Term));
@@ -414,7 +453,7 @@ struct BinModifier: public Modifier {
 };
 
 /// Generate constant values.
-struct ConstModifier: public Modifier {
+struct ConstModifier : public Modifier {
   ConstModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -423,11 +462,13 @@ struct ConstModifier: public Modifier {
 
     if (Ty->isVectorTy()) {
       switch (getRandom() % 2) {
-      case 0: if (Ty->isIntOrIntVectorTy())
-                return PT->push_back(ConstantVector::getAllOnesValue(Ty));
-              break;
-      case 1: if (Ty->isIntOrIntVectorTy())
-                return PT->push_back(ConstantVector::getNullValue(Ty));
+      case 0:
+        if (Ty->isIntOrIntVectorTy())
+          return PT->push_back(ConstantVector::getAllOnesValue(Ty));
+        break;
+      case 1:
+        if (Ty->isIntOrIntVectorTy())
+          return PT->push_back(ConstantVector::getNullValue(Ty));
       }
     }
 
@@ -465,33 +506,32 @@ struct ConstModifier: public Modifier {
   }
 };
 
-struct AllocaModifier: public Modifier {
+struct AllocaModifier : public Modifier {
   AllocaModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
   void Act() override {
     Type *Tp = pickType();
     const DataLayout &DL = BB->getModule()->getDataLayout();
-    PT->push_back(new AllocaInst(Tp, DL.getAllocaAddrSpace(),
-                                 "A", BB->getFirstNonPHI()));
+    PT->push_back(
+        new AllocaInst(Tp, DL.getAllocaAddrSpace(), "A", BB->getFirstNonPHI()));
   }
 };
 
-struct ExtractElementModifier: public Modifier {
+struct ExtractElementModifier : public Modifier {
   ExtractElementModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
   void Act() override {
     Value *Val0 = getRandomVectorValue();
     Value *V = ExtractElementInst::Create(
-        Val0,
-        getRandomValue(Type::getInt32Ty(BB->getContext())),
-        "E", BB->getTerminator());
+        Val0, getRandomValue(Type::getInt32Ty(BB->getContext())), "E",
+        BB->getTerminator());
     return PT->push_back(V);
   }
 };
 
-struct ShuffModifier: public Modifier {
+struct ShuffModifier : public Modifier {
   ShuffModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -504,11 +544,11 @@ struct ShuffModifier: public Modifier {
       return;
 
     unsigned Width = cast<FixedVectorType>(Val0->getType())->getNumElements();
-    std::vector<Constant*> Idxs;
+    std::vector<Constant *> Idxs;
 
     Type *I32 = Type::getInt32Ty(BB->getContext());
-    for (unsigned i=0; i<Width; ++i) {
-      Constant *CI = ConstantInt::get(I32, getRandom() % (Width*2));
+    for (unsigned i = 0; i < Width; ++i) {
+      Constant *CI = ConstantInt::get(I32, getRandom() % (Width * 2));
       // Pick some undef values.
       if (!(getRandom() % 5))
         CI = UndefValue::get(I32);
@@ -517,13 +557,13 @@ struct ShuffModifier: public Modifier {
 
     Constant *Mask = ConstantVector::get(Idxs);
 
-    Value *V = new ShuffleVectorInst(Val0, Val1, Mask, "Shuff",
-                                     BB->getTerminator());
+    Value *V =
+        new ShuffleVectorInst(Val0, Val1, Mask, "Shuff", BB->getTerminator());
     PT->push_back(V);
   }
 };
 
-struct InsertElementModifier: public Modifier {
+struct InsertElementModifier : public Modifier {
   InsertElementModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -532,14 +572,13 @@ struct InsertElementModifier: public Modifier {
     Value *Val1 = getRandomValue(Val0->getType()->getScalarType());
 
     Value *V = InsertElementInst::Create(
-        Val0, Val1,
-        getRandomValue(Type::getInt32Ty(BB->getContext())),
-        "I", BB->getTerminator());
+        Val0, Val1, getRandomValue(Type::getInt32Ty(BB->getContext())), "I",
+        BB->getTerminator());
     return PT->push_back(V);
   }
 };
 
-struct CastModifier: public Modifier {
+struct CastModifier : public Modifier {
   CastModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -553,14 +592,15 @@ struct CastModifier: public Modifier {
       DestTy = pickVectorType(cast<VectorType>(VTy));
 
     // no need to cast.
-    if (VTy == DestTy) return;
+    if (VTy == DestTy)
+      return;
 
     // Pointers:
     if (VTy->isPointerTy()) {
       if (!DestTy->isPointerTy())
         DestTy = PointerType::get(DestTy, 0);
       return PT->push_back(
-        new BitCastInst(V, DestTy, "PC", BB->getTerminator()));
+          new BitCastInst(V, DestTy, "PC", BB->getTerminator()));
     }
 
     unsigned VSize = VTy->getScalarType()->getPrimitiveSizeInBits();
@@ -569,20 +609,21 @@ struct CastModifier: public Modifier {
     // Generate lots of bitcasts.
     if ((getRandom() & 1) && VSize == DestSize) {
       return PT->push_back(
-        new BitCastInst(V, DestTy, "BC", BB->getTerminator()));
+          new BitCastInst(V, DestTy, "BC", BB->getTerminator()));
     }
 
     // Both types are integers:
     if (VTy->isIntOrIntVectorTy() && DestTy->isIntOrIntVectorTy()) {
       if (VSize > DestSize) {
         return PT->push_back(
-          new TruncInst(V, DestTy, "Tr", BB->getTerminator()));
+            new TruncInst(V, DestTy, "Tr", BB->getTerminator()));
       } else {
         assert(VSize < DestSize && "Different int types with the same size?");
         if (getRandom() & 1)
           return PT->push_back(
-            new ZExtInst(V, DestTy, "ZE", BB->getTerminator()));
-        return PT->push_back(new SExtInst(V, DestTy, "Se", BB->getTerminator()));
+              new ZExtInst(V, DestTy, "ZE", BB->getTerminator()));
+        return PT->push_back(
+            new SExtInst(V, DestTy, "Se", BB->getTerminator()));
       }
     }
 
@@ -590,26 +631,28 @@ struct CastModifier: public Modifier {
     if (VTy->isFPOrFPVectorTy() && DestTy->isIntOrIntVectorTy()) {
       if (getRandom() & 1)
         return PT->push_back(
-          new FPToSIInst(V, DestTy, "FC", BB->getTerminator()));
-      return PT->push_back(new FPToUIInst(V, DestTy, "FC", BB->getTerminator()));
+            new FPToSIInst(V, DestTy, "FC", BB->getTerminator()));
+      return PT->push_back(
+          new FPToUIInst(V, DestTy, "FC", BB->getTerminator()));
     }
 
     // Int to fp.
     if (VTy->isIntOrIntVectorTy() && DestTy->isFPOrFPVectorTy()) {
       if (getRandom() & 1)
         return PT->push_back(
-          new SIToFPInst(V, DestTy, "FC", BB->getTerminator()));
-      return PT->push_back(new UIToFPInst(V, DestTy, "FC", BB->getTerminator()));
+            new SIToFPInst(V, DestTy, "FC", BB->getTerminator()));
+      return PT->push_back(
+          new UIToFPInst(V, DestTy, "FC", BB->getTerminator()));
     }
 
     // Both floats.
     if (VTy->isFPOrFPVectorTy() && DestTy->isFPOrFPVectorTy()) {
       if (VSize > DestSize) {
         return PT->push_back(
-          new FPTruncInst(V, DestTy, "Tr", BB->getTerminator()));
+            new FPTruncInst(V, DestTy, "Tr", BB->getTerminator()));
       } else if (VSize < DestSize) {
         return PT->push_back(
-          new FPExtInst(V, DestTy, "ZE", BB->getTerminator()));
+            new FPExtInst(V, DestTy, "ZE", BB->getTerminator()));
       }
       // If VSize == DestSize, then the two types must be fp128 and ppc_fp128,
       // for which there is no defined conversion. So do nothing.
@@ -617,7 +660,7 @@ struct CastModifier: public Modifier {
   }
 };
 
-struct SelectModifier: public Modifier {
+struct SelectModifier : public Modifier {
   SelectModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -640,7 +683,7 @@ struct SelectModifier: public Modifier {
   }
 };
 
-struct CmpModifier: public Modifier {
+struct CmpModifier : public Modifier {
   CmpModifier(BasicBlock *BB, PieceTable *PT, Random *R)
       : Modifier(BB, PT, R) {}
 
@@ -648,18 +691,19 @@ struct CmpModifier: public Modifier {
     Value *Val0 = getRandomVal();
     Value *Val1 = getRandomValue(Val0->getType());
 
-    if (Val0->getType()->isPointerTy()) return;
+    if (Val0->getType()->isPointerTy())
+      return;
     bool fp = Val0->getType()->getScalarType()->isFloatingPointTy();
 
     int op;
     if (fp) {
       op = getRandom() %
-      (CmpInst::LAST_FCMP_PREDICATE - CmpInst::FIRST_FCMP_PREDICATE) +
-       CmpInst::FIRST_FCMP_PREDICATE;
+               (CmpInst::LAST_FCMP_PREDICATE - CmpInst::FIRST_FCMP_PREDICATE) +
+           CmpInst::FIRST_FCMP_PREDICATE;
     } else {
       op = getRandom() %
-      (CmpInst::LAST_ICMP_PREDICATE - CmpInst::FIRST_ICMP_PREDICATE) +
-       CmpInst::FIRST_ICMP_PREDICATE;
+               (CmpInst::LAST_ICMP_PREDICATE - CmpInst::FIRST_ICMP_PREDICATE) +
+           CmpInst::FIRST_ICMP_PREDICATE;
     }
 
     Value *V = CmpInst::Create(fp ? Instruction::FCmp : Instruction::ICmp,
@@ -668,6 +712,38 @@ struct CmpModifier: public Modifier {
     return PT->push_back(V);
   }
 };
+
+// https://stackoverflow.com/questions/322938/recommended-way-to-initialize-srand
+unsigned long mix(unsigned long a, unsigned long b, unsigned long c) {
+  a = a - b;
+  a = a - c;
+  a = a ^ (c >> 13);
+  b = b - c;
+  b = b - a;
+  b = b ^ (a << 8);
+  c = c - a;
+  c = c - b;
+  c = c ^ (b >> 13);
+  a = a - b;
+  a = a - c;
+  a = a ^ (c >> 12);
+  b = b - c;
+  b = b - a;
+  b = b ^ (a << 16);
+  c = c - a;
+  c = c - b;
+  c = c ^ (b >> 5);
+  a = a - b;
+  a = a - c;
+  a = a ^ (c >> 3);
+  b = b - c;
+  b = b - a;
+  b = b ^ (a << 10);
+  c = c - a;
+  c = c - b;
+  c = c ^ (b >> 15);
+  return c;
+}
 
 } // end anonymous namespace
 
@@ -708,7 +784,7 @@ static void FillFunction(Function *F, Random &R) {
 }
 
 static void IntroduceControlFlow(Function *F, Random &R) {
-  std::vector<Instruction*> BoolInst;
+  std::vector<Instruction *> BoolInst;
   for (auto &Instr : F->front()) {
     if (Instr.getType() == IntegerType::getInt1Ty(F->getContext()))
       BoolInst.push_back(&Instr);
@@ -738,15 +814,43 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm codegen stress-tester\n");
 
   LLVMContext Context;
-  auto M = std::make_unique<Module>("/tmp/autogen.bc", Context);
-  Function *F = GenEmptyFunction(M.get());
+  std::unique_ptr<llvm::Module> M;
 
-  // Pick an initial seed value
-  Random R(SeedCL);
-  // Generate lots of random instructions inside a single basic block.
-  FillFunction(F, R);
-  // Break the basic block into many loops.
-  IntroduceControlFlow(F, R);
+  if (!InputFilename.empty()) {       // Mutate
+    constexpr int MAX_SIZE = 1048576; // 1 MiB
+    std::streamsize Size = 0;
+    std::vector<char> Buffer(MAX_SIZE);
+    std::ifstream InFile(InputFilename, std::ios::binary | std::ios::ate);
+    Size = InFile.tellg();
+    InFile.seekg(0, std::ios::beg);
+    if (!InFile.read(Buffer.data(), Size)) {
+      errs() << "Error reading input file.\n";
+      return 1;
+    }
+
+    createISelMutator();
+    unsigned Seed = SeedCL;
+    if (SeedCL == 0) {
+      // Replace default value with a more reasonable seed.
+      srand(mix(clock(), time(NULL), getpid()));
+      Seed = rand();
+    }
+    errs() << Seed << '\n';
+    size_t NewSize =
+        LLVMFuzzerCustomMutator((uint8_t *)Buffer.data(), Size, MAX_SIZE, Seed);
+
+    M = llvm::parseModule((uint8_t *)Buffer.data(), NewSize, Context);
+  } else { // Generate (legacy)
+    auto M = std::make_unique<Module>("/tmp/autogen.bc", Context);
+    Function *F = GenEmptyFunction(M.get());
+
+    // Pick an initial seed value
+    Random R(SeedCL);
+    // Generate lots of random instructions inside a single basic block.
+    FillFunction(F, R);
+    // Break the basic block into many loops.
+    IntroduceControlFlow(F, R);
+  }
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;
@@ -762,7 +866,7 @@ int main(int argc, char **argv) {
   }
 
   // Check that the generated module is accepted by the verifier.
-  if (verifyModule(*M.get(), &Out->os()))
+  if (verifyModule(*M.get(), &errs()))
     report_fatal_error("Broken module found, compilation aborted!");
 
   // Output textual IR.

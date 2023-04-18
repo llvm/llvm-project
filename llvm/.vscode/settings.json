@@ -13,6 +13,8 @@
         "PYTHON_EXECUTABLE": "/usr/bin/python3"
     },
     "files.associations": {
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "system_error": "cpp",
+        "*.tcc": "cpp"
     }
 }
