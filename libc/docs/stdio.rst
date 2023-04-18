@@ -83,7 +83,7 @@ Function Name  Available
 =============  =========
 (f)getc        |check|
 fgets          |check|
-getchar
+getchar        |check|
 fread          |check|
 (f)putc        |check|
 (f)puts        |check|
