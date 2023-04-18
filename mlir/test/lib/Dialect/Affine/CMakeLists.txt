@@ -20,6 +20,7 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   Core
 
   LINK_LIBS PUBLIC
+  MLIRArithTransforms
   MLIRAffineTransforms
   MLIRAffineUtils
   MLIRIR
