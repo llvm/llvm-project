@@ -323,7 +323,7 @@ struct KnownFPClass {
   ///   x > +0 --> true
   ///   x < -0 --> false
   bool cannotBeOrderedLessThanZero() const {
-  return isKnownNever(OrderedLessThanZeroMask);
+    return isKnownNever(OrderedLessThanZeroMask);
   }
 
   /// Return true if we can prove that the analyzed floating-point value is

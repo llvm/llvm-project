@@ -4617,17 +4617,22 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
                                           KnownFPClass &Known, unsigned Depth,
                                           const Query &Q,
                                           const TargetLibraryInfo *TLI) {
-  if ((InterestedClasses & fcNan) == fcNone)
+  if ((InterestedClasses &
+       (KnownFPClass::OrderedLessThanZeroMask | fcNan)) == fcNone)
     return;
 
   KnownFPClass KnownSrc;
   computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                       KnownSrc, Depth + 1, Q, TLI);
-  if (KnownSrc.isKnownNeverNaN())
-    Known.knownNot(fcNan);
+
+  // Sign should be preserved
+  // TODO: Handle cannot be ordered greater than zero
+  if (KnownSrc.cannotBeOrderedLessThanZero())
+    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+
+  Known.propagateNaN(KnownSrc, true);
 
   // Infinity needs a range check.
-  // TODO: Sign bit should be preserved
 }
 
 // TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
