@@ -21,6 +21,18 @@
 
 namespace __llvm_libc {
 
+template <typename T> struct has_head_tail {
+  template <typename C> static char sfinae(decltype(&C::head_tail));
+  template <typename C> static uint16_t sfinae(...);
+  static constexpr bool value = sizeof(sfinae<T>(0)) == sizeof(char);
+};
+
+template <typename T> struct has_loop_and_tail {
+  template <typename C> static char sfinae(decltype(&C::loop_and_tail));
+  template <typename C> static uint16_t sfinae(...);
+  static constexpr bool value = sizeof(sfinae<T>(0)) == sizeof(char);
+};
+
 // Allocates two Buffer and extracts two spans out of them, one
 // aligned and one misaligned. Tests are run on both spans.
 struct Buffers {
@@ -132,7 +144,10 @@ using MemsetImplementations = testing::TypeList<
 #endif
     generic::Memset<uint32_t>, generic::Memset<cpp::array<uint32_t, 2>>, //
     generic::Memset<uint16_t>, generic::Memset<cpp::array<uint16_t, 2>>, //
-    generic::Memset<uint8_t>, generic::Memset<cpp::array<uint8_t, 2>>    //
+    generic::Memset<uint8_t>, generic::Memset<cpp::array<uint8_t, 2>>,   //
+    generic::MemsetSequence<uint8_t, uint8_t>,                           //
+    generic::MemsetSequence<uint16_t, uint8_t>,                          //
+    generic::MemsetSequence<uint32_t, uint16_t, uint8_t>                 //
     >;
 
 // Adapt CheckMemset signature to op implementation signatures.
@@ -158,7 +173,8 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       }
     }
   }
-  { // Test head tail operations from kSize to 2 * kSize.
+  if constexpr (has_head_tail<Impl>::value) {
+    // Test head tail operations from kSize to 2 * kSize.
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
@@ -167,7 +183,8 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
   }
-  { // Test loop operations from kSize to 3 * kSize.
+  if constexpr (has_loop_and_tail<Impl>::value) {
+    // Test loop operations from kSize to 3 * kSize.
     if constexpr (kSize > 1) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);
