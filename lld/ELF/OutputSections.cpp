@@ -534,7 +534,7 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     taskSize += sections[i]->getSize();
     bool done = ++i == numSections;
     if (done || taskSize >= taskSizeLimit) {
-      tg.execute([=] { fn(begin, i); });
+      tg.spawn([=] { fn(begin, i); });
       if (done)
         break;
       begin = i;
