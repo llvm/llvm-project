@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
+#include "mlir/Dialect/Arith/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -45,6 +46,10 @@ private:
   Option<bool> reifyToFuncArgs{
       *this, "reify-to-func-args",
       llvm::cl::desc("Reify in terms of function args"), llvm::cl::init(false)};
+
+  Option<bool> useArithOps{*this, "use-arith-ops",
+                           llvm::cl::desc("Reify with arith dialect ops"),
+                           llvm::cl::init(false)};
 };
 
 } // namespace
@@ -62,7 +67,8 @@ FailureOr<BoundType> parseBoundType(std::string type) {
 /// Look for "test.reify_bound" ops in the input and replace their results with
 /// the reified values.
 static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
-                                          bool reifyToFuncArgs) {
+                                          bool reifyToFuncArgs,
+                                          bool useArithOps) {
   IRRewriter rewriter(funcOp.getContext());
   WalkResult result = funcOp.walk([&](Operation *op) {
     // Look for test.reify_bound ops.
@@ -131,11 +137,21 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
               FailureOr<OpFoldResult>(rewriter.getIndexAttr(*reifiedConst));
       } else {
         if (dim) {
-          reified = reifyShapedValueDimBound(rewriter, op->getLoc(), *boundType,
-                                             value, *dim, stopCondition);
+          if (useArithOps) {
+            reified = arith::reifyShapedValueDimBound(
+                rewriter, op->getLoc(), *boundType, value, *dim, stopCondition);
+          } else {
+            reified = reifyShapedValueDimBound(
+                rewriter, op->getLoc(), *boundType, value, *dim, stopCondition);
+          }
         } else {
-          reified = reifyIndexValueBound(rewriter, op->getLoc(), *boundType,
-                                         value, stopCondition);
+          if (useArithOps) {
+            reified = arith::reifyIndexValueBound(
+                rewriter, op->getLoc(), *boundType, value, stopCondition);
+          } else {
+            reified = reifyIndexValueBound(rewriter, op->getLoc(), *boundType,
+                                           value, stopCondition);
+          }
         }
       }
       if (failed(reified)) {
@@ -159,7 +175,8 @@ static LogicalResult testReifyValueBounds(func::FuncOp funcOp,
 }
 
 void TestReifyValueBounds::runOnOperation() {
-  if (failed(testReifyValueBounds(getOperation(), reifyToFuncArgs)))
+  if (failed(
+          testReifyValueBounds(getOperation(), reifyToFuncArgs, useArithOps)))
     signalPassFailure();
 }
 
