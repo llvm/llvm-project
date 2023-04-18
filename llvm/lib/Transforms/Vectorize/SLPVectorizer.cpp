@@ -14133,13 +14133,11 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
 }
 
 template <typename T>
-static bool
-tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
-                       function_ref<unsigned(T *)> Limit,
-                       function_ref<bool(T *, T *)> Comparator,
-                       function_ref<bool(T *, T *)> AreCompatible,
-                       function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
-                       bool LimitForRegisterSize) {
+static bool tryToVectorizeSequence(
+    SmallVectorImpl<T *> &Incoming, function_ref<bool(T *, T *)> Comparator,
+    function_ref<bool(T *, T *)> AreCompatible,
+    function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
+    bool LimitForRegisterSize, BoUpSLP &R) {
   bool Changed = false;
   // Sort by type, parent, operands.
   stable_sort(Incoming, Comparator);
@@ -14170,10 +14168,18 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
         TryToVectorizeHelper(ArrayRef(IncIt, NumElts), LimitForRegisterSize)) {
       // Success start over because instructions might have been changed.
       Changed = true;
-    } else if (NumElts < Limit(*IncIt) &&
-               (Candidates.empty() ||
-                Candidates.front()->getType() == (*IncIt)->getType())) {
-      Candidates.append(IncIt, std::next(IncIt, NumElts));
+    } else {
+      /// \Returns the minimum number of elements that we will attempt to
+      /// vectorize.
+      auto GetMinNumElements = [&R](Value *V) {
+        unsigned EltSize = R.getVectorElementSize(V);
+        return std::max(2U, R.getMaxVecRegSize() / EltSize);
+      };
+      if (NumElts < GetMinNumElements(*IncIt) &&
+          (Candidates.empty() ||
+           Candidates.front()->getType() == (*IncIt)->getType())) {
+        Candidates.append(IncIt, std::next(IncIt, NumElts));
+      }
     }
     // Final attempt to vectorize instructions with the same types.
     if (Candidates.size() > 1 &&
@@ -14314,14 +14320,10 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
       return compareCmp<true>(V1, V2, *TLI,
                               [&R](Instruction *I) { return R.isDeleted(I); });
     };
-    auto Limit = [&R](Value *V) {
-      unsigned EltSize = R.getVectorElementSize(V);
-      return std::max(2U, R.getMaxVecRegSize() / EltSize);
-    };
 
     SmallVector<Value *> Vals(PostponedCmps.begin(), PostponedCmps.end());
     OpsChanged |= tryToVectorizeSequence<Value>(
-        Vals, Limit, CompareSorter, AreCompatibleCompares,
+        Vals, CompareSorter, AreCompatibleCompares,
         [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
           // Exclude possible reductions from other blocks.
           bool ArePossiblyReducedInOtherBlock =
@@ -14336,7 +14338,7 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
             return false;
           return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
         },
-        /*LimitForRegisterSize=*/true);
+        /*LimitForRegisterSize=*/true, R);
     Instructions.clear();
   } else {
     Instructions.clear();
@@ -14439,10 +14441,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
     return true;
   };
-  auto Limit = [&R](Value *V) {
-    unsigned EltSize = R.getVectorElementSize(V);
-    return std::max(2U, R.getMaxVecRegSize() / EltSize);
-  };
 
   bool HaveVectorizedPhiNodes = false;
   do {
@@ -14484,11 +14482,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
 
     HaveVectorizedPhiNodes = tryToVectorizeSequence<Value>(
-        Incoming, Limit, PHICompare, AreCompatiblePHIs,
+        Incoming, PHICompare, AreCompatiblePHIs,
         [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
           return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
         },
-        /*LimitForRegisterSize=*/true);
+        /*LimitForRegisterSize=*/true, R);
     Changed |= HaveVectorizedPhiNodes;
     VisitedInstrs.insert(Incoming.begin(), Incoming.end());
   } while (HaveVectorizedPhiNodes);
@@ -14764,10 +14762,6 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     return V1->getValueOperand()->getValueID() ==
            V2->getValueOperand()->getValueID();
   };
-  auto Limit = [&R, this](StoreInst *SI) {
-    unsigned EltSize = DL->getTypeSizeInBits(SI->getValueOperand()->getType());
-    return R.getMinVF(EltSize);
-  };
 
   // Attempt to sort and vectorize each of the store-groups.
   for (auto &Pair : Stores) {
@@ -14781,11 +14775,11 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       continue;
 
     Changed |= tryToVectorizeSequence<StoreInst>(
-        Pair.second, Limit, StoreSorter, AreCompatibleStores,
+        Pair.second, StoreSorter, AreCompatibleStores,
         [this, &R](ArrayRef<StoreInst *> Candidates, bool) {
           return vectorizeStores(Candidates, R);
         },
-        /*LimitForRegisterSize=*/false);
+        /*LimitForRegisterSize=*/false, R);
   }
   return Changed;
 }
