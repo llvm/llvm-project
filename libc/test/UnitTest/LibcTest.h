@@ -23,8 +23,6 @@
 namespace __llvm_libc {
 namespace testing {
 
-class RunContext;
-
 // Only the following conditions are supported. Notice that we do not have
 // a TRUE or FALSE condition. That is because, C library funtions do not
 // return boolean values, but use integral return values to indicate true or
@@ -41,6 +39,18 @@ enum TestCondition {
 };
 
 namespace internal {
+
+class RunContext {
+public:
+  enum RunResult { Result_Pass = 1, Result_Fail = 2 };
+
+  RunResult status() const { return Status; }
+
+  void markFail() { Status = Result_Fail; }
+
+private:
+  RunResult Status = Result_Pass;
+};
 
 template <typename ValType>
 bool test(RunContext *Ctx, TestCondition Cond, ValType LHS, ValType RHS,
@@ -65,9 +75,9 @@ template <typename T> struct Matcher : public MatcherBase {
 class Test {
 private:
   Test *Next = nullptr;
-  RunContext *Ctx = nullptr;
+  internal::RunContext *Ctx = nullptr;
 
-  void setContext(RunContext *C) { Ctx = C; }
+  void setContext(internal::RunContext *C) { Ctx = C; }
 
 public:
   virtual ~Test() {}
@@ -160,6 +170,10 @@ private:
   static Test *Start;
   static Test *End;
 };
+
+extern int argc;
+extern char **argv;
+extern char **envp;
 
 namespace internal {
 
