@@ -73,8 +73,8 @@ define i32 @test5(i1 %c, i32 %x, i32 %y) {
 define i32 @test_sub_deduce_true(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sub_deduce_true(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 6, i32 [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[COND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i32 15, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %c = icmp eq i32 %x, 9
@@ -99,8 +99,8 @@ define i32 @test_sub_deduce_true_no_const_fold(i32 %x, i32 %y) {
 define i32 @test_sub_deduce_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test_sub_deduce_false(
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[X:%.*]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C_NOT]], i32 7, i32 [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[COND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C_NOT]], i32 16, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %c = icmp ne i32 %x, 9
