@@ -305,6 +305,8 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 } // namespace bolt
 } // namespace llvm
 
+using ELF64LEPhdrTy = ELF64LEFile::Elf_Phdr;
+
 namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
