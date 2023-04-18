@@ -1022,3 +1022,164 @@ define <2 x float> @multiple_extractelement(<4 x float> nofpclass(zero) %arg0) {
   %ins.1 = insertelement <2 x float> %ins.0, float %extract2, i32 1
   ret <2 x float> %ins.1
 }
+
+; FIXME: Doesn't actually reach computeKnownFPClass
+define <4 x float> @shufflevector_constexpr() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_constexpr
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    ret <4 x float> <float 1.000000e+00, float bitcast (i32 ptrtoint (ptr @shufflevector_constexpr to i32) to float), float 4.000000e+00, float 0.000000e+00>
+;
+  ret <4 x float> shufflevector (<2 x float> <float 1.0, float bitcast (i32 ptrtoint (ptr @shufflevector_constexpr to i32) to float)>, <2 x float> <float 4.0, float 0.0>, <4 x i32> <i32 0, i32 1, i32 2, i32 3>)
+}
+
+define <4 x float> @shufflevector_concat_disjoint(<2 x float> nofpclass(nan) %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_concat_disjoint
+; CHECK-SAME: (<2 x float> nofpclass(nan) [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_concat_overlap(<2 x float> nofpclass(nan norm psub) %arg0, <2 x float> nofpclass(inf nan sub) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_concat_overlap
+; CHECK-SAME: (<2 x float> nofpclass(nan psub norm) [[ARG0:%.*]], <2 x float> nofpclass(nan inf sub) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_unknown_lhs(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_unknown_lhs
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_unknown_rhs(<2 x float> nofpclass(inf) %arg0, <2 x float> %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_unknown_rhs
+; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x float> [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_unknown_all(<2 x float> %arg0, <2 x float> %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_unknown_all
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_only_demand_lhs(<2 x float> nofpclass(inf) %arg0, <2 x float> %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_only_demand_lhs
+; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x float> [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_only_demand_rhs(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_only_demand_rhs
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 2, i32 3, i32 3, i32 2>
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_undef_demanded(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_undef_demanded
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> undef
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> undef
+  ret <4 x float> %shuffle
+}
+
+define <4 x float> @shufflevector_zeroinit_demanded(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <4 x float> @shufflevector_zeroinit_demanded
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> zeroinitializer
+  ret <4 x float> %shuffle
+}
+
+define float @shufflevector_extractelt0(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @shufflevector_extractelt0
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+  %extract = extractelement <4 x float> %shuffle, i32 0
+  ret float %extract
+}
+
+define float @shufflevector_extractelt1(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @shufflevector_extractelt1
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+  %extract = extractelement <4 x float> %shuffle, i32 1
+  ret float %extract
+}
+
+define float @shufflevector_extractelt2(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @shufflevector_extractelt2
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 2
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+  %extract = extractelement <4 x float> %shuffle, i32 2
+  ret float %extract
+}
+
+define float @shufflevector_extractelt3(<2 x float> %arg0, <2 x float> nofpclass(inf) %arg1) {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define float @shufflevector_extractelt3
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[SHUFFLE]], i32 3
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> <i32 1, i32 3, i32 0, i32 1>
+  %extract = extractelement <4 x float> %shuffle, i32 3
+  ret float %extract
+}
