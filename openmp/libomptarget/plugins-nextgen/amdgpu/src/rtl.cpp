@@ -2508,6 +2508,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     void *DevPtr;
     for (AMDGPUMemoryPoolTy *MemoryPool : AllMemoryPools) {
+      if (!MemoryPool->isGlobal())
+        continue;
+
       if (MemoryPool->isCoarseGrained()) {
         DevPtr = nullptr;
         size_t PreAllocSize = utils::PER_DEVICE_PREALLOC_SIZE;
