@@ -2071,31 +2071,30 @@ void TreePatternNode::SubstituteFormalArguments(
 /// fragments, return the set of inlined versions (this can be more than
 /// one if a PatFrags record has multiple alternatives).
 void TreePatternNode::InlinePatternFragments(
-  const TreePatternNodePtr &T, TreePattern &TP,
-  std::vector<TreePatternNodePtr> &OutAlternatives) {
+    TreePattern &TP, std::vector<TreePatternNodePtr> &OutAlternatives) {
 
   if (TP.hasError())
     return;
 
-  if (T->isLeaf()) {
-    OutAlternatives.push_back(T);  // nothing to do.
+  if (isLeaf()) {
+    OutAlternatives.push_back(this); // nothing to do.
     return;
   }
 
-  Record *Op = T->getOperator();
+  Record *Op = getOperator();
 
   if (!Op->isSubClassOf("PatFrags")) {
-    if (T->getNumChildren() == 0) {
-      OutAlternatives.push_back(T);
+    if (getNumChildren() == 0) {
+      OutAlternatives.push_back(this);
       return;
     }
 
     // Recursively inline children nodes.
     std::vector<std::vector<TreePatternNodePtr>> ChildAlternatives(
-        T->getNumChildren());
-    for (unsigned i = 0, e = T->getNumChildren(); i != e; ++i) {
-      TreePatternNodePtr Child = T->getChildShared(i);
-      InlinePatternFragments(Child, TP, ChildAlternatives[i]);
+        getNumChildren());
+    for (unsigned i = 0, e = getNumChildren(); i != e; ++i) {
+      TreePatternNodePtr Child = getChildShared(i);
+      Child->InlinePatternFragments(TP, ChildAlternatives[i]);
       // If there are no alternatives for any child, there are no
       // alternatives for this expression as whole.
       if (ChildAlternatives[i].empty())
@@ -2120,18 +2119,18 @@ void TreePatternNode::InlinePatternFragments(
       for (unsigned i = 0, e = ChildAlternatives.size(); i != e; ++i)
         NewChildren.push_back(ChildAlternatives[i][Idxs[i]]);
       TreePatternNodePtr R = makeIntrusiveRefCnt<TreePatternNode>(
-          T->getOperator(), std::move(NewChildren), T->getNumTypes());
+          getOperator(), std::move(NewChildren), getNumTypes());
 
       // Copy over properties.
-      R->setName(T->getName());
-      R->setNamesAsPredicateArg(T->getNamesAsPredicateArg());
-      R->setPredicateCalls(T->getPredicateCalls());
-      R->setGISelFlagsRecord(T->getGISelFlagsRecord());
-      R->setTransformFn(T->getTransformFn());
-      for (unsigned i = 0, e = T->getNumTypes(); i != e; ++i)
-        R->setType(i, T->getExtType(i));
-      for (unsigned i = 0, e = T->getNumResults(); i != e; ++i)
-        R->setResultIndex(i, T->getResultIndex(i));
+      R->setName(getName());
+      R->setNamesAsPredicateArg(getNamesAsPredicateArg());
+      R->setPredicateCalls(getPredicateCalls());
+      R->setGISelFlagsRecord(getGISelFlagsRecord());
+      R->setTransformFn(getTransformFn());
+      for (unsigned i = 0, e = getNumTypes(); i != e; ++i)
+        R->setType(i, getExtType(i));
+      for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+        R->setResultIndex(i, getResultIndex(i));
 
       // Register alternative.
       OutAlternatives.push_back(R);
@@ -2157,7 +2156,7 @@ void TreePatternNode::InlinePatternFragments(
   TreePattern *Frag = TP.getDAGPatterns().getPatternFragment(Op);
 
   // Verify that we are passing the right number of operands.
-  if (Frag->getNumArgs() != T->getNumChildren()) {
+  if (Frag->getNumArgs() != getNumChildren()) {
     TP.error("'" + Op->getName() + "' fragment requires " +
              Twine(Frag->getNumArgs()) + " operands!");
     return;
@@ -2171,7 +2170,7 @@ void TreePatternNode::InlinePatternFragments(
   // Compute the map of formal to actual arguments.
   std::map<std::string, TreePatternNodePtr> ArgMap;
   for (unsigned i = 0, e = Frag->getNumArgs(); i != e; ++i) {
-    TreePatternNodePtr Child = T->getChildShared(i);
+    TreePatternNodePtr Child = getChildShared(i);
     if (Scope != 0) {
       Child = Child->clone();
       Child->addNameAsPredicateArg(ScopedName(Scope, Frag->getArgName(i)));
@@ -2192,20 +2191,20 @@ void TreePatternNode::InlinePatternFragments(
 
     // Transfer types.  Note that the resolved alternative may have fewer
     // (but not more) results than the PatFrags node.
-    FragTree->setName(T->getName());
+    FragTree->setName(getName());
     for (unsigned i = 0, e = FragTree->getNumTypes(); i != e; ++i)
-      FragTree->UpdateNodeType(i, T->getExtType(i), TP);
+      FragTree->UpdateNodeType(i, getExtType(i), TP);
 
     if (Op->isSubClassOf("GISelFlags"))
       FragTree->setGISelFlagsRecord(Op);
 
     // Transfer in the old predicates.
-    for (const TreePredicateCall &Pred : T->getPredicateCalls())
+    for (const TreePredicateCall &Pred : getPredicateCalls())
       FragTree->addPredicateCall(Pred);
 
     // The fragment we inlined could have recursive inlining that is needed.  See
     // if there are any pattern fragments in it and inline them as needed.
-    InlinePatternFragments(FragTree, TP, OutAlternatives);
+    FragTree->InlinePatternFragments(TP, OutAlternatives);
   }
 }
 
