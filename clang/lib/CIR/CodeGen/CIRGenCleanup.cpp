@@ -63,6 +63,21 @@ void CIRGenFunction::initFullExprCleanupWithFlag(Address ActiveFlag) {
     cleanup.setTestFlagInEHCleanup();
 }
 
+/// We don't need a normal entry block for the given cleanup.
+/// Optimistic fixup branches can cause these blocks to come into
+/// existence anyway;  if so, destroy it.
+///
+/// The validity of this transformation is very much specific to the
+/// exact ways in which we form branches to cleanup entries.
+static void destroyOptimisticNormalEntry(CIRGenFunction &CGF,
+                                         EHCleanupScope &scope) {
+  auto *entry = scope.getNormalBlock();
+  if (!entry)
+    return;
+
+  llvm_unreachable("NYI");
+}
+
 /// Pops a cleanup block. If the block includes a normal cleanup, the
 /// current insertion point is threaded through the cleanup, as are
 /// any branch fixups on the cleanup.
@@ -81,6 +96,113 @@ void CIRGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   [[maybe_unused]] Address EHActiveFlag = Scope.shouldTestFlagInEHCleanup()
                                               ? Scope.getActiveFlag()
                                               : Address::invalid();
+
+  // Check whether we need an EH cleanup. This is only true if we've
+  // generated a lazy EH cleanup block.
+  auto *EHEntry = Scope.getCachedEHDispatchBlock();
+  assert(Scope.hasEHBranches() == (EHEntry != nullptr));
+  bool RequiresEHCleanup = (EHEntry != nullptr);
+
+  // Check the three conditions which might require a normal cleanup:
+
+  // - whether there are branch fix-ups through this cleanup
+  unsigned FixupDepth = Scope.getFixupDepth();
+  bool HasFixups = EHStack.getNumBranchFixups() != FixupDepth;
+
+  // - whether there are branch-throughs or branch-afters
+  bool HasExistingBranches = Scope.hasBranches();
+
+  // - whether there's a fallthrough
+  auto *FallthroughSource = builder.getInsertionBlock();
+  bool HasFallthrough = (FallthroughSource != nullptr && IsActive);
+
+  // Branch-through fall-throughs leave the insertion point set to the
+  // end of the last cleanup, which points to the current scope.  The
+  // rest of CIR gen doesn't need to worry about this; it only happens
+  // during the execution of PopCleanupBlocks().
+  bool HasTerminator =
+      !FallthroughSource->empty() &&
+      FallthroughSource->back().mightHaveTrait<mlir::OpTrait::IsTerminator>();
+  bool HasPrebranchedFallthrough = (FallthroughSource && HasTerminator &&
+                                    FallthroughSource->getTerminator());
+
+  // If this is a normal cleanup, then having a prebranched
+  // fallthrough implies that the fallthrough source unconditionally
+  // jumps here.
+  assert(!Scope.isNormalCleanup() || !HasPrebranchedFallthrough ||
+         (Scope.getNormalBlock() &&
+          FallthroughSource->getTerminator()->getSuccessor(0) ==
+              Scope.getNormalBlock()));
+
+  bool RequiresNormalCleanup = false;
+  if (Scope.isNormalCleanup() &&
+      (HasFixups || HasExistingBranches || HasFallthrough)) {
+    RequiresNormalCleanup = true;
+  }
+
+  // If we have a prebranched fallthrough into an inactive normal
+  // cleanup, rewrite it so that it leads to the appropriate place.
+  if (Scope.isNormalCleanup() && HasPrebranchedFallthrough && !IsActive) {
+    llvm_unreachable("NYI");
+  }
+
+  // If we don't need the cleanup at all, we're done.
+  if (!RequiresNormalCleanup && !RequiresEHCleanup) {
+    llvm_unreachable("NYI");
+  }
+
+  // Copy the cleanup emission data out.  This uses either a stack
+  // array or malloc'd memory, depending on the size, which is
+  // behavior that SmallVector would provide, if we could use it
+  // here. Unfortunately, if you ask for a SmallVector<char>, the
+  // alignment isn't sufficient.
+  auto *CleanupSource = reinterpret_cast<char *>(Scope.getCleanupBuffer());
+  alignas(EHScopeStack::ScopeStackAlignment) char
+      CleanupBufferStack[8 * sizeof(void *)];
+  std::unique_ptr<char[]> CleanupBufferHeap;
+  size_t CleanupSize = Scope.getCleanupSize();
+
+  if (CleanupSize <= sizeof(CleanupBufferStack)) {
+    memcpy(CleanupBufferStack, CleanupSource, CleanupSize);
+  } else {
+    CleanupBufferHeap.reset(new char[CleanupSize]);
+    memcpy(CleanupBufferHeap.get(), CleanupSource, CleanupSize);
+  }
+
+  EHScopeStack::Cleanup::Flags cleanupFlags;
+  if (Scope.isNormalCleanup())
+    cleanupFlags.setIsNormalCleanupKind();
+  if (Scope.isEHCleanup())
+    cleanupFlags.setIsEHCleanupKind();
+
+  // Under -EHa, invoke seh.scope.end() to mark scope end before dtor
+  bool IsEHa = getLangOpts().EHAsynch && !Scope.isLifetimeMarker();
+  // const EHPersonality &Personality = EHPersonality::get(*this);
+  if (!RequiresNormalCleanup) {
+    llvm_unreachable("NYI");
+  } else {
+    // If we have a fallthrough and no other need for the cleanup,
+    // emit it directly.
+    if (HasFallthrough && !HasPrebranchedFallthrough && !HasFixups &&
+        !HasExistingBranches) {
+
+      // mark SEH scope end for fall-through flow
+      if (IsEHa) {
+        llvm_unreachable("NYI");
+      }
+
+      destroyOptimisticNormalEntry(*this, Scope);
+      EHStack.popCleanup();
+      // CONTINUE HERE...
+      // EmitCleanup(*this, Fn, cleanupFlags, NormalActiveFlag);
+
+      // Otherwise, the best approach is to thread everything through
+      // the cleanup block and then try to clean up after ourselves.
+    } else {
+      llvm_unreachable("NYI");
+    }
+  }
+
   llvm_unreachable("NYI");
 }
 
@@ -217,4 +339,44 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     llvm_unreachable("NYI");
 
   return Scope->getCleanupBuffer();
+}
+
+void EHScopeStack::popCleanup() {
+  assert(!empty() && "popping exception stack when not empty");
+
+  assert(isa<EHCleanupScope>(*begin()));
+  EHCleanupScope &Cleanup = cast<EHCleanupScope>(*begin());
+  InnermostNormalCleanup = Cleanup.getEnclosingNormalCleanup();
+  InnermostEHScope = Cleanup.getEnclosingEHScope();
+  deallocate(Cleanup.getAllocatedSize());
+
+  // Destroy the cleanup.
+  Cleanup.Destroy();
+
+  // Check whether we can shrink the branch-fixups stack.
+  if (!BranchFixups.empty()) {
+    // If we no longer have any normal cleanups, all the fixups are
+    // complete.
+    if (!hasNormalCleanups())
+      BranchFixups.clear();
+
+    // Otherwise we can still trim out unnecessary nulls.
+    else
+      popNullFixups();
+  }
+}
+
+void EHScopeStack::deallocate(size_t Size) {
+  StartOfData += llvm::alignTo(Size, ScopeStackAlignment);
+}
+
+/// Remove any 'null' fixups on the stack.  However, we can't pop more
+/// fixups than the fixup depth on the innermost normal cleanup, or
+/// else fixups that we try to add to that cleanup will end up in the
+/// wrong place.  We *could* try to shrink fixup depths, but that's
+/// actually a lot of work for little benefit.
+void EHScopeStack::popNullFixups() {
+  // We expect this to only be called when there's still an innermost
+  // normal cleanup;  otherwise there really shouldn't be any fixups.
+  llvm_unreachable("NYI");
 }
