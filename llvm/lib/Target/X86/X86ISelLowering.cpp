@@ -49145,7 +49145,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     // Don't break NOT patterns.
     SDValue BC = peekThroughOneUseBitcasts(N0);
     if (ISD::isBitwiseLogicOp(BC.getOpcode()) &&
-        BC->isOnlyUserOf(BC.getOperand(1).getNode()) && 
+        BC->isOnlyUserOf(BC.getOperand(1).getNode()) &&
         !ISD::isBuildVectorAllOnes(BC.getOperand(1).getNode())) {
       if (SDValue RHS = TryConstantFold(BC.getOperand(1))) {
         SDLoc DL(N);
