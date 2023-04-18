@@ -347,8 +347,9 @@ RValue CIRGenFunction::buildCXXDestructorCall(GlobalDecl Dtor,
   CallArgList Args;
   commonBuildCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
                                      ImplicitParamTy, CE, Args, nullptr);
-  assert((CE || currSrcLoc) && "expected source location");
+  assert((CE || Dtor.getDecl()) && "expected source location provider");
   return buildCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
                    ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
-                   CE ? getLoc(CE->getExprLoc()) : *currSrcLoc);
+                   CE ? getLoc(CE->getExprLoc())
+                      : getLoc(Dtor.getDecl()->getSourceRange()));
 }
