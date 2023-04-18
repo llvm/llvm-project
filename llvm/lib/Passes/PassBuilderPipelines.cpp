@@ -1404,7 +1404,12 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM;
 
-  MPM.addPass(HeterogeneousDebugVerify(*TM));
+  auto OptimizationLevelAsOptLevel =
+      CodeGenOpt::getLevel(Level.getSpeedupLevel());
+  auto CodeGenOptLevel =
+      TM ? TM->getOptLevel()
+         : OptimizationLevelAsOptLevel.value_or(CodeGenOpt::Aggressive);
+  MPM.addPass(HeterogeneousDebugVerify(CodeGenOptLevel));
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());

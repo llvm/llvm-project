@@ -19,7 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace llvm;
 
@@ -52,10 +52,11 @@ struct DiagnosticInfoRemovingIncompatibleHeterogeneousDebug
 
 constexpr unsigned RetainedNodesOpIdx = 7;
 
-static bool maybeStrip(Module &M, const TargetMachine &TM, bool IsNPM = false) {
+static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
+                       bool IsNPM = false) {
   if (DisableHeterogeneousDebugVerify || !isHeterogeneousDebug(M))
     return false;
-  if (TM.getOptLevel() == CodeGenOpt::None && !IsNPM)
+  if (OptLevel == CodeGenOpt::None && !IsNPM)
     return false;
   M.getContext().diagnose(
       DiagnosticInfoRemovingIncompatibleHeterogeneousDebug(M));
@@ -80,14 +81,14 @@ static bool maybeStrip(Module &M, const TargetMachine &TM, bool IsNPM = false) {
 }
 
 class HeterogeneousDebugVerifyLegacy : public ModulePass {
-  const TargetMachine &TM;
+  const CodeGenOpt::Level OptLevel;
 
 public:
   static char ID;
-  HeterogeneousDebugVerifyLegacy(const TargetMachine &TM)
-      : ModulePass(ID), TM(TM) {}
+  HeterogeneousDebugVerifyLegacy(CodeGenOpt::Level OptLevel)
+      : ModulePass(ID), OptLevel(OptLevel) {}
 
-  bool doInitialization(Module &M) override { return maybeStrip(M, TM); }
+  bool doInitialization(Module &M) override { return maybeStrip(M, OptLevel); }
   bool runOnModule(Module &M) override { return false; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -107,17 +108,17 @@ INITIALIZE_PASS(HeterogeneousDebugVerifyLegacy,
                 "Verify heterogeneous debug preconditions", false, true)
 
 ModulePass *
-llvm::createHeterogeneousDebugVerifyLegacyPass(const TargetMachine &TM) {
-  return new HeterogeneousDebugVerifyLegacy(TM);
+llvm::createHeterogeneousDebugVerifyLegacyPass(CodeGenOpt::Level OptLevel) {
+  return new HeterogeneousDebugVerifyLegacy(OptLevel);
 }
 
 namespace llvm {
 
-HeterogeneousDebugVerify::HeterogeneousDebugVerify(const TargetMachine &TM)
-    : TM(TM) {}
+HeterogeneousDebugVerify::HeterogeneousDebugVerify(CodeGenOpt::Level OptLevel)
+    : OptLevel(OptLevel) {}
 PreservedAnalyses HeterogeneousDebugVerify::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
-  (void)maybeStrip(M, TM, /*IsNPM=*/true);
+  (void)maybeStrip(M, OptLevel, /*IsNPM=*/true);
   return PreservedAnalyses::all();
 }
 

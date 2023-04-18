@@ -1082,7 +1082,7 @@ bool TargetPassConfig::addCoreISelPasses() {
 }
 
 bool TargetPassConfig::addISelPasses() {
-  addPass(createHeterogeneousDebugVerifyLegacyPass(*TM));
+  addPass(createHeterogeneousDebugVerifyLegacyPass(TM->getOptLevel()));
 
   if (TM->useEmulatedTLS())
     addPass(createLowerEmuTLSPass());

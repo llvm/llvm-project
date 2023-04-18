@@ -19,21 +19,21 @@
 
 namespace llvm {
 class ModulePass;
-class TargetMachine;
 
 /// Create and return a pass for the legacy pass manager that strips
 /// heterogeneous debug info from modules compiled above -O0.
-ModulePass *createHeterogeneousDebugVerifyLegacyPass(const TargetMachine &TM);
+ModulePass *
+createHeterogeneousDebugVerifyLegacyPass(CodeGenOpt::Level OptLevel);
 
 /// Pass for the new pass manager that strips
 /// heterogeneous debug info from modules compiled above -O0. It should be added
 /// to pipelines when compiling above -O0.
 class HeterogeneousDebugVerify
     : public PassInfoMixin<HeterogeneousDebugVerify> {
-  const TargetMachine &TM;
+  const CodeGenOpt::Level OptLevel;
 
 public:
-  HeterogeneousDebugVerify(const TargetMachine &TM);
+  HeterogeneousDebugVerify(CodeGenOpt::Level OptLevel);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
