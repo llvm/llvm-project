@@ -72,11 +72,6 @@ public:
     return *(end() - 1);
   }
 
-  char popFront() {
-    assert(!empty());
-    return *First++;
-  }
-
   bool consumeFront(char C) {
     if (!startsWith(C))
       return false;
