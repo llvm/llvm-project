@@ -1231,23 +1231,110 @@ public:
   }
 };
 
+static void populateCompressedWithHiPosArray(OpBuilder &builder, Location loc,
+                                             ArrayRef<unsigned> batchDimSzs,
+                                             Value posMemRef, unsigned nse,
+                                             PackOp op) {
+  SmallVector<Value> lbs, ubs, steps;
+  Value c0 = constantIndex(builder, loc, 0);
+  Value c1 = constantIndex(builder, loc, 1);
+  Value c2 = constantIndex(builder, loc, 2);
+  for (unsigned dimSz : batchDimSzs) {
+    lbs.push_back(c0);
+    ubs.push_back(constantIndex(builder, loc, dimSz));
+    steps.push_back(c1);
+  }
+  auto tensorType = op.getValues().getType();
+  auto memrefType =
+      MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+  Value batV = builder.create<bufferization::ToMemrefOp>(loc, memrefType,
+                                                         op.getValues());
+  scf::buildLoopNest(
+      builder, loc, lbs, ubs, steps,
+      [&ubs, c0, c1, c2, nse, batV, posMemRef](OpBuilder &builder, Location loc,
+                                               ValueRange ivs) {
+        // Linearize index variables
+        Value crd = constantIndex(builder, loc, 0);
+        for (unsigned i = 0, e = ivs.size(); i < e; i++) {
+          crd = builder.create<arith::AddIOp>(loc, crd, ivs[i]);
+          if (i != ivs.size() - 1)
+            crd = builder.create<arith::MulIOp>(loc, crd, ubs[i + 1]);
+        }
+        Value len = constantIndex(builder, loc, nse);
+        Value pLo = builder.create<arith::MulIOp>(loc, crd, len);
+        SmallVector<Value> indices(ivs.begin(), ivs.end());
+        auto whileOp = builder.create<scf::WhileOp>(
+            loc, TypeRange{builder.getIndexType()}, ValueRange{len},
+            [&indices, c0, c1, batV](OpBuilder &builder, Location loc,
+                                     ValueRange vs) {
+              Value curLen = vs.front();
+              Value pred = builder.create<arith::CmpIOp>(
+                  loc, arith::CmpIPredicate::eq, curLen, c0);
+              auto ifOp = builder.create<scf::IfOp>(
+                  loc, TypeRange{builder.getI1Type()}, pred, true);
+              {
+                OpBuilder::InsertionGuard guard(builder);
+                // if len == 0.
+                builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+                builder.create<scf::YieldOp>(loc,
+                                             constantI1(builder, loc, false));
+                // Else branch.
+                builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+                indices.push_back(
+                    builder.create<arith::SubIOp>(loc, curLen, c1));
+                Value val = builder.create<memref::LoadOp>(loc, batV, indices);
+                indices.pop_back();
+                Value cont = builder.create<arith::CmpFOp>(
+                    loc, arith::CmpFPredicate::OEQ, val,
+                    constantZero(builder, loc, val.getType()));
+                builder.create<scf::YieldOp>(loc, cont);
+              }
+              builder.create<scf::ConditionOp>(loc, ifOp.getResults()[0], vs);
+            },
+            [c1](OpBuilder &builder, Location loc, ValueRange vs) {
+              // len --;
+              Value nxLen = builder.create<arith::SubIOp>(loc, vs.front(), c1);
+              builder.create<scf::YieldOp>(loc, nxLen);
+            });
+        len = whileOp.getResults()[0];
+        Value pHi = builder.create<arith::AddIOp>(loc, pLo, len);
+        // Stores position lower bound.
+        Value idx = builder.create<arith::MulIOp>(loc, crd, c2);
+        genStore(builder, loc, pLo, posMemRef, idx);
+        // Stores position upper bound.
+        idx = builder.create<arith::AddIOp>(loc, idx, c1);
+        genStore(builder, loc, pHi, posMemRef, idx);
+      });
+}
+
 struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(PackOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
+    const unsigned batchedLvls = op.getNumBatchedLvls();
+    unsigned nse = op.getValues().getType().getDimSize(batchedLvls);
     const auto stt = getSparseTensorType(op.getResult());
-    assert(isUniqueCOOType(stt));
+    assert(isCOOType(stt.getEncoding(), batchedLvls, true));
+
+    unsigned batchedCount = 1;
+    SmallVector<unsigned> batchDimSzs;
+    batchDimSzs.reserve(batchedLvls);
+    for (unsigned i = 0; i < batchedLvls; i++) {
+      // Should already be guaranteed by verifier.
+      assert(!ShapedType::isDynamic(stt.getDimShape()[i]));
+      batchedCount *= stt.getDimShape()[i];
+      batchDimSzs.push_back(stt.getDimShape()[i]);
+    }
 
     SmallVector<Value> fields;
     Location loc = op.getLoc();
 
     foreachFieldAndTypeInSparseTensor(
         stt,
-        [&rewriter, &fields, &op, stt,
+        [&rewriter, &fields, &op, &batchDimSzs, nse, batchedCount, stt,
          loc](Type fType, FieldIndex fIdx, SparseTensorFieldKind fKind,
-              Level /*lvl*/, DimLevelType /*dlt*/) -> bool {
+              Level /*lvl*/, DimLevelType dlt) -> bool {
           assert(fields.size() == fIdx);
           Value field;
           switch (fKind) {
@@ -1259,34 +1346,38 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
             // By creating a constant value for it, we avoid the complexity of
             // memory management.
             const auto posTp = stt.getPosType();
-            auto tensorType = RankedTensorType::get({2}, posTp);
-            auto memrefType = MemRefType::get(tensorType.getShape(),
-                                              tensorType.getElementType());
-            auto cstPtr = rewriter.create<arith::ConstantOp>(
-                loc, tensorType,
-                DenseElementsAttr::get(
-                    tensorType,
-                    ArrayRef<Attribute>{
-                        IntegerAttr::get(posTp, 0),
-                        IntegerAttr::get(
-                            posTp, op.getValues().getType().getShape()[0])}));
-            field = rewriter.create<bufferization::ToMemrefOp>(loc, memrefType,
-                                                               cstPtr);
+            if (isCompressedDLT(dlt)) {
+              RankedTensorType tensorType;
+              SmallVector<Attribute> posAttr;
+              tensorType = RankedTensorType::get({batchedCount + 1}, posTp);
+              posAttr.push_back(IntegerAttr::get(posTp, 0));
+              for (unsigned i = 0; i < batchedCount; i++) {
+                // The postion memref will have values as
+                // [0, nse, 2 * nse, ..., batchedCount * nse]
+                posAttr.push_back(IntegerAttr::get(posTp, nse * (i + 1)));
+              }
+              MemRefType memrefType = MemRefType::get(
+                  tensorType.getShape(), tensorType.getElementType());
+              auto cstPtr = rewriter.create<arith::ConstantOp>(
+                  loc, tensorType, DenseElementsAttr::get(tensorType, posAttr));
+              field = rewriter.create<bufferization::ToMemrefOp>(
+                  loc, memrefType, cstPtr);
+            } else {
+              assert(isCompressedWithHiDLT(dlt) && !batchDimSzs.empty());
+              MemRefType posMemTp = MemRefType::get({batchedCount * 2}, posTp);
+              field = rewriter.create<memref::AllocaOp>(loc, posMemTp);
+              populateCompressedWithHiPosArray(rewriter, loc, batchDimSzs,
+                                               field, nse, op);
+            }
             break;
           }
           case SparseTensorFieldKind::CrdMemRef: {
             auto tensorType = op.getCoordinates().getType();
             auto memrefType = MemRefType::get(tensorType.getShape(),
                                               tensorType.getElementType());
-            auto crdMemRef = rewriter.create<bufferization::ToMemrefOp>(
+            field = rewriter.create<bufferization::ToMemrefOp>(
                 op->getLoc(), memrefType, op.getCoordinates());
-            ReassociationIndices reassociation;
-            for (int i = 0, e = tensorType.getRank(); i < e; i++)
-              reassociation.push_back(i);
 
-            // Flattened the indices buffer to rank 1.
-            field = rewriter.create<memref::CollapseShapeOp>(
-                loc, crdMemRef, ArrayRef<ReassociationIndices>(reassociation));
             break;
           }
           case SparseTensorFieldKind::ValMemRef: {
@@ -1300,6 +1391,17 @@ struct SparsePackOpConverter : public OpConversionPattern<PackOp> {
           }
 
           assert(field);
+          if (auto memrefTp = field.getType().dyn_cast<MemRefType>();
+              memrefTp && memrefTp.getRank() > 1) {
+            ReassociationIndices reassociation;
+            for (int i = 0, e = memrefTp.getRank(); i < e; i++)
+              reassociation.push_back(i);
+            // Flattens the buffer to rank 1. The value buffer might need be
+            // collapsed as well due to batching.
+            field = rewriter.create<memref::CollapseShapeOp>(
+                loc, field, ArrayRef<ReassociationIndices>(reassociation));
+          }
+
           if (fType != field.getType())
             field = rewriter.create<memref::CastOp>(loc, fType, field);
           fields.push_back(field);
