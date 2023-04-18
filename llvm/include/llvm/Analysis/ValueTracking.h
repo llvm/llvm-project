@@ -458,6 +458,10 @@ KnownFPClass computeKnownFPClass(
 bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
                           unsigned Depth = 0);
 
+
+bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI);
+
 /// Return true if we can prove that the specified FP value is either NaN or
 /// never less than -0.0.
 ///
@@ -466,8 +470,18 @@ bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
 ///       -0 --> true
 ///   x > +0 --> true
 ///   x < -0 --> false
-bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI);
+inline bool cannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
+                                        const TargetLibraryInfo *TLI = nullptr,
+                                        unsigned Depth = 0,
+                                        AssumptionCache *AC = nullptr,
+                                        const Instruction *CtxI = nullptr,
+                                        const DominatorTree *DT = nullptr,
+                                        bool UseInstrInfo = true) {
+  KnownFPClass Known =
+      computeKnownFPClass(V, DL, KnownFPClass::OrderedLessThanZeroMask, Depth,
+                          TLI, AC, CtxI, DT, UseInstrInfo);
+  return Known.cannotBeOrderedLessThanZero();
+}
 
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value
