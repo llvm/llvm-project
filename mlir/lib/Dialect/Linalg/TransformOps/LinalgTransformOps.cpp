@@ -3194,12 +3194,11 @@ DiagnosedSilenceableFailure
 transform::HoistRedundantTensorSubsetsOp::applyToOne(
     Operation *target, transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  IRRewriter rewriter(target->getContext());
+  TrackingListener listener(state, *this);
+  IRRewriter rewriter(target->getContext(), &listener);
   auto forOp = dyn_cast<scf::ForOp>(target);
   if (forOp) {
-    scf::ForOp newForOp =
-        linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
-    results.push_back(newForOp);
+    linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
     return DiagnosedSilenceableFailure::success();
   }
 
@@ -3208,8 +3207,13 @@ transform::HoistRedundantTensorSubsetsOp::applyToOne(
   target->walk([&](scf::ForOp forOp) {
     hoistRedundantSubsetExtractInsert(rewriter, forOp);
   });
-  results.push_back(target);
   return DiagnosedSilenceableFailure::success();
+}
+
+void transform::HoistRedundantTensorSubsetsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
 }
 
 //===----------------------------------------------------------------------===//
