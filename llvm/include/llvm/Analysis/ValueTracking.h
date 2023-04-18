@@ -329,10 +329,14 @@ struct KnownFPClass {
     SignBit = false;
   }
 
+  /// Return true if the sign bit must be 0, ignoring the sign of nans.
+  bool signBitIsZeroOrNaN() const {
+    return isKnownNever(fcNegative);
+  }
+
   /// Assume the sign bit is zero.
-  void signBitIsZero() {
-    KnownFPClasses = (KnownFPClasses & fcPositive) |
-                     (KnownFPClasses & fcNan);
+  void signBitMustBeZero() {
+    KnownFPClasses &= (fcPositive | fcNan);
     SignBit = false;
   }
 
