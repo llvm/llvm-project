@@ -353,3 +353,115 @@ RValue CIRGenFunction::buildCXXDestructorCall(GlobalDecl Dtor,
                    CE ? getLoc(CE->getExprLoc())
                       : getLoc(Dtor.getDecl()->getSourceRange()));
 }
+
+namespace {
+/// The parameters to pass to a usual operator delete.
+struct UsualDeleteParams {
+  bool DestroyingDelete = false;
+  bool Size = false;
+  bool Alignment = false;
+};
+} // namespace
+
+// FIXME(cir): this should be shared with LLVM codegen
+static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
+  UsualDeleteParams Params;
+
+  const FunctionProtoType *FPT = FD->getType()->castAs<FunctionProtoType>();
+  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
+
+  // The first argument is always a void*.
+  ++AI;
+
+  // The next parameter may be a std::destroying_delete_t.
+  if (FD->isDestroyingOperatorDelete()) {
+    Params.DestroyingDelete = true;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // Figure out what other parameters we should be implicitly passing.
+  if (AI != AE && (*AI)->isIntegerType()) {
+    Params.Size = true;
+    ++AI;
+  }
+
+  if (AI != AE && (*AI)->isAlignValT()) {
+    Params.Alignment = true;
+    ++AI;
+  }
+
+  assert(AI == AE && "unexpected usual deallocation function parameter");
+  return Params;
+}
+
+/// Emit a call to an operator new or operator delete function, as implicitly
+/// created by new-expressions and delete-expressions.
+static RValue buildNewDeleteCall(CIRGenFunction &CGF,
+                                 const FunctionDecl *CalleeDecl,
+                                 const FunctionProtoType *CalleeType,
+                                 const CallArgList &Args) {
+  mlir::cir::CallOp CallOrInvoke{};
+  auto CalleePtr = CGF.CGM.GetAddrOfFunction(CalleeDecl);
+  CIRGenCallee Callee =
+      CIRGenCallee::forDirect(CalleePtr, GlobalDecl(CalleeDecl));
+  RValue RV = CGF.buildCall(CGF.CGM.getTypes().arrangeFreeFunctionCall(
+                                Args, CalleeType, /*ChainCall=*/false),
+                            Callee, ReturnValueSlot(), Args, &CallOrInvoke);
+
+  /// C++1y [expr.new]p10:
+  ///   [In a new-expression,] an implementation is allowed to omit a call
+  ///   to a replaceable global allocation function.
+  ///
+  /// We model such elidable calls with the 'builtin' attribute.
+  assert(!UnimplementedFeature::attributeBuiltin());
+  return RV;
+}
+
+void CIRGenFunction::buildDeleteCall(const FunctionDecl *DeleteFD,
+                                     mlir::Value Ptr, QualType DeleteTy,
+                                     mlir::Value NumElements,
+                                     CharUnits CookieSize) {
+  assert((!NumElements && CookieSize.isZero()) ||
+         DeleteFD->getOverloadedOperator() == OO_Array_Delete);
+
+  const auto *DeleteFTy = DeleteFD->getType()->castAs<FunctionProtoType>();
+  CallArgList DeleteArgs;
+
+  auto Params = getUsualDeleteParams(DeleteFD);
+  auto ParamTypeIt = DeleteFTy->param_type_begin();
+
+  // Pass the pointer itself.
+  QualType ArgTy = *ParamTypeIt++;
+  mlir::Value DeletePtr =
+      builder.createBitcast(Ptr.getLoc(), Ptr, ConvertType(ArgTy));
+  DeleteArgs.add(RValue::get(DeletePtr), ArgTy);
+
+  // Pass the std::destroying_delete tag if present.
+  mlir::Value DestroyingDeleteTag{};
+  if (Params.DestroyingDelete) {
+    llvm_unreachable("NYI");
+  }
+
+  // Pass the size if the delete function has a size_t parameter.
+  if (Params.Size) {
+    llvm_unreachable("NYI");
+  }
+
+  // Pass the alignment if the delete function has an align_val_t parameter.
+  if (Params.Alignment) {
+    llvm_unreachable("NYI");
+  }
+
+  assert(ParamTypeIt == DeleteFTy->param_type_end() &&
+         "unknown parameter to usual delete function");
+
+  // Emit the call to delete.
+  buildNewDeleteCall(*this, DeleteFD, DeleteFTy, DeleteArgs);
+
+  // If call argument lowering didn't use the destroying_delete_t alloca,
+  // remove it again.
+  if (DestroyingDeleteTag && DestroyingDeleteTag.use_empty()) {
+    llvm_unreachable("NYI"); // DestroyingDeleteTag->eraseFromParent();
+  }
+}

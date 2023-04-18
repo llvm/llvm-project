@@ -736,6 +736,10 @@ public:
                          Address Ptr);
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
 
+  void buildDeleteCall(const FunctionDecl *DeleteFD, mlir::Value Ptr,
+                       QualType DeleteTy, mlir::Value NumElements = nullptr,
+                       CharUnits CookieSize = CharUnits());
+
   mlir::Value createLoad(const clang::VarDecl *VD, const char *Name);
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or

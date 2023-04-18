@@ -468,6 +468,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   {
     auto FnBeginLoc = getLoc(FD->getBody()->getEndLoc());
     auto FnEndLoc = getLoc(FD->getBody()->getEndLoc());
+    SourceLocRAIIObject fnLoc{*this, getLoc(Loc)};
 
     assert(Fn.isDeclaration() && "Function already has body?");
     mlir::Block *EntryBB = Fn.addEntryBlock();
@@ -498,7 +499,6 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
              cast<CXXMethodDecl>(FD)->isLambdaStaticInvoker()) {
       // The lambda static invoker function is special, because it forwards or
       // clones the body of the function call operator (but is actually static).
-      SourceLocRAIIObject Loc{*this, FnBeginLoc};
       buildLambdaStaticInvokeBody(cast<CXXMethodDecl>(FD));
     } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
                (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||
