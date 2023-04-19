@@ -47,6 +47,66 @@ define amdgpu_kernel void @buffers_dont_alias(ptr addrspace(8) noalias %a, ptr a
   ret void
 }
 
+define amdgpu_kernel void @buffers_from_flat_dont_alias(ptr noalias %a.flat, ptr noalias %b.flat) {
+; SDAG-LABEL: buffers_from_flat_dont_alias:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; SDAG-NEXT:    s_mov_b32 s7, 0
+; SDAG-NEXT:    s_mov_b32 s6, 16
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    s_and_b32 s5, s1, 0xffff
+; SDAG-NEXT:    s_mov_b32 s4, s0
+; SDAG-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
+; SDAG-NEXT:    s_and_b32 s5, s3, 0xffff
+; SDAG-NEXT:    s_mov_b32 s4, s2
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    v_mul_f32_e32 v0, v0, v0
+; SDAG-NEXT:    v_mul_f32_e32 v1, v1, v1
+; SDAG-NEXT:    v_mul_f32_e32 v2, v2, v2
+; SDAG-NEXT:    v_mul_f32_e32 v3, v3, v3
+; SDAG-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; SDAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: buffers_from_flat_dont_alias:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GISEL-NEXT:    s_mov_b32 s7, 0
+; GISEL-NEXT:    s_mov_b32 s6, 16
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_and_b32 s5, s1, 0xffff
+; GISEL-NEXT:    s_mov_b32 s4, s0
+; GISEL-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
+; GISEL-NEXT:    s_and_b32 s5, s3, 0xffff
+; GISEL-NEXT:    s_mov_b32 s4, s2
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_mul_f32_e32 v0, v0, v0
+; GISEL-NEXT:    v_mul_f32_e32 v1, v1, v1
+; GISEL-NEXT:    v_mul_f32_e32 v2, v2, v2
+; GISEL-NEXT:    v_mul_f32_e32 v3, v3, v3
+; GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; GISEL-NEXT:    s_endpgm
+  %a = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %a.flat, i16 0, i32 16, i32 0)
+  %b = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr %b.flat, i16 0, i32 16, i32 0)
+
+  %l0 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %a, i32 0, i32 0, i32 0)
+  %s0 = fmul float %l0, %l0
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %s0, ptr addrspace(8) %b, i32 0, i32 0, i32 0)
+
+  %l1 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %a, i32 4, i32 0, i32 0)
+  %s1 = fmul float %l1, %l1
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %s1, ptr addrspace(8) %b, i32 4, i32 0, i32 0)
+
+  %l2 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %a, i32 8, i32 0, i32 0)
+  %s2 = fmul float %l2, %l2
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %s2, ptr addrspace(8) %b, i32 8, i32 0, i32 0)
+
+  %l3 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %a, i32 12, i32 0, i32 0)
+  %s3 = fmul float %l3, %l3
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %s3, ptr addrspace(8) %b, i32 12, i32 0, i32 0)
+
+  ret void
+}
+
 define amdgpu_kernel void @buffers_might_alias(ptr addrspace(8) %a, ptr addrspace(8) %b) {
 ; SDAG-LABEL: buffers_might_alias:
 ; SDAG:       ; %bb.0:
@@ -151,3 +211,4 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p0(ptr readnone nocapture, i16, i32, i32)
