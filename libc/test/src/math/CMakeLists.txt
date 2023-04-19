@@ -1,5 +1,11 @@
 add_libc_testsuite(libc_math_unittests)
 
+add_library(
+  libc_math_test_utils
+  RandUtils.cpp
+  RandUtils.h
+)
+
 add_fp_unittest(
   cosf_test
   NEED_MPFR
