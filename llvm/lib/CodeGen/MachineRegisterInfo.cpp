@@ -645,9 +645,8 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     bool IsRootReserved = true;
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      MCRegister Reg = *Super;
+    for (MCPhysReg Super : TRI->superregs_inclusive(*Root)) {
+      MCRegister Reg = Super;
       if (!isReserved(Reg)) {
         IsRootReserved = false;
         break;

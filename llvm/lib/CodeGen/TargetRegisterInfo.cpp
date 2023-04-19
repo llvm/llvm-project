@@ -79,8 +79,8 @@ bool TargetRegisterInfo::shouldRegionSplitForVirtReg(
 
 void TargetRegisterInfo::markSuperRegs(BitVector &RegisterSet,
                                        MCRegister Reg) const {
-  for (MCSuperRegIterator AI(Reg, this, true); AI.isValid(); ++AI)
-    RegisterSet.set(*AI);
+  for (MCPhysReg SR : superregs_inclusive(Reg))
+    RegisterSet.set(SR);
 }
 
 bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
@@ -90,9 +90,9 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
   for (unsigned Reg : RegisterSet.set_bits()) {
     if (Checked[Reg])
       continue;
-    for (MCSuperRegIterator SR(Reg, this); SR.isValid(); ++SR) {
-      if (!RegisterSet[*SR] && !is_contained(Exceptions, Reg)) {
-        dbgs() << "Error: Super register " << printReg(*SR, this)
+    for (MCPhysReg SR : superregs(Reg)) {
+      if (!RegisterSet[SR] && !is_contained(Exceptions, Reg)) {
+        dbgs() << "Error: Super register " << printReg(SR, this)
                << " of reserved register " << printReg(Reg, this)
                << " is not reserved.\n";
         return false;
@@ -100,7 +100,7 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
 
       // We transitively check superregs. So we can remember this for later
       // to avoid compiletime explosion in deep register hierarchies.
-      Checked.set(*SR);
+      Checked.set(SR);
     }
   }
   return true;
