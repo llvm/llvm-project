@@ -1153,8 +1153,7 @@ define i1 @assumed_positive_olt_with_negative_constant(double %a) {
 ; CHECK-LABEL: @assumed_positive_olt_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge double [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[A]], -1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge double %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1166,8 +1165,7 @@ define i1 @assumed_positive_ole_with_negative_constant(double %a) {
 ; CHECK-LABEL: @assumed_positive_ole_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge double [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole double [[A]], -1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge double %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1179,8 +1177,7 @@ define i1 @assumed_positive_oeq_with_negative_constant(double %a) {
 ; CHECK-LABEL: @assumed_positive_oeq_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge double [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[A]], -1.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge double %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
