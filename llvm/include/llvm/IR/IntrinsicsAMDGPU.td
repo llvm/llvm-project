@@ -997,6 +997,16 @@ class AMDGPUBufferRsrcTy<LLVMType data_ty = llvm_any_ty>
 
 let TargetPrefix = "amdgcn" in {
 
+def int_amdgcn_make_buffer_rsrc : DefaultAttrsIntrinsic <
+  [AMDGPUBufferRsrcTy<llvm_i8_ty>],
+  [llvm_anyptr_ty, // base
+   llvm_i16_ty,    // stride (and swizzle control)
+   llvm_i32_ty,    // NumRecords / extent
+   llvm_i32_ty],   // flags
+  // Attributes lifted from ptrmask + some extra argument attributes.
+  [IntrNoMem, NoCapture<ArgIndex<0>>, ReadNone<ArgIndex<0>>,
+   IntrSpeculatable, IntrWillReturn]>;
+
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
 class AMDGPUBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <

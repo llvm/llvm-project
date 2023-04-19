@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -4423,6 +4424,50 @@ bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
   return true;
 }
 
+/// To create a buffer resource from a 64-bit pointer, mask off the upper 32
+/// bits of the pointer and replace them with the stride argument, then
+/// merge_values everything together. In the common case of a raw buffer (the
+/// stride component is 0), we can just AND off the upper half.
+bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  Register Result = MI.getOperand(0).getReg();
+  Register Pointer = MI.getOperand(2).getReg();
+  Register Stride = MI.getOperand(3).getReg();
+  Register NumRecords = MI.getOperand(4).getReg();
+  Register Flags = MI.getOperand(5).getReg();
+
+  LLT S32 = LLT::scalar(32);
+
+  B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+  auto Unmerge = B.buildUnmerge(S32, Pointer);
+  Register LowHalf = Unmerge.getReg(0);
+  Register HighHalf = Unmerge.getReg(1);
+
+  auto AndMask = B.buildConstant(S32, 0x0000ffff);
+  auto Masked = B.buildAnd(S32, HighHalf, AndMask);
+
+  MachineInstrBuilder NewHighHalf = Masked;
+  std::optional<ValueAndVReg> StrideConst =
+      getIConstantVRegValWithLookThrough(Stride, MRI);
+  if (!StrideConst || !StrideConst->Value.isZero()) {
+    MachineInstrBuilder ShiftedStride;
+    if (StrideConst) {
+      uint32_t StrideVal = StrideConst->Value.getZExtValue();
+      uint32_t ShiftedStrideVal = StrideVal << 16;
+      ShiftedStride = B.buildConstant(S32, ShiftedStrideVal);
+    } else {
+      auto ExtStride = B.buildAnyExt(S32, Stride);
+      auto ShiftConst = B.buildConstant(S32, 16);
+      ShiftedStride = B.buildShl(S32, ExtStride, ShiftConst);
+    }
+    NewHighHalf = B.buildOr(S32, Masked, ShiftedStride);
+  }
+  Register NewHighHalfReg = NewHighHalf.getReg(0);
+  B.buildMergeValues(Result, {LowHalf, NewHighHalfReg, NumRecords, Flags});
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeImplicitArgPtr(MachineInstr &MI,
                                                  MachineRegisterInfo &MRI,
                                                  MachineIRBuilder &B) const {
@@ -5959,6 +6004,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     return false;
   }
+  case Intrinsic::amdgcn_make_buffer_rsrc:
+    return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:
     if (!AMDGPU::isKernel(B.getMF().getFunction().getCallingConv())) {
       // This only makes sense to call in a kernel, so just lower to null.

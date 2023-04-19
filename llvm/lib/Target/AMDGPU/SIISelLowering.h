@@ -259,6 +259,10 @@ private:
   // argument (as would be seen in older buffer intrinsics), does nothing.
   SDValue bufferRsrcPtrToVector(SDValue MaybePointer, SelectionDAG &DAG) const;
 
+  // Wrap a 64-bit pointer into a v4i32 (which is how all SelectionDAG code
+  // represents ptr addrspace(8)) using the flags specified in the intrinsic.
+  SDValue lowerPointerAsRsrcIntrin(SDNode *Op, SelectionDAG &DAG) const;
+
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
                                      ArrayRef<SDValue> Ops, MemSDNode *M) const;
