@@ -85,9 +85,11 @@ Here ``n`` can be initialized in the constructor initialization list, unlike
 
 .. option:: UseAssignment
 
-   If this option is set to `true` (default is `false`), the check will initialize
-   members with an assignment. In this case the fix of the first example looks
-   like this:
+   If this option is set to `true` (by default `UseAssignment` from
+   `modernize-use-default-member-init
+   <../modernize/use-default-member-init.html>`_ will be used),
+   the check will initialize members with an assignment.
+   In this case the fix of the first example looks like this:
 
 .. code-block:: c++
 
