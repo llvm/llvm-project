@@ -525,6 +525,7 @@ function(add_integration_test test_name)
 
   # Tests on the GPU require an external loader utility to launch the kernel.
   if(TARGET libc.utils.gpu.loader)
+    add_dependencies(${fq_build_target_name} libc.utils.gpu.loader)
     get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
   endif()
 
