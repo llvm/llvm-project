@@ -376,19 +376,6 @@ public:
     return getExpression()->getFragmentInfo();
   }
 
-  /// Get the FragmentInfo for the variable if it exists, otherwise return a
-  /// FragmentInfo that covers the entire variable if the variable size is
-  /// known, otherwise return a zero-sized fragment.
-  DIExpression::FragmentInfo getFragmentOrEntireVariable() const {
-    DIExpression::FragmentInfo VariableSlice(0, 0);
-    // Get the fragment or variable size, or zero.
-    if (auto Sz = getFragmentSizeInBits())
-      VariableSlice.SizeInBits = *Sz;
-    if (auto Frag = getExpression()->getFragmentInfo())
-      VariableSlice.OffsetInBits = Frag->OffsetInBits;
-    return VariableSlice;
-  }
-
   /// \name Casting methods
   /// @{
   static bool classof(const IntrinsicInst *I) {
