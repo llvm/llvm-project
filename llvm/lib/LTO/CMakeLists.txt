@@ -38,4 +38,4 @@ add_llvm_component_library(LLVMLTO
   Target
   TargetParser
   TransformUtils
-)
+  )

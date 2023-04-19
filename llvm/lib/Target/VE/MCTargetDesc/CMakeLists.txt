@@ -10,9 +10,9 @@ add_llvm_component_library(LLVMVEDesc
 
   LINK_COMPONENTS
   MC
-  VEInfo
   Support
   TargetParser
+  VEInfo
 
   ADD_TO_COMPONENT
   VE

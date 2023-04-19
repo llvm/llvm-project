@@ -98,8 +98,10 @@ add_llvm_target(AArch64CodeGen
   AArch64Utils
   Analysis
   AsmPrinter
+  CFGuard
   CodeGen
   Core
+  GlobalISel
   MC
   Scalar
   SelectionDAG
@@ -107,12 +109,10 @@ add_llvm_target(AArch64CodeGen
   Target
   TargetParser
   TransformUtils
-  GlobalISel
-  CFGuard
 
   ADD_TO_COMPONENT
   AArch64
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

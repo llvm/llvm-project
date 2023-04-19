@@ -4,9 +4,9 @@ add_llvm_component_library(LLVMVEAsmParser
   LINK_COMPONENTS
   MC
   MCParser
+  Support
   VEDesc
   VEInfo
-  Support
 
   ADD_TO_COMPONENT
   VE
