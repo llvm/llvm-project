@@ -47433,7 +47433,9 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
 
     // TESTZ(OR(LO(X),HI(X)),OR(LO(Y),HI(Y))) -> TESTZ(X,Y)
     // TODO: Add COND_NE handling?
-    if (CC == X86::COND_E && OpVT.is128BitVector() && Subtarget.hasAVX()) {
+    // TODO: Add TESTP handling
+    if (CC == X86::COND_E && OpVT.is128BitVector() && Subtarget.hasAVX() && 
+        EFLAGS.getOpcode() == X86ISD::PTEST) {
       SDValue Src0 = peekThroughBitcasts(Op0);
       SDValue Src1 = peekThroughBitcasts(Op1);
       if (Src0.getOpcode() == ISD::OR && Src1.getOpcode() == ISD::OR) {
