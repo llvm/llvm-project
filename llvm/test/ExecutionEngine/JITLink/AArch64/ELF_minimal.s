@@ -1,6 +1,7 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false -position-independent -filetype=obj -o %t/aarch64_reloc.o %s
-# RUN: llvm-jitlink -noexec %t/aarch64_reloc.o
+# RUN: llvm-mc -triple=aarch64-unknown-linux-gnu -relax-relocations=false \
+# RUN:   -position-independent -filetype=obj -o %t/elf_minimal.o %s
+# RUN: llvm-jitlink -noexec %t/elf_minimal.o
 
 	.text
 	.globl	sub1
