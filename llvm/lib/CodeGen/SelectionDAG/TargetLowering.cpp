@@ -5318,10 +5318,8 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   }
 }
 
-void TargetLowering::CollectTargetIntrinsicOperands(const CallInst &I,
-                                           SmallVectorImpl<SDValue> &Ops,
-                                           SelectionDAG &DAG) const {
-  return;
+void TargetLowering::CollectTargetIntrinsicOperands(
+    const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
 }
 
 std::pair<unsigned, const TargetRegisterClass *>

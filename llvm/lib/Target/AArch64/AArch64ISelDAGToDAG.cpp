@@ -1941,7 +1941,6 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
   CurDAG->RemoveDeadNode(N);
-  return;
 }
 
 void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
@@ -1975,7 +1974,6 @@ void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
   CurDAG->RemoveDeadNode(N);
-  return;
 }
 
 void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
@@ -2037,7 +2035,6 @@ void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
   CurDAG->RemoveDeadNode(N);
-  return;
 }
 
 bool SelectSMETile(unsigned &BaseReg, unsigned TileNum) {
