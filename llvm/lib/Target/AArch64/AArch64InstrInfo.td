@@ -774,6 +774,12 @@ def AArch64faddp     : PatFrags<(ops node:$Rn, node:$Rm),
                                 [(AArch64addp_n node:$Rn, node:$Rm),
                                  (int_aarch64_neon_faddp node:$Rn, node:$Rm)]>;
 def AArch64roundingvlshr : ComplexPattern<vAny, 2, "SelectRoundingVLShr", [AArch64vlshr]>;
+def AArch64facge     : PatFrags<(ops node:$Rn, node:$Rm),
+                                [(AArch64fcmge (fabs node:$Rn), (fabs node:$Rm)),
+                                 (int_aarch64_neon_facge node:$Rn, node:$Rm)]>;
+def AArch64facgt     : PatFrags<(ops node:$Rn, node:$Rm),
+                                [(AArch64fcmgt (fabs node:$Rn), (fabs node:$Rm)),
+                                 (int_aarch64_neon_facgt node:$Rn, node:$Rm)]>;
 
 def SDT_AArch64SETTAG : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 def AArch64stg : SDNode<"AArch64ISD::STG", SDT_AArch64SETTAG, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -4973,8 +4979,8 @@ let Predicates = [HasNEON, HasFullFP16] in {
 foreach VT = [ v4f16, v8f16 ] in
 def : Pat<(fabs (fsub VT:$Rn, VT:$Rm)), (!cast<Instruction>("FABD"#VT) VT:$Rn, VT:$Rm)>;
 }
-defm FACGE   : SIMDThreeSameVectorFPCmp<1,0,0b101,"facge",int_aarch64_neon_facge>;
-defm FACGT   : SIMDThreeSameVectorFPCmp<1,1,0b101,"facgt",int_aarch64_neon_facgt>;
+defm FACGE   : SIMDThreeSameVectorFPCmp<1,0,0b101,"facge",AArch64facge>;
+defm FACGT   : SIMDThreeSameVectorFPCmp<1,1,0b101,"facgt",AArch64facgt>;
 defm FADDP   : SIMDThreeSameVectorFP<1,0,0b010,"faddp", AArch64faddp>;
 defm FADD    : SIMDThreeSameVectorFP<0,0,0b010,"fadd", any_fadd>;
 defm FCMEQ   : SIMDThreeSameVectorFPCmp<0, 0, 0b100, "fcmeq", AArch64fcmeq>;
