@@ -492,9 +492,9 @@ private:
   void pushCallInternal(const FunctionDecl *FuncDecl,
                         ArrayRef<const Expr *> Args);
 
-  /// Assigns storage locations and values to all global variables and fields
-  /// referenced in `FuncDecl`. `FuncDecl` must have a body.
-  void initFieldsAndGlobals(const FunctionDecl *FuncDecl);
+  /// Assigns storage locations and values to all global variables, fields
+  /// and functions referenced in `FuncDecl`. `FuncDecl` must have a body.
+  void initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl);
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
