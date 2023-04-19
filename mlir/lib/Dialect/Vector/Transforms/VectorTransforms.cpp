@@ -1079,12 +1079,18 @@ struct CanonicalizeContractMatmulToMMT final
       if (auto sext = mat.getDefiningOp<arith::ExtSIOp>()) {
         Value trans =
             rewriter.create<vector::TransposeOp>(loc, sext.getIn(), perm);
-        return rewriter.create<arith::ExtSIOp>(loc, mat.getType(), trans);
+        VectorType newType =
+            VectorType::get(cast<VectorType>(trans.getType()).getShape(),
+                            cast<VectorType>(mat.getType()).getElementType());
+        return rewriter.create<arith::ExtSIOp>(loc, newType, trans);
       }
       if (auto zext = mat.getDefiningOp<arith::ExtUIOp>()) {
         Value trans =
             rewriter.create<vector::TransposeOp>(loc, zext.getIn(), perm);
-        return rewriter.create<arith::ExtUIOp>(loc, mat.getType(), trans);
+        VectorType newType =
+            VectorType::get(cast<VectorType>(trans.getType()).getShape(),
+                            cast<VectorType>(mat.getType()).getElementType());
+        return rewriter.create<arith::ExtUIOp>(loc, newType, trans);
       }
       return rewriter.create<vector::TransposeOp>(loc, mat, perm);
     };
