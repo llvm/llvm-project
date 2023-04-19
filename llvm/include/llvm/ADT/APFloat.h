@@ -757,7 +757,7 @@ class APFloat : public APFloatBase {
   typedef detail::IEEEFloat IEEEFloat;
   typedef detail::DoubleAPFloat DoubleAPFloat;
 
-  static_assert(std::is_standard_layout<IEEEFloat>::value);
+  static_assert(std::is_standard_layout_v<IEEEFloat>);
 
   union Storage {
     const fltSemantics *semantics;
@@ -849,9 +849,9 @@ class APFloat : public APFloatBase {
   } U;
 
   template <typename T> static bool usesLayout(const fltSemantics &Semantics) {
-    static_assert(std::is_same<T, IEEEFloat>::value ||
-                  std::is_same<T, DoubleAPFloat>::value);
-    if (std::is_same<T, DoubleAPFloat>::value) {
+    static_assert(std::is_same_v<T, IEEEFloat> ||
+                  std::is_same_v<T, DoubleAPFloat>);
+    if (std::is_same_v<T, DoubleAPFloat>) {
       return &Semantics == &PPCDoubleDouble();
     }
     return &Semantics != &PPCDoubleDouble();
@@ -912,7 +912,7 @@ public:
   APFloat(const fltSemantics &Semantics, StringRef S);
   APFloat(const fltSemantics &Semantics, integerPart I) : U(Semantics, I) {}
   template <typename T,
-            typename = std::enable_if_t<std::is_floating_point<T>::value>>
+            typename = std::enable_if_t<std::is_floating_point_v<T>>>
   APFloat(const fltSemantics &Semantics, T V) = delete;
   // TODO: Remove this constructor. This isn't faster than the first one.
   APFloat(const fltSemantics &Semantics, uninitializedTag)
