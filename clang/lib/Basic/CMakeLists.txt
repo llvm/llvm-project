@@ -14,8 +14,18 @@ set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake"
 if(llvm_vc AND LLVM_APPEND_VC_REV)
   set(llvm_source_dir ${LLVM_MAIN_SRC_DIR})
 endif()
+if (LLVM_VC_REPOSITORY AND LLVM_VC_REVISION)
+  set(llvm_source_dir ${LLVM_SOURCE_DIR})
+  set(llvm_vc_repository ${LLVM_VC_REPOSITORY})
+  set(llvm_vc_revision ${LLVM_VC_REVISION})
+endif()
 if(clang_vc AND LLVM_APPEND_VC_REV)
   set(clang_source_dir ${CLANG_SOURCE_DIR})
+endif()
+if (CLANG_VC_REPOSITORY AND CLANG_VC_REVISION)
+  set(clang_source_dir ${CLANG_SOURCE_DIR})
+  set(clang_vc_repository ${CLANG_VC_REPOSITORY})
+  set(clang_vc_revision ${CLANG_VC_REVISION})
 endif()
 
 # Create custom target to generate the VC revision include.
@@ -24,7 +34,11 @@ add_custom_command(OUTPUT "${version_inc}"
   COMMAND ${CMAKE_COMMAND} "-DNAMES=\"LLVM;CLANG\""
                            "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
                            "-DCLANG_SOURCE_DIR=${clang_source_dir}"
+                           "-DCLANG_VC_REPOSITORY=${clang_vc_repository}"
+                           "-DCLANG_VC_REVISION=${clang_vc_revision}"
                            "-DHEADER_FILE=${version_inc}"
+                           "-DLLVM_VC_REPOSITORY=${llvm_vc_repository}"
+                           "-DLLVM_VC_REVISION=${llvm_vc_revision}"
                            -P "${generate_vcs_version_script}")
 
 # Mark the generated header as being generated.
