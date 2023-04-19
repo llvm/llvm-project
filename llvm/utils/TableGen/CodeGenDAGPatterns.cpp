@@ -2397,10 +2397,10 @@ bool TreePatternNode::NodeHasProperty(SDNP Property,
       return Int->hasProperty(Property);
   }
 
-  if (!Operator->isSubClassOf("SDPatternOperator"))
+  if (!getOperator()->isSubClassOf("SDPatternOperator"))
     return false;
 
-  return CGP.getSDNodeInfo(Operator).hasProperty(Property);
+  return CGP.getSDNodeInfo(getOperator()).hasProperty(Property);
 }
 
 
