@@ -174,6 +174,10 @@ Changes in existing checks
   arguments to ``std::print``, ``std::format`` or other functions listed in
   the ``StringParameterFunction`` check option.
 
+- Improved :doc:`bugprone-dangling-handle
+  <clang-tidy/checks/bugprone/dangling-handle>` check enhancing detection of
+  handles behind type aliases.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`bugprone-dynamic-static-initializers
   <clang-tidy/checks/bugprone/dynamic-static-initializers>` check.
