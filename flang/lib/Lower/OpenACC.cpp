@@ -263,7 +263,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value gangStatic;
   llvm::SmallVector<mlir::Value, 2> tileOperands, privateOperands,
       reductionOperands;
-  std::int64_t executionMapping = mlir::acc::OpenACCExecMapping::NONE;
+  bool hasGang = false, hasVector = false, hasWorker = false;
 
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
@@ -292,21 +292,21 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
           }
         }
       }
-      executionMapping |= mlir::acc::OpenACCExecMapping::GANG;
+      hasGang = true;
     } else if (const auto *workerClause =
                    std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
       if (workerClause->v) {
         workerNum = fir::getBase(converter.genExprValue(
             *Fortran::semantics::GetExpr(*workerClause->v), stmtCtx));
       }
-      executionMapping |= mlir::acc::OpenACCExecMapping::WORKER;
+      hasWorker = true;
     } else if (const auto *vectorClause =
                    std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
       if (vectorClause->v) {
         vectorNum = fir::getBase(converter.genExprValue(
             *Fortran::semantics::GetExpr(*vectorClause->v), stmtCtx));
       }
-      executionMapping |= mlir::acc::OpenACCExecMapping::VECTOR;
+      hasVector = true;
     } else if (const auto *tileClause =
                    std::get_if<Fortran::parser::AccClause::Tile>(&clause.u)) {
       const Fortran::parser::AccTileExprList &accTileExprList = tileClause->v;
@@ -350,7 +350,12 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       firOpBuilder, currentLocation, operands, operandSegments);
 
-  loopOp.setExecMappingAttr(firOpBuilder.getI64IntegerAttr(executionMapping));
+  if (hasGang)
+    loopOp.setHasGangAttr(firOpBuilder.getUnitAttr());
+  if (hasWorker)
+    loopOp.setHasWorkerAttr(firOpBuilder.getUnitAttr());
+  if (hasVector)
+    loopOp.setHasVectorAttr(firOpBuilder.getUnitAttr());
 
   // Lower clauses mapped to attributes
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
