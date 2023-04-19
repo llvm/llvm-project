@@ -1338,7 +1338,7 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
 static void addCallStack(CallStackTrie &AllocTrie,
                          const AllocationInfo *AllocInfo) {
   SmallVector<uint64_t> StackIds;
-  for (auto StackFrame : AllocInfo->CallStack)
+  for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
   auto AllocType = getAllocType(AllocInfo->Info.getMaxAccessCount(),
                                 AllocInfo->Info.getMinSize(),
