@@ -36,6 +36,8 @@ namespace dr1423 { // dr1423: 11
 #endif
 }
 
+// dr1425: na abi
+
 namespace dr1432 { // dr1432: 16
 #if __cplusplus >= 201103L
   template<typename T> T declval();
@@ -63,8 +65,6 @@ struct A {
   A() { void foo(int=i); } // expected-error {{default argument references 'this'}}
 };
 }
-
-// dr1425: na abi
 
 namespace dr1460 { // dr1460: 3.5
 #if __cplusplus >= 201103L
@@ -493,7 +493,7 @@ namespace dr1490 {  // dr1490: 3.7 c++11
 
   char s[4]{"abc"};                   // Ok
   std::initializer_list<char>{"abc"}; // expected-error {{expected unqualified-id}}}
-} // dr190
+} // dr1490
 
 namespace dr1495 { // dr1495: 4
   // Deduction succeeds in both directions.
