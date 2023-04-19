@@ -135,6 +135,23 @@ define void @scatter_loopless(<vscale x 1 x i64> %x, ptr %p, i64 %stride) {
   ret void
 }
 
+; We previously crashed expecting a constant to be fixed length.
+define void @constant_stride(<vscale x 1 x i64> %x, ptr %p, i64 %stride) {
+; CHECK-LABEL: @constant_stride(
+; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr i32, ptr [[P:%.*]], <vscale x 1 x i64> zeroinitializer
+; CHECK-NEXT:    call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> [[X:%.*]], <vscale x 1 x ptr> [[PTRS]], i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+; CHECK-NEXT:    ret void
+;
+  %ptrs = getelementptr i32, ptr %p, <vscale x 1 x i64> zeroinitializer
+  call void @llvm.masked.scatter.nxv1i64.nxv1p0(
+  <vscale x 1 x i64> %x,
+  <vscale x 1 x ptr> %ptrs,
+  i32 8,
+  <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 1, i64 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer)
+  )
+  ret void
+}
+
 declare i64 @llvm.vscale.i64()
 declare void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64>, <vscale x 1 x ptr>, i32, <vscale x 1 x i1>)
 declare <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
