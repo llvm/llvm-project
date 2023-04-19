@@ -406,6 +406,14 @@ genrule(
     cmd = "echo '#undef CLANG_REVISION' > $@",
 )
 
+py_binary(
+    name = "bundle_resources",
+    srcs = [
+        "utils/bundle_resources.py",
+    ],
+    main = "utils/bundle_resources.py",
+)
+
 # A hacky library to expose some internal headers of the `basic` library to its
 # own implementation source files using a stripped include prefix rather than
 # file-relative-inclusion. This is inherently non-modular as these headers will
@@ -817,6 +825,18 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "HTMLLogger_gen",
+    outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
+    srcs = [
+        "lib/Analysis/FlowSensitive/HTMLLogger.html",
+        "lib/Analysis/FlowSensitive/HTMLLogger.css",
+        "lib/Analysis/FlowSensitive/HTMLLogger.js",
+    ],
+    tools = [":bundle_resources"],
+    cmd = "$(location :bundle_resources) $@ $(SRCS)",
+)
+
 cc_library(
     name = "analysis",
     srcs = glob([
@@ -824,15 +844,21 @@ cc_library(
         "lib/Analysis/FlowSensitive/*.cpp",
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
-    ]),
+    ]) + [
+        "lib/Analysis/FlowSensitive/HTMLLogger.inc",
+    ],
     hdrs = glob([
         "include/clang/Analysis/**/*.h",
     ]),
-    includes = ["include"],
+    includes = [
+        "include",
+        "lib/Analysis/FlowSensitive",
+    ],
     textual_hdrs = glob([
         "include/clang/Analysis/**/*.def",
     ]),
     deps = [
+        ":HTMLLogger_gen",
         ":ast",
         ":ast_matchers",
         ":basic",
