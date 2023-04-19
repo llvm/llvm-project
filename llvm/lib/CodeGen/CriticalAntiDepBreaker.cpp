@@ -261,11 +261,8 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
 
       if (MO.isRegMask()) {
         auto ClobbersPhysRegAndSubRegs = [&](unsigned PhysReg) {
-          for (MCPhysReg SR : TRI->subregs_inclusive(PhysReg))
-            if (!MO.clobbersPhysReg(SR))
-              return false;
-
-          return true;
+          return all_of(TRI->subregs_inclusive(PhysReg),
+                        [&](MCPhysReg SR) { return MO.clobbersPhysReg(SR); });
         };
 
         for (unsigned i = 0, e = TRI->getNumRegs(); i != e; ++i) {
