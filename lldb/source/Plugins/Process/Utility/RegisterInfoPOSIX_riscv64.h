@@ -35,6 +35,11 @@ public:
     uint32_t fcsr;
   };
 
+  struct VPR {
+    // The size should be VLEN*32 in bits, but we don't have VLEN here.
+    void *vpr;
+  };
+
   RegisterInfoPOSIX_riscv64(const lldb_private::ArchSpec &target_arch,
                             lldb_private::Flags flags);
 
