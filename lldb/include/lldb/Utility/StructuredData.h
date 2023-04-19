@@ -579,7 +579,7 @@ public:
     void *m_object;
   };
 
-  static ObjectSP ParseJSON(const std::string &json_text);
+  static ObjectSP ParseJSON(llvm::StringRef json_text);
   static ObjectSP ParseJSONFromFile(const FileSpec &file, Status &error);
   static bool IsRecordType(const ObjectSP object_sp);
 };
