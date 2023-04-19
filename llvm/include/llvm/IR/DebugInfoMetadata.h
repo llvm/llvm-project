@@ -1981,7 +1981,7 @@ public:
 
   /// Return the linkage name of Subprogram. If the linkage name is empty,
   /// return scope name (the demangled name).
-  const StringRef getSubprogramLinkageName() const {
+  StringRef getSubprogramLinkageName() const {
     DISubprogram *SP = getScope()->getSubprogram();
     if (!SP)
       return "";
