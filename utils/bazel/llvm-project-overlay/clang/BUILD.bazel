@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("//:workspace_root.bzl", "workspace_root")
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
@@ -718,6 +719,8 @@ gentbl(
     ],
 )
 
+workspace_root(name = "workspace_root")
+
 cc_library(
     name = "ast",
     srcs = glob([
@@ -742,8 +745,8 @@ cc_library(
         # least bad approach. Using `includes` is *specifically* problematic for
         # this library because it contains files that collide easily with system
         # headers such as `CXXABI.h`.
-        "-I$(GENDIR)/external/llvm-project/clang/lib/AST",
-        "-I$(GENDIR)/external/llvm-project/clang/lib/AST/Interp",
+        "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST",
+        "-I$(GENDIR)/$(WORKSPACE_ROOT)/clang/lib/AST/Interp",
     ],
     textual_hdrs = [
         "include/clang/AST/AttrImpl.inc",
@@ -763,6 +766,9 @@ cc_library(
     ] + glob([
         "include/clang/AST/*.def",
     ]),
+    toolchains = [
+        ":workspace_root",
+    ],
     deps = [
         ":ast_attr_gen",
         ":ast_comment_command_info_gen",
@@ -1536,12 +1542,15 @@ genrule(
     outs = [hdr.replace("lib/Headers/", "staging/include/") for hdr in builtin_headers],
     cmd = """
        for src in $(SRCS); do
-         relsrc=$${src/*external\\/llvm-project\\/clang\\/lib\\/Headers\\/}
+         relsrc=$${src/*"$(WORKSPACE_ROOT)"\\/clang\\/lib\\/Headers}
          target=$(@D)/staging/include/$$relsrc
          mkdir -p $$(dirname $$target)
          cp $$src $$target
        done""",
     output_to_bindir = 1,
+    toolchains = [
+        ":workspace_root",
+    ],
 )
 
 cc_library(
