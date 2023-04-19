@@ -102,13 +102,18 @@ class ExecTestCase(TestBase):
             # Run and we should stop at breakpoint in main after exec
             process.Continue()
 
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        for t in process.threads:
+            if t.stop_reason != lldb.eStopReasonNone:
+                self.assertStopReason(t.stop_reason, lldb.eStopReasonBreakpoint,
+                    "Unexpected stop reason")
+                if self.TraceOn():
+                    print(t)
+                    if t.stop_reason != lldb.eStopReasonBreakpoint:
+                        self.runCmd("bt")
+
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint2)
-        if self.TraceOn():
-            for t in process.threads:
-                print(t)
-                if t.GetStopReason() != lldb.eStopReasonBreakpoint:
-                    self.runCmd("bt")
         self.assertEqual(len(threads), 1,
                         "Stopped at breakpoint in exec'ed process.")
 
