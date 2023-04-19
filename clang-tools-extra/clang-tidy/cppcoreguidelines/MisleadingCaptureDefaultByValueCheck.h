@@ -16,11 +16,8 @@ namespace clang::tidy::cppcoreguidelines {
 
 /// Warns when lambda specify a by-value capture default and capture ``this``.
 ///
-/// By-value capture defaults in lambas defined within member functions can be
-/// misleading about whether capturing data member is by value or reference.
-/// For example, [=] will capture local variables by value but member variables
-/// by reference. CppCoreGuideline F.54 suggests to never use by-value capture
-/// default when capturing this.
+/// By-value capture defaults in member functions can be misleading about
+/// whether data members are captured by value or reference.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value.html

@@ -112,17 +112,17 @@ New checks
   This check relies heavily on, but is not exclusive to, the functions from
   the *Annex K. "Bounds-checking interfaces"* of C11.
 
-- New :doc:`cppcoreguidelines-misleading-capture-default-by-value
-  <clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value>` check.
-
-  Warns when lambda specify a by-value capture default and capture ``this``.
-
 - New :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>` check.
 
   Flags C++20 coroutine lambdas with non-empty capture lists that may cause
   use-after-free errors and suggests avoiding captures or ensuring the lambda
   closure object has a guaranteed lifetime.
+
+- New :doc:`cppcoreguidelines-misleading-capture-default-by-value
+  <clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value>` check.
+
+  Warns when lambda specify a by-value capture default and capture ``this``.
 
 - New :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check.
