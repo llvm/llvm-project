@@ -307,7 +307,7 @@ require a few additions.
 
 .. code-block:: cmake
 
-  cmake_minimum_required(VERSION 3.13.4)
+  cmake_minimum_required(VERSION 3.20.0)
   project(offloadTest VERSION 1.0 LANGUAGES CXX)
 
   list(APPEND CMAKE_MODULE_PATH "${PATH_TO_OPENMP_INSTALL}/lib/cmake/openmp")
@@ -318,7 +318,7 @@ require a few additions.
   target_link_libraries(offload PRIVATE OpenMPTarget::OpenMPTarget_NVPTX)
   target_sources(offload PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/Main.cpp)
 
-Using this module requires at least CMake version 3.13.4. Supported languages
+Using this module requires at least CMake version 3.20.0. Supported languages
 are C and C++ with Fortran support planned in the future. Compiler support is
 best for Clang but this module should work for other compiler vendors such as
 IBM, GNU.

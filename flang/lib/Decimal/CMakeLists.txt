@@ -1,5 +1,5 @@
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.13.4)
+  cmake_minimum_required(VERSION 3.20.0)
 
   project(FortranDecimal C CXX)
 
