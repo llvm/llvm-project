@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   BinaryFormat
   DebugInfoCodeView
-  DebugInfoDWARF
   DebugInfoLogicalView
   DebugInfoPDB
   MC

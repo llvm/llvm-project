@@ -13,7 +13,6 @@ set(LLVM_LINK_COMPONENTS
   FuzzMutate
   FuzzerCLI
   IPO
-  IRReader
   InstCombine
   Instrumentation
   MC

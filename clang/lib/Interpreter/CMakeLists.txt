@@ -23,7 +23,6 @@ add_clang_library(clangInterpreter
   clangBasic
   clangCodeGen
   clangDriver
-  clangEdit
   clangFrontend
   clangFrontendTool
   clangLex

@@ -21,11 +21,9 @@ set(CLANG_SCAN_DEPS_LIB_DEPS
   clangAST
   clangBasic
   clangCAS
-  clangCodeGen
   clangDependencyScanning
   clangDriver
   clangFrontend
-  clangFrontendTool
   clangLex
   clangParse
   clangSerialization
