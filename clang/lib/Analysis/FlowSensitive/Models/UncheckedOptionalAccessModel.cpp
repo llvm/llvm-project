@@ -43,9 +43,9 @@ using LatticeTransferState = TransferState<NoopLattice>;
 
 DeclarationMatcher optionalClass() {
   return classTemplateSpecializationDecl(
-      anyOf(hasName("std::optional"), hasName("std::__optional_storage_base"),
-            hasName("__optional_destruct_base"), hasName("absl::optional"),
-            hasName("base::Optional")),
+      hasAnyName("::std::optional", "::std::__optional_storage_base",
+                 "::std::__optional_destruct_base", "::absl::optional",
+                 "::base::Optional"),
       hasTemplateArgument(0, refersToType(type().bind("T"))));
 }
 
@@ -251,14 +251,34 @@ QualType stripReference(QualType Type) {
   return Type->isReferenceType() ? Type->getPointeeType() : Type;
 }
 
+bool isTopLevelNamespaceWithName(const NamespaceDecl &NS,
+                                 llvm::StringRef Name) {
+  return NS.getDeclName().isIdentifier() && NS.getName() == Name &&
+         NS.getParent() != nullptr && NS.getParent()->isTranslationUnit();
+}
+
 /// Returns true if and only if `Type` is an optional type.
 bool isOptionalType(QualType Type) {
   if (!Type->isRecordType())
     return false;
-  // FIXME: Optimize this by avoiding the `getQualifiedNameAsString` call.
-  auto TypeName = Type->getAsCXXRecordDecl()->getQualifiedNameAsString();
-  return TypeName == "std::optional" || TypeName == "absl::optional" ||
-         TypeName == "base::Optional";
+  const CXXRecordDecl *D = Type->getAsCXXRecordDecl();
+  if (D == nullptr || !D->getDeclName().isIdentifier())
+    return false;
+  if (D->getName() == "optional") {
+    if (const auto *N =
+        dyn_cast_or_null<NamespaceDecl>(D->getDeclContext()))
+      return N->isStdNamespace() || isTopLevelNamespaceWithName(*N, "absl");
+    return false;
+  }
+
+  if (D->getName() == "Optional") {
+    // Check whether namespace is "::base".
+    const auto *N =
+        dyn_cast_or_null<NamespaceDecl>(D->getDeclContext());
+    return N != nullptr && isTopLevelNamespaceWithName(*N, "base");
+  }
+
+  return false;
 }
 
 /// Returns the number of optional wrappers in `Type`.
