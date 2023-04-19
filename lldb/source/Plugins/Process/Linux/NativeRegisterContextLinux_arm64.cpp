@@ -61,7 +61,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   case llvm::Triple::aarch64: {
     // Configure register sets supported by this AArch64 target.
     // Read SVE header to check for SVE support.
-    struct user_sve_header sve_header;
+    struct sve::user_sve_header sve_header;
     struct iovec ioVec;
     ioVec.iov_base = &sve_header;
     ioVec.iov_len = sizeof(sve_header);
@@ -380,7 +380,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       if (GetRegisterInfo().IsSVERegVG(reg)) {
         uint64_t vg_value = reg_value.GetAsUInt64();
 
-        if (sve_vl_valid(vg_value * 8)) {
+        if (sve::vl_valid(vg_value * 8)) {
           if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
 
@@ -566,7 +566,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
   if (contains_sve_reg_data) {
     // We have SVE register data first write SVE header.
     ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
-    if (!sve_vl_valid(m_sve_header.vl)) {
+    if (!sve::vl_valid(m_sve_header.vl)) {
       m_sve_header_is_valid = false;
       error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm64::%s "
                                      "Invalid SVE header in data_sp",
@@ -934,7 +934,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
       // On every stop we configure SVE vector length by calling
       // ConfigureVectorLength regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
-      if (sve_vl_valid(m_sve_header.vl))
+      if (sve::vl_valid(m_sve_header.vl))
         vq = sve::vq_from_vl(m_sve_header.vl);
 
       GetRegisterInfo().ConfigureVectorLength(vq);
