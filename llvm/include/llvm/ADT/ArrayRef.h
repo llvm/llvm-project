@@ -122,8 +122,8 @@ namespace llvm {
     /// ensure that only ArrayRefs of pointers can be converted.
     template <typename U>
     ArrayRef(const ArrayRef<U *> &A,
-             std::enable_if_t<std::is_convertible_v<U *const *, T const *>> * =
-                 nullptr)
+             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
+                 * = nullptr)
         : Data(A.data()), Length(A.size()) {}
 
     /// Construct an ArrayRef<const T*> from a SmallVector<T*>. This is
@@ -132,7 +132,7 @@ namespace llvm {
     template <typename U, typename DummyT>
     /*implicit*/ ArrayRef(
         const SmallVectorTemplateCommon<U *, DummyT> &Vec,
-        std::enable_if_t<std::is_convertible_v<U *const *, T const *>> * =
+        std::enable_if_t<std::is_convertible<U *const *, T const *>::value> * =
             nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
 
@@ -140,8 +140,8 @@ namespace llvm {
     /// to ensure that only vectors of pointers can be converted.
     template <typename U, typename A>
     ArrayRef(const std::vector<U *, A> &Vec,
-             std::enable_if_t<std::is_convertible_v<U *const *, T const *>> * =
-                 nullptr)
+             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
+                 * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
 
     /// @}
@@ -261,7 +261,7 @@ namespace llvm {
     /// The declaration here is extra complicated so that "arrayRef = {}"
     /// continues to select the move assignment operator.
     template <typename U>
-    std::enable_if_t<std::is_same_v<U, T>, ArrayRef<T>> &
+    std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
     operator=(U &&Temporary) = delete;
 
     /// Disallow accidental assignment from a temporary.
@@ -269,7 +269,7 @@ namespace llvm {
     /// The declaration here is extra complicated so that "arrayRef = {}"
     /// continues to select the move assignment operator.
     template <typename U>
-    std::enable_if_t<std::is_same_v<U, T>, ArrayRef<T>> &
+    std::enable_if_t<std::is_same<U, T>::value, ArrayRef<T>> &
     operator=(std::initializer_list<U>) = delete;
 
     /// @}

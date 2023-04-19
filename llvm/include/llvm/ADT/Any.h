@@ -70,7 +70,7 @@ public:
   // instead.
   template <typename T,
             std::enable_if_t<
-                std::conjunction_v<
+                std::conjunction<
                     std::negation<std::is_same<std::decay_t<T>, Any>>,
                     // We also disable this overload when an `Any` object can be
                     // converted to the parameter type because in that case,
@@ -83,7 +83,7 @@ public:
                     // adopting it to work-around usage of `Any` with types that
                     // need to be implicitly convertible from an `Any`.
                     std::negation<std::is_convertible<Any, std::decay_t<T>>>,
-                    std::is_copy_constructible<std::decay_t<T>>>,
+                    std::is_copy_constructible<std::decay_t<T>>>::value,
                 int> = 0>
   Any(T &&Value) {
     Storage =
