@@ -2856,6 +2856,16 @@ public:
     /// Return the index of the bit after the end of the fragment, e.g. for
     /// fragment offset=16 and size=32 return their sum, 48.
     uint64_t endInBits() const { return OffsetInBits + SizeInBits; }
+
+    /// Returns a zero-sized fragment if A and B don't intersect.
+    static DIExpression::FragmentInfo intersect(DIExpression::FragmentInfo A,
+                                                DIExpression::FragmentInfo B) {
+      uint64_t StartInBits = std::max(A.OffsetInBits, B.OffsetInBits);
+      uint64_t EndInBits = std::min(A.endInBits(), B.endInBits());
+      if (EndInBits <= StartInBits)
+        return {0, 0};
+      return DIExpression::FragmentInfo(EndInBits - StartInBits, StartInBits);
+    }
   };
 
   /// Retrieve the details of this fragment expression.
