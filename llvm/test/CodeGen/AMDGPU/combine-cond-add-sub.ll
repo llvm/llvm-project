@@ -662,8 +662,8 @@ define amdgpu_kernel void @sub_zext_setcc_commute(ptr addrspace(1) nocapture %ar
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
+; GCN-NEXT:    s_sub_i32 s0, s2, s3
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
 ;
@@ -675,10 +675,10 @@ define amdgpu_kernel void @sub_zext_setcc_commute(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    s_sub_i32 s2, s2, s3
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v0, v0, v3
 ; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
-; GFX9-NEXT:    v_subrev_u32_e32 v0, s3, v0
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 bb:
@@ -711,8 +711,8 @@ define amdgpu_kernel void @sub_sext_setcc_commute(ptr addrspace(1) nocapture %ar
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
+; GCN-NEXT:    s_sub_i32 s0, s2, s3
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
 ;
@@ -724,10 +724,10 @@ define amdgpu_kernel void @sub_sext_setcc_commute(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
+; GFX9-NEXT:    s_sub_i32 s2, s2, s3
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v0, v0, v3
 ; GFX9-NEXT:    v_add_u32_e32 v0, s2, v0
-; GFX9-NEXT:    v_subrev_u32_e32 v0, s3, v0
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 bb:
