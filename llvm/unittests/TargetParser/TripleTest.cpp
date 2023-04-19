@@ -1879,18 +1879,23 @@ TEST(TripleTest, FileFormat) {
   Triple T = Triple("");
   T.setObjectFormat(Triple::ELF);
   EXPECT_EQ(Triple::ELF, T.getObjectFormat());
+  EXPECT_EQ("elf", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 
   T.setObjectFormat(Triple::MachO);
   EXPECT_EQ(Triple::MachO, T.getObjectFormat());
+  EXPECT_EQ("macho", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 
   T.setObjectFormat(Triple::XCOFF);
   EXPECT_EQ(Triple::XCOFF, T.getObjectFormat());
+  EXPECT_EQ("xcoff", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 
   T.setObjectFormat(Triple::GOFF);
   EXPECT_EQ(Triple::GOFF, T.getObjectFormat());
+  EXPECT_EQ("goff", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 
   T.setObjectFormat(Triple::SPIRV);
   EXPECT_EQ(Triple::SPIRV, T.getObjectFormat());
+  EXPECT_EQ("spirv", Triple::getObjectFormatTypeName(T.getObjectFormat()));
 }
 
 TEST(TripleTest, NormalizeWindows) {
