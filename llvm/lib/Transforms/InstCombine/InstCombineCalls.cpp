@@ -1305,7 +1305,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   // not a multiple of element size then behavior is undefined.
   if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(II))
     if (ConstantInt *NumBytes = dyn_cast<ConstantInt>(AMI->getLength()))
-      if (NumBytes->getSExtValue() < 0 ||
+      if (NumBytes->isNegative() ||
           (NumBytes->getZExtValue() % AMI->getElementSizeInBytes() != 0)) {
         CreateNonTerminatorUnreachable(AMI);
         assert(AMI->getType()->isVoidTy() &&
