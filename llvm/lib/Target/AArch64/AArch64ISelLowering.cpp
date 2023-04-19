@@ -25286,13 +25286,11 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 }
 
 Value *AArch64TargetLowering::createComplexDeinterleavingIR(
-    Instruction *I, ComplexDeinterleavingOperation OperationType,
+    IRBuilderBase &B, ComplexDeinterleavingOperation OperationType,
     ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
     Value *Accumulator) const {
   VectorType *Ty = cast<VectorType>(InputA->getType());
   bool IsScalable = Ty->isScalableTy();
-
-  IRBuilder<> B(I);
 
   unsigned TyWidth =
       Ty->getScalarSizeInBits() * Ty->getElementCount().getKnownMinValue();
@@ -25317,9 +25315,9 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
           B.CreateExtractVector(HalfTy, Accumulator, B.getInt64(Stride));
     }
     auto *LowerSplitInt = createComplexDeinterleavingIR(
-        I, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
+        B, OperationType, Rotation, LowerSplitA, LowerSplitB, LowerSplitAcc);
     auto *UpperSplitInt = createComplexDeinterleavingIR(
-        I, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
+        B, OperationType, Rotation, UpperSplitA, UpperSplitB, UpperSplitAcc);
 
     auto *Result = B.CreateInsertVector(Ty, PoisonValue::get(Ty), LowerSplitInt,
                                         B.getInt64(0));
