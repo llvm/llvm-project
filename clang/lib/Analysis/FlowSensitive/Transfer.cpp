@@ -469,6 +469,20 @@ public:
     Env.setValue(Loc, Env.create<PointerValue>(*ThisPointeeLoc));
   }
 
+  void VisitCXXNewExpr(const CXXNewExpr *S) {
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(Loc, *Val);
+  }
+
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
+    // Empty method.
+    // We consciously don't do anything on deletes.  Diagnosing double deletes
+    // (for example) should be done by a specific analysis, not by the
+    // framework.
+  }
+
   void VisitReturnStmt(const ReturnStmt *S) {
     if (!Env.getAnalysisOptions().ContextSensitiveOpts)
       return;
