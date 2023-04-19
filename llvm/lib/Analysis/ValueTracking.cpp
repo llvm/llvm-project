@@ -2512,57 +2512,6 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   }
 }
 
-static bool isNonZeroShift(const Operator *I, const APInt &DemandedElts,
-                           unsigned Depth, const Query &Q,
-                           const KnownBits &KnownVal) {
-  auto ShiftOp = [&](const APInt &Lhs, const APInt &Rhs) {
-    switch (I->getOpcode()) {
-    case Instruction::Shl:
-      return Lhs.shl(Rhs);
-    case Instruction::LShr:
-      return Lhs.lshr(Rhs);
-    case Instruction::AShr:
-      return Lhs.ashr(Rhs);
-    default:
-      llvm_unreachable("Unknown Shift Opcode");
-    }
-  };
-
-  auto InvShiftOp = [&](const APInt &Lhs, const APInt &Rhs) {
-    switch (I->getOpcode()) {
-    case Instruction::Shl:
-      return Lhs.lshr(Rhs);
-    case Instruction::LShr:
-    case Instruction::AShr:
-      return Lhs.shl(Rhs);
-    default:
-      llvm_unreachable("Unknown Shift Opcode");
-    }
-  };
-
-  if (KnownVal.isUnknown())
-    return false;
-
-  KnownBits KnownCnt =
-      computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
-  APInt MaxShift = KnownCnt.getMaxValue();
-  unsigned NumBits = KnownVal.getBitWidth();
-  if (MaxShift.uge(NumBits))
-    return false;
-
-  if (!ShiftOp(KnownVal.One, MaxShift).isZero())
-    return true;
-
-  // If all of the bits shifted out are known to be zero, and Val is known
-  // non-zero then at least one non-zero bit must remain.
-  if (InvShiftOp(KnownVal.Zero, NumBits - MaxShift)
-          .eq(InvShiftOp(APInt::getAllOnes(NumBits), NumBits - MaxShift)) &&
-      isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q))
-    return true;
-
-  return false;
-}
-
 /// Return true if the given value is known to be non-zero when defined. For
 /// vectors, return true if every demanded element is known to be non-zero when
 /// defined. For pointers, if the context instruction and dominator tree are
@@ -2733,7 +2682,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (Known.One[0])
       return true;
 
-    return isNonZeroShift(I, DemandedElts, Depth, Q, Known);
+    if (!Known.isUnknown()) {
+      KnownBits KnownCnt =
+          computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+
+      if (KnownCnt.getMaxValue().ult(Known.getBitWidth()) &&
+          !Known.One.shl(KnownCnt.getMaxValue()).isZero())
+        return true;
+    }
+
+    break;
   }
   case Instruction::LShr:
   case Instruction::AShr: {
@@ -2749,7 +2707,19 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (Known.isNegative())
       return true;
 
-    return isNonZeroShift(I, DemandedElts, Depth, Q, Known);
+    // If the shifter operand is a constant, and all of the bits shifted
+    // out are known to be zero, and X is known non-zero then at least one
+    // non-zero bit must remain.
+    if (ConstantInt *Shift = dyn_cast<ConstantInt>(I->getOperand(1))) {
+      auto ShiftVal = Shift->getLimitedValue(BitWidth - 1);
+      // Is there a known one in the portion not shifted out?
+      if (Known.countMaxLeadingZeros() < BitWidth - ShiftVal)
+        return true;
+      // Are all the bits to be shifted out known zero?
+      if (Known.countMinTrailingZeros() >= ShiftVal)
+        return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
+    }
+    break;
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
