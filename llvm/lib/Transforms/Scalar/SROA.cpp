@@ -241,7 +241,7 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
     bool SetKillLocation = false;
 
     if (IsSplit) {
-      std::optional<DIExpression::FragmentInfo> BaseFragment = std::nullopt;
+      std::optional<DIExpression::FragmentInfo> BaseFragment;
       {
         auto R = BaseFragments.find(getAggregateVariable(DbgAssign));
         if (R == BaseFragments.end())
