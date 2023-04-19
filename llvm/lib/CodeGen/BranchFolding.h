@@ -118,10 +118,10 @@ class TargetRegisterInfo;
     bool EnableHoistCommonCode;
     bool UpdateLiveIns;
     unsigned MinCommonTailLength;
-    const TargetInstrInfo *TII;
-    const MachineRegisterInfo *MRI;
-    const TargetRegisterInfo *TRI;
-    MachineLoopInfo *MLI;
+    const TargetInstrInfo *TII = nullptr;
+    const MachineRegisterInfo *MRI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineLoopInfo *MLI = nullptr;
     LivePhysRegs LiveRegs;
 
   private:

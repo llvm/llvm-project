@@ -189,11 +189,11 @@ namespace {
     std::vector<BBInfo> BBAnalysis;
     TargetSchedModel SchedModel;
 
-    const TargetLoweringBase *TLI;
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    const MachineBranchProbabilityInfo *MBPI;
-    MachineRegisterInfo *MRI;
+    const TargetLoweringBase *TLI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const MachineBranchProbabilityInfo *MBPI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
 
     LivePhysRegs Redefs;
 

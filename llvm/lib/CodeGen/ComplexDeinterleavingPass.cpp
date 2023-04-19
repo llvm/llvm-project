@@ -197,8 +197,8 @@ public:
   explicit ComplexDeinterleavingGraph(const TargetLowering *tl) : TL(tl) {}
 
 private:
-  const TargetLowering *TL;
-  Instruction *RootValue;
+  const TargetLowering *TL = nullptr;
+  Instruction *RootValue = nullptr;
   NodePtr RootNode;
   SmallVector<NodePtr> CompositeNodes;
   SmallPtrSet<Instruction *, 16> AllInstructions;

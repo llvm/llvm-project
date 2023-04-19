@@ -63,16 +63,16 @@ static cl::opt<bool> VerifyPatternOrder(
 
 namespace {
 class MachineCombiner : public MachineFunctionPass {
-  const TargetSubtargetInfo *STI;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  const TargetSubtargetInfo *STI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
-  MachineRegisterInfo *MRI;
-  MachineLoopInfo *MLI; // Current MachineLoopInfo
-  MachineTraceMetrics *Traces;
-  MachineTraceMetrics::Ensemble *TraceEnsemble;
-  MachineBlockFrequencyInfo *MBFI;
-  ProfileSummaryInfo *PSI;
+  MachineRegisterInfo *MRI = nullptr;
+  MachineLoopInfo *MLI = nullptr; // Current MachineLoopInfo
+  MachineTraceMetrics *Traces = nullptr;
+  MachineTraceMetrics::Ensemble *TraceEnsemble = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
   RegisterClassInfo RegClassInfo;
 
   TargetSchedModel TSchedModel;
