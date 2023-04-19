@@ -98,7 +98,7 @@ void PlatformQemuUser::DebuggerInitialize(Debugger &debugger) {
           debugger, ConstString(GetPluginNameStatic()))) {
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the qemu-user platform plugin."),
+        "Properties for the qemu-user platform plugin.",
         /*is_global_property=*/true);
   }
 }
