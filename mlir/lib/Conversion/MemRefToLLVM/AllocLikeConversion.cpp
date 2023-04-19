@@ -128,7 +128,7 @@ bool AllocationOpLLVMLowering::isMemRefSizeMultipleOf(
     const DataLayout *defaultLayout) const {
   uint64_t sizeDivisor = getMemRefEltSizeInBytes(type, op, defaultLayout);
   for (unsigned i = 0, e = type.getRank(); i < e; i++) {
-    if (ShapedType::isDynamic(type.getDimSize(i)))
+    if (type.isDynamicDim(i))
       continue;
     sizeDivisor = sizeDivisor * type.getDimSize(i);
   }
