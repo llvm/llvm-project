@@ -4377,7 +4377,9 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       // Floating point scalars are already located in index #0.
       // Many insertions to #0 can fold away for scalar fp-ops, so let's assume
       // true for all.
-      if (ScalarType->isFloatingPointTy())
+      if (ScalarType->isFloatingPointTy() &&
+          (Opcode != Instruction::InsertElement || !Op0 ||
+           isa<UndefValue>(Op0)))
         return RegisterFileMoveCost;
 
       if (Opcode == Instruction::InsertElement &&
