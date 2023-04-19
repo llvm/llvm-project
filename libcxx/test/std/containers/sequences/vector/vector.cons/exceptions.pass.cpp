@@ -12,6 +12,7 @@
 // Check that vector constructors don't leak memory when an operation inside the constructor throws an exception
 
 #include <cstddef>
+#include <memory>
 #include <type_traits>
 #include <vector>
 

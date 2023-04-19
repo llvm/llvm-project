@@ -7,8 +7,6 @@ body:             |
   bb.0:
     liveins: $sgpr0
 
-    ; CHECK: $vgpr0 = COPY %3
-    ; CHECK: SI_RETURN_TO_EPILOG implicit $vgpr0
     ; GCN-LABEL: name: rcp_sqrt_test
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}

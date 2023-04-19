@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP57:%.*]] = bitcast [2 x %struct.kmp_taskred_input_t.0]* [[DOTRD_INPUT_3]] to i8*
 // CHECK1-NEXT:    [[TMP58:%.*]] = call i8* @__kmpc_taskred_init(i32 [[TMP0]], i32 2, i8* [[TMP57]])
 // CHECK1-NEXT:    store i8* [[TMP58]], i8** [[DOTTASK_RED_6]], align 8
-// CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i16*, i8**)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[A]], i64 [[TMP2]], i16* [[VLA]], i8** [[DOTTASK_RED_]])
+// CHECK1-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i16*, i8**)* @main.omp_outlined to void (i32*, i32*, ...)*), i32* [[A]], i64 [[TMP2]], i16* [[VLA]], i8** [[DOTTASK_RED_]])
 // CHECK1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    call void @__kmpc_end_taskgroup(%struct.ident_t* @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    store i32 0, i32* [[RETVAL]], align 4
@@ -461,7 +461,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
 // CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i32* nonnull align 4 dereferenceable(4) [[A:%.*]], i64 [[VLA:%.*]], i16* nonnull align 2 dereferenceable(2) [[D:%.*]], i8** nonnull align 8 dereferenceable(8) [[DOTTASK_RED_:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8

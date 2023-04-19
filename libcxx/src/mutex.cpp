@@ -25,10 +25,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-const defer_lock_t  defer_lock{};
-const try_to_lock_t try_to_lock{};
-const adopt_lock_t  adopt_lock{};
-
 // ~mutex is defined elsewhere
 
 void

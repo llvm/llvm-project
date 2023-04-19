@@ -14,6 +14,7 @@
 //    -> vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include <cstddef>

@@ -103,6 +103,14 @@ API Changes
 ABI Affecting Changes
 ---------------------
 
+- Symbols for ``std::allocator_arg``, ``std::defer_lock``, ``std::try_to_lock``, ``std::adopt_lock``, and
+  ``std::piecewise_construct`` have been removed from the built library. Under most circumstances, user code
+  should not have been relying on those symbols anyway since those are empty classes and the compiler does
+  not generate an undefined reference unless the address of the object is taken. However, this is an ABI break
+  if the address of one of these objects has been taken in code compiled as C++03, since in those cases the
+  objects were marked as defined in the shared library. In other Standard modes, this should never be a problem
+  since those objects were defined in the headers as ``constexpr``.
+
 Build System Changes
 --------------------
 
