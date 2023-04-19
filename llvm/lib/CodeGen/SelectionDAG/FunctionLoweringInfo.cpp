@@ -292,18 +292,18 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
       for (WinEHHandlerType &H : TBME.HandlerArray) {
         if (H.Handler)
-          H.Handler = MBBMap[H.Handler.get<const BasicBlock *>()];
+          H.Handler = MBBMap[cast<const BasicBlock *>(H.Handler)];
       }
     }
     for (CxxUnwindMapEntry &UME : EHInfo.CxxUnwindMap)
       if (UME.Cleanup)
-        UME.Cleanup = MBBMap[UME.Cleanup.get<const BasicBlock *>()];
+        UME.Cleanup = MBBMap[cast<const BasicBlock *>(UME.Cleanup)];
     for (SEHUnwindMapEntry &UME : EHInfo.SEHUnwindMap) {
-      const auto *BB = UME.Handler.get<const BasicBlock *>();
+      const auto *BB = cast<const BasicBlock *>(UME.Handler);
       UME.Handler = MBBMap[BB];
     }
     for (ClrEHUnwindMapEntry &CME : EHInfo.ClrEHUnwindMap) {
-      const auto *BB = CME.Handler.get<const BasicBlock *>();
+      const auto *BB = cast<const BasicBlock *>(CME.Handler);
       CME.Handler = MBBMap[BB];
     }
   } else if (Personality == EHPersonality::Wasm_CXX) {
@@ -313,18 +313,18 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // Map all BB references in the Wasm EH data to MBBs.
     DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
     for (auto &KV : EHInfo.SrcToUnwindDest) {
-      const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dest = KV.second.get<const BasicBlock *>();
+      const auto *Src = cast<const BasicBlock *>(KV.first);
+      const auto *Dest = cast<const BasicBlock *>(KV.second);
       SrcToUnwindDest[MBBMap[Src]] = MBBMap[Dest];
     }
     EHInfo.SrcToUnwindDest = std::move(SrcToUnwindDest);
     DenseMap<BBOrMBB, SmallPtrSet<BBOrMBB, 4>> UnwindDestToSrcs;
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
-      const auto *Dest = KV.first.get<const BasicBlock *>();
+      const auto *Dest = cast<const BasicBlock *>(KV.first);
       UnwindDestToSrcs[MBBMap[Dest]] = SmallPtrSet<BBOrMBB, 4>();
       for (const auto P : KV.second)
         UnwindDestToSrcs[MBBMap[Dest]].insert(
-            MBBMap[P.get<const BasicBlock *>()]);
+            MBBMap[cast<const BasicBlock *>(P)]);
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }

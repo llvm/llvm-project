@@ -788,7 +788,7 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     ModuleSymbolTable::Symbol Msym = *MsymI++;
     Skip();
 
-    if (GlobalValue *GV = Msym.dyn_cast<GlobalValue *>()) {
+    if (GlobalValue *GV = dyn_cast_if_present<GlobalValue *>(Msym)) {
       if (Res.Prevailing) {
         if (Sym.isUndefined())
           continue;
@@ -826,7 +826,8 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
           GV->setDLLStorageClass(GlobalValue::DLLStorageClassTypes::
                                  DefaultStorageClass);
       }
-    } else if (auto *AS = Msym.dyn_cast<ModuleSymbolTable::AsmSymbol *>()) {
+    } else if (auto *AS =
+                   dyn_cast_if_present<ModuleSymbolTable::AsmSymbol *>(Msym)) {
       // Collect non-prevailing symbols.
       if (!Res.Prevailing)
         NonPrevailingAsmSymbols.insert(AS->first);

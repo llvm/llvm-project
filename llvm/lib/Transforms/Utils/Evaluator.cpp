@@ -121,7 +121,7 @@ isSimpleEnoughValueToCommit(Constant *C,
 }
 
 void Evaluator::MutableValue::clear() {
-  if (auto *Agg = Val.dyn_cast<MutableAggregate *>())
+  if (auto *Agg = dyn_cast_if_present<MutableAggregate *>(Val))
     delete Agg;
   Val = nullptr;
 }
@@ -130,7 +130,7 @@ Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
                                         const DataLayout &DL) const {
   TypeSize TySize = DL.getTypeStoreSize(Ty);
   const MutableValue *V = this;
-  while (const auto *Agg = V->Val.dyn_cast<MutableAggregate *>()) {
+  while (const auto *Agg = dyn_cast_if_present<MutableAggregate *>(V->Val)) {
     Type *AggTy = Agg->Ty;
     std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
     if (!Index || Index->uge(Agg->Elements.size()) ||
@@ -140,11 +140,11 @@ Constant *Evaluator::MutableValue::read(Type *Ty, APInt Offset,
     V = &Agg->Elements[Index->getZExtValue()];
   }
 
-  return ConstantFoldLoadFromConst(V->Val.get<Constant *>(), Ty, Offset, DL);
+  return ConstantFoldLoadFromConst(cast<Constant *>(V->Val), Ty, Offset, DL);
 }
 
 bool Evaluator::MutableValue::makeMutable() {
-  Constant *C = Val.get<Constant *>();
+  Constant *C = cast<Constant *>(Val);
   Type *Ty = C->getType();
   unsigned NumElements;
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
@@ -171,10 +171,10 @@ bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
   MutableValue *MV = this;
   while (Offset != 0 ||
          !CastInst::isBitOrNoopPointerCastable(Ty, MV->getType(), DL)) {
-    if (MV->Val.is<Constant *>() && !MV->makeMutable())
+    if (isa<Constant *>(MV->Val) && !MV->makeMutable())
       return false;
 
-    MutableAggregate *Agg = MV->Val.get<MutableAggregate *>();
+    MutableAggregate *Agg = cast<MutableAggregate *>(MV->Val);
     Type *AggTy = Agg->Ty;
     std::optional<APInt> Index = DL.getGEPIndexForOffset(AggTy, Offset);
     if (!Index || Index->uge(Agg->Elements.size()) ||
