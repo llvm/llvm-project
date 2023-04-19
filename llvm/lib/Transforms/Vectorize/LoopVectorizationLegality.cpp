@@ -743,7 +743,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT)) {
+        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop,
+                                                         SinkAfter, DT)) {
           AllowedExit.insert(Phi);
           FixedOrderRecurrences.insert(Phi);
           continue;
@@ -915,6 +916,18 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       LLVM_DEBUG(dbgs() << "LV: Did not find one integer induction var.\n");
     }
   }
+
+  // For fixed order recurrences, we use the previous value (incoming value from
+  // the latch) to check if it dominates all users of the recurrence. Bail out
+  // if we have to sink such an instruction for another recurrence, as the
+  // dominance requirement may not hold after sinking.
+  BasicBlock *LoopLatch = TheLoop->getLoopLatch();
+  if (any_of(FixedOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
+        Instruction *V =
+            cast<Instruction>(Phi->getIncomingValueForBlock(LoopLatch));
+        return SinkAfter.contains(V);
+      }))
+    return false;
 
   // Now we know the widest induction type, check if our found induction
   // is the same size. If it's not, unset it here and InnerLoopVectorizer
