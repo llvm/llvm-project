@@ -33,17 +33,18 @@ add_clang_library(clangTidyBugproneModule
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
   NoEscapeCheck.cpp
+  NonZeroEnumToBoolConversionCheck.cpp
   NotNullTerminatedResultCheck.cpp
   ParentVirtualCallCheck.cpp
   PosixReturnCheck.cpp
   RedundantBranchConditionCheck.cpp
   ReservedIdentifierCheck.cpp
   SharedPtrArrayMismatchCheck.cpp
-  SmartPtrArrayMismatchCheck.cpp
   SignalHandlerCheck.cpp
   SignedCharMisuseCheck.cpp
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
+  SmartPtrArrayMismatchCheck.cpp
   SpuriouslyWakeUpFunctionsCheck.cpp
   StandaloneEmptyCheck.cpp
   StringConstructorCheck.cpp
