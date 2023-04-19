@@ -36,7 +36,7 @@ cp -p "${src_file}" "${formatted_file}"
 
 cleanup() {
   rc=$?
-  rm "${formatted_file}" "${original_file}"
+  rm -f "${formatted_file}" "${original_file}"
   exit ${rc}
 }
 trap 'cleanup' INT HUP QUIT TERM EXIT
