@@ -1608,7 +1608,7 @@ void DynamicLoaderDarwinKernel::DebuggerInitialize(
     const bool is_global_setting = true;
     PluginManager::CreateSettingForDynamicLoaderPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the DynamicLoaderDarwinKernel plug-in."),
+        "Properties for the DynamicLoaderDarwinKernel plug-in.",
         is_global_setting);
   }
 }

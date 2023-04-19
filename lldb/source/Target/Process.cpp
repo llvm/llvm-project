@@ -167,8 +167,8 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         std::make_shared<ProcessOptionValueProperties>(ConstString("process"));
     m_collection_sp->Initialize(g_process_properties);
     m_collection_sp->AppendProperty(
-        ConstString("thread"), ConstString("Settings specific to threads."),
-        true, Thread::GetGlobalProperties().GetValueProperties());
+        ConstString("thread"), "Settings specific to threads.", true,
+        Thread::GetGlobalProperties().GetValueProperties());
   } else {
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Process::GetGlobalProperties());
@@ -181,8 +181,8 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
       std::make_unique<ProcessExperimentalProperties>();
   m_collection_sp->AppendProperty(
       ConstString(Properties::GetExperimentalSettingsName()),
-      ConstString("Experimental settings - setting these won't produce "
-                  "errors if the setting is not present."),
+      "Experimental settings - setting these won't produce "
+      "errors if the setting is not present.",
       true, m_experimental_properties_up->GetValueProperties());
 }
 

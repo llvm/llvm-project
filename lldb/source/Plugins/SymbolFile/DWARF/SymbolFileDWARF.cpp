@@ -251,8 +251,7 @@ void SymbolFileDWARF::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForSymbolFilePlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the dwarf symbol-file plug-in."),
-        is_global_setting);
+        "Properties for the dwarf symbol-file plug-in.", is_global_setting);
   }
 }
 

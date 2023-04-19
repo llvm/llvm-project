@@ -221,8 +221,7 @@ void PlatformDarwinKernel::DebuggerInitialize(
     const bool is_global_setting = true;
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the PlatformDarwinKernel plug-in."),
-        is_global_setting);
+        "Properties for the PlatformDarwinKernel plug-in.", is_global_setting);
   }
 }
 
