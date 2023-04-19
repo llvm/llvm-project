@@ -804,7 +804,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
                                    --config ${build_configuration}
                                    ${build_tool_args}
     INSTALL_COMMAND ""
-    DOWNLOAD_COMMAND ""
     STEP_TARGETS configure build
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
@@ -916,7 +915,6 @@ if (CLANG_BOLT_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
                                    --config ${build_configuration}
                                    --target ${CLANG_BOLT_INSTRUMENT_TARGETS}
     INSTALL_COMMAND ""
-    DOWNLOAD_COMMAND ""
     STEP_TARGETS configure build
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
