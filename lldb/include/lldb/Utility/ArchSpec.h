@@ -172,6 +172,8 @@ public:
     eCore_mips64r5el,
     eCore_mips64r6el,
 
+    eCore_msp430,
+
     eCore_ppc_generic,
     eCore_ppc_ppc601,
     eCore_ppc_ppc602,

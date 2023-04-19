@@ -193,7 +193,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  SmallVector<unsigned, 16> AddrSpaces;
+  unsigned AddrSpace = std::numeric_limits<unsigned>::max();
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
@@ -726,7 +726,10 @@ public:
   }
 
   unsigned getNumChildren() const { return Children.size(); }
-  TreePatternNode *getChild(unsigned N) const { return Children[N].get(); }
+  const TreePatternNode *getChild(unsigned N) const {
+    return Children[N].get();
+  }
+  TreePatternNode *getChild(unsigned N) { return Children[N].get(); }
   const TreePatternNodePtr &getChildShared(unsigned N) const {
     return Children[N];
   }

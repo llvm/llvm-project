@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   EmulateWideInt.cpp
   ExpandOps.cpp
   IntRangeOptimizations.cpp
+  ReifyValueBounds.cpp
   UnsignedWhenEquivalent.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -23,7 +24,9 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRPass
+  MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils
+  MLIRValueBoundsOpInterface
   MLIRVectorDialect
   )

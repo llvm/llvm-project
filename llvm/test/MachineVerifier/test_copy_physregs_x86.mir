@@ -1,4 +1,4 @@
-#RUN: not --crash llc -march=x86-64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -march=x86-64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
 # REQUIRES: x86-registered-target
 
 # These copies have mismatched type sizes that are allowed because the
@@ -28,27 +28,35 @@ body:             |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2, $xmm3
 
-    ; FP16 reg is sub_reg of xmm
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: %0:_(s16) = COPY $xmm0
     %0:_(s16) = COPY $xmm0
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: %1:_(<4 x s16>) = COPY $xmm1
     %1:_(<4 x s16>) = COPY $xmm1
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: %2:_(s256) = COPY $xmm2
     %2:_(s256) = COPY $xmm2
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: %3:_(<8 x s32>) = COPY $xmm3
     %3:_(<8 x s32>) = COPY $xmm3
 
-    ; FP16 reg is sub_reg of xmm
+    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: $xmm0 = COPY %0:_(s16)
     $xmm0 = COPY %0
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: $xmm1 = COPY %1:_(<4 x s16>)
     $xmm1 = COPY %1
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: $xmm2 = COPY %2:_(s256)
     $xmm2 = COPY %2
 
     ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: - instruction: $xmm3 = COPY %3:_(<8 x s32>)
     $xmm3 = COPY %3
 ...

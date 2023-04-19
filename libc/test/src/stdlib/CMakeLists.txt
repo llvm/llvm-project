@@ -53,7 +53,7 @@ add_libc_unittest(
     libc.src.stdlib.atoll
 )
 
-add_libc_unittest(
+add_fp_unittest(
   strtod_test
   SUITE
     libc_stdlib_unittests
@@ -64,7 +64,7 @@ add_libc_unittest(
     libc.src.stdlib.strtod
 )
 
-add_libc_unittest(
+add_fp_unittest(
   strtof_test
   SUITE
     libc_stdlib_unittests

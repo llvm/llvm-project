@@ -665,14 +665,16 @@ Vectorizer::splitOddVectorElts(ArrayRef<Instruction *> Chain,
                                unsigned ElementSizeBits) {
   unsigned ElementSizeBytes = ElementSizeBits / 8;
   unsigned SizeBytes = ElementSizeBytes * Chain.size();
-  unsigned NumLeft = (SizeBytes - (SizeBytes % 4)) / ElementSizeBytes;
-  if (NumLeft == Chain.size()) {
-    if ((NumLeft & 1) == 0)
-      NumLeft /= 2; // Split even in half
-    else
-      --NumLeft;    // Split off last element
-  } else if (NumLeft == 0)
+  unsigned LeftBytes = (SizeBytes - (SizeBytes % 4));
+  // If we're already a multiple of 4 bytes or the whole chain is shorter than 4
+  // bytes, then try splitting down on power-of-2 boundary.
+  if (LeftBytes == SizeBytes || LeftBytes == 0)
+    LeftBytes = PowerOf2Ceil(SizeBytes) / 2;
+  unsigned NumLeft = LeftBytes / ElementSizeBytes;
+  if (NumLeft == 0)
     NumLeft = 1;
+  LLVM_DEBUG(dbgs() << "LSV: Splitting the chain into " << NumLeft << "+"
+                    << Chain.size() - NumLeft << " elements\n");
   return std::make_pair(Chain.slice(0, NumLeft), Chain.slice(NumLeft));
 }
 

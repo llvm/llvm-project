@@ -154,10 +154,10 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
     auto computeNumElements =
         [&](MemRefType type, function_ref<Value()> getDynamicSize) -> Value {
       // Compute number of elements.
-      int64_t size = type.getShape()[0];
-      Value numElements = ((size == ShapedType::kDynamic)
-                               ? getDynamicSize()
-                               : createIndexConstant(rewriter, loc, size));
+      Value numElements =
+          type.isDynamicDim(0)
+              ? getDynamicSize()
+              : createIndexConstant(rewriter, loc, type.getDimSize(0));
       Type indexType = getIndexType();
       if (numElements.getType() != indexType)
         numElements = typeConverter->materializeTargetConversion(
@@ -987,7 +987,7 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto targetType = op.getTarget().getType().cast<BaseMemRefType>();
 
     // First make sure we have an unranked memref descriptor representation.
-    auto makeUnranked = [&, this](Value ranked, BaseMemRefType type) {
+    auto makeUnranked = [&, this](Value ranked, MemRefType type) {
       auto rank = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                     type.getRank());
       auto *typeConverter = getTypeConverter();
@@ -1011,12 +1011,14 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto stackSaveOp =
         rewriter.create<LLVM::StackSaveOp>(loc, getVoidPtrType());
 
-    Value unrankedSource = srcType.hasRank()
-                               ? makeUnranked(adaptor.getSource(), srcType)
-                               : adaptor.getSource();
-    Value unrankedTarget = targetType.hasRank()
-                               ? makeUnranked(adaptor.getTarget(), targetType)
-                               : adaptor.getTarget();
+    auto srcMemRefType = srcType.dyn_cast<MemRefType>();
+    Value unrankedSource =
+        srcMemRefType ? makeUnranked(adaptor.getSource(), srcMemRefType)
+                      : adaptor.getSource();
+    auto targetMemRefType = targetType.dyn_cast<MemRefType>();
+    Value unrankedTarget =
+        targetMemRefType ? makeUnranked(adaptor.getTarget(), targetMemRefType)
+                         : adaptor.getTarget();
 
     // Now promote the unranked descriptors to the stack.
     auto one = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
@@ -1390,11 +1392,11 @@ private:
         }
 
         Value dimSize;
-        int64_t size = targetMemRefType.getDimSize(i);
         // If the size of this dimension is dynamic, then load it at runtime
         // from the shape operand.
-        if (!ShapedType::isDynamic(size)) {
-          dimSize = createIndexConstant(rewriter, loc, size);
+        if (!targetMemRefType.isDynamicDim(i)) {
+          dimSize = createIndexConstant(rewriter, loc,
+                                        targetMemRefType.getDimSize(i));
         } else {
           Value shapeOp = reshapeOp.getShape();
           Value index = createIndexConstant(rewriter, loc, i);
@@ -1589,7 +1591,8 @@ public:
       return rewriter.replaceOp(transposeOp, {viewMemRef}), success();
 
     auto targetMemRef = MemRefDescriptor::undef(
-        rewriter, loc, typeConverter->convertType(transposeOp.getShapedType()));
+        rewriter, loc,
+        typeConverter->convertType(transposeOp.getIn().getType()));
 
     // Copy the base and aligned pointers from the old descriptor to the new
     // one.

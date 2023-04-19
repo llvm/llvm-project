@@ -17,8 +17,8 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
-#include "utils/testutils/ExecuteFunction.h"
-#include "utils/testutils/StreamWrapper.h"
+#include "test/UnitTest/ExecuteFunction.h"
+#include "test/UnitTest/TestLogger.h"
 
 namespace __llvm_libc {
 namespace testing {
@@ -51,9 +51,7 @@ bool test(RunContext *Ctx, TestCondition Cond, ValType LHS, ValType RHS,
 
 struct MatcherBase {
   virtual ~MatcherBase() {}
-  virtual void explainError(testutils::StreamWrapper &OS) {
-    OS << "unknown error\n";
-  }
+  virtual void explainError() { tlog << "unknown error\n"; }
   // Override and return true to skip `explainError` step.
   virtual bool is_silent() const { return false; }
 };

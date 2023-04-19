@@ -1679,6 +1679,9 @@ def isGFX9Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
+def isNotGFX9Plus :
+  Predicate<"Subtarget->getGeneration() < AMDGPUSubtarget::GFX9">;
+
 def isGFX9Only : Predicate <
   "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureGFX9Insts)>;

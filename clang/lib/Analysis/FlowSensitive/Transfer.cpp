@@ -403,6 +403,18 @@ public:
       Env.setValue(Loc, NullPointerVal);
       break;
     }
+    case CK_FunctionToPointerDecay: {
+      StorageLocation *PointeeLoc =
+          Env.getStorageLocation(*SubExpr, SkipPast::Reference);
+      if (PointeeLoc == nullptr)
+        break;
+
+      auto &PointerLoc = Env.createStorageLocation(*S);
+      auto &PointerVal = Env.create<PointerValue>(*PointeeLoc);
+      Env.setStorageLocation(*S, PointerLoc);
+      Env.setValue(PointerLoc, PointerVal);
+      break;
+    }
     default:
       break;
     }
@@ -467,6 +479,20 @@ public:
     auto &Loc = Env.createStorageLocation(*S);
     Env.setStorageLocation(*S, Loc);
     Env.setValue(Loc, Env.create<PointerValue>(*ThisPointeeLoc));
+  }
+
+  void VisitCXXNewExpr(const CXXNewExpr *S) {
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(Loc, *Val);
+  }
+
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
+    // Empty method.
+    // We consciously don't do anything on deletes.  Diagnosing double deletes
+    // (for example) should be done by a specific analysis, not by the
+    // framework.
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {

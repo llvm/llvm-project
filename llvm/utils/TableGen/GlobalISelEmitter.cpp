@@ -3696,7 +3696,7 @@ private:
       const TreePatternNode *Src, const TreePatternNode *Dst);
   Expected<action_iterator> createAndImportSubInstructionRenderer(
       action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
-      unsigned TempReg);
+      const TreePatternNode *Src, unsigned TempReg);
   Expected<action_iterator>
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode *Dst);
@@ -3705,14 +3705,12 @@ private:
       action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
       const TreePatternNode *Src, const TreePatternNode *Dst);
 
-  Expected<action_iterator>
-  importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
-                             BuildMIAction &DstMIBuilder,
-                             const llvm::TreePatternNode *Dst);
-  Expected<action_iterator>
-  importExplicitUseRenderer(action_iterator InsertPt, RuleMatcher &Rule,
-                            BuildMIAction &DstMIBuilder,
-                            TreePatternNode *DstChild);
+  Expected<action_iterator> importExplicitUseRenderers(
+      action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+      const llvm::TreePatternNode *Dst, const TreePatternNode *Src);
+  Expected<action_iterator> importExplicitUseRenderer(
+      action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
+      const TreePatternNode *DstChild, const TreePatternNode *Src);
   Error importDefaultOperandRenderers(action_iterator InsertPt, RuleMatcher &M,
                                       BuildMIAction &DstMIBuilder,
                                       DagInit *DefaultOps) const;
@@ -3745,25 +3743,25 @@ private:
   /// If no register class is found, return std::nullopt.
   std::optional<const CodeGenRegisterClass *>
   inferSuperRegisterClassForNode(const TypeSetByHwMode &Ty,
-                                 TreePatternNode *SuperRegNode,
-                                 TreePatternNode *SubRegIdxNode);
+                                 const TreePatternNode *SuperRegNode,
+                                 const TreePatternNode *SubRegIdxNode);
   std::optional<CodeGenSubRegIndex *>
-  inferSubRegIndexForNode(TreePatternNode *SubRegIdxNode);
+  inferSubRegIndexForNode(const TreePatternNode *SubRegIdxNode);
 
   /// Infer a CodeGenRegisterClass which suppoorts \p Ty and \p SubRegIdxNode.
   /// Return std::nullopt if no such class exists.
   std::optional<const CodeGenRegisterClass *>
   inferSuperRegisterClass(const TypeSetByHwMode &Ty,
-                          TreePatternNode *SubRegIdxNode);
+                          const TreePatternNode *SubRegIdxNode);
 
   /// Return the CodeGenRegisterClass associated with \p Leaf if it has one.
   std::optional<const CodeGenRegisterClass *>
-  getRegClassFromLeaf(TreePatternNode *Leaf);
+  getRegClassFromLeaf(const TreePatternNode *Leaf);
 
   /// Return a CodeGenRegisterClass for \p N if one can be found. Return
   /// std::nullopt otherwise.
   std::optional<const CodeGenRegisterClass *>
-  inferRegClassFromPattern(TreePatternNode *N);
+  inferRegClassFromPattern(const TreePatternNode *N);
 
   /// Return the size of the MemoryVT in this predicate, if possible.
   std::optional<unsigned>
@@ -4166,7 +4164,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     bool IsFCmp = SrcGIOrNull->TheDef->getName() == "G_FCMP";
 
     if (IsFCmp || SrcGIOrNull->TheDef->getName() == "G_ICMP") {
-      TreePatternNode *SrcChild = Src->getChild(NumChildren - 1);
+      const TreePatternNode *SrcChild = Src->getChild(NumChildren - 1);
       if (SrcChild->isLeaf()) {
         DefInit *DI = dyn_cast<DefInit>(SrcChild->getLeafValue());
         Record *CCDef = DI ? DI->getDef() : nullptr;
@@ -4194,8 +4192,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     if (IsAtomic && SrcGIOrNull->TheDef->getName() == "G_STORE") {
       assert(NumChildren == 2 && "wrong operands for atomic store");
 
-      TreePatternNode *PtrChild = Src->getChild(0);
-      TreePatternNode *ValueChild = Src->getChild(1);
+      const TreePatternNode *PtrChild = Src->getChild(0);
+      const TreePatternNode *ValueChild = Src->getChild(1);
 
       if (auto Error = importChildMatcher(Rule, InsnMatcher, PtrChild, true,
                                           false, 1, TempOpIdx))
@@ -4216,7 +4214,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return failedImport("Expected IntInit containing intrinsic ID)");
 
     for (unsigned i = 0; i != NumChildren; ++i) {
-      TreePatternNode *SrcChild = Src->getChild(i);
+      const TreePatternNode *SrcChild = Src->getChild(i);
 
       // We need to determine the meaning of a literal integer based on the
       // context. If this is a field required to be an immediate (such as an
@@ -4510,7 +4508,7 @@ Error GlobalISelEmitter::importChildMatcher(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     action_iterator InsertPt, RuleMatcher &Rule, BuildMIAction &DstMIBuilder,
-    TreePatternNode *DstChild) {
+    const TreePatternNode *DstChild, const TreePatternNode *Src) {
 
   const auto &SubOperand = Rule.getComplexSubOperand(DstChild->getName());
   if (SubOperand) {
@@ -4580,7 +4578,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
-          ++InsertPt, Rule, DstChild, TempRegID);
+          ++InsertPt, Rule, DstChild, Src, TempRegID);
       if (auto Error = InsertPtOrError.takeError())
         return std::move(Error);
       return InsertPtOrError.get();
@@ -4652,6 +4650,16 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     return failedImport(
         "Dst pattern child def is an unsupported tablegen class");
   }
+
+  // Handle the case where the MVT/register class is omitted in the dest pattern
+  // but MVT exists in the source pattern.
+  if (isa<UnsetInit>(DstChild->getLeafValue())) {
+    for (unsigned NumOp = 0; NumOp < Src->getNumChildren(); NumOp++)
+      if (Src->getChild(NumOp)->getName() == DstChild->getName()) {
+        DstMIBuilder.addRenderer<CopyRenderer>(Src->getChild(NumOp)->getName());
+        return InsertPt;
+      }
+  }
   return failedImport("Dst pattern child is an unsupported kind");
 }
 
@@ -4682,8 +4690,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
               .takeError())
     return std::move(Error);
 
-  if (auto Error = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst)
-                       .takeError())
+  if (auto Error =
+          importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst, Src)
+              .takeError())
     return std::move(Error);
 
   return DstMIBuilder;
@@ -4692,7 +4701,7 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
 Expected<action_iterator>
 GlobalISelEmitter::createAndImportSubInstructionRenderer(
     const action_iterator InsertPt, RuleMatcher &M, const TreePatternNode *Dst,
-    unsigned TempRegID) {
+    const TreePatternNode *Src, unsigned TempRegID) {
   auto InsertPtOrError = createInstructionRenderer(InsertPt, M, Dst);
 
   // TODO: Assert there's exactly one result.
@@ -4706,8 +4715,8 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
   // Assign the result to TempReg.
   DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true);
 
-  InsertPtOrError =
-      importExplicitUseRenderers(InsertPtOrError.get(), M, DstMIBuilder, Dst);
+  InsertPtOrError = importExplicitUseRenderers(InsertPtOrError.get(), M,
+                                               DstMIBuilder, Dst, Src);
   if (auto Error = InsertPtOrError.takeError())
     return std::move(Error);
 
@@ -4790,7 +4799,7 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
 
     unsigned Num = Dst->getNumChildren();
     for (unsigned I = 1; I != Num; I += 2) {
-      TreePatternNode *SubRegChild = Dst->getChild(I + 1);
+      const TreePatternNode *SubRegChild = Dst->getChild(I + 1);
 
       auto SubIdx = inferSubRegIndexForNode(SubRegChild);
       if (!SubIdx)
@@ -4869,7 +4878,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
-    const llvm::TreePatternNode *Dst) {
+    const llvm::TreePatternNode *Dst, const llvm::TreePatternNode *Src) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
   CodeGenInstruction *OrigDstI = &Target.getInstruction(Dst->getOperator());
 
@@ -4885,7 +4894,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
 
     CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
-    TreePatternNode *ValChild = Dst->getChild(0);
+    const TreePatternNode *ValChild = Dst->getChild(0);
     if (!ValChild->isLeaf()) {
       // We really have to handle the source instruction, and then insert a
       // copy from the subregister.
@@ -4898,7 +4907,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
         InsertPt, *ExtractSrcTy, TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
-        ++InsertPt, M, ValChild, TempRegID);
+        ++InsertPt, M, ValChild, Src, TempRegID);
       if (auto Error = InsertPtOrError.takeError())
         return std::move(Error);
 
@@ -4947,15 +4956,15 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
       return failedImport("Malformed REG_SEQUENCE");
 
     for (unsigned I = 1; I != ExpectedDstINumUses; I += 2) {
-      TreePatternNode *ValChild = Dst->getChild(I);
-      TreePatternNode *SubRegChild = Dst->getChild(I + 1);
+      const TreePatternNode *ValChild = Dst->getChild(I);
+      const TreePatternNode *SubRegChild = Dst->getChild(I + 1);
 
       if (DefInit *SubRegInit =
               dyn_cast<DefInit>(SubRegChild->getLeafValue())) {
         CodeGenSubRegIndex *SubIdx = CGRegs.getSubRegIdx(SubRegInit->getDef());
 
         auto InsertPtOrError =
-            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild);
+            importExplicitUseRenderer(InsertPt, M, DstMIBuilder, ValChild, Src);
         if (auto Error = InsertPtOrError.takeError())
           return std::move(Error);
         InsertPt = InsertPtOrError.get();
@@ -5024,7 +5033,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     }
 
     auto InsertPtOrError = importExplicitUseRenderer(InsertPt, M, DstMIBuilder,
-                                                     Dst->getChild(Child));
+                                                     Dst->getChild(Child), Src);
     if (auto Error = InsertPtOrError.takeError())
       return std::move(Error);
     InsertPt = InsertPtOrError.get();
@@ -5098,7 +5107,7 @@ Error GlobalISelEmitter::importImplicitDefRenderers(
 }
 
 std::optional<const CodeGenRegisterClass *>
-GlobalISelEmitter::getRegClassFromLeaf(TreePatternNode *Leaf) {
+GlobalISelEmitter::getRegClassFromLeaf(const TreePatternNode *Leaf) {
   assert(Leaf && "Expected node?");
   assert(Leaf->isLeaf() && "Expected leaf?");
   Record *RCRec = getInitValueAsRegClass(Leaf->getLeafValue());
@@ -5111,7 +5120,7 @@ GlobalISelEmitter::getRegClassFromLeaf(TreePatternNode *Leaf) {
 }
 
 std::optional<const CodeGenRegisterClass *>
-GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
+GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode *N) {
   if (!N)
     return std::nullopt;
 
@@ -5143,13 +5152,13 @@ GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
   if (IsRegSequence || InstName == "COPY_TO_REGCLASS") {
     // If we have a COPY_TO_REGCLASS, then we need to handle it specially. It
     // has the desired register class as the first child.
-    TreePatternNode *RCChild = N->getChild(IsRegSequence ? 0 : 1);
+    const TreePatternNode *RCChild = N->getChild(IsRegSequence ? 0 : 1);
     if (!RCChild->isLeaf())
       return std::nullopt;
     return getRegClassFromLeaf(RCChild);
   }
   if (InstName == "INSERT_SUBREG") {
-    TreePatternNode *Child0 = N->getChild(0);
+    const TreePatternNode *Child0 = N->getChild(0);
     assert(Child0->getNumTypes() == 1 && "Unexpected number of types!");
     const TypeSetByHwMode &VTy = Child0->getExtType(0);
     return inferSuperRegisterClassForNode(VTy, Child0, N->getChild(2));
@@ -5179,8 +5188,8 @@ GlobalISelEmitter::inferRegClassFromPattern(TreePatternNode *N) {
 }
 
 std::optional<const CodeGenRegisterClass *>
-GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
-                                           TreePatternNode *SubRegIdxNode) {
+GlobalISelEmitter::inferSuperRegisterClass(
+    const TypeSetByHwMode &Ty, const TreePatternNode *SubRegIdxNode) {
   assert(SubRegIdxNode && "Expected subregister index node!");
   // We need a ValueTypeByHwMode for getSuperRegForSubReg.
   if (!Ty.isValueTypeByHwMode(false))
@@ -5204,8 +5213,8 @@ GlobalISelEmitter::inferSuperRegisterClass(const TypeSetByHwMode &Ty,
 
 std::optional<const CodeGenRegisterClass *>
 GlobalISelEmitter::inferSuperRegisterClassForNode(
-    const TypeSetByHwMode &Ty, TreePatternNode *SuperRegNode,
-    TreePatternNode *SubRegIdxNode) {
+    const TypeSetByHwMode &Ty, const TreePatternNode *SuperRegNode,
+    const TreePatternNode *SubRegIdxNode) {
   assert(SuperRegNode && "Expected super register node!");
   // Check if we already have a defined register class for the super register
   // node. If we do, then we should preserve that rather than inferring anything
@@ -5218,8 +5227,8 @@ GlobalISelEmitter::inferSuperRegisterClassForNode(
   return inferSuperRegisterClass(Ty, SubRegIdxNode);
 }
 
-std::optional<CodeGenSubRegIndex *>
-GlobalISelEmitter::inferSubRegIndexForNode(TreePatternNode *SubRegIdxNode) {
+std::optional<CodeGenSubRegIndex *> GlobalISelEmitter::inferSubRegIndexForNode(
+    const TreePatternNode *SubRegIdxNode) {
   if (!SubRegIdxNode->isLeaf())
     return std::nullopt;
 

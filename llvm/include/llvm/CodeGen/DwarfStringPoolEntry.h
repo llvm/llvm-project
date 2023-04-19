@@ -63,7 +63,7 @@ public:
   /// thus specified entry mustn`t be reallocated.
   DwarfStringPoolEntryRef(const StringMapEntry<DwarfStringPoolEntry *> &Entry)
       : MapEntry(&Entry) {
-    assert(MapEntry.get<ByPtrStringEntryPtr>()->second != nullptr);
+    assert(cast<ByPtrStringEntryPtr>(MapEntry)->second != nullptr);
   }
 
   explicit operator bool() const { return !MapEntry.isNull(); }
@@ -85,18 +85,18 @@ public:
 
   /// \returns string.
   StringRef getString() const {
-    if (MapEntry.is<ByValStringEntryPtr>())
-      return MapEntry.get<ByValStringEntryPtr>()->first();
+    if (isa<ByValStringEntryPtr>(MapEntry))
+      return cast<ByValStringEntryPtr>(MapEntry)->first();
 
-    return MapEntry.get<ByPtrStringEntryPtr>()->first();
+    return cast<ByPtrStringEntryPtr>(MapEntry)->first();
   }
 
   /// \returns the entire string pool entry for convenience.
   const DwarfStringPoolEntry &getEntry() const {
-    if (MapEntry.is<ByValStringEntryPtr>())
-      return MapEntry.get<ByValStringEntryPtr>()->second;
+    if (isa<ByValStringEntryPtr>(MapEntry))
+      return cast<ByValStringEntryPtr>(MapEntry)->second;
 
-    return *MapEntry.get<ByPtrStringEntryPtr>()->second;
+    return *cast<ByPtrStringEntryPtr>(MapEntry)->second;
   }
 
   bool operator==(const DwarfStringPoolEntryRef &X) const {
