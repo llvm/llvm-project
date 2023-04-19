@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++11 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++11 -verify=ref %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
+// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
 
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
@@ -851,3 +851,26 @@ constexpr int ignoredExprs() {
 }
 
 #endif
+
+namespace PredefinedExprs {
+#if __cplusplus >= 201402L
+  template<typename CharT>
+  constexpr bool strings_match(const CharT *str1, const CharT *str2) {
+    while (*str1 && *str2) {
+      if (*str1++ != *str2++)
+        return false;
+    };
+
+    return *str1 == *str2;
+  }
+
+  void foo() {
+    static_assert(strings_match(__FUNCSIG__, "void __cdecl PredefinedExprs::foo(void)"), "");
+    static_assert(strings_match(L__FUNCSIG__, L"void __cdecl PredefinedExprs::foo(void)"), "");
+    static_assert(strings_match(L__FUNCTION__, L"foo"), "");
+    static_assert(strings_match(__FUNCTION__, "foo"), "");
+    static_assert(strings_match(__func__, "foo"), "");
+    static_assert(strings_match(__PRETTY_FUNCTION__, "void PredefinedExprs::foo()"), "");
+  }
+#endif
+}
