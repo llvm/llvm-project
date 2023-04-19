@@ -9,10 +9,10 @@
 """
 extract - A set of function that extract symbol lists from shared libraries.
 """
-import distutils.spawn
 import os.path
 from os import environ
 import re
+import shutil
 import subprocess
 import sys
 
@@ -30,7 +30,7 @@ class NMExtractor(object):
         """
         Search for the nm executable and return the path.
         """
-        return distutils.spawn.find_executable('nm')
+        return shutil.which('nm')
 
     def __init__(self, static_lib):
         """
@@ -119,7 +119,7 @@ class ReadElfExtractor(object):
         """
         Search for the readelf executable and return the path.
         """
-        return distutils.spawn.find_executable('readelf')
+        return shutil.which('readelf')
 
     def __init__(self, static_lib):
         """
@@ -200,7 +200,7 @@ class AIXDumpExtractor(object):
          """
          Search for the dump executable and return the path.
          """
-         return distutils.spawn.find_executable('dump')
+         return shutil.which('dump')
 
      def __init__(self, static_lib):
          """

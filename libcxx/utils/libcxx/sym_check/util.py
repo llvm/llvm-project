@@ -8,8 +8,8 @@
 
 from pprint import pformat
 import ast
-import distutils.spawn
 import re
+import shutil
 import subprocess
 import sys
 
@@ -60,7 +60,7 @@ def write_syms(sym_list, out=None, names_only=False, filter=None):
             f.write(out_str)
 
 
-_cppfilt_exe = distutils.spawn.find_executable('c++filt')
+_cppfilt_exe = shutil.which('c++filt')
 
 
 def demangle_symbol(symbol):
