@@ -334,8 +334,7 @@ public:
   Value(std::nullptr_t) : Type(T_Null) {}
   // Boolean (disallow implicit conversions).
   // (The last template parameter is a dummy to keep templates distinct.)
-  template <typename T,
-            typename = std::enable_if_t<std::is_same<T, bool>::value>,
+  template <typename T, typename = std::enable_if_t<std::is_same_v<T, bool>>,
             bool = false>
   Value(T B) : Type(T_Boolean) {
     create<bool>(B);
@@ -357,15 +356,15 @@ public:
   }
   // Floating point. Must be non-narrowing convertible to double.
   template <typename T,
-            typename = std::enable_if_t<std::is_floating_point<T>::value>,
+            typename = std::enable_if_t<std::is_floating_point_v<T>>,
             double * = nullptr>
   Value(T D) : Type(T_Double) {
     create<double>(double{D});
   }
   // Serializable types: with a toJSON(const T&)->Value function, found by ADL.
   template <typename T,
-            typename = std::enable_if_t<std::is_same<
-                Value, decltype(toJSON(*(const T *)nullptr))>::value>,
+            typename = std::enable_if_t<
+                std::is_same_v<Value, decltype(toJSON(*(const T *)nullptr))>>,
             Value * = nullptr>
   Value(const T &V) : Value(toJSON(V)) {}
 
