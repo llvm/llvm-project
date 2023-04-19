@@ -280,7 +280,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llround
     libc.src.math.llroundf
     libc.src.math.llroundl
-    libc.src.math.log10
     libc.src.math.log10f
     libc.src.math.log1pf
     libc.src.math.log2f
