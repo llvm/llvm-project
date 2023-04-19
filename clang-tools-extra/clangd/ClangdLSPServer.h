@@ -21,6 +21,7 @@
 #include "llvm/Support/JSON.h"
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -197,7 +198,8 @@ private:
                  Callback<llvm::json::Value> Reply);
 
   void bindMethods(LSPBinder &, const ClientCapabilities &Caps);
-  std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
+  std::vector<CodeAction> getFixes(StringRef File, const clangd::Diagnostic &D);
+
 
   /// Checks if completion request should be ignored. We need this due to the
   /// limitation of the LSP. Per LSP, a client sends requests for all "trigger
@@ -231,10 +233,12 @@ private:
   std::atomic<bool> IsBeingDestroyed = {false};
 
   std::mutex FixItsMutex;
-  typedef std::map<clangd::Diagnostic, std::vector<Fix>, LSPDiagnosticCompare>
+  typedef std::map<clangd::Diagnostic, std::vector<CodeAction>,
+                   LSPDiagnosticCompare>
       DiagnosticToReplacementMap;
   /// Caches FixIts per file and diagnostics
-  llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;
+  llvm::StringMap<DiagnosticToReplacementMap>
+      FixItsMap;
   // Last semantic-tokens response, for incremental requests.
   std::mutex SemanticTokensMutex;
   llvm::StringMap<SemanticTokens> LastSemanticTokens;
@@ -271,6 +275,8 @@ private:
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
   /// Whether the client supports offsets for parameter info labels.
   bool SupportsOffsetsInSignatureHelp = false;
+  /// Whether the client supports the versioned document changes.
+  bool SupportsDocumentChanges = false;
   std::mutex BackgroundIndexProgressMutex;
   enum class BackgroundIndexProgress {
     // Client doesn't support reporting progress. No transitions possible.
