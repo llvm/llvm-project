@@ -351,8 +351,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
       RI.getAllocatableSet
       (*II->getParent()->getParent(), &Mips::CPU16RegsRegClass);
   // Exclude all the registers being used by the instruction.
-  for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = II->getOperand(i);
+  for (MachineOperand &MO : II->operands()) {
     if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
         !MO.getReg().isVirtual())
       Candidates.reset(MO.getReg());
@@ -367,8 +366,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
   // whether the register is live before the instruction. if it's not
   // then we don't need to save it in case there are no free registers.
   int DefReg = 0;
-  for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = II->getOperand(i);
+  for (MachineOperand &MO : II->operands()) {
     if (MO.isReg() && MO.isDef()) {
       DefReg = MO.getReg();
       break;
