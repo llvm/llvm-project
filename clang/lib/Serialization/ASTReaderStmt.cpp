@@ -1218,7 +1218,7 @@ void ASTStmtReader::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
       SourceLocation FieldLoc = readSourceLocation();
       Designators.push_back(Designator::CreateFieldDesignator(
           Field->getIdentifier(), DotLoc, FieldLoc));
-      Designators.back().setField(Field);
+      Designators.back().setFieldDecl(Field);
       break;
     }
 
