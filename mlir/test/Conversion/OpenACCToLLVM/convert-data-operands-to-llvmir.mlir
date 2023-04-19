@@ -113,11 +113,18 @@ func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.data copy(%b : memref<10xf32>) copyout(%a : memref<10xf32>) {
+    acc.parallel {
+      acc.yield
+    }
+    acc.terminator
   }
   return
 }
 
 // CHECK: acc.data copy(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) copyout(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
+// CHECK: acc.parallel
+// CHECK: acc.yield
+// CHECK: acc.terminator
 
 // -----
 
@@ -215,9 +222,13 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 func.func @testparallelop(%i: i64, %a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.parallel num_gangs(%i: i64) present(%a, %b : memref<10xf32>, memref<10xf32>) {
+    %0 = arith.constant 0 : i32
+    acc.yield
   } attributes {async}
   return
 }
 
 // CHECK: acc.parallel num_gangs(%{{.*}}: i64) present(%{{.*}}, %{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>, !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-// CHECK-NEXT: } attributes {async}
+// CHECK:   %c0_i32 = arith.constant 0 : i32
+// CHECK:   acc.yield
+// CHECK: } attributes {async}
