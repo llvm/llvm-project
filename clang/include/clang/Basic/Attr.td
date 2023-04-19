@@ -315,6 +315,13 @@ class Keyword<string name, bit hasOwnParseRules>
     : Spelling<name, "Keyword"> {
   bit HasOwnParseRules = hasOwnParseRules;
 }
+
+// A keyword that can appear wherever a standard attribute can appear,
+// and that appertains to whatever a standard attribute would appertain to.
+// This is useful for things that affect semantics but that should otherwise
+// be treated like standard attributes.
+class RegularKeyword<string name> : Keyword<name, 0> {}
+
 // A keyword that has its own individual parsing rules.
 class CustomKeyword<string name> : Keyword<name, 1> {}
 
@@ -2425,6 +2432,11 @@ def AArch64VectorPcs: DeclOrTypeAttr {
 def AArch64SVEPcs: DeclOrTypeAttr {
   let Spellings = [Clang<"aarch64_sve_pcs">];
   let Documentation = [AArch64SVEPcsDocs];
+}
+
+def ArmStreaming : TypeAttr, TargetSpecificAttr<TargetAArch64> {
+  let Spellings = [RegularKeyword<"__arm_streaming">];
+  let Documentation = [ArmStreamingDocs];
 }
 
 def Pure : InheritableAttr {

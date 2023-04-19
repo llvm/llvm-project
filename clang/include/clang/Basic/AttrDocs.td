@@ -6551,6 +6551,41 @@ Requirements on Development Tools - Engineering Specification Documentation
   }];
 }
 
+def ArmStreamingDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+.. Note:: This attribute has not been implemented yet, but once it is
+   implemented, it will behave as described below.
+
+The ``__arm_streaming`` keyword is only available on AArch64 targets.
+It applies to function types and specifies that the function has a
+“streaming interface”.  This means that:
+
+* the function requires the Scalable Matrix Extension (SME)
+
+* the function must be entered in streaming mode (that is, with PSTATE.SM
+  set to 1)
+
+* the function must return in streaming mode
+
+See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
+<https://github.com/ARM-software/abi-aa>`_ for more details about
+streaming-interface functions.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  For example, if a normal non-streaming
+function calls an ``__arm_streaming`` function, Clang generates code
+that switches into streaming mode before calling the function and
+switches back to non-streaming mode on return.
+
+``__arm_streaming`` can appear anywhere that a standard ``[[…]]`` type
+attribute can appear.
+
+See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
+for more details about this extension, and for other related SME features.
+  }];
+}
+
 def AlwaysInlineDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

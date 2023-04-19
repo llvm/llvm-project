@@ -2381,6 +2381,11 @@ static void emitClangAttrAcceptsExprPack(RecordKeeper &Records,
   OS << "#endif // CLANG_ATTR_ACCEPTS_EXPR_PACK\n\n";
 }
 
+static bool isRegularKeywordAttribute(const FlattenedSpelling &S) {
+  return (S.variety() == "Keyword" &&
+          !S.getSpellingRecord().getValueAsBit("HasOwnParseRules"));
+}
+
 static void emitFormInitializer(raw_ostream &OS,
                                 const FlattenedSpelling &Spelling,
                                 StringRef SpellingIndex) {
@@ -2388,7 +2393,9 @@ static void emitFormInitializer(raw_ostream &OS,
       (Spelling.variety() == "Keyword" && Spelling.name() == "alignas");
   OS << "{AttributeCommonInfo::AS_" << Spelling.variety() << ", "
      << SpellingIndex << ", " << (IsAlignas ? "true" : "false")
-     << " /*IsAlignas*/}";
+     << " /*IsAlignas*/, "
+     << (isRegularKeywordAttribute(Spelling) ? "true" : "false")
+     << " /*IsRegularKeywordAttribute*/}";
 }
 
 static void emitAttributes(RecordKeeper &Records, raw_ostream &OS,
@@ -3405,6 +3412,26 @@ static void GenerateHasAttrSpellingStringSwitch(
         OS << "    .Case(\"" << S.name() << "\", " << TestStr << ")\n";
   }
   OS << "    .Default(0);\n";
+}
+
+// Emits the list of tokens for regular keyword attributes.
+void EmitClangAttrTokenKinds(RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("A list of tokens generated from the attribute"
+                       " definitions",
+                       OS);
+  // Assume for now that the same token is not used in multiple regular
+  // keyword attributes.
+  for (auto *R : Records.getAllDerivedDefinitions("Attr"))
+    for (const auto &S : GetFlattenedSpellings(*R))
+      if (isRegularKeywordAttribute(S)) {
+        if (!R->getValueAsListOfDefs("Args").empty())
+          PrintError(R->getLoc(),
+                     "RegularKeyword attributes with arguments are not "
+                     "yet supported");
+        OS << "KEYWORD_ATTRIBUTE("
+           << S.getSpellingRecord().getValueAsString("Name") << ")\n";
+      }
+  OS << "#undef KEYWORD_ATTRIBUTE\n";
 }
 
 // Emits the list of spellings for attributes.

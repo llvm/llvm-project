@@ -5328,6 +5328,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_AArch64SVEPcs:
     CC = CC_AArch64SVEPCS;
     break;
+  case ParsedAttr::AT_ArmStreaming:
+    CC = CC_C; // FIXME: placeholder until real SME support is added.
+    break;
   case ParsedAttr::AT_AMDGPUKernelCall:
     CC = CC_AMDGPUKernelCall;
     break;
