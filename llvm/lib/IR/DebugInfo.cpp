@@ -1998,6 +1998,8 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
       // leave dbg.declares with non-empty expressions in place.
       if (DDI->getExpression()->getNumElements() != 0)
         continue;
+      if (!DDI->getAddress())
+        continue;
       if (AllocaInst *Alloca =
               dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
         // FIXME: Skip VLAs for now (let these variables use dbg.declares).
