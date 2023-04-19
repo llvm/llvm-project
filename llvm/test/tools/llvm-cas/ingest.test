@@ -4,6 +4,8 @@ RUN: mkdir %t
 RUN: llvm-cas --cas %t/cas --ingest --data %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/cas.id | FileCheck %s
 
+CHECK: syml
+CHECK-SAME: broken_symlink -> missing
 CHECK: file
 CHECK-SAME: directory/file
 CHECK: syml
@@ -13,7 +15,9 @@ CHECK-SAME: oneline
 CHECK: file
 CHECK-SAME: oneline-nonewline
 CHECK: syml
-CHECK-SAME: sym_dir
+CHECK-SAME: self -> .
+CHECK: syml
+CHECK-SAME: sym_dir -> directory
 
 RUN: llvm-cas --cas %t/cas --get-cas-id --data %S/Inputs/directory/file @%t/cas.id > %t/file.casid
 RUN: llvm-cas --cas %t/cas --cat-blob @%t/file.casid | FileCheck %s --check-prefix=CHECK-TEST-FILE

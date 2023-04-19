@@ -418,16 +418,31 @@ int traverseGraph(ObjectStore &CAS, const CASID &ID) {
   return 0;
 }
 
-static Error recursiveAccess(CachingOnDiskFileSystem &FS, StringRef Path) {
+static Error
+recursiveAccess(CachingOnDiskFileSystem &FS, StringRef Path,
+                llvm::DenseSet<llvm::sys::fs::UniqueID> &SeenDirectories) {
   auto ST = FS.status(Path);
+
+  // Ignore missing entries, which can be a symlink to a missing file, which is
+  // not an error in the filesystem itself.
+  // FIXME: add status(follow=false) to VFS instead, which would let us detect
+  // this case directly.
+  if (ST.getError() == llvm::errc::no_such_file_or_directory)
+    return Error::success();
+
   if (!ST)
     return createFileError(Path, ST.getError());
 
-  if (ST->isDirectory()) {
+  // Check that this is the first time we see the directory to prevent infinite
+  // recursion into symlinks. The status() above will ensure all symlinks are
+  // ingested.
+  // FIXME: add status(follow=false) to VFS instead, and then only traverse
+  // a directory and not a symlink to a directory.
+  if (ST->isDirectory() && SeenDirectories.insert(ST->getUniqueID()).second) {
     std::error_code EC;
     for (llvm::vfs::directory_iterator I = FS.dir_begin(Path, EC), IE;
          !EC && I != IE; I.increment(EC)) {
-      auto Err = recursiveAccess(FS, I->path());
+      auto Err = recursiveAccess(FS, I->path(), SeenDirectories);
       if (Err)
         return Err;
     }
@@ -452,7 +467,8 @@ static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
 
   (*FS)->trackNewAccesses();
 
-  if (Error E = recursiveAccess(**FS, Path))
+  llvm::DenseSet<llvm::sys::fs::UniqueID> SeenDirectories;
+  if (Error E = recursiveAccess(**FS, Path, SeenDirectories))
     return std::move(E);
 
   return (*FS)->createTreeFromNewAccesses(

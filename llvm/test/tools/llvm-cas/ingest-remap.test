@@ -3,6 +3,8 @@ RUN: rm -rf %t && mkdir -p %t
 RUN: llvm-cas --cas %t/cas --ingest --prefix-map %S/Inputs=/^input --data %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/cas.id | FileCheck %s
 
+CHECK: syml
+CHECK-SAME: /^input/broken_symlink -> missing
 CHECK: file
 CHECK-SAME: /^input/directory/file
 CHECK: syml
@@ -12,4 +14,6 @@ CHECK-SAME: /^input/oneline
 CHECK: file
 CHECK-SAME: /^input/oneline-nonewline
 CHECK: syml
-CHECK-SAME: /^input/sym_dir
+CHECK-SAME: /^input/self -> .
+CHECK: syml
+CHECK-SAME: /^input/sym_dir -> directory
