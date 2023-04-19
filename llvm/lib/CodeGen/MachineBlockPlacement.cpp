@@ -353,15 +353,15 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// Pair struct containing basic block and taildup profitability
   struct BlockAndTailDupResult {
-    MachineBasicBlock *BB;
+    MachineBasicBlock *BB = nullptr;
     bool ShouldTailDup;
   };
 
   /// Triple struct containing edge weight and the edge.
   struct WeightedEdge {
     BlockFrequency Weight;
-    MachineBasicBlock *Src;
-    MachineBasicBlock *Dest;
+    MachineBasicBlock *Src = nullptr;
+    MachineBasicBlock *Dest = nullptr;
   };
 
   /// work lists of blocks that are ready to be laid out
@@ -372,32 +372,32 @@ class MachineBlockPlacement : public MachineFunctionPass {
   DenseMap<const MachineBasicBlock *, BlockAndTailDupResult> ComputedEdges;
 
   /// Machine Function
-  MachineFunction *F;
+  MachineFunction *F = nullptr;
 
   /// A handle to the branch probability pass.
-  const MachineBranchProbabilityInfo *MBPI;
+  const MachineBranchProbabilityInfo *MBPI = nullptr;
 
   /// A handle to the function-wide block frequency pass.
   std::unique_ptr<MBFIWrapper> MBFI;
 
   /// A handle to the loop info.
-  MachineLoopInfo *MLI;
+  MachineLoopInfo *MLI = nullptr;
 
   /// Preferred loop exit.
   /// Member variable for convenience. It may be removed by duplication deep
   /// in the call stack.
-  MachineBasicBlock *PreferredLoopExit;
+  MachineBasicBlock *PreferredLoopExit = nullptr;
 
   /// A handle to the target's instruction info.
-  const TargetInstrInfo *TII;
+  const TargetInstrInfo *TII = nullptr;
 
   /// A handle to the target's lowering info.
-  const TargetLoweringBase *TLI;
+  const TargetLoweringBase *TLI = nullptr;
 
   /// A handle to the post dominator tree.
-  MachinePostDominatorTree *MPDT;
+  MachinePostDominatorTree *MPDT = nullptr;
 
-  ProfileSummaryInfo *PSI;
+  ProfileSummaryInfo *PSI = nullptr;
 
   /// Duplicator used to duplicate tails during placement.
   ///
