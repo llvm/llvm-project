@@ -1521,65 +1521,69 @@ std::pair<Operation *, ValueRange> LoopEmitter::genSliceLvlTraverseLoop(
 // }
 ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
     OpBuilder &builder, Location loc, TensorId tid,
-    ArrayRef<const SliceInfo *> unResLvls, ValueRange userReduc,
+    ArrayRef<const SliceInfo *> unResLvls,
+    std::optional<std::pair<TensorId, Level>> firstResLvl, ValueRange userReduc,
     LoopBodyBuilder bodyBuilder) {
-  // assert(unResLvls.size() == 1 && "TODO");
+
   Value c0 = C_IDX(0), c1 = C_IDX(1), c2 = C_IDX(2);
-
-  const SliceInfo &frontSlice = *unResLvls.back();
-  Level firstLvl = *frontSlice.slicedOnLvl;
-  assert(!lvlFullyResolved(tid, firstLvl) && "TODO");
-
-  // FIXME: it is not zero when the first level is fully resolved.
   Value pos = c0;
   OpBuilder::InsertPoint ip;
   SmallVector<Value> innerArgs(userReduc.begin(), userReduc.end());
-  scf::ForOp outerMost = nullptr;
-  if (!lvlFullyResolved(tid, firstLvl)) {
-    if (isCompressedDLT(lvlTypes[tid][firstLvl])) {
-      unsigned depth = frontSlice.depth - 1;
-      Value offset = frontSlice.offset;
-      Value sPtrBuf = slicePosBuffer[tid][firstLvl][depth];
-      Value mSz = genIndexLoad(builder, loc, sPtrBuf, c0); // memSize
-      outerMost = builder.create<scf::ForOp>(
-          loc, c2, mSz, c2, innerArgs,
-          [this, c1, tid, firstLvl, offset, sPtrBuf, &ip, &pos, &innerArgs](
-              OpBuilder &builder, Location loc, Value iv, ValueRange iterArgs) {
-            // generate traversal for each level.
-            Value loopLo = genIndexLoad(builder, loc, sPtrBuf, iv);
-            Value loopHi = genIndexLoad(builder, loc, sPtrBuf, ADDI(iv, c1));
-            ValueRange itArgs =
-                genSliceLvlTraverseLoop(
-                    builder, loc, loopLo, loopHi, offset,
-                    sliceSizes[tid][firstLvl].back(), tid, firstLvl, iterArgs,
-                    false,
-                    [&](OpBuilder &builder, Location, Value iv,
-                        MutableArrayRef<Value> reduc) {
-                      ip = builder.saveInsertionPoint();
-                      pos = iv;
-                      innerArgs.assign(reduc.begin(), reduc.end());
-                    })
-                    .second;
-            YIELD(itArgs);
-          });
-    } else if (isDenseDLT(lvlTypes[tid][firstLvl])) {
-      assert(firstLvl == 0); // This must be the first level.
-      Value lb = frontSlice.offset;
-      Value sliceSz =
-          sliceSizes[tid][*frontSlice.slicedOnLvl][frontSlice.depth - 1];
-      Value ub = ADDI(lb, sliceSz);
-      outerMost = builder.create<scf::ForOp>(
-          loc, lb, ub, c1, innerArgs,
-          [&](OpBuilder &builder, Location loc, Value iv, ValueRange iterArgs) {
-            ip = builder.saveInsertionPoint();
-            pos = iv;
-            innerArgs.assign(iterArgs.begin(), iterArgs.end());
-          });
+  scf::ForOp outerMost = nullptr; // the outtermost loop.
+  if (firstResLvl.has_value()) {
+    // Overwrite position when the first level is fully resolved.
+    pos = posits[firstResLvl->first][firstResLvl->second];
+    ip = builder.saveInsertionPoint();
+  } else {
+    const SliceInfo &frontSlice = *unResLvls.back();
+    Level firstLvl = *frontSlice.slicedOnLvl;
+    if (!lvlFullyResolved(tid, firstLvl)) {
+      if (isCompressedDLT(lvlTypes[tid][firstLvl])) {
+        unsigned depth = frontSlice.depth - 1;
+        Value offset = frontSlice.offset;
+        Value sPtrBuf = slicePosBuffer[tid][firstLvl][depth];
+        Value mSz = genIndexLoad(builder, loc, sPtrBuf, c0); // memSize
+        outerMost = builder.create<scf::ForOp>(
+            loc, c2, mSz, c2, innerArgs,
+            [this, c1, tid, firstLvl, offset, sPtrBuf, &ip, &pos,
+             &innerArgs](OpBuilder &builder, Location loc, Value iv,
+                         ValueRange iterArgs) {
+              // generate traversal for each level.
+              Value loopLo = genIndexLoad(builder, loc, sPtrBuf, iv);
+              Value loopHi = genIndexLoad(builder, loc, sPtrBuf, ADDI(iv, c1));
+              ValueRange itArgs =
+                  genSliceLvlTraverseLoop(
+                      builder, loc, loopLo, loopHi, offset,
+                      sliceSizes[tid][firstLvl].back(), tid, firstLvl, iterArgs,
+                      false,
+                      [&](OpBuilder &builder, Location, Value iv,
+                          MutableArrayRef<Value> reduc) {
+                        ip = builder.saveInsertionPoint();
+                        pos = iv;
+                        innerArgs.assign(reduc.begin(), reduc.end());
+                      })
+                      .second;
+              YIELD(itArgs);
+            });
+      } else if (isDenseDLT(lvlTypes[tid][firstLvl])) {
+        assert(firstLvl == 0); // This must be the first level.
+        Value lb = frontSlice.offset;
+        Value sliceSz =
+            sliceSizes[tid][*frontSlice.slicedOnLvl][frontSlice.depth - 1];
+        Value ub = ADDI(lb, sliceSz);
+        outerMost = builder.create<scf::ForOp>(
+            loc, lb, ub, c1, innerArgs,
+            [&](OpBuilder &builder, Location loc, Value iv,
+                ValueRange iterArgs) {
+              ip = builder.saveInsertionPoint();
+              pos = iv;
+              innerArgs.assign(iterArgs.begin(), iterArgs.end());
+            });
+      }
+      // We generated the loop for the first slice above, now remove it.
+      unResLvls = unResLvls.drop_back();
     }
-    // We generated the loop for the first slice above, now remove it.
-    unResLvls = unResLvls.drop_back();
   }
-
   // Reset the insertion point into the loop body.
   builder.restoreInsertionPoint(ip);
   if (!unResLvls.empty()) {
@@ -1611,12 +1615,21 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
                              bodyBuilder(builder, loc, pos, innerArgs);
                              return innerArgs;
                            });
-    YIELD(denseNest.results);
+
+    if (!outerMost) {
+      // If the outermost loop has not been set, this is the outermost loop.
+      outerMost = denseNest.loops.front();
+    } else {
+      // Otherwise we need to generate yield operations to link the SSA chain.
+      YIELD(denseNest.results);
+    }
   } else {
+    assert(outerMost);
     // Generates user request loop body.
     bodyBuilder(builder, loc, pos, innerArgs);
     YIELD(innerArgs);
   }
+  assert(outerMost);
   // Insert after current while operation.
   builder.setInsertionPointAfter(outerMost);
   return outerMost.getResults();
@@ -1624,7 +1637,6 @@ ValueRange LoopEmitter::genUnResolvedSliceTreeTraverse(
 
 void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
                                         TensorId tid, Level lvl) {
-  assert(lvl == 0 && "TODO: handle non-first level");
   Value c0 = C_IDX(0), c1 = C_IDX(1), c2 = C_IDX(2), c3 = C_IDX(3),
         c4 = C_IDX(4);
   if (isDenseDLT(lvlTypes[tid][lvl])) {
@@ -1634,14 +1646,23 @@ void LoopEmitter::genResolvedSliceBegin(OpBuilder &builder, Location loc,
                                  lvl, /*depth=*/1);
     return;
   }
-  Value size = sliceSizes[tid][0][0];
-  Value sPtrBuf = slicePosBuffer[tid][0][0];
-  Value pHi = genIndexLoad(builder, loc, positionsBuffers[tid][0], c1);
+  Value size = sliceSizes[tid][lvl][0];
+  Value sPtrBuf = slicePosBuffer[tid][lvl][0];
+  Value pHi, pLo;
+  if (lvl == 0) {
+    pLo = c0;
+    pHi = genIndexLoad(builder, loc, positionsBuffers[tid][0], c1);
+  } else {
+    pLo = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
+                       posits[tid][lvl - 1]);
+    pHi = genIndexLoad(builder, loc, positionsBuffers[tid][lvl],
+                       ADDI(posits[tid][lvl - 1], c1));
+  }
   // Fills out pIdxBuffer[tid][lvl][0] with [/*memSize =*/4, 0, 0, pHi]
   builder.create<memref::StoreOp>(loc, c4, sPtrBuf, c0);  // memSize = 4
   builder.create<memref::StoreOp>(loc, c0, sPtrBuf, c1);  // index = 0
-  builder.create<memref::StoreOp>(loc, c0, sPtrBuf, c2);  // pLo = 0;
-  builder.create<memref::StoreOp>(loc, pHi, sPtrBuf, c3); // loaded pHi.
+  builder.create<memref::StoreOp>(loc, pLo, sPtrBuf, c2); // pLo
+  builder.create<memref::StoreOp>(loc, pHi, sPtrBuf, c3); // pHi
 
   // This is an non empty tensor if 0 < pHi.
   Value isNonEmpty = CMPI(ult, c0, pHi);
@@ -1703,10 +1724,15 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
   assert(slicePosBuffer[tid][lvl - 1].size() == sliceStack[tid].back().depth);
 
   SmallVector<const SliceInfo *> unResSlices;
+  std::optional<std::pair<TensorId, Level>> firstResLvl;
   for (Level curLvl = lvl; curLvl >= 1; curLvl--) {
     Level prevLvl = curLvl - 1;
+    if (lvlFullyResolved(tid, prevLvl)) {
+      firstResLvl = std::make_pair(tid, prevLvl);
+      break;
+    }
     unResSlices.push_back(&getMostRecentSliceOnLvl(tid, prevLvl));
-    if (!isDenseDLT(lvlTypes[tid][prevLvl]) || lvlFullyResolved(tid, prevLvl)) {
+    if (!isDenseDLT(lvlTypes[tid][prevLvl])) {
       break;
     }
   }
@@ -1722,7 +1748,7 @@ void LoopEmitter::genUnResolvedSliceBegin(OpBuilder &builder, Location loc,
   };
 
   ValueRange result = genUnResolvedSliceTreeTraverse(
-      builder, loc, tid, unResSlices, reduc,
+      builder, loc, tid, unResSlices, firstResLvl, reduc,
       [this, c1, c2, tid, lvl, sPtrBuf](OpBuilder &builder, Location loc,
                                         Value iv,
                                         MutableArrayRef<Value> reduc) {
@@ -1869,7 +1895,7 @@ bool LoopEmitter::genSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
 void LoopEmitter::invalidateSliceIterIdx(OpBuilder &builder, Location loc,
                                          TensorId tid, Level lvl) {
   for (unsigned i = 0; i <= lvl; i++) {
-    if (!isDenseDLT(lvlTypes[tid][i])) {
+    if (!isDenseDLT(lvlTypes[tid][i]) && !dependentLvlMap[tid][i].empty()) {
       builder.create<memref::StoreOp>(loc, C_IDX(0),
                                       slicePosBuffer[tid][i].back(), C_IDX(1));
     }
