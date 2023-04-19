@@ -83,9 +83,15 @@ template <size_t Bits> struct UInt {
     return uint32_t(uint64_t(*this));
   }
 
+  constexpr explicit operator uint16_t() const {
+    return uint16_t(uint64_t(*this));
+  }
+
   constexpr explicit operator uint8_t() const {
     return uint8_t(uint64_t(*this));
   }
+
+  constexpr explicit operator bool() const { return !is_zero(); }
 
   UInt<Bits> &operator=(const UInt<Bits> &other) = default;
 
@@ -108,11 +114,23 @@ template <size_t Bits> struct UInt {
     return s.carry;
   }
 
-  constexpr UInt<Bits> operator+(const UInt<Bits> &other) const {
+  UInt<Bits> operator+(const UInt<Bits> &other) const {
     UInt<Bits> result;
     SumCarry<uint64_t> s{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       s = add_with_carry(val[i], other.val[i], s.carry);
+      result.val[i] = s.sum;
+    }
+    return result;
+  }
+
+  // This will only apply when initializing a variable from constant values, so
+  // it will always use the constexpr version of add_with_carry.
+  constexpr UInt<Bits> operator+(UInt<Bits> &&other) const {
+    UInt<Bits> result;
+    SumCarry<uint64_t> s{0, 0};
+    for (size_t i = 0; i < WORDCOUNT; ++i) {
+      s = add_with_carry_const(val[i], other.val[i], s.carry);
       result.val[i] = s.sum;
     }
     return result;
@@ -134,11 +152,21 @@ template <size_t Bits> struct UInt {
     return d.borrow;
   }
 
-  constexpr UInt<Bits> operator-(const UInt<Bits> &other) const {
+  UInt<Bits> operator-(const UInt<Bits> &other) const {
     UInt<Bits> result;
     DiffBorrow<uint64_t> d{0, 0};
     for (size_t i = 0; i < WORDCOUNT; ++i) {
       d = sub_with_borrow(val[i], other.val[i], d.borrow);
+      result.val[i] = d.diff;
+    }
+    return result;
+  }
+
+  constexpr UInt<Bits> operator-(UInt<Bits> &&other) const {
+    UInt<Bits> result;
+    DiffBorrow<uint64_t> d{0, 0};
+    for (size_t i = 0; i < WORDCOUNT; ++i) {
+      d = sub_with_borrow_const(val[i], other.val[i], d.borrow);
       result.val[i] = d.diff;
     }
     return result;
