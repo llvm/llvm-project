@@ -333,12 +333,12 @@ public:
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
-    RemarkKind Kind;
+    RemarkKind Kind = RK_Missing;
     std::string Pattern;
     std::shared_ptr<llvm::Regex> Regex;
 
     /// By default, optimization remark is missing.
-    OptRemark() : Kind(RK_Missing), Regex(nullptr) {}
+    OptRemark() = default;
 
     /// Returns true iff the optimization remark holds a valid regular
     /// expression.
