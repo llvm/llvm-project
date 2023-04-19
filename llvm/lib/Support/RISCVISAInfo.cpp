@@ -286,16 +286,17 @@ bool RISCVISAInfo::hasExtension(StringRef Ext) const {
 // We rank extensions in the following order:
 // -Single letter extensions in canonical order.
 // -Unknown single letter extensions in alphabetical order.
-// -Multi-letter extensions starting with 's' in alphabetical order.
 // -Multi-letter extensions starting with 'z' sorted by canonical order of
 //  the second letter then sorted alphabetically.
+// -Multi-letter extensions starting with 's' in alphabetical order.
+// -(TODO) Multi-letter extensions starting with 'zxm' in alphabetical order.
 // -X extensions in alphabetical order.
 // These flags are used to indicate the category. The first 6 bits store the
 // single letter extension rank for single letter and multi-letter extensions
 // starting with 'z'.
 enum RankFlags {
-  RF_S_EXTENSION = 1 << 6,
-  RF_Z_EXTENSION = 1 << 7,
+  RF_Z_EXTENSION = 1 << 6,
+  RF_S_EXTENSION = 1 << 7,
   RF_X_EXTENSION = 1 << 8,
 };
 

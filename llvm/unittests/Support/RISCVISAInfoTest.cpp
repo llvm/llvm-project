@@ -484,11 +484,8 @@ TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
   for (const auto &Ext : Exts)
     ExtNames.push_back(Ext.first);
 
-  // FIXME: z* extensions should be ordered before s* extensions. The current
-  // ordering matches what is documented in RISCVISAInfo, but this doesn't
-  // match the ISA manual.
   // FIXME: 'l' and 'y' should be ordered after 'i', 'm', 'c'.
   EXPECT_THAT(ExtNames,
-              ElementsAre("i", "m", "l", "c", "y", "sbar", "sfoo", "zicsr",
-                          "zmfoo", "zfinx", "zzfoo", "xbar", "xfoo"));
+              ElementsAre("i", "m", "l", "c", "y", "zicsr", "zmfoo", "zfinx",
+                           "zzfoo", "sbar", "sfoo", "xbar", "xfoo"));
 }
