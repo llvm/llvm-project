@@ -312,6 +312,8 @@ Bug Fixes in This Version
   (`#61417 <https://github.com/llvm/llvm-project/issues/61417>`_)
 - Fix crash after suggesting typo correction to constexpr if condition.
   (`#61885 <https://github.com/llvm/llvm-project/issues/61885>`_)
+- Clang constexpr evaluator now treats comparison of [[gnu::weak]]-attributed
+  member pointer as an invalid expression.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
