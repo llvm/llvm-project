@@ -59,7 +59,7 @@ public:
 #ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
     ~bad_function_call() _NOEXCEPT override;
 #else
-    ~bad_function_call() _NOEXCEPT override {}
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL ~bad_function_call() _NOEXCEPT override {}
 #endif
 
 #ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
@@ -204,7 +204,7 @@ class __alloc_func<_Fp, _Ap, _Rp(_ArgTypes...)>
     _LIBCPP_INLINE_VISIBILITY
     void destroy() _NOEXCEPT { __f_.~__compressed_pair<_Target, _Alloc>(); }
 
-    static void __destroy_and_delete(__alloc_func* __f) {
+    _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__alloc_func* __f) {
       typedef allocator_traits<_Alloc> __alloc_traits;
       typedef __rebind_alloc<__alloc_traits, __alloc_func> _FunAlloc;
       _FunAlloc __a(__f->__get_allocator());
@@ -248,7 +248,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   void destroy() _NOEXCEPT { __f_.~_Target(); }
 
-  static void __destroy_and_delete(__default_alloc_func* __f) {
+  _LIBCPP_HIDE_FROM_ABI static void __destroy_and_delete(__default_alloc_func* __f) {
     __f->destroy();
       __builtin_new_allocator::__deallocate_type<__default_alloc_func>(__f, 1);
   }
@@ -303,14 +303,14 @@ public:
     explicit __func(_Fp&& __f, _Alloc&& __a)
         : __f_(_VSTD::move(__f), _VSTD::move(__a)) {}
 
-    virtual __base<_Rp(_ArgTypes...)>* __clone() const;
-    virtual void __clone(__base<_Rp(_ArgTypes...)>*) const;
-    virtual void destroy() _NOEXCEPT;
-    virtual void destroy_deallocate() _NOEXCEPT;
-    virtual _Rp operator()(_ArgTypes&&... __arg);
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual __base<_Rp(_ArgTypes...)>* __clone() const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __clone(__base<_Rp(_ArgTypes...)>*) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy_deallocate() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual _Rp operator()(_ArgTypes&&... __arg);
 #ifndef _LIBCPP_HAS_NO_RTTI
-    virtual const void* target(const type_info&) const _NOEXCEPT;
-    virtual const std::type_info& target_type() const _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const void* target(const type_info&) const _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual const std::type_info& target_type() const _NOEXCEPT;
 #endif // _LIBCPP_HAS_NO_RTTI
 };
 
@@ -392,7 +392,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
     typedef __base<_Rp(_ArgTypes...)> __func;
     __func* __f_;
 
-    _LIBCPP_NO_CFI static __func* __as_base(void* __p)
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI static __func* __as_base(void* __p)
     {
         return reinterpret_cast<__func*>(__p);
     }
@@ -629,14 +629,15 @@ struct __policy
     }
 
   private:
-    template <typename _Fun> static void* __large_clone(const void* __s)
+    template <typename _Fun>
+    _LIBCPP_HIDE_FROM_ABI static void* __large_clone(const void* __s)
     {
         const _Fun* __f = static_cast<const _Fun*>(__s);
         return __f->__clone();
     }
 
     template <typename _Fun>
-    static void __large_destroy(void* __s) {
+    _LIBCPP_HIDE_FROM_ABI static void __large_destroy(void* __s) {
       _Fun::__destroy_and_delete(static_cast<_Fun*>(__s));
     }
 
@@ -702,14 +703,14 @@ struct __policy_invoker<_Rp(_ArgTypes...)>
     _LIBCPP_INLINE_VISIBILITY
     explicit __policy_invoker(__Call __c) : __call_(__c) {}
 
-    static _Rp __call_empty(const __policy_storage*,
+    _LIBCPP_HIDE_FROM_ABI static _Rp __call_empty(const __policy_storage*,
                             __fast_forward<_ArgTypes>...)
     {
         __throw_bad_function_call();
     }
 
     template <typename _Fun>
-    static _Rp __call_impl(const __policy_storage* __buf,
+    _LIBCPP_HIDE_FROM_ABI static _Rp __call_impl(const __policy_storage* __buf,
                            __fast_forward<_ArgTypes>... __args)
     {
         _Fun* __f = reinterpret_cast<_Fun*>(__use_small_storage<_Fun>::value
@@ -1005,11 +1006,11 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     function() _NOEXCEPT { }
     _LIBCPP_INLINE_VISIBILITY
-    function(nullptr_t) _NOEXCEPT {}
-    function(const function&);
-    function(function&&) _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI function(nullptr_t) _NOEXCEPT {}
+    _LIBCPP_HIDE_FROM_ABI function(const function&);
+    _LIBCPP_HIDE_FROM_ABI function(function&&) _NOEXCEPT;
     template<class _Fp, class = _EnableIfLValueCallable<_Fp>>
-    function(_Fp);
+    _LIBCPP_HIDE_FROM_ABI function(_Fp);
 
 #if _LIBCPP_STD_VER <= 14
     template<class _Alloc>
@@ -1019,23 +1020,23 @@ public:
       _LIBCPP_INLINE_VISIBILITY
       function(allocator_arg_t, const _Alloc&, nullptr_t) _NOEXCEPT {}
     template<class _Alloc>
-      function(allocator_arg_t, const _Alloc&, const function&);
+    _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, const function&);
     template<class _Alloc>
-      function(allocator_arg_t, const _Alloc&, function&&);
+    _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc&, function&&);
     template<class _Fp, class _Alloc, class = _EnableIfLValueCallable<_Fp>>
-      function(allocator_arg_t, const _Alloc& __a, _Fp __f);
+    _LIBCPP_HIDE_FROM_ABI function(allocator_arg_t, const _Alloc& __a, _Fp __f);
 #endif
 
-    function& operator=(const function&);
-    function& operator=(function&&) _NOEXCEPT;
-    function& operator=(nullptr_t) _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI function& operator=(const function&);
+    _LIBCPP_HIDE_FROM_ABI function& operator=(function&&) _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI function& operator=(nullptr_t) _NOEXCEPT;
     template<class _Fp, class = _EnableIfLValueCallable<__decay_t<_Fp>>>
-    function& operator=(_Fp&&);
+    _LIBCPP_HIDE_FROM_ABI function& operator=(_Fp&&);
 
-    ~function();
+    _LIBCPP_HIDE_FROM_ABI ~function();
 
     // function modifiers:
-    void swap(function&) _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI void swap(function&) _NOEXCEPT;
 
 #if _LIBCPP_STD_VER <= 14
     template<class _Fp, class _Alloc>
@@ -1057,13 +1058,15 @@ public:
       bool operator!=(const function<_R2(_ArgTypes2...)>&) const = delete;
 public:
     // function invocation:
-    _Rp operator()(_ArgTypes...) const;
+    _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes...) const;
 
 #ifndef _LIBCPP_HAS_NO_RTTI
     // function target access:
-    const std::type_info& target_type() const _NOEXCEPT;
-    template <typename _Tp> _Tp* target() _NOEXCEPT;
-    template <typename _Tp> const _Tp* target() const _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
+    template <typename _Tp>
+    _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
+    template <typename _Tp>
+    _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
 #endif // _LIBCPP_HAS_NO_RTTI
 };
 

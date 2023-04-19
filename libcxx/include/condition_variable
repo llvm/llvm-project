@@ -199,7 +199,7 @@ condition_variable_any::notify_all() _NOEXCEPT
 struct __lock_external
 {
     template <class _Lock>
-    void operator()(_Lock* __m) {__m->lock();}
+    _LIBCPP_HIDE_FROM_ABI void operator()(_Lock* __m) {__m->lock();}
 };
 
 template <class _Lock>
