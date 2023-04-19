@@ -28,11 +28,10 @@ namespace llvm {
 static constexpr unsigned InstCombineDefaultMaxIterations = 1000;
 
 struct InstCombineOptions {
-  bool UseLoopInfo;
-  unsigned MaxIterations;
+  bool UseLoopInfo = false;
+  unsigned MaxIterations = InstCombineDefaultMaxIterations;
 
-  InstCombineOptions()
-      : UseLoopInfo(false), MaxIterations(InstCombineDefaultMaxIterations) {}
+  InstCombineOptions() = default;
 
   InstCombineOptions &setUseLoopInfo(bool Value) {
     UseLoopInfo = Value;
