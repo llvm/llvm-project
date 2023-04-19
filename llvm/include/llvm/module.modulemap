@@ -418,6 +418,9 @@ module LLVM_Utils {
     umbrella "Support"
     module * { export * }
 
+    // Exclude this; deprecated.
+    exclude header "Support/Host.h"
+
     // Exclude this; it should only be used on Windows.
     exclude header "Support/Windows/WindowsSupport.h"
 
