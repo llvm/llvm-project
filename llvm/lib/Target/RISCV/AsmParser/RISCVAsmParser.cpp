@@ -2892,8 +2892,10 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgOp() const {
 
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
-  if (Inst.getOpcode() == RISCV::PseudoVMSGEU_VX_M_T ||
-      Inst.getOpcode() == RISCV::PseudoVMSGE_VX_M_T) {
+  unsigned Opcode = Inst.getOpcode();
+
+  if (Opcode == RISCV::PseudoVMSGEU_VX_M_T ||
+      Opcode == RISCV::PseudoVMSGE_VX_M_T) {
     unsigned DestReg = Inst.getOperand(0).getReg();
     unsigned TempReg = Inst.getOperand(1).getReg();
     if (DestReg == TempReg) {
@@ -2902,8 +2904,6 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                         "the destination register.");
     }
   }
-
-  unsigned Opcode = Inst.getOpcode();
 
   if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
       Opcode == RISCV::TH_LWD) {
@@ -2931,7 +2931,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return Error(Loc, "Operand must be constant 4.");
   }
 
-  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+  const MCInstrDesc &MCID = MII.get(Opcode);
   RISCVII::VConstraintType Constraints = RISCVII::getConstraint(MCID.TSFlags);
   if (Constraints == RISCVII::NoConstraint)
     return false;
