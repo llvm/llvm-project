@@ -4,10 +4,23 @@ set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BOLT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_CXX_STANDARD 17)
 
-set(BOLT_ENABLE_RUNTIME OFF)
+set(BOLT_ENABLE_RUNTIME_default OFF)
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
+    AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
+      OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     AND "X86" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(BOLT_ENABLE_RUNTIME ON)
+  set(BOLT_ENABLE_RUNTIME_default ON)
+endif()
+option(BOLT_ENABLE_RUNTIME "Enable BOLT runtime" ${BOLT_ENABLE_RUNTIME_default})
+if (BOLT_ENABLE_RUNTIME)
+  # Some systems prevent reading /proc/self/map_files
+  execute_process(COMMAND ls /proc/self/map_files
+    RESULT_VARIABLE LS OUTPUT_QUIET ERROR_QUIET)
+  if (LS)
+    set(BOLT_ENABLE_RUNTIME OFF)
+    message(WARNING
+      "BOLT runtime is disabled as /proc/self/map_files is unreadable.")
+  endif()
 endif()
 
 set(BOLT_CLANG_EXE "" CACHE FILEPATH "Path to clang executable for the target \
