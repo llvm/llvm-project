@@ -242,11 +242,11 @@ static cl::opt<std::string>
          cl::desc("Target a specific cpu type (-mcpu=help for details)"),
          cl::value_desc("cpu-name"), cl::cat(Options), cl::init("native"));
 
-static cl::opt<bool> DumpObjectToDisk(
-    "dump-object-to-disk",
-    cl::desc("dumps the generated benchmark object to disk "
-             "and prints a message to access it (default = false)"),
-    cl::cat(BenchmarkOptions), cl::init(false));
+static cl::opt<std::string>
+    DumpObjectToDisk("dump-object-to-disk",
+                     cl::desc("dumps the generated benchmark object to disk "
+                              "and prints a message to access it"),
+                     cl::ValueOptional, cl::cat(BenchmarkOptions));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
@@ -381,8 +381,11 @@ static void runBenchmarkConfigurations(
          Repetitors) {
       auto RC = ExitOnErr(Runner.getRunnableConfiguration(
           Conf, NumRepetitions, LoopBodySize, *Repetitor));
+      std::optional<StringRef> DumpFile;
+      if (DumpObjectToDisk.getNumOccurrences())
+        DumpFile = DumpObjectToDisk;
       AllResults.emplace_back(
-          ExitOnErr(Runner.runConfiguration(std::move(RC), DumpObjectToDisk)));
+          ExitOnErr(Runner.runConfiguration(std::move(RC), DumpFile)));
     }
     Benchmark &Result = AllResults.front();
 
