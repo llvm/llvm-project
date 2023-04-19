@@ -11,13 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.cpp.inc"
@@ -157,4 +160,24 @@ bool hlfir::isMaskArgument(mlir::Type type) {
 
   // input is a scalar, so allow i1 too
   return mlir::isa<fir::LogicalType>(elementType) || isI1Type(elementType);
+}
+
+mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
+                                const mlir::Location &loc,
+                                const hlfir::ExprType &expr) {
+  mlir::IndexType indexTy = builder.getIndexType();
+  llvm::SmallVector<mlir::Value> extents;
+  extents.reserve(expr.getRank());
+
+  for (std::int64_t extent : expr.getShape()) {
+    if (extent == hlfir::ExprType::getUnknownExtent())
+      return {};
+    extents.emplace_back(builder.create<mlir::arith::ConstantOp>(
+        loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
+  }
+
+  fir::ShapeType shapeTy =
+      fir::ShapeType::get(builder.getContext(), expr.getRank());
+  fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
+  return shape.getResult();
 }
