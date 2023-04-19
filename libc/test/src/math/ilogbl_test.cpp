@@ -15,8 +15,6 @@
 #include "test/UnitTest/Test.h"
 #include <math.h>
 
-using RunContext = __llvm_libc::testing::RunContext;
-
 TEST_F(LlvmLibcILogbTest, SpecialNumbers_ilogbl) {
   test_special_numbers<long double>(&__llvm_libc::ilogbl);
 }
