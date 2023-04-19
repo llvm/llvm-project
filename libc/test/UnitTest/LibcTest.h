@@ -17,8 +17,8 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
-#include "utils/testutils/ExecuteFunction.h"
 
 namespace __llvm_libc {
 namespace testing {

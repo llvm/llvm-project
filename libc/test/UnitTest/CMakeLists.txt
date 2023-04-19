@@ -1,11 +1,21 @@
-add_library(
-  LibcUnitTest
+set(libc_unit_test_srcs
+  ExecuteFunction.h
   Test.h
   LibcTest.cpp
   LibcTest.h
   TestLogger.cpp
   TestLogger.h
 )
+
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  list(APPEND libc_unit_test_srcs ExecuteFunctionUnix.cpp)
+endif()
+
+add_library(
+  LibcUnitTest
+  ${libc_unit_test_srcs}
+)
+
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(
   LibcUnitTest
