@@ -836,6 +836,92 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
     return AArch64PrettyPrinterInst;
   }
 }
+
+class DisassemblerTarget {
+public:
+  const Target *TheTarget;
+  std::unique_ptr<const MCSubtargetInfo> SubtargetInfo;
+  std::shared_ptr<MCContext> Context;
+  std::unique_ptr<MCDisassembler> DisAsm;
+  std::shared_ptr<const MCInstrAnalysis> InstrAnalysis;
+  std::shared_ptr<MCInstPrinter> InstPrinter;
+  PrettyPrinter *PrettyPrinter;
+
+  DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
+                     StringRef TripleName, StringRef MCPU,
+                     SubtargetFeatures &Features);
+  DisassemblerTarget(DisassemblerTarget &Other, SubtargetFeatures &Features);
+
+private:
+  MCTargetOptions Options;
+  std::shared_ptr<const MCRegisterInfo> RegisterInfo;
+  std::shared_ptr<const MCAsmInfo> AsmInfo;
+  std::shared_ptr<const MCInstrInfo> InstrInfo;
+  std::shared_ptr<MCObjectFileInfo> ObjectFileInfo;
+};
+
+DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
+                                       StringRef TripleName, StringRef MCPU,
+                                       SubtargetFeatures &Features)
+    : TheTarget(TheTarget),
+      PrettyPrinter(&selectPrettyPrinter(Triple(TripleName))),
+      RegisterInfo(TheTarget->createMCRegInfo(TripleName)) {
+  if (!RegisterInfo)
+    reportError(Obj.getFileName(), "no register info for target " + TripleName);
+
+  // Set up disassembler.
+  AsmInfo.reset(TheTarget->createMCAsmInfo(*RegisterInfo, TripleName, Options));
+  if (!AsmInfo)
+    reportError(Obj.getFileName(), "no assembly info for target " + TripleName);
+
+  SubtargetInfo.reset(
+      TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
+  if (!SubtargetInfo)
+    reportError(Obj.getFileName(),
+                "no subtarget info for target " + TripleName);
+  InstrInfo.reset(TheTarget->createMCInstrInfo());
+  if (!InstrInfo)
+    reportError(Obj.getFileName(),
+                "no instruction info for target " + TripleName);
+  Context =
+      std::make_shared<MCContext>(Triple(TripleName), AsmInfo.get(),
+                                  RegisterInfo.get(), SubtargetInfo.get());
+
+  // FIXME: for now initialize MCObjectFileInfo with default values
+  ObjectFileInfo.reset(
+      TheTarget->createMCObjectFileInfo(*Context, /*PIC=*/false));
+  Context->setObjectFileInfo(ObjectFileInfo.get());
+
+  DisAsm.reset(TheTarget->createMCDisassembler(*SubtargetInfo, *Context));
+  if (!DisAsm)
+    reportError(Obj.getFileName(), "no disassembler for target " + TripleName);
+
+  InstrAnalysis.reset(TheTarget->createMCInstrAnalysis(InstrInfo.get()));
+
+  int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
+  InstPrinter.reset(TheTarget->createMCInstPrinter(Triple(TripleName),
+                                                   AsmPrinterVariant, *AsmInfo,
+                                                   *InstrInfo, *RegisterInfo));
+  if (!InstPrinter)
+    reportError(Obj.getFileName(),
+                "no instruction printer for target " + TripleName);
+  InstPrinter->setPrintImmHex(PrintImmHex);
+  InstPrinter->setPrintBranchImmAsAddress(true);
+  InstPrinter->setSymbolizeOperands(SymbolizeOperands);
+  InstPrinter->setMCInstrAnalysis(InstrAnalysis.get());
+}
+
+DisassemblerTarget::DisassemblerTarget(DisassemblerTarget &Other,
+                                       SubtargetFeatures &Features)
+    : TheTarget(Other.TheTarget),
+      SubtargetInfo(TheTarget->createMCSubtargetInfo(TripleName, MCPU,
+                                                     Features.getString())),
+      Context(Other.Context),
+      DisAsm(TheTarget->createMCDisassembler(*SubtargetInfo, *Context)),
+      InstrAnalysis(Other.InstrAnalysis), InstPrinter(Other.InstPrinter),
+      PrettyPrinter(Other.PrettyPrinter), RegisterInfo(Other.RegisterInfo),
+      AsmInfo(Other.AsmInfo), InstrInfo(Other.InstrInfo),
+      ObjectFileInfo(Other.ObjectFileInfo) {}
 } // namespace
 
 static uint8_t getElfSymbolType(const ObjectFile &Obj, const SymbolRef &Sym) {
@@ -1326,15 +1412,14 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
   return std::move(*DebugBinary);
 }
 
-static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
-                              const ObjectFile &DbgObj, MCContext &Ctx,
-                              MCDisassembler *PrimaryDisAsm,
-                              MCDisassembler *SecondaryDisAsm,
-                              const MCInstrAnalysis *MIA, MCInstPrinter *IP,
-                              const MCSubtargetInfo *PrimarySTI,
-                              const MCSubtargetInfo *SecondarySTI,
-                              PrettyPrinter &PIP, SourcePrinter &SP,
-                              bool InlineRelocs) {
+static void
+disassembleObject(const Target *TheTarget, ObjectFile &Obj,
+                  const ObjectFile &DbgObj, MCContext &Ctx,
+                  MCDisassembler *PrimaryDisAsm,
+                  std::optional<DisassemblerTarget> &SecondaryTarget,
+                  const MCInstrAnalysis *MIA, MCInstPrinter *IP,
+                  const MCSubtargetInfo *PrimarySTI, PrettyPrinter &PIP,
+                  SourcePrinter &SP, bool InlineRelocs) {
   const MCSubtargetInfo *STI = PrimarySTI;
   MCDisassembler *DisAsm = PrimaryDisAsm;
   bool PrimaryIsThumb = false;
@@ -1790,13 +1875,17 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
         if (!MappingSymbols.empty()) {
           char Kind = getMappingSymbolKind(MappingSymbols, Index);
           DumpARMELFData = Kind == 'd';
-          if (SecondarySTI) {
+          if (SecondaryTarget) {
             if (Kind == 'a') {
-              STI = PrimaryIsThumb ? SecondarySTI : PrimarySTI;
-              DisAsm = PrimaryIsThumb ? SecondaryDisAsm : PrimaryDisAsm;
+              STI = PrimaryIsThumb ? SecondaryTarget->SubtargetInfo.get()
+                                   : PrimarySTI;
+              DisAsm = PrimaryIsThumb ? SecondaryTarget->DisAsm.get()
+                                      : PrimaryDisAsm;
             } else if (Kind == 't') {
-              STI = PrimaryIsThumb ? PrimarySTI : SecondarySTI;
-              DisAsm = PrimaryIsThumb ? PrimaryDisAsm : SecondaryDisAsm;
+              STI = PrimaryIsThumb ? PrimarySTI
+                                   : SecondaryTarget->SubtargetInfo.get();
+              DisAsm = PrimaryIsThumb ? PrimaryDisAsm
+                                      : SecondaryTarget->DisAsm.get();
             }
           }
         }
@@ -2064,20 +2153,6 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
     Features.AddFeature("+all");
   }
 
-  std::unique_ptr<const MCRegisterInfo> MRI(
-      TheTarget->createMCRegInfo(TripleName));
-  if (!MRI)
-    reportError(Obj->getFileName(),
-                "no register info for target " + TripleName);
-
-  // Set up disassembler.
-  MCTargetOptions MCOptions;
-  std::unique_ptr<const MCAsmInfo> AsmInfo(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
-  if (!AsmInfo)
-    reportError(Obj->getFileName(),
-                "no assembly info for target " + TripleName);
-
   if (MCPU.empty())
     MCPU = Obj->tryGetCPUName().value_or("").str();
 
@@ -2104,57 +2179,23 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
     }
   }
 
-  std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, MCPU, Features.getString()));
-  if (!STI)
-    reportError(Obj->getFileName(),
-                "no subtarget info for target " + TripleName);
-  std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
-  if (!MII)
-    reportError(Obj->getFileName(),
-                "no instruction info for target " + TripleName);
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
-  // FIXME: for now initialize MCObjectFileInfo with default values
-  std::unique_ptr<MCObjectFileInfo> MOFI(
-      TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
-  Ctx.setObjectFileInfo(MOFI.get());
-
-  std::unique_ptr<MCDisassembler> DisAsm(
-      TheTarget->createMCDisassembler(*STI, Ctx));
-  if (!DisAsm)
-    reportError(Obj->getFileName(), "no disassembler for target " + TripleName);
+  DisassemblerTarget PrimaryTarget(TheTarget, *Obj, TripleName, MCPU, Features);
 
   // If we have an ARM object file, we need a second disassembler, because
   // ARM CPUs have two different instruction sets: ARM mode, and Thumb mode.
   // We use mapping symbols to switch between the two assemblers, where
   // appropriate.
-  std::unique_ptr<MCDisassembler> SecondaryDisAsm;
-  std::unique_ptr<const MCSubtargetInfo> SecondarySTI;
-  if (isArmElf(*Obj) && !STI->checkFeatures("+mclass")) {
-    if (STI->checkFeatures("+thumb-mode"))
-      Features.AddFeature("-thumb-mode");
-    else
-      Features.AddFeature("+thumb-mode");
-    SecondarySTI.reset(TheTarget->createMCSubtargetInfo(TripleName, MCPU,
-                                                        Features.getString()));
-    SecondaryDisAsm.reset(TheTarget->createMCDisassembler(*SecondarySTI, Ctx));
+  std::optional<DisassemblerTarget> SecondaryTarget;
+
+  if (isArmElf(*Obj)) {
+    if (!PrimaryTarget.SubtargetInfo->checkFeatures("+mclass")) {
+      if (PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode"))
+        Features.AddFeature("-thumb-mode");
+      else
+        Features.AddFeature("+thumb-mode");
+      SecondaryTarget.emplace(PrimaryTarget, Features);
+    }
   }
-
-  std::unique_ptr<const MCInstrAnalysis> MIA(
-      TheTarget->createMCInstrAnalysis(MII.get()));
-
-  int AsmPrinterVariant = AsmInfo->getAssemblerDialect();
-  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *AsmInfo, *MII, *MRI));
-  if (!IP)
-    reportError(Obj->getFileName(),
-                "no instruction printer for target " + TripleName);
-  IP->setPrintImmHex(PrintImmHex);
-  IP->setPrintBranchImmAsAddress(true);
-  IP->setSymbolizeOperands(SymbolizeOperands);
-  IP->setMCInstrAnalysis(MIA.get());
-
-  PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
 
   const ObjectFile *DbgObj = Obj;
   if (!FetchedBinary.getBinary() && !Obj->hasDebugInfo()) {
@@ -2184,13 +2225,16 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   SourcePrinter SP(DbgObj, TheTarget->getName());
 
   for (StringRef Opt : DisassemblerOptions)
-    if (!IP->applyTargetSpecificCLOption(Opt))
+    if (!PrimaryTarget.InstPrinter->applyTargetSpecificCLOption(Opt))
       reportError(Obj->getFileName(),
                   "Unrecognized disassembler option: " + Opt);
 
-  disassembleObject(TheTarget, *Obj, *DbgObj, Ctx, DisAsm.get(),
-                    SecondaryDisAsm.get(), MIA.get(), IP.get(), STI.get(),
-                    SecondarySTI.get(), PIP, SP, InlineRelocs);
+  disassembleObject(TheTarget, *Obj, *DbgObj, *PrimaryTarget.Context.get(),
+                    PrimaryTarget.DisAsm.get(), SecondaryTarget,
+                    PrimaryTarget.InstrAnalysis.get(),
+                    PrimaryTarget.InstPrinter.get(),
+                    PrimaryTarget.SubtargetInfo.get(),
+                    *PrimaryTarget.PrettyPrinter, SP, InlineRelocs);
 }
 
 void Dumper::printRelocations() {
