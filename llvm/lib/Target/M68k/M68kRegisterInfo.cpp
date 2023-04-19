@@ -76,8 +76,8 @@ unsigned
 M68kRegisterInfo::getMatchingMegaReg(unsigned Reg,
                                      const TargetRegisterClass *RC) const {
   for (MCPhysReg Super : superregs(Reg))
-    if (RC->contains(*Super))
-      return *Super;
+    if (RC->contains(Super))
+      return Super;
   return 0;
 }
 
@@ -130,7 +130,7 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       Reserved.set(*I);
     }
     for (MCPhysReg I : subregs_inclusive(Reg)) {
-      Reserved.set(*I);
+      Reserved.set(I);
     }
   };
 
