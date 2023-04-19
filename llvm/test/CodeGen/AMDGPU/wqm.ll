@@ -1709,16 +1709,6 @@ main_body:
 }
 
 ; ... but only if WQM is necessary.
-; CHECK-LABEL: {{^}}test_kill_1:
-; CHECK-NEXT: ; %main_body
-; CHECK: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: image_sample
-; CHECK: s_and_b64 exec, exec, [[ORIG]]
-; CHECK: image_sample
-; CHECK-NOT: wqm
-; CHECK-DAG: buffer_store_dword
-; CHECK-DAG: v_cmp_
 define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg %sampler, i32 %idx, float %data, float %coord, float %coord2, float %z) {
 ; GFX9-W64-LABEL: test_kill_1:
 ; GFX9-W64:       ; %bb.0: ; %main_body
@@ -1782,11 +1772,6 @@ main_body:
 }
 
 ; Check prolog shaders.
-; CHECK-LABEL: {{^}}test_prolog_1:
-; CHECK: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: v_add_f32_e32 v0,
-; CHECK: s_and_b64 exec, exec, [[ORIG]]
 define amdgpu_ps float @test_prolog_1(float %a, float %b) #5 {
 ; GFX9-W64-LABEL: test_prolog_1:
 ; GFX9-W64:       ; %bb.0: ; %main_body
@@ -1808,28 +1793,6 @@ main_body:
   ret float %s
 }
 
-; CHECK-LABEL: {{^}}test_loop_vcc:
-; CHECK-NEXT: ; %entry
-; CHECK-NEXT: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: v_mov
-; CHECK: v_mov
-; CHECK: v_mov
-; CHECK: v_mov
-; CHECK: s_and_b64 exec, exec, [[LIVE]]
-; CHECK: image_store
-; CHECK: s_wqm_b64 exec, exec
-; CHECK-DAG: v_mov_b32_e32 [[CTR:v[0-9]+]], 0
-; CHECK-DAG: s_mov_b32 [[SEVEN:s[0-9]+]], 0x40e00000
-
-; CHECK: [[LOOPHDR:.LBB[0-9]+_[0-9]+]]: ; %body
-; CHECK: v_add_f32_e32 [[CTR]], 2.0, [[CTR]]
-; CHECK: [[LOOP:.LBB[0-9]+_[0-9]+]]: ; %loop
-; CHECK: v_cmp_lt_f32_e32 vcc, [[SEVEN]], [[CTR]]
-; CHECK: s_cbranch_vccz [[LOOPHDR]]
-
-; CHECK: ; %break
-; CHECK: ; return
 define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-LABEL: test_loop_vcc:
 ; GFX9-W64:       ; %bb.0: ; %entry
@@ -1925,22 +1888,6 @@ break:
 
 ; Only intrinsic stores need exact execution -- other stores do not have
 ; externally visible effects and may require WQM for correctness.
-; CHECK-LABEL: {{^}}test_alloca:
-; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-
-; CHECK: s_and_b64 exec, exec, [[LIVE]]
-; CHECK: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4{{$}}
-; CHECK: s_and_b64 exec, exec, [[LIVE]]
-; CHECK: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen
-
-; CHECK: s_and_b64 exec, exec, [[LIVE]]
-; CHECK: image_sample
-; CHECK: buffer_store_dwordx4
 define amdgpu_ps void @test_alloca(float %data, i32 %a, i32 %idx) nounwind {
 ; GFX9-W64-LABEL: test_alloca:
 ; GFX9-W64:       ; %bb.0: ; %entry
@@ -2020,11 +1967,6 @@ entry:
 ; otherwise the EXEC mask exported by the epilog will be wrong. This is true
 ; even if the shader has no kills, because a kill could have happened in a
 ; previous shader fragment.
-; CHECK-LABEL: {{^}}test_nonvoid_return:
-; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: s_and_b64 exec, exec, [[LIVE]]
-; CHECK-NOT: exec
 define amdgpu_ps <4 x float> @test_nonvoid_return() nounwind {
 ; GFX9-W64-LABEL: test_nonvoid_return:
 ; GFX9-W64:       ; %bb.0:
@@ -2053,11 +1995,6 @@ define amdgpu_ps <4 x float> @test_nonvoid_return() nounwind {
   ret <4 x float> %dtex
 }
 
-; CHECK-LABEL: {{^}}test_nonvoid_return_unreachable:
-; CHECK: s_mov_b64 [[LIVE:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: s_and_b64 exec, exec, [[LIVE]]
-; CHECK-NOT: exec
 define amdgpu_ps <4 x float> @test_nonvoid_return_unreachable(i32 inreg %c) nounwind {
 ; GFX9-W64-LABEL: test_nonvoid_return_unreachable:
 ; GFX9-W64:       ; %bb.0: ; %entry
@@ -2110,17 +2047,6 @@ else:
 }
 
 ; Test awareness that s_wqm_b64 clobbers SCC.
-; CHECK-LABEL: {{^}}test_scc:
-; CHECK: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
-; CHECK: s_wqm_b64 exec, exec
-; CHECK: s_cmp_
-; CHECK-NEXT: s_cbranch_scc
-; CHECK: ; %else
-; CHECK: image_sample
-; CHECK: ; %if
-; CHECK: image_sample
-; CHECK: ; %end
-; CHECK: s_and_b64 exec, exec, [[ORIG]]
 define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX9-W64-LABEL: test_scc:
 ; GFX9-W64:       ; %bb.0: ; %main_body
