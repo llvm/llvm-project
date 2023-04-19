@@ -2232,10 +2232,10 @@ cc_binary(
 
 gentbl(
     name = "ScanDepsTableGen",
-    strip_include_prefix = "include/clang/tools/clang-scan-deps",
+    strip_include_prefix = "tools/clang-scan-deps",
     tbl_outs = [(
         "-gen-opt-parser-defs",
-        "include/clang/tools/clang-scan-deps/Opts.inc",
+        "tools/clang-scan-deps/Opts.inc",
     )],
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/clang-scan-deps/Opts.td",
