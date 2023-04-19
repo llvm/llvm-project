@@ -1,11 +1,11 @@
-.. title:: clang-tidy - cppcoreguidelines-avoid-capture-default-when-capturing-this
+.. title:: clang-tidy - cppcoreguidelines-misleading-capture-default-by-value
 
-cppcoreguidelines-avoid-capture-default-when-capturing-this
-===========================================================
+cppcoreguidelines-misleading-capture-default-by-value
+=====================================================
 
-Warns when lambda specify a capture default and capture ``this``.
+Warns when lambda specify a by-value capture default and capture ``this``.
 
-Capture-defaults in member functions can be misleading about
+By-value capture-defaults in member functions can be misleading about
 whether data members are captured by value or reference. For example,
 specifying the capture default ``[=]`` will still capture data members
 by reference.
@@ -40,14 +40,4 @@ Examples:
       };
 
 This check implements
-`CppCoreGuideline F.54 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f54-if-you-capture-this-capture-all-variables-explicitly-no-default-capture>`_.
-
-
-Options
--------
-
-.. option:: IgnoreCaptureDefaultByReference
-
-  Do not warn when using capture default by reference. In this case, there is no
-  confusion as to whether variables are captured by value or reference.
-  Defaults to `false`.
+`CppCoreGuideline F.54 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f54-when-writing-a-lambda-that-captures-this-or-any-class-data-member-dont-use--default-capture>`_.

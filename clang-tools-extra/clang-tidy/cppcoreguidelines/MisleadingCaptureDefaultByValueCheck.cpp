@@ -1,4 +1,4 @@
-//===--- AvoidCaptureDefaultWhenCapturingThisCheck.cpp - clang-tidy--------===//
+//===--- MisleadingCaptureDefaultByValueCheck.cpp - clang-tidy-------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AvoidCaptureDefaultWhenCapturingThisCheck.h"
+#include "MisleadingCaptureDefaultByValueCheck.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -18,20 +18,11 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-AvoidCaptureDefaultWhenCapturingThisCheck::
-    AvoidCaptureDefaultWhenCapturingThisCheck(StringRef Name,
-                                              ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IgnoreCaptureDefaultByReference(
-          Options.get("IgnoreCaptureDefaultByReference", false)) {}
+MisleadingCaptureDefaultByValueCheck::MisleadingCaptureDefaultByValueCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {}
 
-void AvoidCaptureDefaultWhenCapturingThisCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IgnoreCaptureDefaultByReference",
-                IgnoreCaptureDefaultByReference);
-}
-
-void AvoidCaptureDefaultWhenCapturingThisCheck::registerMatchers(
+void MisleadingCaptureDefaultByValueCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(lambdaExpr(hasAnyCapture(capturesThis())).bind("lambda"),
                      this);
@@ -85,23 +76,19 @@ static std::string createReplacementText(const LambdaExpr *Lambda) {
   return Replacement;
 }
 
-void AvoidCaptureDefaultWhenCapturingThisCheck::check(
+void MisleadingCaptureDefaultByValueCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   if (!Lambda)
     return;
 
-  if (IgnoreCaptureDefaultByReference &&
-      Lambda->getCaptureDefault() == LCD_ByRef)
-    return;
-
-  if (Lambda->getCaptureDefault() != LCD_None) {
+  if (Lambda->getCaptureDefault() == LCD_ByCopy) {
     bool IsThisImplicitlyCaptured = std::any_of(
         Lambda->implicit_capture_begin(), Lambda->implicit_capture_end(),
         [](const LambdaCapture &Capture) { return Capture.capturesThis(); });
     auto Diag = diag(Lambda->getCaptureDefaultLoc(),
                      "lambdas that %select{|implicitly }0capture 'this' "
-                     "should not specify a capture default")
+                     "should not specify a by-value capture default")
                 << IsThisImplicitlyCaptured;
 
     std::string ReplacementText = createReplacementText(Lambda);
