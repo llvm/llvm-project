@@ -50,7 +50,6 @@ cc_library(
     name = "fp_test_helpers",
     srcs = [
         "FPExceptMatcher.cpp",
-        "FPMatcher.cpp",
     ],
     hdrs = [
         "FPExceptMatcher.h",
