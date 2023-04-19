@@ -321,8 +321,7 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
   if (!Matcher.is_silent()) {
     tlog << File << ":" << Line << ": FAILURE\n"
          << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
-    testutils::StreamWrapper OutsWrapper = testutils::outs();
-    Matcher.explainError(OutsWrapper);
+    Matcher.explainError();
   }
   return false;
 }

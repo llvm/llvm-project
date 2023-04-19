@@ -5,8 +5,6 @@ endif()
 
 add_library(
   libc_test_utils
-  StreamWrapper.cpp
-  StreamWrapper.h
   ${EFFile}
   ExecuteFunction.h
   ${FDReaderFile}

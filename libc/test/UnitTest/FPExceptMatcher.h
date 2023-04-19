@@ -44,9 +44,10 @@ public:
 
   bool match(bool unused) { return exceptionRaised; }
 
-  void explainError(testutils::StreamWrapper &stream) override {
-    stream << "A floating point exception should have been raised but it "
-           << "wasn't\n";
+  void explainError() override {
+    __llvm_libc::testing::tlog
+        << "A floating point exception should have been raised but it "
+        << "wasn't\n";
   }
 };
 
