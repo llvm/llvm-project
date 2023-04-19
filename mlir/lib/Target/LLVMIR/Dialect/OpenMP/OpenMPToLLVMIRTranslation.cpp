@@ -1542,6 +1542,38 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+/// Lowers the FlagsAttr which is applied to the module on the device
+/// pass when offloading, this attribute contains OpenMP RTL globals that can
+/// be passed as flags to the frontend, otherwise they are set to default
+LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  ompBuilder->createGlobalFlag(
+      attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
+      "__omp_rtl_debug_kind");
+  ompBuilder->createGlobalFlag(
+      attribute
+          .getAssumeTeamsOversubscription() /*LangOpts().OpenMPTeamSubscription*/
+      ,
+      "__omp_rtl_assume_teams_oversubscription");
+  ompBuilder->createGlobalFlag(
+      attribute
+          .getAssumeThreadsOversubscription() /*LangOpts().OpenMPThreadSubscription*/
+      ,
+      "__omp_rtl_assume_threads_oversubscription");
+  ompBuilder->createGlobalFlag(
+      attribute.getAssumeNoThreadState() /*LangOpts().OpenMPNoThreadState*/,
+      "__omp_rtl_assume_no_thread_state");
+  ompBuilder->createGlobalFlag(
+      attribute
+          .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
+      ,
+      "__omp_rtl_assume_no_nested_parallelism");
+
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -1556,9 +1588,32 @@ public:
   LogicalResult
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final;
+
+  LogicalResult
+  amendOperation(Operation *op, NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final;
 };
 
 } // namespace
+
+/// Given an OpenMP MLIR attribute, create the corresponding LLVM-IR, runtime
+/// calls, or operation amendments
+LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
+    Operation *op, NamedAttribute attribute,
+    LLVM::ModuleTranslation &moduleTranslation) const {
+
+  return llvm::TypeSwitch<Attribute, LogicalResult>(attribute.getValue())
+      .Case([&](mlir::omp::FlagsAttr rtlAttr) {
+        return convertFlagsAttr(op, rtlAttr, moduleTranslation);
+      })
+      .Default([&](Attribute attr) {
+        // fall through for omp attributes that do not require lowering and/or
+        // have no concrete definition and thus no type to define a case on
+        return success();
+      });
+
+  return failure();
+}
 
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR
 /// (including OpenMP runtime calls).
