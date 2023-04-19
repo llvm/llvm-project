@@ -21,17 +21,10 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
-
-// Force linking some of the runtimes that helps attaching to a debugger.
-LLVM_ATTRIBUTE_USED void linkComponents() {
-  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-               << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
-}
 
 namespace clang {
 
@@ -44,12 +37,7 @@ IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
 
   auto JTMB = JITTargetMachineBuilder(TI.getTriple());
   JTMB.addFeatures(TI.getTargetOpts().Features);
-  LLJITBuilder Builder;
-  Builder.setJITTargetMachineBuilder(JTMB);
-  // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
-  Builder.setEnableDebuggerSupport(true);
-
-  if (auto JitOrErr = Builder.create())
+  if (auto JitOrErr = LLJITBuilder().setJITTargetMachineBuilder(JTMB).create())
     Jit = std::move(*JitOrErr);
   else {
     Err = JitOrErr.takeError();
