@@ -45,6 +45,7 @@ static_library("bugprone") {
     "MoveForwardingReferenceCheck.cpp",
     "MultipleStatementMacroCheck.cpp",
     "NoEscapeCheck.cpp",
+    "NonZeroEnumToBoolConversionCheck.cpp",
     "NotNullTerminatedResultCheck.cpp",
     "ParentVirtualCallCheck.cpp",
     "PosixReturnCheck.cpp",
