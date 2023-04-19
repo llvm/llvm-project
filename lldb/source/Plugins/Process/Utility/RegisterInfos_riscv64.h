@@ -74,7 +74,7 @@ using namespace riscv_dwarf;
 #define DEFINE_VPR_ALT(reg, alt, generic_kind)                                 \
   {                                                                            \
     #reg, #alt, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,      \
-    VPR_KIND(vpr_##reg, generic_kind), nullptr, nullptr                        \
+    VPR_KIND(vpr_##reg, generic_kind), nullptr, nullptr, nullptr               \
   }
 
 // clang-format on
