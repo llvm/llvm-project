@@ -2016,8 +2016,8 @@ TreePatternNodePtr TreePatternNode::clone() const {
     CChildren.reserve(Children.size());
     for (unsigned i = 0, e = getNumChildren(); i != e; ++i)
       CChildren.push_back(getChild(i)->clone());
-    New = makeIntrusiveRefCnt<TreePatternNode>(getOperator(), std::move(CChildren),
-                                            getNumTypes());
+    New = makeIntrusiveRefCnt<TreePatternNode>(
+        getOperator(), std::move(CChildren), getNumTypes());
   }
   New->setName(getName());
   New->setNamesAsPredicateArg(getNamesAsPredicateArg());
@@ -3016,9 +3016,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     }
   }
 
-  TreePatternNodePtr Result =
-      makeIntrusiveRefCnt<TreePatternNode>(Operator, std::move(Children),
-                                        NumResults);
+  TreePatternNodePtr Result = makeIntrusiveRefCnt<TreePatternNode>(
+      Operator, std::move(Children), NumResults);
   Result->setName(OpName);
 
   if (Dag->getName()) {
