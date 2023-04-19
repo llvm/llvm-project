@@ -244,7 +244,7 @@ body: |
   ; GCN-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
   ; GCN-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[PRED_COPY2]], 0, [[PRED_COPY3]], 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[V_CMP_EQ_F32_e64_]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[V_CMP_EQ_F32_e64_]], implicit-def $scc
   ; GCN-NEXT:   $vcc = PRED_COPY [[S_AND_B64_]]
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; GCN-NEXT: {{  $}}
@@ -283,7 +283,7 @@ body:             |
   ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[PRED_COPY2]], implicit-def $scc
   ; GCN-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[V_CMP_NE_U32_e64_]], implicit-def $scc
   ; GCN-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_AND_B64_]], $exec, implicit-def $scc
   ; GCN-NEXT:   $vcc = PRED_COPY [[S_AND_B64_1]]
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
@@ -321,7 +321,7 @@ body:             |
   ; GCN-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
-  ; GCN-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[V_CMP_EQ_U32_e64_]], [[S_MOV_B64_]], implicit-def dead $scc
+  ; GCN-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[V_CMP_EQ_U32_e64_]], [[S_MOV_B64_]], implicit-def $scc
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[S_XOR_B64_]], $exec, implicit-def $scc
   ; GCN-NEXT:   $vcc = PRED_COPY [[S_AND_B64_]]
   ; GCN-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc

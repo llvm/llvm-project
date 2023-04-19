@@ -1,11 +1,21 @@
-add_library(
-  LibcUnitTest
+set(libc_unit_test_srcs
+  ExecuteFunction.h
   Test.h
   LibcTest.cpp
   LibcTest.h
   TestLogger.cpp
   TestLogger.h
 )
+
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  list(APPEND libc_unit_test_srcs ExecuteFunctionUnix.cpp)
+endif()
+
+add_library(
+  LibcUnitTest
+  ${libc_unit_test_srcs}
+)
+
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(
   LibcUnitTest
@@ -14,7 +24,6 @@ add_dependencies(
   libc.src.__support.CPP.type_traits
   libc.src.__support.OSUtil.osutil
   libc.src.__support.uint128)
-target_link_libraries(LibcUnitTest PUBLIC libc_test_utils)
 
 add_library(
   LibcUnitTestMain
@@ -23,7 +32,7 @@ add_library(
 
 target_include_directories(LibcUnitTestMain PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(LibcUnitTestMain LibcUnitTest)
-target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest libc_test_utils)
+target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest)
 
 add_header_library(
   string_utils
@@ -39,9 +48,11 @@ add_library(
   FPExceptMatcher.cpp
   FPExceptMatcher.h
   FPMatcher.h
+  RoundingModeUtils.cpp
+  RoundingModeUtils.h
 )
 target_include_directories(LibcFPTestHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcFPTestHelpers LibcUnitTest libc_test_utils)
+target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest

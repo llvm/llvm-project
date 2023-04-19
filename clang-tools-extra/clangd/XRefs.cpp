@@ -1907,7 +1907,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
         // In .foo.bar we want to jump to bar's type, so find *last* field.
         for (auto &D : llvm::reverse(S->designators()))
           if (D.isFieldDesignator())
-            if (const auto *FD = D.getField())
+            if (const auto *FD = D.getFieldDecl())
               return FD->getType();
         return QualType();
       }

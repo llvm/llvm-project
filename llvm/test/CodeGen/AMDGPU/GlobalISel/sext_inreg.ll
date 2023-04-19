@@ -49,24 +49,21 @@ define amdgpu_ps i8 @s_sext_inreg_i8(i8 inreg %value) {
 ;
 ; GFX8-LABEL: s_sext_inreg_i8:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s1, 3, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 3
 ; GFX8-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX8-NEXT:    s_ashr_i32 s0, s0, 3
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_sext_inreg_i8:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_bfe_u32 s1, 3, 0x100000
-; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 3
 ; GFX9-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 3
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_i8:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_u32 s1, 3, 0x100000
-; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 3
 ; GFX10PLUS-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 3
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -83,24 +80,21 @@ define amdgpu_ps i8 @s_sext_inreg_i8_6(i8 inreg %value) {
 ;
 ; GFX8-LABEL: s_sext_inreg_i8_6:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s1, 6, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 6
 ; GFX8-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX8-NEXT:    s_ashr_i32 s0, s0, 6
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_sext_inreg_i8_6:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_bfe_u32 s1, 6, 0x100000
-; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 6
 ; GFX9-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 6
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_i8_6:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_u32 s1, 6, 0x100000
-; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 6
 ; GFX10PLUS-NEXT:    s_sext_i32_i8 s0, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 6
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -612,24 +606,21 @@ define amdgpu_ps i16 @s_sext_inreg_i16_9(i16 inreg %value) {
 ;
 ; GFX8-LABEL: s_sext_inreg_i16_9:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s1, 9, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 9
 ; GFX8-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX8-NEXT:    s_ashr_i32 s0, s0, 9
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_sext_inreg_i16_9:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_bfe_u32 s1, 9, 0x100000
-; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 9
 ; GFX9-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 9
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_i16_9:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_u32 s1, 9, 0x100000
-; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 9
 ; GFX10PLUS-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 9
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -646,24 +637,21 @@ define amdgpu_ps i16 @s_sext_inreg_i16_15(i16 inreg %value) {
 ;
 ; GFX8-LABEL: s_sext_inreg_i16_15:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s1, 15, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 15
 ; GFX8-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX8-NEXT:    s_ashr_i32 s0, s0, 15
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_sext_inreg_i16_15:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_bfe_u32 s1, 15, 0x100000
-; GFX9-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 15
 ; GFX9-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 15
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_i16_15:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_u32 s1, 15, 0x100000
-; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, s1
+; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 15
 ; GFX10PLUS-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX10PLUS-NEXT:    s_ashr_i32 s0, s0, 15
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -762,9 +750,8 @@ define amdgpu_ps i32 @s_sext_inreg_v2i16_11(<2 x i16> inreg %value) {
 ; GFX8-LABEL: s_sext_inreg_v2i16_11:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX8-NEXT:    s_bfe_u32 s2, 11, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s0, s0, s2
-; GFX8-NEXT:    s_lshl_b32 s1, s1, s2
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 11
+; GFX8-NEXT:    s_lshl_b32 s1, s1, 11
 ; GFX8-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX8-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX8-NEXT:    s_ashr_i32 s0, s0, 11
@@ -889,8 +876,8 @@ define amdgpu_ps <2 x i32> @s_sext_inreg_v4i16_14(<4 x i16> inreg %value) {
 ;
 ; GFX8-LABEL: s_sext_inreg_v4i16_14:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s0, -1, 0x100000
-; GFX8-NEXT:    s_mov_b32 s1, s0
+; GFX8-NEXT:    s_mov_b32 s0, 0xffff
+; GFX8-NEXT:    s_mov_b32 s1, 0xffff
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_sext_inreg_v4i16_14:
@@ -978,11 +965,10 @@ define <4 x float> @v_sext_inreg_v8i16_11(<8 x i16> %value) {
 ; GFX8-LABEL: v_sext_inreg_v8i16_11:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_bfe_u32 s4, -1, 0x100000
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v1, s4
-; GFX8-NEXT:    v_mov_b32_e32 v2, s4
-; GFX8-NEXT:    v_mov_b32_e32 v3, s4
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0xffff
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0xffff
+; GFX8-NEXT:    v_mov_b32_e32 v3, 0xffff
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_sext_inreg_v8i16_11:
@@ -1041,32 +1027,31 @@ define amdgpu_ps <4 x i32> @s_sext_inreg_v8i16_5(<8 x i16> inreg %value) {
 ; GFX8-LABEL: s_sext_inreg_v8i16_5:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX8-NEXT:    s_bfe_u32 s8, 10, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s4, s4, s8
+; GFX8-NEXT:    s_lshl_b32 s4, s4, 10
 ; GFX8-NEXT:    s_lshr_b32 s5, s1, 16
-; GFX8-NEXT:    s_lshl_b32 s0, s0, s8
-; GFX8-NEXT:    s_bfe_u32 s4, s4, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s5, s5, s8
-; GFX8-NEXT:    s_bfe_u32 s0, s0, 0x100000
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 10
+; GFX8-NEXT:    s_and_b32 s4, 0xffff, s4
+; GFX8-NEXT:    s_lshl_b32 s5, s5, 10
+; GFX8-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    s_lshr_b32 s6, s2, 16
-; GFX8-NEXT:    s_lshl_b32 s1, s1, s8
+; GFX8-NEXT:    s_lshl_b32 s1, s1, 10
 ; GFX8-NEXT:    s_or_b32 s0, s0, s4
-; GFX8-NEXT:    s_bfe_u32 s4, s5, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s6, s6, s8
-; GFX8-NEXT:    s_bfe_u32 s1, s1, 0x100000
+; GFX8-NEXT:    s_and_b32 s4, 0xffff, s5
+; GFX8-NEXT:    s_lshl_b32 s6, s6, 10
+; GFX8-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    s_lshr_b32 s7, s3, 16
-; GFX8-NEXT:    s_lshl_b32 s2, s2, s8
+; GFX8-NEXT:    s_lshl_b32 s2, s2, 10
 ; GFX8-NEXT:    s_or_b32 s1, s1, s4
-; GFX8-NEXT:    s_bfe_u32 s4, s6, 0x100000
-; GFX8-NEXT:    s_lshl_b32 s7, s7, s8
-; GFX8-NEXT:    s_bfe_u32 s2, s2, 0x100000
+; GFX8-NEXT:    s_and_b32 s4, 0xffff, s6
+; GFX8-NEXT:    s_lshl_b32 s7, s7, 10
+; GFX8-NEXT:    s_and_b32 s2, 0xffff, s2
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX8-NEXT:    s_lshl_b32 s3, s3, s8
+; GFX8-NEXT:    s_lshl_b32 s3, s3, 10
 ; GFX8-NEXT:    s_or_b32 s2, s2, s4
-; GFX8-NEXT:    s_bfe_u32 s4, s7, 0x100000
-; GFX8-NEXT:    s_bfe_u32 s3, s3, 0x100000
+; GFX8-NEXT:    s_and_b32 s4, 0xffff, s7
+; GFX8-NEXT:    s_and_b32 s3, 0xffff, s3
 ; GFX8-NEXT:    s_lshl_b32 s4, s4, 16
 ; GFX8-NEXT:    s_or_b32 s3, s3, s4
 ; GFX8-NEXT:    ; return to shader part epilog
@@ -1550,251 +1535,18 @@ define amdgpu_ps i65 @s_sext_inreg_i65_18(i65 inreg %value) {
 }
 
 define amdgpu_ps i65 @s_sext_inreg_i65_33(i65 inreg %value) {
-; GFX6-LABEL: s_sext_inreg_i65_33:
-; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_mov_b32 s0, 0
-; GFX6-NEXT:    s_mov_b32 s1, 0
-; GFX6-NEXT:    s_mov_b32 s2, 0
-; GFX6-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: s_sext_inreg_i65_33:
-; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s0, 1, 0x100000
-; GFX8-NEXT:    s_bfe_u32 s1, 2, 0x100000
-; GFX8-NEXT:    s_lshr_b32 s0, 0, s0
-; GFX8-NEXT:    s_lshr_b32 s1, 0, s1
-; GFX8-NEXT:    s_bfe_u32 s2, 3, 0x100000
-; GFX8-NEXT:    s_and_b32 s0, s0, 1
-; GFX8-NEXT:    s_and_b32 s1, s1, 1
-; GFX8-NEXT:    s_lshr_b32 s2, 0, s2
-; GFX8-NEXT:    s_lshl_b32 s0, s0, 17
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 18
-; GFX8-NEXT:    s_bfe_u32 s3, 4, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s2, 1
-; GFX8-NEXT:    s_lshr_b32 s3, 0, s3
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 19
-; GFX8-NEXT:    s_bfe_u32 s4, 5, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s3, 1
-; GFX8-NEXT:    s_lshr_b32 s4, 0, s4
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 20
-; GFX8-NEXT:    s_bfe_u32 s5, 6, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s4, 1
-; GFX8-NEXT:    s_lshr_b32 s5, 0, s5
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 21
-; GFX8-NEXT:    s_bfe_u32 s6, 7, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s5, 1
-; GFX8-NEXT:    s_lshr_b32 s6, 0, s6
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 22
-; GFX8-NEXT:    s_bfe_u32 s7, 8, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s6, 1
-; GFX8-NEXT:    s_lshr_b32 s7, 0, s7
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 23
-; GFX8-NEXT:    s_bfe_u32 s8, 9, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s7, 1
-; GFX8-NEXT:    s_lshr_b32 s8, 0, s8
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 24
-; GFX8-NEXT:    s_bfe_u32 s9, 10, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s8, 1
-; GFX8-NEXT:    s_lshr_b32 s9, 0, s9
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 25
-; GFX8-NEXT:    s_bfe_u32 s10, 11, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s9, 1
-; GFX8-NEXT:    s_lshr_b32 s10, 0, s10
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 26
-; GFX8-NEXT:    s_bfe_u32 s11, 12, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s10, 1
-; GFX8-NEXT:    s_lshr_b32 s11, 0, s11
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 27
-; GFX8-NEXT:    s_bfe_u32 s12, 13, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s11, 1
-; GFX8-NEXT:    s_lshr_b32 s12, 0, s12
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 28
-; GFX8-NEXT:    s_bfe_u32 s13, 14, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s12, 1
-; GFX8-NEXT:    s_lshr_b32 s13, 0, s13
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 29
-; GFX8-NEXT:    s_bfe_u32 s14, 15, 0x100000
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s13, 1
-; GFX8-NEXT:    s_lshr_b32 s14, 0, s14
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 30
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_and_b32 s1, s14, 1
-; GFX8-NEXT:    s_lshl_b32 s1, s1, 31
-; GFX8-NEXT:    s_or_b32 s0, s0, s1
-; GFX8-NEXT:    s_mov_b32 s1, s0
-; GFX8-NEXT:    s_mov_b32 s2, 0
-; GFX8-NEXT:    ; return to shader part epilog
-;
-; GFX9-LABEL: s_sext_inreg_i65_33:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_bfe_u32 s0, 1, 0x100000
-; GFX9-NEXT:    s_bfe_u32 s1, 2, 0x100000
-; GFX9-NEXT:    s_lshr_b32 s0, 0, s0
-; GFX9-NEXT:    s_lshr_b32 s1, 0, s1
-; GFX9-NEXT:    s_bfe_u32 s2, 3, 0x100000
-; GFX9-NEXT:    s_and_b32 s0, s0, 1
-; GFX9-NEXT:    s_and_b32 s1, s1, 1
-; GFX9-NEXT:    s_lshr_b32 s2, 0, s2
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 17
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 18
-; GFX9-NEXT:    s_bfe_u32 s3, 4, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s2, 1
-; GFX9-NEXT:    s_lshr_b32 s3, 0, s3
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 19
-; GFX9-NEXT:    s_bfe_u32 s4, 5, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s3, 1
-; GFX9-NEXT:    s_lshr_b32 s4, 0, s4
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 20
-; GFX9-NEXT:    s_bfe_u32 s5, 6, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s4, 1
-; GFX9-NEXT:    s_lshr_b32 s5, 0, s5
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 21
-; GFX9-NEXT:    s_bfe_u32 s6, 7, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s5, 1
-; GFX9-NEXT:    s_lshr_b32 s6, 0, s6
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 22
-; GFX9-NEXT:    s_bfe_u32 s7, 8, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s6, 1
-; GFX9-NEXT:    s_lshr_b32 s7, 0, s7
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 23
-; GFX9-NEXT:    s_bfe_u32 s8, 9, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s7, 1
-; GFX9-NEXT:    s_lshr_b32 s8, 0, s8
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 24
-; GFX9-NEXT:    s_bfe_u32 s9, 10, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s8, 1
-; GFX9-NEXT:    s_lshr_b32 s9, 0, s9
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 25
-; GFX9-NEXT:    s_bfe_u32 s10, 11, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s9, 1
-; GFX9-NEXT:    s_lshr_b32 s10, 0, s10
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 26
-; GFX9-NEXT:    s_bfe_u32 s11, 12, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s10, 1
-; GFX9-NEXT:    s_lshr_b32 s11, 0, s11
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 27
-; GFX9-NEXT:    s_bfe_u32 s12, 13, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s11, 1
-; GFX9-NEXT:    s_lshr_b32 s12, 0, s12
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 28
-; GFX9-NEXT:    s_bfe_u32 s13, 14, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s12, 1
-; GFX9-NEXT:    s_lshr_b32 s13, 0, s13
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 29
-; GFX9-NEXT:    s_bfe_u32 s14, 15, 0x100000
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s13, 1
-; GFX9-NEXT:    s_lshr_b32 s14, 0, s14
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 30
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_and_b32 s1, s14, 1
-; GFX9-NEXT:    s_lshl_b32 s1, s1, 31
-; GFX9-NEXT:    s_or_b32 s0, s0, s1
-; GFX9-NEXT:    s_mov_b32 s1, s0
-; GFX9-NEXT:    s_mov_b32 s2, 0
-; GFX9-NEXT:    ; return to shader part epilog
+; GCN-LABEL: s_sext_inreg_i65_33:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    s_mov_b32 s1, 0
+; GCN-NEXT:    s_mov_b32 s2, 0
+; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: s_sext_inreg_i65_33:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_bfe_u32 s0, 1, 0x100000
-; GFX10PLUS-NEXT:    s_bfe_u32 s1, 2, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s0, 0, s0
-; GFX10PLUS-NEXT:    s_bfe_u32 s2, 3, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s1, 0, s1
-; GFX10PLUS-NEXT:    s_lshr_b32 s2, 0, s2
-; GFX10PLUS-NEXT:    s_bfe_u32 s3, 4, 0x100000
-; GFX10PLUS-NEXT:    s_and_b32 s0, s0, 1
-; GFX10PLUS-NEXT:    s_and_b32 s1, s1, 1
-; GFX10PLUS-NEXT:    s_bfe_u32 s4, 5, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s3, 0, s3
-; GFX10PLUS-NEXT:    s_lshl_b32 s0, s0, 17
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s1, 18
-; GFX10PLUS-NEXT:    s_and_b32 s2, s2, 1
-; GFX10PLUS-NEXT:    s_lshr_b32 s4, 0, s4
-; GFX10PLUS-NEXT:    s_bfe_u32 s5, 6, 0x100000
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 19
-; GFX10PLUS-NEXT:    s_and_b32 s2, s3, 1
-; GFX10PLUS-NEXT:    s_bfe_u32 s6, 7, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s5, 0, s5
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 20
-; GFX10PLUS-NEXT:    s_and_b32 s2, s4, 1
-; GFX10PLUS-NEXT:    s_lshr_b32 s6, 0, s6
-; GFX10PLUS-NEXT:    s_bfe_u32 s7, 8, 0x100000
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 21
-; GFX10PLUS-NEXT:    s_and_b32 s2, s5, 1
-; GFX10PLUS-NEXT:    s_bfe_u32 s8, 9, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s7, 0, s7
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 22
-; GFX10PLUS-NEXT:    s_and_b32 s2, s6, 1
-; GFX10PLUS-NEXT:    s_lshr_b32 s8, 0, s8
-; GFX10PLUS-NEXT:    s_bfe_u32 s9, 10, 0x100000
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 23
-; GFX10PLUS-NEXT:    s_and_b32 s2, s7, 1
-; GFX10PLUS-NEXT:    s_bfe_u32 s10, 11, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s9, 0, s9
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 24
-; GFX10PLUS-NEXT:    s_and_b32 s2, s8, 1
-; GFX10PLUS-NEXT:    s_lshr_b32 s10, 0, s10
-; GFX10PLUS-NEXT:    s_bfe_u32 s11, 12, 0x100000
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 25
-; GFX10PLUS-NEXT:    s_and_b32 s2, s9, 1
-; GFX10PLUS-NEXT:    s_bfe_u32 s12, 13, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s11, 0, s11
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 26
-; GFX10PLUS-NEXT:    s_and_b32 s2, s10, 1
-; GFX10PLUS-NEXT:    s_lshr_b32 s12, 0, s12
-; GFX10PLUS-NEXT:    s_bfe_u32 s13, 14, 0x100000
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 27
-; GFX10PLUS-NEXT:    s_and_b32 s2, s11, 1
-; GFX10PLUS-NEXT:    s_bfe_u32 s14, 15, 0x100000
-; GFX10PLUS-NEXT:    s_lshr_b32 s13, 0, s13
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 28
-; GFX10PLUS-NEXT:    s_and_b32 s2, s12, 1
-; GFX10PLUS-NEXT:    s_lshr_b32 s14, 0, s14
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 29
-; GFX10PLUS-NEXT:    s_and_b32 s2, s13, 1
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 30
-; GFX10PLUS-NEXT:    s_and_b32 s2, s14, 1
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_lshl_b32 s1, s2, 31
+; GFX10PLUS-NEXT:    s_mov_b32 s0, 0
+; GFX10PLUS-NEXT:    s_mov_b32 s1, 0
 ; GFX10PLUS-NEXT:    s_mov_b32 s2, 0
-; GFX10PLUS-NEXT:    s_or_b32 s0, s0, s1
-; GFX10PLUS-NEXT:    s_mov_b32 s1, s0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %shl = shl i65 %value, 33
   %ashr = shl i65 %shl, 33

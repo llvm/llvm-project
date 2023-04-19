@@ -154,7 +154,7 @@ public:
   bool UseBigObj;
   bool UseOffsetLabels = false;
 
-  MCSectionCOFF *AddrsigSection;
+  MCSectionCOFF *AddrsigSection = nullptr;
 
   MCSectionCOFF *CGProfileSection = nullptr;
 

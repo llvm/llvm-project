@@ -552,6 +552,7 @@ cc_library(
         "//mlir:AffineTransforms",
         "//mlir:AffineUtils",
         "//mlir:Analysis",
+        "//mlir:ArithTransforms",
         "//mlir:DialectUtils",
         "//mlir:FuncDialect",
         "//mlir:IR",

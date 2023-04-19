@@ -183,7 +183,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[PRED_COPY13:%[0-9]+]]:sreg_64 = PRED_COPY [[REG_SEQUENCE2]].sub2_sub3
   ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY12]], [[PRED_COPY10]], implicit $exec
   ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY13]], [[PRED_COPY11]], implicit $exec
-  ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
+  ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; UNPACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.3:
@@ -231,7 +231,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[PRED_COPY11:%[0-9]+]]:sreg_64 = PRED_COPY [[REG_SEQUENCE2]].sub2_sub3
   ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY10]], [[PRED_COPY8]], implicit $exec
   ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY11]], [[PRED_COPY9]], implicit $exec
-  ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
+  ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; PACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.3:
@@ -417,7 +417,7 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr6
   ; UNPACKED-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; UNPACKED-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[S_MOV_B32_]]
-  ; UNPACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[PRED_COPY5]], [[PRED_COPY7]], 0, implicit $exec
+  ; UNPACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[PRED_COPY5]], [[PRED_COPY7]], 0, implicit $exec
   ; UNPACKED-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[S_MOV_B32_1]]
   ; UNPACKED-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[PRED_COPY8]], [[PRED_COPY4]], implicit $exec
@@ -438,7 +438,7 @@ define amdgpu_ps void @raw_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[PRED_COPY6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr6
   ; PACKED-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; PACKED-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[S_MOV_B32_]]
-  ; PACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[PRED_COPY5]], [[PRED_COPY7]], 0, implicit $exec
+  ; PACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[PRED_COPY5]], [[PRED_COPY7]], 0, implicit $exec
   ; PACKED-NEXT:   BUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[PRED_COPY4]], [[V_ADD_CO_U32_e64_]], [[REG_SEQUENCE]], [[PRED_COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x s16>), align 1, addrspace 7)
   ; PACKED-NEXT:   S_ENDPGM 0
   %voffset.add = add i32 %voffset, 4096
@@ -465,7 +465,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[PRED_COPY7:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
   ; UNPACKED-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; UNPACKED-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[S_MOV_B32_]]
-  ; UNPACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[PRED_COPY6]], [[PRED_COPY8]], 0, implicit $exec
+  ; UNPACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[PRED_COPY6]], [[PRED_COPY8]], 0, implicit $exec
   ; UNPACKED-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; UNPACKED-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[S_MOV_B32_1]]
   ; UNPACKED-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[PRED_COPY9]], [[PRED_COPY4]], implicit $exec
@@ -488,7 +488,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[PRED_COPY14:%[0-9]+]]:sreg_64 = PRED_COPY [[REG_SEQUENCE2]].sub2_sub3
   ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY13]], [[PRED_COPY11]], implicit $exec
   ; UNPACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY14]], [[PRED_COPY12]], implicit $exec
-  ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
+  ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; UNPACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.3:
@@ -522,7 +522,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[PRED_COPY7:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
   ; PACKED-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; PACKED-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[S_MOV_B32_]]
-  ; PACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[PRED_COPY6]], [[PRED_COPY8]], 0, implicit $exec
+  ; PACKED-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[PRED_COPY6]], [[PRED_COPY8]], 0, implicit $exec
   ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.2:
@@ -539,7 +539,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[PRED_COPY12:%[0-9]+]]:sreg_64 = PRED_COPY [[REG_SEQUENCE2]].sub2_sub3
   ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY11]], [[PRED_COPY9]], implicit $exec
   ; PACKED-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY12]], [[PRED_COPY10]], implicit $exec
-  ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
+  ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; PACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.3:

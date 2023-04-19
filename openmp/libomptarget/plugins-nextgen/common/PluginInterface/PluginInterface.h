@@ -74,17 +74,15 @@ struct AsyncInfoWrapperTy {
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 
-  // Get a reference to the error associated with the asycnhronous operations
-  // related to the async info wrapper.
-  Error &getError() { return Err; }
-
   /// Synchronize with the __tgt_async_info's pending operations if it's the
-  /// internal async info and return the error associated with the async
-  /// operations. This function must be called before destroying the object.
-  Error finalize();
+  /// internal async info. The error associated to the aysnchronous operations
+  /// issued in this queue must be provided in \p Err. This function will update
+  /// the error parameter with the result of the synchronization if it was
+  /// actually executed. This function must be called before destroying the
+  /// object and only once.
+  void finalize(Error &Err);
 
 private:
-  Error Err;
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
   __tgt_async_info *AsyncInfoPtr;

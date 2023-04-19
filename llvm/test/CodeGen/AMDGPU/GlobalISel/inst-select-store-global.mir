@@ -861,15 +861,25 @@ body: |
     ; GFX6-LABEL: name: store_atomic_global_s32
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
-    ; GFX6-NEXT: G_STORE [[COPY1]](s32), [[COPY]](p1) :: (store monotonic (s32), addrspace 1)
+    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
+    ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX6-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
+    ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; GFX6-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; GFX6-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
+    ; GFX6-NEXT: BUFFER_STORE_DWORD_ADDR64 [[PRED_COPY1]], [[PRED_COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store monotonic (s32), addrspace 1)
     ; GFX7-LABEL: name: store_atomic_global_s32
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
     ; GFX7-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store monotonic (s32), addrspace 1)
+    ; GFX7-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX7-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
+    ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; GFX7-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; GFX7-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
+    ; GFX7-NEXT: BUFFER_STORE_DWORD_ADDR64 [[PRED_COPY1]], [[PRED_COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store monotonic (s32), addrspace 1)
     ; GFX7-FLAT-LABEL: name: store_atomic_global_s32
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX7-FLAT-NEXT: {{  $}}
@@ -914,15 +924,25 @@ body: |
     ; GFX6-LABEL: name: store_atomic_global_s64
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: G_STORE [[COPY1]](s64), [[COPY]](p1) :: (store monotonic (s64), addrspace 1)
+    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX6-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
+    ; GFX6-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; GFX6-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; GFX6-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
+    ; GFX6-NEXT: BUFFER_STORE_DWORDX2_ADDR64 [[PRED_COPY1]], [[PRED_COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store monotonic (s64), addrspace 1)
     ; GFX7-LABEL: name: store_atomic_global_s64
     ; GFX7: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX7-NEXT: {{  $}}
     ; GFX7-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
     ; GFX7-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX7-NEXT: FLAT_STORE_DWORDX2 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (store monotonic (s64), addrspace 1)
+    ; GFX7-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GFX7-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 61440
+    ; GFX7-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; GFX7-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+    ; GFX7-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
+    ; GFX7-NEXT: BUFFER_STORE_DWORDX2_ADDR64 [[PRED_COPY1]], [[PRED_COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store monotonic (s64), addrspace 1)
     ; GFX7-FLAT-LABEL: name: store_atomic_global_s64
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX7-FLAT-NEXT: {{  $}}

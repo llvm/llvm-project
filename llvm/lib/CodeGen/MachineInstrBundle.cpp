@@ -197,8 +197,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       }
 
       if (!MO.isDead() && Reg.isPhysical()) {
-        for (MCSubRegIterator SubRegs(Reg, TRI); SubRegs.isValid(); ++SubRegs) {
-          unsigned SubReg = *SubRegs;
+        for (MCPhysReg SubReg : TRI->subregs(Reg)) {
           if (LocalDefSet.insert(SubReg).second)
             LocalDefs.push_back(SubReg);
         }

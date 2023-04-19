@@ -79,8 +79,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
     ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
+    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[V_BCNT_U32_B32_e64_]], [[PRED_COPY1]], 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = G_CTPOP %0
@@ -103,8 +104,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
     ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
+    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[PRED_COPY1]], [[V_BCNT_U32_B32_e64_]], 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = G_CTPOP %0
@@ -153,8 +155,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
     ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
+    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[V_BCNT_U32_B32_e64_]], [[PRED_COPY1]], 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s32) = G_CTPOP %0
@@ -178,8 +181,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
     ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY1]], [[PRED_COPY]], implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
+    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY1]], 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[V_BCNT_U32_B32_e64_]], [[PRED_COPY]], 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s32) = G_CTPOP %1
@@ -203,8 +207,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
     ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
+    ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[PRED_COPY]], implicit-def $scc
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[S_BCNT1_I32_B32_]], [[PRED_COPY1]], 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:sgpr(s32) = G_CTPOP %0

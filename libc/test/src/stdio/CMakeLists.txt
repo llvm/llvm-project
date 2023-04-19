@@ -112,7 +112,7 @@ add_libc_unittest(
     LibcMemoryHelpers
 )
 
-add_libc_unittest(
+add_fp_unittest(
   sprintf_test
   SUITE
     libc_stdio_unittests

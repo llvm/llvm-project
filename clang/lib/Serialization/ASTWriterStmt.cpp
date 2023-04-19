@@ -1087,7 +1087,7 @@ void ASTStmtWriter::VisitDesignatedInitExpr(DesignatedInitExpr *E) {
   Record.push_back(E->usesGNUSyntax());
   for (const DesignatedInitExpr::Designator &D : E->designators()) {
     if (D.isFieldDesignator()) {
-      if (FieldDecl *Field = D.getField()) {
+      if (FieldDecl *Field = D.getFieldDecl()) {
         Record.push_back(serialization::DESIG_FIELD_DECL);
         Record.AddDeclRef(Field);
       } else {

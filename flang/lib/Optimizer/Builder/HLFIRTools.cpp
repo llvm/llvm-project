@@ -409,6 +409,20 @@ hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
   return result;
 }
 
+llvm::SmallVector<mlir::Value> hlfir::genLowerbounds(mlir::Location loc,
+                                                     fir::FirOpBuilder &builder,
+                                                     mlir::Value shape,
+                                                     unsigned rank) {
+  llvm::SmallVector<mlir::Value> lbounds;
+  if (shape)
+    lbounds = getExplicitLboundsFromShape(shape);
+  if (!lbounds.empty())
+    return lbounds;
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  return llvm::SmallVector<mlir::Value>(rank, one);
+}
+
 static hlfir::Entity followShapeInducingSource(hlfir::Entity entity) {
   while (true) {
     if (auto reassoc = entity.getDefiningOp<hlfir::NoReassocOp>()) {

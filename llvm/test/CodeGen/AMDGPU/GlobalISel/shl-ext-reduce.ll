@@ -664,7 +664,7 @@ define i32 @v_shl_i32_zext_i16(i16 %x) {
 ; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0x3fff, v0
 ; GFX10PLUS-NEXT:    v_lshlrev_b16 v0, 2, v0
-; GFX10PLUS-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %and = and i16 %x, 16383
   %ext = zext i16 %and to i32

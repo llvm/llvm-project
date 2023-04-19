@@ -532,12 +532,10 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_fma_f32 v3, -v3, v6, v4
 ; CI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; CI-NEXT:    v_div_fmas_f32 v3, v3, v5, v6
-; CI-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; CI-NEXT:    v_div_fixup_f32 v3, v3, v2, v1
 ; CI-NEXT:    v_trunc_f32_e32 v3, v3
 ; CI-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_bfe_u32 v1, v1, 0, 16
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_or_b32_e32 v2, v0, v1
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
@@ -573,9 +571,8 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_div_fixup_f16 v1, v1, v2, s1
 ; VI-NEXT:    v_trunc_f16_e32 v1, v1
 ; VI-NEXT:    v_fma_f16 v1, -v1, v2, s1
-; VI-NEXT:    v_mov_b32_e32 v2, 16
-; VI-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; VI-NEXT:    v_or_b32_e32 v2, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -670,18 +667,14 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_fma_f32 v5, -v5, v8, v6
 ; CI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; CI-NEXT:    v_div_fmas_f32 v5, v5, v7, v8
-; CI-NEXT:    v_bfe_u32 v1, v1, 0, 16
-; CI-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_or_b32_e32 v0, v0, v1
-; CI-NEXT:    v_bfe_u32 v1, v2, 0, 16
 ; CI-NEXT:    v_div_fixup_f32 v5, v5, v4, v3
 ; CI-NEXT:    v_trunc_f32_e32 v5, v5
 ; CI-NEXT:    v_fma_f32 v3, -v5, v4, v3
 ; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_bfe_u32 v2, v3, 0, 16
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_or_b32_e32 v1, v1, v2
+; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
+; CI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; CI-NEXT:    v_mov_b32_e32 v2, s4
 ; CI-NEXT:    v_mov_b32_e32 v3, s5
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
@@ -723,6 +716,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_trunc_f16_e32 v1, v1
 ; VI-NEXT:    v_fma_f16 v1, -v1, v2, s6
 ; VI-NEXT:    v_cvt_f32_f16_e32 v2, s3
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; VI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; VI-NEXT:    v_mov_b32_e32 v4, s9
@@ -735,11 +730,8 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_div_fixup_f16 v3, v3, v4, s7
 ; VI-NEXT:    v_trunc_f16_e32 v3, v3
 ; VI-NEXT:    v_fma_f16 v3, -v3, v4, s7
-; VI-NEXT:    v_mov_b32_e32 v4, 16
-; VI-NEXT:    v_lshlrev_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    v_lshlrev_b32_sdwa v1, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]

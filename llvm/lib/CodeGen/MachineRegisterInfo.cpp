@@ -643,16 +643,8 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
 bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
-    bool IsRootReserved = true;
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      MCRegister Reg = *Super;
-      if (!isReserved(Reg)) {
-        IsRootReserved = false;
-        break;
-      }
-    }
-    if (IsRootReserved)
+    if (all_of(TRI->superregs_inclusive(*Root),
+               [&](MCPhysReg Super) { return isReserved(Super); }))
       return true;
   }
   return false;

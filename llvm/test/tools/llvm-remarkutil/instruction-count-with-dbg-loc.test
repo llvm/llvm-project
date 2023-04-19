@@ -1,0 +1,7 @@
+RUN: llvm-remarkutil instruction-count --use-debug-loc --parser=yaml %p/Inputs/instruction-count-with-dbg-loc.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count-with-dbg-loc.yaml | llvm-remarkutil instruction-count --use-debug-loc --parser=bitstream | FileCheck %s
+
+; CHECK-LABEL: Source,Function,InstructionCount
+; CHECK: path/to/inst.c:1:2,func1,1
+; CHECK: path/to/inst2.c:1:2,func2,2
+; CHECK: path/to/inst3.c:1:2,func3,3

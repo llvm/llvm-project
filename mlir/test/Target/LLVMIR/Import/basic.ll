@@ -87,6 +87,77 @@ define i32 @invokeLandingpad() personality ptr @__gxx_personality_v0 {
   ret i32 0
 }
 
+declare i32 @foo2()
+
+; CHECK-LABEL: @invokePhi
+; CHECK-SAME:            (%[[cond:.*]]: i1) -> i32
+define i32 @invokePhi(i1 %cond) personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  ; CHECK: llvm.cond_br %[[cond]], ^[[bb1:.*]], ^[[bb2:.*]]
+  br i1 %cond, label %call, label %nocall
+; CHECK: ^[[bb1]]:
+call:
+  ; CHECK: %[[invoke:.*]] = llvm.invoke @foo2() to ^[[bb3:.*]] unwind ^[[bb5:.*]] : () -> i32
+  %invoke = invoke i32 @foo2() to label %bb0 unwind label %bb1
+; CHECK: ^[[bb2]]:
+nocall:
+  ; CHECK: llvm.br ^[[bb4:.*]](%[[c0]] : i32)
+  br label %bb0
+; CHECK: ^[[bb3]]:
+  ; CHECK: llvm.br ^[[bb4]](%[[invoke]] : i32)
+; CHECK: ^[[bb4]](%[[barg:.*]]: i32):
+bb0:
+  %ret = phi i32 [ 0, %nocall ], [ %invoke, %call ]
+  ; CHECK: llvm.return %[[barg]] : i32
+  ret i32 %ret
+; CHECK: ^[[bb5]]:
+bb1:
+  ; CHECK: %[[lp:.*]] = llvm.landingpad cleanup : i32
+  %resume = landingpad i32 cleanup
+  ; CHECK: llvm.resume %[[lp]] : i32
+  resume i32 %resume
+}
+
+; CHECK-LABEL: @invokePhiComplex
+; CHECK-SAME:                   (%[[cond:.*]]: i1) -> i32
+define i32 @invokePhiComplex(i1 %cond) personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  ; CHECK: %[[c1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  ; CHECK: %[[c2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  ; CHECK: %[[c20:.*]] = llvm.mlir.constant(20 : i32) : i32  
+  ; CHECK: llvm.cond_br %[[cond]], ^[[bb1:.*]], ^[[bb2:.*]]
+  br i1 %cond, label %call, label %nocall
+; CHECK: ^[[bb1]]:
+call:
+  ; CHECK: %[[invoke:.*]] = llvm.invoke @foo2() to ^[[bb3:.*]] unwind ^[[bb5:.*]] : () -> i32
+  %invoke = invoke i32 @foo2() to label %bb0 unwind label %bb1
+; CHECK: ^[[bb2]]:
+nocall:
+  ; CHECK: llvm.br ^[[bb4:.*]](%[[c0]], %[[c1]], %[[c2]] : i32, i32, i32)
+  br label %bb0
+; CHECK: ^[[bb3]]:
+  ; CHECK: llvm.br ^[[bb4]](%[[invoke]], %[[c20]], %[[invoke]] : i32, i32, i32)
+; CHECK: ^[[bb4]](%[[barg0:.*]]: i32, %[[barg1:.*]]: i32, %[[barg2:.*]]: i32):
+bb0:
+  %a = phi i32 [ 0, %nocall ], [ %invoke, %call ]
+  %b = phi i32 [ 1, %nocall ], [ 20, %call ]
+  %c = phi i32 [ 2, %nocall ], [ %invoke, %call ]
+  ; CHECK: %[[add0:.*]] = llvm.add %[[barg0]], %[[barg1]] : i32
+  ; CHECK: %[[add1:.*]] = llvm.add %[[barg2]], %[[add0]] : i32
+  %d = add i32 %a, %b
+  %e = add i32 %c, %d
+  ; CHECK: llvm.return %[[add1]] : i32
+  ret i32 %e
+; CHECK: ^[[bb5]]:
+bb1:
+  ; CHECK: %[[lp:.*]] = llvm.landingpad cleanup : i32
+  %resume = landingpad i32 cleanup
+  ; CHECK: llvm.resume %[[lp]] : i32
+  resume i32 %resume
+}
+
 ; CHECK-LABEL: @hasGCFunction
 ; CHECK-SAME: garbageCollector = "statepoint-example"
 define void @hasGCFunction() gc "statepoint-example" {
