@@ -193,15 +193,16 @@ BenchmarkRunner::getRunnableConfiguration(
   return std::move(RC);
 }
 
-Expected<Benchmark>
-BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
-                                  bool DumpObjectToDisk) const {
+Expected<Benchmark> BenchmarkRunner::runConfiguration(
+    RunnableConfiguration &&RC,
+    const std::optional<StringRef> &DumpFile) const {
   Benchmark &InstrBenchmark = RC.InstrBenchmark;
   object::OwningBinary<object::ObjectFile> &ObjectFile = RC.ObjectFile;
 
-  if (DumpObjectToDisk &&
-      BenchmarkPhaseSelector > BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
-    auto ObjectFilePath = writeObjectFile(ObjectFile.getBinary()->getData());
+  if (DumpFile && BenchmarkPhaseSelector >
+                      BenchmarkPhaseSelectorE::PrepareAndAssembleSnippet) {
+    auto ObjectFilePath =
+        writeObjectFile(ObjectFile.getBinary()->getData(), *DumpFile);
     if (Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = toString(std::move(E));
       return std::move(InstrBenchmark);
@@ -238,11 +239,16 @@ BenchmarkRunner::runConfiguration(RunnableConfiguration &&RC,
   return std::move(InstrBenchmark);
 }
 
-Expected<std::string> BenchmarkRunner::writeObjectFile(StringRef Buffer) const {
+Expected<std::string>
+BenchmarkRunner::writeObjectFile(StringRef Buffer, StringRef FileName) const {
   int ResultFD = 0;
-  SmallString<256> ResultPath;
+  SmallString<256> ResultPath = FileName;
   if (Error E = errorCodeToError(
-          sys::fs::createTemporaryFile("snippet", "o", ResultFD, ResultPath)))
+          FileName.empty() ? sys::fs::createTemporaryFile("snippet", "o",
+                                                          ResultFD, ResultPath)
+                           : sys::fs::openFileForReadWrite(
+                                 FileName, ResultFD, sys::fs::CD_CreateAlways,
+                                 sys::fs::OF_None)))
     return std::move(E);
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   OFS.write(Buffer.data(), Buffer.size());
