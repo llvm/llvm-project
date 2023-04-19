@@ -10,7 +10,7 @@
 
 // REQUIRES: has-unix-headers
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions -D_LIBCPP_ENABLE_ASSERTIONS
+// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
 
