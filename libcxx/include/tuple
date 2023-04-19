@@ -295,7 +295,7 @@ class __tuple_leaf
     _Hp __value_;
 
     template <class _Tp>
-    static constexpr bool __can_bind_reference() {
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
 #if __has_keyword(__reference_binds_to_temporary)
       return !__reference_binds_to_temporary(_Hp, _Tp);
 #else
@@ -367,8 +367,8 @@ public:
         {static_assert(!is_reference<_Hp>::value,
            "Attempted to uses-allocator construct a reference element in a tuple");}
 
-    __tuple_leaf(const __tuple_leaf& __t) = default;
-    __tuple_leaf(__tuple_leaf&& __t) = default;
+    _LIBCPP_HIDE_FROM_ABI __tuple_leaf(const __tuple_leaf& __t) = default;
+    _LIBCPP_HIDE_FROM_ABI __tuple_leaf(__tuple_leaf&& __t) = default;
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     int swap(__tuple_leaf& __t) _NOEXCEPT_(__is_nothrow_swappable<__tuple_leaf>::value)
@@ -1308,8 +1308,7 @@ template <>
 class _LIBCPP_TEMPLATE_VIS tuple<>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY constexpr
-        tuple() _NOEXCEPT = default;
+    constexpr tuple() _NOEXCEPT = default;
     template <class _Alloc>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
         tuple(allocator_arg_t, const _Alloc&) _NOEXCEPT {}

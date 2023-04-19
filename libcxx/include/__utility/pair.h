@@ -70,8 +70,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
     _T1 first;
     _T2 second;
 
-    pair(pair const&) = default;
-    pair(pair&&) = default;
+    _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
+    _LIBCPP_HIDE_FROM_ABI pair(pair&&) = default;
 
 #ifdef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI
@@ -93,37 +93,37 @@ struct _LIBCPP_TEMPLATE_VIS pair
 #else
     struct _CheckArgs {
       template <int&...>
-      static constexpr bool __enable_explicit_default() {
+      static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit_default() {
           return is_default_constructible<_T1>::value
               && is_default_constructible<_T2>::value
               && !__enable_implicit_default<>();
       }
 
       template <int&...>
-      static constexpr bool __enable_implicit_default() {
+      static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit_default() {
           return __is_implicitly_default_constructible<_T1>::value
               && __is_implicitly_default_constructible<_T2>::value;
       }
 
       template <class _U1, class _U2>
-      static constexpr bool __is_pair_constructible() {
+      static _LIBCPP_HIDE_FROM_ABI constexpr bool __is_pair_constructible() {
           return is_constructible<first_type, _U1>::value
               && is_constructible<second_type, _U2>::value;
       }
 
       template <class _U1, class _U2>
-      static constexpr bool __is_implicit() {
+      static _LIBCPP_HIDE_FROM_ABI constexpr bool __is_implicit() {
           return is_convertible<_U1, first_type>::value
               && is_convertible<_U2, second_type>::value;
       }
 
       template <class _U1, class _U2>
-      static constexpr bool __enable_explicit() {
+      static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit() {
           return __is_pair_constructible<_U1, _U2>() && !__is_implicit<_U1, _U2>();
       }
 
       template <class _U1, class _U2>
-      static constexpr bool __enable_implicit() {
+      static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit() {
           return __is_pair_constructible<_U1, _U2>() && __is_implicit<_U1, _U2>();
       }
     };
@@ -134,18 +134,18 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
     struct _CheckTupleLikeConstructor {
         template <class _Tuple>
-        static constexpr bool __enable_implicit() {
+        static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit() {
             return __tuple_convertible<_Tuple, pair>::value;
         }
 
         template <class _Tuple>
-        static constexpr bool __enable_explicit() {
+        static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit() {
             return __tuple_constructible<_Tuple, pair>::value
                && !__tuple_convertible<_Tuple, pair>::value;
         }
 
         template <class _Tuple>
-        static constexpr bool __enable_assign() {
+        static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_assign() {
             return __tuple_assignable<_Tuple, pair>::value;
         }
     };
