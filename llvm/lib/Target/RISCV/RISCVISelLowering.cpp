@@ -16108,6 +16108,9 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 
   if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
+  if (Subtarget.enableSeqCstTrailingFence() && isa<StoreInst>(Inst) &&
+      Ord == AtomicOrdering::SequentiallyConsistent)
+    return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
   return nullptr;
 }
 
