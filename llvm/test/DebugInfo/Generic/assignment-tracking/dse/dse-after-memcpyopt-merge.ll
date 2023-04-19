@@ -1,4 +1,4 @@
-; RUN: opt %s -S -passes=dse -o - | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt %s -S -passes=dse -o - | FileCheck %s
 
 ;; Observed in the wild, but test is created by running memcpyopt on
 ;; assignment-tracking/memcpyopt/merge-stores.ll then manually inserting
@@ -7,17 +7,19 @@
 ;; A memory intrinsic (or vector instruction) might have multiple dbg.assigns
 ;; linked to it if it has been created as a result of merging scalar stores,
 ;; such as in this example. DSE is going to shorten the memset because there's
-;; a later store that overwrites part of it. Unlink the dbg.assigns that
-;; describe the overlapping fragments.
+;; a later store that overwrites part of it. Insert a linked dbg.assign after
+;; each overlapping fragment to undef the dead part's memory location without
+;; needing to work out how to split the fragments exactly.
 
 ;; Check that there's an unlinked dbg.assign inserted after each overlapping
 ;; fragment of the shortened store.
 ;;
-; CHECK: llvm.dbg.assign({{.*}}, metadata ptr %g, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata ![[ID]], metadata ptr %arrayidx3.i, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression())
-; CHECK: llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK:      call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[ID:[0-9]+]], metadata ptr %arrayidx5.i, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+
+; CHECK:      call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[ID]], metadata ptr %arrayidx7.i, metadata !DIExpression())
+; CHECK-NEXT: call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+
 ; CHECK: call void @llvm.memset{{.*}}, !DIAssignID ![[ID]]
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
@@ -32,7 +34,10 @@ define dso_local void @_Z1fv() local_unnamed_addr !dbg !7 {
 entry:
   %g = alloca %struct.v, align 4, !DIAssignID !23
   call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !23, metadata ptr %g, metadata !DIExpression()), !dbg !24
-   %arrayidx.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 2, !dbg !37
+  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %g), !dbg !25
+  call void @llvm.dbg.assign(metadata ptr %g, metadata !26, metadata !DIExpression(), metadata !35, metadata ptr undef, metadata !DIExpression()), !dbg !32
+  call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !29, metadata !DIExpression(), metadata !36, metadata ptr undef, metadata !DIExpression()), !dbg !32
+  %arrayidx.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 2, !dbg !37
   call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !39, metadata ptr %arrayidx.i, metadata !DIExpression()), !dbg !24
   %arrayidx3.i = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 1, !dbg !40
   call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !39, metadata ptr %arrayidx3.i, metadata !DIExpression()), !dbg !24
@@ -45,14 +50,19 @@ entry:
   ;; -- Start modification
   %arrayidx7 = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 3, !dbg !24
   store float 0.000000e+00, ptr %arrayidx7, align 4, !dbg !24, !DIAssignID !49
+  call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32), metadata !49, metadata ptr %arrayidx7, metadata !DIExpression()), !dbg !24
   %arrayidx = getelementptr inbounds %struct.v, ptr %g, i64 0, i32 0, i64 0, !dbg !24
   store float 0.000000e+00, ptr %arrayidx, align 4, !dbg !24, !DIAssignID !50
+  call void @llvm.dbg.assign(metadata float 0.000000e+00, metadata !11, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32), metadata !50, metadata ptr %arrayidx, metadata !DIExpression()), !dbg !24
   ;; -- End modification
   call void @_Z3escP1v(ptr nonnull %g), !dbg !43
+  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %0), !dbg !45
   ret void, !dbg !45
 }
 
+declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
 declare !dbg !64 dso_local void @_Z3escP1v(ptr) local_unnamed_addr
+declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
