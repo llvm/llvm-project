@@ -4153,30 +4153,6 @@ static Instruction *foldICmpXNegX(ICmpInst &I,
   return nullptr;
 }
 
-static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
-                                  InstCombinerImpl &IC) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
-  // Normalize xor operand as operand 0.
-  CmpInst::Predicate Pred = I.getPredicate();
-  if (match(Op1, m_c_Xor(m_Specific(Op0), m_Value()))) {
-    std::swap(Op0, Op1);
-    Pred = ICmpInst::getSwappedPredicate(Pred);
-  }
-  if (!match(Op0, m_c_Xor(m_Specific(Op1), m_Value(A))))
-    return nullptr;
-
-  // icmp (X ^ Y_NonZero) u>= X --> icmp (X ^ Y_NonZero) u> X
-  // icmp (X ^ Y_NonZero) u<= X --> icmp (X ^ Y_NonZero) u< X
-  // icmp (X ^ Y_NonZero) s>= X --> icmp (X ^ Y_NonZero) s> X
-  // icmp (X ^ Y_NonZero) s<= X --> icmp (X ^ Y_NonZero) s< X
-  CmpInst::Predicate PredOut = CmpInst::getStrictPredicate(Pred);
-  if (PredOut != Pred &&
-      isKnownNonZero(A, Q.DL, /*Depth=*/0, Q.AC, Q.CxtI, Q.DT))
-    return new ICmpInst(PredOut, Op0, Op1);
-
-  return nullptr;
-}
-
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -4472,9 +4448,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           return new ICmpInst(I.getSwappedPredicate(), X,
                               ConstantExpr::getNeg(RHSC));
   }
-
-  if (Instruction * R = foldICmpXorXX(I, Q, *this))
-    return R;
 
   {
     // Try to remove shared multiplier from comparison:
