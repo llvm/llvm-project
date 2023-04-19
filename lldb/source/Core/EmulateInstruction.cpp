@@ -363,7 +363,7 @@ bool EmulateInstruction::WriteRegisterDefault(EmulateInstruction *instruction,
                                               const RegisterValue &reg_value) {
   StreamFile strm(stdout, false);
   strm.Printf("    Write to Register (name = %s, value = ", reg_info->name);
-  DumpRegisterValue(reg_value, &strm, reg_info, false, false, eFormatDefault);
+  DumpRegisterValue(reg_value, strm, *reg_info, false, false, eFormatDefault);
   strm.PutCString(", context = ");
   context.Dump(strm, instruction);
   strm.EOL();

@@ -169,7 +169,7 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
          reg_idx < num_registers; ++reg_idx) {
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
       if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        DumpRegisterValue(reg_value, &strm, reg_info, true, false,
+        DumpRegisterValue(reg_value, strm, *reg_info, true, false,
                           eFormatDefault);
         strm.EOL();
       }
