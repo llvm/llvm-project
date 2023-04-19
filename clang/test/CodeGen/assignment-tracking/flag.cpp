@@ -8,10 +8,10 @@
 // RUN:     -emit-llvm  %s -o - -fexperimental-assignment-tracking=disabled -O1\
 // RUN: | FileCheck %s --check-prefixes=DISABLE
 
-//// Disabled by default:
+//// Enabled by default:
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -debug-info-kind=standalone   \
 // RUN:     -emit-llvm  %s -o - -O1                                            \
-// RUN: | FileCheck %s --check-prefixes=DISABLE
+// RUN: | FileCheck %s --check-prefixes=ENABLE
 
 //// Disabled at O0 unless forced.
 // RUN: %clang_cc1 -triple x86_64-none-linux-gnu -debug-info-kind=standalone   \
