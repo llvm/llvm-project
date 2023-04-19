@@ -1328,6 +1328,7 @@ private:
         {}
 
     template <class> friend class valarray;
+    template <class> friend class sliceExpr;
 };
 
 template <class _Tp>
