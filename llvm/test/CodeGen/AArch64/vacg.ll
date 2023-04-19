@@ -5,9 +5,7 @@
 define <4 x i32> @gt_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: gt_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.4s, v0.4s
-; CHECK-NEXT:    fabs v1.4s, v1.4s
-; CHECK-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    facgt v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
@@ -20,9 +18,7 @@ entry:
 define <4 x i32> @ge_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: ge_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.4s, v0.4s
-; CHECK-NEXT:    fabs v1.4s, v1.4s
-; CHECK-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    facge v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
@@ -35,9 +31,7 @@ entry:
 define <4 x i32> @lt_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: lt_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.4s, v0.4s
-; CHECK-NEXT:    fabs v1.4s, v1.4s
-; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    facgt v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
@@ -50,9 +44,7 @@ entry:
 define <4 x i32> @le_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: le_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.4s, v0.4s
-; CHECK-NEXT:    fabs v1.4s, v1.4s
-; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    facge v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
@@ -65,9 +57,7 @@ entry:
 define <2 x i32> @gt_v2f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: gt_v2f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.2s, v0.2s
-; CHECK-NEXT:    fabs v1.2s, v1.2s
-; CHECK-NEXT:    fcmgt v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    facgt v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
@@ -80,9 +70,7 @@ entry:
 define <2 x i32> @ge_v2f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: ge_v2f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.2s, v0.2s
-; CHECK-NEXT:    fabs v1.2s, v1.2s
-; CHECK-NEXT:    fcmge v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    facge v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> %a)
@@ -95,9 +83,7 @@ entry:
 define <4 x i16> @gt_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: gt_v4f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.4h, v0.4h
-; CHECK-NEXT:    fabs v1.4h, v1.4h
-; CHECK-NEXT:    fcmgt v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    facgt v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <4 x half> @llvm.fabs.v4f16(<4 x half> %a)
@@ -110,9 +96,7 @@ entry:
 define <4 x i16> @ge_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: ge_v4f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.4h, v0.4h
-; CHECK-NEXT:    fabs v1.4h, v1.4h
-; CHECK-NEXT:    fcmge v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    facge v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <4 x half> @llvm.fabs.v4f16(<4 x half> %a)
@@ -125,9 +109,7 @@ entry:
 define <8 x i16> @gt_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: gt_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.8h, v0.8h
-; CHECK-NEXT:    fabs v1.8h, v1.8h
-; CHECK-NEXT:    fcmgt v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    facgt v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
@@ -140,9 +122,7 @@ entry:
 define <8 x i16> @ge_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: ge_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.8h, v0.8h
-; CHECK-NEXT:    fabs v1.8h, v1.8h
-; CHECK-NEXT:    fcmge v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    facge v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
@@ -155,9 +135,7 @@ entry:
 define <2 x i64> @gt_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: gt_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.2d, v0.2d
-; CHECK-NEXT:    fabs v1.2d, v1.2d
-; CHECK-NEXT:    fcmgt v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    facgt v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
@@ -170,9 +148,7 @@ entry:
 define <2 x i64> @ge_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: ge_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fabs v0.2d, v0.2d
-; CHECK-NEXT:    fabs v1.2d, v1.2d
-; CHECK-NEXT:    fcmge v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    facge v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %vabs1.i = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> %a)
