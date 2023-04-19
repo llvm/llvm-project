@@ -2336,9 +2336,11 @@ function(llvm_setup_rpath name)
     # Since BUILD_SHARED_LIBS is only recommended for use by developers,
     # hardcode the rpath to build/install lib dir first in this mode.
     # FIXME: update this when there is better solution.
-    set(_install_rpath "${LLVM_LIBRARY_OUTPUT_INTDIR}" "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+    set(_build_rpath "${LLVM_LIBRARY_OUTPUT_INTDIR}" ${extra_libdir})
+    set(_install_rpath "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
   elseif(UNIX)
-    set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+    set(_build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
+    set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
     if(${CMAKE_SYSTEM_NAME} MATCHES "(FreeBSD|DragonFly)")
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-z,origin ")
@@ -2352,9 +2354,14 @@ function(llvm_setup_rpath name)
     return()
   endif()
 
-  # Enable BUILD_WITH_INSTALL_RPATH unless CMAKE_BUILD_RPATH is set.
+  # Enable BUILD_WITH_INSTALL_RPATH unless CMAKE_BUILD_RPATH is set and not
+  # building for macOS or Windows, as those two platforms seemingly require it.
   if("${CMAKE_BUILD_RPATH}" STREQUAL "")
-    set_property(TARGET ${name} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin|Windows")
+      set_property(TARGET ${name} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
+    else()
+      set_property(TARGET ${name} APPEND PROPERTY BUILD_RPATH "${_build_rpath}")
+    endif()
   endif()
 
   set_target_properties(${name} PROPERTIES
