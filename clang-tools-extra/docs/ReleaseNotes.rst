@@ -136,11 +136,6 @@ New checks
   Checks that all implicit and explicit inline functions in header files are
   tagged with the ``LIBC_INLINE`` macro.
 
-- New :doc:`misc-header-include-cycle
-  <clang-tidy/checks/misc/header-include-cycle>` check.
-
-  Check detects cyclic ``#include`` dependencies between user-defined headers.
-
 - New :doc:`modernize-type-traits
   <clang-tidy/checks/modernize/type-traits>` check.
 
