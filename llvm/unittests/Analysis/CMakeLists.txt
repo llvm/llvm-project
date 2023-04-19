@@ -22,7 +22,6 @@ set(ANALYSIS_TEST_SOURCES
   CGSCCPassManagerTest.cpp
   ConstraintSystemTest.cpp
   DDGTest.cpp
-  DivergenceAnalysisTest.cpp
   DomTreeUpdaterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
