@@ -170,7 +170,8 @@ hsa_status_t get_agent_memory_pool(hsa_agent_t agent,
   return iterate_agent_memory_pools(agent, cb);
 }
 
-int load(int argc, char **argv, char **envp, void *image, size_t size) {
+int load(int argc, char **argv, char **envp, void *image, size_t size,
+         const LaunchParameters &params) {
   // Initialize the HSA runtime used to communicate with the device.
   if (hsa_status_t err = hsa_init())
     handle_error(err);
@@ -355,13 +356,15 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
   // with one thread on the device, forcing the rest of the wavefront to be
   // masked off.
   std::memset(packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
-  packet->setup = 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-  packet->workgroup_size_x = 1;
-  packet->workgroup_size_y = 1;
-  packet->workgroup_size_z = 1;
-  packet->grid_size_x = 1;
-  packet->grid_size_y = 1;
-  packet->grid_size_z = 1;
+  packet->setup = (1 + (params.num_blocks_y * params.num_threads_y != 1) +
+                   (params.num_blocks_z * params.num_threads_z != 1))
+                  << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+  packet->workgroup_size_x = params.num_threads_x;
+  packet->workgroup_size_y = params.num_threads_y;
+  packet->workgroup_size_z = params.num_threads_z;
+  packet->grid_size_x = params.num_blocks_x * params.num_threads_x;
+  packet->grid_size_y = params.num_blocks_y * params.num_threads_y;
+  packet->grid_size_z = params.num_blocks_z * params.num_threads_z;
   packet->private_segment_size = private_size;
   packet->group_segment_size = group_size;
   packet->kernel_object = kernel;
