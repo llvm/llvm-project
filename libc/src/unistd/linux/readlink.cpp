@@ -26,7 +26,7 @@ LLVM_LIBC_FUNCTION(ssize_t, readlink,
   ssize_t ret =
       __llvm_libc::syscall_impl(SYS_readlinkat, AT_FDCWD, path, buf, bufsize);
 #else
-#error "SYS_readlink or SYS_readlinkat not available."
+#error "readlink or readlinkat syscalls not available."
 #endif
   if (ret < 0) {
     libc_errno = -ret;
