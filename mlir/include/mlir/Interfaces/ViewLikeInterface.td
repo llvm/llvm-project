@@ -50,9 +50,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
          `getArrayAttrMaxRanks()`[0] (resp. [1], [2]).
       3. if an entry of `static_offsets` (resp. `static_sizes`,
          `static_strides`) is equal to a special sentinel value, namely
-         `ShapedType::kDynamic` (resp. `ShapedType::kDynamic`,
-         `ShapedType::kDynamic`), then the corresponding entry is
-         a dynamic offset (resp. size, stride).
+         `ShapedType::kDynamic`, then the corresponding entry is a dynamic
+         offset (resp. size, stride).
       4. a variadic `offset` (resp. `sizes`, `strides`) operand  must be present
          for each dynamic offset (resp. size, stride).
       5. `offsets`, `sizes` and `strides` operands are specified in this order
