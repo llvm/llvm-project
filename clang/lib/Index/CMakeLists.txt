@@ -32,7 +32,6 @@ add_clang_library(clangIndex
   clangFormat
   clangFrontend
   clangLex
-  clangRewrite
   clangSerialization
   clangToolingCore
 

@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
   InterfaceStub
-  Object
   ObjectYAML
   Option
   Support
