@@ -123,8 +123,8 @@ void fenceTeam(atomic::OrderingTy Ordering);
 void fenceKernel(atomic::OrderingTy Ordering);
 void fenceSystem(atomic::OrderingTy Ordering);
 void syncWarp(__kmpc_impl_lanemask_t);
-void syncThreads();
-void syncThreadsAligned() { syncThreads(); }
+void syncThreads(atomic::OrderingTy Ordering);
+void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 void unsetLock(omp_lock_t *);
 int testLock(omp_lock_t *);
 void initLock(omp_lock_t *);
@@ -261,8 +261,16 @@ void syncWarp(__kmpc_impl_lanemask_t) {
   // AMDGCN doesn't need to sync threads in a warp
 }
 
-void syncThreads() { __builtin_amdgcn_s_barrier(); }
-void syncThreadsAligned() { syncThreads(); }
+void syncThreads(atomic::OrderingTy Ordering) {
+  if (Ordering != atomic::relaxed)
+    fenceTeam(Ordering == atomic::acq_rel ? atomic::release : atomic::seq_cst);
+
+  __builtin_amdgcn_s_barrier();
+
+  if (Ordering != atomic::relaxed)
+    fenceTeam(Ordering == atomic::acq_rel ? atomic::aquire : atomic::seq_cst);
+}
+void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 
 // TODO: Don't have wavefront lane locks. Possibly can't have them.
 void unsetLock(omp_lock_t *) { __builtin_trap(); }
@@ -327,12 +335,12 @@ void fenceSystem(atomic::OrderingTy) { __nvvm_membar_sys(); }
 
 void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
 
-void syncThreads() {
+void syncThreads(atomic::OrderingTy Ordering) {
   constexpr int BarrierNo = 8;
   asm volatile("barrier.sync %0;" : : "r"(BarrierNo) : "memory");
 }
 
-void syncThreadsAligned() { __syncthreads(); }
+void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
 constexpr uint32_t UNSET = 0;
@@ -381,9 +389,13 @@ void synchronize::init(bool IsSPMD) {
 
 void synchronize::warp(LaneMaskTy Mask) { impl::syncWarp(Mask); }
 
-void synchronize::threads() { impl::syncThreads(); }
+void synchronize::threads(atomic::OrderingTy Ordering) {
+  impl::syncThreads(Ordering);
+}
 
-void synchronize::threadsAligned() { impl::syncThreadsAligned(); }
+void synchronize::threadsAligned(atomic::OrderingTy Ordering) {
+  impl::syncThreadsAligned(Ordering);
+}
 
 void fence::team(atomic::OrderingTy Ordering) { impl::fenceTeam(Ordering); }
 
@@ -504,13 +516,13 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
 __attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
                                                           int32_t TId) {
   FunctionTracingRAII();
-  synchronize::threadsAligned();
+  synchronize::threadsAligned(atomic::OrderingTy::seq_cst);
 }
 
 __attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
                                                              int32_t TId) {
   FunctionTracingRAII();
-  synchronize::threads();
+  synchronize::threads(atomic::OrderingTy::seq_cst);
 }
 
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
