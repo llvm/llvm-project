@@ -114,7 +114,7 @@ TEST(WalkAST, DeclRef) {
   testWalk("int $explicit^x;", "int y = ^x;");
   testWalk("int $explicit^foo();", "int y = ^foo();");
   testWalk("namespace ns { int $explicit^x; }", "int y = ns::^x;");
-  testWalk("struct S { static int $explicit^x; };", "int y = S::^x;");
+  testWalk("struct $implicit^S { static int x; };", "int y = S::^x;");
   // Canonical declaration only.
   testWalk("extern int $explicit^x; int x;", "int y = ^x;");
   // Return type of `foo` isn't used.
@@ -342,6 +342,13 @@ TEST(WalkAST, TemplateNames) {
 }
 
 TEST(WalkAST, MemberExprs) {
+  testWalk("struct $implicit^S { static int f; };", "void foo() { S::^f; }");
+  testWalk("struct B { static int f; }; struct $implicit^S : B {};",
+           "void foo() { S::^f; }");
+  testWalk("struct B { static void f(); }; struct $implicit^S : B {};",
+           "void foo() { S::^f; }");
+  testWalk("struct B { static void f(); }; ",
+           "struct S : B { void foo() { ^f(); } };");
   testWalk("struct $implicit^S { void foo(); };", "void foo() { S{}.^foo(); }");
   testWalk(
       "struct S { void foo(); }; struct $implicit^X : S { using S::foo; };",
