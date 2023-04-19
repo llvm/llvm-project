@@ -1719,12 +1719,13 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
     // Otherwise, if it has an upperboud, use (upperbound - lowerbound + 1),
     // where lowerbound is from the LowerBound field of the Subrange,
     // or the language default lowerbound if that field is unspecified.
-    if (auto *CI = Subrange->getCount().dyn_cast<ConstantInt *>())
+    if (auto *CI = dyn_cast_if_present<ConstantInt *>(Subrange->getCount()))
       Count = CI->getSExtValue();
-    else if (auto *UI = Subrange->getUpperBound().dyn_cast<ConstantInt *>()) {
+    else if (auto *UI = dyn_cast_if_present<ConstantInt *>(
+                 Subrange->getUpperBound())) {
       // Fortran uses 1 as the default lowerbound; other languages use 0.
       int64_t Lowerbound = (moduleIsInFortran()) ? 1 : 0;
-      auto *LI = Subrange->getLowerBound().dyn_cast<ConstantInt *>();
+      auto *LI = dyn_cast_if_present<ConstantInt *>(Subrange->getLowerBound());
       Lowerbound = (LI) ? LI->getSExtValue() : Lowerbound;
       Count = UI->getSExtValue() - Lowerbound + 1;
     }
@@ -3283,7 +3284,7 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
   // Second, emit each global that is in a comdat into its own .debug$S
   // section along with its own symbol substream.
   for (const CVGlobalVariable &CVGV : ComdatVariables) {
-    const GlobalVariable *GV = CVGV.GVInfo.get<const GlobalVariable *>();
+    const GlobalVariable *GV = cast<const GlobalVariable *>(CVGV.GVInfo);
     MCSymbol *GVSym = Asm->getSymbol(GV);
     OS.AddComment("Symbol subsection for " +
                   Twine(GlobalValue::dropLLVMManglingEscape(GV->getName())));
@@ -3392,7 +3393,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
           : getFullyQualifiedName(Scope, DIGV->getName());
 
   if (const GlobalVariable *GV =
-          CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
+          dyn_cast_if_present<const GlobalVariable *>(CVGV.GVInfo)) {
     // DataSym record, see SymbolRecord.h for more info. Thread local data
     // happens to have the same format as global data.
     MCSymbol *GVSym = Asm->getSymbol(GV);
@@ -3419,7 +3420,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     emitNullTerminatedSymbolName(OS, QualifiedName, LengthOfDataRecord);
     endSymbolRecord(DataEnd);
   } else {
-    const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
+    const DIExpression *DIE = cast<const DIExpression *>(CVGV.GVInfo);
     assert(DIE->isConstant() &&
            "Global constant variables must contain a constant expression.");
 

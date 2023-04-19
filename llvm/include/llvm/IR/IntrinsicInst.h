@@ -195,29 +195,29 @@ public:
   }
   bool operator==(const location_op_iterator &RHS) const { return I == RHS.I; }
   const Value *operator*() const {
-    ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                               ? I.get<ValueAsMetadata *>()
-                               : *I.get<ValueAsMetadata **>();
+    ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                               ? cast<ValueAsMetadata *>(I)
+                               : *cast<ValueAsMetadata **>(I);
     return VAM->getValue();
   };
   Value *operator*() {
-    ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                               ? I.get<ValueAsMetadata *>()
-                               : *I.get<ValueAsMetadata **>();
+    ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                               ? cast<ValueAsMetadata *>(I)
+                               : *cast<ValueAsMetadata **>(I);
     return VAM->getValue();
   }
   location_op_iterator &operator++() {
-    if (I.is<ValueAsMetadata *>())
-      I = I.get<ValueAsMetadata *>() + 1;
+    if (isa<ValueAsMetadata *>(I))
+      I = cast<ValueAsMetadata *>(I) + 1;
     else
-      I = I.get<ValueAsMetadata **>() + 1;
+      I = cast<ValueAsMetadata **>(I) + 1;
     return *this;
   }
   location_op_iterator &operator--() {
-    if (I.is<ValueAsMetadata *>())
-      I = I.get<ValueAsMetadata *>() - 1;
+    if (isa<ValueAsMetadata *>(I))
+      I = cast<ValueAsMetadata *>(I) - 1;
     else
-      I = I.get<ValueAsMetadata **>() - 1;
+      I = cast<ValueAsMetadata **>(I) - 1;
     return *this;
   }
 };
