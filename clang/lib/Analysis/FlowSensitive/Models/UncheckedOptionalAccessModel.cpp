@@ -18,6 +18,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
@@ -36,16 +37,44 @@
 
 namespace clang {
 namespace dataflow {
+
+static bool isTopLevelNamespaceWithName(const NamespaceDecl &NS,
+                                        llvm::StringRef Name) {
+  return NS.getDeclName().isIdentifier() && NS.getName() == Name &&
+         NS.getParent() != nullptr && NS.getParent()->isTranslationUnit();
+}
+
+static bool hasOptionalClassName(const CXXRecordDecl &RD) {
+  if (!RD.getDeclName().isIdentifier())
+    return false;
+
+  if (RD.getName() == "optional") {
+    if (const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext()))
+      return N->isStdNamespace() || isTopLevelNamespaceWithName(*N, "absl");
+    return false;
+  }
+
+  if (RD.getName() == "Optional") {
+    // Check whether namespace is "::base".
+    const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
+    return N != nullptr && isTopLevelNamespaceWithName(*N, "base");
+  }
+
+  return false;
+}
+
 namespace {
 
 using namespace ::clang::ast_matchers;
 using LatticeTransferState = TransferState<NoopLattice>;
 
+AST_MATCHER(CXXRecordDecl, hasOptionalClassNameMatcher) {
+  return hasOptionalClassName(Node);
+}
+
 DeclarationMatcher optionalClass() {
   return classTemplateSpecializationDecl(
-      hasAnyName("::std::optional", "::std::__optional_storage_base",
-                 "::std::__optional_destruct_base", "::absl::optional",
-                 "::base::Optional"),
+      hasOptionalClassNameMatcher(),
       hasTemplateArgument(0, refersToType(type().bind("T"))));
 }
 
@@ -63,8 +92,10 @@ auto isOptionalMemberCallWithName(
   auto Exception = unless(Ignorable ? expr(anyOf(*Ignorable, cxxThisExpr()))
                                     : cxxThisExpr());
   return cxxMemberCallExpr(
-      on(expr(Exception)),
-      callee(cxxMethodDecl(hasName(MemberName), ofClass(optionalClass()))));
+      on(expr(Exception,
+              anyOf(hasOptionalType(),
+                    hasType(pointerType(pointee(optionalOrAliasType())))))),
+      callee(cxxMethodDecl(hasName(MemberName))));
 }
 
 auto isOptionalOperatorCallWithName(
@@ -251,34 +282,12 @@ QualType stripReference(QualType Type) {
   return Type->isReferenceType() ? Type->getPointeeType() : Type;
 }
 
-bool isTopLevelNamespaceWithName(const NamespaceDecl &NS,
-                                 llvm::StringRef Name) {
-  return NS.getDeclName().isIdentifier() && NS.getName() == Name &&
-         NS.getParent() != nullptr && NS.getParent()->isTranslationUnit();
-}
-
 /// Returns true if and only if `Type` is an optional type.
 bool isOptionalType(QualType Type) {
   if (!Type->isRecordType())
     return false;
   const CXXRecordDecl *D = Type->getAsCXXRecordDecl();
-  if (D == nullptr || !D->getDeclName().isIdentifier())
-    return false;
-  if (D->getName() == "optional") {
-    if (const auto *N =
-        dyn_cast_or_null<NamespaceDecl>(D->getDeclContext()))
-      return N->isStdNamespace() || isTopLevelNamespaceWithName(*N, "absl");
-    return false;
-  }
-
-  if (D->getName() == "Optional") {
-    // Check whether namespace is "::base".
-    const auto *N =
-        dyn_cast_or_null<NamespaceDecl>(D->getDeclContext());
-    return N != nullptr && isTopLevelNamespaceWithName(*N, "base");
-  }
-
-  return false;
+  return D != nullptr && hasOptionalClassName(*D);
 }
 
 /// Returns the number of optional wrappers in `Type`.
