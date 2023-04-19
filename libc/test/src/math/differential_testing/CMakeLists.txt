@@ -57,7 +57,7 @@ function(add_diff_binary target_name)
 
   target_link_libraries(
       ${fq_target_name}
-      PRIVATE ${link_object_files} libc_test_utils libc_diff_test_utils)
+      PRIVATE ${link_object_files} libc_diff_test_utils)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

@@ -204,3 +204,16 @@ void f16() {
 __int128 f17() {
   return __sync_swap(&Ptr, Val);
 }
+
+// Test that a statement expression compiles.
+// CHECK-LABEL: @f18(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[T_ADDR:%.*]] = alloca i128, align 8
+// CHECK-NEXT:    [[T:%.*]] = load i128, ptr [[TMP0:%.*]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i128 [[T]], ptr [[T_ADDR]], align 8, !tbaa [[TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[T_ADDR]], i128 [[T]], i128 [[T]] seq_cst seq_cst, align 16
+// CHECK-NEXT:    ret void
+//
+void f18(__int128 t) {
+  __sync_bool_compare_and_swap(({int x = 1; &t;}), t, t);
+}

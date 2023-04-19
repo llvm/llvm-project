@@ -1,3 +1,4 @@
+get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
 add_startup_object(
   crt1
   SRC
@@ -8,9 +9,8 @@ add_startup_object(
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin
     -nogpulib # Do not include any GPU vendor libraries.
-    -march=${LIBC_GPU_TARGET_ARCHITECTURE}
     --target=${LIBC_GPU_TARGET_TRIPLE}
-    --cuda-path=${LIBC_CUDA_ROOT}
+    ${nvptx_options}
   NO_GPU_BUNDLE # Compile this file directly without special GPU handling.
 )
 get_fq_target_name(crt1 fq_name)

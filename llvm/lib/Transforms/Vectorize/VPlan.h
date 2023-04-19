@@ -2338,8 +2338,8 @@ public:
   VPValue *getVPValue(Value *V, bool OverrideAllowed = false) {
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
-    assert((!Value2VPValue[V]->getDefiningRecipe() || Value2VPValueEnabled ||
-            OverrideAllowed) &&
+    assert((Value2VPValueEnabled || OverrideAllowed ||
+            !Value2VPValue[V]->getDefiningRecipe()) &&
            "Value2VPValue mapping may be out of date!");
     return Value2VPValue[V];
   }

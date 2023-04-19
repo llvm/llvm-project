@@ -169,10 +169,8 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     unsigned newPosRank = std::max<int64_t>(0, oldPosRank - dstDropCount);
     SmallVector<Attribute> newPositions = llvm::to_vector(
         insertOp.getPosition().getValue().take_back(newPosRank));
-    if (srcDropCount >= dstDropCount) {
-      auto zeroAttr = rewriter.getZeroAttr(rewriter.getI64Type());
-      newPositions.resize(newPosRank + srcDropCount, zeroAttr);
-    }
+    newPositions.resize(newDstType.getRank() - newSrcRank,
+                        rewriter.getI64IntegerAttr(0));
 
     auto newInsertOp = rewriter.create<vector::InsertOp>(
         loc, newDstType, newSrcVector, newDstVector,

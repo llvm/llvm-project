@@ -536,7 +536,7 @@ Function *FunctionSpecializer::createSpecialization(Function *F, const SpecSig &
   // Initialize the lattice state of the arguments of the function clone,
   // marking the argument on which we specialized the function constant
   // with the given value.
-  Solver.markArgInFuncSpecialization(Clone, S.Args);
+  Solver.setLatticeValueForSpecializationArguments(Clone, S.Args);
 
   Solver.addArgumentTrackedFunction(Clone);
   Solver.markBlockExecutable(&Clone->front());
@@ -666,16 +666,9 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
   if (A->user_empty())
     return false;
 
-  // For now, don't attempt to specialize functions based on the values of
-  // composite types.
-  Type *ArgTy = A->getType();
-  if (!ArgTy->isSingleValueType())
-    return false;
-
-  // Specialization of integer and floating point types needs to be explicitly
-  // enabled.
-  if (!SpecializeLiteralConstant &&
-      (ArgTy->isIntegerTy() || ArgTy->isFloatingPointTy()))
+  Type *Ty = A->getType();
+  if (!Ty->isPointerTy() && (!SpecializeLiteralConstant ||
+      (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
   // SCCP solver does not record an argument that will be constructed on
@@ -686,21 +679,22 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
   // Check the lattice value and decide if we should attemt to specialize,
   // based on this argument. No point in specialization, if the lattice value
   // is already a constant.
-  const ValueLatticeElement &LV = Solver.getLatticeValueFor(A);
-  if (LV.isUnknownOrUndef() || LV.isConstant() ||
-      (LV.isConstantRange() && LV.getConstantRange().isSingleElement())) {
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Nothing to do, parameter "
-                      << A->getNameOrAsOperand() << " is already constant\n");
-    return false;
-  }
+  bool IsOverdefined = Ty->isStructTy()
+    ? any_of(Solver.getStructLatticeValueFor(A), SCCPSolver::isOverdefined)
+    : SCCPSolver::isOverdefined(Solver.getLatticeValueFor(A));
 
-  LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting parameter "
-                    << A->getNameOrAsOperand() << "\n");
-
-  return true;
+  LLVM_DEBUG(
+    if (IsOverdefined)
+      dbgs() << "FnSpecialization: Found interesting parameter "
+             << A->getNameOrAsOperand() << "\n";
+    else
+      dbgs() << "FnSpecialization: Nothing to do, parameter "
+             << A->getNameOrAsOperand() << " is already constant\n";
+  );
+  return IsOverdefined;
 }
 
-/// Check if the valuy \p V  (an actual argument) is a constant or can only
+/// Check if the value \p V  (an actual argument) is a constant or can only
 /// have a constant value. Return that constant.
 Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
   if (isa<PoisonValue>(V))
@@ -720,18 +714,8 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
   // Select for possible specialisation values that are constants or
   // are deduced to be constants or constant ranges with a single element.
   Constant *C = dyn_cast<Constant>(V);
-  if (!C) {
-    const ValueLatticeElement &LV = Solver.getLatticeValueFor(V);
-    if (LV.isConstant())
-      C = LV.getConstant();
-    else if (LV.isConstantRange() && LV.getConstantRange().isSingleElement()) {
-      assert(V->getType()->isIntegerTy() && "Non-integral constant range");
-      C = Constant::getIntegerValue(V->getType(),
-                                    *LV.getConstantRange().getSingleElement());
-    } else
-      return nullptr;
-  }
-
+  if (!C)
+    C = Solver.getConstantOrNull(V);
   return C;
 }
 

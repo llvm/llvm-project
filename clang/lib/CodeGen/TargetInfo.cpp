@@ -7916,7 +7916,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
     if (isVectorTypeBased(FT->getReturnType().getTypePtr(), /*IsParam*/true))
       return true;
   if (const FunctionProtoType *Proto = Ty->getAs<FunctionProtoType>())
-    for (auto ParamType : Proto->getParamTypes())
+    for (const auto &ParamType : Proto->getParamTypes())
       if (isVectorTypeBased(ParamType.getTypePtr(), /*IsParam*/true))
         return true;
 

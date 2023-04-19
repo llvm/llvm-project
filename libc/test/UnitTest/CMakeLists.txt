@@ -1,29 +1,29 @@
-add_library(
-  TestLogger
-  TestLogger.cpp
-  TestLogger.h
-)
-target_include_directories(TestLogger PUBLIC ${LIBC_SOURCE_DIR})
-add_dependencies(TestLogger
-  libc.src.__support.CPP.string
-  libc.src.__support.CPP.string_view
-  libc.src.__support.OSUtil.osutil
-)
-
-add_library(
-  LibcUnitTest
+set(libc_unit_test_srcs
+  ExecuteFunction.h
   Test.h
   LibcTest.cpp
   LibcTest.h
+  TestLogger.cpp
+  TestLogger.h
 )
+
+if(${LIBC_TARGET_OS} STREQUAL "linux")
+  list(APPEND libc_unit_test_srcs ExecuteFunctionUnix.cpp)
+endif()
+
+add_library(
+  LibcUnitTest
+  ${libc_unit_test_srcs}
+)
+
 target_include_directories(LibcUnitTest PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(
   LibcUnitTest
   libc.src.__support.CPP.string
   libc.src.__support.CPP.string_view
   libc.src.__support.CPP.type_traits
-  libc.src.__support.uint128 TestLogger)
-target_link_libraries(LibcUnitTest PUBLIC libc_test_utils TestLogger)
+  libc.src.__support.OSUtil.osutil
+  libc.src.__support.uint128)
 
 add_library(
   LibcUnitTestMain
@@ -32,31 +32,34 @@ add_library(
 
 target_include_directories(LibcUnitTestMain PUBLIC ${LIBC_SOURCE_DIR})
 add_dependencies(LibcUnitTestMain LibcUnitTest)
-target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest libc_test_utils)
+target_link_libraries(LibcUnitTestMain PUBLIC LibcUnitTest)
 
 add_header_library(
   string_utils
   HDRS
   StringUtils.h
   DEPENDS
-  libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.type_traits
 )
 
 add_library(
   LibcFPTestHelpers
   FPExceptMatcher.cpp
   FPExceptMatcher.h
-  FPMatcher.cpp
   FPMatcher.h
+  RoundingModeUtils.cpp
+  RoundingModeUtils.h
 )
 target_include_directories(LibcFPTestHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcFPTestHelpers LibcUnitTest libc_test_utils)
+target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
   libc.test.UnitTest.string_utils
   libc.src.__support.FPUtil.fp_bits
   libc.src.__support.FPUtil.fenv_impl
+  libc.test.UnitTest.string_utils
 )
 
 add_library(

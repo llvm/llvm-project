@@ -40,8 +40,11 @@ static uint64_t getFirstIntValue(ArrayAttr attr) {
 
 /// Returns the number of bits for the given scalar/vector type.
 static int getNumBits(Type type) {
+  // TODO: This does not take into account any memory layout or widening
+  // constraints. E.g., a vector<3xi57> may report to occupy 3x57=171 bit, even
+  // though in practice it will likely be stored as in a 4xi64 vector register.
   if (auto vectorType = type.dyn_cast<VectorType>())
-    return vectorType.cast<ShapedType>().getSizeInBits();
+    return vectorType.getNumElements() * vectorType.getElementTypeBitWidth();
   return type.getIntOrFloatBitWidth();
 }
 
@@ -457,8 +460,8 @@ struct VectorReductionToDotProd final : OpRewritePattern<vector::ReductionOp> {
       return rewriter.notifyMatchFailure(op, "unsupported integer bitwidth");
 
     VectorType inVecTy = op.getSourceVectorType();
-    if (inVecTy.getNumElements() != 4 || inVecTy.getShape().size() != 1 ||
-        inVecTy.isScalable())
+    if (!llvm::is_contained({4, 3}, inVecTy.getNumElements()) ||
+        inVecTy.getShape().size() != 1 || inVecTy.isScalable())
       return rewriter.notifyMatchFailure(op, "unsupported vector shape");
 
     auto mul = op.getVector().getDefiningOp<arith::MulIOp>();
@@ -491,15 +494,31 @@ private:
   static LogicalResult handleCase(vector::ReductionOp op, arith::MulIOp mul,
                                   PatternRewriter &rewriter) {
     auto lhs = mul.getLhs().getDefiningOp<LhsExtensionOp>();
-    if (!lhs || !getElementTypeOrSelf(lhs.getIn().getType()).isInteger(8))
+    if (!lhs)
+      return failure();
+    Value lhsIn = lhs.getIn();
+    auto lhsInType = cast<VectorType>(lhsIn.getType());
+    if (!lhsInType.getElementType().isInteger(8))
       return failure();
 
     auto rhs = mul.getRhs().getDefiningOp<RhsExtensionOp>();
-    if (!rhs || !getElementTypeOrSelf(rhs.getIn().getType()).isInteger(8))
+    if (!rhs)
+      return failure();
+    Value rhsIn = rhs.getIn();
+    auto rhsInType = cast<VectorType>(rhsIn.getType());
+    if (!rhsInType.getElementType().isInteger(8))
       return failure();
 
-    Value lhsIn = lhs.getIn();
-    Value rhsIn = rhs.getIn();
+    if (op.getSourceVectorType().getNumElements() == 3) {
+      IntegerType i8Type = rewriter.getI8Type();
+      auto v4i8Type = VectorType::get({4}, i8Type);
+      Location loc = op.getLoc();
+      Value zero = spirv::ConstantOp::getZero(i8Type, loc, rewriter);
+      lhsIn = rewriter.create<spirv::CompositeConstructOp>(
+          loc, v4i8Type, ValueRange{lhsIn, zero});
+      rhsIn = rewriter.create<spirv::CompositeConstructOp>(
+          loc, v4i8Type, ValueRange{rhsIn, zero});
+    }
 
     // There's no variant of dot prod ops for unsigned LHS and signed RHS, so
     // we have to swap operands instead in that case.

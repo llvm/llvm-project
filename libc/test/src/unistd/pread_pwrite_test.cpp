@@ -16,7 +16,6 @@
 #include "src/unistd/write.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   // The strategy here is that we first create a file and write to it. Next,

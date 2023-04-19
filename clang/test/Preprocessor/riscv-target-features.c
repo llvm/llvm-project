@@ -518,12 +518,12 @@
 // CHECK-ZIFENCEI-EXT: __riscv_zifencei 2000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv32izfa0p1 -x c -E -dM %s \
+// RUN: -march=rv32izfa0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
 // RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv64izfa0p1 -x c -E -dM %s \
+// RUN: -march=rv64izfa0p2 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFA-EXT %s
-// CHECK-ZFA-EXT: __riscv_zfa 1000{{$}}
+// CHECK-ZFA-EXT: __riscv_zfa 2000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zve64x_zvkb0p3 -x c -E -dM %s \

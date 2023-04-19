@@ -154,7 +154,7 @@ public:
   bool UseBigObj;
   bool UseOffsetLabels = false;
 
-  MCSectionCOFF *AddrsigSection;
+  MCSectionCOFF *AddrsigSection = nullptr;
 
   MCSectionCOFF *CGProfileSection = nullptr;
 
@@ -414,9 +414,9 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
     Sym->Aux.resize(1);
     memset(&Sym->Aux[0], 0, sizeof(Sym->Aux[0]));
     Sym->Aux[0].AuxType = ATWeakExternal;
-    Sym->Aux[0].Aux.WeakExternal.TagIndex = 0;
+    Sym->Aux[0].Aux.WeakExternal.TagIndex = 0; // Filled in later
     Sym->Aux[0].Aux.WeakExternal.Characteristics =
-        COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS;
+        cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics();
   } else {
     if (!Base)
       Sym->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;

@@ -10,17 +10,18 @@
 //
 // Thread-related code.
 //===----------------------------------------------------------------------===//
+#include "asan_thread.h"
+
 #include "asan_allocator.h"
 #include "asan_interceptors.h"
+#include "asan_mapping.h"
 #include "asan_poisoning.h"
 #include "asan_stack.h"
-#include "asan_thread.h"
-#include "asan_mapping.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
-#include "lsan/lsan_common.h"
 
 namespace __asan {
 

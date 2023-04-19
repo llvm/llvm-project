@@ -7,7 +7,9 @@
 // =============================================================================
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -20,6 +22,8 @@ using namespace mlir;
 using namespace acc;
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // OpenACC operations
@@ -34,6 +38,161 @@ void OpenACCDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc"
       >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
+      >();
+
+  // By attaching interfaces here, we make the OpenACC dialect dependent on
+  // the other dialects. This is probably better than having dialects like LLVM
+  // and memref be dependent on OpenACC.
+  LLVM::LLVMPointerType::attachInterface<PointerLikeType>(*getContext());
+  MemRefType::attachInterface<PointerLikeType>(*getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// DataBoundsOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DataBoundsOp::verify() {
+  auto extent = getExtent();
+  auto upperbound = getUpperbound();
+  if (!extent && !upperbound) {
+    return emitError("expected extent or upperbound.");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DevicePtrOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DevicePtrOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_deviceptr) {
+    return emitError("data clause associated with deviceptr operation must "
+                     "match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PresentOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::PresentOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_present) {
+    return emitError(
+        "data clause associated with present operation must match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyinOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CopyinOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_copyin &&
+      getDataClause() != acc::DataClause::acc_copyin_readonly) {
+    return emitError(
+        "data clause associated with copyin operation must match its intent");
+  }
+  return success();
+}
+
+bool acc::CopyinOp::isCopyinReadonly() {
+  return getDataClause() == acc::DataClause::acc_copyin_readonly;
+}
+
+//===----------------------------------------------------------------------===//
+// CreateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CreateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_create &&
+      getDataClause() != acc::DataClause::acc_create_zero) {
+    return emitError(
+        "data clause associated with create operation must match its intent");
+  }
+  return success();
+}
+
+bool acc::CreateOp::isCreateZero() {
+  return getDataClause() == acc::DataClause::acc_create_zero;
+}
+
+//===----------------------------------------------------------------------===//
+// NoCreateOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::NoCreateOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_no_create) {
+    return emitError("data clause associated with no_create operation must "
+                     "match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AttachOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::AttachOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_attach) {
+    return emitError(
+        "data clause associated with attach operation must match its intent");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetDevicePtrOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::GetDevicePtrOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_getdeviceptr) {
+    return emitError("getDevicePtr mismatch");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CopyoutOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::CopyoutOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_copyout &&
+      getDataClause() != acc::DataClause::acc_copyout_zero) {
+    return emitError(
+        "data clause associated with copyout operation must match its intent");
+  }
+  if (!getVarPtr() || !getAccPtr()) {
+    return emitError("must have both host and device pointers");
+  }
+  return success();
+}
+
+bool acc::CopyoutOp::isCopyoutZero() {
+  return getDataClause() == acc::DataClause::acc_copyout_zero;
+}
+
+//===----------------------------------------------------------------------===//
+// DeleteOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DeleteOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_delete) {
+    return emitError(
+        "data clause associated with delete operation must match its intent");
+  }
+  if (!getVarPtr() && !getAccPtr()) {
+    return emitError("must have either host or device pointer");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DetachOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::DetachOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_detach) {
+    return emitError(
+        "data clause associated with detach operation must match its intent");
+  }
+  if (!getVarPtr() && !getAccPtr()) {
+    return emitError("must have either host or device pointer");
+  }
+  return success();
 }
 
 template <typename StructureOp>
@@ -50,85 +209,6 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
   }
 
   return success();
-}
-
-static ParseResult
-parseOperandList(OpAsmParser &parser, StringRef keyword,
-                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &args,
-                 SmallVectorImpl<Type> &argTypes, OperationState &result) {
-  if (failed(parser.parseOptionalKeyword(keyword)))
-    return success();
-
-  if (failed(parser.parseLParen()))
-    return failure();
-
-  // Exit early if the list is empty.
-  if (succeeded(parser.parseOptionalRParen()))
-    return success();
-
-  if (failed(parser.parseCommaSeparatedList([&]() {
-        OpAsmParser::UnresolvedOperand arg;
-        Type type;
-
-        if (parser.parseOperand(arg, /*allowResultNumber=*/false) ||
-            parser.parseColonType(type))
-          return failure();
-
-        args.push_back(arg);
-        argTypes.push_back(type);
-        return success();
-      })) ||
-      failed(parser.parseRParen()))
-    return failure();
-
-  return parser.resolveOperands(args, argTypes, parser.getCurrentLocation(),
-                                result.operands);
-}
-
-static void printOperandList(Operation::operand_range operands,
-                             StringRef listName, OpAsmPrinter &printer) {
-
-  if (!operands.empty()) {
-    printer << " " << listName << "(";
-    llvm::interleaveComma(operands, printer, [&](Value op) {
-      printer << op << ": " << op.getType();
-    });
-    printer << ")";
-  }
-}
-
-static ParseResult parseOperandAndType(OpAsmParser &parser,
-                                       OperationState &result) {
-  OpAsmParser::UnresolvedOperand operand;
-  Type type;
-  if (parser.parseOperand(operand) || parser.parseColonType(type) ||
-      parser.resolveOperand(operand, type, result.operands))
-    return failure();
-  return success();
-}
-
-/// Parse optional operand and its type wrapped in parenthesis.
-/// Example:
-///   `(` %vectorLength: i64 `)`
-static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
-                                                       OperationState &result) {
-  if (succeeded(parser.parseOptionalLParen())) {
-    return failure(parseOperandAndType(parser, result) || parser.parseRParen());
-  }
-  return std::nullopt;
-}
-
-/// Parse optional operand with its type prefixed with prefixKeyword `=`.
-/// Example:
-///   num=%gangNum: i32
-static OptionalParseResult parserOptionalOperandAndTypeWithPrefix(
-    OpAsmParser &parser, OperationState &result, StringRef prefixKeyword) {
-  if (succeeded(parser.parseOptionalKeyword(prefixKeyword))) {
-    if (parser.parseEqual() || parseOperandAndType(parser, result))
-      return failure();
-    return success();
-  }
-  return std::nullopt;
 }
 
 static bool isComputeOperation(Operation *op) {
@@ -174,7 +254,8 @@ unsigned ParallelOp::getNumDataOperands() {
          getCreateOperands().size() + getCreateZeroOperands().size() +
          getNoCreateOperands().size() + getPresentOperands().size() +
          getDevicePtrOperands().size() + getAttachOperands().size() +
-         getGangPrivateOperands().size() + getGangFirstPrivateOperands().size();
+         getGangPrivateOperands().size() +
+         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value ParallelOp::getDataOperand(unsigned i) {
@@ -198,7 +279,8 @@ unsigned SerialOp::getNumDataOperands() {
          getCreateOperands().size() + getCreateZeroOperands().size() +
          getNoCreateOperands().size() + getPresentOperands().size() +
          getDevicePtrOperands().size() + getAttachOperands().size() +
-         getGangPrivateOperands().size() + getGangFirstPrivateOperands().size();
+         getGangPrivateOperands().size() +
+         getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
 }
 
 Value SerialOp::getDataOperand(unsigned i) {
@@ -218,7 +300,7 @@ unsigned KernelsOp::getNumDataOperands() {
          getCopyoutZeroOperands().size() + getCreateOperands().size() +
          getCreateZeroOperands().size() + getNoCreateOperands().size() +
          getPresentOperands().size() + getDevicePtrOperands().size() +
-         getAttachOperands().size();
+         getAttachOperands().size() + getDataClauseOperands().size();
 }
 
 Value KernelsOp::getDataOperand(unsigned i) {
@@ -232,180 +314,114 @@ Value KernelsOp::getDataOperand(unsigned i) {
 // LoopOp
 //===----------------------------------------------------------------------===//
 
-/// Parse acc.loop operation
-/// operation := `acc.loop`
-///              (`gang` ( `(` (`num=` value)? (`,` `static=` value `)`)? )? )?
-///              (`vector` ( `(` value `)` )? )? (`worker` (`(` value `)`)? )?
-///              (`vector_length` `(` value `)`)?
-///              (`tile` `(` value-list `)`)?
-///              (`private` `(` value-list `)`)?
-///              (`reduction` `(` value-list `)`)?
-///              region attr-dict?
-ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
-  Builder &builder = parser.getBuilder();
-  unsigned executionMapping = OpenACCExecMapping::NONE;
-  SmallVector<Type, 8> operandTypes;
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> privateOperands,
-      reductionOperands;
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> tileOperands;
-  OptionalParseResult gangNum, gangStatic, worker, vector;
-
-  // gang?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangKeyword())))
-    executionMapping |= OpenACCExecMapping::GANG;
-
-  // optional gang operand
+static ParseResult
+parseGangClause(OpAsmParser &parser,
+                std::optional<OpAsmParser::UnresolvedOperand> &gangNum,
+                Type &gangNumType,
+                std::optional<OpAsmParser::UnresolvedOperand> &gangStatic,
+                Type &gangStaticType, UnitAttr &hasGang) {
+  hasGang = UnitAttr::get(parser.getBuilder().getContext());
+  // optional gang operands
   if (succeeded(parser.parseOptionalLParen())) {
-    gangNum = parserOptionalOperandAndTypeWithPrefix(
-        parser, result, LoopOp::getGangNumKeyword());
-    if (gangNum.has_value() && failed(*gangNum))
-      return failure();
+    if (succeeded(parser.parseOptionalKeyword(LoopOp::getGangNumKeyword()))) {
+      if (parser.parseEqual())
+        return failure();
+      gangNum = OpAsmParser::UnresolvedOperand{};
+      if (parser.parseOperand(*gangNum) || parser.parseColonType(gangNumType))
+        return failure();
+    } else {
+      gangNum = std::nullopt;
+    }
     // FIXME: Comma should require subsequent operands.
     (void)parser.parseOptionalComma();
-    gangStatic = parserOptionalOperandAndTypeWithPrefix(
-        parser, result, LoopOp::getGangStaticKeyword());
-    if (gangStatic.has_value() && failed(*gangStatic))
-      return failure();
+    if (succeeded(
+            parser.parseOptionalKeyword(LoopOp::getGangStaticKeyword()))) {
+      gangStatic = OpAsmParser::UnresolvedOperand{};
+      if (parser.parseEqual())
+        return failure();
+      gangStatic = OpAsmParser::UnresolvedOperand{};
+      if (parser.parseOperand(*gangStatic) ||
+          parser.parseColonType(gangStaticType))
+        return failure();
+    }
     // FIXME: Why allow optional last commas?
     (void)parser.parseOptionalComma();
     if (failed(parser.parseRParen()))
       return failure();
   }
-
-  // worker?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getWorkerKeyword())))
-    executionMapping |= OpenACCExecMapping::WORKER;
-
-  // optional worker operand
-  worker = parseOptionalOperandAndType(parser, result);
-  if (worker.has_value() && failed(*worker))
-    return failure();
-
-  // vector?
-  if (succeeded(parser.parseOptionalKeyword(LoopOp::getVectorKeyword())))
-    executionMapping |= OpenACCExecMapping::VECTOR;
-
-  // optional vector operand
-  vector = parseOptionalOperandAndType(parser, result);
-  if (vector.has_value() && failed(*vector))
-    return failure();
-
-  // tile()?
-  if (failed(parseOperandList(parser, LoopOp::getTileKeyword(), tileOperands,
-                              operandTypes, result)))
-    return failure();
-
-  // private()?
-  if (failed(parseOperandList(parser, LoopOp::getPrivateKeyword(),
-                              privateOperands, operandTypes, result)))
-    return failure();
-
-  // reduction()?
-  if (failed(parseOperandList(parser, LoopOp::getReductionKeyword(),
-                              reductionOperands, operandTypes, result)))
-    return failure();
-
-  if (executionMapping != acc::OpenACCExecMapping::NONE)
-    result.addAttribute(LoopOp::getExecutionMappingAttrStrName(),
-                        builder.getI64IntegerAttr(executionMapping));
-
-  // Parse optional results in case there is a reduce.
-  if (parser.parseOptionalArrowTypeList(result.types))
-    return failure();
-
-  if (failed(parseRegions<LoopOp>(parser, result)))
-    return failure();
-
-  result.addAttribute(LoopOp::getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(
-                          {static_cast<int32_t>(gangNum.has_value() ? 1 : 0),
-                           static_cast<int32_t>(gangStatic.has_value() ? 1 : 0),
-                           static_cast<int32_t>(worker.has_value() ? 1 : 0),
-                           static_cast<int32_t>(vector.has_value() ? 1 : 0),
-                           static_cast<int32_t>(tileOperands.size()),
-                           static_cast<int32_t>(privateOperands.size()),
-                           static_cast<int32_t>(reductionOperands.size())}));
-
-  if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
-    return failure();
-
   return success();
 }
 
-void LoopOp::print(OpAsmPrinter &printer) {
-  unsigned execMapping = getExecMapping();
-  if (execMapping & OpenACCExecMapping::GANG) {
-    printer << " " << LoopOp::getGangKeyword();
-    Value gangNum = getGangNum();
-    Value gangStatic = getGangStatic();
-
-    // Print optional gang operands
-    if (gangNum || gangStatic) {
-      printer << "(";
-      if (gangNum) {
-        printer << LoopOp::getGangNumKeyword() << "=" << gangNum << ": "
-                << gangNum.getType();
-        if (gangStatic)
-          printer << ", ";
-      }
+void printGangClause(OpAsmPrinter &p, Operation *op, Value gangNum,
+                     Type gangNumType, Value gangStatic, Type gangStaticType,
+                     UnitAttr hasGang) {
+  if (gangNum || gangStatic) {
+    p << "(";
+    if (gangNum) {
+      p << LoopOp::getGangNumKeyword() << "=" << gangNum << " : "
+        << gangNumType;
       if (gangStatic)
-        printer << LoopOp::getGangStaticKeyword() << "=" << gangStatic << ": "
-                << gangStatic.getType();
-      printer << ")";
+        p << ", ";
     }
+    if (gangStatic)
+      p << LoopOp::getGangStaticKeyword() << "=" << gangStatic << " : "
+        << gangStaticType;
+    p << ")";
   }
+}
 
-  if (execMapping & OpenACCExecMapping::WORKER) {
-    printer << " " << LoopOp::getWorkerKeyword();
-
-    // Print optional worker operand if present
-    if (Value workerNum = getWorkerNum())
-      printer << "(" << workerNum << ": " << workerNum.getType() << ")";
+static ParseResult
+parseWorkerClause(OpAsmParser &parser,
+                  std::optional<OpAsmParser::UnresolvedOperand> &workerNum,
+                  Type &workerNumType, UnitAttr &hasWorker) {
+  hasWorker = UnitAttr::get(parser.getBuilder().getContext());
+  if (succeeded(parser.parseOptionalLParen())) {
+    workerNum = OpAsmParser::UnresolvedOperand{};
+    if (parser.parseOperand(*workerNum) ||
+        parser.parseColonType(workerNumType) || parser.parseRParen())
+      return failure();
   }
+  return success();
+}
 
-  if (execMapping & OpenACCExecMapping::VECTOR) {
-    printer << " " << LoopOp::getVectorKeyword();
+void printWorkerClause(OpAsmPrinter &p, Operation *op, Value workerNum,
+                       Type workerNumType, UnitAttr hasWorker) {
+  if (workerNum)
+    p << "(" << workerNum << " : " << workerNumType << ")";
+}
 
-    // Print optional vector operand if present
-    if (Value vectorLength = this->getVectorLength())
-      printer << "(" << vectorLength << ": " << vectorLength.getType() << ")";
+static ParseResult
+parseVectorClause(OpAsmParser &parser,
+                  std::optional<OpAsmParser::UnresolvedOperand> &vectorLength,
+                  Type &vectorLengthType, UnitAttr &hasVector) {
+  hasVector = UnitAttr::get(parser.getBuilder().getContext());
+  if (succeeded(parser.parseOptionalLParen())) {
+    vectorLength = OpAsmParser::UnresolvedOperand{};
+    if (parser.parseOperand(*vectorLength) ||
+        parser.parseColonType(vectorLengthType) || parser.parseRParen())
+      return failure();
   }
+  return success();
+}
 
-  // tile()?
-  printOperandList(getTileOperands(), LoopOp::getTileKeyword(), printer);
-
-  // private()?
-  printOperandList(getPrivateOperands(), LoopOp::getPrivateKeyword(), printer);
-
-  // reduction()?
-  printOperandList(getReductionOperands(), LoopOp::getReductionKeyword(),
-                   printer);
-
-  if (getNumResults() > 0)
-    printer << " -> (" << getResultTypes() << ")";
-
-  printer << ' ';
-  printer.printRegion(getRegion(),
-                      /*printEntryBlockArgs=*/false,
-                      /*printBlockTerminators=*/true);
-
-  printer.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(), {LoopOp::getExecutionMappingAttrStrName(),
-                            LoopOp::getOperandSegmentSizeAttr()});
+void printVectorClause(OpAsmPrinter &p, Operation *op, Value vectorLength,
+                       Type vectorLengthType, UnitAttr hasVector) {
+  if (vectorLength)
+    p << "(" << vectorLength << " : " << vectorLengthType << ")";
 }
 
 LogicalResult acc::LoopOp::verify() {
   // auto, independent and seq attribute are mutually exclusive.
   if ((getAuto_() && (getIndependent() || getSeq())) ||
       (getIndependent() && getSeq())) {
-    return emitError("only one of " + acc::LoopOp::getAutoAttrStrName() + ", " +
-                     acc::LoopOp::getIndependentAttrStrName() + ", " +
-                     acc::LoopOp::getSeqAttrStrName() +
-                     " can be present at the same time");
+    return emitError() << "only one of \"" << acc::LoopOp::getAutoAttrStrName()
+                       << "\", " << getIndependentAttrName() << ", "
+                       << getSeqAttrName()
+                       << " can be present at the same time";
   }
 
   // Gang, worker and vector are incompatible with seq.
-  if (getSeq() && getExecMapping() != OpenACCExecMapping::NONE)
+  if (getSeq() && (getHasGang() || getHasWorker() || getHasVector()))
     return emitError("gang, worker or vector cannot appear with the seq attr");
 
   // Check non-empty body().
@@ -435,7 +451,7 @@ unsigned DataOp::getNumDataOperands() {
          getCopyoutZeroOperands().size() + getCreateOperands().size() +
          getCreateZeroOperands().size() + getNoCreateOperands().size() +
          getPresentOperands().size() + getDeviceptrOperands().size() +
-         getAttachOperands().size();
+         getAttachOperands().size() + getDataClauseOperands().size();
 }
 
 Value DataOp::getDataOperand(unsigned i) {
@@ -452,7 +468,7 @@ LogicalResult acc::ExitDataOp::verify() {
   // At least one copyout, delete, or detach clause must appear on an exit data
   // directive.
   if (getCopyoutOperands().empty() && getDeleteOperands().empty() &&
-      getDetachOperands().empty())
+      getDetachOperands().empty() && getDataClauseOperands().empty())
     return emitError(
         "at least one operand in copyout, delete or detach must appear on the "
         "exit data operation");
@@ -475,7 +491,7 @@ LogicalResult acc::ExitDataOp::verify() {
 
 unsigned ExitDataOp::getNumDataOperands() {
   return getCopyoutOperands().size() + getDeleteOperands().size() +
-         getDetachOperands().size();
+         getDetachOperands().size() + getDataClauseOperands().size();
 }
 
 Value ExitDataOp::getDataOperand(unsigned i) {
@@ -499,7 +515,8 @@ LogicalResult acc::EnterDataOp::verify() {
   // At least one copyin, create, or attach clause must appear on an enter data
   // directive.
   if (getCopyinOperands().empty() && getCreateOperands().empty() &&
-      getCreateZeroOperands().empty() && getAttachOperands().empty())
+      getCreateZeroOperands().empty() && getAttachOperands().empty() &&
+      getDataClauseOperands().empty())
     return emitError(
         "at least one operand in copyin, create, "
         "create_zero or attach must appear on the enter data operation");
@@ -522,7 +539,8 @@ LogicalResult acc::EnterDataOp::verify() {
 
 unsigned EnterDataOp::getNumDataOperands() {
   return getCopyinOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getAttachOperands().size();
+         getCreateZeroOperands().size() + getAttachOperands().size() +
+         getDataClauseOperands().size();
 }
 
 Value EnterDataOp::getDataOperand(unsigned i) {
@@ -625,3 +643,6 @@ LogicalResult acc::WaitOp::verify() {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"

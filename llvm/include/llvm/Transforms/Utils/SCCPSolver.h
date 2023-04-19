@@ -168,17 +168,18 @@ public:
   /// range with a single element.
   Constant *getConstant(const ValueLatticeElement &LV) const;
 
+  /// Return either a Constant or nullptr for a given Value.
+  Constant *getConstantOrNull(Value *V) const;
+
   /// Return a reference to the set of argument tracked functions.
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions();
 
-  /// Mark the constant arguments of a new function specialization. \p F points
-  /// to the cloned function and \p Args contains a list of constant arguments
-  /// represented as pairs of {formal,actual} values (the formal argument is
-  /// associated with the original function definition). All other arguments of
-  /// the specialization inherit the lattice state of their corresponding values
-  /// in the original function.
-  void markArgInFuncSpecialization(Function *F,
-                                   const SmallVectorImpl<ArgInfo> &Args);
+  /// Set the Lattice Value for the arguments of a specialization \p F.
+  /// If an argument is Constant then its lattice value is marked with the
+  /// corresponding actual argument in \p Args. Otherwise, its lattice value
+  /// is inherited (copied) from the corresponding formal argument in \p Args.
+  void setLatticeValueForSpecializationArguments(Function *F,
+                                       const SmallVectorImpl<ArgInfo> &Args);
 
   /// Mark all of the blocks in function \p F non-executable. Clients can used
   /// this method to erase a function from the module (e.g., if it has been

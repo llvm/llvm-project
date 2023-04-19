@@ -35,13 +35,10 @@ bool BasicBlockSectionsProfileReader::isFunctionHot(StringRef FuncName) const {
 std::pair<bool, SmallVector<BBClusterInfo>>
 BasicBlockSectionsProfileReader::getBBClusterInfoForFunction(
     StringRef FuncName) const {
-  std::pair<bool, SmallVector<BBClusterInfo>> cluster_info(false, {});
   auto R = ProgramBBClusterInfo.find(getAliasName(FuncName));
-  if (R != ProgramBBClusterInfo.end()) {
-    cluster_info.second = R->second;
-    cluster_info.first = true;
-  }
-  return cluster_info;
+  return R != ProgramBBClusterInfo.end()
+             ? std::pair(true, R->second)
+             : std::pair(false, SmallVector<BBClusterInfo>{});
 }
 
 // Basic Block Sections can be enabled for a subset of machine basic blocks.

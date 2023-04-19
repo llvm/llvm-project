@@ -26,7 +26,14 @@ static void populateDialectSparseTensorSubmodule(const py::module &m) {
       .value("singleton", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON)
       .value("singleton-nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU)
       .value("singleton-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO)
-      .value("singleton-nu-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO);
+      .value("singleton-nu-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO)
+      .value("compressed-hi", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI)
+      .value("compressed-hi-nu",
+             MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NU)
+      .value("compressed-hi-no",
+             MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NO)
+      .value("compressed-hi-nu-no",
+             MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_WITH_HI_NU_NO);
 
   mlir_attribute_subclass(m, "EncodingAttr",
                           mlirAttributeIsASparseTensorEncodingAttr)

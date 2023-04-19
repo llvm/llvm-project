@@ -15,6 +15,13 @@
 #define ZXTEST_USE_STREAMABLE_MACROS
 #include <zxtest/zxtest.h>
 namespace testing = zxtest;
+// zxtest defines a different ASSERT_DEATH, taking a lambda and an error message
+// if death didn't occur, versus gtest taking a statement and a string to search
+// for in the dying process. zxtest doesn't define an EXPECT_DEATH, so we use
+// that in the tests below (which works as intended for gtest), and we define
+// EXPECT_DEATH as a wrapper for zxtest's ASSERT_DEATH. Note that zxtest drops
+// the functionality for checking for a particular message in death.
+#define EXPECT_DEATH(X, Y) ASSERT_DEATH(([&] { X; }), "")
 #else
 #include "gtest/gtest.h"
 #endif

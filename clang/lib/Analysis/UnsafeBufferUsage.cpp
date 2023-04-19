@@ -645,6 +645,7 @@ class DeclUseTracker {
 public:
   DeclUseTracker() = default;
   DeclUseTracker(const DeclUseTracker &) = delete; // Let's avoid copies.
+  DeclUseTracker &operator=(const DeclUseTracker &) = delete;
   DeclUseTracker(DeclUseTracker &&) = default;
   DeclUseTracker &operator=(DeclUseTracker &&) = default;
 

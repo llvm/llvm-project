@@ -116,11 +116,7 @@ define <2 x i32> @ctpop_lshr_intmin_intmin_plus1_vec_nz(<2 x i32> %x) {
 
 define <2 x i32> @ctpop_shl2_1_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl2_1_vec_nz(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 15>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 2, i32 1>, [[AND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[SHL]], zeroinitializer
-; CHECK-NEXT:    [[CNT:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
 ;
   %and = and <2 x i32> %x, <i32 15 ,i32 15>
   %shl = shl <2 x i32> <i32 2 ,i32 1>, %and

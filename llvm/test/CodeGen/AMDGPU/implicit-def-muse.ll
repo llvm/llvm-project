@@ -7,9 +7,9 @@
 ; CHECK-NOT: COPY [[IMPDEF0]]
 ; CHECK-NOT: COPY [[IMPDEF1]]
 ; CHECK: .false:
-define <2 x float> @vcopy_i1_undef(ptr addrspace(1) %p) {
+define <2 x float> @vcopy_i1_undef(ptr addrspace(1) %p, i1 %c0) {
 entry:
-  br i1 undef, label %exit, label %false
+  br i1 %c0, label %exit, label %false
 
 false:
   %x = load <2 x float>, ptr addrspace(1) %p

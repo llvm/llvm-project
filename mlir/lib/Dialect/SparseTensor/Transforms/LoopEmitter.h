@@ -264,6 +264,9 @@ private:
     unsigned depth; // the depth (relative to dependentDimMap[tid][lvl]).
   };
 
+  using LoopBodyBuilder = llvm::function_ref<void(OpBuilder &, Location, Value,
+                                                  MutableArrayRef<Value>)>;
+
   /// Linearizes address for dense dimension (i.e., p = (i * d0) + j).
   Value genAddress(OpBuilder &builder, Location loc, TensorId tid, Level lvl,
                    Value iv);
@@ -318,11 +321,13 @@ private:
                                             ArrayRef<TensorId> tids,
                                             ArrayRef<Level> lvls);
 
-  /// Emits a for loop to iterate over a dense level, or a sparse level that has
-  /// not been sliced.
+  /// Emits a for loop to iterate over a tensor level with the provided lower
+  /// bound `lo` and upper bound `hi`.
+  /// Apart from iterating just single tensor level, for loops can be used for
+  /// slice-driven loop on dense level too.
   Operation *emitForLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
-                                        TensorId tid, Level lvl,
-                                        MutableArrayRef<Value> reduc,
+                                        TensorId tid, Level lvl, Value lo,
+                                        Value hi, MutableArrayRef<Value> reduc,
                                         bool isParallel);
 
   /// Emits a while loop to iterate over a sparse level that has been sliced.
@@ -405,9 +410,16 @@ private:
 
   /// Retrieves the most recent slice on lvl. To reduce affine expression like
   /// d0 + d1 + d2, we need two slices (one of size d1 + d2, and the other of
-  /// size d2). This methods returns the latter slice (of size d2), which is
-  /// also the final slice on the level.
-  const SliceInfo &getFinalSliceOnLvl(TensorId tid, Level lvl);
+  /// size d2). This methods returns the latter slice (of size d2).
+  const SliceInfo &getMostRecentSliceOnLvl(TensorId tid, Level lvl);
+
+  /// Similar to getMostRecentSliceOnLvl, but yields error when the most recent
+  /// slice is not the final slice needed to fully reduced the dependencies.
+  const SliceInfo &getFinalSliceOnLvl(TensorId tid, Level lvl) {
+    const SliceInfo &info = getMostRecentSliceOnLvl(tid, lvl);
+    assert(info.depth == dependentLvlMap[tid][lvl].size() - 1);
+    return info;
+  }
 
   /// Get the remaining number of constraints needed to fully *resolve*
   /// dependent levels on tensor[tid].
@@ -436,18 +448,15 @@ private:
   genSliceLvlTraverseLoop(OpBuilder &builder, Location loc, Value pLo,
                           Value pHi, Value offset, Value size, TensorId tid,
                           Level lvl, ValueRange userReduc, bool genYield,
-                          /*bodyBuilder=*/
-                          llvm::function_ref<void(OpBuilder &, Location, Value,
-                                                  MutableArrayRef<Value>)>);
+                          LoopBodyBuilder bodyBuilder);
 
   /// Generates a nested loop that iterates over tid on all the coordinates on
   /// lvl.
   ValueRange genUnResolvedSliceTreeTraverse(
-      OpBuilder &builder, Location loc, Value offset, TensorId tid, Level lvl,
-      size_t depth, ValueRange userReduc,
-      /*bodyBody=*/
-      llvm::function_ref<void(OpBuilder &, Location, Value,
-                              MutableArrayRef<Value>)>);
+      OpBuilder &builder, Location loc, TensorId tid,
+      ArrayRef<const SliceInfo *> unResLvls,
+      std::optional<std::pair<TensorId, Level>> firstResLvl,
+      ValueRange userReduc, LoopBodyBuilder bodyBuilder);
 
   /// Generates code to get the first non-empty slice of tid on lvl, when all
   /// the previous level before `lvl` are resolved (or lvl is the first level).
@@ -465,6 +474,11 @@ private:
   void genUnResolvedSliceBegin(OpBuilder &builder, Location loc, TensorId tid,
                                Level lvl);
 
+  /// Invalidates the index kept in slice postion buffers (by setting it to
+  /// zero).
+  /// TODO: We should instead use an SSA value for the index.
+  void invalidateSliceIterIdx(OpBuilder &builder, Location loc, TensorId tid,
+                              Level lvl);
   /// Generates code to get the first non-empty slice of tid on lvl.
   /// return true if has already been resolved.
   bool genSliceBegin(OpBuilder &builder, Location loc, TensorId tid, Level lvl);

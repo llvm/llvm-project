@@ -62,6 +62,7 @@ std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
 std::unique_ptr<mlir::Pass> createStackArraysPass();
 std::unique_ptr<mlir::Pass> createSimplifyIntrinsicsPass();
 std::unique_ptr<mlir::Pass> createAddDebugFoundationPass();
+std::unique_ptr<mlir::Pass> createLoopVersioningPass();
 
 std::unique_ptr<mlir::Pass>
 createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);

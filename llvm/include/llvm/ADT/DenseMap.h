@@ -464,7 +464,7 @@ protected:
   }
 
   static const KeyT getEmptyKey() {
-    static_assert(std::is_base_of_v<DenseMapBase, DerivedT>,
+    static_assert(std::is_base_of<DenseMapBase, DerivedT>::value,
                   "Must pass the derived type to this template!");
     return KeyInfoT::getEmptyKey();
   }
