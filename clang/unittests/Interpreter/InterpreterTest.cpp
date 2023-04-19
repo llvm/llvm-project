@@ -225,7 +225,7 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
 
   std::string MangledName = MangleName(FD);
   auto Addr = cantFail(Interp->getSymbolAddress(MangledName));
-  EXPECT_NE(0U, Addr);
+  EXPECT_NE(0U, Addr.getValue());
   GlobalDecl GD(FD);
   EXPECT_EQ(Addr, cantFail(Interp->getSymbolAddress(GD)));
 }
@@ -309,7 +309,8 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
 
   std::string MangledName = MangleName(TmpltSpec);
   typedef int (*TemplateSpecFn)(void *);
-  auto fn = (TemplateSpecFn)cantFail(Interp->getSymbolAddress(MangledName));
+  auto fn =
+      cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
   EXPECT_EQ(42, fn(NewA));
   free(NewA);
 }
