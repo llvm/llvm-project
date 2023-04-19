@@ -87,10 +87,10 @@ public:
 
 protected:
   enum {
-    IsRandomAccess =
-        std::is_base_of_v<std::random_access_iterator_tag, IteratorCategoryT>,
-    IsBidirectional =
-        std::is_base_of_v<std::bidirectional_iterator_tag, IteratorCategoryT>,
+    IsRandomAccess = std::is_base_of<std::random_access_iterator_tag,
+                                     IteratorCategoryT>::value,
+    IsBidirectional = std::is_base_of<std::bidirectional_iterator_tag,
+                                      IteratorCategoryT>::value,
   };
 
   /// A proxy object for computing a reference via indirecting a copy of an
@@ -225,12 +225,12 @@ template <
     typename DifferenceTypeT =
         typename std::iterator_traits<WrappedIteratorT>::difference_type,
     typename PointerT = std::conditional_t<
-        std::is_same_v<
-            T, typename std::iterator_traits<WrappedIteratorT>::value_type>,
+        std::is_same<T, typename std::iterator_traits<
+                            WrappedIteratorT>::value_type>::value,
         typename std::iterator_traits<WrappedIteratorT>::pointer, T *>,
     typename ReferenceT = std::conditional_t<
-        std::is_same_v<
-            T, typename std::iterator_traits<WrappedIteratorT>::value_type>,
+        std::is_same<T, typename std::iterator_traits<
+                            WrappedIteratorT>::value_type>::value,
         typename std::iterator_traits<WrappedIteratorT>::reference, T &>>
 class iterator_adaptor_base
     : public iterator_facade_base<DerivedT, IteratorCategoryT, T,
