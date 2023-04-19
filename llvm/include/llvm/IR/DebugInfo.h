@@ -224,6 +224,20 @@ void RAUW(DIAssignID *Old, DIAssignID *New);
 /// Remove all Assignment Tracking related intrinsics and metadata from \p F.
 void deleteAll(Function *F);
 
+/// Calculate the fragment of the variable in \p DAI covered
+/// from (Dest + SliceOffsetInBits) to
+///   to (Dest + SliceOffsetInBits + SliceSizeInBits)
+///
+/// Return false if it can't be calculated for any reason.
+/// Result is set to nullopt if the intersect equals the variable fragment (or
+/// variable size) in DAI.
+///
+/// Result contains a zero-sized fragment if there's no intersect.
+bool calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
+    std::optional<DIExpression::FragmentInfo> &Result);
+
 /// Helper struct for trackAssignments, below. We don't use the similar
 /// DebugVariable class because trackAssignments doesn't (yet?) understand
 /// partial variables (fragment info) as input and want to make that clear and
