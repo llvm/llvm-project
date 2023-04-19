@@ -392,8 +392,8 @@ function(add_compiler_rt_runtime name type)
       target_link_libraries(${libname} PRIVATE ${builtins_${libname}})
     endif()
     if(${type} STREQUAL "SHARED")
-      if(COMMAND llvm_setup_rpath)
-        llvm_setup_rpath(${libname})
+      if(APPLE OR WIN32)
+        set_property(TARGET ${libname} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
       endif()
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
@@ -698,7 +698,6 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
                ${LIBCXX_CMAKE_ARGS}
     INSTALL_COMMAND ""
-    DOWNLOAD_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
     USES_TERMINAL_CONFIGURE 1

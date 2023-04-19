@@ -1,7 +1,7 @@
 ## Check that BOLT successfully splits C++ exception-handling code for
 ## PIEs or shared objects.
 
-REQUIRES: system-linux
+REQUIRES: system-linux,bolt-runtime
 
 RUN: %clangxx %cxxflags -pie -fPIC %p/Inputs/exceptions_split.cpp -Wl,-q -o %t
 RUN: llvm-bolt %t -o %t.instr --instrument --instrumentation-file=%t.fdata

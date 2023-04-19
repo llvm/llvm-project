@@ -17,7 +17,6 @@ clang_target_link_libraries(ClangCodeGenTests
   clangBasic
   clangCodeGen
   clangFrontend
-  clangInterpreter
   clangLex
   clangParse
   clangSerialization
