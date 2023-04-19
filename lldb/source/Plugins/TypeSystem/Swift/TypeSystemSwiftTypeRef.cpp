@@ -3040,10 +3040,11 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // Because the API deals out an index into a list of children we
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
-  if (get_ast_num_children() <
-      runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
-          .getValueOr(0))
-    return impl();
+  if (ModuleList::GetGlobalModuleListProperties().GetSwiftValidateTypeSystem())
+    if (get_ast_num_children() <
+        runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
+            .getValueOr(0))
+      return impl();
   if (ShouldSkipValidation(type))
     return impl();
   std::string ast_child_name;
@@ -3112,6 +3113,9 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
 #ifndef NDEBUG
         // This block is a custom VALIDATE_AND_RETURN implementation to support
         // checking the return value, plus the by-ref `child_indexes`.
+        if (!ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftValidateTypeSystem())
+          return index_size;
         if (!GetSwiftASTContext())
           return index_size;
         auto swift_scratch_ctx_lock = SwiftScratchContextLock(exe_ctx);
@@ -3531,6 +3535,9 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
 #ifndef NDEBUG
   {
     auto result = impl();
+    if (!ModuleList::GetGlobalModuleListProperties()
+             .GetSwiftValidateTypeSystem())
+      return result;
     if (!GetSwiftASTContext())
       return result;
     std::vector<TupleElement> ast_elements;
