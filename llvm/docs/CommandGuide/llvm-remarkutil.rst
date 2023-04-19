@@ -58,7 +58,7 @@ instruction-count
 
 .. program:: llvm-remarkutil instruction-count
 
-USAGE: :program:`llvm-remarkutil` instruction-count <input file> --parser=<bitstream|yaml> -o <output file>
+USAGE: :program:`llvm-remarkutil` instruction-count <input file> --parser=<bitstream|yaml> [--use-debug-loc] -o <output file>
 
 Summary
 ^^^^^^^
@@ -74,6 +74,12 @@ CSV format is as follows:
   Function,InstructionCount
   foo,123
 
+if `--use-debug-loc` is passed then the CSV will include the source path, line number and column. 
+
+::
+  Source,Function,InstructionCount
+  path:line:column,foo,3
+
 .. _annotation-count_subcommand:
 
 annotation-count
@@ -81,7 +87,7 @@ annotation-count
 
 .. program:: llvm-remarkutil annotation-count
 
-USAGE: :program:`llvm-remarkutil` annotation-count <input file> --parser=<bitstream|yaml> --annotation-type=<type> -o <output file>
+USAGE: :program:`llvm-remarkutil` annotation-count <input file> --parser=<bitstream|yaml> --annotation-type=<type>  [--use-debug-loc] -o <output file>
 
 Summary
 ^^^^^^^
@@ -96,3 +102,9 @@ CSV format is as follows:
 ::
   Function,Count
   foo,123
+
+if `--use-debug-loc` is passed then the CSV will include the source path, line number and column. 
+
+::
+  Source,Function,Count
+  path:line:column,foo,3

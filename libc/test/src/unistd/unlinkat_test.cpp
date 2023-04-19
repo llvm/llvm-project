@@ -13,7 +13,6 @@
 #include "src/unistd/unlinkat.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 TEST(LlvmLibcUnlinkatTest, CreateAndDeleteTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

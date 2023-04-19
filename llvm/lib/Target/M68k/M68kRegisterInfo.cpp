@@ -75,9 +75,9 @@ M68kRegisterInfo::getRegsForTailCall(const MachineFunction &MF) const {
 unsigned
 M68kRegisterInfo::getMatchingMegaReg(unsigned Reg,
                                      const TargetRegisterClass *RC) const {
-  for (MCSuperRegIterator Super(Reg, this); Super.isValid(); ++Super)
-    if (RC->contains(*Super))
-      return *Super;
+  for (MCPhysReg Super : superregs(Reg))
+    if (RC->contains(Super))
+      return Super;
   return 0;
 }
 
@@ -129,8 +129,8 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     for (MCRegAliasIterator I(Reg, this, /* self */ true); I.isValid(); ++I) {
       Reserved.set(*I);
     }
-    for (MCSubRegIterator I(Reg, this, /* self */ true); I.isValid(); ++I) {
-      Reserved.set(*I);
+    for (MCPhysReg I : subregs_inclusive(Reg)) {
+      Reserved.set(I);
     }
   };
 

@@ -43,12 +43,12 @@ public:
   TinyPtrVector() = default;
 
   ~TinyPtrVector() {
-    if (VecTy *V = Val.template dyn_cast<VecTy*>())
+    if (VecTy *V = dyn_cast_if_present<VecTy *>(Val))
       delete V;
   }
 
   TinyPtrVector(const TinyPtrVector &RHS) : Val(RHS.Val) {
-    if (VecTy *V = Val.template dyn_cast<VecTy*>())
+    if (VecTy *V = dyn_cast_if_present<VecTy *>(Val))
       Val = new VecTy(*V);
   }
 
@@ -62,20 +62,20 @@ public:
 
     // Try to squeeze into the single slot. If it won't fit, allocate a copied
     // vector.
-    if (Val.template is<EltTy>()) {
+    if (isa<EltTy>(Val)) {
       if (RHS.size() == 1)
         Val = RHS.front();
       else
-        Val = new VecTy(*RHS.Val.template get<VecTy*>());
+        Val = new VecTy(*cast<VecTy *>(RHS.Val));
       return *this;
     }
 
     // If we have a full vector allocated, try to re-use it.
-    if (RHS.Val.template is<EltTy>()) {
-      Val.template get<VecTy*>()->clear();
-      Val.template get<VecTy*>()->push_back(RHS.front());
+    if (isa<EltTy>(RHS.Val)) {
+      cast<VecTy *>(Val)->clear();
+      cast<VecTy *>(Val)->push_back(RHS.front());
     } else {
-      *Val.template get<VecTy*>() = *RHS.Val.template get<VecTy*>();
+      *cast<VecTy *>(Val) = *cast<VecTy *>(RHS.Val);
     }
     return *this;
   }
@@ -95,8 +95,8 @@ public:
     // If this vector has been allocated on the heap, re-use it if cheap. If it
     // would require more copying, just delete it and we'll steal the other
     // side.
-    if (VecTy *V = Val.template dyn_cast<VecTy*>()) {
-      if (RHS.Val.template is<EltTy>()) {
+    if (VecTy *V = dyn_cast_if_present<VecTy *>(Val)) {
+      if (isa<EltTy>(RHS.Val)) {
         V->clear();
         V->push_back(RHS.front());
         RHS.Val = EltTy();
@@ -136,24 +136,25 @@ public:
   operator ArrayRef<EltTy>() const {
     if (Val.isNull())
       return std::nullopt;
-    if (Val.template is<EltTy>())
+    if (isa<EltTy>(Val))
       return *Val.getAddrOfPtr1();
-    return *Val.template get<VecTy*>();
+    return *cast<VecTy *>(Val);
   }
 
   // implicit conversion operator to MutableArrayRef.
   operator MutableArrayRef<EltTy>() {
     if (Val.isNull())
       return std::nullopt;
-    if (Val.template is<EltTy>())
+    if (isa<EltTy>(Val))
       return *Val.getAddrOfPtr1();
-    return *Val.template get<VecTy*>();
+    return *cast<VecTy *>(Val);
   }
 
   // Implicit conversion to ArrayRef<U> if EltTy* implicitly converts to U*.
-  template <typename U, std::enable_if_t<
-                            std::is_convertible_v<ArrayRef<EltTy>, ArrayRef<U>>,
-                            bool> = false>
+  template <
+      typename U,
+      std::enable_if_t<std::is_convertible<ArrayRef<EltTy>, ArrayRef<U>>::value,
+                       bool> = false>
   operator ArrayRef<U>() const {
     return operator ArrayRef<EltTy>();
   }
@@ -162,7 +163,7 @@ public:
     // This vector can be empty if it contains no element, or if it
     // contains a pointer to an empty vector.
     if (Val.isNull()) return true;
-    if (VecTy *Vec = Val.template dyn_cast<VecTy*>())
+    if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val))
       return Vec->empty();
     return false;
   }
@@ -170,9 +171,9 @@ public:
   unsigned size() const {
     if (empty())
       return 0;
-    if (Val.template is<EltTy>())
+    if (isa<EltTy>(Val))
       return 1;
-    return Val.template get<VecTy*>()->size();
+    return cast<VecTy *>(Val)->size();
   }
 
   using iterator = EltTy *;
@@ -181,17 +182,17 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   iterator begin() {
-    if (Val.template is<EltTy>())
+    if (isa<EltTy>(Val))
       return Val.getAddrOfPtr1();
 
-    return Val.template get<VecTy *>()->begin();
+    return cast<VecTy *>(Val)->begin();
   }
 
   iterator end() {
-    if (Val.template is<EltTy>())
+    if (isa<EltTy>(Val))
       return begin() + (Val.isNull() ? 0 : 1);
 
-    return Val.template get<VecTy *>()->end();
+    return cast<VecTy *>(Val)->end();
   }
 
   const_iterator begin() const {
@@ -215,28 +216,27 @@ public:
 
   EltTy operator[](unsigned i) const {
     assert(!Val.isNull() && "can't index into an empty vector");
-    if (Val.template is<EltTy>()) {
+    if (isa<EltTy>(Val)) {
       assert(i == 0 && "tinyvector index out of range");
-      return Val.template get<EltTy>();
+      return cast<EltTy>(Val);
     }
 
-    assert(i < Val.template get<VecTy*>()->size() &&
-           "tinyvector index out of range");
-    return (*Val.template get<VecTy*>())[i];
+    assert(i < cast<VecTy *>(Val)->size() && "tinyvector index out of range");
+    return (*cast<VecTy *>(Val))[i];
   }
 
   EltTy front() const {
     assert(!empty() && "vector empty");
-    if (Val.template is<EltTy>())
-      return Val.template get<EltTy>();
-    return Val.template get<VecTy*>()->front();
+    if (isa<EltTy>(Val))
+      return cast<EltTy>(Val);
+    return cast<VecTy *>(Val)->front();
   }
 
   EltTy back() const {
     assert(!empty() && "vector empty");
-    if (Val.template is<EltTy>())
-      return Val.template get<EltTy>();
-    return Val.template get<VecTy*>()->back();
+    if (isa<EltTy>(Val))
+      return cast<EltTy>(Val);
+    return cast<VecTy *>(Val)->back();
   }
 
   void push_back(EltTy NewVal) {
@@ -248,29 +248,29 @@ public:
     }
 
     // If we have a single value, convert to a vector.
-    if (Val.template is<EltTy>()) {
-      EltTy V = Val.template get<EltTy>();
+    if (isa<EltTy>(Val)) {
+      EltTy V = cast<EltTy>(Val);
       Val = new VecTy();
-      Val.template get<VecTy*>()->push_back(V);
+      cast<VecTy *>(Val)->push_back(V);
     }
 
     // Add the new value, we know we have a vector.
-    Val.template get<VecTy*>()->push_back(NewVal);
+    cast<VecTy *>(Val)->push_back(NewVal);
   }
 
   void pop_back() {
     // If we have a single value, convert to empty.
-    if (Val.template is<EltTy>())
+    if (isa<EltTy>(Val))
       Val = (EltTy)nullptr;
-    else if (VecTy *Vec = Val.template get<VecTy*>())
+    else if (VecTy *Vec = cast<VecTy *>(Val))
       Vec->pop_back();
   }
 
   void clear() {
     // If we have a single value, convert to empty.
-    if (Val.template is<EltTy>()) {
+    if (isa<EltTy>(Val)) {
       Val = EltTy();
-    } else if (VecTy *Vec = Val.template dyn_cast<VecTy*>()) {
+    } else if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val)) {
       // If we have a vector form, just clear it.
       Vec->clear();
     }
@@ -282,10 +282,10 @@ public:
     assert(I < end() && "Erasing at past-the-end iterator.");
 
     // If we have a single value, convert to empty.
-    if (Val.template is<EltTy>()) {
+    if (isa<EltTy>(Val)) {
       if (I == begin())
         Val = EltTy();
-    } else if (VecTy *Vec = Val.template dyn_cast<VecTy*>()) {
+    } else if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val)) {
       // multiple items in a vector; just do the erase, there is no
       // benefit to collapsing back to a pointer
       return Vec->erase(I);
@@ -298,10 +298,10 @@ public:
     assert(S <= E && "Trying to erase invalid range.");
     assert(E <= end() && "Trying to erase past the end.");
 
-    if (Val.template is<EltTy>()) {
+    if (isa<EltTy>(Val)) {
       if (S == begin() && S != E)
         Val = EltTy();
-    } else if (VecTy *Vec = Val.template dyn_cast<VecTy*>()) {
+    } else if (VecTy *Vec = dyn_cast_if_present<VecTy *>(Val)) {
       return Vec->erase(S, E);
     }
     return end();
@@ -315,15 +315,15 @@ public:
       return std::prev(end());
     }
     assert(!Val.isNull() && "Null value with non-end insert iterator.");
-    if (Val.template is<EltTy>()) {
-      EltTy V = Val.template get<EltTy>();
+    if (isa<EltTy>(Val)) {
+      EltTy V = cast<EltTy>(Val);
       assert(I == begin());
       Val = Elt;
       push_back(V);
       return begin();
     }
 
-    return Val.template get<VecTy*>()->insert(I, Elt);
+    return cast<VecTy *>(Val)->insert(I, Elt);
   }
 
   template<typename ItTy>
@@ -342,12 +342,12 @@ public:
       }
 
       Val = new VecTy();
-    } else if (Val.template is<EltTy>()) {
-      EltTy V = Val.template get<EltTy>();
+    } else if (isa<EltTy>(Val)) {
+      EltTy V = cast<EltTy>(Val);
       Val = new VecTy();
-      Val.template get<VecTy*>()->push_back(V);
+      cast<VecTy *>(Val)->push_back(V);
     }
-    return Val.template get<VecTy*>()->insert(begin() + Offset, From, To);
+    return cast<VecTy *>(Val)->insert(begin() + Offset, From, To);
   }
 };
 

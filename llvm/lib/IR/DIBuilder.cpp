@@ -582,14 +582,14 @@ DIBuilder::createArrayType(uint64_t Size, uint32_t AlignInBits, DIType *Ty,
       VMContext, dwarf::DW_TAG_array_type, "", nullptr, 0, nullptr, Ty, Size,
       AlignInBits, 0, DINode::FlagZero, Subscripts, 0, nullptr, nullptr, "",
       nullptr,
-      DL.is<DIExpression *>() ? (Metadata *)DL.get<DIExpression *>()
-                              : (Metadata *)DL.get<DIVariable *>(),
-      AS.is<DIExpression *>() ? (Metadata *)AS.get<DIExpression *>()
-                              : (Metadata *)AS.get<DIVariable *>(),
-      AL.is<DIExpression *>() ? (Metadata *)AL.get<DIExpression *>()
-                              : (Metadata *)AL.get<DIVariable *>(),
-      RK.is<DIExpression *>() ? (Metadata *)RK.get<DIExpression *>()
-                              : (Metadata *)RK.get<DIVariable *>());
+      isa<DIExpression *>(DL) ? (Metadata *)cast<DIExpression *>(DL)
+                              : (Metadata *)cast<DIVariable *>(DL),
+      isa<DIExpression *>(AS) ? (Metadata *)cast<DIExpression *>(AS)
+                              : (Metadata *)cast<DIVariable *>(AS),
+      isa<DIExpression *>(AL) ? (Metadata *)cast<DIExpression *>(AL)
+                              : (Metadata *)cast<DIVariable *>(AL),
+      isa<DIExpression *>(RK) ? (Metadata *)cast<DIExpression *>(RK)
+                              : (Metadata *)cast<DIVariable *>(RK));
   trackIfUnresolved(R);
   return R;
 }
@@ -714,8 +714,8 @@ DIGenericSubrange *DIBuilder::getOrCreateGenericSubrange(
     DIGenericSubrange::BoundType CountNode, DIGenericSubrange::BoundType LB,
     DIGenericSubrange::BoundType UB, DIGenericSubrange::BoundType Stride) {
   auto ConvToMetadata = [&](DIGenericSubrange::BoundType Bound) -> Metadata * {
-    return Bound.is<DIExpression *>() ? (Metadata *)Bound.get<DIExpression *>()
-                                      : (Metadata *)Bound.get<DIVariable *>();
+    return isa<DIExpression *>(Bound) ? (Metadata *)cast<DIExpression *>(Bound)
+                                      : (Metadata *)cast<DIVariable *>(Bound);
   };
   return DIGenericSubrange::get(VMContext, ConvToMetadata(CountNode),
                                 ConvToMetadata(LB), ConvToMetadata(UB),

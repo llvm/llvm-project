@@ -125,7 +125,13 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    report(DRE->getLocation(), DRE->getFoundDecl());
+    // Static class members are handled here, as they don't produce MemberExprs.
+    if (DRE->getFoundDecl()->isCXXClassMember()) {
+      if (auto *Qual = DRE->getQualifier())
+        report(DRE->getLocation(), Qual->getAsRecordDecl(), RefType::Implicit);
+    } else {
+      report(DRE->getLocation(), DRE->getFoundDecl());
+    }
     return true;
   }
 

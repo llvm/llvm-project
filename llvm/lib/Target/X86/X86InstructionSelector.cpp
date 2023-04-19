@@ -247,9 +247,9 @@ bool X86InstructionSelector::selectDebugInstr(MachineInstr &I,
     LLT Ty = MRI.getType(Reg);
     const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
     const TargetRegisterClass *RC =
-        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+        dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank);
     if (!RC) {
-      const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
       RC = getRegClass(Ty, RB);
       if (!RC) {
         LLVM_DEBUG(

@@ -3,6 +3,8 @@ set(LLVM_LINK_COMPONENTS
    native
    Option
    OrcJit
+   OrcShared
+   OrcTargetProcess
    Support
    Target
    TargetParser

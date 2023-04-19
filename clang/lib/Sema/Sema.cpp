@@ -865,7 +865,7 @@ static void checkUndefinedButUsed(Sema &S) {
   S.getUndefinedButUsed(Undefined);
   if (Undefined.empty()) return;
 
-  for (auto Undef : Undefined) {
+  for (const auto &Undef : Undefined) {
     ValueDecl *VD = cast<ValueDecl>(Undef.first);
     SourceLocation UseLoc = Undef.second;
 

@@ -3,10 +3,17 @@
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
 
-// No rule will be added to the match table.
 // CHECK:      constexpr static int64_t MatchTable0[] = {
-// CHECK-NEXT:   GIM_Reject
-// CHECK-NEXT: };
+// CHECK-NEXT:   GIM_Try,
+// CHECK-NEXT:     GIM_CheckOpcode{{.*}}TargetOpcode::G_ANYEXT,
+// CHECK-NEXT:     GIM_CheckType{{.*}}/*Type*/GILLT_s32,
+// CHECK-NEXT:     GIM_CheckType{{.*}}/*Type*/GILLT_s8,
+// CHECK-NEXT:     GIM_CheckRegBankForClass{{.*}}/*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:     // (anyext:{{.*}}=>{{.*}}(SELECT_I4:
+// CHECK:          GIR_Done,
+// CHECK-NEXT:   // Label 0:
+// CHECK-NEXT:   GIM_Reject,
+// CHECK-NEXT:   };
 
 def SELECT_I4 : I<(outs GPR32:$dst), (ins GPR8:$cond, GPR32:$T, GPR32:$F), []>;
 def LI : I<(outs GPR32:$dst), (ins i32imm:$src), []>;

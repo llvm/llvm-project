@@ -2,30 +2,20 @@
 ; RUN: llc < %s --mattr=+complxnum,+neon -o - | FileCheck %s
 
 target triple = "aarch64-arm-none-eabi"
-; Expected to not transform
+; Expected to transform
 ;   *p = (a * b);
 ;   return (a * b) * a;
 define <4 x float> @mul_triangle(<4 x float> %a, <4 x float> %b, ptr %p) {
 ; CHECK-LABEL: mul_triangle:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip2 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v5.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    fmul v6.2s, v5.2s, v4.2s
-; CHECK-NEXT:    fneg v2.2s, v6.2s
-; CHECK-NEXT:    fmla v2.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fmul v3.2s, v4.2s, v1.2s
-; CHECK-NEXT:    fmla v3.2s, v0.2s, v5.2s
-; CHECK-NEXT:    fmul v1.2s, v3.2s, v4.2s
-; CHECK-NEXT:    fmul v5.2s, v3.2s, v0.2s
-; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x0]
-; CHECK-NEXT:    fneg v1.2s, v1.2s
-; CHECK-NEXT:    fmla v5.2s, v4.2s, v2.2s
-; CHECK-NEXT:    fmla v1.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v0.4s, v1.4s, v5.4s
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v3.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v3.4s, #0
+; CHECK-NEXT:    str q3, [x0]
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v3.4s, #90
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

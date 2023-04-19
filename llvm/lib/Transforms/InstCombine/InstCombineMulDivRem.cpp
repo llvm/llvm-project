@@ -186,7 +186,7 @@ static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
 }
 
 static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
-                       bool DoFold);
+                       bool AssumeNonZero, bool DoFold);
 
 Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
@@ -486,15 +486,19 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   //        (shl Op1, Log2(Op0))
   //    if Log2(Op1) folds away ->
   //        (shl Op0, Log2(Op1))
-  if (takeLog2(Builder, Op0, /*Depth*/ 0, /*DoFold*/ false)) {
-    Value *Res = takeLog2(Builder, Op0, /*Depth*/ 0, /*DoFold*/ true);
+  if (takeLog2(Builder, Op0, /*Depth*/ 0, /*AssumeNonZero*/ false,
+               /*DoFold*/ false)) {
+    Value *Res = takeLog2(Builder, Op0, /*Depth*/ 0, /*AssumeNonZero*/ false,
+                          /*DoFold*/ true);
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op1, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
     return Shl;
   }
-  if (takeLog2(Builder, Op1, /*Depth*/ 0, /*DoFold*/ false)) {
-    Value *Res = takeLog2(Builder, Op1, /*Depth*/ 0, /*DoFold*/ true);
+  if (takeLog2(Builder, Op1, /*Depth*/ 0, /*AssumeNonZero*/ false,
+               /*DoFold*/ false)) {
+    Value *Res = takeLog2(Builder, Op1, /*Depth*/ 0, /*AssumeNonZero*/ false,
+                          /*DoFold*/ true);
     BinaryOperator *Shl = BinaryOperator::CreateShl(Op0, Res);
     // We can only propegate nuw flag.
     Shl->setHasNoUnsignedWrap(HasNUW);
@@ -1181,7 +1185,7 @@ static const unsigned MaxDepth = 6;
 // actual instructions, otherwise return a non-null dummy value. Return nullptr
 // on failure.
 static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
-                       bool DoFold) {
+                       bool AssumeNonZero, bool DoFold) {
   auto IfFold = [DoFold](function_ref<Value *()> Fn) {
     if (!DoFold)
       return reinterpret_cast<Value *>(-1);
@@ -1207,14 +1211,18 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   // FIXME: Require one use?
   Value *X, *Y;
   if (match(Op, m_ZExt(m_Value(X))))
-    if (Value *LogX = takeLog2(Builder, X, Depth, DoFold))
+    if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
       return IfFold([&]() { return Builder.CreateZExt(LogX, Op->getType()); });
 
   // log2(X << Y) -> log2(X) + Y
   // FIXME: Require one use unless X is 1?
-  if (match(Op, m_Shl(m_Value(X), m_Value(Y))))
-    if (Value *LogX = takeLog2(Builder, X, Depth, DoFold))
-      return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
+  if (match(Op, m_Shl(m_Value(X), m_Value(Y)))) {
+    auto *BO = cast<OverflowingBinaryOperator>(Op);
+    // nuw will be set if the `shl` is trivially non-zero.
+    if (AssumeNonZero || BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap())
+      if (Value *LogX = takeLog2(Builder, X, Depth, AssumeNonZero, DoFold))
+        return IfFold([&]() { return Builder.CreateAdd(LogX, Y); });
+  }
 
   // log2(Cond ? X : Y) -> Cond ? log2(X) : log2(Y)
   // FIXME: missed optimization: if one of the hands of select is/contains
@@ -1222,8 +1230,10 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   // FIXME: can both hands contain undef?
   // FIXME: Require one use?
   if (SelectInst *SI = dyn_cast<SelectInst>(Op))
-    if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth, DoFold))
-      if (Value *LogY = takeLog2(Builder, SI->getOperand(2), Depth, DoFold))
+    if (Value *LogX = takeLog2(Builder, SI->getOperand(1), Depth,
+                               AssumeNonZero, DoFold))
+      if (Value *LogY = takeLog2(Builder, SI->getOperand(2), Depth,
+                                 AssumeNonZero, DoFold))
         return IfFold([&]() {
           return Builder.CreateSelect(SI->getOperand(0), LogX, LogY);
         });
@@ -1231,13 +1241,18 @@ static Value *takeLog2(IRBuilderBase &Builder, Value *Op, unsigned Depth,
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))
   // log2(umax(X, Y)) -> umax(log2(X), log2(Y))
   auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op);
-  if (MinMax && MinMax->hasOneUse() && !MinMax->isSigned())
-    if (Value *LogX = takeLog2(Builder, MinMax->getLHS(), Depth, DoFold))
-      if (Value *LogY = takeLog2(Builder, MinMax->getRHS(), Depth, DoFold))
+  if (MinMax && MinMax->hasOneUse() && !MinMax->isSigned()) {
+    // Use AssumeNonZero as false here. Otherwise we can hit case where
+    // log2(umax(X, Y)) != umax(log2(X), log2(Y)) (because overflow).
+    if (Value *LogX = takeLog2(Builder, MinMax->getLHS(), Depth,
+                               /*AssumeNonZero*/ false, DoFold))
+      if (Value *LogY = takeLog2(Builder, MinMax->getRHS(), Depth,
+                                 /*AssumeNonZero*/ false, DoFold))
         return IfFold([&]() {
-          return Builder.CreateBinaryIntrinsic(
-              MinMax->getIntrinsicID(), LogX, LogY);
+          return Builder.CreateBinaryIntrinsic(MinMax->getIntrinsicID(), LogX,
+                                               LogY);
         });
+  }
 
   return nullptr;
 }
@@ -1357,8 +1372,10 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   }
 
   // Op1 udiv Op2 -> Op1 lshr log2(Op2), if log2() folds away.
-  if (takeLog2(Builder, Op1, /*Depth*/0, /*DoFold*/false)) {
-    Value *Res = takeLog2(Builder, Op1, /*Depth*/0, /*DoFold*/true);
+  if (takeLog2(Builder, Op1, /*Depth*/ 0, /*AssumeNonZero*/ true,
+               /*DoFold*/ false)) {
+    Value *Res = takeLog2(Builder, Op1, /*Depth*/ 0,
+                          /*AssumeNonZero*/ true, /*DoFold*/ true);
     return replaceInstUsesWith(
         I, Builder.CreateLShr(Op0, Res, I.getName(), I.isExact()));
   }

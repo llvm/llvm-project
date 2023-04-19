@@ -3578,9 +3578,8 @@ SDValue X86TargetLowering::LowerCallResult(
     // In some calling conventions we need to remove the used registers
     // from the register mask.
     if (RegMask) {
-      for (MCSubRegIterator SubRegs(VA.getLocReg(), TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs)
-        RegMask[*SubRegs / 32] &= ~(1u << (*SubRegs % 32));
+      for (MCPhysReg SubReg : TRI->subregs_inclusive(VA.getLocReg()))
+        RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
     }
 
     // Report an error if there was an attempt to return FP values via XMM
@@ -4941,9 +4940,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // in the RegMask.
     if (ShouldDisableArgRegs) {
       for (auto const &RegPair : RegsToPass)
-        for (MCSubRegIterator SubRegs(RegPair.first, TRI, /*IncludeSelf=*/true);
-             SubRegs.isValid(); ++SubRegs)
-          RegMask[*SubRegs / 32] &= ~(1u << (*SubRegs % 32));
+        for (MCPhysReg SubReg : TRI->subregs_inclusive(RegPair.first))
+          RegMask[SubReg / 32] &= ~(1u << (SubReg % 32));
     }
 
     // Create the RegMask Operand according to our updated mask.
@@ -47351,9 +47349,10 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     if (SDValue NotOp1 = IsNOT(Op1, DAG)) {
       if (peekThroughBitcasts(NotOp1) == peekThroughBitcasts(Op0)) {
         SDLoc DL(EFLAGS);
-        return DAG.getNode(EFLAGS.getOpcode(), DL, VT,
-                           DAG.getBitcast(OpVT, NotOp1),
-                           DAG.getAllOnesConstant(DL, OpVT));
+        return DAG.getNode(
+            EFLAGS.getOpcode(), DL, VT, DAG.getBitcast(OpVT, NotOp1),
+            DAG.getBitcast(OpVT,
+                           DAG.getAllOnesConstant(DL, NotOp1.getValueType())));
       }
     }
   }
@@ -49145,7 +49144,7 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     // Don't break NOT patterns.
     SDValue BC = peekThroughOneUseBitcasts(N0);
     if (ISD::isBitwiseLogicOp(BC.getOpcode()) &&
-        BC->isOnlyUserOf(BC.getOperand(1).getNode()) && 
+        BC->isOnlyUserOf(BC.getOperand(1).getNode()) &&
         !ISD::isBuildVectorAllOnes(BC.getOperand(1).getNode())) {
       if (SDValue RHS = TryConstantFold(BC.getOperand(1))) {
         SDLoc DL(N);

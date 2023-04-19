@@ -790,7 +790,7 @@ void getGuaranteedWellDefinedOps(const Instruction *I,
 /// when I is executed with any operands which appear in KnownPoison holding
 /// a poison value at the point of execution.
 bool mustTriggerUB(const Instruction *I,
-                   const SmallSet<const Value *, 16> &KnownPoison);
+                   const SmallPtrSetImpl<const Value *> &KnownPoison);
 
 /// Return true if this function can prove that if Inst is executed
 /// and yields a poison value or undef bits, then that will trigger

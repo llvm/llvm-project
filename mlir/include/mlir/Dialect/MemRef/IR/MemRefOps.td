@@ -1390,18 +1390,16 @@ def MemRef_ReinterpretCastOp
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     // The result of the op is always a ranked memref.
-    MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
+    MemRefType getType() { return getResult().getType(); }
     Value getViewSource() { return getSource(); }
 
-    /// Return the rank of the source ShapedType.
-    unsigned getResultRank() {
-      return getResult().getType().cast<ShapedType>().getRank();
-    }
+    /// Return the rank of the result type.
+    unsigned getResultRank() { return getType().getRank(); }
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`
     /// and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
-      unsigned resultRank = getResult().getType().cast<ShapedType>().getRank();
+      unsigned resultRank = getType().getRank();
       return {1, resultRank, resultRank};
     }
 
@@ -1830,8 +1828,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     The representation based on offsets, sizes and strides support a
     partially-static specification via attributes specified through the
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
-    sentinel value ShapedType::kDynamic and
-    ShapedType::kDynamic encodes that the corresponding entry has
+    sentinel value ShapedType::kDynamic encodes that the corresponding entry has
     a dynamic value.
 
     A subview operation may additionally reduce the rank of the resulting view
@@ -2122,7 +2119,6 @@ def MemRef_TransposeOp : MemRef_Op<"transpose", [
 
   let extraClassDeclaration = [{
     static StringRef getPermutationAttrStrName() { return "permutation"; }
-    ShapedType getShapedType() { return getIn().getType().cast<ShapedType>(); }
   }];
 
   let hasCustomAssemblyFormat = 1;

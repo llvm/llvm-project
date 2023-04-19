@@ -1,9 +1,4 @@
-// UNSUPPORTED: target={{.*}}
-// FIXME: The test case is disabled (for now) because affine index on sparse tensor
-// are not handled efficiently by sparse compiler, the test case will be re-enabled
-// after new algorithm is implemented.
-
-// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{option} = "enable-runtime-library=true enable-index-reduction=true"
 // DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
@@ -13,16 +8,16 @@
 // RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// REDEFINE: %{option} = "enable-runtime-library=false enable-index-reduction=true"
 // RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// REDEFINE: %{option} = "enable-runtime-library=false enable-index-reduction=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{compile} | %{run}
 
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-index-reduction=true enable-arm-sve=%ENABLE_VLA"
 // REDEFINE: %{run} = %lli \
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
@@ -33,6 +28,7 @@
 
 #DCSR = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
 #CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+#CDR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "dense"]}>
 #CSC = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (j,i)>
@@ -42,46 +38,55 @@
 module {
 
   func.func @conv2d(%input:  tensor<8x8xi32>,
-               %filter: tensor<3x3xi32, #DCSR>,
+               %filter: tensor<3x3xi32>,
                %output: tensor<6x6xi32>) -> tensor<6x6xi32> {
     %0 = linalg.conv_2d
-      ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32, #DCSR>)
+      ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32>)
       outs (%output: tensor<6x6xi32>) -> tensor<6x6xi32>
     return %0 : tensor<6x6xi32>
   }
 
   func.func @conv2d_sparse_out(%input:  tensor<8x8xi32>,
-               %filter: tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR> {
+               %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR> {
     %s = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>
     %0 = linalg.conv_2d
-      ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32, #DCSR>)
+      ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
     return %0 : tensor<6x6xi32, #DCSR>
   }
 
   func.func @conv2d_all_sparse_DCSR(%input:  tensor<8x8xi32, #DCSR>,
-               %filter: tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR> {
+               %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR> {
     %s = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>
     %0 = linalg.conv_2d
-      ins  (%input, %filter: tensor<8x8xi32, #DCSR>, tensor<3x3xi32, #DCSR>)
+      ins  (%input, %filter: tensor<8x8xi32, #DCSR>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
     return %0 : tensor<6x6xi32, #DCSR>
   }
 
   func.func @conv2d_all_sparse_CSR(%input:  tensor<8x8xi32, #CSR>,
-               %filter: tensor<3x3xi32, #CSR>) -> tensor<6x6xi32, #CSR> {
+               %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #CSR> {
     %s = bufferization.alloc_tensor() : tensor<6x6xi32, #CSR>
     %0 = linalg.conv_2d
-      ins  (%input, %filter: tensor<8x8xi32, #CSR>, tensor<3x3xi32, #CSR>)
+      ins  (%input, %filter: tensor<8x8xi32, #CSR>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #CSR>) -> tensor<6x6xi32, #CSR>
     return %0 : tensor<6x6xi32, #CSR>
   }
 
+  func.func @conv2d_all_sparse_CD(%input:  tensor<8x8xi32, #CDR>,
+               %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #CDR> {
+    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #CDR>
+    %0 = linalg.conv_2d
+      ins  (%input, %filter: tensor<8x8xi32, #CDR>, tensor<3x3xi32>)
+      outs (%s: tensor<6x6xi32, #CDR>) -> tensor<6x6xi32, #CDR>
+    return %0 : tensor<6x6xi32, #CDR>
+  }
+
   func.func @conv2d_all_sparse_CSC(%input:  tensor<8x8xi32, #CSC>,
-               %filter: tensor<3x3xi32, #CSC>) -> tensor<6x6xi32, #CSC> {
+               %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #CSC> {
     %s = bufferization.alloc_tensor() : tensor<6x6xi32, #CSC>
     %0 = linalg.conv_2d
-      ins  (%input, %filter: tensor<8x8xi32, #CSC>, tensor<3x3xi32, #CSC>)
+      ins  (%input, %filter: tensor<8x8xi32, #CSC>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #CSC>) -> tensor<6x6xi32, #CSC>
     return %0 : tensor<6x6xi32, #CSC>
   }
@@ -96,12 +101,6 @@ module {
       [  0,  0,  0 ],
       [ -1,  0,  1 ]
     ]> : tensor<3x3xi32>
-    %sparse_filter_DCSR = sparse_tensor.convert %filter
-      : tensor<3x3xi32> to tensor<3x3xi32, #DCSR>
-    %sparse_filter_CSR = sparse_tensor.convert %filter
-      : tensor<3x3xi32> to tensor<3x3xi32, #CSR>
-    %sparse_filter_CSC = sparse_tensor.convert %filter
-      : tensor<3x3xi32> to tensor<3x3xi32, #CSC>
 
 
     %input = arith.constant dense<[
@@ -118,26 +117,31 @@ module {
       : tensor<8x8xi32> to tensor<8x8xi32, #DCSR>
     %sparse_input_CSR = sparse_tensor.convert %input
       : tensor<8x8xi32> to tensor<8x8xi32, #CSR>
+    %sparse_input_CD = sparse_tensor.convert %input
+      : tensor<8x8xi32> to tensor<8x8xi32, #CDR>
     %sparse_input_CSC = sparse_tensor.convert %input
       : tensor<8x8xi32> to tensor<8x8xi32, #CSC>
 
     // Call the kernel.
     %output = arith.constant dense<0> : tensor<6x6xi32>
-    %0 = call @conv2d(%input, %sparse_filter_DCSR, %output)
+    %0 = call @conv2d(%input, %filter, %output)
        : (tensor<8x8xi32>,
-          tensor<3x3xi32, #DCSR>, tensor<6x6xi32>) -> tensor<6x6xi32>
-    %1 = call @conv2d_sparse_out(%input, %sparse_filter_DCSR)
+          tensor<3x3xi32>, tensor<6x6xi32>) -> tensor<6x6xi32>
+    %1 = call @conv2d_sparse_out(%input, %filter)
        : (tensor<8x8xi32>,
-          tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
-    %2 = call @conv2d_all_sparse_DCSR(%sparse_input_DCSR, %sparse_filter_DCSR)
+          tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR>
+    %2 = call @conv2d_all_sparse_DCSR(%sparse_input_DCSR, %filter)
        : (tensor<8x8xi32, #DCSR>,
-          tensor<3x3xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
-    %3 = call @conv2d_all_sparse_CSR(%sparse_input_CSR, %sparse_filter_CSR)
+          tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR>
+    %3 = call @conv2d_all_sparse_CSR(%sparse_input_CSR, %filter)
        : (tensor<8x8xi32, #CSR>,
-          tensor<3x3xi32, #CSR>) -> tensor<6x6xi32, #CSR>
-    %4 = call @conv2d_all_sparse_CSC(%sparse_input_CSC, %sparse_filter_CSC)
+          tensor<3x3xi32>) -> tensor<6x6xi32, #CSR>
+    %4 = call @conv2d_all_sparse_CD(%sparse_input_CD, %filter)
+       : (tensor<8x8xi32, #CDR>,
+          tensor<3x3xi32>) -> tensor<6x6xi32, #CDR>
+    %5 = call @conv2d_all_sparse_CSC(%sparse_input_CSC, %filter)
        : (tensor<8x8xi32, #CSC>,
-          tensor<3x3xi32, #CSC>) -> tensor<6x6xi32, #CSC>
+          tensor<3x3xi32>) -> tensor<6x6xi32, #CSC>
 
 
     // Verify the output.
@@ -192,6 +196,21 @@ module {
     // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
     // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
     //
+    %all_sparse_CD = sparse_tensor.convert %4
+      : tensor<6x6xi32, #CDR> to tensor<6x6xi32>
+    %v4 = vector.transfer_read %all_sparse_CD[%c0, %c0], %i0
+      : tensor<6x6xi32>, vector<6x6xi32>
+    vector.print %v4 : vector<6x6xi32>
+
+    //
+    // Should be the same as dense output
+    // CHECK:    ( ( 0, 0, -1, -6, -1, 6 ),
+    // CHECK-SAME: ( -1, 0, 1, 0, 1, 0 ),
+    // CHECK-SAME: ( 0, -1, 1, 0, 0, 0 ),
+    // CHECK-SAME: ( -1, 0, 0, 0, 0, 0 ),
+    // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
+    // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
+    //
     %all_sparse_CSR = sparse_tensor.convert %3
       : tensor<6x6xi32, #CSR> to tensor<6x6xi32>
     %v3 = vector.transfer_read %all_sparse_CSR[%c0, %c0], %i0
@@ -207,25 +226,23 @@ module {
     // CHECK-SAME: ( 0, 0, 3, 6, -3, -6 ),
     // CHECK-SAME: ( 2, -1, 3, 0, -3, 0 ) )
     //
-    %all_sparse_CSC = sparse_tensor.convert %4
+    %all_sparse_CSC = sparse_tensor.convert %5
       : tensor<6x6xi32, #CSC> to tensor<6x6xi32>
-    %v4 = vector.transfer_read %all_sparse_CSC[%c0, %c0], %i0
+    %v5 = vector.transfer_read %all_sparse_CSC[%c0, %c0], %i0
       : tensor<6x6xi32>, vector<6x6xi32>
-    vector.print %v4 : vector<6x6xi32>
+    vector.print %v5 : vector<6x6xi32>
 
     // Release the resources.
-    bufferization.dealloc_tensor %sparse_filter_DCSR : tensor<3x3xi32, #DCSR>
-    bufferization.dealloc_tensor %sparse_filter_CSR : tensor<3x3xi32, #CSR>
-    bufferization.dealloc_tensor %sparse_filter_CSC : tensor<3x3xi32, #CSC>
-
     bufferization.dealloc_tensor %sparse_input_DCSR : tensor<8x8xi32, #DCSR>
     bufferization.dealloc_tensor %sparse_input_CSR : tensor<8x8xi32, #CSR>
     bufferization.dealloc_tensor %sparse_input_CSC : tensor<8x8xi32, #CSC>
+    bufferization.dealloc_tensor %sparse_input_CD : tensor<8x8xi32, #CDR>
 
     bufferization.dealloc_tensor %1 : tensor<6x6xi32, #DCSR>
     bufferization.dealloc_tensor %2 : tensor<6x6xi32, #DCSR>
     bufferization.dealloc_tensor %3 : tensor<6x6xi32, #CSR>
-    bufferization.dealloc_tensor %4 : tensor<6x6xi32, #CSC>
+    bufferization.dealloc_tensor %4 : tensor<6x6xi32, #CDR>
+    bufferization.dealloc_tensor %5 : tensor<6x6xi32, #CSC>
     return
   }
 }

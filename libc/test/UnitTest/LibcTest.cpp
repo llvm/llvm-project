@@ -11,8 +11,8 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"
+#include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
-#include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 
 namespace __llvm_libc {
@@ -321,8 +321,7 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
   if (!Matcher.is_silent()) {
     tlog << File << ":" << Line << ": FAILURE\n"
          << "Failed to match " << LHSStr << " against " << RHSStr << ".\n";
-    testutils::StreamWrapper OutsWrapper = testutils::outs();
-    Matcher.explainError(OutsWrapper);
+    Matcher.explainError();
   }
   return false;
 }

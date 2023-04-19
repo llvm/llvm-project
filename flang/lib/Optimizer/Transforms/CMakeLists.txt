@@ -16,6 +16,7 @@ add_flang_library(FIRTransforms
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
   OpenACC/OpenACCDataOperandConversion.cpp
+  LoopVersioning.cpp
 
   DEPENDS
   FIRDialect

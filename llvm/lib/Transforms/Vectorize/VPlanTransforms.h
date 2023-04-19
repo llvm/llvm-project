@@ -77,10 +77,7 @@ struct VPlanTransforms {
   /// to combine the value from the recurrence phis and previous values. The
   /// current implementation assumes all users can be sunk after the previous
   /// value, which is enforced by earlier legality checks.
-  /// \returns true if all users of fixed-order recurrences could be re-arranged
-  /// as needed or false if it is not possible. In the latter case, \p Plan is
-  /// not valid.
-  static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
+  static void adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.

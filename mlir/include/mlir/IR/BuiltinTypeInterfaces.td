@@ -99,15 +99,6 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
 
     /// Return the number of elements present in the given shape.
     static int64_t getNumElements(ArrayRef<int64_t> shape);
-
-    /// Returns the total amount of bits occupied by a value of this type. This
-    /// does not take into account any memory layout or widening constraints,
-    /// e.g. a vector<3xi57> may report to occupy 3x57=171 bit, even though in
-    /// practice it will likely be stored as in a 4xi64 vector register. Fails
-    /// with an assertion if the size cannot be computed statically, e.g. if the
-    /// type has a dynamic shape or if its elemental type does not have a known
-    /// bit width.
-    int64_t getSizeInBits() const;
   }];
 
   let extraSharedClassDeclaration = [{

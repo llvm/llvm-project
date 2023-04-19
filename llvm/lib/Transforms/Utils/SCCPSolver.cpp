@@ -73,30 +73,9 @@ static bool canRemoveInstruction(Instruction *I) {
 }
 
 bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
-  Constant *Const = nullptr;
-  if (V->getType()->isStructTy()) {
-    std::vector<ValueLatticeElement> IVs = getStructLatticeValueFor(V);
-    if (llvm::any_of(IVs, isOverdefined))
-      return false;
-    std::vector<Constant *> ConstVals;
-    auto *ST = cast<StructType>(V->getType());
-    for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
-      ValueLatticeElement V = IVs[i];
-      ConstVals.push_back(SCCPSolver::isConstant(V)
-                              ? getConstant(V)
-                              : UndefValue::get(ST->getElementType(i)));
-    }
-    Const = ConstantStruct::get(ST, ConstVals);
-  } else {
-    const ValueLatticeElement &IV = getLatticeValueFor(V);
-    if (isOverdefined(IV))
-      return false;
-
-    Const = SCCPSolver::isConstant(IV) ? getConstant(IV)
-                                       : UndefValue::get(V->getType());
-  }
-  assert(Const && "Constant is nullptr here!");
-
+  Constant *Const = getConstantOrNull(V);
+  if (!Const)
+    return false;
   // Replacing `musttail` instructions with constant breaks `musttail` invariant
   // unless the call itself can be removed.
   // Calls with "clang.arc.attachedcall" implicitly use the return value and
@@ -734,12 +713,14 @@ public:
 
   Constant *getConstant(const ValueLatticeElement &LV) const;
 
+  Constant *getConstantOrNull(Value *V) const;
+
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
     return TrackingIncomingArguments;
   }
 
-  void markArgInFuncSpecialization(Function *F,
-                                   const SmallVectorImpl<ArgInfo> &Args);
+  void setLatticeValueForSpecializationArguments(Function *F,
+                                       const SmallVectorImpl<ArgInfo> &Args);
 
   void markFunctionUnreachable(Function *F) {
     for (auto &BB : *F)
@@ -833,36 +814,68 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
   return nullptr;
 }
 
-void SCCPInstVisitor::markArgInFuncSpecialization(
-    Function *F, const SmallVectorImpl<ArgInfo> &Args) {
+Constant *SCCPInstVisitor::getConstantOrNull(Value *V) const {
+  Constant *Const = nullptr;
+  if (V->getType()->isStructTy()) {
+    std::vector<ValueLatticeElement> LVs = getStructLatticeValueFor(V);
+    if (any_of(LVs, SCCPSolver::isOverdefined))
+      return nullptr;
+    std::vector<Constant *> ConstVals;
+    auto *ST = cast<StructType>(V->getType());
+    for (unsigned I = 0, E = ST->getNumElements(); I != E; ++I) {
+      ValueLatticeElement LV = LVs[I];
+      ConstVals.push_back(SCCPSolver::isConstant(LV)
+                              ? getConstant(LV)
+                              : UndefValue::get(ST->getElementType(I)));
+    }
+    Const = ConstantStruct::get(ST, ConstVals);
+  } else {
+    const ValueLatticeElement &LV = getLatticeValueFor(V);
+    if (SCCPSolver::isOverdefined(LV))
+      return nullptr;
+    Const = SCCPSolver::isConstant(LV) ? getConstant(LV)
+                                       : UndefValue::get(V->getType());
+  }
+  assert(Const && "Constant is nullptr here!");
+  return Const;
+}
+
+void SCCPInstVisitor::setLatticeValueForSpecializationArguments(Function *F,
+                                        const SmallVectorImpl<ArgInfo> &Args) {
   assert(!Args.empty() && "Specialization without arguments");
   assert(F->arg_size() == Args[0].Formal->getParent()->arg_size() &&
          "Functions should have the same number of arguments");
 
   auto Iter = Args.begin();
-  Argument *NewArg = F->arg_begin();
-  Argument *OldArg = Args[0].Formal->getParent()->arg_begin();
+  Function::arg_iterator NewArg = F->arg_begin();
+  Function::arg_iterator OldArg = Args[0].Formal->getParent()->arg_begin();
   for (auto End = F->arg_end(); NewArg != End; ++NewArg, ++OldArg) {
 
     LLVM_DEBUG(dbgs() << "SCCP: Marking argument "
                       << NewArg->getNameOrAsOperand() << "\n");
 
-    if (Iter != Args.end() && OldArg == Iter->Formal) {
-      // Mark the argument constants in the new function.
-      markConstant(NewArg, Iter->Actual);
+    // Mark the argument constants in the new function
+    // or copy the lattice state over from the old function.
+    if (Iter != Args.end() && Iter->Formal == &*OldArg) {
+      if (auto *STy = dyn_cast<StructType>(NewArg->getType())) {
+        for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+          ValueLatticeElement &NewValue = StructValueState[{&*NewArg, I}];
+          NewValue.markConstant(Iter->Actual->getAggregateElement(I));
+        }
+      } else {
+        ValueState[&*NewArg].markConstant(Iter->Actual);
+      }
       ++Iter;
-    } else if (ValueState.count(OldArg)) {
-      // For the remaining arguments in the new function, copy the lattice state
-      // over from the old function.
-      //
-      // Note: This previously looked like this:
-      // ValueState[NewArg] = ValueState[OldArg];
-      // This is incorrect because the DenseMap class may resize the underlying
-      // memory when inserting `NewArg`, which will invalidate the reference to
-      // `OldArg`. Instead, we make sure `NewArg` exists before setting it.
-      auto &NewValue = ValueState[NewArg];
-      NewValue = ValueState[OldArg];
-      pushToWorkList(NewValue, NewArg);
+    } else {
+      if (auto *STy = dyn_cast<StructType>(NewArg->getType())) {
+        for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+          ValueLatticeElement &NewValue = StructValueState[{&*NewArg, I}];
+          NewValue = StructValueState[{&*OldArg, I}];
+        }
+      } else {
+        ValueLatticeElement &NewValue = ValueState[&*NewArg];
+        NewValue = ValueState[&*OldArg];
+      }
     }
   }
 }
@@ -1945,13 +1958,17 @@ Constant *SCCPSolver::getConstant(const ValueLatticeElement &LV) const {
   return Visitor->getConstant(LV);
 }
 
+Constant *SCCPSolver::getConstantOrNull(Value *V) const {
+  return Visitor->getConstantOrNull(V);
+}
+
 SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
   return Visitor->getArgumentTrackedFunctions();
 }
 
-void SCCPSolver::markArgInFuncSpecialization(
-    Function *F, const SmallVectorImpl<ArgInfo> &Args) {
-  Visitor->markArgInFuncSpecialization(F, Args);
+void SCCPSolver::setLatticeValueForSpecializationArguments(Function *F,
+                                   const SmallVectorImpl<ArgInfo> &Args) {
+  Visitor->setLatticeValueForSpecializationArguments(F, Args);
 }
 
 void SCCPSolver::markFunctionUnreachable(Function *F) {

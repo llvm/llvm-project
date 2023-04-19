@@ -235,7 +235,8 @@ public:
   std::vector<ProbeType> &getProbes() { return Probes; }
   void addProbes(ProbeType Probe) { Probes.push_back(Probe); }
   // Caller node of the inline site
-  MCPseudoProbeInlineTreeBase<ProbeType, DerivedProbeInlineTreeType> *Parent;
+  MCPseudoProbeInlineTreeBase<ProbeType, DerivedProbeInlineTreeType> *Parent =
+      nullptr;
   DerivedProbeInlineTreeType *getOrAddNode(const InlineSite &Site) {
     auto Ret = Children.emplace(
         Site, std::make_unique<DerivedProbeInlineTreeType>(Site));

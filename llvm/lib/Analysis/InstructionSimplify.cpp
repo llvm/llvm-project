@@ -4582,6 +4582,21 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
       return FalseVal;
   }
 
+  if (Pred == ICmpInst::Predicate::ICMP_EQ) {
+    Value *X;
+    Value *Y;
+    // select(X | Y == 0, X or Y, X | Y) -> X | Y
+    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_Zero())) &&
+        match(FalseVal, m_Or(m_Value(X), m_Value(Y))) &&
+        (TrueVal == X || TrueVal == Y))
+      return FalseVal;
+    // select(X & Y == -1, X or Y, X & Y) -> X & Y
+    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_AllOnes())) &&
+        match(FalseVal, m_And(m_Value(X), m_Value(Y))) &&
+        (TrueVal == X || TrueVal == Y))
+      return FalseVal;
+  }
+
   return nullptr;
 }
 

@@ -17,8 +17,8 @@ static void *loop(void *args) {
   uintptr_t n = (uintptr_t)args;
   for (int i = 0; i < n; ++i) {
     pthread_t thread;
-    pthread_create(&thread, 0, null_func, nullptr);
-    pthread_detach(thread);
+    if (pthread_create(&thread, 0, null_func, nullptr) == 0)
+      pthread_detach(thread);
   }
   return nullptr;
 }
@@ -27,7 +27,8 @@ int main(int argc, char **argv) {
   uintptr_t n = atoi(argv[1]);
   pthread_t threads[64];
   for (auto &thread : threads)
-    pthread_create(&thread, 0, loop, (void *)n);
+    while (pthread_create(&thread, 0, loop, (void *)n) != 0) {
+    }
 
   for (auto &thread : threads)
     pthread_join(thread, nullptr);
