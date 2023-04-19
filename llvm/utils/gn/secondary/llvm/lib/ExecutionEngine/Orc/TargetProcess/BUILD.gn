@@ -8,7 +8,6 @@ static_library("TargetProcess") {
   sources = [
     "ExecutorSharedMemoryMapperService.cpp",
     "JITLoaderGDB.cpp",
-    "JITLoaderPerf.cpp",
     "OrcRTBootstrap.cpp",
     "RegisterEHFrames.cpp",
     "SimpleExecutorDylibManager.cpp",
