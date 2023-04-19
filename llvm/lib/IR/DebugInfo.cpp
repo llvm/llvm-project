@@ -1836,6 +1836,140 @@ void at::deleteAll(Function *F) {
     DAI->eraseFromParent();
 }
 
+bool at::calculateFragmentIntersect(
+    const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
+    uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DAI,
+    std::optional<DIExpression::FragmentInfo> &Result) {
+  // There are multiple offsets at play in this function, so let's break it
+  // down. Starting with how variables may be stored in allocas:
+  //
+  //   1 Simplest case: variable is alloca sized and starts at offset 0.
+  //   2 Variable is larger than the alloca: the alloca holds just a part of it.
+  //   3 Variable is smaller than the alloca: the alloca may hold multiple
+  //   variables.
+  //
+  // Imagine we have a store to the entire alloca. In case (3) the store
+  // affects bits outside of the bounds of each variable. In case (2), where
+  // the alloca holds the Xth bit to the Yth bit of a variable, the
+  // zero-offset store doesn't represent an assignment at offset zero to the
+  // variable. It is an assignment to offset X.
+  //
+  // # Example 1
+  // Obviously, not all stores are alloca-sized and have zero offset. Imagine
+  // the lower 32 bits of this store are dead and are going to be DSEd:
+  //
+  //    store i64 %v, ptr %dest, !DIAssignID !1
+  //    dbg.assign(..., !DIExpression(fragment, 128, 32), !1, %dest,
+  //               !DIExpression(DW_OP_plus_uconst, 4))
+  //
+  // Goal: Given our dead bits at offset:0 size:32 for the store, determine the
+  // part of the variable, which fits in the fragment expressed by the
+  // dbg.assign, that has been killed, if any.
+  //
+  //     calculateFragmentIntersect(..., SliceOffsetInBits=0,
+  //                 SliceSizeInBits=32, Dest=%dest, DAI=dbg.assign)
+  //
+  // Drawing the store (s) in memory followed by the shortened version ($),
+  // then the dbg.assign (d), with the fragment information on a seperate scale
+  // underneath:
+  //
+  // Memory
+  // offset
+  //   from
+  //   dest 0      63
+  //        |      |
+  //       s[######] - Original stores 64 bits to Dest.
+  //       $----[##] - DSE says the lower 32 bits are dead, to be removed.
+  //       d    [##] - DAI's address-modifying expression adds 4 bytes to dest.
+  // Variable   |  |
+  // Fragment   128|
+  //  Offsets      159
+  //
+  // The answer is achieved in a few steps:
+  // 1. Add the fragment offset to the store offset:
+  //      SliceOffsetInBits:0 + VarFrag.OffsetInBits:128 = 128
+  //
+  // 2. Subtract the address-modifying expression offset plus difference
+  //    between d.address and dest:
+  //      128 - (expression_offset:32 + (d.address - dest):0) = 96
+  //
+  // 3. That offset along with the store size (32) represents the bits of the
+  //    variable that'd be affected by the store. Call it SliceOfVariable.
+  //    Intersect that with DAI's fragment info:
+  //      SliceOfVariable ∩ DAI_fragment = none
+  //
+  // In this case: none of the dead bits of the store affect DAI.
+  //
+  // # Example 2
+  // Similar example with the same goal. This time the upper 16 bits
+  // of the store are going to be DSE'd.
+  //
+  //    store i64 %v, ptr %dest, !DIAssignID !1
+  //    dbg.assign(..., !DIExpression(fragment, 128, 32), !1, %dest,
+  //               !DIExpression(DW_OP_plus_uconst, 4))
+  //
+  //     calculateFragmentIntersect(..., SliceOffsetInBits=48,
+  //                 SliceSizeInBits=16, Dest=%dest, DAI=dbg.assign)
+  //
+  // Memory
+  // offset
+  //   from
+  //   dest 0      63
+  //        |      |
+  //       s[######] - Original stores 64 bits to Dest.
+  //       $[####]-- - DSE says the upper 16 bits are dead, to be removed.
+  //       d    [##] - DAI's address-modifying expression adds 4 bytes to dest.
+  // Variable   |  |
+  // Fragment   128|
+  //  Offsets      159
+  //
+  // Using the same steps in the first example:
+  // 1. SliceOffsetInBits:48 + VarFrag.OffsetInBits:128 = 176
+  // 2. 176 - (expression_offset:32 + (d.address - dest):0) = 144
+  // 3. SliceOfVariable offset = 144, size = 16:
+  //      SliceOfVariable ∩ DAI_fragment = (offset: 144, size: 16)
+  // SliceOfVariable tells us the bits of the variable described by DAI that are
+  // affected by the DSE.
+  if (DAI->isKillAddress())
+    return false;
+
+  DIExpression::FragmentInfo VarFrag = DAI->getFragmentOrEntireVariable();
+  if (VarFrag.SizeInBits == 0)
+    return false; // Variable size is unknown.
+
+  // Calculate the difference between Dest and the dbg.assign address +
+  // address-modifying expression.
+  int64_t PointerOffsetInBits;
+  {
+    auto DestOffsetInBytes = DAI->getAddress()->getPointerOffsetFrom(Dest, DL);
+    if (!DestOffsetInBytes)
+      return false; // Can't calculate difference in addresses.
+
+    int64_t ExprOffsetInBytes;
+    if (!DAI->getAddressExpression()->extractIfOffset(ExprOffsetInBytes))
+      return false;
+
+    int64_t PointerOffsetInBytes = *DestOffsetInBytes + ExprOffsetInBytes;
+    PointerOffsetInBits = PointerOffsetInBytes * 8;
+  }
+
+  // Adjust the slice offset so that we go from describing the a slice
+  // of memory to a slice of the variable.
+  int64_t NewOffsetInBits =
+      SliceOffsetInBits + VarFrag.OffsetInBits - PointerOffsetInBits;
+  if (NewOffsetInBits < 0)
+    return false; // Fragment offsets can only be positive.
+  DIExpression::FragmentInfo SliceOfVariable(SliceSizeInBits, NewOffsetInBits);
+  // Intersect the variable slice with DAI's fragment to trim it down to size.
+  DIExpression::FragmentInfo TrimmedSliceOfVariable =
+      DIExpression::FragmentInfo::intersect(SliceOfVariable, VarFrag);
+  if (TrimmedSliceOfVariable == VarFrag)
+    Result = std::nullopt;
+  else
+    Result = TrimmedSliceOfVariable;
+  return true;
+}
+
 /// Collect constant properies (base, size, offset) of \p StoreDest.
 /// Return std::nullopt if any properties are not constants.
 static std::optional<AssignmentInfo>

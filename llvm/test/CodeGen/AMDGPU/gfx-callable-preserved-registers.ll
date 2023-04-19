@@ -204,11 +204,6 @@ define amdgpu_gfx void @void_func_void_clobber_s28_s29() #1 {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "; clobber", "~{s[30:31]}"() #0
-; GCN:          v_writelane_b32 v0, s28, 0
-; GCN:          v_writelane_b32 v0, s29, 1
-
-; GCN:          v_readlane_b32 s28, v0, 0
-; GCN:          v_readlane_b32 s29, v0, 1
   call void asm sideeffect "; clobber", "~{s[28:29]}"() #0
   ret void
 }

@@ -74,4 +74,27 @@ const char *AsFortran(DefinedIo x) {
   }
 }
 
+std::string AsFortran(IgnoreTKRSet tkr) {
+  std::string result;
+  if (tkr.test(IgnoreTKR::Type)) {
+    result += 'T';
+  }
+  if (tkr.test(IgnoreTKR::Kind)) {
+    result += 'K';
+  }
+  if (tkr.test(IgnoreTKR::Rank)) {
+    result += 'R';
+  }
+  if (tkr.test(IgnoreTKR::Device)) {
+    result += 'D';
+  }
+  if (tkr.test(IgnoreTKR::Managed)) {
+    result += 'M';
+  }
+  if (tkr.test(IgnoreTKR::Contiguous)) {
+    result += 'C';
+  }
+  return result;
+}
+
 } // namespace Fortran::common

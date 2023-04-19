@@ -58,7 +58,7 @@ If you would like to run the LLVM tests you will need `Python
 <http://www.python.org/>`_. Version 3.6 and newer are known to work. You can
 install Python with Visual Studio 2019, from the Microsoft store or from
 the `Python web site <http://www.python.org/>`_. We recommend the latter since it
-allows you to to adjust installation options.
+allows you to adjust installation options.
 
 You will need `Git for Windows <https://git-scm.com/>`_ with bash tools, too.
 Git for Windows is also bundled with Visual Studio 2019.
