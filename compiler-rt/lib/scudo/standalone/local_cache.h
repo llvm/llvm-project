@@ -14,6 +14,7 @@
 #include "platform.h"
 #include "report.h"
 #include "stats.h"
+#include "string_utils.h"
 
 namespace scudo {
 
@@ -163,6 +164,29 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   }
 
   LocalStats &getStats() { return Stats; }
+
+  void getStats(ScopedString *Str) {
+    bool EmptyCache = true;
+    for (uptr I = 0; I < NumClasses; ++I) {
+      if (PerClassArray[I].Count == 0)
+        continue;
+
+      EmptyCache = false;
+      // The size of BatchClass is set to 0 intentionally. See the comment in
+      // initCache() for more details.
+      const uptr ClassSize = I == BatchClassId
+                                 ? SizeClassAllocator::getSizeByClassId(I)
+                                 : PerClassArray[I].ClassSize;
+      // Note that the string utils don't support printing u16 thus we cast it
+      // to a common use type uptr.
+      Str->append("    %02zu (%6zu): cached: %4zu max: %4zu\n", I, ClassSize,
+                  static_cast<uptr>(PerClassArray[I].Count),
+                  static_cast<uptr>(PerClassArray[I].MaxCount));
+    }
+
+    if (EmptyCache)
+      Str->append("    No block is cached.\n");
+  }
 
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
