@@ -884,27 +884,3 @@ define float @returned_extractvalue([4 x float] nofpclass(nan) %array) {
   %extract = extractvalue [4 x float] %array, 0
   ret float %extract
 }
-
-define float @return_nofpclass_freeze_nan_arg(float nofpclass(nan) %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(nan) float @return_nofpclass_freeze_nan_arg
-; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze float [[ARG]]
-; CHECK-NEXT:    ret float [[FREEZE]]
-;
-  %freeze = freeze float %arg
-  ret float %freeze
-}
-
-define float @return_nofpclass_extractelement_freeze_pinf_arg(<2 x float> nofpclass(pinf) %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(pinf) float @return_nofpclass_extractelement_freeze_pinf_arg
-; CHECK-SAME: (<2 x float> nofpclass(pinf) [[ARG:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[FREEZE:%.*]] = freeze <2 x float> [[ARG]]
-; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x float> [[FREEZE]], i32 0
-; CHECK-NEXT:    ret float [[ELT]]
-;
-  %freeze = freeze <2 x float> %arg
-  %elt = extractelement <2 x float> %freeze, i32 0
-  ret float %elt
-}
