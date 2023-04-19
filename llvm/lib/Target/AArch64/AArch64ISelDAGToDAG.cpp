@@ -68,8 +68,6 @@ public:
   template <signed Low, signed High, signed Scale>
   bool SelectRDVLImm(SDValue N, SDValue &Imm);
 
-  bool tryMLAV64LaneV128(SDNode *N);
-  bool tryMULLV64LaneV128(unsigned IntNo, SDNode *N);
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -835,135 +833,6 @@ getExtendTypeForNode(SDValue N, bool IsLoadStore = false) {
   }
 
   return AArch64_AM::InvalidShiftExtend;
-}
-
-// Helper for SelectMLAV64LaneV128 - Recognize high lane extracts.
-static bool checkHighLaneIndex(SDNode *DL, SDValue &LaneOp, int &LaneIdx) {
-  if (DL->getOpcode() != AArch64ISD::DUPLANE16 &&
-      DL->getOpcode() != AArch64ISD::DUPLANE32)
-    return false;
-
-  SDValue SV = DL->getOperand(0);
-  if (SV.getOpcode() != ISD::INSERT_SUBVECTOR)
-    return false;
-
-  SDValue EV = SV.getOperand(1);
-  if (EV.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return false;
-
-  ConstantSDNode *DLidx = cast<ConstantSDNode>(DL->getOperand(1).getNode());
-  ConstantSDNode *EVidx = cast<ConstantSDNode>(EV.getOperand(1).getNode());
-  LaneIdx = DLidx->getSExtValue() + EVidx->getSExtValue();
-  LaneOp = EV.getOperand(0);
-
-  return true;
-}
-
-// Helper for SelectOpcV64LaneV128 - Recognize operations where one operand is a
-// high lane extract.
-static bool checkV64LaneV128(SDValue Op0, SDValue Op1, SDValue &StdOp,
-                             SDValue &LaneOp, int &LaneIdx) {
-
-  if (!checkHighLaneIndex(Op0.getNode(), LaneOp, LaneIdx)) {
-    std::swap(Op0, Op1);
-    if (!checkHighLaneIndex(Op0.getNode(), LaneOp, LaneIdx))
-      return false;
-  }
-  StdOp = Op1;
-  return true;
-}
-
-/// SelectMLAV64LaneV128 - AArch64 supports vector MLAs where one multiplicand
-/// is a lane in the upper half of a 128-bit vector.  Recognize and select this
-/// so that we don't emit unnecessary lane extracts.
-bool AArch64DAGToDAGISel::tryMLAV64LaneV128(SDNode *N) {
-  SDLoc dl(N);
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  SDValue MLAOp1;   // Will hold ordinary multiplicand for MLA.
-  SDValue MLAOp2;   // Will hold lane-accessed multiplicand for MLA.
-  int LaneIdx = -1; // Will hold the lane index.
-
-  if (Op1.getOpcode() != ISD::MUL ||
-      !checkV64LaneV128(Op1.getOperand(0), Op1.getOperand(1), MLAOp1, MLAOp2,
-                        LaneIdx)) {
-    std::swap(Op0, Op1);
-    if (Op1.getOpcode() != ISD::MUL ||
-        !checkV64LaneV128(Op1.getOperand(0), Op1.getOperand(1), MLAOp1, MLAOp2,
-                          LaneIdx))
-      return false;
-  }
-
-  SDValue LaneIdxVal = CurDAG->getTargetConstant(LaneIdx, dl, MVT::i64);
-
-  SDValue Ops[] = { Op0, MLAOp1, MLAOp2, LaneIdxVal };
-
-  unsigned MLAOpc = ~0U;
-
-  switch (N->getSimpleValueType(0).SimpleTy) {
-  default:
-    llvm_unreachable("Unrecognized MLA.");
-  case MVT::v4i16:
-    MLAOpc = AArch64::MLAv4i16_indexed;
-    break;
-  case MVT::v8i16:
-    MLAOpc = AArch64::MLAv8i16_indexed;
-    break;
-  case MVT::v2i32:
-    MLAOpc = AArch64::MLAv2i32_indexed;
-    break;
-  case MVT::v4i32:
-    MLAOpc = AArch64::MLAv4i32_indexed;
-    break;
-  }
-
-  ReplaceNode(N, CurDAG->getMachineNode(MLAOpc, dl, N->getValueType(0), Ops));
-  return true;
-}
-
-bool AArch64DAGToDAGISel::tryMULLV64LaneV128(unsigned IntNo, SDNode *N) {
-  SDLoc dl(N);
-  SDValue SMULLOp0;
-  SDValue SMULLOp1;
-  int LaneIdx;
-
-  if (!checkV64LaneV128(N->getOperand(1), N->getOperand(2), SMULLOp0, SMULLOp1,
-                        LaneIdx))
-    return false;
-
-  SDValue LaneIdxVal = CurDAG->getTargetConstant(LaneIdx, dl, MVT::i64);
-
-  SDValue Ops[] = { SMULLOp0, SMULLOp1, LaneIdxVal };
-
-  unsigned SMULLOpc = ~0U;
-
-  if (IntNo == Intrinsic::aarch64_neon_smull) {
-    switch (N->getSimpleValueType(0).SimpleTy) {
-    default:
-      llvm_unreachable("Unrecognized SMULL.");
-    case MVT::v4i32:
-      SMULLOpc = AArch64::SMULLv4i16_indexed;
-      break;
-    case MVT::v2i64:
-      SMULLOpc = AArch64::SMULLv2i32_indexed;
-      break;
-    }
-  } else if (IntNo == Intrinsic::aarch64_neon_umull) {
-    switch (N->getSimpleValueType(0).SimpleTy) {
-    default:
-      llvm_unreachable("Unrecognized SMULL.");
-    case MVT::v4i32:
-      SMULLOpc = AArch64::UMULLv4i16_indexed;
-      break;
-    case MVT::v2i64:
-      SMULLOpc = AArch64::UMULLv2i32_indexed;
-      break;
-    }
-  } else
-    llvm_unreachable("Unrecognized intrinsic.");
-
-  ReplaceNode(N, CurDAG->getMachineNode(SMULLOpc, dl, N->getValueType(0), Ops));
-  return true;
 }
 
 /// Instructions that accept extend modifiers like UXTW expect the register
@@ -4436,11 +4305,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
-  case ISD::ADD:
-    if (tryMLAV64LaneV128(Node))
-      return;
-    break;
-
   case ISD::LOAD: {
     if (tryAuthLoad(Node))
       return;
@@ -5084,11 +4948,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                                            : AArch64::TBXv16i8Four,
                   true);
       return;
-    case Intrinsic::aarch64_neon_smull:
-    case Intrinsic::aarch64_neon_umull:
-      if (tryMULLV64LaneV128(IntNo, Node))
-        return;
-      break;
     case Intrinsic::ptrauth_resign: {
       SDLoc DL(Node);
       // IntrinsicID is operand #0
