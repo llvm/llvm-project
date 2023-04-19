@@ -631,7 +631,6 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
 
   LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
   LLVMOrcDisposeMaterializationResponsibility(MR);
-  return;
 }
 
 TEST_F(OrcCAPITestBase, MaterializationResponsibility) {
