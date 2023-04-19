@@ -4,7 +4,7 @@
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK $(%run %t-unique UNIQUE)
 // Verify that we can disable symbolization if needed:
 // RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM $(%run %t-unique NOSYM-UNIQUE)
-// XFAIL: target={{.*windows-msvc.*}}
+// XFAIL: target={{.*windows.*}}
 // Unsupported function flag
 // UNSUPPORTED: target={{.*openbsd.*}}
 

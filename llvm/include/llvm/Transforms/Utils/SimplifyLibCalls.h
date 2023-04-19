@@ -181,6 +181,7 @@ private:
   Value *optimizeMemMove(CallInst *CI, IRBuilderBase &B);
   Value *optimizeMemSet(CallInst *CI, IRBuilderBase &B);
   Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeNew(CallInst *CI, IRBuilderBase &B, LibFunc &Func);
   Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
 

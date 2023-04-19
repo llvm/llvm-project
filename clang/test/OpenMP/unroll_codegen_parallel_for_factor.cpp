@@ -21,7 +21,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    store i32 %[[START:.+]], ptr %[[START_ADDR]], align 4
 // IR-NEXT:    store i32 %[[END:.+]], ptr %[[END_ADDR]], align 4
 // IR-NEXT:    store i32 %[[STEP:.+]], ptr %[[STEP_ADDR]], align 4
-// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @2, i32 3, ptr @.omp_outlined., ptr %[[END_ADDR]], ptr %[[STEP_ADDR]], ptr %[[START_ADDR]])
+// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @2, i32 3, ptr @func.omp_outlined, ptr %[[END_ADDR]], ptr %[[STEP_ADDR]], ptr %[[START_ADDR]])
 // IR-NEXT:    ret void
 // IR-NEXT:  }
 extern "C" void func(int start, int end, int step) {
@@ -32,7 +32,7 @@ extern "C" void func(int start, int end, int step) {
 }
 
 
-// IR-LABEL: @.omp_outlined.(
+// IR-LABEL: @func.omp_outlined(
 // IR-NEXT:  [[ENTRY:.*]]:
 // IR-NEXT:    %[[DOTGLOBAL_TID__ADDR:.+]] = alloca ptr, align 8
 // IR-NEXT:    %[[DOTBOUND_TID__ADDR:.+]] = alloca ptr, align 8
