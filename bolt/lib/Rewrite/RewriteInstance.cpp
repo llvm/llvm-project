@@ -4097,7 +4097,6 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
       FF.setImageAddress(0);
       FF.setImageSize(0);
       FF.setFileOffset(0);
-      BC->deregisterSection(*ColdSection);
     } else {
       FF.setAddress(NextAvailableAddress);
       FF.setImageAddress(ColdSection->getAllocAddress());
@@ -4111,6 +4110,9 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
             "BOLT: mapping cold fragment {0:x+} to {1:x+} with size {2:x+}\n",
             FF.getImageAddress(), FF.getAddress(), FF.getImageSize()));
     RTDyld.reassignSectionAddress(ColdSection->getSectionID(), FF.getAddress());
+
+    if (TooLarge)
+      BC->deregisterSection(*ColdSection);
 
     NextAvailableAddress += FF.getImageSize();
   }

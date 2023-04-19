@@ -1,11 +1,23 @@
 // RUN: mlir-opt %s -test-affine-reify-value-bounds -verify-diagnostics \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
+// RUN: mlir-opt %s -test-affine-reify-value-bounds="use-arith-ops" \
+// RUN:     -verify-diagnostics -split-input-file | \
+// RUN: FileCheck %s --check-prefix=CHECK-ARITH
+
 // CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 + 5)>
 // CHECK-LABEL: func @arith_addi(
 //  CHECK-SAME:     %[[a:.*]]: index
 //       CHECK:   %[[apply:.*]] = affine.apply #[[$map]]()[%[[a]]]
 //       CHECK:   return %[[apply]]
+
+// CHECK-ARITH-LABEL: func @arith_addi(
+//  CHECK-ARITH-SAME:     %[[a:.*]]: index
+//       CHECK-ARITH:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK-ARITH:   %[[add:.*]] = arith.addi %[[c5]], %[[a]]
+//       CHECK-ARITH:   %[[c5:.*]] = arith.constant 5 : index
+//       CHECK-ARITH:   %[[add:.*]] = arith.addi %[[a]], %[[c5]]
+//       CHECK-ARITH:   return %[[add]]
 func.func @arith_addi(%a: index) -> index {
   %0 = arith.constant 5 : index
   %1 = arith.addi %0, %a : index

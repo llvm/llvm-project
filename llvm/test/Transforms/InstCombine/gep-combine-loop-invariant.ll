@@ -19,9 +19,9 @@ define i32 @foo(ptr nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[I4:%.*]] to i64
-; CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i8, ptr [[WIN]], i64 [[IDX_EXT1]]
-; CHECK-NEXT:    [[ADD_PTR22:%.*]] = getelementptr i8, ptr [[ADD_PTR1]], i64 -1
-; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr i8, ptr [[ADD_PTR22]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[WIN]], i64 [[IDX_EXT]]
+; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[IDX_EXT1]]
+; CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR2]], i64 -1
 ; CHECK-NEXT:    [[I3:%.*]] = load i32, ptr [[ADD_PTR3]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I3]], [[SCAN_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_END]], label [[IF_THEN]]
@@ -99,8 +99,8 @@ define void @PR37005(ptr %base, ptr %in) {
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
 ; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], <i64 1125899906842496, i64 1125899906842496>
-; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 80
-; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, ptr [[E51]], <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -130,8 +130,8 @@ define void @PR37005_2(ptr %base, ptr %in) {
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint ptr [[E2]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[PI1]], 14
 ; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], 1125899906842496
-; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], <2 x i64> <i64 80, i64 60>
-; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E51]], i64 [[SL1]]
+; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[SL1]]
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, ptr [[E5]], <2 x i64> <i64 80, i64 60>
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -161,8 +161,8 @@ define void @PR37005_3(<2 x ptr> %base, ptr %in) {
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], <i64 14, i64 14>
 ; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], <i64 1125899906842496, i64 1125899906842496>
-; CHECK-NEXT:    [[E51:%.*]] = getelementptr inbounds i8, <2 x ptr> [[BASE:%.*]], i64 80
-; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E51]], <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, <2 x ptr> [[BASE:%.*]], <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -190,7 +190,8 @@ define void @PR51485(<2 x i64> %v) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[SL1:%.*]] = shl nuw nsw <2 x i64> [[V:%.*]], <i64 7, i64 7>
-; CHECK-NEXT:    [[E6:%.*]] = getelementptr i8, ptr getelementptr (i8, ptr @PR51485, i64 80), <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E5:%.*]] = getelementptr inbounds i8, ptr @PR51485, <2 x i64> [[SL1]]
+; CHECK-NEXT:    [[E6:%.*]] = getelementptr inbounds i8, <2 x ptr> [[E5]], i64 80
 ; CHECK-NEXT:    call void @blackhole(<2 x ptr> [[E6]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -258,8 +259,8 @@ define void @only_one_inbounds(ptr %ptr, i1 %c, i32 noundef %arg1, i32 noundef %
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG1_EXT:%.*]] = zext i32 [[ARG1:%.*]] to i64
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[ARG2_EXT]]
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR21]], i64 [[ARG1_EXT]]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[ARG1_EXT]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR2]], i64 [[ARG2_EXT]]
 ; CHECK-NEXT:    call void @use(ptr [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -286,9 +287,9 @@ define void @both_inbounds_one_neg(ptr %ptr, i1 %c, i32 noundef %arg) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 -1
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR21]], i64 [[ARG_EXT]]
-; CHECK-NEXT:    call void @use(ptr [[PTR3]])
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR2]], i64 -1
+; CHECK-NEXT:    call void @use(ptr nonnull [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -313,8 +314,8 @@ define void @both_inbounds_pos(ptr %ptr, i1 %c, i32 noundef %arg) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[ARG_EXT:%.*]] = zext i32 [[ARG:%.*]] to i64
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR21]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[ARG_EXT]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR2]], i64 1
 ; CHECK-NEXT:    call void @use(ptr nonnull [[PTR3]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:

@@ -21,6 +21,7 @@
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
@@ -657,9 +658,9 @@ static std::string getModuleCachePath(ArrayRef<std::string> Args) {
 // generating P1689 format, trying to generate the compilation database
 // form specified command line after the positional parameter "--".
 static std::unique_ptr<tooling::CompilationDatabase>
-getCompilationDataBase(int argc, const char **argv, std::string &ErrorMessage) {
+getCompilationDataBase(int argc, char **argv, std::string &ErrorMessage) {
   llvm::InitLLVM X(argc, argv);
-  ParseArgs(argc, const_cast<char **>(argv));
+  ParseArgs(argc, argv);
 
   if (!CompilationDB.empty())
     return tooling::JSONCompilationDatabase::loadFromFile(
@@ -674,7 +675,7 @@ getCompilationDataBase(int argc, const char **argv, std::string &ErrorMessage) {
 
   // Trying to get the input file, the output file and the command line options
   // from the positional parameter "--".
-  const char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
+  char **DoubleDash = std::find(argv, argv + argc, StringRef("--"));
   if (DoubleDash == argv + argc) {
     llvm::errs() << "The command line arguments is required after '--' in "
                     "P1689 per file mode.";
@@ -746,7 +747,7 @@ getCompilationDataBase(int argc, const char **argv, std::string &ErrorMessage) {
       FEOpts.Inputs[0].getFile(), OutputFile, CommandLine);
 }
 
-int main(int argc, const char **argv) {
+int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   std::string ErrorMessage;
   std::unique_ptr<tooling::CompilationDatabase> Compilations =
       getCompilationDataBase(argc, argv, ErrorMessage);

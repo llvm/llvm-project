@@ -102,3 +102,37 @@ define <2 x i8> @mul_x_selectp2_vec(<2 x i8> %xx, i1 %c) {
   %r = mul <2 x i8> %x, %s
   ret <2 x i8> %r
 }
+
+
+define i8 @shl_add_log_may_cause_poison_pr62175_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add_log_may_cause_poison_pr62175_fail(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 4, [[X:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[SHL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %shl = shl i8 4, %x
+  %mul = mul i8 %y, %shl
+  ret i8 %mul
+}
+
+define i8 @shl_add_log_may_cause_poison_pr62175_with_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add_log_may_cause_poison_pr62175_with_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %shl = shl nuw i8 4, %x
+  %mul = mul i8 %y, %shl
+  ret i8 %mul
+}
+
+define i8 @shl_add_log_may_cause_poison_pr62175_with_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl_add_log_may_cause_poison_pr62175_with_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %shl = shl nsw i8 4, %x
+  %mul = mul i8 %y, %shl
+  ret i8 %mul
+}

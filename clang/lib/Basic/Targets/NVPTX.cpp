@@ -73,7 +73,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   // types.
   llvm::Triple HostTriple(Opts.HostTriple);
   if (!HostTriple.isNVPTX())
-    HostTarget.reset(AllocateTarget(llvm::Triple(Opts.HostTriple), Opts));
+    HostTarget = AllocateTarget(llvm::Triple(Opts.HostTriple), Opts);
 
   // If no host target, make some guesses about the data layout and return.
   if (!HostTarget) {

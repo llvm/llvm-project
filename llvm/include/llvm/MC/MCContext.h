@@ -101,7 +101,7 @@ private:
   Triple TT;
 
   /// The SourceMgr for this object, if any.
-  const SourceMgr *SrcMgr;
+  const SourceMgr *SrcMgr = nullptr;
 
   /// The SourceMgr for inline assembly, if any.
   std::unique_ptr<SourceMgr> InlineSrcMgr;
@@ -110,16 +110,16 @@ private:
   DiagHandlerTy DiagHandler;
 
   /// The MCAsmInfo for this target.
-  const MCAsmInfo *MAI;
+  const MCAsmInfo *MAI = nullptr;
 
   /// The MCRegisterInfo for this target.
-  const MCRegisterInfo *MRI;
+  const MCRegisterInfo *MRI = nullptr;
 
   /// The MCObjectFileInfo for this target.
-  const MCObjectFileInfo *MOFI;
+  const MCObjectFileInfo *MOFI = nullptr;
 
   /// The MCSubtargetInfo for this target.
-  const MCSubtargetInfo *MSTI;
+  const MCSubtargetInfo *MSTI = nullptr;
 
   std::unique_ptr<CodeViewContext> CVContext;
 

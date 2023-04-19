@@ -163,6 +163,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_stack_arrays, false)) {
     opts.StackArrays = 1;
   }
+  if (args.hasFlag(clang::driver::options::OPT_floop_versioning,
+                   clang::driver::options::OPT_fno_loop_versioning, false)) {
+    opts.LoopVersioning = 1;
+  }
 
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());

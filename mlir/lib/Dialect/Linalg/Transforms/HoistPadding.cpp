@@ -462,9 +462,9 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
   // of the enclosing loops.
   for (auto forOp : packingLoops) {
     // Compute an upper bound `ubVal` for the upper bound of `forOp`.
-    FailureOr<OpFoldResult> loopUb = reifyValueBound(
+    FailureOr<OpFoldResult> loopUb = reifyIndexValueBound(
         rewriter, loc, presburger::BoundType::UB, forOp.getUpperBound(),
-        /*dim=*/std::nullopt, /*stopCondition=*/
+        /*stopCondition=*/
         [&](Value v, std::optional<int64_t> d) {
           if (v == forOp.getUpperBound())
             return false;
