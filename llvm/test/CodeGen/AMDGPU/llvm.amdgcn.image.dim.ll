@@ -3508,34 +3508,6 @@ main_body:
 }
 
 define amdgpu_ps <3 x float> @getresinfo_dmask7(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %mip) {
-; GFX6-LABEL: getresinfo_dmask7:
-; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    s_mov_b32 s0, s2
-; GFX6-NEXT:    s_mov_b32 s1, s3
-; GFX6-NEXT:    s_mov_b32 s2, s4
-; GFX6-NEXT:    s_mov_b32 s3, s5
-; GFX6-NEXT:    s_mov_b32 s4, s6
-; GFX6-NEXT:    s_mov_b32 s5, s7
-; GFX6-NEXT:    s_mov_b32 s6, s8
-; GFX6-NEXT:    s_mov_b32 s7, s9
-; GFX6-NEXT:    image_get_resinfo v[0:2], v0, s[0:7] dmask:0x7 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: getresinfo_dmask7:
-; GFX8:       ; %bb.0: ; %main_body
-; GFX8-NEXT:    s_mov_b32 s0, s2
-; GFX8-NEXT:    s_mov_b32 s1, s3
-; GFX8-NEXT:    s_mov_b32 s2, s4
-; GFX8-NEXT:    s_mov_b32 s3, s5
-; GFX8-NEXT:    s_mov_b32 s4, s6
-; GFX8-NEXT:    s_mov_b32 s5, s7
-; GFX8-NEXT:    s_mov_b32 s6, s8
-; GFX8-NEXT:    s_mov_b32 s7, s9
-; GFX8-NEXT:    image_get_resinfo v[0:2], v0, s[0:7] dmask:0x7 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    ; return to shader part epilog
-;
 ; VERDE-LABEL: getresinfo_dmask7:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:2], v0, s[0:7] dmask:0x7 unorm
@@ -3571,34 +3543,6 @@ main_body:
 }
 
 define amdgpu_ps <2 x float> @getresinfo_dmask3(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %mip) {
-; GFX6-LABEL: getresinfo_dmask3:
-; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    s_mov_b32 s0, s2
-; GFX6-NEXT:    s_mov_b32 s1, s3
-; GFX6-NEXT:    s_mov_b32 s2, s4
-; GFX6-NEXT:    s_mov_b32 s3, s5
-; GFX6-NEXT:    s_mov_b32 s4, s6
-; GFX6-NEXT:    s_mov_b32 s5, s7
-; GFX6-NEXT:    s_mov_b32 s6, s8
-; GFX6-NEXT:    s_mov_b32 s7, s9
-; GFX6-NEXT:    image_get_resinfo v[0:1], v0, s[0:7] dmask:0x3 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: getresinfo_dmask3:
-; GFX8:       ; %bb.0: ; %main_body
-; GFX8-NEXT:    s_mov_b32 s0, s2
-; GFX8-NEXT:    s_mov_b32 s1, s3
-; GFX8-NEXT:    s_mov_b32 s2, s4
-; GFX8-NEXT:    s_mov_b32 s3, s5
-; GFX8-NEXT:    s_mov_b32 s4, s6
-; GFX8-NEXT:    s_mov_b32 s5, s7
-; GFX8-NEXT:    s_mov_b32 s6, s8
-; GFX8-NEXT:    s_mov_b32 s7, s9
-; GFX8-NEXT:    image_get_resinfo v[0:1], v0, s[0:7] dmask:0x3 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    ; return to shader part epilog
-;
 ; VERDE-LABEL: getresinfo_dmask3:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v[0:1], v0, s[0:7] dmask:0x3 unorm
@@ -3634,34 +3578,6 @@ main_body:
 }
 
 define amdgpu_ps float @getresinfo_dmask1(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %mip) {
-; GFX6-LABEL: getresinfo_dmask1:
-; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    s_mov_b32 s0, s2
-; GFX6-NEXT:    s_mov_b32 s1, s3
-; GFX6-NEXT:    s_mov_b32 s2, s4
-; GFX6-NEXT:    s_mov_b32 s3, s5
-; GFX6-NEXT:    s_mov_b32 s4, s6
-; GFX6-NEXT:    s_mov_b32 s5, s7
-; GFX6-NEXT:    s_mov_b32 s6, s8
-; GFX6-NEXT:    s_mov_b32 s7, s9
-; GFX6-NEXT:    image_get_resinfo v0, v0, s[0:7] dmask:0x1 unorm
-; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    ; return to shader part epilog
-;
-; GFX8-LABEL: getresinfo_dmask1:
-; GFX8:       ; %bb.0: ; %main_body
-; GFX8-NEXT:    s_mov_b32 s0, s2
-; GFX8-NEXT:    s_mov_b32 s1, s3
-; GFX8-NEXT:    s_mov_b32 s2, s4
-; GFX8-NEXT:    s_mov_b32 s3, s5
-; GFX8-NEXT:    s_mov_b32 s4, s6
-; GFX8-NEXT:    s_mov_b32 s5, s7
-; GFX8-NEXT:    s_mov_b32 s6, s8
-; GFX8-NEXT:    s_mov_b32 s7, s9
-; GFX8-NEXT:    image_get_resinfo v0, v0, s[0:7] dmask:0x1 unorm
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    ; return to shader part epilog
-;
 ; VERDE-LABEL: getresinfo_dmask1:
 ; VERDE:       ; %bb.0: ; %main_body
 ; VERDE-NEXT:    image_get_resinfo v0, v0, s[0:7] dmask:0x1 unorm
