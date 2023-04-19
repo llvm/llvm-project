@@ -804,6 +804,8 @@ void ConvertMathToFuncsPass::generateOpImplementations() {
   module.walk([&](Operation *op) {
     TypeSwitch<Operation *>(op)
         .Case<math::CountLeadingZerosOp>([&](math::CountLeadingZerosOp op) {
+          if (!convertCtlz)
+            return;
           Type resultType = getElementTypeOrSelf(op.getResult().getType());
 
           // Generate the software implementation of this operation,
@@ -872,7 +874,8 @@ void ConvertMathToFuncsPass::runOnOperation() {
                          vector::VectorDialect>();
 
   target.addIllegalOp<math::IPowIOp>();
-  target.addIllegalOp<math::CountLeadingZerosOp>();
+  if (convertCtlz)
+    target.addIllegalOp<math::CountLeadingZerosOp>();
   target.addDynamicallyLegalOp<math::FPowIOp>(
       [this](math::FPowIOp op) { return !isFPowIConvertible(op); });
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
