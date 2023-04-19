@@ -266,7 +266,12 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   if (LockFD == -1)
     return Error::success(); // already closed.
-  auto _1 = make_scope_exit([&]() { LockFD = -1; });
+  auto _1 = make_scope_exit([&]() {
+    assert(LockFD >= 0);
+    sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
+    sys::fs::closeFile(LockFile);
+    LockFD = -1;
+  });
 
   bool ExceededSizeLimit = CheckSizeLimit ? hasExceededSizeLimit() : false;
   PrimaryKVDB.reset();
