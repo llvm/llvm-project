@@ -500,3 +500,15 @@ func.func @bad_parent_comp6(%arg0: !fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i
   %2 = hlfir.parent_comp %arg0 shape %1 : (!fir.box<!fir.array<10x!fir.type<t2{i:i32,j:i32}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<t1{i:i32}>>>
   return
 }
+
+// -----
+func.func @bad_shapeof(%arg0: !hlfir.expr<!fir.char<1,10>>) {
+  // expected-error@+1 {{'hlfir.shape_of' op cannot get the shape of a shape-less expression}}
+  %0 = hlfir.shape_of %arg0 : (!hlfir.expr<!fir.char<1,10>>) -> !fir.shape<1>
+}
+
+// -----
+func.func @bad_shapeof2(%arg0: !hlfir.expr<10xi32>) {
+  // expected-error@+1 {{'hlfir.shape_of' op result rank and expr rank do not match}}
+  %0 = hlfir.shape_of %arg0 : (!hlfir.expr<10xi32>) -> !fir.shape<42>
+}
