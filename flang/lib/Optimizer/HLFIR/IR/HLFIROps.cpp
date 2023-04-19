@@ -16,10 +16,12 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
 #include <optional>
@@ -935,6 +937,27 @@ hlfir::ShapeOfOp::canonicalize(ShapeOfOp shapeOf,
   rewriter.replaceAllUsesWith(shapeOf.getResult(), shape);
   rewriter.eraseOp(shapeOf);
   return mlir::LogicalResult::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetExtent
+//===----------------------------------------------------------------------===//
+
+void hlfir::GetExtentOp::build(mlir::OpBuilder &builder,
+                               mlir::OperationState &result, mlir::Value shape,
+                               unsigned dim) {
+  mlir::Type indexTy = builder.getIndexType();
+  mlir::IntegerAttr dimAttr = mlir::IntegerAttr::get(indexTy, dim);
+  build(builder, result, indexTy, shape, dimAttr);
+}
+
+mlir::LogicalResult hlfir::GetExtentOp::verify() {
+  fir::ShapeType shapeTy = getShape().getType().cast<fir::ShapeType>();
+  std::uint64_t rank = shapeTy.getRank();
+  llvm::APInt dim = getDim();
+  if (dim.sge(rank))
+    return emitOpError("dimension index out of bounds");
+  return mlir::success();
 }
 
 #define GET_OP_CLASSES
