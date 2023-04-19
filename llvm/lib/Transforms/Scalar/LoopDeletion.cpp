@@ -486,6 +486,14 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }
+
+  // We can't directly branch to an EH pad. Don't bother handling this edge
+  // case.
+  if (ExitBlock && ExitBlock->isEHPad()) {
+    LLVM_DEBUG(dbgs() << "Cannot delete loop exiting to EH pad.\n");
+    return LoopDeletionResult::Unmodified;
+  }
+
   // Finally, we have to check that the loop really is dead.
   bool Changed = false;
   if (!isLoopDead(L, SE, ExitingBlocks, ExitBlock, Changed, Preheader, LI)) {
