@@ -1353,6 +1353,25 @@ INSTANTIATE_TEST_SUITE_P(
       return Info.param.NamespaceName;
     });
 
+// Verifies that similarly-named types are ignored.
+TEST_P(UncheckedOptionalAccessTest, NonTrackedOptionalType) {
+  ExpectDiagnosticsFor(
+      R"(
+    namespace other {
+    namespace $ns {
+    template <typename T>
+    struct $optional {
+      T value();
+    };
+    }
+
+    void target($ns::$optional<int> opt) {
+      opt.value();
+    }
+    }
+  )");
+}
+
 TEST_P(UncheckedOptionalAccessTest, EmptyFunctionBody) {
   ExpectDiagnosticsFor(R"(
     void target() {
