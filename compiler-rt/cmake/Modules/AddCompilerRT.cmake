@@ -698,6 +698,7 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
                ${LIBCXX_CMAKE_ARGS}
     INSTALL_COMMAND ""
+    DOWNLOAD_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
     USES_TERMINAL_CONFIGURE 1
