@@ -14,8 +14,8 @@
 #include "sanitizer_platform.h"
 #if SANITIZER_WINDOWS
 
-#  include "sanitizer_dbghelp.h"
-#  include "sanitizer_symbolizer_internal.h"
+#include "sanitizer_dbghelp.h"
+#include "sanitizer_symbolizer_internal.h"
 
 namespace __sanitizer {
 
