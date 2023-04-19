@@ -222,8 +222,8 @@ getReservedRegs(const MachineFunction &MF) const {
   }
   const TargetRegisterClass &RC = ARM::GPRPairRegClass;
   for (unsigned Reg : RC)
-    for (MCSubRegIterator SI(Reg, this); SI.isValid(); ++SI)
-      if (Reserved.test(*SI))
+    for (MCPhysReg S : subregs(Reg))
+      if (Reserved.test(S))
         markSuperRegs(Reserved, Reg);
   // For v8.1m architecture
   markSuperRegs(Reserved, ARM::ZR);
@@ -326,9 +326,9 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 // Get the other register in a GPRPair.
 static MCPhysReg getPairedGPR(MCPhysReg Reg, bool Odd,
                               const MCRegisterInfo *RI) {
-  for (MCSuperRegIterator Supers(Reg, RI); Supers.isValid(); ++Supers)
-    if (ARM::GPRPairRegClass.contains(*Supers))
-      return RI->getSubReg(*Supers, Odd ? ARM::gsub_1 : ARM::gsub_0);
+  for (MCPhysReg Super : RI->superregs(Reg))
+    if (ARM::GPRPairRegClass.contains(Super))
+      return RI->getSubReg(Super, Odd ? ARM::gsub_1 : ARM::gsub_0);
   return 0;
 }
 

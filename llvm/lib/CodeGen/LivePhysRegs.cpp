@@ -266,8 +266,8 @@ void llvm::addLiveIns(MachineBasicBlock &MBB, const LivePhysRegs &LiveRegs) {
       continue;
     // Skip the register if we are about to add one of its super registers.
     bool ContainsSuperReg = false;
-    for (MCSuperRegIterator SReg(Reg, &TRI); SReg.isValid(); ++SReg) {
-      if (LiveRegs.contains(*SReg) && !MRI.isReserved(*SReg)) {
+    for (MCPhysReg SReg : TRI.superregs(Reg)) {
+      if (LiveRegs.contains(SReg) && !MRI.isReserved(SReg)) {
         ContainsSuperReg = true;
         break;
       }
