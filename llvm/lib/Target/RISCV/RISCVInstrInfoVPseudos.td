@@ -1746,14 +1746,14 @@ multiclass VPseudoILoad<bit Ordered> {
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
-              VLXSched<idxEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_TU":
               VPseudoILoadNoMaskTU<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
-              VLXSched<idxEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
               RISCVMaskedPseudo</*MaskOpIdx*/ 3>,
-              VLXSched<idxEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -1820,10 +1820,10 @@ multiclass VPseudoIStore<bit Ordered> {
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoIStoreNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
-              VSXSched<idxEEW, Order, DataLInfo, IdxLInfo>;
+              VSXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoIStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
-              VSXSched<idxEEW, Order, DataLInfo, IdxLInfo>;
+              VSXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -3773,15 +3773,15 @@ multiclass VPseudoISegLoad<bit Ordered> {
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
                 VPseudoISegLoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                       nf, Ordered>,
-                VLXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_TU" :
                 VPseudoISegLoadNoMaskTU<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                         nf, Ordered>,
-                VLXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegLoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                     nf, Ordered>,
-                VLXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
             }
           }
         }
