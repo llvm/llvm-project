@@ -5235,7 +5235,9 @@ def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], "Allocate array temporaries on the heap (default)">>;
-
+defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
+  PosFlag<SetTrue, [], "Create unit-strided versions of loops">,
+   NegFlag<SetFalse, [], "Do not create unit-strided loops (default)">>;
 } // let Flags = [FC1Option, FlangOption, FlangOnlyOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
