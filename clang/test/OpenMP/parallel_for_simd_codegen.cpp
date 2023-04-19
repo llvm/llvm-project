@@ -793,7 +793,7 @@ for (int i = 0; i < 10; ++i);
 // OMP50: call i32 @__kmpc_global_thread_num
 // OMP50: call void @__kmpc_push_num_threads
 // OMP50: call void {{.*}} @__kmpc_fork_call
-// OMP50-LABEL: define internal void @_Z20parallel_simd_atomici.omp_outlined
+// OMP50-LABEL: define internal void @.omp_outlined..14
 // OMP50: call void @__kmpc_for_static_init_4
 // OMP50: omp.inner.for.body:
 // OMP50: %{{[0-9]+}} = atomicrmw add i32* %{{[0-9]+}}, i32 1 monotonic, align 4, !llvm.access.group !47

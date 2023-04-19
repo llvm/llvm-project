@@ -24,14 +24,14 @@ void foo() {
 // CHECK-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA3:![0-9]+]]
 // CHECK-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK-NEXT:    call void @_Z3foov.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @.omp_outlined.(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z3foov.omp_outlined.1)
+// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @.omp_outlined..1)
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK: Function Attrs: noinline norecurse nounwind
-// CHECK-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -42,7 +42,7 @@ void foo() {
 //
 //
 // CHECK: Function Attrs: alwaysinline norecurse nounwind
-// CHECK-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined.1
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined..1
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -62,14 +62,14 @@ void foo() {
 // CHECK-NOINLINE-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK-NOINLINE-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4, !tbaa [[TBAA3:![0-9]+]]
 // CHECK-NOINLINE-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
-// CHECK-NOINLINE-NEXT:    call void @_Z3foov.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
+// CHECK-NOINLINE-NEXT:    call void @.omp_outlined.(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK-NOINLINE-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
-// CHECK-NOINLINE-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z3foov.omp_outlined.1)
+// CHECK-NOINLINE-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @.omp_outlined..1)
 // CHECK-NOINLINE-NEXT:    ret void
 //
 //
 // CHECK-NOINLINE: Function Attrs: noinline norecurse nounwind
-// CHECK-NOINLINE-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
+// CHECK-NOINLINE-LABEL: define {{[^@]+}}@.omp_outlined.
 // CHECK-NOINLINE-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  entry:
 // CHECK-NOINLINE-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -80,7 +80,7 @@ void foo() {
 //
 //
 // CHECK-NOINLINE: Function Attrs: alwaysinline norecurse nounwind
-// CHECK-NOINLINE-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined.1
+// CHECK-NOINLINE-LABEL: define {{[^@]+}}@.omp_outlined..1
 // CHECK-NOINLINE-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  entry:
 // CHECK-NOINLINE-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
