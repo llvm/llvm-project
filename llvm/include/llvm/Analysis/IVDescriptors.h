@@ -186,11 +186,14 @@ public:
   /// previous iteration (e.g. if the value is defined in the previous
   /// iteration, we refer to it as first-order recurrence, if it is defined in
   /// the iteration before the previous, we refer to it as second-order
-  /// recurrence and so on). Note that this function optimistically assumes that
-  /// uses of the recurrence can be re-ordered if necessary and users need to
-  /// check and perform the re-ordering.
-  static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                     DominatorTree *DT);
+  /// recurrence and so on). \p SinkAfter includes pairs of instructions where
+  /// the first will be rescheduled to appear after the second if/when the loop
+  /// is vectorized. It may be augmented with additional pairs if needed in
+  /// order to handle Phi as a first-order recurrence.
+  static bool
+  isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                         MapVector<Instruction *, Instruction *> &SinkAfter,
+                         DominatorTree *DT);
 
   RecurKind getRecurrenceKind() const { return Kind; }
 

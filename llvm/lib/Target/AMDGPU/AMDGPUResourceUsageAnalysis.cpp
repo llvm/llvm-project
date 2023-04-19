@@ -485,11 +485,14 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           IsAGPR = true;
           Width = 32;
         } else {
+          // We only expect TTMP registers or registers that do not belong to
+          // any RC.
           assert((AMDGPU::TTMP_32RegClass.contains(Reg) ||
                   AMDGPU::TTMP_64RegClass.contains(Reg) ||
                   AMDGPU::TTMP_128RegClass.contains(Reg) ||
                   AMDGPU::TTMP_256RegClass.contains(Reg) ||
-                  AMDGPU::TTMP_512RegClass.contains(Reg)) &&
+                  AMDGPU::TTMP_512RegClass.contains(Reg) ||
+                  !TRI.getPhysRegBaseClass(Reg)) &&
                  "Unknown register class");
         }
         unsigned HWReg = TRI.getHWRegIndex(Reg);

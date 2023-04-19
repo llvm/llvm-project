@@ -275,6 +275,9 @@ R
 **RPO**
     Reverse postorder
 
+**RTTI**
+    Run-time Type Information
+
 S
 -
 

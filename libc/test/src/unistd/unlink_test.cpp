@@ -12,7 +12,6 @@
 #include "src/unistd/unlink.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 TEST(LlvmLibcUnlinkTest, CreateAndUnlink) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

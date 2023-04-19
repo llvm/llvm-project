@@ -1063,17 +1063,6 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
       MD->setHwStage(CC, ".trap_present",
                      (bool)CurrentProgramInfo.TrapHandlerEnable);
 
-      // Compute registers
-      // If the front-end has set tgid_x/y/z_en - assert that the
-      // CurrentProgramInfo is consistent (usually set with function attributes
-      // amdgpu-no-workgroup-id-x etc.).
-      assert(MD->checkComputeRegisters(".tgid_x_en",
-                                       (bool)CurrentProgramInfo.TGIdXEnable));
-      assert(MD->checkComputeRegisters(".tgid_y_en",
-                                       (bool)CurrentProgramInfo.TGIdYEnable));
-      assert(MD->checkComputeRegisters(".tgid_z_en",
-                                       (bool)CurrentProgramInfo.TGIdZEnable));
-
       // EXCPEnMSB?
       const unsigned LdsDwGranularity = 128;
       MD->setHwStage(CC, ".lds_size",

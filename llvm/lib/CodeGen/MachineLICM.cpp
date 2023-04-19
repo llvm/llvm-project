@@ -112,26 +112,26 @@ STATISTIC(NumNotHoistedDueToHotness,
 namespace {
 
   class MachineLICMBase : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetLoweringBase *TLI;
-    const TargetRegisterInfo *TRI;
-    const MachineFrameInfo *MFI;
-    MachineRegisterInfo *MRI;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetLoweringBase *TLI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const MachineFrameInfo *MFI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
     TargetSchedModel SchedModel;
     bool PreRegAlloc;
     bool HasProfileData;
 
     // Various analyses that we use...
-    AliasAnalysis        *AA;      // Alias analysis info.
-    MachineBlockFrequencyInfo *MBFI; // Machine block frequncy info
-    MachineLoopInfo      *MLI;     // Current MachineLoopInfo
-    MachineDominatorTree *DT;      // Machine dominator tree for the cur loop
+    AliasAnalysis *AA = nullptr;               // Alias analysis info.
+    MachineBlockFrequencyInfo *MBFI = nullptr; // Machine block frequncy info
+    MachineLoopInfo *MLI = nullptr;            // Current MachineLoopInfo
+    MachineDominatorTree *DT = nullptr; // Machine dominator tree for the cur loop
 
     // State that is updated as we process loops
     bool         Changed;          // True if a loop is changed.
     bool         FirstInLoop;      // True if it's the first LICM in the loop.
-    MachineLoop *CurLoop;          // The current loop we are working on.
-    MachineBasicBlock *CurPreheader; // The preheader for CurLoop.
+    MachineLoop *CurLoop = nullptr; // The current loop we are working on.
+    MachineBasicBlock *CurPreheader = nullptr; // The preheader for CurLoop.
 
     // Exit blocks for CurLoop.
     SmallVector<MachineBasicBlock *, 8> ExitBlocks;

@@ -26,6 +26,7 @@ target_arch = getattr(config, 'target_arch', None)
 if lsan_lit_test_mode == "Standalone":
   config.name = "LeakSanitizer-Standalone"
   lsan_cflags = ["-fsanitize=leak"]
+  config.available_features.add('lsan-standalone')
 elif lsan_lit_test_mode == "AddressSanitizer":
   config.name = "LeakSanitizer-AddressSanitizer"
   lsan_cflags = ["-fsanitize=address"]

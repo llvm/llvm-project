@@ -28,7 +28,7 @@ public:
 
   bool match(FormatSection actualValue);
 
-  void explainError(testutils::StreamWrapper &stream) override;
+  void explainError() override;
 };
 
 } // namespace testing

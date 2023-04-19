@@ -1484,11 +1484,12 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                                            std::optional<Level> lvl,
                                            DimLevelType dlt, bool isIdxReduc) {
     assert(env.merger().loop(b) == idx);
-    // FIXME: Dense index reduction can reuse the universal index as well.
-    if (!isIdxReduc && (isDenseDLT(dlt) || isUndefDLT(dlt))) {
+    if (isDenseDLT(dlt) || isUndefDLT(dlt))
       needsUniv = true;
-    } else {
-      // sparse/singleton levels.
+    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) || isIdxReduc) {
+      // Only when this is a index reduction loop, can the dlt be undefined.
+      assert(!isUndefDLT(dlt) || isIdxReduc);
+      // sparse/singleton levels, or a dense/sparse index reduction loop.
       tids.push_back(tid);
       lvls.push_back(*lvl);
     }
@@ -1581,7 +1582,7 @@ static bool translateBitsToTidLvlPairs(
           tids.push_back(tid);
           lvls.push_back(*lvl);
           numloopCond++;
-        } else if (isDenseDLT(dlt)) {
+        } else if (isDenseDLT(dlt) || isIdxReduc) {
           tids.push_back(tid);
           lvls.push_back(*lvl);
         } else {

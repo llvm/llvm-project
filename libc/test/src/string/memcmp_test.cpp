@@ -9,6 +9,7 @@
 #include "memory_utils/memory_check_utils.h"
 #include "src/string/memcmp.h"
 #include "test/UnitTest/Test.h"
+#include "test/UnitTest/TestLogger.h"
 
 namespace __llvm_libc {
 
@@ -51,7 +52,10 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
   for (size_t size = 0; size < kMaxSize; ++size) {
     auto span1 = Buffer1.span().subspan(0, size);
     auto span2 = Buffer2.span().subspan(0, size);
-    ASSERT_TRUE((CheckMemcmp<Impl>(span1, span2, size)));
+    const bool OK = CheckMemcmp<Impl>(span1, span2, size);
+    if (!OK)
+      testing::tlog << "Failed at size=" << size << '\n';
+    ASSERT_TRUE(OK);
   }
 }
 

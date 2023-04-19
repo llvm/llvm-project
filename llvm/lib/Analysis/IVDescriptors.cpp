@@ -927,8 +927,9 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   return false;
 }
 
-bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                                                  DominatorTree *DT) {
+bool RecurrenceDescriptor::isFixedOrderRecurrence(
+    PHINode *Phi, Loop *TheLoop,
+    MapVector<Instruction *, Instruction *> &SinkAfter, DominatorTree *DT) {
 
   // Ensure the phi node is in the loop header and has two incoming values.
   if (Phi->getParent() != TheLoop->getHeader() ||
@@ -964,7 +965,8 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
   }
 
-  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous))
+  if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous) ||
+      SinkAfter.count(Previous)) // Cannot rely on dominance due to motion.
     return false;
 
   // Ensure every user of the phi node (recursively) is dominated by the
@@ -973,9 +975,23 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // loop.
   // TODO: Consider extending this sinking to handle memory instructions.
 
+  // We optimistically assume we can sink all users after Previous. Keep a set
+  // of instructions to sink after Previous ordered by dominance in the common
+  // basic block. It will be applied to SinkAfter if all users can be sunk.
+  auto CompareByComesBefore = [](const Instruction *A, const Instruction *B) {
+    return A->comesBefore(B);
+  };
+  std::set<Instruction *, decltype(CompareByComesBefore)> InstrsToSink(
+      CompareByComesBefore);
+
   BasicBlock *PhiBB = Phi->getParent();
   SmallVector<Instruction *, 8> WorkList;
   auto TryToPushSinkCandidate = [&](Instruction *SinkCandidate) {
+    // Already sunk SinkCandidate.
+    if (SinkCandidate->getParent() == PhiBB &&
+        InstrsToSink.find(SinkCandidate) != InstrsToSink.end())
+      return true;
+
     // Cyclic dependence.
     if (Previous == SinkCandidate)
       return false;
@@ -989,12 +1005,55 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
         SinkCandidate->mayReadFromMemory() || SinkCandidate->isTerminator())
       return false;
 
+    // Avoid sinking an instruction multiple times (if multiple operands are
+    // fixed order recurrences) by sinking once - after the latest 'previous'
+    // instruction.
+    auto It = SinkAfter.find(SinkCandidate);
+    if (It != SinkAfter.end()) {
+      auto *OtherPrev = It->second;
+      // Find the earliest entry in the 'sink-after' chain. The last entry in
+      // the chain is the original 'Previous' for a recurrence handled earlier.
+      auto EarlierIt = SinkAfter.find(OtherPrev);
+      while (EarlierIt != SinkAfter.end()) {
+        Instruction *EarlierInst = EarlierIt->second;
+        EarlierIt = SinkAfter.find(EarlierInst);
+        // Bail out if order has not been preserved.
+        if (EarlierIt != SinkAfter.end() &&
+            !DT->dominates(EarlierInst, OtherPrev))
+          return false;
+        OtherPrev = EarlierInst;
+      }
+      // Bail out if order has not been preserved.
+      if (OtherPrev != It->second && !DT->dominates(It->second, OtherPrev))
+        return false;
+
+      // SinkCandidate is already being sunk after an instruction after
+      // Previous. Nothing left to do.
+      if (DT->dominates(Previous, OtherPrev) || Previous == OtherPrev)
+        return true;
+
+      // If there are other instructions to be sunk after SinkCandidate, remove
+      // and re-insert SinkCandidate can break those instructions. Bail out for
+      // simplicity.
+      if (any_of(SinkAfter,
+          [SinkCandidate](const std::pair<Instruction *, Instruction *> &P) {
+            return P.second == SinkCandidate;
+          }))
+        return false;
+
+      // Otherwise, Previous comes after OtherPrev and SinkCandidate needs to be
+      // re-sunk to Previous, instead of sinking to OtherPrev. Remove
+      // SinkCandidate from SinkAfter to ensure it's insert position is updated.
+      SinkAfter.erase(SinkCandidate);
+    }
+
     // If we reach a PHI node that is not dominated by Previous, we reached a
     // header PHI. No need for sinking.
     if (isa<PHINode>(SinkCandidate))
       return true;
 
     // Sink User tentatively and check its users
+    InstrsToSink.insert(SinkCandidate);
     WorkList.push_back(SinkCandidate);
     return true;
   };
@@ -1009,6 +1068,11 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
     }
   }
 
+  // We can sink all users of Phi. Update the mapping.
+  for (Instruction *I : InstrsToSink) {
+    SinkAfter[I] = Previous;
+    Previous = I;
+  }
   return true;
 }
 

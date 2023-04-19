@@ -289,6 +289,12 @@ genBounds(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
 genBounds(mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape);
 
+/// Generate lower bounds from a shape. If \p shape is null or is a fir.shape,
+/// the returned vector will contain \p rank ones.
+llvm::SmallVector<mlir::Value> genLowerbounds(mlir::Location loc,
+                                              fir::FirOpBuilder &builder,
+                                              mlir::Value shape, unsigned rank);
+
 /// Compute fir.shape<> (no lower bounds) for an entity.
 mlir::Value genShape(mlir::Location loc, fir::FirOpBuilder &builder,
                      Entity entity);

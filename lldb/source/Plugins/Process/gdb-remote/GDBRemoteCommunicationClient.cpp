@@ -549,8 +549,7 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetThreadsInfo() {
       if (response.IsUnsupportedResponse()) {
         m_supports_jThreadsInfo = false;
       } else if (!response.Empty()) {
-        object_sp =
-            StructuredData::ParseJSON(std::string(response.GetStringRef()));
+        object_sp = StructuredData::ParseJSON(response.GetStringRef());
       }
     }
   }
@@ -2620,7 +2619,7 @@ size_t GDBRemoteCommunicationClient::QueryGDBServer(
     return 0;
 
   StructuredData::ObjectSP data =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+      StructuredData::ParseJSON(response.GetStringRef());
   if (!data)
     return 0;
 
@@ -3868,7 +3867,7 @@ GDBRemoteCommunicationClient::GetModulesInfo(
   }
 
   StructuredData::ObjectSP response_object_sp =
-      StructuredData::ParseJSON(std::string(response.GetStringRef()));
+      StructuredData::ParseJSON(response.GetStringRef());
   if (!response_object_sp)
     return std::nullopt;
 
@@ -4126,7 +4125,7 @@ GDBRemoteCommunicationClient::GetSupportedStructuredDataPlugins() {
     if (SendPacketAndWaitForResponse("qStructuredDataPlugins", response) ==
         PacketResult::Success) {
       m_supported_async_json_packets_sp =
-          StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          StructuredData::ParseJSON(response.GetStringRef());
       if (m_supported_async_json_packets_sp &&
           !m_supported_async_json_packets_sp->GetAsArray()) {
         // We were returned something other than a JSON array.  This is

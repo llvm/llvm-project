@@ -979,8 +979,11 @@ public:
   }
 
   /// Tests whether the target uses emulated TLS as default.
+  ///
+  /// Note: Android API level 29 (10) introduced ELF TLS.
   bool hasDefaultEmulatedTLS() const {
-    return isAndroid() || isOSOpenBSD() || isWindowsCygwinEnvironment();
+    return (isAndroid() && isAndroidVersionLT(29)) || isOSOpenBSD() ||
+           isWindowsCygwinEnvironment() || isOHOSFamily();
   }
 
   /// Tests whether the target uses -data-sections as default.

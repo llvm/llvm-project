@@ -1,9 +1,9 @@
-# RUN: %cmake_exe %mlir_src_root/examples/standalone -G "%cmake_generator" \
+# RUN: "%cmake_exe" "%mlir_src_root/examples/standalone" -G "%cmake_generator" \
 # RUN: -DCMAKE_CXX_COMPILER=%host_cxx -DCMAKE_C_COMPILER=%host_cc \
 # RUN: -DLLVM_ENABLE_LIBCXX=%enable_libcxx -DMLIR_DIR=%mlir_cmake_dir \
 # RUN: -DLLVM_USE_LINKER=%llvm_use_linker \
 # RUN: -DPython3_EXECUTABLE=%python
-# RUN: %cmake_exe --build . --target check-standalone | tee %t | FileCheck %s
+# RUN: "%cmake_exe" --build . --target check-standalone | tee %t | FileCheck %s
 
 # Note: The number of checked tests is not important. The command will fail
 # if any fail.
