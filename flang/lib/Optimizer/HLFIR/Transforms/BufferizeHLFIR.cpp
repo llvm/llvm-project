@@ -196,9 +196,12 @@ struct AssignOpConversion : public mlir::OpConversionPattern<hlfir::AssignOp> {
   mlir::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<hlfir::AssignOp>(
-        assign, getBufferizedExprStorage(adaptor.getOperands()[0]),
-        getBufferizedExprStorage(adaptor.getOperands()[1]));
+    llvm::SmallVector<mlir::Value> newOperands;
+    for (mlir::Value operand : adaptor.getOperands())
+      newOperands.push_back(getBufferizedExprStorage(operand));
+    rewriter.startRootUpdate(assign);
+    assign->setOperands(newOperands);
+    rewriter.finalizeRootUpdate(assign);
     return mlir::success();
   }
 };
