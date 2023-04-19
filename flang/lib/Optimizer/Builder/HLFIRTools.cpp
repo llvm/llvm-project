@@ -483,7 +483,7 @@ mlir::Value hlfir::genShape(mlir::Location loc, fir::FirOpBuilder &builder,
         return builder.create<fir::ShapeOp>(loc, s.getExtents());
   }
   if (entity.getType().isa<hlfir::ExprType>())
-    TODO(loc, "get shape from HLFIR expr without producer holding the shape");
+    return builder.create<hlfir::ShapeOfOp>(loc, entity.getBase());
   // There is no shape lying around for this entity. Retrieve the extents and
   // build a new fir.shape.
   return builder.create<fir::ShapeOp>(loc,
