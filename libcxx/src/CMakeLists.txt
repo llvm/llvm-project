@@ -58,7 +58,6 @@ set(LIBCXX_SOURCES
   system_error.cpp
   thread.cpp
   typeinfo.cpp
-  utility.cpp
   valarray.cpp
   variant.cpp
   vector.cpp

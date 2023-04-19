@@ -294,14 +294,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[DOTCAPTURE_EXPR__CASTED]], align 8
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i64 [[TMP3]]) #[[ATTR2:[0-9]+]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i64 [[TMP3]]) #[[ATTR2:[0-9]+]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -376,7 +376,7 @@ int a;
 // CHECK-64-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP19]] to i1
 // CHECK-64-NEXT:    [[TMP20:%.*]] = zext i1 [[TOBOOL4]] to i32
 // CHECK-64-NEXT:    [[TMP21:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP20]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64, i64)* @__omp_outlined__1 to i8*), i8* null, i8** [[TMP21]], i64 3), !llvm.access.group [[ACC_GRP130]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP20]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP21]], i64 3), !llvm.access.group [[ACC_GRP130]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP22:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP130]]
@@ -437,7 +437,7 @@ int a;
 // CHECK-64-NEXT:    [[TOBOOL20:%.*]] = trunc i8 [[TMP44]] to i1
 // CHECK-64-NEXT:    [[TMP45:%.*]] = zext i1 [[TOBOOL20]] to i32
 // CHECK-64-NEXT:    [[TMP46:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS19]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP45]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64, i64)* @__omp_outlined__2 to i8*), i8* null, i8** [[TMP46]], i64 3)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP45]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1 to i8*), i8* null, i8** [[TMP46]], i64 3)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC21:%.*]]
 // CHECK-64:       omp.inner.for.inc21:
 // CHECK-64-NEXT:    [[TMP47:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -482,7 +482,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -590,7 +590,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -710,14 +710,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__3(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__3
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -770,7 +770,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP144]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__4 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP144]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP144]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP144]]
@@ -813,7 +813,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__4
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -902,14 +902,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__5
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -962,7 +962,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP150]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__6 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP150]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP150]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP150]]
@@ -1005,7 +1005,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__6
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1085,14 +1085,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__7(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__7
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1145,7 +1145,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP156]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__8 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP156]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP156]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP156]]
@@ -1188,7 +1188,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__8
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1275,14 +1275,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__9(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__9
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1335,7 +1335,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP162]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__10 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP162]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP162]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP162]]
@@ -1378,7 +1378,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__10
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1465,14 +1465,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__11(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__11
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1525,7 +1525,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP168]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__12 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP168]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP168]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP168]]
@@ -1568,7 +1568,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__12
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1655,14 +1655,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__13(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__13
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1715,7 +1715,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP174]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__14 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP174]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP174]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP174]]
@@ -1758,7 +1758,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__14
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1853,14 +1853,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP3:%.*]] = load i64, i64* [[A_CASTED]], align 8
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__15(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i64 [[TMP3]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i64 [[TMP3]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__15
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -1926,7 +1926,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP11]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP17]], i8** [[TMP16]], align 8
 // CHECK-64-NEXT:    [[TMP18:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64, i64)* @__omp_outlined__16 to i8*), i8* null, i8** [[TMP18]], i64 3)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP18]], i64 3)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -1971,7 +1971,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__16
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2058,14 +2058,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__17(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__17
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2118,7 +2118,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__18 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -2154,7 +2154,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__18
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2236,14 +2236,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__19(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__19
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2296,7 +2296,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__20 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -2332,7 +2332,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__20
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2405,14 +2405,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__21(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__21
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2465,7 +2465,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__22 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -2501,7 +2501,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__22
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2581,14 +2581,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__23(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__23
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2641,7 +2641,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__24 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -2677,7 +2677,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__24
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2757,14 +2757,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__25(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__25
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2817,7 +2817,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__26 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -2853,7 +2853,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__26
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2933,14 +2933,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__27(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__27
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -2993,7 +2993,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__28 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -3029,7 +3029,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__28
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3109,14 +3109,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__29(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__29
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3170,7 +3170,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP192]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__30 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP192]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP192]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP192]]
@@ -3213,7 +3213,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__30
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3293,14 +3293,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__31(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__31
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3356,7 +3356,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP10]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP14]], i8** [[TMP13]], align 8, !llvm.access.group [[ACC_GRP198]]
 // CHECK-64-NEXT:    [[TMP15:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__32 to i8*), i8* null, i8** [[TMP15]], i64 2), !llvm.access.group [[ACC_GRP198]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP15]], i64 2), !llvm.access.group [[ACC_GRP198]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP198]]
@@ -3399,7 +3399,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__32
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3488,14 +3488,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__33(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__33
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3552,7 +3552,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP10]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP14]], i8** [[TMP13]], align 8, !llvm.access.group [[ACC_GRP204]]
 // CHECK-64-NEXT:    [[TMP15:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__34 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__34_wrapper to i8*), i8** [[TMP15]], i64 2), !llvm.access.group [[ACC_GRP204]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined to i8*), i8* bitcast (void (i16, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper to i8*), i8** [[TMP15]], i64 2), !llvm.access.group [[ACC_GRP204]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP16:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP204]]
@@ -3577,7 +3577,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__34
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3645,7 +3645,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__34_wrapper
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
 // CHECK-64-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
@@ -3663,7 +3663,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i64 1
 // CHECK-64-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to i64*
 // CHECK-64-NEXT:    [[TMP8:%.*]] = load i64, i64* [[TMP7]], align 8
-// CHECK-64-NEXT:    call void @__omp_outlined__34(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i64 [[TMP5]], i64 [[TMP8]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i64 [[TMP5]], i64 [[TMP8]]) #[[ATTR2]]
 // CHECK-64-NEXT:    ret void
 //
 //
@@ -3679,14 +3679,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__35(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__35
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3739,7 +3739,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP210]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__36 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP210]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP210]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP210]]
@@ -3782,7 +3782,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__36
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3869,14 +3869,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__37(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__37
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -3929,7 +3929,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP216]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__38 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP216]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP216]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP216]]
@@ -3972,7 +3972,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__38
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4059,14 +4059,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__39(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__39
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4119,7 +4119,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP222]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__40 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP222]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP222]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP222]]
@@ -4162,7 +4162,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__40
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4249,14 +4249,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__41(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__41
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4309,7 +4309,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8, !llvm.access.group [[ACC_GRP228]]
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__42 to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP228]]
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2), !llvm.access.group [[ACC_GRP228]]
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP228]]
@@ -4352,7 +4352,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__42
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4439,14 +4439,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__43(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__43
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4499,7 +4499,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__44 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -4535,7 +4535,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__44
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4608,14 +4608,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__45(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__45
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4668,7 +4668,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__46 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -4704,7 +4704,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__46
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4786,14 +4786,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__47(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__47
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4846,7 +4846,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__48 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -4882,7 +4882,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__48
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -4955,14 +4955,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__49(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__49
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5015,7 +5015,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__50 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -5051,7 +5051,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__50
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5131,14 +5131,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__51(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__51
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5191,7 +5191,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__52 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -5227,7 +5227,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__52
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5307,14 +5307,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__53(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__53
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5367,7 +5367,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__54 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -5403,7 +5403,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__54
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5483,14 +5483,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__55(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__55
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5543,7 +5543,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__56 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -5579,7 +5579,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__56
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5659,14 +5659,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__57(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__57
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5719,7 +5719,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__58 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -5755,7 +5755,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__58
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5828,14 +5828,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__59(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__59
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -5888,7 +5888,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__60 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -5924,7 +5924,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__60
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6006,14 +6006,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__61(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__61
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6066,7 +6066,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__62 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -6102,7 +6102,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__62
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6175,14 +6175,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__63(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__63
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6235,7 +6235,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__64 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -6271,7 +6271,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__64
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6351,14 +6351,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__65(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__65
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6411,7 +6411,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__66 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -6447,7 +6447,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__66
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6527,14 +6527,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__67(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__67
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6587,7 +6587,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__68 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -6623,7 +6623,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__68
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6703,14 +6703,14 @@ int a;
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-64-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-64-NEXT:    call void @__omp_outlined__69(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-64-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__69
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6763,7 +6763,7 @@ int a;
 // CHECK-64-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP9]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP13]], i8** [[TMP12]], align 8
 // CHECK-64-NEXT:    [[TMP14:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @__omp_outlined__70 to i8*), i8* null, i8** [[TMP14]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i64, i64)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP14]], i64 2)
 // CHECK-64-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-64:       omp.inner.for.inc:
 // CHECK-64-NEXT:    [[TMP15:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -6799,7 +6799,7 @@ int a;
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__70
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6883,14 +6883,14 @@ int a;
 // CHECK-64-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-64-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-64-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__71 to i8*), i8* null, i8** [[TMP4]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined to i8*), i8* null, i8** [[TMP4]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__71
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -6977,14 +6977,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__72 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__72
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7054,14 +7054,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__73 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__73
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7148,14 +7148,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__74 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__74
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7221,14 +7221,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__75 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__75
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7294,14 +7294,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__76 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__76
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7367,14 +7367,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__77 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__77
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7446,14 +7446,14 @@ int a;
 // CHECK-64-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-64-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-64-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__78 to i8*), i8* null, i8** [[TMP4]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined to i8*), i8* null, i8** [[TMP4]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__78
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7548,14 +7548,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__79 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__79
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7633,14 +7633,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__80 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__80
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7735,14 +7735,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__81 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__81
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7816,14 +7816,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__82 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__82
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7897,14 +7897,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__83 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__83
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -7978,14 +7978,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__84 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__84
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8059,14 +8059,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__85 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__85
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8141,14 +8141,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__86 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__86
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8226,14 +8226,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__87 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__87
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8328,14 +8328,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__88 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__88
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8409,14 +8409,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__89 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__89
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8490,14 +8490,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__90 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__90
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8571,14 +8571,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__91 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__91
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8652,14 +8652,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__92 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__92
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8746,14 +8746,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__93 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__93
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8823,14 +8823,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__94 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__94
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8917,14 +8917,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__95 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__95
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -8990,14 +8990,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__96 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__96
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -9063,14 +9063,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__97 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__97
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -9136,14 +9136,14 @@ int a;
 // CHECK-64:       user_code.entry:
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-64-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__98 to i8*), i8* null, i8** [[TMP2]], i64 0)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined to i8*), i8* null, i8** [[TMP2]], i64 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__98
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -9221,14 +9221,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR__CASTED]], align 4
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9301,7 +9301,7 @@ int a;
 // CHECK-32-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP17]] to i1
 // CHECK-32-NEXT:    [[TMP18:%.*]] = zext i1 [[TOBOOL4]] to i32
 // CHECK-32-NEXT:    [[TMP19:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP18]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @__omp_outlined__1 to i8*), i8* null, i8** [[TMP19]], i32 3), !llvm.access.group [[ACC_GRP130]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP18]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP19]], i32 3), !llvm.access.group [[ACC_GRP130]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP130]]
@@ -9360,7 +9360,7 @@ int a;
 // CHECK-32-NEXT:    [[TOBOOL20:%.*]] = trunc i8 [[TMP40]] to i1
 // CHECK-32-NEXT:    [[TMP41:%.*]] = zext i1 [[TOBOOL20]] to i32
 // CHECK-32-NEXT:    [[TMP42:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS19]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP41]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @__omp_outlined__2 to i8*), i8* null, i8** [[TMP42]], i32 3)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP41]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1 to i8*), i8* null, i8** [[TMP42]], i32 3)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC21:%.*]]
 // CHECK-32:       omp.inner.for.inc21:
 // CHECK-32-NEXT:    [[TMP43:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -9405,7 +9405,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9509,7 +9509,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9625,14 +9625,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__3(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__3
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9683,7 +9683,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP144]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__4 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP144]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP144]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP144]]
@@ -9726,7 +9726,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__4
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9813,14 +9813,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__5
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9871,7 +9871,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP150]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__6 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP150]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP150]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP150]]
@@ -9914,7 +9914,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__6
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -9991,14 +9991,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__7(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__7
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10049,7 +10049,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP156]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__8 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP156]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP156]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP156]]
@@ -10092,7 +10092,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__8
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10177,14 +10177,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__9(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__9
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10235,7 +10235,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP162]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__10 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP162]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP162]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP162]]
@@ -10278,7 +10278,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__10
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10363,14 +10363,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__11(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__11
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10421,7 +10421,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP168]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__12 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP168]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP168]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP168]]
@@ -10464,7 +10464,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__12
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10549,14 +10549,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__13(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__13
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10607,7 +10607,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP174]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__14 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP174]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP174]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP174]]
@@ -10650,7 +10650,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__14
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10741,14 +10741,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_CASTED]], align 4
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__15(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__15
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10810,7 +10810,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP15:%.*]] = inttoptr i32 [[TMP9]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP15]], i8** [[TMP14]], align 4
 // CHECK-32-NEXT:    [[TMP16:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @__omp_outlined__16 to i8*), i8* null, i8** [[TMP16]], i32 3)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP16]], i32 3)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -10855,7 +10855,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__16
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10938,14 +10938,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__17(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__17
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -10996,7 +10996,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__18 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -11032,7 +11032,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__18
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11112,14 +11112,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__19(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__19
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11170,7 +11170,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__20 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -11206,7 +11206,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__20
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11276,14 +11276,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__21(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__21
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11334,7 +11334,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__22 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -11370,7 +11370,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__22
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11448,14 +11448,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__23(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__23
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11506,7 +11506,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__24 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -11542,7 +11542,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__24
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11620,14 +11620,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__25(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__25
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11678,7 +11678,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__26 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -11714,7 +11714,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__26
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11792,14 +11792,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__27(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__27
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11850,7 +11850,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__28 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -11886,7 +11886,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__28
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -11964,14 +11964,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__29(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__29
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12023,7 +12023,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP192]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__30 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP192]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP192]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP192]]
@@ -12066,7 +12066,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__30
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12143,14 +12143,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__31(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__31
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12204,7 +12204,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP12:%.*]] = inttoptr i32 [[TMP8]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP12]], i8** [[TMP11]], align 4, !llvm.access.group [[ACC_GRP198]]
 // CHECK-32-NEXT:    [[TMP13:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__32 to i8*), i8* null, i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP198]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP198]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP198]]
@@ -12247,7 +12247,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__32
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12334,14 +12334,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__33(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__33
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12396,7 +12396,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP12:%.*]] = inttoptr i32 [[TMP8]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP12]], i8** [[TMP11]], align 4, !llvm.access.group [[ACC_GRP204]]
 // CHECK-32-NEXT:    [[TMP13:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__34 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__34_wrapper to i8*), i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP204]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined to i8*), i8* bitcast (void (i16, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper to i8*), i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP204]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP204]]
@@ -12421,7 +12421,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__34
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12486,7 +12486,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__34_wrapper
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
 // CHECK-32-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
@@ -12504,7 +12504,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 1
 // CHECK-32-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to i32*
 // CHECK-32-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__34(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32 [[TMP5]], i32 [[TMP8]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32 [[TMP5]], i32 [[TMP8]]) #[[ATTR2]]
 // CHECK-32-NEXT:    ret void
 //
 //
@@ -12520,14 +12520,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__35(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__35
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12578,7 +12578,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP210]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__36 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP210]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP210]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP210]]
@@ -12621,7 +12621,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__36
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12706,14 +12706,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__37(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__37
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12764,7 +12764,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP216]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__38 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP216]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP216]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP216]]
@@ -12807,7 +12807,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__38
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12892,14 +12892,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__39(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__39
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -12950,7 +12950,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP222]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__40 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP222]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP222]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP222]]
@@ -12993,7 +12993,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__40
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13078,14 +13078,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__41(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__41
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13136,7 +13136,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP228]]
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__42 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP228]]
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP228]]
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP228]]
@@ -13179,7 +13179,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__42
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13264,14 +13264,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__43(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__43
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13322,7 +13322,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__44 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -13358,7 +13358,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__44
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13428,14 +13428,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__45(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__45
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13486,7 +13486,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__46 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -13522,7 +13522,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__46
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13602,14 +13602,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__47(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__47
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13660,7 +13660,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__48 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -13696,7 +13696,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__48
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13766,14 +13766,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__49(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__49
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13824,7 +13824,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__50 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -13860,7 +13860,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__50
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13938,14 +13938,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__51(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__51
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -13996,7 +13996,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__52 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -14032,7 +14032,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__52
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14110,14 +14110,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__53(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__53
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14168,7 +14168,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__54 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -14204,7 +14204,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__54
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14282,14 +14282,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__55(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__55
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14340,7 +14340,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__56 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -14376,7 +14376,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__56
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14454,14 +14454,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__57(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__57
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14512,7 +14512,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__58 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -14548,7 +14548,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__58
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14618,14 +14618,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__59(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__59
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14676,7 +14676,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__60 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -14712,7 +14712,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__60
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14792,14 +14792,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__61(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__61
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14850,7 +14850,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__62 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -14886,7 +14886,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__62
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -14956,14 +14956,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__63(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__63
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15014,7 +15014,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__64 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -15050,7 +15050,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__64
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15128,14 +15128,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__65(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__65
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15186,7 +15186,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__66 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -15222,7 +15222,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__66
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15300,14 +15300,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__67(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__67
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15358,7 +15358,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__68 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -15394,7 +15394,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__68
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15472,14 +15472,14 @@ int a;
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-NEXT:    call void @__omp_outlined__69(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__69
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15530,7 +15530,7 @@ int a;
 // CHECK-32-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__70 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32:       omp.inner.for.inc:
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -15566,7 +15566,7 @@ int a;
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__70
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15648,14 +15648,14 @@ int a;
 // CHECK-32-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-32-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-32-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__71 to i8*), i8* null, i8** [[TMP4]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined to i8*), i8* null, i8** [[TMP4]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__71
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15742,14 +15742,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__72 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__72
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15819,14 +15819,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__73 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__73
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15913,14 +15913,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__74 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__74
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -15986,14 +15986,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__75 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__75
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16059,14 +16059,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__76 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__76
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16132,14 +16132,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__77 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__77
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16211,14 +16211,14 @@ int a;
 // CHECK-32-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-32-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-32-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__78 to i8*), i8* null, i8** [[TMP4]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined to i8*), i8* null, i8** [[TMP4]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__78
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16313,14 +16313,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__79 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__79
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16398,14 +16398,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__80 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__80
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16500,14 +16500,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__81 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__81
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16581,14 +16581,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__82 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__82
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16662,14 +16662,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__83 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__83
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16743,14 +16743,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__84 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__84
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16824,14 +16824,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__85 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__85
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16906,14 +16906,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__86 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__86
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -16991,14 +16991,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__87 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__87
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17093,14 +17093,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__88 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__88
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17174,14 +17174,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__89 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__89
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17255,14 +17255,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__90 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__90
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17336,14 +17336,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__91 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__91
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17417,14 +17417,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__92 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__92
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17511,14 +17511,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__93 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__93
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17588,14 +17588,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__94 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__94
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17682,14 +17682,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__95 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__95
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17755,14 +17755,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__96 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__96
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17828,14 +17828,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__97 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__97
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17901,14 +17901,14 @@ int a;
 // CHECK-32:       user_code.entry:
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__98 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__98
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -17986,14 +17986,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = load i32, i32* [[DOTCAPTURE_EXPR__CASTED]], align 4
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18066,7 +18066,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TOBOOL4:%.*]] = trunc i8 [[TMP17]] to i1
 // CHECK-32-EX-NEXT:    [[TMP18:%.*]] = zext i1 [[TOBOOL4]] to i32
 // CHECK-32-EX-NEXT:    [[TMP19:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP18]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @__omp_outlined__1 to i8*), i8* null, i8** [[TMP19]], i32 3), !llvm.access.group [[ACC_GRP130]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP18]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP19]], i32 3), !llvm.access.group [[ACC_GRP130]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP130]]
@@ -18125,7 +18125,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TOBOOL20:%.*]] = trunc i8 [[TMP40]] to i1
 // CHECK-32-EX-NEXT:    [[TMP41:%.*]] = zext i1 [[TOBOOL20]] to i32
 // CHECK-32-EX-NEXT:    [[TMP42:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS19]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP41]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @__omp_outlined__2 to i8*), i8* null, i8** [[TMP42]], i32 3)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP41]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1 to i8*), i8* null, i8** [[TMP42]], i32 3)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC21:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc21:
 // CHECK-32-EX-NEXT:    [[TMP43:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -18170,7 +18170,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18274,7 +18274,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__2
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18390,14 +18390,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__3(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__3
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18448,7 +18448,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP144]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__4 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP144]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP144]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP144]]
@@ -18491,7 +18491,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__4
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18578,14 +18578,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__5(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__5
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18636,7 +18636,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP150]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__6 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP150]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP150]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP150]]
@@ -18679,7 +18679,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__6
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18756,14 +18756,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__7(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__7
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18814,7 +18814,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP156]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__8 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP156]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP156]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP156]]
@@ -18857,7 +18857,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__8
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -18942,14 +18942,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__9(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__9
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19000,7 +19000,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP162]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__10 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP162]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP162]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP162]]
@@ -19043,7 +19043,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__10
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19128,14 +19128,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__11(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__11
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19186,7 +19186,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP168]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__12 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP168]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP168]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP168]]
@@ -19229,7 +19229,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__12
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19314,14 +19314,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__13(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__13
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19372,7 +19372,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP174]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__14 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP174]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP174]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP174]]
@@ -19415,7 +19415,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__14
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19506,14 +19506,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = load i32, i32* [[A_CASTED]], align 4
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__15(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]], i32 [[TMP3]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__15
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19575,7 +19575,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP15:%.*]] = inttoptr i32 [[TMP9]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP15]], i8** [[TMP14]], align 4
 // CHECK-32-EX-NEXT:    [[TMP16:%.*]] = bitcast [3 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @__omp_outlined__16 to i8*), i8* null, i8** [[TMP16]], i32 3)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP16]], i32 3)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP17:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -19620,7 +19620,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__16
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19703,14 +19703,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__17(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__17
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19761,7 +19761,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__18 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -19797,7 +19797,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__18
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19877,14 +19877,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__19(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__19
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -19935,7 +19935,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__20 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -19971,7 +19971,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__20
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20041,14 +20041,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__21(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__21
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20099,7 +20099,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__22 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -20135,7 +20135,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__22
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20213,14 +20213,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__23(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__23
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20271,7 +20271,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__24 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -20307,7 +20307,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__24
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20385,14 +20385,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__25(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__25
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20443,7 +20443,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__26 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -20479,7 +20479,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__26
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20557,14 +20557,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__27(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__27
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20615,7 +20615,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__28 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -20651,7 +20651,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__28
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20729,14 +20729,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__29(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__29
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20788,7 +20788,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP192]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__30 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP192]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP192]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP192]]
@@ -20831,7 +20831,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__30
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20908,14 +20908,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__31(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__31
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -20969,7 +20969,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = inttoptr i32 [[TMP8]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP12]], i8** [[TMP11]], align 4, !llvm.access.group [[ACC_GRP198]]
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__32 to i8*), i8* null, i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP198]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP198]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP198]]
@@ -21012,7 +21012,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__32
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21099,14 +21099,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__33(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 1)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__33
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21161,7 +21161,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = inttoptr i32 [[TMP8]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP12]], i8** [[TMP11]], align 4, !llvm.access.group [[ACC_GRP204]]
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__34 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__34_wrapper to i8*), i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP204]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined to i8*), i8* bitcast (void (i16, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper to i8*), i8** [[TMP13]], i32 2), !llvm.access.group [[ACC_GRP204]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP204]]
@@ -21186,7 +21186,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__34
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21251,7 +21251,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__34_wrapper
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
 // CHECK-32-EX-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
@@ -21269,7 +21269,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8*, i8** [[TMP2]], i32 1
 // CHECK-32-EX-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to i32*
 // CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__34(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32 [[TMP5]], i32 [[TMP8]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]], i32 [[TMP5]], i32 [[TMP8]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    ret void
 //
 //
@@ -21285,14 +21285,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__35(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__35
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21343,7 +21343,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP210]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__36 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP210]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP210]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP210]]
@@ -21386,7 +21386,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__36
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21471,14 +21471,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__37(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__37
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21529,7 +21529,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP216]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__38 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP216]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP216]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP216]]
@@ -21572,7 +21572,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__38
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21657,14 +21657,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__39(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__39
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21715,7 +21715,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP222]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__40 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP222]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP222]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP222]]
@@ -21758,7 +21758,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__40
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21843,14 +21843,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__41(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__41
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -21901,7 +21901,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4, !llvm.access.group [[ACC_GRP228]]
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__42 to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP228]]
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2), !llvm.access.group [[ACC_GRP228]]
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4, !llvm.access.group [[ACC_GRP228]]
@@ -21944,7 +21944,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__42
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22029,14 +22029,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__43(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__43
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22087,7 +22087,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__44 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -22123,7 +22123,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__44
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22193,14 +22193,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__45(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__45
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22251,7 +22251,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__46 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -22287,7 +22287,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__46
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22367,14 +22367,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__47(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__47
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22425,7 +22425,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__48 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -22461,7 +22461,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__48
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22531,14 +22531,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__49(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__49
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22589,7 +22589,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__50 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -22625,7 +22625,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__50
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22703,14 +22703,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__51(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__51
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22761,7 +22761,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__52 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -22797,7 +22797,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__52
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22875,14 +22875,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__53(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__53
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -22933,7 +22933,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__54 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -22969,7 +22969,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__54
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23047,14 +23047,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__55(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__55
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23105,7 +23105,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__56 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -23141,7 +23141,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__56
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23219,14 +23219,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__57(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__57
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23277,7 +23277,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__58 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -23313,7 +23313,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__58
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23383,14 +23383,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__59(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__59
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23441,7 +23441,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__60 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -23477,7 +23477,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__60
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23557,14 +23557,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__61(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__61
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23615,7 +23615,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__62 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -23651,7 +23651,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__62
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23721,14 +23721,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__63(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__63
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23779,7 +23779,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__64 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -23815,7 +23815,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__64
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23893,14 +23893,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__65(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__65
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -23951,7 +23951,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__66 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -23987,7 +23987,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__66
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24065,14 +24065,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__67(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__67
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24123,7 +24123,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__68 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -24159,7 +24159,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__68
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24237,14 +24237,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], i32* [[DOTTHREADID_TEMP_]], align 4
-// CHECK-32-EX-NEXT:    call void @__omp_outlined__69(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
+// CHECK-32-EX-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined(i32* [[DOTTHREADID_TEMP_]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__69
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24295,7 +24295,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = inttoptr i32 [[TMP7]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP11]], i8** [[TMP10]], align 4
 // CHECK-32-EX-NEXT:    [[TMP12:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @__omp_outlined__70 to i8*), i8* null, i8** [[TMP12]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32, i32)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined to i8*), i8* null, i8** [[TMP12]], i32 2)
 // CHECK-32-EX-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK-32-EX:       omp.inner.for.inc:
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, i32* [[DOTOMP_IV]], align 4
@@ -24331,7 +24331,7 @@ int a;
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__70
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24413,14 +24413,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__71 to i8*), i8* null, i8** [[TMP4]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined to i8*), i8* null, i8** [[TMP4]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__71
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24507,14 +24507,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__72 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__72
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24584,14 +24584,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__73 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__73
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24678,14 +24678,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__74 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__74
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24751,14 +24751,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__75 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__75
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24824,14 +24824,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__76 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__76
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24897,14 +24897,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__77 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__77
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -24976,14 +24976,14 @@ int a;
 // CHECK-32-EX-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__78 to i8*), i8* null, i8** [[TMP4]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 [[TMP3]], i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined to i8*), i8* null, i8** [[TMP4]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__78
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25078,14 +25078,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__79 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__79
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25163,14 +25163,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__80 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__80
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25265,14 +25265,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__81 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__81
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25346,14 +25346,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__82 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__82
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25427,14 +25427,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__83 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__83
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25508,14 +25508,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__84 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__84
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25589,14 +25589,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__85 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__85
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25671,14 +25671,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__86 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__86
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25756,14 +25756,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__87 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__87
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25858,14 +25858,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__88 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__88
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -25939,14 +25939,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__89 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__89
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26020,14 +26020,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__90 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__90
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26101,14 +26101,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__91 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__91
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26182,14 +26182,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__92 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__92
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26276,14 +26276,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__93 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__93
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26353,14 +26353,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__94 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__94
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26447,14 +26447,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__95 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__95
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26520,14 +26520,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__96 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__96
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26593,14 +26593,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__97 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__97
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -26666,14 +26666,14 @@ int a;
 // CHECK-32-EX:       user_code.entry:
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = bitcast [0 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @__omp_outlined__98 to i8*), i8* null, i8** [[TMP2]], i32 0)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined to i8*), i8* null, i8** [[TMP2]], i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__98
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4

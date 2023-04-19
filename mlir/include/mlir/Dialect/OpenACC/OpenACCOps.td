@@ -139,7 +139,6 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
                        Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
                        DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
-                       OptionalAttr<OpenACC_DataClauseEnum>:$decomposedFrom,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
@@ -242,7 +241,6 @@ class OpenACC_DataExitOp<string mnemonic, string clause, list<Trait> traits = []
                        OpenACC_PointerLikeTypeInterface:$accPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds,
                        DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
-                       OptionalAttr<OpenACC_DataClauseEnum>:$decomposedFrom,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);

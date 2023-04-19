@@ -522,7 +522,7 @@ int main()
 // CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr))
 // CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// CHECK-NEXT:    call void @__omp_outlined__(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[N5]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]], i64 [[TMP4]], ptr [[TMP5]]) #[[ATTR1:[0-9]+]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[N5]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]], i64 [[TMP4]], ptr [[TMP5]]) #[[ATTR1:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[N5]], i64 4)
 // CHECK-NEXT:    call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1)
 // CHECK-NEXT:    ret void
@@ -530,7 +530,7 @@ int main()
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], i64 noundef [[VLA3:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR7:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -677,7 +677,7 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP34]], align 8
 // CHECK-NEXT:    [[TMP35:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP36]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__.1, ptr @__omp_outlined__.1_wrapper, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 7)
+// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP36]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 7)
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK:       omp.inner.for.inc:
 // CHECK-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
@@ -760,7 +760,7 @@ int main()
 // CHECK-NEXT:    store ptr [[TMP4]], ptr [[TMP68]], align 8
 // CHECK-NEXT:    [[TMP69:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP70:%.*]] = load i32, ptr [[TMP69]], align 4
-// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP70]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__.2, ptr @__omp_outlined__.2_wrapper, ptr [[CAPTURED_VARS_ADDRS34_ASCAST]], i64 7)
+// CHECK-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP70]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1_wrapper, ptr [[CAPTURED_VARS_ADDRS34_ASCAST]], i64 7)
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC35:%.*]]
 // CHECK:       omp.inner.for.inc35:
 // CHECK-NEXT:    [[TMP71:%.*]] = load i32, ptr [[DOTOMP_IV10_ASCAST]], align 4
@@ -779,7 +779,7 @@ int main()
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@__omp_outlined__.1
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR7]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -902,7 +902,7 @@ int main()
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@__omp_outlined__.1_wrapper
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined_wrapper
 // CHECK-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2, addrspace(5)
@@ -932,11 +932,11 @@ int main()
 // CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 6
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
-// CHECK-NEXT:    call void @__omp_outlined__.1(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP4]], i64 [[TMP6]], ptr [[TMP8]], i64 [[TMP10]], ptr [[TMP12]], i64 [[TMP14]], ptr [[TMP16]]) #[[ATTR1]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP4]], i64 [[TMP6]], ptr [[TMP8]], i64 [[TMP10]], ptr [[TMP12]], i64 [[TMP14]], ptr [[TMP16]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@__omp_outlined__.2
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[N:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]], i64 noundef [[VLA1:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR7]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -1060,7 +1060,7 @@ int main()
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@__omp_outlined__.2_wrapper
+// CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1_wrapper
 // CHECK-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2, addrspace(5)
@@ -1090,7 +1090,7 @@ int main()
 // CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
 // CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 6
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
-// CHECK-NEXT:    call void @__omp_outlined__.2(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP4]], i64 [[TMP6]], ptr [[TMP8]], i64 [[TMP10]], ptr [[TMP12]], i64 [[TMP14]], ptr [[TMP16]]) #[[ATTR1]]
+// CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined_omp_outlined.1(ptr [[DOTADDR1_ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP4]], i64 [[TMP6]], ptr [[TMP8]], i64 [[TMP10]], ptr [[TMP12]], i64 [[TMP14]], ptr [[TMP16]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //
 //

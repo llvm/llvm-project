@@ -812,20 +812,19 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
 
   m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
-      ConstString("target"),
-      ConstString("Settings specify to debugging targets."), true,
+      ConstString("target"), "Settings specify to debugging targets.", true,
       Target::GetGlobalProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
-      ConstString("platform"), ConstString("Platform settings."), true,
+      ConstString("platform"), "Platform settings.", true,
       Platform::GetGlobalPlatformProperties().GetValueProperties());
   m_collection_sp->AppendProperty(
-      ConstString("symbols"), ConstString("Symbol lookup and cache settings."),
-      true, ModuleList::GetGlobalModuleListProperties().GetValueProperties());
+      ConstString("symbols"), "Symbol lookup and cache settings.", true,
+      ModuleList::GetGlobalModuleListProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         ConstString("interpreter"),
-        ConstString("Settings specify to the debugger's command interpreter."),
-        true, m_command_interpreter_up->GetValueProperties());
+        "Settings specify to the debugger's command interpreter.", true,
+        m_command_interpreter_up->GetValueProperties());
   }
   OptionValueSInt64 *term_width =
       m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64(

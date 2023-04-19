@@ -379,10 +379,10 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK1-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]], float noundef 3.000000e+00)
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 5, ptr @.omp_outlined., ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[VAR]], ptr @_ZZ4mainE5sivar)
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @.omp_outlined..1)
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @.omp_outlined..2)
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @.omp_outlined..3)
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 5, ptr @main.omp_outlined, ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[VAR]], ptr @_ZZ4mainE5sivar)
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @main.omp_outlined.1)
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @main.omp_outlined.2)
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @main.omp_outlined.3)
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiET_v()
 // CHECK1-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5:[0-9]+]]
@@ -437,7 +437,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -594,7 +594,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..1
+// CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined.1
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -673,7 +673,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..2
+// CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined.2
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -752,7 +752,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..3
+// CHECK1-LABEL: define {{[^@]+}}@main.omp_outlined.3
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -854,7 +854,7 @@ int main() {
 // CHECK1-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK1-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 128
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VAR]], align 128
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @.omp_outlined..5, ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[TMP0]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @_Z5tmainIiET_v.omp_outlined, ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[TMP0]])
 // CHECK1-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
@@ -899,7 +899,7 @@ int main() {
 // CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[C]], align 8
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @.omp_outlined..4, ptr [[THIS1]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_ZN2SSC2ERi.omp_outlined, ptr [[THIS1]])
 // CHECK1-NEXT:    store ptr [[TMP]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -972,7 +972,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..4
+// CHECK1-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1175,7 +1175,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..5
+// CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1361,7 +1361,7 @@ int main() {
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK1-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @.omp_outlined..6, ptr [[THIS1]])
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_ZN3SSTIiEC2Ev.omp_outlined, ptr [[THIS1]])
 // CHECK1-NEXT:    store ptr [[TMP]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK1-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -1414,7 +1414,7 @@ int main() {
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..6
+// CHECK1-LABEL: define {{[^@]+}}@_ZN3SSTIiEC2Ev.omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR3]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1580,7 +1580,7 @@ int main() {
 // CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[TMP1]], ptr [[C]], align 8
-// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @.omp_outlined., ptr [[THIS1]])
+// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_ZN2SSC2ERi.omp_outlined, ptr [[THIS1]])
 // CHECK3-NEXT:    store ptr [[TMP]], ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK3-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -1635,7 +1635,7 @@ int main() {
 // CHECK3-NEXT:    ret void
 //
 //
-// CHECK3-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK3-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
 // CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1801,7 +1801,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
 // CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[THIS1]], i32 0, i32 3
 // CHECK3-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
-// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @.omp_outlined..1, ptr [[TMP1]], ptr [[TMP12]], ptr [[TMP14]], ptr [[TMP16]])
+// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined, ptr [[TMP1]], ptr [[TMP12]], ptr [[TMP14]], ptr [[TMP16]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -1840,11 +1840,11 @@ int main() {
 // CHECK3-NEXT:    store i32 [[MUL]], ptr [[TMP6]], align 4
 // CHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[CLASS_ANON_1]], ptr [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
-// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @.omp_outlined..2, ptr [[TMP1]], ptr [[TMP9]])
+// CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @_ZZN2SSC1ERiENKUlvE0_clEv.omp_outlined, ptr [[TMP1]], ptr [[TMP9]])
 // CHECK3-NEXT:    ret void
 //
 //
-// CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..1
+// CHECK3-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE_clEv.omp_outlined
 // CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1961,7 +1961,7 @@ int main() {
 // CHECK3-NEXT:    ret void
 //
 //
-// CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..2
+// CHECK3-LABEL: define {{[^@]+}}@_ZZN2SSC1ERiENKUlvE0_clEv.omp_outlined
 // CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR3]] {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2064,105 +2064,6 @@ int main() {
 // CHECK3-NEXT:    ret void
 //
 //
-// CHECK3-LABEL: define {{[^@]+}}@.omp_outlined..3
-// CHECK3-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3]] {
-// CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK3-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK3-NEXT:    [[SIVAR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK3-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
-// CHECK3-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[_TMP1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[DOTOMP_STRIDE:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[G:%.*]] = alloca i32, align 128
-// CHECK3-NEXT:    [[G1:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[_TMP2:%.*]] = alloca ptr, align 8
-// CHECK3-NEXT:    [[SIVAR3:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[REF_TMP:%.*]] = alloca [[CLASS_ANON_2:%.*]], align 8
-// CHECK3-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK3-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// CHECK3-NEXT:    store ptr [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SIVAR_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr @g1, align 8
-// CHECK3-NEXT:    store ptr [[TMP1]], ptr [[TMP]], align 8
-// CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
-// CHECK3-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
-// CHECK3-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
-// CHECK3-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr @g1, align 8
-// CHECK3-NEXT:    store ptr [[G1]], ptr [[_TMP2]], align 8
-// CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-// CHECK3-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP4]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// CHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK3-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP5]], 1
-// CHECK3-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
-// CHECK3:       cond.true:
-// CHECK3-NEXT:    br label [[COND_END:%.*]]
-// CHECK3:       cond.false:
-// CHECK3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK3-NEXT:    br label [[COND_END]]
-// CHECK3:       cond.end:
-// CHECK3-NEXT:    [[COND:%.*]] = phi i32 [ 1, [[COND_TRUE]] ], [ [[TMP6]], [[COND_FALSE]] ]
-// CHECK3-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-// CHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-// CHECK3-NEXT:    store i32 [[TMP7]], ptr [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
-// CHECK3:       omp.inner.for.cond:
-// CHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK3-NEXT:    [[CMP4:%.*]] = icmp sle i32 [[TMP8]], [[TMP9]]
-// CHECK3-NEXT:    br i1 [[CMP4]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
-// CHECK3:       omp.inner.for.body:
-// CHECK3-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP10]], 1
-// CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
-// CHECK3-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
-// CHECK3-NEXT:    store i32 1, ptr [[G]], align 128
-// CHECK3-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK3-NEXT:    store volatile i32 1, ptr [[TMP11]], align 4
-// CHECK3-NEXT:    store i32 2, ptr [[SIVAR3]], align 4
-// CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[CLASS_ANON_2]], ptr [[REF_TMP]], i32 0, i32 0
-// CHECK3-NEXT:    store ptr [[G]], ptr [[TMP12]], align 8
-// CHECK3-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[CLASS_ANON_2]], ptr [[REF_TMP]], i32 0, i32 1
-// CHECK3-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK3-NEXT:    store ptr [[TMP14]], ptr [[TMP13]], align 8
-// CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[CLASS_ANON_2]], ptr [[REF_TMP]], i32 0, i32 2
-// CHECK3-NEXT:    store ptr [[SIVAR3]], ptr [[TMP15]], align 8
-// CHECK3-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
-// CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
-// CHECK3:       omp.body.continue:
-// CHECK3-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
-// CHECK3:       omp.inner.for.inc:
-// CHECK3-NEXT:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP16]], 1
-// CHECK3-NEXT:    store i32 [[ADD5]], ptr [[DOTOMP_IV]], align 4
-// CHECK3-NEXT:    br label [[OMP_INNER_FOR_COND]]
-// CHECK3:       omp.inner.for.end:
-// CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
-// CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP4]])
-// CHECK3-NEXT:    [[TMP17:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK3-NEXT:    [[TMP18:%.*]] = icmp ne i32 [[TMP17]], 0
-// CHECK3-NEXT:    br i1 [[TMP18]], label [[DOTOMP_LASTPRIVATE_THEN:%.*]], label [[DOTOMP_LASTPRIVATE_DONE:%.*]]
-// CHECK3:       .omp.lastprivate.then:
-// CHECK3-NEXT:    [[TMP19:%.*]] = load i32, ptr [[G]], align 128
-// CHECK3-NEXT:    store volatile i32 [[TMP19]], ptr @g, align 128
-// CHECK3-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK3-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 4
-// CHECK3-NEXT:    store volatile i32 [[TMP21]], ptr [[TMP2]], align 4
-// CHECK3-NEXT:    [[TMP22:%.*]] = load i32, ptr [[SIVAR3]], align 4
-// CHECK3-NEXT:    store i32 [[TMP22]], ptr [[TMP0]], align 4
-// CHECK3-NEXT:    br label [[DOTOMP_LASTPRIVATE_DONE]]
-// CHECK3:       .omp.lastprivate.done:
-// CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB1]], i32 [[TMP4]])
-// CHECK3-NEXT:    ret void
-//
-//
 // CHECK4-LABEL: define {{[^@]+}}@main
 // CHECK4-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
@@ -2210,11 +2111,11 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[DOTBLOCK_DESCRIPTOR_ADDR]], align 8
 // CHECK4-NEXT:    store ptr [[DOTBLOCK_DESCRIPTOR]], ptr [[BLOCK_ADDR]], align 8
-// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 1, ptr @.omp_outlined., ptr @_ZZ4mainE5sivar)
+// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 1, ptr @__main_block_invoke.omp_outlined, ptr @_ZZ4mainE5sivar)
 // CHECK4-NEXT:    ret void
 //
 //
-// CHECK4-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK4-LABEL: define {{[^@]+}}@__main_block_invoke.omp_outlined
 // CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2376,7 +2277,7 @@ int main() {
 // CHECK4-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK4-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK4-NEXT:    store ptr [[TMP1]], ptr [[C]], align 8
-// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @.omp_outlined..2, ptr [[THIS1]])
+// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_ZN2SSC2ERi.omp_outlined, ptr [[THIS1]])
 // CHECK4-NEXT:    store ptr [[TMP]], ptr [[_TMP2]], align 8
 // CHECK4-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK4-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -2418,7 +2319,7 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    store ptr @___ZN2SSC2ERi_block_invoke, ptr [[BLOCK_INVOKE]], align 8
 // CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 4
-// CHECK4-NEXT:    store ptr @__block_descriptor_tmp.6, ptr [[BLOCK_DESCRIPTOR]], align 8
+// CHECK4-NEXT:    store ptr @__block_descriptor_tmp.3, ptr [[BLOCK_DESCRIPTOR]], align 8
 // CHECK4-NEXT:    [[BLOCK_CAPTURED_THIS_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    store ptr [[THIS1]], ptr [[BLOCK_CAPTURED_THIS_ADDR]], align 8
 // CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr [[BLOCK]], i32 0, i32 6
@@ -2443,7 +2344,7 @@ int main() {
 // CHECK4-NEXT:    ret void
 //
 //
-// CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..2
+// CHECK4-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
 // CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2537,7 +2438,7 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_INVOKE:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 3
 // CHECK4-NEXT:    store ptr @g1_block_invoke_2, ptr [[BLOCK_INVOKE]], align 8
 // CHECK4-NEXT:    [[BLOCK_DESCRIPTOR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 4
-// CHECK4-NEXT:    store ptr @__block_descriptor_tmp.4, ptr [[BLOCK_DESCRIPTOR]], align 8
+// CHECK4-NEXT:    store ptr @__block_descriptor_tmp.2, ptr [[BLOCK_DESCRIPTOR]], align 8
 // CHECK4-NEXT:    [[BLOCK_CAPTURED_THIS_ADDR:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 5
 // CHECK4-NEXT:    store ptr [[TMP0]], ptr [[BLOCK_CAPTURED_THIS_ADDR]], align 8
 // CHECK4-NEXT:    [[BLOCK_CAPTURED:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[BLOCK]], i32 0, i32 6
@@ -2621,11 +2522,11 @@ int main() {
 // CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR4:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 8
 // CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR5:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr, ptr, i32 }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 7
 // CHECK4-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR5]], align 8
-// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @.omp_outlined..3, ptr [[THIS]], ptr [[TMP5]], ptr [[BLOCK_CAPTURE_ADDR4]], ptr [[TMP6]])
+// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @g1_block_invoke_2.omp_outlined, ptr [[THIS]], ptr [[TMP5]], ptr [[BLOCK_CAPTURE_ADDR4]], ptr [[TMP6]])
 // CHECK4-NEXT:    ret void
 //
 //
-// CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..3
+// CHECK4-LABEL: define {{[^@]+}}@g1_block_invoke_2.omp_outlined
 // CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[C:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2778,11 +2679,11 @@ int main() {
 // CHECK4-NEXT:    store i32 [[DIV]], ptr [[TMP3]], align 4
 // CHECK4-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, ptr, ptr }>, ptr [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 6
 // CHECK4-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[BLOCK_CAPTURE_ADDR2]], align 8
-// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @.omp_outlined..5, ptr [[THIS]], ptr [[TMP5]])
+// CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 2, ptr @___ZN2SSC2ERi_block_invoke.omp_outlined, ptr [[THIS]], ptr [[TMP5]])
 // CHECK4-NEXT:    ret void
 //
 //
-// CHECK4-LABEL: define {{[^@]+}}@.omp_outlined..5
+// CHECK4-LABEL: define {{[^@]+}}@___ZN2SSC2ERi_block_invoke.omp_outlined
 // CHECK4-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2]] {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2902,10 +2803,10 @@ int main() {
 // CHECK5-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
 // CHECK5-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK5-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]], float noundef 3.000000e+00)
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 5, ptr @.omp_outlined., ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[VAR]], ptr @_ZZ4mainE5sivar)
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @.omp_outlined..1)
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @.omp_outlined..2)
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @.omp_outlined..3)
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 5, ptr @main.omp_outlined, ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[VAR]], ptr @_ZZ4mainE5sivar)
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @main.omp_outlined.1)
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @main.omp_outlined.2)
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr @main.omp_outlined.3)
 // CHECK5-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIiET_v()
 // CHECK5-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
 // CHECK5-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR5:[0-9]+]]
@@ -2960,7 +2861,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK5-LABEL: define {{[^@]+}}@main.omp_outlined
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[SIVAR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3117,7 +3018,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..1
+// CHECK5-LABEL: define {{[^@]+}}@main.omp_outlined.1
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3196,7 +3097,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..2
+// CHECK5-LABEL: define {{[^@]+}}@main.omp_outlined.2
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3275,7 +3176,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..3
+// CHECK5-LABEL: define {{[^@]+}}@main.omp_outlined.3
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3395,7 +3296,7 @@ int main() {
 // CHECK5-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK5-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 128
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VAR]], align 128
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @.omp_outlined..5, ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[TMP0]])
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 4, ptr @_Z5tmainIiET_v.omp_outlined, ptr [[T_VAR]], ptr [[VEC]], ptr [[S_ARR]], ptr [[TMP0]])
 // CHECK5-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
@@ -3440,7 +3341,7 @@ int main() {
 // CHECK5-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 3
 // CHECK5-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK5-NEXT:    store ptr [[TMP1]], ptr [[C]], align 8
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @.omp_outlined..4, ptr [[THIS1]])
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_ZN2SSC2ERi.omp_outlined, ptr [[THIS1]])
 // CHECK5-NEXT:    store ptr [[TMP]], ptr [[_TMP2]], align 8
 // CHECK5-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK5-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -3513,7 +3414,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..4
+// CHECK5-LABEL: define {{[^@]+}}@_ZN2SSC2ERi.omp_outlined
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3716,7 +3617,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..5
+// CHECK5-LABEL: define {{[^@]+}}@_Z5tmainIiET_v.omp_outlined
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[T_VAR:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[VEC:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[S_ARR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[VAR:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3902,7 +3803,7 @@ int main() {
 // CHECK5-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK5-NEXT:    store i32 0, ptr [[A]], align 4
-// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @.omp_outlined..6, ptr [[THIS1]])
+// CHECK5-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_ZN3SSTIiEC2Ev.omp_outlined, ptr [[THIS1]])
 // CHECK5-NEXT:    store ptr [[TMP]], ptr [[_TMP2]], align 8
 // CHECK5-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // CHECK5-NEXT:    store i32 1, ptr [[DOTOMP_UB]], align 4
@@ -3955,7 +3856,7 @@ int main() {
 // CHECK5-NEXT:    ret void
 //
 //
-// CHECK5-LABEL: define {{[^@]+}}@.omp_outlined..6
+// CHECK5-LABEL: define {{[^@]+}}@_ZN3SSTIiEC2Ev.omp_outlined
 // CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef [[THIS:%.*]]) #[[ATTR3]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8

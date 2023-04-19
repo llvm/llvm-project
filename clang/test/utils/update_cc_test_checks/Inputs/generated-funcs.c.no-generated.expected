@@ -15,7 +15,7 @@ void foo(void);
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // OMP-NEXT:    store i32 0, ptr [[I]], align 4
-// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 0, ptr @.omp_outlined.)
+// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2:[0-9]+]], i32 0, ptr @main.omp_outlined)
 // OMP-NEXT:    call void @foo()
 // OMP-NEXT:    ret i32 0
 //
@@ -63,7 +63,7 @@ int main(void) {
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, ptr [[I]], align 4
-// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 0, ptr @.omp_outlined..1)
+// OMP-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 0, ptr @foo.omp_outlined)
 // OMP-NEXT:    ret void
 //
 // NOOMP-LABEL: @foo(

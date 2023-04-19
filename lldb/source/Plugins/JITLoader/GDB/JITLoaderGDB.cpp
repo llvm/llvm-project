@@ -158,8 +158,7 @@ void JITLoaderGDB::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForJITLoaderPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the JIT LoaderGDB plug-in."),
-        is_global_setting);
+        "Properties for the JIT LoaderGDB plug-in.", is_global_setting);
   }
 }
 

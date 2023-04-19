@@ -713,8 +713,7 @@ void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the kdp-remote process plug-in."),
-        is_global_setting);
+        "Properties for the kdp-remote process plug-in.", is_global_setting);
   }
 }
 

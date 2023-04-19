@@ -4088,8 +4088,8 @@ TargetProperties::TargetProperties(Target *target)
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
         ConstString(Properties::GetExperimentalSettingsName()),
-        ConstString("Experimental settings - setting these won't produce "
-                    "errors if the setting is not present."),
+        "Experimental settings - setting these won't produce "
+        "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp =
@@ -4099,12 +4099,12 @@ TargetProperties::TargetProperties(Target *target)
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
         ConstString(Properties::GetExperimentalSettingsName()),
-        ConstString("Experimental settings - setting these won't produce "
-                    "errors if the setting is not present."),
+        "Experimental settings - setting these won't produce "
+        "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
     m_collection_sp->AppendProperty(
-        ConstString("process"), ConstString("Settings specific to processes."),
-        true, Process::GetGlobalProperties().GetValueProperties());
+        ConstString("process"), "Settings specific to processes.", true,
+        Process::GetGlobalProperties().GetValueProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
   }

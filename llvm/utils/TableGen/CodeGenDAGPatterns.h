@@ -626,13 +626,16 @@ struct TreePredicateCall {
 };
 
 class TreePatternNode : public RefCountedBase<TreePatternNode> {
+  /// Number of results for this node.
+  unsigned NumResults;
+
   /// The type of each node result.  Before and during type inference, each
   /// result may be a set of possible types.  After (successful) type inference,
   /// each is a single concrete type.
-  std::vector<TypeSetByHwMode> Types;
+  std::unique_ptr<TypeSetByHwMode[]> Types;
 
   /// The index of each result in results of the pattern.
-  std::vector<unsigned> ResultPerm;
+  std::unique_ptr<unsigned[]> ResultPerm;
 
   /// OperatorOrVal - The Record for the operator if this is an interior node
   /// (not a leaf) or the init value (e.g. the "GPRC" record, or "7") for a
@@ -651,7 +654,7 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
   /// TransformFn - The transformation function to execute on this node before
   /// it can be substituted into the resulting instruction on a pattern match.
-  Record *TransformFn;
+  Record *TransformFn = nullptr;
 
   std::vector<TreePatternNodePtr> Children;
 
@@ -661,17 +664,16 @@ class TreePatternNode : public RefCountedBase<TreePatternNode> {
 
 public:
   TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
-                  unsigned NumResults)
-      : OperatorOrVal(Op), TransformFn(nullptr), Children(std::move(Ch)) {
-    Types.resize(NumResults);
-    ResultPerm.resize(NumResults);
-    std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
+                  unsigned numResults)
+      : NumResults(numResults), Types(new TypeSetByHwMode[numResults]),
+        ResultPerm(new unsigned[numResults]), OperatorOrVal(Op),
+        Children(std::move(Ch)) {
+    std::iota(ResultPerm.get(), ResultPerm.get() + numResults, 0);
   }
-  TreePatternNode(Init *val, unsigned NumResults) // leaf ctor
-      : OperatorOrVal(val), TransformFn(nullptr) {
-    Types.resize(NumResults);
-    ResultPerm.resize(NumResults);
-    std::iota(ResultPerm.begin(), ResultPerm.end(), 0);
+  TreePatternNode(Init *val, unsigned numResults) // leaf ctor
+      : NumResults(numResults), Types(new TypeSetByHwMode[numResults]),
+        ResultPerm(new unsigned[numResults]), OperatorOrVal(val) {
+    std::iota(ResultPerm.get(), ResultPerm.get() + numResults, 0);
   }
 
   bool hasName() const { return !Name.empty(); }
@@ -691,11 +693,16 @@ public:
   bool isLeaf() const { return isa<Init *>(OperatorOrVal); }
 
   // Type accessors.
-  unsigned getNumTypes() const { return Types.size(); }
+  unsigned getNumTypes() const { return NumResults; }
   ValueTypeByHwMode getType(unsigned ResNo) const {
     return Types[ResNo].getValueTypeByHwMode();
   }
-  const std::vector<TypeSetByHwMode> &getExtTypes() const { return Types; }
+  ArrayRef<TypeSetByHwMode> getExtTypes() const {
+    return ArrayRef(Types.get(), NumResults);
+  }
+  MutableArrayRef<TypeSetByHwMode> getExtTypes() {
+    return MutableArrayRef(Types.get(), NumResults);
+  }
   const TypeSetByHwMode &getExtType(unsigned ResNo) const {
     return Types[ResNo];
   }
@@ -712,7 +719,6 @@ public:
     return Types[ResNo].empty();
   }
 
-  unsigned getNumResults() const { return ResultPerm.size(); }
   unsigned getResultIndex(unsigned ResNo) const { return ResultPerm[ResNo]; }
   void setResultIndex(unsigned ResNo, unsigned RI) { ResultPerm[ResNo] = RI; }
 
@@ -866,7 +872,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const TreePatternNode &TPN) {
   TPN.print(OS);
   return OS;
 }
-
 
 /// TreePattern - Represent a pattern, used for instructions, pattern
 /// fragments, etc.

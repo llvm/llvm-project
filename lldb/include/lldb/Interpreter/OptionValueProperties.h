@@ -197,8 +197,8 @@ public:
   OptionValueFileSpecList *GetPropertyAtIndexAsOptionValueFileSpecList(
       const ExecutionContext *exe_ctx, bool will_modify, uint32_t idx) const;
 
-  void AppendProperty(ConstString name, ConstString desc,
-                      bool is_global, const lldb::OptionValueSP &value_sp);
+  void AppendProperty(ConstString name, llvm::StringRef desc, bool is_global,
+                      const lldb::OptionValueSP &value_sp);
 
   lldb::OptionValuePropertiesSP GetSubProperty(const ExecutionContext *exe_ctx,
                                                ConstString name);

@@ -88,8 +88,7 @@ void TraceIntelPT::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForTracePlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the intel-pt trace plug-in."),
-        is_global_setting);
+        "Properties for the intel-pt trace plug-in.", is_global_setting);
   }
 }
 

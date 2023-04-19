@@ -45,11 +45,9 @@ void OptionValueProperties::SetValueChangedCallback(
 }
 
 void OptionValueProperties::AppendProperty(ConstString name,
-                                           ConstString desc,
-                                           bool is_global,
+                                           llvm::StringRef desc, bool is_global,
                                            const OptionValueSP &value_sp) {
-  Property property(name.GetStringRef(), desc.GetStringRef(), is_global,
-                    value_sp);
+  Property property(name.GetStringRef(), desc, is_global, value_sp);
   m_name_to_index.Append(name, m_properties.size());
   m_properties.push_back(property);
   value_sp->SetParent(shared_from_this());
