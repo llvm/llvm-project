@@ -15,7 +15,6 @@
 #include "src/unistd/write.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 // The tests here are exactly the same as those of dup2. We only test the
 // plumbing of the dup3 syscall and not the dup3 functionality itself as it is
