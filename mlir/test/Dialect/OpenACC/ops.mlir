@@ -250,11 +250,11 @@ func.func @testloopop() -> () {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop tile(%i64Value, %i64Value : i64, i64) {
+  acc.loop tile(%i64Value: i64, %i64Value: i64) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop tile(%i32Value, %i32Value : i32, i32) {
+  acc.loop tile(%i32Value: i32, %i32Value: i32) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
@@ -268,55 +268,55 @@ func.func @testloopop() -> () {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64) {
+// CHECK:      acc.loop gang(num=[[I64VALUE]]: i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(static=[[I64VALUE]] : i64) {
+// CHECK:      acc.loop gang(static=[[I64VALUE]]: i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop worker([[I64VALUE]] : i64) {
+// CHECK:      acc.loop worker([[I64VALUE]]: i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop worker([[I32VALUE]] : i32) {
+// CHECK:      acc.loop worker([[I32VALUE]]: i32) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop worker([[IDXVALUE]] : index) {
+// CHECK:      acc.loop worker([[IDXVALUE]]: index) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop vector([[I64VALUE]] : i64) {
+// CHECK:      acc.loop vector([[I64VALUE]]: i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop vector([[I32VALUE]] : i32) {
+// CHECK:      acc.loop vector([[I32VALUE]]: i32) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop vector([[IDXVALUE]] : index) {
+// CHECK:      acc.loop vector([[IDXVALUE]]: index) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64) worker vector {
+// CHECK:      acc.loop gang(num=[[I64VALUE]]: i64) worker vector {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) worker([[I64VALUE]] : i64) vector([[I64VALUE]] : i64) {
+// CHECK:      acc.loop gang(num=[[I64VALUE]]: i64, static=[[I64VALUE]]: i64) worker([[I64VALUE]]: i64) vector([[I64VALUE]]: i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I32VALUE]] : i32, static=[[IDXVALUE]] : index) {
+// CHECK:      acc.loop gang(num=[[I32VALUE]]: i32, static=[[IDXVALUE]]: index) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop tile([[I64VALUE]], [[I64VALUE]] : i64, i64) {
+// CHECK:      acc.loop tile([[I64VALUE]]: i64, [[I64VALUE]]: i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop tile([[I32VALUE]], [[I32VALUE]] : i32, i32) {
+// CHECK:      acc.loop tile([[I32VALUE]]: i32, [[I32VALUE]]: i32) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }

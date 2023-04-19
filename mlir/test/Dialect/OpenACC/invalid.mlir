@@ -62,7 +62,7 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{only one of "auto", "independent", "seq" can be present at the same time}}
+// expected-error@+1 {{only one of auto, independent, seq can be present at the same time}}
 acc.loop {
   acc.yield
 } attributes {auto_, seq}
