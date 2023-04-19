@@ -946,14 +946,9 @@ static bool isSimple(Instruction *I) {
 }
 
 /// Shuffles \p Mask in accordance with the given \p SubMask.
-/// \param ExtendingManyInputs Supports reshuffling of the mask with not only
-/// one but two input vectors.
-static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
-                    bool ExtendingManyInputs = false) {
+static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask) {
   if (SubMask.empty())
     return;
-  assert((!ExtendingManyInputs || SubMask.size() > Mask.size()) &&
-         "SubMask with many inputs support must be larger than the mask.");
   if (Mask.empty()) {
     Mask.append(SubMask.begin(), SubMask.end());
     return;
@@ -961,9 +956,8 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
   SmallVector<int> NewMask(SubMask.size(), UndefMaskElem);
   int TermValue = std::min(Mask.size(), SubMask.size());
   for (int I = 0, E = SubMask.size(); I < E; ++I) {
-    if ((!ExtendingManyInputs &&
-         (SubMask[I] >= TermValue || Mask[SubMask[I]] >= TermValue)) ||
-        SubMask[I] == UndefMaskElem)
+    if (SubMask[I] >= TermValue || SubMask[I] == UndefMaskElem ||
+        Mask[SubMask[I]] >= TermValue)
       continue;
     NewMask[I] = Mask[SubMask[I]];
   }
@@ -6794,8 +6788,6 @@ protected:
 /// analysis/transformations.
 class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
-  SmallVector<int> CommonMask;
-  SmallVector<Value *, 2> InVectors;
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
   ArrayRef<Value *> VectorizedVals;
@@ -7017,53 +7009,19 @@ public:
                                    VecTy, std::nullopt, CostKind, 0, EEVTy);
       }
     }
-    InVectors.assign(1, VecBase);
     return VecBase;
-  }
-  void add(const TreeEntry *E1, const TreeEntry *E2, ArrayRef<int> Mask) {
-    CommonMask.assign(Mask.begin(), Mask.end());
-    InVectors.assign(
-        2, Constant::getNullValue(FixedVectorType::get(
-               E1->Scalars.front()->getType(),
-               std::max(E1->getVectorFactor(), E2->getVectorFactor()))));
-  }
-  void add(const TreeEntry *E1, ArrayRef<int> Mask) {
-    CommonMask.assign(Mask.begin(), Mask.end());
-    InVectors.assign(
-        1, Constant::getNullValue(FixedVectorType::get(
-               E1->Scalars.front()->getType(), E1->getVectorFactor())));
   }
   void gather(ArrayRef<Value *> VL, Value *Root = nullptr) {
     Cost += getBuildVectorCost(VL, Root);
-    if (!Root) {
-      assert(InVectors.empty() && "Unexpected input vectors for buildvector.");
-      InVectors.assign(1, Constant::getNullValue(FixedVectorType::get(
-                              VL.front()->getType(), VL.size())));
-    }
   }
   /// Finalize emission of the shuffles.
-  InstructionCost finalize(ArrayRef<int> ExtMask) {
+  InstructionCost finalize() {
     IsFinalized = true;
-    ::addMask(CommonMask, ExtMask, /*ExtendingManyInputs=*/true);
-    if (CommonMask.empty())
-      return Cost;
-    int Limit = CommonMask.size() * 2;
-    if (all_of(CommonMask, [=](int Idx) { return Idx < Limit; }) &&
-        ShuffleVectorInst::isIdentityMask(CommonMask))
-      return Cost;
-    return Cost +
-           TTI.getShuffleCost(InVectors.size() == 2 ? TTI::SK_PermuteTwoSrc
-                                                    : TTI::SK_PermuteSingleSrc,
-                              FixedVectorType::get(
-                                  cast<VectorType>(InVectors.front()->getType())
-                                      ->getElementType(),
-                                  CommonMask.size()),
-                              CommonMask);
+    return Cost;
   }
 
   ~ShuffleCostEstimator() {
-    assert((IsFinalized || CommonMask.empty()) &&
-           "Shuffle construction must be finalized.");
+      assert(IsFinalized && "Shuffle construction must be finalized.");
   }
 };
 
@@ -7151,30 +7109,35 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         if (Mask[I] != UndefMaskElem)
           GatheredScalars[I] = PoisonValue::get(ScalarTy);
       }
-      LLVM_DEBUG(
-          int Limit = Mask.size() * 2;
-          if (*GatherShuffle == TTI::SK_PermuteSingleSrc &&
-              all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
-              ShuffleVectorInst::isIdentityMask(Mask)) {
-            // Perfect match in the graph, will reuse the previously
-            // vectorized node. Cost is 0.
-            dbgs() << "SLP: perfect diamond match for gather bundle "
-                      "that starts with "
-                   << *VL.front() << ".\n";
-          } else {
-            dbgs() << "SLP: shuffled " << Entries.size()
-                   << " entries for bundle that starts with " << *VL.front()
-                   << ".\n";
-          });
-      if (Entries.size() == 1)
-        Estimator.add(Entries.front(), Mask);
-      else
-        Estimator.add(Entries.front(), Entries.back(), Mask);
+      InstructionCost GatherCost = 0;
+      int Limit = Mask.size() * 2;
+      if (all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
+          ShuffleVectorInst::isIdentityMask(Mask)) {
+        // Perfect match in the graph, will reuse the previously vectorized
+        // node. Cost is 0.
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: perfect diamond match for gather bundle that starts with "
+            << *VL.front() << ".\n");
+        if (NeedToShuffleReuses)
+          GatherCost =
+              TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                  FinalVecTy, E->ReuseShuffleIndices);
+      } else {
+        LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
+                          << " entries for bundle that starts with "
+                          << *VL.front() << ".\n");
+        // Detected that instead of gather we can emit a shuffle of single/two
+        // previously vectorized nodes. Add the cost of the permutation rather
+        // than gather.
+        ::addMask(Mask, E->ReuseShuffleIndices);
+        GatherCost = TTI->getShuffleCost(*GatherShuffle, FinalVecTy, Mask);
+      }
       Estimator.gather(
           GatheredScalars,
           Constant::getNullValue(FixedVectorType::get(
               GatheredScalars.front()->getType(), GatheredScalars.size())));
-      return Estimator.finalize(E->ReuseShuffleIndices);
+      return GatherCost + Estimator.finalize();
     }
     if (ExtractShuffle && all_of(GatheredScalars, PoisonValue::classof)) {
       // Check that gather of extractelements can be represented as just a
@@ -7184,15 +7147,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // single input vector or of 2 input vectors.
       InstructionCost Cost =
           computeExtractCost(VL, VecTy, *ExtractShuffle, ExtractMask, *TTI);
-      return Cost + Estimator.finalize(E->ReuseShuffleIndices);
+      if (NeedToShuffleReuses)
+        Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                    FinalVecTy, E->ReuseShuffleIndices);
+      return Cost + Estimator.finalize();
     }
-    Estimator.gather(
-        GatheredScalars,
-        (ExtractShuffle || GatherShuffle)
-            ? Constant::getNullValue(FixedVectorType::get(
-                  GatheredScalars.front()->getType(), GatheredScalars.size()))
-            : nullptr);
-    return Estimator.finalize(E->ReuseShuffleIndices);
+    InstructionCost ReuseShuffleCost = 0;
+    if (NeedToShuffleReuses)
+      ReuseShuffleCost = TTI->getShuffleCost(
+          TTI::SK_PermuteSingleSrc, FinalVecTy, E->ReuseShuffleIndices);
+    Estimator.gather(GatheredScalars);
+    return ReuseShuffleCost + Estimator.finalize();
   }
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
