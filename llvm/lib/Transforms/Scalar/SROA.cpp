@@ -130,7 +130,6 @@ namespace {
 /// UseFrag - Use Target as the new fragment.
 /// UseNoFrag - The new slice already covers the whole variable.
 /// Skip - The new alloca slice doesn't include this variable.
-/// FIXME: Can we use calculateFragmentIntersect instead?
 enum FragCalcResult { UseFrag, UseNoFrag, Skip };
 static FragCalcResult
 calculateFragment(DILocalVariable *Variable,
