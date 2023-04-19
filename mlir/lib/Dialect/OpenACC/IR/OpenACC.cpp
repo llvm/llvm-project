@@ -88,10 +88,13 @@ LogicalResult acc::PresentOp::verify() {
 // CopyinOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::CopyinOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_copyin &&
-      getDataClause() != acc::DataClause::acc_copyin_readonly) {
+      getDataClause() != acc::DataClause::acc_copyin_readonly &&
+      getDataClause() != acc::DataClause::acc_copy) {
     return emitError(
-        "data clause associated with copyin operation must match its intent");
+        "data clause associated with copyin operation must match its intent"
+        " or specify original clause this operation was decomposed from");
   }
   return success();
 }
@@ -104,16 +107,22 @@ bool acc::CopyinOp::isCopyinReadonly() {
 // CreateOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::CreateOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_create &&
-      getDataClause() != acc::DataClause::acc_create_zero) {
+      getDataClause() != acc::DataClause::acc_create_zero &&
+      getDataClause() != acc::DataClause::acc_copyout &&
+      getDataClause() != acc::DataClause::acc_copyout_zero) {
     return emitError(
-        "data clause associated with create operation must match its intent");
+        "data clause associated with create operation must match its intent"
+        " or specify original clause this operation was decomposed from");
   }
   return success();
 }
 
 bool acc::CreateOp::isCreateZero() {
-  return getDataClause() == acc::DataClause::acc_create_zero;
+  // The zero modifier is encoded in the data clause.
+  return getDataClause() == acc::DataClause::acc_create_zero ||
+         getDataClause() == acc::DataClause::acc_copyout_zero;
 }
 
 //===----------------------------------------------------------------------===//
@@ -142,7 +151,13 @@ LogicalResult acc::AttachOp::verify() {
 // GetDevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::GetDevicePtrOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_getdeviceptr) {
+  // This operation is also created for use in unstructured constructs
+  // when we need an "accPtr" to feed to exit operation. Thus we test
+  // for those cases as well:
+  if (getDataClause() != acc::DataClause::acc_getdeviceptr &&
+      getDataClause() != acc::DataClause::acc_copyout &&
+      getDataClause() != acc::DataClause::acc_delete &&
+      getDataClause() != acc::DataClause::acc_detach) {
     return emitError("getDevicePtr mismatch");
   }
   return success();
@@ -152,10 +167,13 @@ LogicalResult acc::GetDevicePtrOp::verify() {
 // CopyoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::CopyoutOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_copyout &&
-      getDataClause() != acc::DataClause::acc_copyout_zero) {
+      getDataClause() != acc::DataClause::acc_copyout_zero &&
+      getDataClause() != acc::DataClause::acc_copy) {
     return emitError(
-        "data clause associated with copyout operation must match its intent");
+        "data clause associated with copyout operation must match its intent"
+        " or specify original clause this operation was decomposed from");
   }
   if (!getVarPtr() || !getAccPtr()) {
     return emitError("must have both host and device pointers");
@@ -171,9 +189,13 @@ bool acc::CopyoutOp::isCopyoutZero() {
 // DeleteOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DeleteOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_delete) {
+  // Test for all clauses this operation can be decomposed from:
+  if (getDataClause() != acc::DataClause::acc_delete &&
+      getDataClause() != acc::DataClause::acc_create &&
+      getDataClause() != acc::DataClause::acc_create_zero) {
     return emitError(
-        "data clause associated with delete operation must match its intent");
+        "data clause associated with delete operation must match its intent"
+        " or specify original clause this operation was decomposed from");
   }
   if (!getVarPtr() && !getAccPtr()) {
     return emitError("must have either host or device pointer");
@@ -185,9 +207,12 @@ LogicalResult acc::DeleteOp::verify() {
 // DetachOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DetachOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_detach) {
+  // Test for all clauses this operation can be decomposed from:
+  if (getDataClause() != acc::DataClause::acc_detach &&
+      getDataClause() != acc::DataClause::acc_attach) {
     return emitError(
-        "data clause associated with detach operation must match its intent");
+        "data clause associated with detach operation must match its intent"
+        " or specify original clause this operation was decomposed from");
   }
   if (!getVarPtr() && !getAccPtr()) {
     return emitError("must have either host or device pointer");
