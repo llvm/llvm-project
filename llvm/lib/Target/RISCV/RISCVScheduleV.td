@@ -13,8 +13,10 @@ defvar SchedMxList = ["M1", "M2", "M4", "M8", "MF2", "MF4", "MF8"];
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar SchedMxListW = !listremove(SchedMxList, ["M8"]);
 defvar SchedMxListFW = !listremove(SchedMxList, ["M8", "MF8"]);
+// Used for floating-point as it doesn't contain MF8.
+defvar SchedMxListF = !listremove(SchedMxList, ["MF8"]);
 // Used for widening floating-point Reduction as it doesn't contain MF8.
-defvar SchedMxListFWRed = !listremove(SchedMxList, ["MF8"]);
+defvar SchedMxListFWRed = SchedMxListF;
 
 class SchedSEWSet<string mx> {
   list<int> val = !cond(!eq(mx, "M1"):  [8, 16, 32, 64],
@@ -24,6 +26,16 @@ class SchedSEWSet<string mx> {
                         !eq(mx, "MF2"): [8, 16, 32],
                         !eq(mx, "MF4"): [8, 16],
                         !eq(mx, "MF8"): [8]);
+}
+
+// For floating-point instructions, SEW won't be 8.
+class SchedSEWSetF<string mx> {
+  list<int> val = !cond(!eq(mx, "M1"):  [16, 32, 64],
+                        !eq(mx, "M2"):  [16, 32, 64],
+                        !eq(mx, "M4"):  [16, 32, 64],
+                        !eq(mx, "M8"):  [16, 32, 64],
+                        !eq(mx, "MF2"): [16, 32],
+                        !eq(mx, "MF4"): [16]);
 }
 
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and
@@ -64,32 +76,33 @@ multiclass LMULReadAdvanceImpl<string name, int val,
 // ReadAdvance for each (name, LMUL, SEW) tuple for each LMUL in each of the
 // SchedMxList variants above. Each multiclass is responsible for defining
 // a record that represents the WorseCase behavior for name.
-multiclass LMULSEWSchedWritesImpl<string name, list<string> MxList> {
+multiclass LMULSEWSchedWritesImpl<string name, list<string> MxList, bit isF = 0> {
   def name # "_WorstCase" : SchedWrite;
   foreach mx = MxList in {
-    foreach sew = SchedSEWSet<mx>.val in
+    foreach sew = !if(isF, SchedSEWSetF<mx>.val, SchedSEWSet<mx>.val) in
       def name # "_" # mx # "_E" # sew : SchedWrite;
   }
 }
-multiclass LMULSEWSchedReadsImpl<string name, list<string> MxList> {
+multiclass LMULSEWSchedReadsImpl<string name, list<string> MxList, bit isF = 0> {
   def name # "_WorstCase" : SchedRead;
   foreach mx = MxList in {
-    foreach sew = SchedSEWSet<mx>.val in
+    foreach sew = !if(isF, SchedSEWSetF<mx>.val, SchedSEWSet<mx>.val) in
       def name # "_" # mx # "_E" # sew : SchedRead;
   }
 }
-multiclass LMULSEWWriteResImpl<string name, list<ProcResourceKind> resources> {
+multiclass LMULSEWWriteResImpl<string name, list<ProcResourceKind> resources,
+                               bit isF = 0> {
   def : WriteRes<!cast<SchedWrite>(name # "_WorstCase"), resources>;
-  foreach mx = SchedMxList in {
-   foreach sew = SchedSEWSet<mx>.val in
-     def : WriteRes<!cast<SchedWrite>(name # "_" # mx # "_E" # sew), resources>;
+  foreach mx = !if(isF, SchedMxListF, SchedMxList) in {
+    foreach sew = !if(isF, SchedSEWSetF<mx>.val, SchedSEWSet<mx>.val) in
+      def : WriteRes<!cast<SchedWrite>(name # "_" # mx # "_E" # sew), resources>;
   }
 }
-multiclass LMULSEWReadAdvanceImpl<string name, int val,
-                                  list<SchedWrite> writes = []> {
+multiclass LMULSEWReadAdvanceImpl<string name, int val, list<SchedWrite> writes = [],
+                                  bit isF = 0> {
   def : ReadAdvance<!cast<SchedRead>(name # "_WorstCase"), val, writes>;
-  foreach mx = SchedMxList in {
-    foreach sew = SchedSEWSet<mx>.val in
+  foreach mx = !if(isF, SchedMxListF, SchedMxList) in {
+    foreach sew = !if(isF, SchedSEWSetF<mx>.val, SchedSEWSet<mx>.val) in
       def : ReadAdvance<!cast<SchedRead>(name # "_" # mx # "_E" # sew), val, writes>;
   }
 }
@@ -123,6 +136,13 @@ multiclass LMULSEWWriteRes<string name, list<ProcResourceKind> resources>
   : LMULSEWWriteResImpl<name, resources>;
 multiclass LMULSEWReadAdvance<string name, int val, list<SchedWrite> writes = []>
   : LMULSEWReadAdvanceImpl<name, val, writes>;
+
+multiclass LMULSEWSchedWritesF<string name> : LMULSEWSchedWritesImpl<name, SchedMxListF, 1>;
+multiclass LMULSEWSchedReadsF<string name> : LMULSEWSchedReadsImpl<name, SchedMxListF, 1>;
+multiclass LMULSEWWriteResF<string name, list<ProcResourceKind> resources>
+  : LMULSEWWriteResImpl<name, resources, 1>;
+multiclass LMULSEWReadAdvanceF<string name, int val, list<SchedWrite> writes = []>
+  : LMULSEWReadAdvanceImpl<name, val, writes, 1>;
 
 multiclass LMULSchedWritesW<string name> : LMULSchedWritesImpl<name, SchedMxListW>;
 multiclass LMULSchedReadsW<string name> : LMULSchedReadsImpl<name, SchedMxListW>;
@@ -296,8 +316,8 @@ defm "" : LMULSchedWritesFW<"WriteVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : LMULSchedWrites<"WriteVFMulV">;
 defm "" : LMULSchedWrites<"WriteVFMulF">;
-defm "" : LMULSEWSchedWrites<"WriteVFDivV">;
-defm "" : LMULSEWSchedWrites<"WriteVFDivF">;
+defm "" : LMULSEWSchedWritesF<"WriteVFDivV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
 defm "" : LMULSchedWritesFW<"WriteVFWMulV">;
 defm "" : LMULSchedWritesFW<"WriteVFWMulF">;
@@ -308,7 +328,7 @@ defm "" : LMULSchedWrites<"WriteVFMulAddF">;
 defm "" : LMULSchedWritesFW<"WriteVFWMulAddV">;
 defm "" : LMULSchedWritesFW<"WriteVFWMulAddF">;
 // 13.8. Vector Floating-Point Square-Root Instruction
-defm "" : LMULSEWSchedWrites<"WriteVFSqrtV">;
+defm "" : LMULSEWSchedWritesF<"WriteVFSqrtV">;
 // 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
 defm "" : LMULSchedWrites<"WriteVFRecpV">;
@@ -515,8 +535,8 @@ defm "" : LMULSchedReadsFW<"ReadVFWALUF">;
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm "" : LMULSchedReads<"ReadVFMulV">;
 defm "" : LMULSchedReads<"ReadVFMulF">;
-defm "" : LMULSEWSchedReads<"ReadVFDivV">;
-defm "" : LMULSEWSchedReads<"ReadVFDivF">;
+defm "" : LMULSEWSchedReadsF<"ReadVFDivV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFDivF">;
 // 13.5. Vector Widening Floating-Point Multiply
 defm "" : LMULSchedReadsFW<"ReadVFWMulV">;
 defm "" : LMULSchedReadsFW<"ReadVFWMulF">;
@@ -527,7 +547,7 @@ defm "" : LMULSchedReads<"ReadVFMulAddF">;
 defm "" : LMULSchedReadsFW<"ReadVFWMulAddV">;
 defm "" : LMULSchedReadsFW<"ReadVFWMulAddF">;
 // 13.8. Vector Floating-Point Square-Root Instruction
-defm "" : LMULSEWSchedReads<"ReadVFSqrtV">;
+defm "" : LMULSEWSchedReadsF<"ReadVFSqrtV">;
 // 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
 defm "" : LMULSchedReads<"ReadVFRecpV">;
@@ -748,15 +768,15 @@ defm "" : LMULWriteResFW<"WriteVFWALUV", []>;
 defm "" : LMULWriteResFW<"WriteVFWALUF", []>;
 defm "" : LMULWriteRes<"WriteVFMulV", []>;
 defm "" : LMULWriteRes<"WriteVFMulF", []>;
-defm "" : LMULSEWWriteRes<"WriteVFDivV", []>;
-defm "" : LMULSEWWriteRes<"WriteVFDivF", []>;
+defm "" : LMULSEWWriteResF<"WriteVFDivV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFDivF", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulV", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulF", []>;
 defm "" : LMULWriteRes<"WriteVFMulAddV", []>;
 defm "" : LMULWriteRes<"WriteVFMulAddF", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulAddV", []>;
 defm "" : LMULWriteResFW<"WriteVFWMulAddF", []>;
-defm "" : LMULSEWWriteRes<"WriteVFSqrtV", []>;
+defm "" : LMULSEWWriteResF<"WriteVFSqrtV", []>;
 defm "" : LMULWriteRes<"WriteVFRecpV", []>;
 defm "" : LMULWriteRes<"WriteVFCmpV", []>;
 defm "" : LMULWriteRes<"WriteVFCmpF", []>;
@@ -898,15 +918,15 @@ defm "" : LMULReadAdvanceFW<"ReadVFWALUV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWALUF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulF", 0>;
-defm "" : LMULSEWReadAdvance<"ReadVFDivV", 0>;
-defm "" : LMULSEWReadAdvance<"ReadVFDivF", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFDivV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFDivF", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulF", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulAddV", 0>;
 defm "" : LMULReadAdvance<"ReadVFMulAddF", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulAddV", 0>;
 defm "" : LMULReadAdvanceFW<"ReadVFWMulAddF", 0>;
-defm "" : LMULSEWReadAdvance<"ReadVFSqrtV", 0>;
+defm "" : LMULSEWReadAdvanceF<"ReadVFSqrtV", 0>;
 defm "" : LMULReadAdvance<"ReadVFRecpV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCmpV", 0>;
 defm "" : LMULReadAdvance<"ReadVFCmpF", 0>;
