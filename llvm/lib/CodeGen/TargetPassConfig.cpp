@@ -56,6 +56,8 @@
 
 using namespace llvm;
 
+extern bool YkStackmapsSpillReloadsFix;
+
 static cl::opt<bool>
     EnableIPRA("enable-ipra", cl::init(false), cl::Hidden,
                cl::desc("Enable interprocedural register allocation "
@@ -1229,6 +1231,13 @@ void TargetPassConfig::addMachinePasses() {
 
   // Expand pseudo instructions before second scheduling pass.
   addPass(&ExpandPostRAPseudosID);
+
+  // Add pass to revert stackmap instructions altered by register allocation.
+  // We need to insert this pass late so that spill offsets will have been
+  // calculated.
+  if (YkStackmapsSpillReloadsFix) {
+    addPass(&FixStackmapsSpillReloadsID);
+  }
 
   // Run pre-sched2 passes.
   addPreSched2();
