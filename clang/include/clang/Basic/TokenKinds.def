@@ -519,6 +519,7 @@ TYPE_TRAIT_1(__has_unique_object_representations,
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
+TYPE_TRAIT_1(__is_trivially_equality_comparable, IsTriviallyEqualityComparable, KEYCXX)
 TYPE_TRAIT_1(__is_bounded_array, IsBoundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_unbounded_array, IsUnboundedArray, KEYCXX)
 TYPE_TRAIT_1(__is_nullptr, IsNullPointer, KEYCXX)

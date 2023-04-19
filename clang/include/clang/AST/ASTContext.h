@@ -2527,7 +2527,9 @@ public:
 
   /// Return true if the specified type has unique object representations
   /// according to (C++17 [meta.unary.prop]p9)
-  bool hasUniqueObjectRepresentations(QualType Ty) const;
+  bool
+  hasUniqueObjectRepresentations(QualType Ty,
+                                 bool CheckIfTriviallyCopyable = true) const;
 
   //===--------------------------------------------------------------------===//
   //                            Type Operators
