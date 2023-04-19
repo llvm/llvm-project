@@ -55,8 +55,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-          NewRecipe =
-              new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II, true);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -474,7 +473,10 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (WidenOriginalIV->needsVectorIV() ||
+    if (any_of(WidenOriginalIV->users(),
+               [WidenOriginalIV](VPUser *U) {
+                 return !U->usesScalars(WidenOriginalIV);
+               }) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
