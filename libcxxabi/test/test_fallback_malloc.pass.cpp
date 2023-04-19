@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <deque>
 #include <cassert>
+#include <inttypes.h>
 
 #include <__threading_support>
 
@@ -192,11 +193,11 @@ int main () {
     print_free_list ();
 
     char *p = (char *) fallback_malloc ( 1024 );    // too big!
-    std::printf("fallback_malloc ( 1024 ) --> %lu\n", (unsigned long ) p);
+    std::printf("fallback_malloc ( 1024 ) --> %" PRIuPTR"\n", (uintptr_t) p);
     print_free_list ();
 
     p = (char *) fallback_malloc ( 32 );
-    std::printf("fallback_malloc ( 32 ) --> %lu\n", (unsigned long) (p - heap));
+    std::printf("fallback_malloc ( 32 ) --> %" PRIuPTR"\n", (uintptr_t) (p - heap));
     if ( !is_fallback_ptr ( p ))
         std::printf("### p is not a fallback pointer!!\n");
 
