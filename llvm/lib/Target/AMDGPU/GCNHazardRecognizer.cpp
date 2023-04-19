@@ -1033,11 +1033,11 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   int WaitStatesNeeded = 0;
 
-  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = IA->getNumOperands();
-       I != E; ++I) {
-    const MachineOperand &Op = IA->getOperand(I);
+  for (const MachineOperand &Op :
+       llvm::drop_begin(IA->operands(), InlineAsm::MIOp_FirstOperand)) {
     if (Op.isReg() && Op.isDef()) {
-      WaitStatesNeeded = std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
+      WaitStatesNeeded =
+          std::max(WaitStatesNeeded, checkVALUHazardsHelper(Op, MRI));
     }
   }
 
