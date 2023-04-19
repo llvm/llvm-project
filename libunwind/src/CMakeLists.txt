@@ -5,11 +5,6 @@ set(LIBUNWIND_CXX_SOURCES
     Unwind-EHABI.cpp
     Unwind-seh.cpp
     )
-if(APPLE)
-  list(APPEND LIBUNWIND_CXX_SOURCES
-    Unwind_AppleExtras.cpp
-    )
-endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   list(APPEND LIBUNWIND_CXX_SOURCES
