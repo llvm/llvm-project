@@ -16,7 +16,6 @@ static_library("cppcoreguidelines") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "AvoidCaptureDefaultWhenCapturingThisCheck.cpp",
     "AvoidCapturingLambdaCoroutinesCheck.cpp",
     "AvoidConstOrRefDataMembersCheck.cpp",
     "AvoidDoWhileCheck.cpp",
@@ -27,6 +26,7 @@ static_library("cppcoreguidelines") {
     "InitVariablesCheck.cpp",
     "InterfacesGlobalInitCheck.cpp",
     "MacroUsageCheck.cpp",
+    "MisleadingCaptureDefaultByValueCheck.cpp",
     "NarrowingConversionsCheck.cpp",
     "NoMallocCheck.cpp",
     "OwningMemoryCheck.cpp",
