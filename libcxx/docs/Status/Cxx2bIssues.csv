@@ -208,7 +208,7 @@
 "`3745 <https://wg21.link/LWG3745>`__","``std::atomic_wait`` and its friends lack ``noexcept``", "November 2022","|Complete|","16.0",""
 "`3746 <https://wg21.link/LWG3746>`__","``optional``'s spaceship with ``U`` with a type derived from optional causes infinite constraint meta-recursion", "November 2022","","","|spaceship|"
 "`3747 <https://wg21.link/LWG3747>`__","``ranges::uninitialized_copy_n``, ``ranges::uninitialized_move_n``, and ``ranges::destroy_n`` should use ``std::move``", "November 2022","","","|ranges|"
-"`3750 <https://wg21.link/LWG3750>`__","Too many papers bump ``__cpp_lib_format``", "November 2022","","","|format|"
+"`3750 <https://wg21.link/LWG3750>`__","Too many papers bump ``__cpp_lib_format``", "November 2022","|Partial| [#note-LWG3750]_","","|format|"
 "`3751 <https://wg21.link/LWG3751>`__","Missing feature macro for ``flat_set``", "November 2022","","","|flat_containers|"
 "`3753 <https://wg21.link/LWG3753>`__","Clarify entity vs. freestanding entity", "November 2022","","",""
 "`3754 <https://wg21.link/LWG3754>`__","Class template expected synopsis contains declarations that do not match the detailed description", "November 2022","|Nothing to do|","",""

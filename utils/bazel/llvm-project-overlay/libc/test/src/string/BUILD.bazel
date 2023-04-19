@@ -42,12 +42,19 @@ libc_test(
     ],
 )
 
+cc_library(
+    name = "strchr_test_helper",
+    hdrs = ["StrchrTest.h"],
+    deps = ["//libc/test/UnitTest:LibcUnitTest"],
+)
+
 libc_test(
     name = "strchr_test",
     srcs = ["strchr_test.cpp"],
     libc_function_deps = [
         "//libc:strchr",
     ],
+    deps = [":strchr_test_helper"],
 )
 
 libc_test(
@@ -80,6 +87,7 @@ libc_test(
     libc_function_deps = [
         "//libc:strrchr",
     ],
+    deps = [":strchr_test_helper"],
 )
 
 libc_test(
@@ -142,9 +150,9 @@ libc_test(
         "//libc:memmove",
     ],
     deps = [
+        ":memory_check_utils",
         "//libc:__support_cpp_span",
         "//libc/test/UnitTest:memory_matcher",
-        ":memory_check_utils",
     ],
 )
 
@@ -155,9 +163,9 @@ libc_test(
         "//libc:bcopy",
     ],
     deps = [
+        ":memory_check_utils",
         "//libc:__support_cpp_span",
         "//libc/test/UnitTest:memory_matcher",
-        ":memory_check_utils",
     ],
 )
 
@@ -167,7 +175,10 @@ libc_test(
     libc_function_deps = [
         "//libc:memcmp",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        "//libc/test/UnitTest:test_logger",
+    ],
 )
 
 libc_test(
@@ -176,7 +187,10 @@ libc_test(
     libc_function_deps = [
         "//libc:bcmp",
     ],
-    deps = [":memory_check_utils"],
+    deps = [
+        ":memory_check_utils",
+        "//libc/test/UnitTest:test_logger",
+    ],
 )
 
 libc_test(

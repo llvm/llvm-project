@@ -598,7 +598,7 @@ exit:
   ret void
 }
 
-; TODO: IRCE is legal here.
+; IRCE is legal here.
 ; Here how it is done if the step was 1: https://godbolt.org/z/jEqWaseWc
 ; It is also legal for step 4. Proof:
 ; - Capacity check ensures that iv < limit <= SINT_MAX - 3, meaning that
@@ -614,23 +614,66 @@ define i32 @test_09(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
 ; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P]], align 4, !range [[RNG16:![0-9]+]]
 ; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P]], align 4, !range [[RNG16]]
 ; CHECK-NEXT:    [[LIMIT:%.*]] = sub i32 [[CAPACITY]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[CAPACITY]], -3
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[CAPACITY]], 2147483646
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[SMAX]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[LIMIT]], i32 0)
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[SMAX2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = call i32 @llvm.smin.i32(i32 [[NUM_ELEMENTS]], i32 [[TMP4]])
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN3]], i32 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp slt i32 [[IV]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[BACKEDGE]], label [[OUT_OF_BOUNDS:%.*]], !prof [[PROF17:![0-9]+]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_WIDE:%.*]] = zext i32 [[IV]] to i64
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_WIDE]]
 ; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[IV_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK:       main.exit.selector:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i32 [[IV_NEXT_LCSSA]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT:%.*]]
+; CHECK:       main.pseudo.exit:
+; CHECK-NEXT:    [[IV_COPY:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IV_LCSSA1_PH:%.*]] = phi i32 [ [[IV_POSTLOOP:%.*]], [[BACKEDGE_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV_LCSSA]], [[MAIN_EXIT_SELECTOR]] ], [ [[IV_LCSSA1_PH]], [[EXIT_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+; CHECK:       out_of_bounds.loopexit:
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       out_of_bounds.loopexit5:
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out_of_bounds:
 ; CHECK-NEXT:    ret i32 -1
+; CHECK:       postloop:
+; CHECK-NEXT:    br label [[LOOP_POSTLOOP:%.*]]
+; CHECK:       loop.postloop:
+; CHECK-NEXT:    [[IV_POSTLOOP]] = phi i32 [ [[IV_COPY]], [[POSTLOOP]] ], [ [[IV_NEXT_POSTLOOP:%.*]], [[BACKEDGE_POSTLOOP]] ]
+; CHECK-NEXT:    [[CAPACITY_CHECK_POSTLOOP:%.*]] = icmp slt i32 [[IV_POSTLOOP]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK_POSTLOOP]], label [[BACKEDGE_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT:%.*]], !prof [[PROF17]]
+; CHECK:       backedge.postloop:
+; CHECK-NEXT:    [[IV_WIDE_POSTLOOP:%.*]] = zext i32 [[IV_POSTLOOP]] to i64
+; CHECK-NEXT:    [[EL_PTR_POSTLOOP:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_WIDE_POSTLOOP]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR_POSTLOOP]], align 4
+; CHECK-NEXT:    [[IV_NEXT_POSTLOOP]] = add nuw nsw i32 [[IV_POSTLOOP]], 4
+; CHECK-NEXT:    [[LOOP_COND_POSTLOOP:%.*]] = icmp slt i32 [[IV_NEXT_POSTLOOP]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT]], !llvm.loop [[LOOP18:![0-9]+]], !irce.loop.clone !6
 ;
 entry:
   %capacity = load i32, ptr %capacity_p, !range !4
@@ -658,9 +701,116 @@ out_of_bounds:
   ret i32 -1
 }
 
+; Same as test_09 but range check comparison is inversed.
+; TODO: IRCE is allowed.
+define i32 @test_10(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
+; CHECK-LABEL: define i32 @test_10
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[CAPACITY_P:%.*]], ptr [[NUM_ELEMENTS_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P]], align 4, !range [[RNG16]]
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P]], align 4, !range [[RNG16]]
+; CHECK-NEXT:    [[LIMIT:%.*]] = sub i32 [[CAPACITY]], 3
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp sge i32 [[IV]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]], !prof [[PROF19:![0-9]+]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_WIDE:%.*]] = zext i32 [[IV]] to i64
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_WIDE]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %capacity = load i32, ptr %capacity_p, !range !4
+  %num_elements = load i32, ptr %num_elements_p, !range !4
+  %limit = sub i32 %capacity, 3
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %capacity_check = icmp sge i32 %iv, %limit
+  br i1 %capacity_check, label %out_of_bounds, label %backedge, !prof !6
+
+backedge:
+  %iv.wide = zext i32 %iv to i64
+  %el.ptr = getelementptr i32, ptr %p, i64 %iv.wide
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %num_elements
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+
+out_of_bounds:
+  ret i32 -1
+}
+
+; Same as test_09 but range check comparison is non-strict:
+; TODO: IRCE is allowed.
+define i32 @test_11(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
+; CHECK-LABEL: define i32 @test_11
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[CAPACITY_P:%.*]], ptr [[NUM_ELEMENTS_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P]], align 4, !range [[RNG16]]
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P]], align 4, !range [[RNG16]]
+; CHECK-NEXT:    [[LIMIT:%.*]] = sub i32 [[CAPACITY]], 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp sle i32 [[IV]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[BACKEDGE]], label [[OUT_OF_BOUNDS:%.*]], !prof [[PROF17]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_WIDE:%.*]] = zext i32 [[IV]] to i64
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i64 [[IV_WIDE]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_LCSSA1:%.*]] = phi i32 [ [[IV]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_LCSSA1]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %capacity = load i32, ptr %capacity_p, !range !4
+  %num_elements = load i32, ptr %num_elements_p, !range !4
+  %limit = sub i32 %capacity, 4
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %capacity_check = icmp sle i32 %iv, %limit
+  br i1 %capacity_check, label %backedge, label %out_of_bounds, !prof !5
+
+backedge:
+  %iv.wide = zext i32 %iv to i64
+  %el.ptr = getelementptr i32, ptr %p, i64 %iv.wide
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %num_elements
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv
+
+out_of_bounds:
+  ret i32 -1
+}
+
 !0 = !{i32 0, i32 50}
 !1 = !{i32 0, i32 2147483640}
 !2 = !{i32 0, i32 2147483641}
 !3 = !{i32 10, i32 50}
 !4 = !{i32 1, i32 2147483648}
 !5 = !{!"branch_weights", i32 1000, i32 1}
+!6 = !{!"branch_weights", i32 1, i32 1000}

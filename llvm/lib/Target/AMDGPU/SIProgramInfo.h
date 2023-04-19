@@ -39,11 +39,23 @@ struct SIProgramInfo {
     uint32_t RrWgMode = 0; // GFX12+
     uint64_t ScratchSize = 0;
 
-    // Fields set in PGM_RSRC2 pm4 packet.
+    // State used to calculate fields set in PGM_RSRC2 pm4 packet.
     uint32_t LDSBlocks = 0;
     uint32_t ScratchBlocks = 0;
 
-    uint64_t ComputePGMRSrc2 = 0;
+    // Fields set in PGM_RSRC2 pm4 packet
+    uint32_t ScratchEnable = 0;
+    uint32_t UserSGPR = 0;
+    uint32_t TrapHandlerEnable = 0;
+    uint32_t TGIdXEnable = 0;
+    uint32_t TGIdYEnable = 0;
+    uint32_t TGIdZEnable = 0;
+    uint32_t TGSizeEnable = 0;
+    uint32_t TIdIGCompCount = 0;
+    uint32_t EXCPEnMSB = 0;
+    uint32_t LdsSize = 0;
+    uint32_t EXCPEnable = 0;
+
     uint64_t ComputePGMRSrc3GFX90A = 0;
 
     uint32_t NumVGPR = 0;
@@ -78,6 +90,10 @@ struct SIProgramInfo {
     /// Compute the value of the ComputePGMRsrc1 register.
     uint64_t getComputePGMRSrc1(const GCNSubtarget &ST) const;
     uint64_t getPGMRSrc1(CallingConv::ID CC, const GCNSubtarget &ST) const;
+
+    /// Compute the value of the ComputePGMRsrc2 register.
+    uint64_t getComputePGMRSrc2() const;
+    uint64_t getPGMRSrc2(CallingConv::ID CC) const;
 };
 
 } // namespace llvm

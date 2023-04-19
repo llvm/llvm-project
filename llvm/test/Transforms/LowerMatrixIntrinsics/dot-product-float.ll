@@ -56,16 +56,10 @@ declare <1 x float> @llvm.matrix.multiply.v1f32.v6f32.v6f32(<6 x float>, <6 x fl
 define <1 x float> @dotproduct_float_v1(<1 x float> %a, <1 x float> %b) {
 ; CHECK-LABEL: @dotproduct_float_v1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <1 x float> [[A:%.*]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <1 x float> [[B:%.*]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x float> [[SPLIT]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x float> [[SPLIT1]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <1 x float> [[BLOCK]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x float> [[TMP1]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <1 x float> undef, <1 x float> [[TMP2]], <1 x i32> <i32 1>
-; CHECK-NEXT:    ret <1 x float> [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul <1 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v1f32(float 0.000000e+00, <1 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
 entry:
   %c = tail call fast <1 x float> @llvm.matrix.multiply.v1f32.v1f32.v1f32(<1 x float> %a, <1 x float> %b, i32 1, i32 1, i32 1)
@@ -77,28 +71,10 @@ declare <1 x float> @llvm.matrix.multiply.v1f32.v1f32.v1f32(<1 x float>, <1 x fl
 define <1 x float> @dotproduct_float_v3(<3 x float> %a, <3 x float> %b) {
 ; CHECK-LABEL: @dotproduct_float_v3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <3 x float> [[A:%.*]], <3 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <3 x float> [[A]], <3 x float> poison, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <3 x float> [[A]], <3 x float> poison, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <3 x float> [[B:%.*]], <3 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x float> [[SPLIT]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x float> [[SPLIT3]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <1 x float> [[BLOCK]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[BLOCK4:%.*]] = shufflevector <1 x float> [[SPLIT1]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x float> [[SPLIT3]], i64 1
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT5:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT6:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT5]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK4]], <1 x float> [[SPLAT_SPLAT6]], <1 x float> [[TMP1]])
-; CHECK-NEXT:    [[BLOCK7:%.*]] = shufflevector <1 x float> [[SPLIT2]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x float> [[SPLIT3]], i64 2
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT8:%.*]] = insertelement <1 x float> poison, float [[TMP4]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT9:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT8]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK7]], <1 x float> [[SPLAT_SPLAT9]], <1 x float> [[TMP3]])
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <1 x float> [[TMP5]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <1 x float> undef, <1 x float> [[TMP6]], <1 x i32> <i32 1>
-; CHECK-NEXT:    ret <1 x float> [[TMP7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul <3 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
 entry:
   %c = tail call fast <1 x float> @llvm.matrix.multiply.v1f32.v3f32.v3f32(<3 x float> %a, <3 x float> %b, i32 1, i32 3, i32 1)
@@ -110,51 +86,12 @@ declare <1 x float> @llvm.matrix.multiply.v1f32.v3f32.v3f32(<3 x float>, <3 x fl
 define <1 x float> @intrinsic_column_major_load_dot_product_float_v6(ptr %lhs_address, ptr %rhs_address) {
 ; CHECK-LABEL: @intrinsic_column_major_load_dot_product_float_v6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x float>, ptr [[LHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 1
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 2
-; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x float>, ptr [[VEC_GEP2]], align 4
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 3
-; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x float>, ptr [[VEC_GEP4]], align 4
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 4
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <1 x float>, ptr [[VEC_GEP6]], align 4
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 5
-; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x float>, ptr [[VEC_GEP8]], align 4
-; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <6 x float>, ptr [[RHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x float> [[COL_LOAD]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <6 x float> [[COL_LOAD10]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <1 x float> [[BLOCK]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[BLOCK11:%.*]] = shufflevector <1 x float> [[COL_LOAD1]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x float> [[COL_LOAD10]], i64 1
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT12:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT12]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK11]], <1 x float> [[SPLAT_SPLAT13]], <1 x float> [[TMP1]])
-; CHECK-NEXT:    [[BLOCK14:%.*]] = shufflevector <1 x float> [[COL_LOAD3]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <6 x float> [[COL_LOAD10]], i64 2
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT15:%.*]] = insertelement <1 x float> poison, float [[TMP4]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT15]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK14]], <1 x float> [[SPLAT_SPLAT16]], <1 x float> [[TMP3]])
-; CHECK-NEXT:    [[BLOCK17:%.*]] = shufflevector <1 x float> [[COL_LOAD5]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <6 x float> [[COL_LOAD10]], i64 3
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT18:%.*]] = insertelement <1 x float> poison, float [[TMP6]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT18]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK17]], <1 x float> [[SPLAT_SPLAT19]], <1 x float> [[TMP5]])
-; CHECK-NEXT:    [[BLOCK20:%.*]] = shufflevector <1 x float> [[COL_LOAD7]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x float> [[COL_LOAD10]], i64 4
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT21:%.*]] = insertelement <1 x float> poison, float [[TMP8]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT22:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT21]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK20]], <1 x float> [[SPLAT_SPLAT22]], <1 x float> [[TMP7]])
-; CHECK-NEXT:    [[BLOCK23:%.*]] = shufflevector <1 x float> [[COL_LOAD9]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <6 x float> [[COL_LOAD10]], i64 5
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT24:%.*]] = insertelement <1 x float> poison, float [[TMP10]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT25:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT24]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK23]], <1 x float> [[SPLAT_SPLAT25]], <1 x float> [[TMP9]])
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <1 x float> [[TMP11]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x float> undef, <1 x float> [[TMP12]], <1 x i32> <i32 1>
-; CHECK-NEXT:    ret <1 x float> [[TMP13]]
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <6 x float>, ptr [[RHS_ADDRESS:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <6 x float>, ptr [[LHS_ADDRESS:%.*]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <6 x float> [[TMP0]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v6f32(float 0.000000e+00, <6 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
+; CHECK-NEXT:    ret <1 x float> [[TMP3]]
 ;
 entry:
   %lhs = tail call fast <6 x float> @llvm.matrix.column.major.load.v6f32.i64(ptr nonnull align 4 %lhs_address, i64 1, i1 false, i32 1, i32 6)
@@ -168,58 +105,12 @@ declare <6 x float> @llvm.matrix.column.major.load.v6f32.i64(ptr nonnull align 4
 define <1 x float> @LoadInst_dot_product_float_v7(ptr %lhs_address, ptr %rhs_address) {
 ; CHECK-LABEL: @LoadInst_dot_product_float_v7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x float>, ptr [[LHS_ADDRESS:%.*]], align 32
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 1
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x float>, ptr [[VEC_GEP]], align 4
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 2
-; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x float>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 3
-; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x float>, ptr [[VEC_GEP4]], align 4
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 4
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <1 x float>, ptr [[VEC_GEP6]], align 16
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 5
-; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x float>, ptr [[VEC_GEP8]], align 4
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr float, ptr [[LHS_ADDRESS]], i64 6
-; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <1 x float>, ptr [[VEC_GEP10]], align 8
-; CHECK-NEXT:    [[COL_LOAD12:%.*]] = load <7 x float>, ptr [[RHS_ADDRESS:%.*]], align 32
-; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x float> [[COL_LOAD]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <1 x float> [[BLOCK]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[BLOCK13:%.*]] = shufflevector <1 x float> [[COL_LOAD1]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 1
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT14:%.*]] = insertelement <1 x float> poison, float [[TMP2]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT14]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK13]], <1 x float> [[SPLAT_SPLAT15]], <1 x float> [[TMP1]])
-; CHECK-NEXT:    [[BLOCK16:%.*]] = shufflevector <1 x float> [[COL_LOAD3]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 2
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT17:%.*]] = insertelement <1 x float> poison, float [[TMP4]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT18:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT17]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK16]], <1 x float> [[SPLAT_SPLAT18]], <1 x float> [[TMP3]])
-; CHECK-NEXT:    [[BLOCK19:%.*]] = shufflevector <1 x float> [[COL_LOAD5]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 3
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT20:%.*]] = insertelement <1 x float> poison, float [[TMP6]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT21:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT20]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK19]], <1 x float> [[SPLAT_SPLAT21]], <1 x float> [[TMP5]])
-; CHECK-NEXT:    [[BLOCK22:%.*]] = shufflevector <1 x float> [[COL_LOAD7]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 4
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT23:%.*]] = insertelement <1 x float> poison, float [[TMP8]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT24:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT23]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK22]], <1 x float> [[SPLAT_SPLAT24]], <1 x float> [[TMP7]])
-; CHECK-NEXT:    [[BLOCK25:%.*]] = shufflevector <1 x float> [[COL_LOAD9]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 5
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT26:%.*]] = insertelement <1 x float> poison, float [[TMP10]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT27:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT26]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK25]], <1 x float> [[SPLAT_SPLAT27]], <1 x float> [[TMP9]])
-; CHECK-NEXT:    [[BLOCK28:%.*]] = shufflevector <1 x float> [[COL_LOAD11]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <7 x float> [[COL_LOAD12]], i64 6
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT29:%.*]] = insertelement <1 x float> poison, float [[TMP12]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT30:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT29]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK28]], <1 x float> [[SPLAT_SPLAT30]], <1 x float> [[TMP11]])
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <1 x float> [[TMP13]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <1 x float> undef, <1 x float> [[TMP14]], <1 x i32> <i32 1>
-; CHECK-NEXT:    ret <1 x float> [[TMP15]]
+; CHECK-NEXT:    [[LHS:%.*]] = load <7 x float>, ptr [[LHS_ADDRESS:%.*]], align 32
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <7 x float>, ptr [[RHS_ADDRESS:%.*]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul <7 x float> [[LHS]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v7f32(float 0.000000e+00, <7 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x float> poison, float [[TMP1]], i64 0
+; CHECK-NEXT:    ret <1 x float> [[TMP2]]
 ;
 entry:
   %lhs = load <7 x float>, ptr %lhs_address
@@ -342,58 +233,12 @@ declare <6 x double> @llvm.matrix.column.major.load.v6f64.i64(ptr nonnull align 
 define <1 x double> @LoadInst_dot_product_double_v7(ptr %lhs_address, ptr %rhs_address) {
 ; CHECK-LABEL: @LoadInst_dot_product_double_v7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <1 x double>, ptr [[LHS_ADDRESS:%.*]], align 64
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[LHS_ADDRESS]], i64 1
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <1 x double>, ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[LHS_ADDRESS]], i64 2
-; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <1 x double>, ptr [[VEC_GEP2]], align 16
-; CHECK-NEXT:    [[VEC_GEP4:%.*]] = getelementptr double, ptr [[LHS_ADDRESS]], i64 3
-; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <1 x double>, ptr [[VEC_GEP4]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, ptr [[LHS_ADDRESS]], i64 4
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <1 x double>, ptr [[VEC_GEP6]], align 32
-; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[LHS_ADDRESS]], i64 5
-; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <1 x double>, ptr [[VEC_GEP8]], align 8
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr double, ptr [[LHS_ADDRESS]], i64 6
-; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <1 x double>, ptr [[VEC_GEP10]], align 16
-; CHECK-NEXT:    [[COL_LOAD12:%.*]] = load <7 x double>, ptr [[RHS_ADDRESS:%.*]], align 64
-; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <1 x double> [[COL_LOAD]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x double> poison, double [[TMP0]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <1 x double> [[BLOCK]], [[SPLAT_SPLAT]]
-; CHECK-NEXT:    [[BLOCK13:%.*]] = shufflevector <1 x double> [[COL_LOAD1]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 1
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT14:%.*]] = insertelement <1 x double> poison, double [[TMP2]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT14]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK13]], <1 x double> [[SPLAT_SPLAT15]], <1 x double> [[TMP1]])
-; CHECK-NEXT:    [[BLOCK16:%.*]] = shufflevector <1 x double> [[COL_LOAD3]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 2
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT17:%.*]] = insertelement <1 x double> poison, double [[TMP4]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT18:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT17]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK16]], <1 x double> [[SPLAT_SPLAT18]], <1 x double> [[TMP3]])
-; CHECK-NEXT:    [[BLOCK19:%.*]] = shufflevector <1 x double> [[COL_LOAD5]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 3
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT20:%.*]] = insertelement <1 x double> poison, double [[TMP6]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT21:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT20]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK19]], <1 x double> [[SPLAT_SPLAT21]], <1 x double> [[TMP5]])
-; CHECK-NEXT:    [[BLOCK22:%.*]] = shufflevector <1 x double> [[COL_LOAD7]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 4
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT23:%.*]] = insertelement <1 x double> poison, double [[TMP8]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT24:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT23]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK22]], <1 x double> [[SPLAT_SPLAT24]], <1 x double> [[TMP7]])
-; CHECK-NEXT:    [[BLOCK25:%.*]] = shufflevector <1 x double> [[COL_LOAD9]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 5
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT26:%.*]] = insertelement <1 x double> poison, double [[TMP10]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT27:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT26]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK25]], <1 x double> [[SPLAT_SPLAT27]], <1 x double> [[TMP9]])
-; CHECK-NEXT:    [[BLOCK28:%.*]] = shufflevector <1 x double> [[COL_LOAD11]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <7 x double> [[COL_LOAD12]], i64 6
-; CHECK-NEXT:    [[SPLAT_SPLATINSERT29:%.*]] = insertelement <1 x double> poison, double [[TMP12]], i64 0
-; CHECK-NEXT:    [[SPLAT_SPLAT30:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT29]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK28]], <1 x double> [[SPLAT_SPLAT30]], <1 x double> [[TMP11]])
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <1 x double> [[TMP13]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <1 x double> undef, <1 x double> [[TMP14]], <1 x i32> <i32 1>
-; CHECK-NEXT:    ret <1 x double> [[TMP15]]
+; CHECK-NEXT:    [[LHS:%.*]] = load <7 x double>, ptr [[LHS_ADDRESS:%.*]], align 64
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <7 x double>, ptr [[RHS_ADDRESS:%.*]], align 64
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul <7 x double> [[LHS]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v7f64(double 0.000000e+00, <7 x double> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <1 x double> poison, double [[TMP1]], i64 0
+; CHECK-NEXT:    ret <1 x double> [[TMP2]]
 ;
 entry:
   %lhs = load <7 x double>, ptr %lhs_address

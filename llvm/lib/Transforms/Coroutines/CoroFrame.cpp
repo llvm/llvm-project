@@ -1946,11 +1946,13 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       DVI->replaceUsesOfWith(Alloca, G);
 
     for (Instruction *I : UsersToUpdate) {
-      // It is meaningless to remain the lifetime intrinsics refer for the
+      // It is meaningless to retain the lifetime intrinsics refer for the
       // member of coroutine frames and the meaningless lifetime intrinsics
       // are possible to block further optimizations.
-      if (I->isLifetimeStartOrEnd())
+      if (I->isLifetimeStartOrEnd()) {
+        I->eraseFromParent();
         continue;
+      }
 
       I->replaceUsesOfWith(Alloca, G);
     }
@@ -2830,7 +2832,7 @@ void coro::salvageDebugInfo(
 
   while (auto *Inst = dyn_cast_or_null<Instruction>(Storage)) {
     if (auto *LdInst = dyn_cast<LoadInst>(Inst)) {
-      Storage = LdInst->getOperand(0);
+      Storage = LdInst->getPointerOperand();
       // FIXME: This is a heuristic that works around the fact that
       // LLVM IR debug intrinsics cannot yet distinguish between
       // memory and value locations: Because a dbg.declare(alloca) is
@@ -2840,7 +2842,7 @@ void coro::salvageDebugInfo(
       if (!SkipOutermostLoad)
         Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
     } else if (auto *StInst = dyn_cast<StoreInst>(Inst)) {
-      Storage = StInst->getOperand(0);
+      Storage = StInst->getValueOperand();
     } else {
       SmallVector<uint64_t, 16> Ops;
       SmallVector<Value *, 0> AdditionalValues;

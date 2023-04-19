@@ -14,5 +14,5 @@ int __defaultparam(void *, int y = 3);
 
 void test_arg_constraint_on_fun_with_default_param() {
   __defaultparam(nullptr); // \
-  // expected-warning{{The 1st argument to '__defaultparam' should not be NULL}}
+  // expected-warning{{The 1st argument to '__defaultparam' is NULL but should not be NULL}}
 }

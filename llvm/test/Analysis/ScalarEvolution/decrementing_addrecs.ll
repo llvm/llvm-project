@@ -23,8 +23,8 @@
 ; FIXME: c's AddRec is expected to be no-sign-wrap
 ;        i is expected to be non-negative
 ;        j is expected to be non-negative
-; FIXME: a is expected to be positive
-; FIXME: b is expected to be non-negative
+;        a is expected to be positive
+;        b is expected to be non-negative
 ;        c is expected to be positive
 define i32 @test_step_1_flags(i32 %n) {
 ; DEFAULT-LABEL: 'test_step_1_flags'
@@ -40,7 +40,7 @@ define i32 @test_step_1_flags(i32 %n) {
 ; DEFAULT-NEXT:    %b = sub i32 %n.minus.1, %i
 ; DEFAULT-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: full-set S: full-set Exits: 0 LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:    %c = sub i32 2147483647, %i
-; DEFAULT-NEXT:    --> {2147483647,+,-1}<nw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
+; DEFAULT-NEXT:    --> {2147483647,+,-1}<nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:    %i.next = add nuw nsw i32 %i, 1
 ; DEFAULT-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %n LoopDispositions: { %loop: Computable }
 ; DEFAULT-NEXT:    %j.next = add nsw i32 %j, -1
@@ -60,17 +60,17 @@ define i32 @test_step_1_flags(i32 %n) {
 ; EXPENSIVE_SHARPENING-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
 ; EXPENSIVE_SHARPENING-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %j = phi i32 [ %n.minus.1, %entry ], [ %j.next, %loop ]
-; EXPENSIVE_SHARPENING-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: full-set S: full-set Exits: 0 LoopDispositions: { %loop: Computable }
+; EXPENSIVE_SHARPENING-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: [0,2147483647) S: [0,2147483647) Exits: 0 LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %a = sub i32 %n, %i
-; EXPENSIVE_SHARPENING-NEXT:    --> {%n,+,-1}<nw><%loop> U: full-set S: full-set Exits: 1 LoopDispositions: { %loop: Computable }
+; EXPENSIVE_SHARPENING-NEXT:    --> {%n,+,-1}<nw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: 1 LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %b = sub i32 %n.minus.1, %i
-; EXPENSIVE_SHARPENING-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: full-set S: full-set Exits: 0 LoopDispositions: { %loop: Computable }
+; EXPENSIVE_SHARPENING-NEXT:    --> {(-1 + %n),+,-1}<nsw><%loop> U: [0,2147483647) S: [0,2147483647) Exits: 0 LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %c = sub i32 2147483647, %i
-; EXPENSIVE_SHARPENING-NEXT:    --> {2147483647,+,-1}<nw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
+; EXPENSIVE_SHARPENING-NEXT:    --> {2147483647,+,-1}<nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (-2147483648 + (-1 * %n)) LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %i.next = add nuw nsw i32 %i, 1
 ; EXPENSIVE_SHARPENING-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %n LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:    %j.next = add nsw i32 %j, -1
-; EXPENSIVE_SHARPENING-NEXT:    --> {(-2 + %n),+,-1}<nw><%loop> U: full-set S: full-set Exits: -1 LoopDispositions: { %loop: Computable }
+; EXPENSIVE_SHARPENING-NEXT:    --> {(-2 + %n),+,-1}<nsw><%loop> U: full-set S: [-1,2147483646) Exits: -1 LoopDispositions: { %loop: Computable }
 ; EXPENSIVE_SHARPENING-NEXT:  Determining loop execution counts for: @test_step_1_flags
 ; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: backedge-taken count is (-1 + %n)
 ; EXPENSIVE_SHARPENING-NEXT:  Loop %loop: constant max backedge-taken count is 2147483646

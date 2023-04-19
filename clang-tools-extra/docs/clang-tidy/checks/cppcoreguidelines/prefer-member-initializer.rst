@@ -23,6 +23,13 @@ Please note, that this check does not enforce this latter rule for
 initializations already implemented as member initializers. For that purpose
 see check `modernize-use-default-member-init <../modernize/use-default-member-init.html>`_.
 
+.. note::
+
+  Enforcement of rule C.48 in this check is deprecated, to be removed in
+  :program:`clang-tidy` version 19 (only C.49 will be enforced by this check then).
+  Please use `cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init.html>`_
+  to enfoce rule C.48.
+
 Example 1
 ---------
 
@@ -85,9 +92,16 @@ Here ``n`` can be initialized in the constructor initialization list, unlike
 
 .. option:: UseAssignment
 
-   If this option is set to `true` (default is `false`), the check will initialize
-   members with an assignment. In this case the fix of the first example looks
-   like this:
+   Note: this option is deprecated, to be removed in :program:`clang-tidy`
+   version 19. Please use the `UseAssignment` option from
+   `cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init.html>`_
+   instead.
+
+   If this option is set to `true` (by default `UseAssignment` from
+   `modernize-use-default-member-init
+   <../modernize/use-default-member-init.html>`_ will be used),
+   the check will initialize members with an assignment.
+   In this case the fix of the first example looks like this:
 
 .. code-block:: c++
 

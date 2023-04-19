@@ -89,7 +89,7 @@ C++20 Feature Support
   an error to a warning under the ``-Wreserved-module-identifier`` warning
   group. This warning is enabled by default. This addresses `#61446
   <https://github.com/llvm/llvm-project/issues/61446>`_ and allows easier
-  building of precompiled modules. This diagnostic may be strengthened into an
+  building of standard modules. This diagnostic may be strengthened into an
   error again in the future once there is a less fragile way to mark a module
   as being part of the implementation rather than a user module.
 
@@ -103,6 +103,8 @@ C++2b Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `DR2397 <https://wg21.link/CWG2397>`_ which allows ``auto`` specifier for pointers
+  and reference to arrays.
 
 C Language Changes
 ------------------
@@ -148,6 +150,9 @@ Non-comprehensive list of changes in this release
 - Clang now supports expressions in ``#pragma clang __debug dump``.
 - Clang now supports declaration of multi-dimensional arrays with
   ``__declspec(property)``.
+- A new builtin type trait ``__is_trivially_equaltiy_comparable`` has been added,
+  which checks whether comparing two instances of a type is equivalent to
+  ``memcmp(&lhs, &rhs, sizeof(T)) == 0``.
 
 New Compiler Flags
 ------------------
@@ -216,6 +221,9 @@ Improvements to Clang's diagnostics
 - Clang now avoids unnecessary diagnostic warnings for obvious expressions in
   the case of binary operators with logical OR operations.
   (`#57906 <https://github.com/llvm/llvm-project/issues/57906>`_)
+- Clang's "static assertion failed" diagnostic now points to the static assertion
+  expression instead of pointing to the ``static_assert`` token.
+  (`#61951 <https://github.com/llvm/llvm-project/issues/61951>`_)
 
 Bug Fixes in This Version
 -------------------------
@@ -282,12 +290,30 @@ Bug Fixes in This Version
 - Fix crash when handling nested immediate invocations in initializers of global
   variables.
   (`#58207 <https://github.com/llvm/llvm-project/issues/58207>`_)
-- Fix crash when generating code coverage information for `PseudoObjectExpr` in 
+- Fix crash when generating code coverage information for `PseudoObjectExpr` in
   Clang AST.
   (`#45481 <https://github.com/llvm/llvm-project/issues/45481>`_)
 - Fix the assertion hit when a template consteval function appears in a nested
   consteval/constexpr call chain.
   (`#61142 <https://github.com/llvm/llvm-project/issues/61142>`_)
+- Clang now better diagnose placeholder types constrained with a concept that is
+  not a type concept.
+- Fix crash when a doc comment contains a line splicing.
+  (`#62054 <https://github.com/llvm/llvm-project/issues/62054>`_)
+- Work around with a clang coverage crash which happens when visiting 
+  expressions/statements with invalid source locations in non-assert builds. 
+  Assert builds may still see assertions triggered from this.
+- Fix a failed assertion due to an invalid source location when trying to form
+  a coverage report for an unresolved constructor expression.
+  (`#62105 <https://github.com/llvm/llvm-project/issues/62105>`_)
+- Fix defaulted equality operator so that it does not attempt to compare unnamed
+  bit-fields. This fixes:
+  (`#61355 <https://github.com/llvm/llvm-project/issues/61335>`_) and
+  (`#61417 <https://github.com/llvm/llvm-project/issues/61417>`_)
+- Fix crash after suggesting typo correction to constexpr if condition.
+  (`#61885 <https://github.com/llvm/llvm-project/issues/61885>`_)
+- Clang constexpr evaluator now treats comparison of [[gnu::weak]]-attributed
+  member pointer as an invalid expression.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

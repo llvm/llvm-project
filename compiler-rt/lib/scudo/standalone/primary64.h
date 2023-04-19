@@ -747,8 +747,14 @@ private:
       }
       // TODO: Consider allocating MemMap in init().
       if (!Region->MemMap.isAllocated()) {
-        Region->MemMap = ReservedMemory.dispatch(
-            getRegionBaseByClassId(ClassId), RegionSize);
+        // TODO: Ideally, a region should reserve RegionSize because the memory
+        // between `RegionBeg` and region base is still belong to a region and
+        // it's just not used. In order to make it work on every platform (some
+        // of them don't support `remap()` across the unused range), dispatch
+        // from `RegionBeg` for now.
+        const uptr ReserveSize =
+            RegionSize - (RegionBeg - getRegionBaseByClassId(ClassId));
+        Region->MemMap = ReservedMemory.dispatch(RegionBeg, ReserveSize);
       }
       DCHECK(Region->MemMap.isAllocated());
 

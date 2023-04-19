@@ -409,6 +409,9 @@ public:
     lvlTypes[t][i] = dlt;
     loopToLvl[t][i] = lvl;
     lvlToLoop[t][lvl] = i;
+    // TODO: Maybe we should favor a constant loop bound when there are multiple
+    // choices.
+    loopBounds[i] = std::make_pair(t, lvl);
   }
 
   using ForeachTensorLoopIdCallback = function_ref<void(
@@ -436,7 +439,7 @@ public:
         // This must be an undefined level.
         assert(!optLvl.has_value());
         // Slice the tid along the dependent level to iterate current loop.
-        callback(b, t, loopToDependencies[loop(b)][t], lvlTp,
+        callback(b, t, getLoopDependentLevel(b), lvlTp,
                  /*isIdxReduc=*/true);
       } else {
         callback(b, t, optLvl, lvlTp, /*isIdxReduc=*/false);
@@ -447,11 +450,13 @@ public:
   /// Sets whether the output tensor is sparse or not.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
 
-  /// Establishes the two-way map that i <-> <t, lvl>.
-  void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl) {
+  /// Establishes the two-way map that i <-> <t, lvl, dlt>.
+  void setLoopDependentTensorLevel(LoopId i, TensorId t, Level lvl,
+                                   DimLevelType dlt) {
     assert(isValidLoopId(i) && isValidLevel(t, lvl));
-    loopToDependencies[i][t] = lvl;
-    levelToDependentIdx[t][lvl].push_back(i);
+    assert(!loopToDependencies[i][t].has_value()); // must be the first def
+    loopToDependencies[i][t] = std::make_pair(lvl, dlt);
+    levelToDependentLoop[t][lvl].push_back(i);
   }
 
   /// Whether the loop has dependent slice.
@@ -464,7 +469,7 @@ public:
   /// expression on t_l, e.g., A[i+j] => {i, j}
   std::vector<LoopId> &getDependentLoops(TensorId t, Level lvl) {
     assert(isValidLevel(t, lvl));
-    return levelToDependentIdx[t][lvl];
+    return levelToDependentLoop[t][lvl];
   }
 
   /// Returns the defining [tid, lvl] for the loop.
@@ -473,13 +478,33 @@ public:
     return loopBounds[i];
   }
 
-  /// Checks whether the TensorLoopId represents a tensor level with
-  /// non-trivial index expression on it.
+  /// Checks whether the TensorLoopId represents a tensor level contains
+  /// non-trivial index expression.
   bool isLvlWithNonTrivialIdxExp(TensorLoopId b) const {
     const TensorId t = tensor(b);
     const LoopId i = loop(b);
     assert(isValidTensorId(t) && isValidLoopId(i));
     return loopToDependencies[i][t].has_value();
+  }
+
+  /// Checks whether the TensorLoopId represents a sparse tensor level contains
+  /// non-trivial index expression.
+  bool isSparseLvlWithNonTrivialIdxExp(TensorLoopId b) const {
+    if (isLvlWithNonTrivialIdxExp(b)) {
+      auto dlt = getLoopDependentLevelType(b);
+      return isCompressedDLT(dlt) || isSingletonDLT(dlt);
+    }
+    return false;
+  }
+
+  Level getLoopDependentLevel(TensorLoopId b) const {
+    assert(isLvlWithNonTrivialIdxExp(b));
+    return loopToDependencies[loop(b)][tensor(b)]->first;
+  }
+
+  DimLevelType getLoopDependentLevelType(TensorLoopId b) const {
+    assert(isLvlWithNonTrivialIdxExp(b));
+    return loopToDependencies[loop(b)][tensor(b)]->second;
   }
 
   /// Convenience getters to immediately access the stored nodes.
@@ -578,6 +603,7 @@ private:
     return i != detail::kInvalidId && i < numLoops;
   }
   bool isValidLevel(TensorId t, Level lvl) const {
+    assert(levelToDependentLoop[t].size() == lvlToLoop[t].size());
     return isValidTensorId(t) && lvl < lvlToLoop[t].size();
   }
   bool isValidExprId(ExprId e) const {
@@ -626,13 +652,15 @@ private:
   // Map from a loop to its dependencies if any.
   // The dependencies of a loop is a set of (tensor, level) pairs.
   // It is currently only set for non-trivial index expressions.
-  // E.g., A[i+j] => i and j will have dependencies {A0} to indicate that
-  // i and j are used in the non-trivial index expression on A0.
-  std::vector<std::vector<std::optional<Level>>> loopToDependencies;
+  // E.g., A[i+j] => i and j will have dependencies {A0, dlt(A0)} to indicate
+  // that i and j are used in the non-trivial index expression on A0.
+  std::vector<std::vector<std::optional<std::pair<Level, DimLevelType>>>>
+      loopToDependencies;
+
   // The inverse map of ldxToDependencies from tensor level -> dependent loop
   // E.g., A[i+j], we have A0 => {i, j}, to indicate that A0 uses both {i, j}
   // to compute its indices.
-  std::vector<std::vector<std::vector<LoopId>>> levelToDependentIdx;
+  std::vector<std::vector<std::vector<LoopId>>> levelToDependentLoop;
 
   // Map from a loop to the [tid, lvl] pair that defines the loop boundary.
   std::vector<std::pair<TensorId, Level>> loopBounds;

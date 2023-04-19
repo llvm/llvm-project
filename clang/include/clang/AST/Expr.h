@@ -593,12 +593,12 @@ public:
   struct EvalStatus {
     /// Whether the evaluated expression has side effects.
     /// For example, (f() && 0) can be folded, but it still has side effects.
-    bool HasSideEffects;
+    bool HasSideEffects = false;
 
     /// Whether the evaluation hit undefined behavior.
     /// For example, 1.0 / 0.0 can be folded to Inf, but has undefined behavior.
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
-    bool HasUndefinedBehavior;
+    bool HasUndefinedBehavior = false;
 
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
@@ -607,10 +607,9 @@ public:
     /// foldable. If the expression is foldable, but not a constant expression,
     /// the notes will describes why it isn't a constant expression. If the
     /// expression *is* a constant expression, no notes will be produced.
-    SmallVectorImpl<PartialDiagnosticAt> *Diag;
+    SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
-    EvalStatus()
-        : HasSideEffects(false), HasUndefinedBehavior(false), Diag(nullptr) {}
+    EvalStatus() = default;
 
     // hasSideEffects - Return true if the evaluated expression has
     // side effects.
@@ -5164,7 +5163,7 @@ public:
     //===------------------------------------------------------------------===//
     // FieldDesignatorInfo
 
-    /// Initializes a field designator.
+    /// Creates a field designator.
     static Designator CreateFieldDesignator(const IdentifierInfo *FieldName,
                                             SourceLocation DotLoc,
                                             SourceLocation FieldLoc) {
@@ -5175,15 +5174,14 @@ public:
 
     const IdentifierInfo *getFieldName() const;
 
-    FieldDecl *getField() const {
+    FieldDecl *getFieldDecl() const {
       assert(isFieldDesignator() && "Only valid on a field designator");
       if (FieldInfo.NameOrField & 0x01)
         return nullptr;
-      else
-        return reinterpret_cast<FieldDecl *>(FieldInfo.NameOrField);
+      return reinterpret_cast<FieldDecl *>(FieldInfo.NameOrField);
     }
 
-    void setField(FieldDecl *FD) {
+    void setFieldDecl(FieldDecl *FD) {
       assert(isFieldDesignator() && "Only valid on a field designator");
       FieldInfo.NameOrField = reinterpret_cast<uintptr_t>(FD);
     }
@@ -5201,7 +5199,7 @@ public:
     //===------------------------------------------------------------------===//
     // ArrayOrRangeDesignator
 
-    /// Initializes an array designator.
+    /// Creates an array designator.
     static Designator CreateArrayDesignator(unsigned Index,
                                             SourceLocation LBracketLoc,
                                             SourceLocation RBracketLoc) {
@@ -5211,7 +5209,7 @@ public:
       return D;
     }
 
-    /// Initializes a GNU array-range designator.
+    /// Creates a GNU array-range designator.
     static Designator CreateArrayRangeDesignator(unsigned Index,
                                                  SourceLocation LBracketLoc,
                                                  SourceLocation EllipsisLoc,
@@ -5245,12 +5243,6 @@ public:
       assert((isArrayDesignator() || isArrayRangeDesignator()) &&
              "Only valid on an array or array-range designator");
       return ArrayOrRangeInfo.RBracketLoc;
-    }
-
-    unsigned xgetFirstExprIndex() const {
-      assert((isArrayDesignator() || isArrayRangeDesignator()) &&
-             "Only valid on an array or array-range designator");
-      return ArrayOrRangeInfo.Index;
     }
 
     SourceLocation getBeginLoc() const LLVM_READONLY {

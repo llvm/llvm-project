@@ -471,11 +471,13 @@ struct IndexCall : public PointerUnion<CallsiteInfo *, AllocInfo *> {
 
   IndexCall *operator->() { return this; }
 
+  PointerUnion<CallsiteInfo *, AllocInfo *> getBase() const { return *this; }
+
   void print(raw_ostream &OS) const {
-    if (auto *AI = dyn_cast<AllocInfo *>())
+    if (auto *AI = llvm::dyn_cast_if_present<AllocInfo *>(getBase())) {
       OS << *AI;
-    else {
-      auto *CI = dyn_cast<CallsiteInfo *>();
+    } else {
+      auto *CI = llvm::dyn_cast_if_present<CallsiteInfo *>(getBase());
       assert(CI);
       OS << *CI;
     }
@@ -758,7 +760,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   auto UpdateCallers = [&](ContextNode *Node,
                            DenseSet<const ContextEdge *> &Visited,
                            auto &&UpdateCallers) -> void {
-    for (auto Edge : Node->CallerEdges) {
+    for (const auto &Edge : Node->CallerEdges) {
       auto Inserted = Visited.insert(Edge.get());
       if (!Inserted.second)
         continue;
@@ -1119,7 +1121,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::updateStackNodes() {
       // not fully matching stack contexts. To do this, subtract any context ids
       // found in caller nodes of the last node found above.
       if (Ids.back() != getLastStackId(Call)) {
-        for (auto PE : LastNode->CallerEdges) {
+        for (const auto &PE : LastNode->CallerEdges) {
           set_subtract(StackSequenceContextIds, PE->getContextIds());
           if (StackSequenceContextIds.empty())
             break;
@@ -1185,9 +1187,9 @@ uint64_t ModuleCallsiteContextGraph::getLastStackId(Instruction *Call) {
 }
 
 uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
-  assert(Call.is<CallsiteInfo *>());
+  assert(isa<CallsiteInfo *>(Call.getBase()));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
-      CallsiteContext(Call.dyn_cast<CallsiteInfo *>());
+      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call.getBase()));
   // Need to convert index into stack id.
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
@@ -1211,10 +1213,10 @@ std::string IndexCallsiteContextGraph::getLabel(const FunctionSummary *Func,
                                                 unsigned CloneNo) const {
   auto VI = FSToVIMap.find(Func);
   assert(VI != FSToVIMap.end());
-  if (Call.is<AllocInfo *>())
+  if (isa<AllocInfo *>(Call.getBase()))
     return (VI->second.name() + " -> alloc").str();
   else {
-    auto *Callsite = Call.dyn_cast<CallsiteInfo *>();
+    auto *Callsite = dyn_cast_if_present<CallsiteInfo *>(Call.getBase());
     return (VI->second.name() + " -> " +
             getMemProfFuncName(Callsite->Callee.name(),
                                Callsite->Clones[CloneNo]))
@@ -1233,9 +1235,9 @@ ModuleCallsiteContextGraph::getStackIdsWithContextNodesForCall(
 
 std::vector<uint64_t>
 IndexCallsiteContextGraph::getStackIdsWithContextNodesForCall(IndexCall &Call) {
-  assert(Call.is<CallsiteInfo *>());
+  assert(isa<CallsiteInfo *>(Call.getBase()));
   CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator>
-      CallsiteContext(Call.dyn_cast<CallsiteInfo *>());
+      CallsiteContext(dyn_cast_if_present<CallsiteInfo *>(Call.getBase()));
   return getStackIdsWithContextNodes<CallsiteInfo,
                                      SmallVector<unsigned>::const_iterator>(
       CallsiteContext);
@@ -1456,7 +1458,8 @@ bool ModuleCallsiteContextGraph::calleeMatchesFunc(Instruction *Call,
 
 bool IndexCallsiteContextGraph::calleeMatchesFunc(IndexCall &Call,
                                                   const FunctionSummary *Func) {
-  ValueInfo Callee = Call.dyn_cast<CallsiteInfo *>()->Callee;
+  ValueInfo Callee =
+      dyn_cast_if_present<CallsiteInfo *>(Call.getBase())->Callee;
   // If there is no summary list then this is a call to an externally defined
   // symbol.
   AliasSummary *Alias =

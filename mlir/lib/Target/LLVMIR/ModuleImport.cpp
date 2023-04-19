@@ -1293,28 +1293,73 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     if (failed(convertCallTypeAndOperands(invokeInst, types, operands)))
       return failure();
 
-    SmallVector<Value> normalArgs, unwindArgs;
-    (void)convertBranchArgs(invokeInst, invokeInst->getNormalDest(),
-                            normalArgs);
-    (void)convertBranchArgs(invokeInst, invokeInst->getUnwindDest(),
-                            unwindArgs);
+    // Check whether the invoke result is an argument to the normal destination
+    // block.
+    bool invokeResultUsedInPhi = llvm::any_of(
+        invokeInst->getNormalDest()->phis(), [&](const llvm::PHINode &phi) {
+          return phi.getIncomingValueForBlock(invokeInst->getParent()) ==
+                 invokeInst;
+        });
 
+    Block *normalDest = lookupBlock(invokeInst->getNormalDest());
+    Block *directNormalDest = normalDest;
+    if (invokeResultUsedInPhi) {
+      // The invoke result cannot be an argument to the normal destination
+      // block, as that would imply using the invoke operation result in its
+      // definition, so we need to create a dummy block to serve as an
+      // intermediate destination.
+      OpBuilder::InsertionGuard g(builder);
+      directNormalDest = builder.createBlock(normalDest);
+    }
+
+    SmallVector<Value> unwindArgs;
+    if (failed(convertBranchArgs(invokeInst, invokeInst->getUnwindDest(),
+                                 unwindArgs)))
+      return failure();
+
+    // Create the invoke operation. Normal destination block arguments will be
+    // added later on to handle the case in which the operation result is
+    // included in this list.
     InvokeOp invokeOp;
     if (llvm::Function *callee = invokeInst->getCalledFunction()) {
       invokeOp = builder.create<InvokeOp>(
           loc, types,
           SymbolRefAttr::get(builder.getContext(), callee->getName()), operands,
-          lookupBlock(invokeInst->getNormalDest()), normalArgs,
+          directNormalDest, ValueRange(),
           lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     } else {
       invokeOp = builder.create<InvokeOp>(
-          loc, types, operands, lookupBlock(invokeInst->getNormalDest()),
-          normalArgs, lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+          loc, types, operands, directNormalDest, ValueRange(),
+          lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
     }
     if (!invokeInst->getType()->isVoidTy())
       mapValue(inst, invokeOp.getResults().front());
     else
       mapNoResultOp(inst, invokeOp);
+
+    SmallVector<Value> normalArgs;
+    if (failed(convertBranchArgs(invokeInst, invokeInst->getNormalDest(),
+                                 normalArgs)))
+      return failure();
+
+    if (invokeResultUsedInPhi) {
+      // The dummy normal dest block will just host an unconditional branch
+      // instruction to the normal destination block passing the required block
+      // arguments (including the invoke operation's result).
+      OpBuilder::InsertionGuard g(builder);
+      builder.setInsertionPointToStart(directNormalDest);
+      builder.create<LLVM::BrOp>(loc, normalArgs, normalDest);
+    } else {
+      // If the invoke operation's result is not a block argument to the normal
+      // destination block, just add the block arguments as usual.
+      assert(llvm::none_of(
+                 normalArgs,
+                 [&](Value val) { return val.getDefiningOp() == invokeOp; }) &&
+             "An llvm.invoke operation cannot pass its result as a block "
+             "argument.");
+      invokeOp.getNormalDestOperandsMutable().append(normalArgs);
+    }
+
     return success();
   }
   if (inst->getOpcode() == llvm::Instruction::GetElementPtr) {

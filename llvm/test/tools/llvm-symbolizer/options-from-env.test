@@ -1,20 +1,6 @@
-# RUN: env LLVM_SYMBOLIZER_OPTS='0x400540 0x40054d --verbose' llvm-symbolizer -e %p/Inputs/addr.exe --no-inlines 0x40055e | FileCheck %s
-# RUN: env LLVM_ADDR2LINE_OPTS='400540 40054d --verbose' llvm-addr2line -e %p/Inputs/addr.exe 40055e | FileCheck %s
+# RUN: env LLVM_SYMBOLIZER_OPTS='0 1 --verbose' llvm-symbolizer 2 | FileCheck %s
+# RUN: env LLVM_ADDR2LINE_OPTS='0 1 --verbose' llvm-addr2line 2 | FileCheck %s
 
-# CHECK:       Filename: /tmp{{[\\/]}}x.c
-# CHECK-NEXT:  Function start filename: /tmp{{[\\/]}}x.c
-# CHECK-NEXT:  Function start line: 2
-# CHECK:       Line: 3
-# CHECK-NEXT:  Column: 3
-
-# CHECK:       Filename: /tmp{{[\\/]}}x.c
-# CHECK-NEXT:  Function start filename: /tmp{{[\\/]}}x.c
-# CHECK-NEXT:  Function start line: 2
-# CHECK:       Line: 3
-# CHECK-NEXT:  Column: 3
-
-# CHECK:       Filename: /tmp{{[\\/]}}x.c
-# CHECK-NEXT:  Function start filename: /tmp{{[\\/]}}x.c
-# CHECK-NEXT:  Function start line: 6
-# CHECK:       Line: 7
-# CHECK-NEXT:  Column: 3
+# CHECK:      0
+# CHECK-NEXT: 1
+# CHECK-NEXT: 2

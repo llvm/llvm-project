@@ -104,7 +104,9 @@ STATISTIC(NumPromotionCandidates, "Number of promotion candidates");
 STATISTIC(NumLoadPromoted, "Number of load-only promotions");
 STATISTIC(NumLoadStorePromoted, "Number of load and store promotions");
 STATISTIC(NumMinMaxHoisted,
-          "Number min/max expressions hoisted out of the loop");
+          "Number of min/max expressions hoisted out of the loop");
+STATISTIC(NumGEPsHoisted,
+          "Number of geps reassociated and hoisted out of the loop");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -170,11 +172,11 @@ static bool pointerInvalidatedByLoop(MemorySSA *MSSA, MemoryUse *MU,
                                      bool InvariantGroup);
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
                                       MemoryUse &MU);
-/// Try to simplify things like (A < INV_1 AND icmp A < INV_2) into (A <
-/// min(INV_1, INV_2)), if INV_1 and INV_2 are both loop invariants and their
-/// minimun can be computed outside of loop, and X is not a loop-invariant.
-static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
-                        MemorySSAUpdater &MSSAU);
+/// Aggregates various functions for hoisting computations out of loop.
+static bool hoistArithmetics(Instruction &I, Loop &L,
+                             ICFLoopSafetyInfo &SafetyInfo,
+                             MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                             DominatorTree *DT);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -983,11 +985,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         }
       }
 
-      // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
-      // into (x < min(INV1, INV2)), and hoisting the invariant part of this
-      // expression out of the loop.
-      if (hoistMinMax(I, *CurLoop, *SafetyInfo, MSSAU)) {
-        ++NumMinMaxHoisted;
+      // Try to reassociate instructions so that part of computations can be
+      // done out of loop.
+      if (hoistArithmetics(I, *CurLoop, *SafetyInfo, MSSAU, AC, DT)) {
         Changed = true;
         continue;
       }
@@ -1757,7 +1757,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
-    I.dropUBImplyingAttrsAndUnknownMetadata();
+    I.dropUBImplyingAttrsAndMetadata();
 
   if (isa<PHINode>(I))
     // Move the new node to the end of the phi list in the destination block.
@@ -2415,6 +2415,9 @@ bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA, MemoryUse &MU) {
   return false;
 }
 
+/// Try to simplify things like (A < INV_1 AND icmp A < INV_2) into (A <
+/// min(INV_1, INV_2)), if INV_1 and INV_2 are both loop invariants and their
+/// minimun can be computed outside of loop, and X is not a loop-invariant.
 static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                         MemorySSAUpdater &MSSAU) {
   bool Inverse = false;
@@ -2491,6 +2494,80 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   eraseInstruction(*cast<Instruction>(Cond1), SafetyInfo, MSSAU);
   eraseInstruction(*cast<Instruction>(Cond2), SafetyInfo, MSSAU);
   return true;
+}
+
+/// Reassociate gep (gep ptr, idx1), idx2 to gep (gep ptr, idx2), idx1 if
+/// this allows hoisting the inner GEP.
+static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
+                     MemorySSAUpdater &MSSAU, AssumptionCache *AC,
+                     DominatorTree *DT) {
+  auto *GEP = dyn_cast<GetElementPtrInst>(&I);
+  if (!GEP)
+    return false;
+
+  auto *Src = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
+  if (!Src || !Src->hasOneUse() || !L.contains(Src))
+    return false;
+
+  Value *SrcPtr = Src->getPointerOperand();
+  auto LoopInvariant = [&](Value *V) { return L.isLoopInvariant(V); };
+  if (!L.isLoopInvariant(SrcPtr) || !all_of(GEP->indices(), LoopInvariant))
+    return false;
+
+  // This can only happen if !AllowSpeculation, otherwise this would already be
+  // handled.
+  // FIXME: Should we respect AllowSpeculation in these reassociation folds?
+  // The flag exists to prevent metadata dropping, which is not relevant here.
+  if (all_of(Src->indices(), LoopInvariant))
+    return false;
+
+  // The swapped GEPs are inbounds if both original GEPs are inbounds
+  // and the sign of the offsets is the same. For simplicity, only
+  // handle both offsets being non-negative.
+  const DataLayout &DL = GEP->getModule()->getDataLayout();
+  auto NonNegative = [&](Value *V) {
+    return isKnownNonNegative(V, DL, 0, AC, GEP, DT);
+  };
+  bool IsInBounds = Src->isInBounds() && GEP->isInBounds() &&
+                    all_of(Src->indices(), NonNegative) &&
+                    all_of(GEP->indices(), NonNegative);
+
+  BasicBlock *Preheader = L.getLoopPreheader();
+  IRBuilder<> Builder(Preheader->getTerminator());
+  Value *NewSrc = Builder.CreateGEP(GEP->getSourceElementType(), SrcPtr,
+                                    SmallVector<Value *>(GEP->indices()),
+                                    "invariant.gep", IsInBounds);
+  Builder.SetInsertPoint(GEP);
+  Value *NewGEP = Builder.CreateGEP(Src->getSourceElementType(), NewSrc,
+                                    SmallVector<Value *>(Src->indices()), "gep",
+                                    IsInBounds);
+  GEP->replaceAllUsesWith(NewGEP);
+  eraseInstruction(*GEP, SafetyInfo, MSSAU);
+  eraseInstruction(*Src, SafetyInfo, MSSAU);
+  return true;
+}
+
+static bool hoistArithmetics(Instruction &I, Loop &L,
+                             ICFLoopSafetyInfo &SafetyInfo,
+                             MemorySSAUpdater &MSSAU,
+                             AssumptionCache *AC, DominatorTree *DT) {
+  // Optimize complex patterns, such as (x < INV1 && x < INV2), turning them
+  // into (x < min(INV1, INV2)), and hoisting the invariant part of this
+  // expression out of the loop.
+  if (hoistMinMax(I, L, SafetyInfo, MSSAU)) {
+    ++NumHoisted;
+    ++NumMinMaxHoisted;
+    return true;
+  }
+
+  // Try to hoist GEPs by reassociation.
+  if (hoistGEP(I, L, SafetyInfo, MSSAU, AC, DT)) {
+    ++NumHoisted;
+    ++NumGEPsHoisted;
+    return true;
+  }
+
+  return false;
 }
 
 /// Little predicate that returns true if the specified basic block is in

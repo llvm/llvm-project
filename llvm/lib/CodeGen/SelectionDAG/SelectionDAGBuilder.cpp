@@ -6210,9 +6210,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::dbg_assign: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
-    assert(AssignmentTrackingEnabled &&
-           "expected assignment tracking to be enabled");
-    return;
+    if (AssignmentTrackingEnabled)
+      return;
+    // If assignment tracking hasn't been enabled then fall through and treat
+    // the dbg.assign as a dbg.value.
+    [[fallthrough]];
   }
   case Intrinsic::dbg_value: {
     // Debug intrinsics are handled seperately in assignment tracking mode.
@@ -7033,6 +7035,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     llvm_unreachable("instrprof failed to lower a cover");
   case Intrinsic::instrprof_increment:
     llvm_unreachable("instrprof failed to lower an increment");
+  case Intrinsic::instrprof_timestamp:
+    llvm_unreachable("instrprof failed to lower a timestamp");
   case Intrinsic::instrprof_value_profile:
     llvm_unreachable("instrprof failed to lower a value profiling call");
   case Intrinsic::localescape: {
@@ -11605,7 +11609,6 @@ void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I) {
   SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
                             DAG.getVTList(OutVT, OutVT), Lo, Hi);
   setValue(&I, Res);
-  return;
 }
 
 void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I) {
@@ -11631,7 +11634,6 @@ void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I) {
   Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, Res.getValue(0),
                     Res.getValue(1));
   setValue(&I, Res);
-  return;
 }
 
 void SelectionDAGBuilder::visitFreeze(const FreezeInst &I) {

@@ -208,10 +208,10 @@ getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
 std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
                                      llvm::StringRef TUPath) {
   const auto &SM = AST.getSourceManager();
-  const FileEntry *F = SM.getFileEntryForID(SM.getFileID(Loc));
+  const auto F = SM.getFileEntryRefForID(SM.getFileID(Loc));
   if (!F)
     return std::nullopt;
-  auto FilePath = getCanonicalPath(F, SM);
+  auto FilePath = getCanonicalPath(*F, SM);
   if (!FilePath) {
     log("failed to get path!");
     return std::nullopt;
@@ -1617,8 +1617,10 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!DeclRange)
     return std::nullopt;
-  auto FilePath =
-      getCanonicalPath(SM.getFileEntryForID(SM.getFileID(NameLoc)), SM);
+  const auto FE = SM.getFileEntryRefForID(SM.getFileID(NameLoc));
+  if (!FE)
+    return std::nullopt;
+  auto FilePath = getCanonicalPath(*FE, SM);
   if (!FilePath)
     return std::nullopt; // Not useful without a uri.
 
@@ -1905,7 +1907,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
         // In .foo.bar we want to jump to bar's type, so find *last* field.
         for (auto &D : llvm::reverse(S->designators()))
           if (D.isFieldDesignator())
-            if (const auto *FD = D.getField())
+            if (const auto *FD = D.getFieldDecl())
               return FD->getType();
         return QualType();
       }
@@ -1968,7 +1970,8 @@ static void unwrapFindType(
     return unwrapFindType(FT->getReturnType(), H, Out);
   if (auto *CRD = T->getAsCXXRecordDecl()) {
     if (CRD->isLambda())
-      return unwrapFindType(CRD->getLambdaCallOperator()->getReturnType(), H, Out);
+      return unwrapFindType(CRD->getLambdaCallOperator()->getReturnType(), H,
+                            Out);
     // FIXME: more cases we'd prefer the return type of the call operator?
     //        std::function etc?
   }

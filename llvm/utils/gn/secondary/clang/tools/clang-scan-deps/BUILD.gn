@@ -1,6 +1,15 @@
-executable("clang-scan-deps") {
+import("//llvm/utils/gn/build/driver_executable.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":clang-scan-deps" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+driver_executable("clang-scan-deps") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opts",
     "//clang/lib/AST",
     "//clang/lib/Basic",
     "//clang/lib/CodeGen",

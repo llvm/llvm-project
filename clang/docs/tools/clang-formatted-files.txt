@@ -5707,7 +5707,6 @@ llvm/include/llvm-c/Comdat.h
 llvm/include/llvm-c/Error.h
 llvm/include/llvm-c/ErrorHandling.h
 llvm/include/llvm-c/ExternC.h
-llvm/include/llvm-c/Initialization.h
 llvm/include/llvm-c/IRReader.h
 llvm/include/llvm-c/LLJIT.h
 llvm/include/llvm-c/OrcEE.h
@@ -8250,7 +8249,6 @@ mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp
 mlir/lib/Dialect/Tensor/Transforms/PassDetail.h
-mlir/lib/Dialect/Tensor/Transforms/SplitPadding.cpp
 mlir/lib/Dialect/Tensor/Utils/Utils.cpp
 mlir/lib/Dialect/Tosa/IR/TosaOps.cpp
 mlir/lib/Dialect/Tosa/Transforms/TosaDecomposeConv2D.cpp

@@ -89,7 +89,7 @@ Value genIsNonzero(OpBuilder &builder, Location loc, Value v);
 /// Computes the shape of destination tensor of a reshape operator. This is only
 /// used when operands have dynamic shape. The shape of the destination is
 /// stored into dstShape.
-void genReshapeDstShape(Location loc, PatternRewriter &rewriter,
+void genReshapeDstShape(OpBuilder &builder, Location loc,
                         SmallVectorImpl<Value> &dstShape,
                         ArrayRef<Value> srcShape,
                         ArrayRef<StaticSize> staticDstShape,
@@ -211,8 +211,8 @@ Operation *getTop(Operation *op);
 /// %v3 = complex.constant (5.0, 6.0)
 /// callback({%c3}, %v3)
 void foreachInSparseConstant(
-    Location loc, RewriterBase &rewriter, SparseElementsAttr attr,
-    AffineMap order, function_ref<void(ArrayRef<Value>, Value)> callback);
+    OpBuilder &builder, Location loc, SparseElementsAttr attr, AffineMap order,
+    function_ref<void(ArrayRef<Value>, Value)> callback);
 
 /// Loads `size`-many values from the memref, which must have rank-1 and
 /// size greater-or-equal to `size`.  If the optional `(offsetIdx,offsetVal)`

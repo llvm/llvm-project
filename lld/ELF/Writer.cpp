@@ -1872,10 +1872,20 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // should only be defined in an executable. If .sdata does not exist, its
     // value/section does not matter but it has to be relative, so set its
     // st_shndx arbitrarily to 1 (Out::elfHeader).
-    if (config->emachine == EM_RISCV && !config->shared) {
-      OutputSection *sec = findSection(".sdata");
-      addOptionalRegular("__global_pointer$", sec ? sec : Out::elfHeader, 0x800,
-                         STV_DEFAULT);
+    if (config->emachine == EM_RISCV) {
+      ElfSym::riscvGlobalPointer = nullptr;
+      if (!config->shared) {
+        OutputSection *sec = findSection(".sdata");
+        addOptionalRegular(
+            "__global_pointer$", sec ? sec : Out::elfHeader, 0x800, STV_DEFAULT);
+        // Set riscvGlobalPointer to be used by the optional global pointer
+        // relaxation.
+        if (config->relaxGP) {
+          Symbol *s = symtab.find("__global_pointer$");
+          if (s && s->isDefined())
+            ElfSym::riscvGlobalPointer = cast<Defined>(s);
+        }
+      }
     }
 
     if (config->emachine == EM_386 || config->emachine == EM_X86_64) {
@@ -2624,6 +2634,23 @@ template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &part) {
   for (PhdrEntry *p : part.phdrs) {
     OutputSection *first = p->firstSec;
     OutputSection *last = p->lastSec;
+
+    // .ARM.exidx sections may not be within a single .ARM.exidx
+    // output section. We always want to describe just the
+    // SyntheticSection.
+    if (part.armExidx && p->p_type == PT_ARM_EXIDX) {
+      p->p_filesz = part.armExidx->getSize();
+      p->p_memsz = part.armExidx->getSize();
+      p->p_offset = first->offset + part.armExidx->outSecOff;
+      p->p_vaddr = first->addr + part.armExidx->outSecOff;
+      p->p_align = part.armExidx->addralign;
+      if (part.elfHeader)
+        p->p_offset -= part.elfHeader->getParent()->offset;
+
+      if (!p->hasLMA)
+        p->p_paddr = first->getLMA() + part.armExidx->outSecOff;
+      return;
+    }
 
     if (first) {
       p->p_filesz = last->offset - first->offset;

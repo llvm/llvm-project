@@ -13,7 +13,6 @@
 #include "src/unistd/close.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 #include "src/errno/libc_errno.h"
 #include <unistd.h>

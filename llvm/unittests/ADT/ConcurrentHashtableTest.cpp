@@ -36,25 +36,38 @@ protected:
   std::array<char, 0x20> ExtraData;
 };
 
-static thread_local BumpPtrAllocator ThreadLocalAllocator;
-class PerThreadAllocator : public AllocatorBase<PerThreadAllocator> {
+class SimpleAllocator : public AllocatorBase<SimpleAllocator> {
 public:
   inline LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
                                                        size_t Alignment) {
-    return ThreadLocalAllocator.Allocate(Size, Align(Alignment));
+#if LLVM_ENABLE_THREADS
+    std::lock_guard<std::mutex> Guard(AllocatorMutex);
+#endif
+
+    return Allocator.Allocate(Size, Align(Alignment));
   }
-  inline size_t getBytesAllocated() const {
-    return ThreadLocalAllocator.getBytesAllocated();
+  inline size_t getBytesAllocated() {
+#if LLVM_ENABLE_THREADS
+    std::lock_guard<std::mutex> Guard(AllocatorMutex);
+#endif
+
+    return Allocator.getBytesAllocated();
   }
 
   // Pull in base class overloads.
-  using AllocatorBase<PerThreadAllocator>::Allocate;
+  using AllocatorBase<SimpleAllocator>::Allocate;
+
+protected:
+#if LLVM_ENABLE_THREADS
+  std::mutex AllocatorMutex;
+#endif
+  BumpPtrAllocator Allocator;
 } Allocator;
 
 TEST(ConcurrentHashTableTest, AddStringEntries) {
   ConcurrentHashTableByPtr<
-      std::string, String, PerThreadAllocator,
-      ConcurrentHashTableInfoByPtr<std::string, String, PerThreadAllocator>>
+      std::string, String, SimpleAllocator,
+      ConcurrentHashTableInfoByPtr<std::string, String, SimpleAllocator>>
       HashTable(Allocator, 10);
 
   size_t AllocatedBytesAtStart = Allocator.getBytesAllocated();
@@ -102,8 +115,8 @@ TEST(ConcurrentHashTableTest, AddStringEntries) {
 TEST(ConcurrentHashTableTest, AddStringMultiplueEntries) {
   const size_t NumElements = 10000;
   ConcurrentHashTableByPtr<
-      std::string, String, PerThreadAllocator,
-      ConcurrentHashTableInfoByPtr<std::string, String, PerThreadAllocator>>
+      std::string, String, SimpleAllocator,
+      ConcurrentHashTableInfoByPtr<std::string, String, SimpleAllocator>>
       HashTable(Allocator);
 
   // Check insertion.
@@ -147,8 +160,8 @@ TEST(ConcurrentHashTableTest, AddStringMultiplueEntriesWithResize) {
   // Number of elements exceeds original size, thus hashtable should be resized.
   const size_t NumElements = 20000;
   ConcurrentHashTableByPtr<
-      std::string, String, PerThreadAllocator,
-      ConcurrentHashTableInfoByPtr<std::string, String, PerThreadAllocator>>
+      std::string, String, SimpleAllocator,
+      ConcurrentHashTableInfoByPtr<std::string, String, SimpleAllocator>>
       HashTable(Allocator, 100);
 
   // Check insertion.
@@ -191,8 +204,8 @@ TEST(ConcurrentHashTableTest, AddStringMultiplueEntriesWithResize) {
 TEST(ConcurrentHashTableTest, AddStringEntriesParallel) {
   const size_t NumElements = 10000;
   ConcurrentHashTableByPtr<
-      std::string, String, PerThreadAllocator,
-      ConcurrentHashTableInfoByPtr<std::string, String, PerThreadAllocator>>
+      std::string, String, SimpleAllocator,
+      ConcurrentHashTableInfoByPtr<std::string, String, SimpleAllocator>>
       HashTable(Allocator);
 
   // Check parallel insertion.
@@ -235,8 +248,8 @@ TEST(ConcurrentHashTableTest, AddStringEntriesParallel) {
 TEST(ConcurrentHashTableTest, AddStringEntriesParallelWithResize) {
   const size_t NumElements = 20000;
   ConcurrentHashTableByPtr<
-      std::string, String, PerThreadAllocator,
-      ConcurrentHashTableInfoByPtr<std::string, String, PerThreadAllocator>>
+      std::string, String, SimpleAllocator,
+      ConcurrentHashTableInfoByPtr<std::string, String, SimpleAllocator>>
       HashTable(Allocator, 100);
 
   // Check parallel insertion.

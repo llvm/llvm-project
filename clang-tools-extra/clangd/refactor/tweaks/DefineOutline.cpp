@@ -183,6 +183,20 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
       },
       Resolver);
 
+  // findExplicitReferences doesn't provide references to
+  // constructor/destructors, it only provides references to type names inside
+  // them.
+  // this works for constructors, but doesn't work for destructor as type name
+  // doesn't cover leading `~`, so handle it specially.
+  if (const auto *Destructor = llvm::dyn_cast<CXXDestructorDecl>(FD)) {
+    if (auto Err = DeclarationCleanups.add(tooling::Replacement(
+            SM, Destructor->getLocation(), 0,
+            getQualification(AST, *TargetContext,
+                             SM.getLocForStartOfFile(SM.getMainFileID()),
+                             Destructor))))
+      Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+  }
+
   // Get rid of default arguments, since they should not be specified in
   // out-of-line definition.
   for (const auto *PVD : FD->parameters()) {

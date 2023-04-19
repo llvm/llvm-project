@@ -63,7 +63,7 @@ const char *SBEvent::GetDataFlavor() {
   if (lldb_event) {
     EventData *event_data = lldb_event->GetData();
     if (event_data)
-      return lldb_event->GetData()->GetFlavor().AsCString();
+      return lldb_event->GetData()->GetFlavor().data();
   }
   return nullptr;
 }

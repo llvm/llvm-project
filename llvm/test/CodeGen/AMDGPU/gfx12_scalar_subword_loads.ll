@@ -406,8 +406,7 @@ define amdgpu_ps void @s_buffer_load_byte_sgpr_or_imm_offset_divergent(<4 x i32>
 ;
 ; GISEL-LABEL: s_buffer_load_byte_sgpr_or_imm_offset_divergent:
 ; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    s_mov_b32 s4, 0
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], s4 offen
+; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -485,8 +484,7 @@ define amdgpu_ps void @s_buffer_load_ubyte_sgpr_or_imm_offset_divergent(<4 x i32
 ;
 ; GISEL-LABEL: s_buffer_load_ubyte_sgpr_or_imm_offset_divergent:
 ; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    s_mov_b32 s4, 0
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], s4 offen
+; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
@@ -559,8 +557,7 @@ define amdgpu_ps void @s_buffer_load_short_sgpr_or_imm_offset_divergent(<4 x i32
 ;
 ; GISEL-LABEL: s_buffer_load_short_sgpr_or_imm_offset_divergent:
 ; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    s_mov_b32 s4, 0
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], s4 offen
+; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -638,8 +635,7 @@ define amdgpu_ps void @s_buffer_load_ushort_sgpr_or_imm_offset_divergent(<4 x i3
 ;
 ; GISEL-LABEL: s_buffer_load_ushort_sgpr_or_imm_offset_divergent:
 ; GISEL:       ; %bb.0: ; %main_body
-; GISEL-NEXT:    s_mov_b32 s4, 0
-; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], s4 offen
+; GISEL-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
 ; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off

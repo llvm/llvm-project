@@ -156,17 +156,25 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
 
 /// Initializes a global storage value.
 static void insertIfGlobal(const Decl &D,
-                           llvm::DenseSet<const FieldDecl *> &Fields,
                            llvm::DenseSet<const VarDecl *> &Vars) {
   if (auto *V = dyn_cast<VarDecl>(&D))
     if (V->hasGlobalStorage())
       Vars.insert(V);
 }
 
-static void getFieldsAndGlobalVars(const Decl &D,
-                                   llvm::DenseSet<const FieldDecl *> &Fields,
-                                   llvm::DenseSet<const VarDecl *> &Vars) {
-  insertIfGlobal(D, Fields, Vars);
+static void insertIfFunction(const Decl &D,
+                             llvm::DenseSet<const FunctionDecl *> &Funcs) {
+  if (auto *FD = dyn_cast<FunctionDecl>(&D))
+    Funcs.insert(FD);
+}
+
+static void
+getFieldsGlobalsAndFuncs(const Decl &D,
+                         llvm::DenseSet<const FieldDecl *> &Fields,
+                         llvm::DenseSet<const VarDecl *> &Vars,
+                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
+  insertIfGlobal(D, Vars);
+  insertIfFunction(D, Funcs);
   if (const auto *Decomp = dyn_cast<DecompositionDecl>(&D))
     for (const auto *B : Decomp->bindings())
       if (auto *ME = dyn_cast_or_null<MemberExpr>(B->getBinding()))
@@ -175,27 +183,32 @@ static void getFieldsAndGlobalVars(const Decl &D,
           Fields.insert(FD);
 }
 
-/// Traverses `S` and inserts into `Vars` any global storage values that are
-/// declared in or referenced from sub-statements.
-static void getFieldsAndGlobalVars(const Stmt &S,
-                                   llvm::DenseSet<const FieldDecl *> &Fields,
-                                   llvm::DenseSet<const VarDecl *> &Vars) {
+/// Traverses `S` and inserts into `Fields`, `Vars` and `Funcs` any fields,
+/// global variables and functions that are declared in or referenced from
+/// sub-statements.
+static void
+getFieldsGlobalsAndFuncs(const Stmt &S,
+                         llvm::DenseSet<const FieldDecl *> &Fields,
+                         llvm::DenseSet<const VarDecl *> &Vars,
+                         llvm::DenseSet<const FunctionDecl *> &Funcs) {
   for (auto *Child : S.children())
     if (Child != nullptr)
-      getFieldsAndGlobalVars(*Child, Fields, Vars);
+      getFieldsGlobalsAndFuncs(*Child, Fields, Vars, Funcs);
 
   if (auto *DS = dyn_cast<DeclStmt>(&S)) {
     if (DS->isSingleDecl())
-      getFieldsAndGlobalVars(*DS->getSingleDecl(), Fields, Vars);
+      getFieldsGlobalsAndFuncs(*DS->getSingleDecl(), Fields, Vars, Funcs);
     else
       for (auto *D : DS->getDeclGroup())
-          getFieldsAndGlobalVars(*D, Fields, Vars);
+        getFieldsGlobalsAndFuncs(*D, Fields, Vars, Funcs);
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
-    insertIfGlobal(*E->getDecl(), Fields, Vars);
+    insertIfGlobal(*E->getDecl(), Vars);
+    insertIfFunction(*E->getDecl(), Funcs);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
-    insertIfGlobal(*VD, Fields, Vars);
+    insertIfGlobal(*VD, Vars);
+    insertIfFunction(*VD, Funcs);
     if (const auto *FD = dyn_cast<FieldDecl>(VD))
       Fields.insert(FD);
   }
@@ -203,11 +216,12 @@ static void getFieldsAndGlobalVars(const Stmt &S,
 
 // FIXME: Add support for resetting globals after function calls to enable
 // the implementation of sound analyses.
-void Environment::initFieldsAndGlobals(const FunctionDecl *FuncDecl) {
+void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   assert(FuncDecl->getBody() != nullptr);
 
   llvm::DenseSet<const FieldDecl *> Fields;
   llvm::DenseSet<const VarDecl *> Vars;
+  llvm::DenseSet<const FunctionDecl *> Funcs;
 
   // Look for global variable and field references in the
   // constructor-initializers.
@@ -217,14 +231,14 @@ void Environment::initFieldsAndGlobals(const FunctionDecl *FuncDecl) {
           Fields.insert(M);
       const Expr *E = Init->getInit();
       assert(E != nullptr);
-      getFieldsAndGlobalVars(*E, Fields, Vars);
+      getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);
     }
     // Add all fields mentioned in default member initializers.
     for (const FieldDecl *F : CtorDecl->getParent()->fields())
       if (const auto *I = F->getInClassInitializer())
-          getFieldsAndGlobalVars(*I, Fields, Vars);
+          getFieldsGlobalsAndFuncs(*I, Fields, Vars, Funcs);
   }
-  getFieldsAndGlobalVars(*FuncDecl->getBody(), Fields, Vars);
+  getFieldsGlobalsAndFuncs(*FuncDecl->getBody(), Fields, Vars, Funcs);
 
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
@@ -237,6 +251,13 @@ void Environment::initFieldsAndGlobals(const FunctionDecl *FuncDecl) {
     setStorageLocation(*D, Loc);
     if (auto *Val = createValue(D->getType()))
       setValue(Loc, *Val);
+  }
+
+  for (const FunctionDecl *FD : Funcs) {
+    if (getStorageLocation(*FD, SkipPast::None) != nullptr)
+      continue;
+    auto &Loc = createStorageLocation(FD->getType());
+    setStorageLocation(*FD, Loc);
   }
 }
 
@@ -265,7 +286,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
     assert(FuncDecl->getBody() != nullptr);
 
-    initFieldsAndGlobals(FuncDecl);
+    initFieldsGlobalsAndFuncs(FuncDecl);
 
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
@@ -339,7 +360,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
                                    ArrayRef<const Expr *> Args) {
   CallStack.push_back(FuncDecl);
 
-  initFieldsAndGlobals(FuncDecl);
+  initFieldsGlobalsAndFuncs(FuncDecl);
 
   const auto *ParamIt = FuncDecl->param_begin();
 

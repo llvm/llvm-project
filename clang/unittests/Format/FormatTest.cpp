@@ -25429,6 +25429,13 @@ TEST_F(FormatTest, SpaceAfterUDL) {
   verifyFormat("auto x = 5s .count() == 5;");
 }
 
+TEST_F(FormatTest, InterfaceAsClassMemberName) {
+  verifyFormat("class Foo {\n"
+               "  int interface;\n"
+               "  Foo::Foo(int iface) : interface{iface} {}\n"
+               "}");
+}
+
 } // namespace
 } // namespace test
 } // namespace format

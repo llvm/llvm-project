@@ -131,3 +131,92 @@ func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
   %ret = math.fma %a, %b, %c : f64
   return %ret : f64
 }
+
+// -----
+
+// CHECK-LABEL:     func @floorf_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @floorf_func(%a: f64) -> f64 {
+  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant -1.000
+  // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
+  // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf olt, [[ARG0]], [[CST]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   return [[ADDF]]
+  %ret = math.floor %a : f64
+  return %ret : f64
+}
+
+// -----
+
+// CHECK-LABEL:     func @ceilf_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @ceilf_func(%a: f64) -> f64 {
+  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 1.000
+  // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
+  // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[CVTF]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   return [[ADDF]]
+  %ret = math.ceil %a : f64
+  return %ret : f64
+}
+
+// -----
+
+// CHECK-LABEL:     func @exp2f_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @exp2f_func(%a: f64) -> f64 {
+  // CHECK-DAG:     [[CST:%.+]]  = arith.constant 0.69314718055994529
+  // CHECK:         [[MULF:%.+]] = arith.mulf [[ARG0]], [[CST]]
+  // CHECK:         [[EXP:%.+]]  = math.exp [[MULF]]
+  // CHECK:         return [[EXP]]
+  %ret = math.exp2 %a : f64
+  return %ret : f64
+}
+
+// CHECK-LABEL:     func @exp2f_func_tensor
+// CHECK-SAME:      ([[ARG0:%.+]]: tensor<1xf32>) -> tensor<1xf32>
+func.func @exp2f_func_tensor(%a: tensor<1xf32>) -> tensor<1xf32> {
+  // CHECK-DAG:     [[CST:%.+]]  = arith.constant dense<0.693147182>
+  // CHECK:         [[MULF:%.+]] = arith.mulf [[ARG0]], [[CST]]
+  // CHECK:         [[EXP:%.+]]  = math.exp [[MULF]]
+  // CHECK:         return [[EXP]]
+  %ret = math.exp2 %a : tensor<1xf32>
+  return %ret : tensor<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL:      func @roundf_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
+func.func @roundf_func(%a: f64) -> f64 {
+  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 5.000000e-01
+  // CHECK-DAG:   [[CST_1:%.+]] = arith.constant -5.000000e-01
+  // CHECK-DAG:  [[COMP:%.+]] = arith.cmpf oge, [[ARG0]], [[CST]]
+  // CHECK-DAG:  [[SEL:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST_1]]
+  // CHECK-DAG:  [[ADDF:%.+]] = arith.addf [[ARG0]], [[SEL]]
+  // CHECK-DAG:   [[CVTI:%.+]] = arith.fptosi [[ADDF]]
+  // CHECK-DAG:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK:   return [[CVTF]]
+  %ret = math.round %a : f64
+  return %ret : f64
+}
+
+// -----
+
+// CHECK-LABEL:   func @powf_func
+// CHECK-SAME:    ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64)
+func.func @powf_func(%a: f64, %b: f64) ->f64 {
+  // CHECK-DAG: [[LOG:%.+]] = math.log [[ARG0]]
+  // CHECK-DAG: [[MULT:%.+]] = arith.mulf [[LOG]], [[ARG1]]
+  // CHECK-DAG: [[EXPR:%.+]] = math.exp [[MULT]]
+  // CHECK: return [[EXPR]]
+  %ret = math.powf %a, %b : f64
+  return %ret : f64
+}

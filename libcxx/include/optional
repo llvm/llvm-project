@@ -167,7 +167,7 @@ template<class T>
 #include <__functional/unary_function.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
-#include <__tuple_dir/sfinae_helpers.h>
+#include <__tuple/sfinae_helpers.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/is_trivially_copy_assignable.h>
@@ -227,7 +227,7 @@ void __throw_bad_optional_access() {
 
 struct nullopt_t
 {
-    struct __secret_tag { _LIBCPP_INLINE_VISIBILITY explicit __secret_tag() = default; };
+    struct __secret_tag { explicit __secret_tag() = default; };
     _LIBCPP_INLINE_VISIBILITY constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
 };
 
@@ -413,7 +413,7 @@ struct __optional_storage_base<_Tp, true>
     __raw_type* __value_;
 
     template <class _Up>
-    static constexpr bool __can_bind_reference() {
+    static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
         using _RawUp = __libcpp_remove_reference_t<_Up>;
         using _UpPtr = _RawUp*;
         using _RawTp = __libcpp_remove_reference_t<_Tp>;
@@ -663,13 +663,13 @@ private:
     // LWG2756: conditionally explicit conversion from _Up
     struct _CheckOptionalArgsConstructor {
       template <class _Up>
-      static constexpr bool __enable_implicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
           return is_constructible_v<_Tp, _Up&&> &&
                  is_convertible_v<_Up&&, _Tp>;
       }
 
       template <class _Up>
-      static constexpr bool __enable_explicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
           return is_constructible_v<_Tp, _Up&&> &&
                  !is_convertible_v<_Up&&, _Tp>;
       }
@@ -702,17 +702,17 @@ private:
           is_assignable<_Tp&, _Opt const&&>
       >;
       template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_implicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
           return is_convertible<_QUp, _Tp>::value &&
               !__check_constructible_from_opt<_Up>::value;
       }
       template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_explicit() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
           return !is_convertible<_QUp, _Tp>::value &&
               !__check_constructible_from_opt<_Up>::value;
       }
       template <class _Up, class _QUp = _QualUp>
-      static constexpr bool __enable_assign() {
+      _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_assign() {
           // Construction and assignability of _QUp to _Tp has already been
           // checked.
           return !__check_constructible_from_opt<_Up>::value &&
@@ -830,8 +830,8 @@ public:
         return *this;
     }
 
-    constexpr optional& operator=(const optional&) = default;
-    constexpr optional& operator=(optional&&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(const optional&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr optional& operator=(optional&&) = default;
 
     // LWG2756
     template <class _Up = value_type,

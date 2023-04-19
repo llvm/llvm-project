@@ -33,6 +33,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
@@ -47,7 +48,6 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class InductionDescriptor;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
@@ -76,7 +76,8 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
-const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE);
+const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
+                                Loop *CurLoop = nullptr);
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -666,6 +667,10 @@ public:
   VPLiveOut(PHINode *Phi, VPValue *Op)
       : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
 
+  static inline bool classof(const VPUser *U) {
+    return U->getVPUserID() == VPUser::VPUserID::LiveOut;
+  }
+
   /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
   /// means we need to add the appropriate incoming value from the middle
   /// block as exiting edges from the scalar epilogue loop (if present) are
@@ -1135,22 +1140,20 @@ class VPWidenIntOrFpInductionRecipe : public VPHeaderPHIRecipe {
   PHINode *IV;
   TruncInst *Trunc;
   const InductionDescriptor &IndDesc;
-  bool NeedsVectorIV;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                const InductionDescriptor &IndDesc,
-                                bool NeedsVectorIV)
+                                const InductionDescriptor &IndDesc)
       : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start), IV(IV),
-        Trunc(nullptr), IndDesc(IndDesc), NeedsVectorIV(NeedsVectorIV) {
+        Trunc(nullptr), IndDesc(IndDesc) {
     addOperand(Step);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, bool NeedsVectorIV)
+                                TruncInst *Trunc)
       : VPHeaderPHIRecipe(VPDef::VPWidenIntOrFpInductionSC, Trunc, Start),
-        IV(IV), Trunc(Trunc), IndDesc(IndDesc), NeedsVectorIV(NeedsVectorIV) {
+        IV(IV), Trunc(Trunc), IndDesc(IndDesc) {
     addOperand(Step);
   }
 
@@ -1204,9 +1207,6 @@ public:
   const Type *getScalarType() const {
     return Trunc ? Trunc->getType() : IV->getType();
   }
-
-  /// Returns true if a vector phi needs to be created for the induction.
-  bool needsVectorIV() const { return NeedsVectorIV; }
 };
 
 class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe {
@@ -1843,9 +1843,11 @@ public:
     return true;
   }
 
-  /// Check if the induction described by \p ID is canonical, i.e.  has the same
-  /// start, step (of 1), and type as the canonical IV.
-  bool isCanonical(const InductionDescriptor &ID, Type *Ty) const;
+  /// Check if the induction described by \p Kind, /p Start and \p Step is
+  /// canonical, i.e.  has the same start, step (of 1), and type as the
+  /// canonical IV.
+  bool isCanonical(InductionDescriptor::InductionKind Kind, VPValue *Start,
+                   VPValue *Step, Type *Ty) const;
 };
 
 /// A recipe for generating the active lane mask for the vector loop that is
@@ -2226,10 +2228,6 @@ class VPlan {
   /// Holds the name of the VPlan, for printing.
   std::string Name;
 
-  /// Holds all the external definitions created for this VPlan. External
-  /// definitions must be immutable and hold a pointer to their underlying IR.
-  DenseMap<Value *, VPValue *> VPExternalDefs;
-
   /// Represents the trip count of the original loop, for folding
   /// the tail.
   VPValue *TripCount = nullptr;
@@ -2245,9 +2243,9 @@ class VPlan {
   /// VPlan.
   Value2VPValueTy Value2VPValue;
 
-  /// Contains all VPValues that been allocated by addVPValue directly and need
-  /// to be free when the plan's destructor is called.
-  SmallVector<VPValue *, 16> VPValuesToFree;
+  /// Contains all the external definitions created for this VPlan. External
+  /// definitions are VPValues that hold a pointer to their underlying IR.
+  SmallVector<VPValue *, 16> VPLiveInsToFree;
 
   /// Indicates whether it is safe use the Value2VPValue mapping or if the
   /// mapping cannot be used any longer, because it is stale.
@@ -2327,50 +2325,35 @@ public:
 
   void setName(const Twine &newName) { Name = newName.str(); }
 
-  /// Get the existing or add a new external definition for \p V.
-  VPValue *getOrAddExternalDef(Value *V) {
-    auto I = VPExternalDefs.insert({V, nullptr});
-    if (I.second)
-      I.first->second = new VPValue(V);
-    return I.first->second;
-  }
-
-  void addVPValue(Value *V) {
-    assert(Value2VPValueEnabled &&
-           "IR value to VPValue mapping may be out of date!");
-    assert(V && "Trying to add a null Value to VPlan");
-    assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
-    VPValue *VPV = new VPValue(V);
-    Value2VPValue[V] = VPV;
-    VPValuesToFree.push_back(VPV);
-  }
-
   void addVPValue(Value *V, VPValue *VPV) {
-    assert(Value2VPValueEnabled && "Value2VPValue mapping may be out of date!");
+    assert((Value2VPValueEnabled || !VPV->getDefiningRecipe()) &&
+           "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
     Value2VPValue[V] = VPV;
   }
 
   /// Returns the VPValue for \p V. \p OverrideAllowed can be used to disable
-  /// checking whether it is safe to query VPValues using IR Values.
+  ///   /// checking whether it is safe to query VPValues using IR Values.
   VPValue *getVPValue(Value *V, bool OverrideAllowed = false) {
-    assert((OverrideAllowed || isa<Constant>(V) || Value2VPValueEnabled) &&
-           "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
+    assert((Value2VPValueEnabled || OverrideAllowed ||
+            !Value2VPValue[V]->getDefiningRecipe()) &&
+           "Value2VPValue mapping may be out of date!");
     return Value2VPValue[V];
   }
 
-  /// Gets the VPValue or adds a new one (if none exists yet) for \p V. \p
-  /// OverrideAllowed can be used to disable checking whether it is safe to
-  /// query VPValues using IR Values.
-  VPValue *getOrAddVPValue(Value *V, bool OverrideAllowed = false) {
-    assert((OverrideAllowed || isa<Constant>(V) || Value2VPValueEnabled) &&
-           "Value2VPValue mapping may be out of date!");
+  /// Gets the VPValue for \p V or adds a new live-in (if none exists yet) for
+  /// \p V.
+  VPValue *getVPValueOrAddLiveIn(Value *V) {
     assert(V && "Trying to get or add the VPValue of a null Value");
-    if (!Value2VPValue.count(V))
-      addVPValue(V);
+    if (!Value2VPValue.count(V)) {
+      VPValue *VPV = new VPValue(V);
+      VPLiveInsToFree.push_back(VPV);
+      addVPValue(V, VPV);
+    }
+
     return getVPValue(V);
   }
 
@@ -2396,7 +2379,7 @@ public:
   iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
   mapToVPValues(User::op_range Operands) {
     std::function<VPValue *(Value *)> Fn = [this](Value *Op) {
-      return getOrAddVPValue(Op);
+      return getVPValueOrAddLiveIn(Op);
     };
     return map_range(Operands, Fn);
   }

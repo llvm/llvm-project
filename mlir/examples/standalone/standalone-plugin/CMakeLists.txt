@@ -1,22 +1,18 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-set(LIBS
-        MLIRIR
-        MLIRPass
-        MLIRPluginsLib
-        MLIRStandalone
-        MLIRTransformUtils
-        )
-
-add_mlir_dialect_library(StandalonePlugin
-        SHARED
+add_llvm_library(StandalonePlugin
+        # BUILDTREE_ONLY is only for testing purposes
+        MODULE BUILDTREE_ONLY
         standalone-plugin.cpp
 
         DEPENDS
         MLIRStandalone
+        PLUGIN_TOOL
+        mlir-opt
+
+        LINK_LIBS
+        MLIRStandalone
         )
-
-llvm_update_compile_flags(StandalonePlugin)
-target_link_libraries(StandalonePlugin PRIVATE ${LIBS})
-
-mlir_check_all_link_libraries(StandalonePlugin)
+target_include_directories(
+        StandalonePlugin
+        PRIVATE
+        "${STANDALONE_BINARY_DIR}/include"
+)

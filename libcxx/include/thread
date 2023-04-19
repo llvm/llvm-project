@@ -376,7 +376,7 @@ struct __thread_invoke_pair {
     // This type is used to pass memory for thread local storage and a functor
     // to a newly created thread because std::pair doesn't work with
     // std::unique_ptr in C++03.
-    __thread_invoke_pair(_Fp& __f) : __tsp_(new __thread_struct), __fn_(__f) {}
+    _LIBCPP_HIDE_FROM_ABI __thread_invoke_pair(_Fp& __f) : __tsp_(new __thread_struct), __fn_(__f) {}
     unique_ptr<__thread_struct> __tsp_;
     _Fp __fn_;
 };

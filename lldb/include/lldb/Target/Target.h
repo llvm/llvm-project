@@ -506,9 +506,9 @@ public:
 
     ~TargetEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override {
+    llvm::StringRef GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
 
@@ -1242,6 +1242,10 @@ public:
   ///     Returns the entry address for this program, or an error
   ///     if none can be found.
   llvm::Expected<lldb_private::Address> GetEntryPointAddress();
+
+  CompilerType GetRegisterType(const std::string &name,
+                               const lldb_private::RegisterFlags &flags,
+                               uint32_t byte_size);
 
   // Target Stop Hooks
   class StopHook : public UserID {

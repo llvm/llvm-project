@@ -32,9 +32,9 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 
 class RegScavenger {
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo* MRI;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
   MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator MBBI;
   unsigned NumRegUnits = 0;

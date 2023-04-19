@@ -432,6 +432,10 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFEN_exact:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFSET:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFSET_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:
         return TBUFFER_LOAD;
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN_exact:

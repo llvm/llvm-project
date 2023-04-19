@@ -14,7 +14,6 @@
 #include <__chrono/time_point.h>
 #include <__compare/ordering.h>
 #include <__config>
-#include <__errc>
 #include <__filesystem/file_status.h>
 #include <__filesystem/file_time_type.h>
 #include <__filesystem/file_type.h>
@@ -22,6 +21,7 @@
 #include <__filesystem/operations.h>
 #include <__filesystem/path.h>
 #include <__filesystem/perms.h>
+#include <__system_error/errc.h>
 #include <__system_error/error_code.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
@@ -47,9 +47,9 @@ class directory_entry {
 
 public:
   // constructors and destructors
-  directory_entry() noexcept = default;
-  directory_entry(directory_entry const&) = default;
-  directory_entry(directory_entry&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI directory_entry() noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI directory_entry(directory_entry const&) = default;
+  _LIBCPP_HIDE_FROM_ABI directory_entry(directory_entry&&) noexcept = default;
 
   _LIBCPP_INLINE_VISIBILITY
   explicit directory_entry(_Path const& __p) : __p_(__p) {
@@ -62,10 +62,10 @@ public:
     __refresh(&__ec);
   }
 
-  ~directory_entry() {}
+  _LIBCPP_HIDE_FROM_ABI ~directory_entry() {}
 
-  directory_entry& operator=(directory_entry const&) = default;
-  directory_entry& operator=(directory_entry&&) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI directory_entry& operator=(directory_entry const&) = default;
+  _LIBCPP_HIDE_FROM_ABI directory_entry& operator=(directory_entry&&) noexcept = default;
 
   _LIBCPP_INLINE_VISIBILITY
   void assign(_Path const& __p) {
@@ -511,8 +511,8 @@ public:
 private:
   friend class directory_iterator;
   friend class recursive_directory_iterator;
-  explicit __dir_element_proxy(directory_entry const& __e) : __elem_(__e) {}
-  __dir_element_proxy(__dir_element_proxy&& __o)
+  _LIBCPP_HIDE_FROM_ABI explicit __dir_element_proxy(directory_entry const& __e) : __elem_(__e) {}
+  _LIBCPP_HIDE_FROM_ABI __dir_element_proxy(__dir_element_proxy&& __o)
       : __elem_(_VSTD::move(__o.__elem_)) {}
   directory_entry __elem_;
 };

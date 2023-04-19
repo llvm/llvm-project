@@ -1948,7 +1948,7 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
     Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
     CurrentLocOps = 1;
   }
-  for (auto Offset : VariableOffsets) {
+  for (const auto &Offset : VariableOffsets) {
     AdditionalValues.push_back(Offset.first);
     assert(Offset.second.isStrictlyPositive() &&
            "Expected strictly positive multiplier for offset.");
@@ -2701,8 +2701,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_dereferenceable:
       case LLVMContext::MD_dereferenceable_or_null:
-        K->setMetadata(Kind,
-          MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
+        if (DoesKMove)
+          K->setMetadata(Kind,
+            MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
@@ -2989,7 +2990,7 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 
   for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
     Instruction *I = &*II;
-    I->dropUBImplyingAttrsAndUnknownMetadata();
+    I->dropUBImplyingAttrsAndMetadata();
     if (I->isUsedByMetadata())
       dropDebugUsers(*I);
     if (I->isDebugOrPseudoInst()) {

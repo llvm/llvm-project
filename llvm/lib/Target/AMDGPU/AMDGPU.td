@@ -953,6 +953,12 @@ def FeatureArchitectedSGPRs : SubtargetFeature<"architected-sgprs",
   "Enable the architected SGPRs"
 >;
 
+def FeatureGDS : SubtargetFeature<"gds",
+  "HasGDS",
+  "true",
+  "Has Global Data Share"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -969,7 +975,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
-  FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts
+  FeatureTrigReducedRange, FeatureExtendedImageInsts, FeatureImageInsts,
+  FeatureGDS
   ]
 >;
 
@@ -980,7 +987,7 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureUnalignedBufferAccess,
-  FeatureImageInsts
+  FeatureImageInsts, FeatureGDS
   ]
 >;
 
@@ -995,7 +1002,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
-   FeatureUnalignedBufferAccess, FeatureImageInsts
+   FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS
   ]
 >;
 
@@ -1013,7 +1020,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureNegativeScratchOffsetBug
+   FeatureNegativeScratchOffsetBug, FeatureGDS
   ]
 >;
 
@@ -1032,7 +1039,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureImageInsts,
+   FeatureGDS
   ]
 >;
 
@@ -1051,7 +1059,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess, FeatureGDS
   ]
 >;
 
@@ -1714,6 +1722,9 @@ def isGFX9Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
+def isNotGFX9Plus :
+  Predicate<"Subtarget->getGeneration() < AMDGPUSubtarget::GFX9">;
+
 def isGFX9Only : Predicate <
   "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureGFX9Insts)>;
@@ -2062,6 +2073,8 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 
 def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;
+
+def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

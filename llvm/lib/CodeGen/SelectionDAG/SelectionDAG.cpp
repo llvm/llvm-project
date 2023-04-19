@@ -5054,6 +5054,10 @@ static bool haveNoCommonBitsSetCommutative(SDValue A, SDValue B) {
                                       SDValue Other) {
     if (SDValue NotOperand =
             getBitwiseNotOperand(Not, Mask, /* AllowUndefs */ true)) {
+      if (NotOperand->getOpcode() == ISD::ZERO_EXTEND ||
+          NotOperand->getOpcode() == ISD::TRUNCATE)
+        NotOperand = NotOperand->getOperand(0);
+
       if (Other == NotOperand)
         return true;
       if (Other->getOpcode() == ISD::AND)
@@ -5062,6 +5066,13 @@ static bool haveNoCommonBitsSetCommutative(SDValue A, SDValue B) {
     }
     return false;
   };
+
+  if (A->getOpcode() == ISD::ZERO_EXTEND || A->getOpcode() == ISD::TRUNCATE)
+    A = A->getOperand(0);
+
+  if (B->getOpcode() == ISD::ZERO_EXTEND || B->getOpcode() == ISD::TRUNCATE)
+    B = B->getOperand(0);
+
   if (A->getOpcode() == ISD::AND)
     return MatchNoCommonBitsPattern(A->getOperand(0), A->getOperand(1), B) ||
            MatchNoCommonBitsPattern(A->getOperand(1), A->getOperand(0), B);
@@ -7114,7 +7125,7 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   AAMDNodes NewAAInfo = AAInfo;
   NewAAInfo.TBAA = NewAAInfo.TBAAStruct = nullptr;
 
-  const Value *SrcVal = SrcPtrInfo.V.dyn_cast<const Value *>();
+  const Value *SrcVal = dyn_cast_if_present<const Value *>(SrcPtrInfo.V);
   bool isConstant =
       AA && SrcVal &&
       AA->pointsToConstantMemory(MemoryLocation(SrcVal, Size, AAInfo));
@@ -7941,7 +7952,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
   assert((Opcode == ISD::INTRINSIC_VOID ||
           Opcode == ISD::INTRINSIC_W_CHAIN ||
           Opcode == ISD::PREFETCH ||
-          ((int)Opcode <= std::numeric_limits<int>::max() &&
+          (Opcode <= (unsigned)std::numeric_limits<int>::max() &&
            (int)Opcode >= ISD::FIRST_TARGET_MEMORY_OPCODE)) &&
          "Opcode is not a memory-accessing opcode!");
 

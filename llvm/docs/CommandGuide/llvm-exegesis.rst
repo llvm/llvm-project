@@ -362,6 +362,13 @@ OPTIONS
  If set,  llvm-exegesis will dump the generated code to a temporary file to
  enable code inspection. Disabled by default.
 
+.. option:: --use-dummy-perf-counters
+
+ If set, llvm-exegesis will not read any real performance counters and
+ return a dummy value instead. This can be used to ensure a snippet doesn't
+ crash when hardware performance counters are unavailable and for
+ debugging :program:`llvm-exegesis` itself.
+
 EXIT STATUS
 -----------
 

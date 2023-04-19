@@ -35,6 +35,7 @@ struct OnStartedArgs {
 };
 
 void ThreadContext::OnStarted(void *arg) {
+  ThreadContextLsanBase::OnStarted(arg);
   auto args = reinterpret_cast<const OnStartedArgs *>(arg);
   stack_begin_ = args->stack_begin;
   stack_end_ = args->stack_end;
@@ -88,7 +89,7 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
 }
 
 void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
-  HandleDeadlySignal(siginfo, context, GetCurrentThread(), &OnStackUnwind,
+  HandleDeadlySignal(siginfo, context, GetCurrentThreadId(), &OnStackUnwind,
                      nullptr);
 }
 

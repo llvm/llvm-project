@@ -8,8 +8,8 @@
 //
 // Compute matrix vector y = Ax
 //
-//
-// CHECK:       gpu.func @kernel(
+// CHECK-LABEL: gpu.module @sparse_kernels
+// CHECK:       gpu.func @kernel0(
 // CHECK-SAME:          %[[VAL_0:.*0]]: index,
 // CHECK-SAME:          %[[VAL_1:.*1]]: memref<?xf64>,
 // CHECK-SAME:          %[[VAL_2:.*2]]: memref<?xindex>,
@@ -48,7 +48,7 @@
 // CHECK:       gpu.host_register
 // CHECK:       gpu.host_register
 // CHECK:       gpu.host_register
-// CHECK:       gpu.launch_func  @sparsekernels::@kernel blocks
+// CHECK:       gpu.launch_func @sparse_kernels::@kernel0 blocks
 //
 func.func @matvec(%A: tensor<?x?xf64, #CSR>, %x: tensor<?xf64>, %y_in: tensor<?xf64>) -> tensor<?xf64> {
   %y_out = linalg.matvec

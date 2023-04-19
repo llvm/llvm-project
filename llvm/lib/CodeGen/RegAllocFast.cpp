@@ -75,15 +75,15 @@ namespace {
     }
 
   private:
-    MachineFrameInfo *MFI;
-    MachineRegisterInfo *MRI;
-    const TargetRegisterInfo *TRI;
-    const TargetInstrInfo *TII;
+    MachineFrameInfo *MFI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
     RegisterClassInfo RegClassInfo;
     const RegClassFilterFunc ShouldAllocateClass;
 
     /// Basic block currently being allocated.
-    MachineBasicBlock *MBB;
+    MachineBasicBlock *MBB = nullptr;
 
     /// Maps virtual regs to the frame index where these values are spilled.
     IndexedMap<int, VirtReg2IndexFunctor> StackSlotForVirtReg;

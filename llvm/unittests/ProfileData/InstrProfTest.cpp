@@ -22,6 +22,9 @@
 #include <cstdarg>
 
 using namespace llvm;
+using ::testing::IsSubsetOf;
+using ::testing::SizeIs;
+using ::testing::UnorderedElementsAre;
 
 [[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(instrprof_error Expected, Error E) {
@@ -35,6 +38,14 @@ ErrorEquals(instrprof_error Expected, Error E) {
     return ::testing::AssertionSuccess();
   return ::testing::AssertionFailure() << "error: " << FoundMsg << "\n";
 }
+
+namespace llvm {
+bool operator==(const TemporalProfTraceTy &lhs,
+                const TemporalProfTraceTy &rhs) {
+  return lhs.Weight == rhs.Weight &&
+         lhs.FunctionNameRefs == rhs.FunctionNameRefs;
+}
+} // end namespace llvm
 
 namespace {
 
@@ -222,6 +233,94 @@ TEST_F(InstrProfTest, test_writer_merge) {
   ASSERT_EQ(2U, R->Counts.size());
   ASSERT_EQ(0U, R->Counts[0]);
   ASSERT_EQ(0U, R->Counts[1]);
+}
+
+TEST_F(InstrProfTest, test_merge_temporal_prof_traces_truncated) {
+  uint64_t ReservoirSize = 10;
+  uint64_t MaxTraceLength = 2;
+  InstrProfWriter Writer(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+
+  TemporalProfTraceTy LargeTrace, SmallTrace;
+  LargeTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo"),
+                                 IndexedInstrProf::ComputeHash("bar"),
+                                 IndexedInstrProf::ComputeHash("goo")};
+  SmallTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo"),
+                                 IndexedInstrProf::ComputeHash("bar")};
+
+  SmallVector<TemporalProfTraceTy, 4> Traces = {LargeTrace, SmallTrace};
+  Writer.addTemporalProfileTraces(Traces, 2);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ASSERT_TRUE(Reader->hasTemporalProfile());
+  EXPECT_EQ(Reader->getTemporalProfTraceStreamSize(), 2U);
+  EXPECT_THAT(Reader->getTemporalProfTraces(),
+              UnorderedElementsAre(SmallTrace, SmallTrace));
+}
+
+TEST_F(InstrProfTest, test_merge_traces_from_writer) {
+  uint64_t ReservoirSize = 10;
+  uint64_t MaxTraceLength = 10;
+  InstrProfWriter Writer(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  InstrProfWriter Writer2(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+  ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+
+  TemporalProfTraceTy FooTrace, BarTrace;
+  FooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo")};
+  BarTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("bar")};
+
+  SmallVector<TemporalProfTraceTy, 4> Traces1({FooTrace}), Traces2({BarTrace});
+  Writer.addTemporalProfileTraces(Traces1, 1);
+  Writer2.addTemporalProfileTraces(Traces2, 1);
+  Writer.mergeRecordsFromWriter(std::move(Writer2), Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ASSERT_TRUE(Reader->hasTemporalProfile());
+  EXPECT_EQ(Reader->getTemporalProfTraceStreamSize(), 2U);
+  EXPECT_THAT(Reader->getTemporalProfTraces(),
+              UnorderedElementsAre(FooTrace, BarTrace));
+}
+
+TEST_F(InstrProfTest, test_merge_traces_sampled) {
+  uint64_t ReservoirSize = 3;
+  uint64_t MaxTraceLength = 10;
+  InstrProfWriter Writer(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+
+  TemporalProfTraceTy FooTrace, BarTrace, GooTrace;
+  FooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo")};
+  BarTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("bar")};
+  GooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("Goo")};
+
+  // Add some sampled traces
+  SmallVector<TemporalProfTraceTy, 4> SampledTraces = {FooTrace, BarTrace,
+                                                       GooTrace};
+  Writer.addTemporalProfileTraces(SampledTraces, 5);
+  // Add some unsampled traces
+  SmallVector<TemporalProfTraceTy, 4> UnsampledTraces = {BarTrace, GooTrace};
+  Writer.addTemporalProfileTraces(UnsampledTraces, 2);
+  UnsampledTraces = {FooTrace};
+  Writer.addTemporalProfileTraces(UnsampledTraces, 1);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ASSERT_TRUE(Reader->hasTemporalProfile());
+  EXPECT_EQ(Reader->getTemporalProfTraceStreamSize(), 8U);
+  // Check that we have a subset of all the traces we added
+  EXPECT_THAT(Reader->getTemporalProfTraces(), SizeIs(ReservoirSize));
+  EXPECT_THAT(
+      Reader->getTemporalProfTraces(),
+      IsSubsetOf({FooTrace, BarTrace, GooTrace, BarTrace, GooTrace, FooTrace}));
 }
 
 using ::llvm::memprof::IndexedMemProfRecord;
@@ -526,7 +625,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
                                  N, T);
   ASSERT_FALSE(Res);
 
-  // Remove the MD_prof metadata 
+  // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
@@ -546,7 +645,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(2000U, ValueData[4].Value);
   ASSERT_EQ(2U, ValueData[4].Count);
 
-  // Remove the MD_prof metadata 
+  // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},

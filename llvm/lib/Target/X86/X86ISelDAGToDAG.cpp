@@ -1715,23 +1715,21 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
   // zero-extended to 64 bits and then added it to the base address, which gives
   // unwanted results when the register holds a negative value.
   // For more information see http://people.redhat.com/drepper/tls.pdf
-  if (auto *C = dyn_cast<ConstantSDNode>(Address)) {
-    if (C->getSExtValue() == 0 && AM.Segment.getNode() == nullptr &&
-        !IndirectTlsSegRefs &&
-        (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
-         Subtarget->isTargetFuchsia())) {
-      if (Subtarget->isTarget64BitILP32() && !AllowSegmentRegForX32)
-        return true;
-      switch (N->getPointerInfo().getAddrSpace()) {
-      case X86AS::GS:
-        AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
-        return false;
-      case X86AS::FS:
-        AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
-        return false;
+  if (isNullConstant(Address) && AM.Segment.getNode() == nullptr &&
+      !IndirectTlsSegRefs &&
+      (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
+       Subtarget->isTargetFuchsia())) {
+    if (Subtarget->isTarget64BitILP32() && !AllowSegmentRegForX32)
+      return true;
+    switch (N->getPointerInfo().getAddrSpace()) {
+    case X86AS::GS:
+      AM.Segment = CurDAG->getRegister(X86::GS, MVT::i16);
+      return false;
+    case X86AS::FS:
+      AM.Segment = CurDAG->getRegister(X86::FS, MVT::i16);
+      return false;
       // Address space X86AS::SS is not handled here, because it is not used to
       // address TLS areas.
-      }
     }
   }
 

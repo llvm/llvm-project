@@ -46,7 +46,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/Attributor.h"
@@ -3331,7 +3330,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       Type *Int8ArrTy = ArrayType::get(Int8Ty, AllocSize->getZExtValue());
       auto *SharedMem = new GlobalVariable(
           *M, Int8ArrTy, /* IsConstant */ false, GlobalValue::InternalLinkage,
-          UndefValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
+          PoisonValue::get(Int8ArrTy), CB->getName() + "_shared", nullptr,
           GlobalValue::NotThreadLocal,
           static_cast<unsigned>(AddressSpace::Shared));
       auto *NewBuffer =

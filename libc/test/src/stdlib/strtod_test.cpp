@@ -10,14 +10,15 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdlib/strtod.h"
 
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 #include <limits.h>
 #include <stddef.h>
 
-using __llvm_libc::testutils::ForceRoundingModeTest;
-using __llvm_libc::testutils::RoundingMode;
+using __llvm_libc::fputil::testing::ForceRoundingModeTest;
+using __llvm_libc::fputil::testing::RoundingMode;
 
 class LlvmLibcStrToDTest : public __llvm_libc::testing::Test,
                            ForceRoundingModeTest<RoundingMode::Nearest> {
@@ -46,15 +47,8 @@ public:
     libc_errno = 0;
     double result = __llvm_libc::strtod(inputString, &str_end);
 
-    __llvm_libc::fputil::FPBits<double> actual_fp =
-        __llvm_libc::fputil::FPBits<double>(result);
-
     EXPECT_EQ(str_end - inputString, expectedStrLen);
-
-    EXPECT_EQ(actual_fp.bits, expected_fp.bits);
-    EXPECT_EQ(actual_fp.get_sign(), expected_fp.get_sign());
-    EXPECT_EQ(actual_fp.get_exponent(), expected_fp.get_exponent());
-    EXPECT_EQ(actual_fp.get_mantissa(), expected_fp.get_mantissa());
+    EXPECT_FP_EQ(result, static_cast<double>(expected_fp));
     EXPECT_EQ(libc_errno, expectedErrno);
   }
 };
@@ -196,6 +190,35 @@ TEST_F(LlvmLibcStrToDTest, FuzzFailures) {
   // with this result, but ours is correct for the nearest rounding mode. See
   // this bug: https://sourceware.org/bugzilla/show_bug.cgi?id=30220
   run_test("0x30000002222225p-1077", 22, uint64_t(0x0006000000444445), ERANGE);
+
+  // This value triggered a bug by having an exponent exactly equal to the
+  // maximum. The overflow checks would accept a value less than the max value
+  // as valid and greater than the max value as invalid (and set it to the max),
+  // but an exponent of exactly max value hit the else condition which is
+  // intended for underflow and set the exponent to the min exponent.
+  run_test(
+      "184774460000000000000000000000000000052300000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000009351662015430037656316837118788423"
+      "887774460000000000004300376000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000052385811247017194600000000"
+      "000000000171946000000000000000000700460000000000000000000000001000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000020000000000000000"
+      "000000000000563168371187884238877744600000000000000000000000000000523858"
+      "112470171946000000000000000001719460000000000000000007004600000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000020000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000005238581124701719460000000"
+      "000000000017194600000000000000000070046000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "200000000000000000E608",
+      1462, uint64_t(0x7ff0000000000000), ERANGE);
 
   // This bug was in the handling of very large exponents in the exponent
   // marker. Previously anything greater than 10,000 would be set to 10,000.

@@ -7781,9 +7781,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       Diag(D.getDeclSpec().getConstexprSpecLoc(),
            diag::err_constinit_local_variable);
     else
-      NewVD->addAttr(ConstInitAttr::Create(
-          Context, D.getDeclSpec().getConstexprSpecLoc(),
-          AttributeCommonInfo::AS_Keyword, ConstInitAttr::Keyword_constinit));
+      NewVD->addAttr(
+          ConstInitAttr::Create(Context, D.getDeclSpec().getConstexprSpecLoc(),
+                                ConstInitAttr::Keyword_constinit));
     break;
   }
 
@@ -10125,9 +10125,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   NewFD->setParams(Params);
 
   if (D.getDeclSpec().isNoreturnSpecified())
-    NewFD->addAttr(C11NoReturnAttr::Create(Context,
-                                           D.getDeclSpec().getNoreturnSpecLoc(),
-                                           AttributeCommonInfo::AS_Keyword));
+    NewFD->addAttr(
+        C11NoReturnAttr::Create(Context, D.getDeclSpec().getNoreturnSpecLoc()));
 
   // Functions returning a variably modified type violate C99 6.7.5.2p2
   // because all functions have linkage.
@@ -10142,15 +10141,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       !NewFD->hasAttr<SectionAttr>())
     NewFD->addAttr(PragmaClangTextSectionAttr::CreateImplicit(
         Context, PragmaClangTextSection.SectionName,
-        PragmaClangTextSection.PragmaLocation, AttributeCommonInfo::AS_Pragma));
+        PragmaClangTextSection.PragmaLocation));
 
   // Apply an implicit SectionAttr if #pragma code_seg is active.
   if (CodeSegStack.CurrentValue && D.isFunctionDefinition() &&
       !NewFD->hasAttr<SectionAttr>()) {
     NewFD->addAttr(SectionAttr::CreateImplicit(
         Context, CodeSegStack.CurrentValue->getString(),
-        CodeSegStack.CurrentPragmaLocation, AttributeCommonInfo::AS_Pragma,
-        SectionAttr::Declspec_allocate));
+        CodeSegStack.CurrentPragmaLocation, SectionAttr::Declspec_allocate));
     if (UnifySection(CodeSegStack.CurrentValue->getString(),
                      ASTContext::PSF_Implicit | ASTContext::PSF_Execute |
                          ASTContext::PSF_Read,
@@ -10163,8 +10161,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (StrictGuardStackCheckStack.CurrentValue && D.isFunctionDefinition() &&
       !NewFD->hasAttr<StrictGuardStackCheckAttr>())
     NewFD->addAttr(StrictGuardStackCheckAttr::CreateImplicit(
-        Context, PragmaClangTextSection.PragmaLocation,
-        AttributeCommonInfo::AS_Pragma));
+        Context, PragmaClangTextSection.PragmaLocation));
 
   // Apply an implicit CodeSegAttr from class declspec or
   // apply an implicit SectionAttr from #pragma code_seg if active.
@@ -10797,8 +10794,7 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
       CodeSegStack.CurrentValue)
     return SectionAttr::CreateImplicit(
         getASTContext(), CodeSegStack.CurrentValue->getString(),
-        CodeSegStack.CurrentPragmaLocation, AttributeCommonInfo::AS_Pragma,
-        SectionAttr::Declspec_allocate);
+        CodeSegStack.CurrentPragmaLocation, SectionAttr::Declspec_allocate);
   return nullptr;
 }
 
@@ -11339,8 +11335,7 @@ static bool CheckMultiVersionAdditionalDecl(
     if (NewMVKind == MultiVersionKind::None &&
         OldMVKind == MultiVersionKind::TargetVersion) {
       NewFD->addAttr(TargetVersionAttr::CreateImplicit(
-          S.Context, "default", NewFD->getSourceRange(),
-          AttributeCommonInfo::AS_GNU));
+          S.Context, "default", NewFD->getSourceRange()));
       NewFD->setIsMultiVersion();
       NewMVKind = MultiVersionKind::TargetVersion;
       if (!NewTVA) {
@@ -11557,8 +11552,7 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
       const auto *OldTVA = OldFD->getAttr<TargetVersionAttr>();
       if (OldTVA) {
         NewFD->addAttr(TargetVersionAttr::CreateImplicit(
-            S.Context, "default", NewFD->getSourceRange(),
-            AttributeCommonInfo::AS_GNU));
+            S.Context, "default", NewFD->getSourceRange()));
         NewFD->setIsMultiVersion();
         OldFD->setIsMultiVersion();
         OldDecl = OldFD;
@@ -14198,9 +14192,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     } else if (Stack->CurrentValue) {
       SectionFlags |= ASTContext::PSF_Implicit;
       auto SectionName = Stack->CurrentValue->getString();
-      var->addAttr(SectionAttr::CreateImplicit(
-          Context, SectionName, Stack->CurrentPragmaLocation,
-          AttributeCommonInfo::AS_Pragma, SectionAttr::Declspec_allocate));
+      var->addAttr(SectionAttr::CreateImplicit(Context, SectionName,
+                                               Stack->CurrentPragmaLocation,
+                                               SectionAttr::Declspec_allocate));
       if (UnifySection(SectionName, SectionFlags, var))
         var->dropAttr<SectionAttr>();
     }
@@ -14210,8 +14204,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     // attribute.
     if (CurInitSeg && var->getInit())
       var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
-                                               CurInitSegLoc,
-                                               AttributeCommonInfo::AS_Pragma));
+                                               CurInitSegLoc));
   }
 
   // All the following checks are C++ only.
@@ -14313,23 +14306,19 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     if (PragmaClangBSSSection.Valid)
       VD->addAttr(PragmaClangBSSSectionAttr::CreateImplicit(
           Context, PragmaClangBSSSection.SectionName,
-          PragmaClangBSSSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangBSSSection.PragmaLocation));
     if (PragmaClangDataSection.Valid)
       VD->addAttr(PragmaClangDataSectionAttr::CreateImplicit(
           Context, PragmaClangDataSection.SectionName,
-          PragmaClangDataSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangDataSection.PragmaLocation));
     if (PragmaClangRodataSection.Valid)
       VD->addAttr(PragmaClangRodataSectionAttr::CreateImplicit(
           Context, PragmaClangRodataSection.SectionName,
-          PragmaClangRodataSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangRodataSection.PragmaLocation));
     if (PragmaClangRelroSection.Valid)
       VD->addAttr(PragmaClangRelroSectionAttr::CreateImplicit(
           Context, PragmaClangRelroSection.SectionName,
-          PragmaClangRelroSection.PragmaLocation,
-          AttributeCommonInfo::AS_Pragma));
+          PragmaClangRelroSection.PragmaLocation));
   }
 
   if (auto *DD = dyn_cast<DecompositionDecl>(ThisDecl)) {
@@ -17672,9 +17661,10 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
     Record->markAbstract();
 
   if (FinalLoc.isValid()) {
-    Record->addAttr(FinalAttr::Create(
-        Context, FinalLoc, AttributeCommonInfo::AS_Keyword,
-        static_cast<FinalAttr::Spelling>(IsFinalSpelledSealed)));
+    Record->addAttr(FinalAttr::Create(Context, FinalLoc,
+                                      IsFinalSpelledSealed
+                                          ? FinalAttr::Keyword_sealed
+                                          : FinalAttr::Keyword_final));
   }
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the
@@ -19872,7 +19862,7 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
   NamedDecl *PrevDecl = LookupSingleName(TUScope, Name, NameLoc,
                                          LookupOrdinaryName);
   AttributeCommonInfo Info(AliasName, SourceRange(AliasNameLoc),
-                           AttributeCommonInfo::AS_Pragma);
+                           AttributeCommonInfo::Form::Pragma());
   AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
       Context, AliasName->getName(), /*IsLiteralLabel=*/true, Info);
 
@@ -19897,7 +19887,7 @@ void Sema::ActOnPragmaWeakID(IdentifierInfo* Name,
   Decl *PrevDecl = LookupSingleName(TUScope, Name, NameLoc, LookupOrdinaryName);
 
   if (PrevDecl) {
-    PrevDecl->addAttr(WeakAttr::CreateImplicit(Context, PragmaLoc, AttributeCommonInfo::AS_Pragma));
+    PrevDecl->addAttr(WeakAttr::CreateImplicit(Context, PragmaLoc));
   } else {
     (void)WeakUndeclaredIdentifiers[Name].insert(WeakInfo(nullptr, NameLoc));
   }

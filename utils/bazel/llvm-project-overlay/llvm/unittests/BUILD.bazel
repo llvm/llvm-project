@@ -455,6 +455,7 @@ cc_test(
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
+    features = ["-layering_check"],  # #include "../lib/CodeGen/RegisterCoalescer.h"
 )
 
 cc_test(
@@ -553,6 +554,17 @@ gentbl(
     ],
 )
 
+gentbl(
+    name = "vt_gen",
+    strip_include_prefix = "Support",
+    tbl_outs = [("-gen-vt", "Support/GenVT.inc")],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "//llvm:include/llvm/CodeGen/ValueTypes.td",
+    td_srcs = [
+        "//llvm:include/llvm/CodeGen/ValueTypes.td",
+    ],
+)
+
 cc_test(
     name = "option_tests",
     size = "small",
@@ -638,6 +650,7 @@ cc_test(
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
+        ":vt_gen",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",

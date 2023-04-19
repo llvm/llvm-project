@@ -25,11 +25,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Vectorize.h"
 #include <numeric>
 
 #define DEBUG_TYPE "vector-combine"
@@ -1565,7 +1562,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   // Calculate our ReconstructMasks from the OrigReconstructMasks and the
   // modified order of the input shuffles.
   SmallVector<SmallVector<int>> ReconstructMasks;
-  for (auto Mask : OrigReconstructMasks) {
+  for (const auto &Mask : OrigReconstructMasks) {
     SmallVector<int> ReconstructMask;
     for (int M : Mask) {
       auto FindIndex = [](const SmallVector<std::pair<int, int>> &V, int M) {

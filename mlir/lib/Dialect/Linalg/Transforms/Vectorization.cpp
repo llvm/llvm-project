@@ -26,6 +26,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1282,7 +1283,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
 
 static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
   // TODO: Masking only supports dynamic generic ops for now.
-  if (!isa<linalg::GenericOp, linalg::FillOp>(op))
+  if (!isa<linalg::GenericOp, linalg::FillOp, linalg::CopyOp>(op))
     return failure();
 
   LDBG("Dynamically-shaped op meets vectorization pre-conditions\n");
@@ -1383,6 +1384,63 @@ static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
         op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
     rewriter.replaceOp(op, expanded);
   }
+}
+
+FailureOr<vector::TransferWriteOp>
+mlir::linalg::maskedVectorize(RewriterBase &rewriter, tensor::PadOp padOp,
+                              ArrayRef<int64_t> inputVectorSizes) {
+  auto padValue = padOp.getConstantPaddingValue();
+  if (!padValue) {
+    LDBG("pad value is not constant: " << padOp << "\n");
+    return rewriter.notifyMatchFailure(padOp, "pad value is not constant");
+  }
+
+  ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
+  if (!(resultTensorShape == inputVectorSizes)) {
+    LDBG("result tensor shape must match input vector sizes: " << padOp
+                                                               << "\n");
+    return rewriter.notifyMatchFailure(
+        padOp, "result tensor shape must match input vector sizes");
+  }
+  if (llvm::any_of(padOp.getStaticLow(),
+                   [](int64_t val) { return val != 0; })) {
+    LDBG("low pad must all be zero: " << padOp << "\n");
+    return rewriter.notifyMatchFailure(padOp, "low pad must all be zero");
+  }
+
+  Location loc = padOp.getLoc();
+  int64_t rank = inputVectorSizes.size();
+  auto maskType = VectorType::get(inputVectorSizes, rewriter.getI1Type());
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType());
+
+  // transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(padOp);
+  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto emptyOp =
+      rewriter.create<tensor::EmptyOp>(loc, padOp.getResultType(),
+                                       /*dynamicSizes=*/ValueRange{});
+  SmallVector<OpFoldResult> mixedSourceDims =
+      getMixedDimensions(rewriter, loc, padOp.getSource());
+  Value mask =
+      rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  auto transferReadOp = rewriter.create<vector::TransferReadOp>(
+      loc,
+      /*vectorType=*/vectorType,
+      /*source=*/padOp.getSource(),
+      /*indices=*/SmallVector<Value>(rank, zero),
+      /*padding=*/padValue,
+      /*inBounds=*/SmallVector<bool>(rank, true));
+  auto maskedOp = cast<vector::MaskOp>(
+      mlir::vector::maskOperation(rewriter, transferReadOp, mask));
+  auto transferWriteOp = rewriter.create<vector::TransferWriteOp>(
+      loc,
+      /*vector=*/maskedOp->getResult(0),
+      /*source=*/emptyOp,
+      /*indices=*/SmallVector<Value>(rank, zero),
+      /*inBounds=*/SmallVector<bool>(rank, true));
+  rewriter.replaceOp(padOp, transferWriteOp->getResults());
+  return transferWriteOp;
 }
 
 /// Emit a suitable vector form for a Linalg op. If provided, `inputVectorSizes`
@@ -2454,6 +2512,29 @@ struct Conv1DGenerator
         .getOperation();
   }
 
+  // Take a value and widen to have the same element type as `ty`.
+  Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty) {
+    const Type srcElementType = getElementTypeOrSelf(val.getType());
+    const Type dstElementType = getElementTypeOrSelf(ty);
+    assert(isa<IntegerType>(dstElementType) || isa<FloatType>(dstElementType));
+    if (srcElementType == dstElementType)
+      return val;
+
+    const int64_t srcWidth = srcElementType.getIntOrFloatBitWidth();
+    const int64_t dstWidth = dstElementType.getIntOrFloatBitWidth();
+    const Type dstType =
+        cast<ShapedType>(val.getType()).cloneWith(std::nullopt, dstElementType);
+
+    if (isa<FloatType>(dstElementType) && srcWidth < dstWidth)
+      return rewriter.create<arith::ExtFOp>(loc, dstType, val);
+
+    if (isa<IntegerType>(dstElementType) && srcWidth < dstWidth)
+      return rewriter.create<arith::ExtSIOp>(loc, dstType, val);
+
+    assert(false && "unhandled promotion case");
+    return nullptr;
+  }
+
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
   Value conv1dSliceAsContraction(RewriterBase &rewriter, Location loc,
                                  Value lhs, Value rhs, Value res) {
@@ -2461,6 +2542,8 @@ struct Conv1DGenerator
     vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
+    lhs = promote(rewriter, loc, lhs, res.getType());
+    rhs = promote(rewriter, loc, rhs, res.getType());
     return rewriter.create<vector::ContractionOp>(
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
@@ -2606,24 +2689,6 @@ struct Conv1DGenerator
         .create<vector::TransferWriteOp>(loc, res, resShaped,
                                          ValueRange{zero, zero, zero})
         .getOperation();
-  }
-
-  // Take a value of element type T and widen to the destination type.
-  Value promote(RewriterBase &rewriter, Location loc, Value val, Type ty) {
-    if (val.getType() == ty)
-      return val;
-
-    const int64_t srcWidth =
-        getElementTypeOrSelf(val.getType()).getIntOrFloatBitWidth();
-    const int64_t destWidth = getElementTypeOrSelf(ty).getIntOrFloatBitWidth();
-
-    if (getElementTypeOrSelf(ty).isa<FloatType>() && srcWidth < destWidth)
-      return rewriter.create<arith::ExtFOp>(loc, ty, val);
-
-    if (getElementTypeOrSelf(ty).isa<IntegerType>() && srcWidth < destWidth)
-      return rewriter.create<arith::ExtSIOp>(loc, ty, val);
-
-    return nullptr;
   }
 
   /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to MulAcc

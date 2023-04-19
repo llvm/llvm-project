@@ -353,6 +353,9 @@ bool canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                         SinkAndHoistLICMFlags &LICMFlags,
                         OptimizationRemarkEmitter *ORE = nullptr);
 
+/// Returns the min/max intrinsic used when expanding a min/max reduction.
+Intrinsic::ID getMinMaxReductionIntrinsicOp(RecurKind RK);
+
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
@@ -428,6 +431,14 @@ bool isKnownNegativeInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE);
 /// Returns true if we can prove that \p S is defined and always non-negative in
 /// loop \p L.
 bool isKnownNonNegativeInLoop(const SCEV *S, const Loop *L,
+                              ScalarEvolution &SE);
+/// Returns true if we can prove that \p S is defined and always positive in
+/// loop \p L.
+bool isKnownPositiveInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE);
+
+/// Returns true if we can prove that \p S is defined and always non-positive in
+/// loop \p L.
+bool isKnownNonPositiveInLoop(const SCEV *S, const Loop *L,
                               ScalarEvolution &SE);
 
 /// Returns true if \p S is defined and never is equal to signed/unsigned max.

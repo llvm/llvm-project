@@ -98,8 +98,19 @@ Improvements to clang-tidy
   `ImplementationFileExtensions`, replacing the check-local options of the
   same name.
 
+- Support specifying `Checks` as a YAML list in the `.clang-tidy` configuration
+  file.
+
+- Fix a potential crash when using the `--dump-config` option.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-non-zero-enum-to-bool-conversion
+  <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check.
+
+  Detect implicit and explicit casts of ``enum`` type into ``bool`` where ``enum`` type
+  doesn't have a zero-value enumerator.
 
 - New :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check.
@@ -109,17 +120,17 @@ New checks
   This check relies heavily on, but is not exclusive to, the functions from
   the *Annex K. "Bounds-checking interfaces"* of C11.
 
-- New :doc:`cppcoreguidelines-avoid-capture-default-when-capturing-this
-  <clang-tidy/checks/cppcoreguidelines/avoid-capture-default-when-capturing-this>` check.
-
-  Warns when lambda specify a capture default and capture ``this``.
-
 - New :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>` check.
 
   Flags C++20 coroutine lambdas with non-empty capture lists that may cause
   use-after-free errors and suggests avoiding captures or ensuring the lambda
   closure object has a guaranteed lifetime.
+
+- New :doc:`cppcoreguidelines-misleading-capture-default-by-value
+  <clang-tidy/checks/cppcoreguidelines/misleading-capture-default-by-value>` check.
+
+  Warns when lambda specify a by-value capture default and capture ``this``.
 
 - New :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check.
@@ -163,6 +174,11 @@ New check aliases
   <clang-tidy/checks/cert/msc33-c>` to :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` was added.
 
+- New alias :doc:`cppcoreguidelines-use-default-member-init
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` to
+  :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Improved :doc:`readability-redundant-string-cstr
@@ -170,6 +186,10 @@ Changes in existing checks
   unnecessary ``std::string::c_str()`` and ``std::string::data()`` calls in
   arguments to ``std::print``, ``std::format`` or other functions listed in
   the ``StringParameterFunction`` check option.
+
+- Improved :doc:`bugprone-dangling-handle
+  <clang-tidy/checks/bugprone/dangling-handle>` check enhancing detection of
+  handles behind type aliases.
 
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`bugprone-dynamic-static-initializers
@@ -179,6 +199,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-fold-init-type
   <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not
   define `value_type` type aliases.
+
+- Improved :doc:`bugprone-incorrect-roundings
+  <clang-tidy/checks/bugprone/incorrect-roundings>` check by adding support for
+  other floating point representations in float constant like ``0.5L``.
 
 - Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
   in :doc:`bugprone-suspicious-include
@@ -195,6 +219,11 @@ Changes in existing checks
 
 - Deprecated :doc:`cert-dcl21-cpp
   <clang-tidy/checks/cert/dcl21-cpp>` check.
+
+- Deprecated C.48 enforcement from :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`. Please use
+  :doc:`cppcoreguidelines-use-default-member-init
+  <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` instead.
 
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`google-build-namespaces
@@ -220,6 +249,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/definitions-in-headers>` to avoid warning on
   declarations inside anonymous namespaces.
 
+- Improved :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>` check with new `IgnoreVirtual`
+  option to optionally ignore virtual methods.
+
 - Deprecated check-local options `HeaderFileExtensions`
   in :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check.
@@ -235,6 +268,11 @@ Changes in existing checks
   functions containing macros or preprocessor directives, and out-of-line special
   member functions in unions.
 
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check with new
+  `IgnoreTemplateInstantiations` option to optionally ignore virtual function
+  overrides that are part of template instantiations.
+
 - Fixed reading `HungarianNotation.CString.*` options in
   :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check.
@@ -249,6 +287,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>`. To preserve the previous
   behavior of using `i` as the prefix for enum tags, set the `EnumConstantPrefix`
   option to `i` instead of using `EnumConstantHungarianPrefix`.
+
+- Fixed a hungarian notation issue in :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` which failed to indicate
+  the number of asterisks.
 
 - Fixed a false positive in :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check warning would
@@ -292,6 +334,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` to understand that there is a
   sequence point between designated initializers.
 
+- Fixed an issue in the :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` checker that was causing
+  false-positives when the move constructor or move assign operator were defaulted.
+
 - Fixed an issue in :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` when specifying an empty
   string for ``Prefix`` or ``Suffix`` options could result in the style not
@@ -302,9 +348,9 @@ Changes in existing checks
   ``DISABLED_`` in the test suite name.
 
 - Improved :doc:`modernize-concat-nested-namespaces
-  <clang-tidy/checks/modernize/concat-nested-namespaces>` to fix incorrect fixes when 
-  using macro between namespace declarations and false positive when using namespace 
-  with attributes.
+  <clang-tidy/checks/modernize/concat-nested-namespaces>` to fix incorrect fixes when
+  using macro between namespace declarations, to fix false positive when using namespace
+  with attributes and to support nested inline namespace introduced in c++20.
 
 - Fixed a false positive in :doc:`performance-no-automatic-move
   <clang-tidy/checks/performance/no-automatic-move>` when warning would be

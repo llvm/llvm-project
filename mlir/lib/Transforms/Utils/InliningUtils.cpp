@@ -105,22 +105,19 @@ void InlinerInterface::handleTerminator(Operation *op,
 
 Value InlinerInterface::handleArgument(OpBuilder &builder, Operation *call,
                                        Operation *callable, Value argument,
-                                       Type targetType,
                                        DictionaryAttr argumentAttrs) const {
   auto *handler = getInterfaceFor(callable);
   assert(handler && "expected valid dialect handler");
-  return handler->handleArgument(builder, call, callable, argument, targetType,
+  return handler->handleArgument(builder, call, callable, argument,
                                  argumentAttrs);
 }
 
 Value InlinerInterface::handleResult(OpBuilder &builder, Operation *call,
                                      Operation *callable, Value result,
-                                     Type targetType,
                                      DictionaryAttr resultAttrs) const {
   auto *handler = getInterfaceFor(callable);
   assert(handler && "expected valid dialect handler");
-  return handler->handleResult(builder, call, callable, result, targetType,
-                               resultAttrs);
+  return handler->handleResult(builder, call, callable, result, resultAttrs);
 }
 
 void InlinerInterface::processInlinedCallBlocks(
@@ -178,11 +175,10 @@ static void handleArgumentImpl(InlinerInterface &interface, OpBuilder &builder,
   // Run the argument attribute handler for the given argument and attribute.
   for (auto [blockArg, argAttr] :
        llvm::zip(callable.getCallableRegion()->getArguments(), argAttrs)) {
-    Value newArgument = interface.handleArgument(builder, call, callable,
-                                                 mapper.lookup(blockArg),
-                                                 blockArg.getType(), argAttr);
-    assert(newArgument.getType() == blockArg.getType() &&
-           "expected the handled argument type to match the target type");
+    Value newArgument = interface.handleArgument(
+        builder, call, callable, mapper.lookup(blockArg), argAttr);
+    assert(newArgument.getType() == mapper.lookup(blockArg).getType() &&
+           "expected the argument type to not change");
 
     // Update the mapping to point the new argument returned by the handler.
     mapper.map(blockArg, newArgument);
@@ -209,15 +205,10 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
     for (Operation *user : result.getUsers())
       resultUsers.insert(user);
 
-    // TODO: Use the type of the call result to replace once the hook can be
-    // used for type conversions. At the moment, all type conversions have to be
-    // done using materializeCallConversion.
-    Type targetType = result.getType();
-
-    Value newResult = interface.handleResult(builder, call, callable, result,
-                                             targetType, resAttr);
-    assert(newResult.getType() == targetType &&
-           "expected the handled result type to match the target type");
+    Value newResult =
+        interface.handleResult(builder, call, callable, result, resAttr);
+    assert(newResult.getType() == result.getType() &&
+           "expected the result type to not change");
 
     // Replace the result uses except for the ones introduce by the handler.
     result.replaceUsesWithIf(newResult, [&](OpOperand &operand) {

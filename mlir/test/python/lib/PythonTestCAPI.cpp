@@ -8,6 +8,7 @@
 
 #include "PythonTestCAPI.h"
 #include "PythonTestDialect.h"
+#include "mlir-c/BuiltinTypes.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/CAPI/Wrap.h"
 
@@ -28,4 +29,8 @@ bool mlirTypeIsAPythonTestTestType(MlirType type) {
 
 MlirType mlirPythonTestTestTypeGet(MlirContext context) {
   return wrap(python_test::TestTypeType::get(unwrap(context)));
+}
+
+bool mlirTypeIsAPythonTestTestTensorValue(MlirValue value) {
+  return mlirTypeIsATensor(wrap(unwrap(value).getType()));
 }

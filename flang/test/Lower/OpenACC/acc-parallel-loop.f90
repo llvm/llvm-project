@@ -62,7 +62,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[ASYNC1:%.*]] = arith.constant 1 : i32
-!CHECK:      acc.parallel async([[ASYNC1]]: i32) {
+!CHECK:      acc.parallel async([[ASYNC1]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -76,7 +76,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[ASYNC2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel async([[ASYNC2]]: i32) {
+!CHECK:      acc.parallel async([[ASYNC2]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -103,7 +103,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[WAIT1:%.*]] = arith.constant 1 : i32
-!CHECK:      acc.parallel wait([[WAIT1]]: i32) {
+!CHECK:      acc.parallel wait([[WAIT1]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -118,7 +118,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      [[WAIT2:%.*]] = arith.constant 1 : i32
 !CHECK:      [[WAIT3:%.*]] = arith.constant 2 : i32
-!CHECK:      acc.parallel wait([[WAIT2]]: i32, [[WAIT3]]: i32) {
+!CHECK:      acc.parallel wait([[WAIT2]], [[WAIT3]] : i32, i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -133,7 +133,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      [[WAIT4:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 !CHECK:      [[WAIT5:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel wait([[WAIT4]]: i32, [[WAIT5]]: i32) {
+!CHECK:      acc.parallel wait([[WAIT4]], [[WAIT5]] : i32, i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -147,7 +147,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[NUMGANGS1:%.*]] = arith.constant 1 : i32
-!CHECK:      acc.parallel num_gangs([[NUMGANGS1]]: i32) {
+!CHECK:      acc.parallel num_gangs([[NUMGANGS1]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -161,7 +161,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[NUMGANGS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel num_gangs([[NUMGANGS2]]: i32) {
+!CHECK:      acc.parallel num_gangs([[NUMGANGS2]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -175,7 +175,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[NUMWORKERS1:%.*]] = arith.constant 10 : i32
-!CHECK:      acc.parallel num_workers([[NUMWORKERS1]]: i32) {
+!CHECK:      acc.parallel num_workers([[NUMWORKERS1]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -189,7 +189,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[NUMWORKERS2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel num_workers([[NUMWORKERS2]]: i32) {
+!CHECK:      acc.parallel num_workers([[NUMWORKERS2]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -203,7 +203,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[VECTORLENGTH1:%.*]] = arith.constant 128 : i32
-!CHECK:      acc.parallel vector_length([[VECTORLENGTH1]]: i32) {
+!CHECK:      acc.parallel vector_length([[VECTORLENGTH1]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -217,7 +217,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      [[VECTORLENGTH2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:      acc.parallel vector_length([[VECTORLENGTH2]]: i32) {
+!CHECK:      acc.parallel vector_length([[VECTORLENGTH2]] : i32) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -300,7 +300,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel copy([[A]]: !fir.ref<!fir.array<10xf32>>, [[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel copy([[A]], [[B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -313,7 +313,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel copy([[A]]: !fir.ref<!fir.array<10xf32>>, [[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel copy([[A]], [[B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -326,7 +326,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel copyin([[A]]: !fir.ref<!fir.array<10xf32>>) copyin_readonly([[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel copyin([[A]] : !fir.ref<!fir.array<10xf32>>) copyin_readonly([[B]] : !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -339,7 +339,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel copyout([[A]]: !fir.ref<!fir.array<10xf32>>) copyout_zero([[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel copyout([[A]] : !fir.ref<!fir.array<10xf32>>) copyout_zero([[B]] : !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -352,7 +352,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel create([[B]]: !fir.ref<!fir.array<10xf32>>) create_zero([[A]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel create([[B]] : !fir.ref<!fir.array<10xf32>>) create_zero([[A]] : !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -365,7 +365,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel no_create([[A]]: !fir.ref<!fir.array<10xf32>>, [[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel no_create([[A]], [[B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -378,7 +378,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel present([[A]]: !fir.ref<!fir.array<10xf32>>, [[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel present([[A]], [[B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -391,7 +391,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel deviceptr([[A]]: !fir.ref<!fir.array<10xf32>>, [[B]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel deviceptr([[A]], [[B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -404,7 +404,7 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel attach([[F]]: !fir.ref<!fir.box<!fir.ptr<f32>>>, [[G]]: !fir.ref<!fir.box<!fir.ptr<f32>>>) {
+!CHECK:      acc.parallel attach([[F]], [[G]] : !fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>) {
 !CHECK:        acc.loop {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
@@ -417,8 +417,8 @@ subroutine acc_parallel_loop
     a(i) = b(i)
   END DO
 
-!CHECK:      acc.parallel private([[A]]: !fir.ref<!fir.array<10xf32>>) firstprivate([[B]]: !fir.ref<!fir.array<10xf32>>) {
-!CHECK:        acc.loop private([[A]]: !fir.ref<!fir.array<10xf32>>) {
+!CHECK:      acc.parallel firstprivate([[B]] : !fir.ref<!fir.array<10xf32>>) private([[A]] : !fir.ref<!fir.array<10xf32>>) {
+!CHECK:        acc.loop private([[A]] : !fir.ref<!fir.array<10xf32>>) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -484,7 +484,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM1]]: i32) {
+!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM1]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -498,7 +498,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM2]]: i32) {
+!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM2]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -511,7 +511,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      acc.parallel {
-!CHECK:        acc.loop gang(num=%{{.*}}: i32, static=%{{.*}}: i32) {
+!CHECK:        acc.loop gang(num=%{{.*}} : i32, static=%{{.*}} : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -537,7 +537,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
-!CHECK:        acc.loop vector([[CONSTANT128]]: i32) {
+!CHECK:        acc.loop vector([[CONSTANT128]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -551,7 +551,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:        acc.loop vector([[VECTORLENGTH]]: i32) {
+!CHECK:        acc.loop vector([[VECTORLENGTH]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -578,7 +578,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
-!CHECK:        acc.loop worker([[WORKER128]]: i32) {
+!CHECK:        acc.loop worker([[WORKER128]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -628,7 +628,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[TILESIZE:%.*]] = arith.constant 2 : i32
-!CHECK:        acc.loop tile([[TILESIZE]]: i32) {
+!CHECK:        acc.loop tile([[TILESIZE]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -642,7 +642,7 @@ subroutine acc_parallel_loop
 
 !CHECK:      acc.parallel {
 !CHECK:        [[TILESIZEM1:%.*]] = arith.constant -1 : i32
-!CHECK:        acc.loop tile([[TILESIZEM1]]: i32) {
+!CHECK:        acc.loop tile([[TILESIZEM1]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -659,7 +659,7 @@ subroutine acc_parallel_loop
 !CHECK:      acc.parallel {
 !CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 !CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-!CHECK:        acc.loop tile([[TILESIZE1]]: i32, [[TILESIZE2]]: i32) {
+!CHECK:        acc.loop tile([[TILESIZE1]], [[TILESIZE2]] : i32, i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -672,7 +672,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      acc.parallel {
-!CHECK:        acc.loop tile(%{{.*}}: i32) {
+!CHECK:        acc.loop tile(%{{.*}} : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -687,7 +687,7 @@ subroutine acc_parallel_loop
   END DO
 
 !CHECK:      acc.parallel {
-!CHECK:        acc.loop tile(%{{.*}}: i32, %{{.*}}: i32) {
+!CHECK:        acc.loop tile(%{{.*}}, %{{.*}} : i32, i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}

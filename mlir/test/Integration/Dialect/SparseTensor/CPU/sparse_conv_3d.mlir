@@ -1,9 +1,4 @@
-// UNSUPPORTED: target={{.*}}
-// FIXME: The test case is disabled (for now) because affine index on sparse tensor
-// are not handled efficiently by sparse compiler, the test case will be re-enabled
-// after new algorithm is implemented.
-
-// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{option} = "enable-index-reduction=true enable-runtime-library=true"
 // DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:  -e entry -entry-point-result=void  \
@@ -13,16 +8,16 @@
 // RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true enable-index-reduction=true"
 // RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true enable-index-reduction=true"
 // RUN: %{compile} | %{run}
 
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA enable-index-reduction=true"
 // REDEFINE: %{run} = %lli \
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
@@ -39,6 +34,10 @@
   dimLevelType = [ "compressed", "dense", "compressed" ]
 }>
 
+#DDC = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed", "compressed" ]
+}>
+
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f
 func.func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> tensor<?x?x?xf32> {
   %buf = bufferization.alloc_tensor(%s1, %s2, %s3) : tensor<?x?x?xf32>
@@ -53,22 +52,31 @@ func.func @conv_3d(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>, %arg2: te
   return %ret : tensor<?x?x?xf32>
 }
 
-func.func @conv_3d_CCC(%arg0: tensor<?x?x?xf32, #CCC>, %arg1: tensor<?x?x?xf32, #CCC>) -> tensor<?x?x?xf32, #CCC> {
+func.func @conv_3d_CCC(%arg0: tensor<?x?x?xf32, #CCC>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32, #CCC> {
   %c6 = arith.constant 6 : index
   %s = bufferization.alloc_tensor(%c6, %c6, %c6) : tensor<?x?x?xf32, #CCC>
   %ret = linalg.conv_3d
-     ins (%arg0, %arg1: tensor<?x?x?xf32, #CCC>, tensor<?x?x?xf32, #CCC>)
+     ins (%arg0, %arg1: tensor<?x?x?xf32, #CCC>, tensor<?x?x?xf32>)
     outs (%s: tensor<?x?x?xf32, #CCC>) -> tensor<?x?x?xf32, #CCC>
   return %ret : tensor<?x?x?xf32, #CCC>
 }
 
-func.func @conv_3d_CDC(%arg0: tensor<?x?x?xf32, #CDC>, %arg1: tensor<?x?x?xf32, #CDC>) -> tensor<?x?x?xf32, #CDC> {
+func.func @conv_3d_CDC(%arg0: tensor<?x?x?xf32, #CDC>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32, #CDC> {
   %c6 = arith.constant 6 : index
   %s = bufferization.alloc_tensor(%c6, %c6, %c6) : tensor<?x?x?xf32, #CDC>
   %ret = linalg.conv_3d
-     ins (%arg0, %arg1: tensor<?x?x?xf32, #CDC>, tensor<?x?x?xf32, #CDC>)
+     ins (%arg0, %arg1: tensor<?x?x?xf32, #CDC>, tensor<?x?x?xf32>)
     outs (%s: tensor<?x?x?xf32, #CDC>) -> tensor<?x?x?xf32, #CDC>
   return %ret : tensor<?x?x?xf32, #CDC>
+}
+
+func.func @conv_3d_DDC(%arg0: tensor<?x?x?xf32, #DDC>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32, #DDC> {
+  %c6 = arith.constant 6 : index
+  %s = bufferization.alloc_tensor(%c6, %c6, %c6) : tensor<?x?x?xf32, #DDC>
+  %ret = linalg.conv_3d
+     ins (%arg0, %arg1: tensor<?x?x?xf32, #DDC>, tensor<?x?x?xf32>)
+    outs (%s: tensor<?x?x?xf32, #DDC>) -> tensor<?x?x?xf32, #DDC>
+  return %ret : tensor<?x?x?xf32, #DDC>
 }
 
 func.func @entry() {
@@ -88,17 +96,15 @@ func.func @entry() {
 
   %in3D_CCC = sparse_tensor.convert %in3D
     : tensor<?x?x?xf32> to tensor<?x?x?xf32, #CCC>
-  %filter3D_CCC = sparse_tensor.convert %filter3D
-    : tensor<?x?x?xf32> to tensor<?x?x?xf32, #CCC>
-
   %in3D_CDC = sparse_tensor.convert %in3D
     : tensor<?x?x?xf32> to tensor<?x?x?xf32, #CDC>
-  %filter3D_CDC = sparse_tensor.convert %filter3D
-    : tensor<?x?x?xf32> to tensor<?x?x?xf32, #CDC>
+  %in3D_DDC = sparse_tensor.convert %in3D
+    : tensor<?x?x?xf32> to tensor<?x?x?xf32, #DDC>
 
   %dense_ret = call @conv_3d(%in3D, %filter3D, %out3D) : (tensor<?x?x?xf32>, tensor<?x?x?xf32>, tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>)
-  %CCC_ret = call @conv_3d_CCC(%in3D_CCC, %filter3D_CCC) : (tensor<?x?x?xf32, #CCC>, tensor<?x?x?xf32, #CCC>) -> (tensor<?x?x?xf32, #CCC>)
-  %CDC_ret = call @conv_3d_CDC(%in3D_CDC, %filter3D_CDC) : (tensor<?x?x?xf32, #CDC>, tensor<?x?x?xf32, #CDC>) -> (tensor<?x?x?xf32, #CDC>)
+  %CCC_ret = call @conv_3d_CCC(%in3D_CCC, %filter3D) : (tensor<?x?x?xf32, #CCC>, tensor<?x?x?xf32>) -> (tensor<?x?x?xf32, #CCC>)
+  %CDC_ret = call @conv_3d_CDC(%in3D_CDC, %filter3D) : (tensor<?x?x?xf32, #CDC>, tensor<?x?x?xf32>) -> (tensor<?x?x?xf32, #CDC>)
+  %DDC_ret = call @conv_3d_DDC(%in3D_DDC, %filter3D) : (tensor<?x?x?xf32, #DDC>, tensor<?x?x?xf32>) -> (tensor<?x?x?xf32, #DDC>)
 
   //      CHECK:( ( ( 108, 108, 108, 108, 108, 108 ),
   // CHECK-SAME:    ( 124, 108, 108, 108, 108, 108 ),
@@ -224,18 +230,59 @@ func.func @entry() {
       : tensor<?x?x?xf32>, vector<6x6x6xf32>
   vector.print %v2 : vector<6x6x6xf32>
 
+  // CHECK-NEXT:( ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 124, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 124, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 124, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ) ),
+  // CHECK-SAME:  ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ) ),
+  // CHECK-SAME:  ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ) ),
+  // CHECK-SAME:  ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ) ),
+  // CHECK-SAME:  ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ) ),
+  // CHECK-SAME:  ( ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ),
+  // CHECK-SAME:    ( 108, 108, 108, 108, 108, 108 ) ) )
+  %3 = sparse_tensor.convert %DDC_ret
+    : tensor<?x?x?xf32, #DDC> to tensor<?x?x?xf32>
+  %v3 = vector.transfer_read %3[%c0, %c0, %c0], %zero
+      : tensor<?x?x?xf32>, vector<6x6x6xf32>
+  vector.print %v2 : vector<6x6x6xf32>
+
   // Free the resources
   bufferization.dealloc_tensor %in3D : tensor<?x?x?xf32>
   bufferization.dealloc_tensor %filter3D : tensor<?x?x?xf32>
   bufferization.dealloc_tensor %out3D : tensor<?x?x?xf32>
 
   bufferization.dealloc_tensor %in3D_CDC : tensor<?x?x?xf32, #CDC>
-  bufferization.dealloc_tensor %filter3D_CDC : tensor<?x?x?xf32, #CDC>
   bufferization.dealloc_tensor %in3D_CCC : tensor<?x?x?xf32, #CCC>
-  bufferization.dealloc_tensor %filter3D_CCC : tensor<?x?x?xf32, #CCC>
+  bufferization.dealloc_tensor %in3D_DDC : tensor<?x?x?xf32, #DDC>
 
   bufferization.dealloc_tensor %CCC_ret : tensor<?x?x?xf32, #CCC>
   bufferization.dealloc_tensor %CDC_ret : tensor<?x?x?xf32, #CDC>
-
+  bufferization.dealloc_tensor %DDC_ret : tensor<?x?x?xf32, #DDC>
   return
 }

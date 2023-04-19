@@ -516,6 +516,10 @@ struct ClientCapabilities {
   /// Whether the client implementation supports a refresh request sent from the
   /// server to the client.
   bool SemanticTokenRefreshSupport = false;
+
+  /// Whether the client supports the textDocument/inactiveRegions
+  /// notification. This is a clangd extension.
+  bool InactiveRegions = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
               llvm::json::Path);
@@ -1735,6 +1739,16 @@ struct SemanticTokensOrDelta {
   std::optional<std::vector<SemanticToken>> tokens; // encoded as integer array
 };
 llvm::json::Value toJSON(const SemanticTokensOrDelta &);
+
+/// Parameters for the inactive regions (server-side) push notification.
+/// This is a clangd extension.
+struct InactiveRegionsParams {
+  /// The textdocument these inactive regions belong to.
+  TextDocumentIdentifier TextDocument;
+  /// The inactive regions that should be sent.
+  std::vector<Range> InactiveRegions;
+};
+llvm::json::Value toJSON(const InactiveRegionsParams &InactiveRegions);
 
 struct SelectionRangeParams {
   /// The text document.

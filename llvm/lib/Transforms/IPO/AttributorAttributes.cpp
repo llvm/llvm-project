@@ -1981,7 +1981,7 @@ struct AANoUnwindImpl : AANoUnwind {
         (unsigned)Instruction::CatchSwitch, (unsigned)Instruction::Resume};
 
     auto CheckForNoUnwind = [&](Instruction &I) {
-      if (!I.mayThrow())
+      if (!I.mayThrow(/* IncludePhaseOneUnwind */ true))
         return true;
 
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
@@ -3582,9 +3582,10 @@ struct CachedReachabilityAA : public BaseTy {
     if (!InUpdate)
       QueryCache.erase(&RQI);
 
-    // Insert a plain RQI (w/o exclusion set) if that makes sense.
-    if (RQI.ExclusionSet &&
-        (!UsedExclusionSet || Result == RQITy::Reachable::Yes)) {
+    // Insert a plain RQI (w/o exclusion set) if that makes sense. Two options:
+    // 1) If it is reachable, it doesn't matter if we have an exclusion set for this query.
+    // 2) We did not use the exclusion set, potentially because there is none.
+    if (Result == RQITy::Reachable::Yes || !UsedExclusionSet) {
       RQITy PlainRQI(RQI.From, RQI.To);
       if (!QueryCache.count(&PlainRQI)) {
         RQITy *RQIPtr = new (A.Allocator) RQITy(RQI.From, RQI.To);
@@ -3594,9 +3595,8 @@ struct CachedReachabilityAA : public BaseTy {
       }
     }
 
-    // Check if we need to insert a new permanent RQI.
-    if (!InUpdate && (UsedExclusionSet ||
-                      (Result == RQITy::Reachable::Yes && RQI.ExclusionSet))) {
+    // Check if we need to insert a new permanent RQI with the exclusion set.
+    if (!InUpdate && Result != RQITy::Reachable::Yes && UsedExclusionSet) {
       assert((!RQI.ExclusionSet || !RQI.ExclusionSet->empty()) &&
              "Did not expect empty set!");
       RQITy *RQIPtr = new (A.Allocator)
@@ -11201,11 +11201,10 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
     auto *AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-    OptimizationRemarkEmitter *ORE = nullptr;
 
     const DataLayout &DL = I.getModule()->getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
-    Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q, ORE);
+    Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q);
     if (!NewV || NewV == &I)
       return false;
 

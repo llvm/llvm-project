@@ -29,15 +29,18 @@ public:
   ErrnoSetterMatcher(T ExpectedReturn, int ExpectedErrno)
       : ExpectedReturn(ExpectedReturn), ExpectedErrno(ExpectedErrno) {}
 
-  void explainError(testutils::StreamWrapper &OS) override {
+  void explainError() override {
     if (ActualReturn != ExpectedReturn)
-      OS << "Expected return to be " << ExpectedReturn << " but got "
-         << ActualReturn << ".\nExpecte errno to be " << strerror(ExpectedErrno)
-         << " but got " << strerror(ActualErrno) << ".\n";
+      __llvm_libc::testing::tlog
+          << "Expected return to be " << ExpectedReturn << " but got "
+          << ActualReturn << ".\nExpecte errno to be "
+          << strerror(ExpectedErrno) << " but got " << strerror(ActualErrno)
+          << ".\n";
     else
-      OS << "Correct value " << ExpectedReturn
-         << " was returned\nBut errno was unexpectely set to "
-         << strerror(ActualErrno) << ".\n";
+      __llvm_libc::testing::tlog
+          << "Correct value " << ExpectedReturn
+          << " was returned\nBut errno was unexpectely set to "
+          << strerror(ActualErrno) << ".\n";
   }
 
   bool match(T Got) {

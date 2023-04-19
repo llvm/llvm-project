@@ -1128,9 +1128,15 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       return false;
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
-    if (AVR::isProgramMemoryAccess(ST)) {
+    // We can not store to program memory.
+    if (AVR::isProgramMemoryAccess(ST))
       return false;
-    }
+    // Since the high byte need to be stored first, we can not emit
+    // i16 post increment store like:
+    // st X+, r24
+    // st X+, r25
+    if (VT == MVT::i16 && !Subtarget.hasLowByteFirst())
+      return false;
   } else {
     return false;
   }
@@ -1150,6 +1156,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
     if ((VT == MVT::i16 && RHSC != 2) || (VT == MVT::i8 && RHSC != 1)) {
       return false;
     }
+
+    // FIXME: We temporarily disable post increment load from program memory,
+    //        due to bug https://github.com/llvm/llvm-project/issues/59914.
+    if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N))
+      if (AVR::isProgramMemoryAccess(LD))
+        return false;
 
     Base = Op->getOperand(0);
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);

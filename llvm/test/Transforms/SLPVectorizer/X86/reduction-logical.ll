@@ -95,30 +95,33 @@ define i1 @logical_or_fcmp(<4 x float> %x) {
 define i1 @logical_and_icmp_diff_preds(<4 x i32> %x) {
 ; SSE-LABEL: @logical_and_icmp_diff_preds(
 ; SSE-NEXT:    [[X0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
-; SSE-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
+; SSE-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X]], i32 3
 ; SSE-NEXT:    [[C0:%.*]] = icmp ult i32 [[X0]], 0
-; SSE-NEXT:    [[C2:%.*]] = icmp sgt i32 [[X2]], 0
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <2 x i32> <i32 3, i32 1>
-; SSE-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[TMP1]], zeroinitializer
-; SSE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
-; SSE-NEXT:    [[S1:%.*]] = select i1 [[C0]], i1 [[TMP3]], i1 false
-; SSE-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[C2]], i1 false
-; SSE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
-; SSE-NEXT:    [[S3:%.*]] = select i1 [[S2]], i1 [[TMP4]], i1 false
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <2 x i32> <i32 1, i32 2>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
+; SSE-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[TMP2]], [[TMP3]]
+; SSE-NEXT:    [[C3:%.*]] = icmp slt i32 [[X3]], 0
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; SSE-NEXT:    [[S1:%.*]] = select i1 [[C0]], i1 [[TMP5]], i1 false
+; SSE-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; SSE-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[TMP6]], i1 false
+; SSE-NEXT:    [[S3:%.*]] = select i1 [[S2]], i1 [[C3]], i1 false
 ; SSE-NEXT:    ret i1 [[S3]]
 ;
 ; AVX-LABEL: @logical_and_icmp_diff_preds(
-; AVX-NEXT:    [[X0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
-; AVX-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[X]], i32 1
-; AVX-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
-; AVX-NEXT:    [[X3:%.*]] = extractelement <4 x i32> [[X]], i32 3
-; AVX-NEXT:    [[C0:%.*]] = icmp ult i32 [[X0]], 0
-; AVX-NEXT:    [[C1:%.*]] = icmp slt i32 [[X1]], 0
-; AVX-NEXT:    [[C2:%.*]] = icmp sgt i32 [[X2]], 0
-; AVX-NEXT:    [[C3:%.*]] = icmp slt i32 [[X3]], 0
-; AVX-NEXT:    [[S1:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
-; AVX-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[C2]], i1 false
-; AVX-NEXT:    [[S3:%.*]] = select i1 [[S2]], i1 [[C3]], i1 false
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 3, i32 1, i32 7>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 2>
+; AVX-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i32> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; AVX-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; AVX-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
+; AVX-NEXT:    [[S1:%.*]] = select i1 [[TMP6]], i1 [[TMP7]], i1 false
+; AVX-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
+; AVX-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[TMP8]], i1 false
+; AVX-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
+; AVX-NEXT:    [[S3:%.*]] = select i1 [[S2]], i1 [[TMP9]], i1 false
 ; AVX-NEXT:    ret i1 [[S3]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0

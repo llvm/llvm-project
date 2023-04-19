@@ -893,6 +893,25 @@ bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
   return true;
 }
 
+Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
+  switch (RK) {
+  default:
+    llvm_unreachable("Unknown min/max recurrence kind");
+  case RecurKind::UMin:
+    return Intrinsic::umin;
+  case RecurKind::UMax:
+    return Intrinsic::umax;
+  case RecurKind::SMin:
+    return Intrinsic::smin;
+  case RecurKind::SMax:
+    return Intrinsic::smax;
+  case RecurKind::FMin:
+    return Intrinsic::minnum;
+  case RecurKind::FMax:
+    return Intrinsic::maxnum;
+  }
+}
+
 CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
   switch (RK) {
   default:
@@ -923,6 +942,13 @@ Value *llvm::createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal,
 
 Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
                             Value *Right) {
+  Type *Ty = Left->getType();
+  if (Ty->isIntOrIntVectorTy()) {
+    // TODO: Add float minnum/maxnum support when FMF nnan is set.
+    Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
+    return Builder.CreateIntrinsic(Ty, Id, {Left, Right}, nullptr,
+                                   "rdx.minmax");
+  }
   CmpInst::Predicate Pred = getMinMaxReductionPredicate(RK);
   Value *Cmp = Builder.CreateCmp(Pred, Left, Right, "rdx.minmax.cmp");
   Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
@@ -1134,6 +1160,20 @@ bool llvm::isKnownNonNegativeInLoop(const SCEV *S, const Loop *L,
   const SCEV *Zero = SE.getZero(S->getType());
   return SE.isAvailableAtLoopEntry(S, L) &&
          SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGE, S, Zero);
+}
+
+bool llvm::isKnownPositiveInLoop(const SCEV *S, const Loop *L,
+                                 ScalarEvolution &SE) {
+  const SCEV *Zero = SE.getZero(S->getType());
+  return SE.isAvailableAtLoopEntry(S, L) &&
+         SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGT, S, Zero);
+}
+
+bool llvm::isKnownNonPositiveInLoop(const SCEV *S, const Loop *L,
+                                    ScalarEvolution &SE) {
+  const SCEV *Zero = SE.getZero(S->getType());
+  return SE.isAvailableAtLoopEntry(S, L) &&
+         SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SLE, S, Zero);
 }
 
 bool llvm::cannotBeMinInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,

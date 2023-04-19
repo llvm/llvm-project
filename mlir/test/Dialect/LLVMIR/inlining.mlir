@@ -6,6 +6,7 @@
 
 func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(42 : i32) : i32
+  %stack = llvm.intr.stacksave : !llvm.ptr
   llvm.store %0, %ptr { alignment = 8 } : i32, !llvm.ptr
   %1 = llvm.load %ptr { alignment = 8 } : !llvm.ptr -> i32
   llvm.intr.dbg.value #variable = %0 : i32
@@ -19,12 +20,14 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 ^bb1:
   llvm.unreachable
 ^bb2:
+  llvm.intr.stackrestore %stack : !llvm.ptr
   return %1 : i32
 }
 
 // CHECK-LABEL: func.func @test_inline(
 // CHECK-SAME: %[[PTR:[a-zA-Z0-9_]+]]
 // CHECK: %[[CST:.*]] = llvm.mlir.constant(42
+// CHECK: %[[STACK:.+]] = llvm.intr.stacksave
 // CHECK: llvm.store %[[CST]], %[[PTR]]
 // CHECK: %[[RES:.+]] = llvm.load %[[PTR]]
 // CHECK: llvm.intr.dbg.value #{{.+}} = %[[CST]]
@@ -33,6 +36,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
 // CHECK: llvm.unreachable
+// CHECK: llvm.intr.stackrestore %[[STACK]]
 func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
   %0 = call @inner_func_inlinable(%ptr) : (!llvm.ptr) -> i32
   return %0 : i32
@@ -253,20 +257,23 @@ llvm.func @test_inline(%cond : i1, %size : i32) -> f32 {
   // CHECK: llvm.intr.lifetime.start
   %0 = llvm.call @static_alloca() : () -> f32
   // CHECK: llvm.intr.lifetime.end
-  // CHECK: llvm.br
+  // CHECK: llvm.br ^[[BB3:[a-zA-Z0-9_]+]]
   llvm.br ^bb3(%0: f32)
   // CHECK: ^{{.+}}:
 ^bb2:
   // Check that the dynamic alloca was inlined, but that it was not moved to the
   // entry block.
+  // CHECK: %[[STACK:[a-zA-Z0-9_]+]] = llvm.intr.stacksave
   // CHECK: llvm.add
-  // CHECK-NEXT: llvm.alloca
+  // CHECK: llvm.alloca
+  // CHECK: llvm.intr.stackrestore %[[STACK]]
   // CHECK-NOT: llvm.call @dynamic_alloca
   %1 = llvm.call @dynamic_alloca(%size) : (i32) -> f32
-  // CHECK: llvm.br
+  // CHECK: llvm.br ^[[BB3]]
   llvm.br ^bb3(%1: f32)
-  // CHECK: ^{{.+}}:
+  // CHECK: ^[[BB3]]
 ^bb3(%arg : f32):
+  // CHECK-NEXT: return
   llvm.return %arg : f32
 }
 

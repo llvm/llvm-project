@@ -50,8 +50,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -1378,7 +1376,7 @@ static bool InstrBreaksNonConvergent(Instruction &I,
 
 /// Helper for NoUnwind inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
-  if (!I.mayThrow())
+  if (!I.mayThrow(/* IncludePhaseOneUnwind */ true))
     return false;
   if (const auto *CI = dyn_cast<CallInst>(&I)) {
     if (Function *Callee = CI->getCalledFunction()) {

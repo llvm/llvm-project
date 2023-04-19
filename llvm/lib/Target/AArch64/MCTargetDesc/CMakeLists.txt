@@ -15,14 +15,15 @@ add_llvm_component_library(LLVMAArch64Desc
   LINK_COMPONENTS
   AArch64Info
   AArch64Utils
-  MC
   BinaryFormat
+  MC
   Support
   TargetParser
 
   ADD_TO_COMPONENT
   AArch64
-)
+  )
+
 add_dependencies(LLVMAArch64Desc AArch64CommonTableGen)
 
 # Hack: we need to include 'main' target directory to grab private headers

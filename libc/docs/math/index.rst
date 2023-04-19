@@ -211,7 +211,7 @@ Performance
   on Linux). Fmod performance results obtained with "differential_testing".
 
 +--------------+-------------------------------+-------------------------------+-------------------------------------+----------------------------------------------------------------------+
-| <Func>       | Reciprocal throughput (clk)   | Latency (clk)                 | Testing ranges                      | Testing configuration                                               |
+| <Func>       | Reciprocal throughput (clk)   | Latency (clk)                 | Testing ranges                      | Testing configuration                                                |
 |              +-----------+-------------------+-----------+-------------------+                                     +-------------+-------------------------+--------------+---------------+
 |              | LLVM libc | Reference (glibc) | LLVM libc | Reference (glibc) |                                     | CPU         | OS                      | Compiler     | Special flags |
 +==============+===========+===================+===========+===================+=====================================+=============+=========================+==============+===============+

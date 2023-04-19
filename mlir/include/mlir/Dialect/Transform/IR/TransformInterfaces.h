@@ -17,9 +17,11 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+
 namespace transform {
 
 class TransformOpInterface;
+class TransformResults;
 
 /// Options controlling the application of transform operations by the
 /// TransformState.
@@ -400,6 +402,11 @@ private:
     return it->second;
   }
 
+  /// Updates the state to include the associations between op results and the
+  /// provided result of applying a transform op.
+  LogicalResult updateStateFromResults(const TransformResults &results,
+                                       ResultRange opResults);
+
   /// Sets the payload IR ops associated with the given transform IR value
   /// (handle). A payload op may be associated multiple handles as long as
   /// at most one of them gets consumed by further transformations.
@@ -563,6 +570,18 @@ private:
   /// Each region must be an ancestor of the following regions in this list.
   /// These are also the keys for "mappings".
   SmallVector<Region *> regionStack;
+
+  /// This cache stores operation names for operations that are tracked in the
+  /// transform dialect state. It is used to detect missing memory side effects
+  /// and op tracking.
+  ///
+  /// All tracked ops are added to this cache before a transform op is applied.
+  /// After the application of the transform op, the names of all tracked ops
+  /// are compared with the names in the cache. If there is a mismatch (or a
+  /// crash), op tracking is missing somewhere. This is typically a missing
+  /// "consumesHandle" side effect or a pattern that removes an op without
+  /// notifying a TrackingListener.
+  DenseMap<Operation *, OperationName> cachedNames;
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 };
 
@@ -597,6 +616,10 @@ public:
   /// is an operation handle, all mapped values are expected to be payload
   /// operations.
   void setMappedValues(OpResult handle, ArrayRef<MappedValue> values);
+
+  /// Sets the currently unset results to empty lists of the kind expected by
+  /// the corresponding results of the given `transform` op.
+  void setRemainingToEmpty(TransformOpInterface transform);
 
 private:
   /// Creates an instance of TransformResults that expects mappings for
@@ -678,6 +701,11 @@ LogicalResult verifyTransformOpInterface(Operation *op);
 void prepareValueMappings(
     SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings,
     ValueRange values, const transform::TransformState &state);
+
+/// Populates `results` with payload associations that match exactly those of
+/// the operands to `block`'s terminator.
+void forwardTerminatorOperands(Block *block, transform::TransformState &state,
+                               transform::TransformResults &results);
 } // namespace detail
 
 /// This trait is supposed to be attached to Transform dialect operations that

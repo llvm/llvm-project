@@ -231,11 +231,6 @@ public:
   /// optimization and code generation without any link-time optimization. It
   /// typically correspond to frontend "-O[123]" options for optimization
   /// levels \c O1, \c O2 and \c O3 resp.
-  ///
-  /// Note that \p Level cannot be `O0` here. The pipelines produced are
-  /// only intended for use when attempting to optimize code. If frontends
-  /// require some transformations for semantic reasons, they should explicitly
-  /// build them.
   ModulePassManager buildPerModuleDefaultPipeline(OptimizationLevel Level,
                                                   bool LTOPreLink = false);
 
@@ -246,11 +241,6 @@ public:
   /// a ThinLTO run. It works to minimize the IR which needs to be analyzed
   /// without making irreversible decisions which could be made better during
   /// the LTO run.
-  ///
-  /// Note that \p Level cannot be `O0` here. The pipelines produced are
-  /// only intended for use when attempting to optimize code. If frontends
-  /// require some transformations for semantic reasons, they should explicitly
-  /// build them.
   ModulePassManager buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level);
 
   /// Build an ThinLTO default optimization pipeline to a pass manager.
@@ -565,6 +555,34 @@ public:
     return PIC;
   }
 
+  // Invoke the callbacks registered for the various extension points.
+  // Custom pipelines should use these to invoke the callbacks registered
+  // by TargetMachines and other clients.
+  void invokePeepholeEPCallbacks(FunctionPassManager &FPM,
+                                 OptimizationLevel Level);
+  void invokeLateLoopOptimizationsEPCallbacks(LoopPassManager &LPM,
+                                              OptimizationLevel Level);
+  void invokeLoopOptimizerEndEPCallbacks(LoopPassManager &LPM,
+                                         OptimizationLevel Level);
+  void invokeScalarOptimizerLateEPCallbacks(FunctionPassManager &FPM,
+                                            OptimizationLevel Level);
+  void invokeCGSCCOptimizerLateEPCallbacks(CGSCCPassManager &CGPM,
+                                           OptimizationLevel Level);
+  void invokeVectorizerStartEPCallbacks(FunctionPassManager &FPM,
+                                        OptimizationLevel Level);
+  void invokeOptimizerEarlyEPCallbacks(ModulePassManager &MPM,
+                                       OptimizationLevel Level);
+  void invokeOptimizerLastEPCallbacks(ModulePassManager &MPM,
+                                      OptimizationLevel Level);
+  void invokeFullLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
+                                                      OptimizationLevel Level);
+  void invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
+                                                     OptimizationLevel Level);
+  void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
+                                      OptimizationLevel Level);
+  void invokePipelineEarlySimplificationEPCallbacks(ModulePassManager &MPM,
+                                                    OptimizationLevel Level);
+
 private:
   // O1 pass pipeline
   FunctionPassManager
@@ -599,7 +617,6 @@ private:
                          std::string ProfileRemappingFile,
                          ThinOrFullLTOPhase LTOPhase,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
-  void invokePeepholeEPCallbacks(FunctionPassManager &, OptimizationLevel);
 
   // Extension Point callbacks
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>

@@ -4,6 +4,7 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefix=GFX10 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefix=GFX11 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -global-isel -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefix=GFX12 %s
 
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 ; PREGFX10-LABEL: tbuffer_load:

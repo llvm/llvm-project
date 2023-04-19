@@ -168,6 +168,28 @@ public:
   bool isSourceOfDivergence(const Value *V) const;
   bool isAlwaysUniform(const Value *V) const;
 
+  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+    if (ToAS == AMDGPUAS::FLAT_ADDRESS) {
+      switch (FromAS) {
+      case AMDGPUAS::GLOBAL_ADDRESS:
+      case AMDGPUAS::CONSTANT_ADDRESS:
+      case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+      case AMDGPUAS::LOCAL_ADDRESS:
+      case AMDGPUAS::PRIVATE_ADDRESS:
+        return true;
+      default:
+        break;
+      }
+      return false;
+    }
+    if ((FromAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
+         ToAS == AMDGPUAS::CONSTANT_ADDRESS) ||
+        (FromAS == AMDGPUAS::CONSTANT_ADDRESS &&
+         ToAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT))
+      return true;
+    return false;
+  }
+
   unsigned getFlatAddressSpace() const {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.
@@ -219,9 +241,10 @@ public:
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
-  InstructionCost getMinMaxReductionCost(
-      VectorType *Ty, VectorType *CondTy, bool IsUnsigned,
-      TTI::TargetCostKind CostKind);
+
+  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
+                                         bool IsUnsigned, FastMathFlags FMF,
+                                         TTI::TargetCostKind CostKind);
 
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
   unsigned getCacheLineSize() const override { return 128; }

@@ -287,5 +287,28 @@ namespace Diagnostics {
   static_assert(CHECK_4(a) && A_IS_B, ""); // expected-error {{failed}} \
                                            // expected-note {{evaluates to '4 == 5'}}
 
+  static_assert(
+    false, // expected-error {{static assertion failed}}
+    ""
+  );
+
+  static_assert(
+    true && false, // expected-error {{static assertion failed due to requirement 'true && false'}}
+    ""
+  );
+
+  static_assert(
+    // with a comment here
+    true && false, // expected-error {{static assertion failed due to requirement 'true && false'}}
+    ""
+  );
+
+  static_assert(
+    // with a comment here
+    (true && // expected-error {{static assertion failed due to requirement '(true && false) || false'}}
+    false)
+    || false,
+    ""
+  );
 
 }

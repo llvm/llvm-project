@@ -1606,6 +1606,9 @@ enum : unsigned {
   NT_ARM_HW_WATCH = 0x403,
   NT_ARM_SVE = 0x405,
   NT_ARM_PAC_MASK = 0x406,
+  NT_ARM_SSVE = 0x40b,
+  NT_ARM_ZA = 0x40c,
+  NT_ARM_ZT = 0x40d,
 
   NT_FILE = 0x46494c45,
   NT_PRXFPREG = 0x46e62b7f,

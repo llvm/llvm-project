@@ -1059,6 +1059,13 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "#endif\n"
                    "  }\n"
                    "}"));
+
+  const StringRef Code("void func() {\n"
+                       "  // clang-format off\n"
+                       "  #define KV(value) #value, value\n"
+                       "  // clang-format on\n"
+                       "}");
+  EXPECT_EQ(Code, format(Code));
 }
 
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {

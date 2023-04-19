@@ -1990,8 +1990,8 @@ static Value *simplifyAndOrOfFCmps(const TargetLibraryInfo *TLI, FCmpInst *LHS,
     // (fcmp uno NNAN, X) | (fcmp uno Y, X) --> fcmp uno Y, X
     // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
     // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
-    if ((isKnownNeverNaN(LHS0, TLI) && (LHS1 == RHS0 || LHS1 == RHS1)) ||
-        (isKnownNeverNaN(LHS1, TLI) && (LHS0 == RHS0 || LHS0 == RHS1)))
+    if (((LHS1 == RHS0 || LHS1 == RHS1) && isKnownNeverNaN(LHS0, TLI)) ||
+        ((LHS0 == RHS0 || LHS0 == RHS1) && isKnownNeverNaN(LHS1, TLI)))
       return RHS;
 
     // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
@@ -2002,8 +2002,8 @@ static Value *simplifyAndOrOfFCmps(const TargetLibraryInfo *TLI, FCmpInst *LHS,
     // (fcmp uno Y, X) | (fcmp uno NNAN, X) --> fcmp uno Y, X
     // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
     // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
-    if ((isKnownNeverNaN(RHS0, TLI) && (RHS1 == LHS0 || RHS1 == LHS1)) ||
-        (isKnownNeverNaN(RHS1, TLI) && (RHS0 == LHS0 || RHS0 == LHS1)))
+    if (((RHS1 == LHS0 || RHS1 == LHS1) && isKnownNeverNaN(RHS0, TLI)) ||
+        ((RHS0 == LHS0 || RHS0 == LHS1) && isKnownNeverNaN(RHS1, TLI)))
       return LHS;
   }
 
@@ -4582,6 +4582,21 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
       return FalseVal;
   }
 
+  if (Pred == ICmpInst::Predicate::ICMP_EQ) {
+    Value *X;
+    Value *Y;
+    // select(X | Y == 0, X or Y, X | Y) -> X | Y
+    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_Zero())) &&
+        match(FalseVal, m_Or(m_Value(X), m_Value(Y))) &&
+        (TrueVal == X || TrueVal == Y))
+      return FalseVal;
+    // select(X & Y == -1, X or Y, X & Y) -> X & Y
+    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_AllOnes())) &&
+        match(FalseVal, m_And(m_Value(X), m_Value(Y))) &&
+        (TrueVal == X || TrueVal == Y))
+      return FalseVal;
+  }
+
   return nullptr;
 }
 
@@ -6682,7 +6697,7 @@ Value *llvm::simplifyLoadInst(LoadInst *LI, Value *PtrOp,
 static Value *simplifyInstructionWithOperands(Instruction *I,
                                               ArrayRef<Value *> NewOps,
                                               const SimplifyQuery &SQ,
-                                              OptimizationRemarkEmitter *ORE) {
+                                              unsigned MaxRecurse) {
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
 
   switch (I->getOpcode()) {
@@ -6695,85 +6710,98 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
     }
     return nullptr;
   case Instruction::FNeg:
-    return simplifyFNegInst(NewOps[0], I->getFastMathFlags(), Q);
+    return simplifyFNegInst(NewOps[0], I->getFastMathFlags(), Q, MaxRecurse);
   case Instruction::FAdd:
-    return simplifyFAddInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
+    return simplifyFAddInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+                            MaxRecurse);
   case Instruction::Add:
-    return simplifyAddInst(NewOps[0], NewOps[1],
-                           Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                           Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    return simplifyAddInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q, MaxRecurse);
   case Instruction::FSub:
-    return simplifyFSubInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
+    return simplifyFSubInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+                            MaxRecurse);
   case Instruction::Sub:
-    return simplifySubInst(NewOps[0], NewOps[1],
-                           Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                           Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    return simplifySubInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q, MaxRecurse);
   case Instruction::FMul:
-    return simplifyFMulInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
+    return simplifyFMulInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+                            MaxRecurse);
   case Instruction::Mul:
-    return simplifyMulInst(NewOps[0], NewOps[1],
-                           Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                           Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    return simplifyMulInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q, MaxRecurse);
   case Instruction::SDiv:
     return simplifySDivInst(NewOps[0], NewOps[1],
-                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
+                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q,
+                            MaxRecurse);
   case Instruction::UDiv:
     return simplifyUDivInst(NewOps[0], NewOps[1],
-                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
+                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q,
+                            MaxRecurse);
   case Instruction::FDiv:
-    return simplifyFDivInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
+    return simplifyFDivInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+                            MaxRecurse);
   case Instruction::SRem:
-    return simplifySRemInst(NewOps[0], NewOps[1], Q);
+    return simplifySRemInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::URem:
-    return simplifyURemInst(NewOps[0], NewOps[1], Q);
+    return simplifyURemInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::FRem:
-    return simplifyFRemInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q);
+    return simplifyFRemInst(NewOps[0], NewOps[1], I->getFastMathFlags(), Q,
+                            MaxRecurse);
   case Instruction::Shl:
-    return simplifyShlInst(NewOps[0], NewOps[1],
-                           Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
-                           Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q);
+    return simplifyShlInst(
+        NewOps[0], NewOps[1], Q.IIQ.hasNoSignedWrap(cast<BinaryOperator>(I)),
+        Q.IIQ.hasNoUnsignedWrap(cast<BinaryOperator>(I)), Q, MaxRecurse);
   case Instruction::LShr:
     return simplifyLShrInst(NewOps[0], NewOps[1],
-                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
+                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q,
+                            MaxRecurse);
   case Instruction::AShr:
     return simplifyAShrInst(NewOps[0], NewOps[1],
-                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q);
+                            Q.IIQ.isExact(cast<BinaryOperator>(I)), Q,
+                            MaxRecurse);
   case Instruction::And:
-    return simplifyAndInst(NewOps[0], NewOps[1], Q);
+    return simplifyAndInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::Or:
-    return simplifyOrInst(NewOps[0], NewOps[1], Q);
+    return simplifyOrInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::Xor:
-    return simplifyXorInst(NewOps[0], NewOps[1], Q);
+    return simplifyXorInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::ICmp:
     return simplifyICmpInst(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
-                            NewOps[1], Q);
+                            NewOps[1], Q, MaxRecurse);
   case Instruction::FCmp:
     return simplifyFCmpInst(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
-                            NewOps[1], I->getFastMathFlags(), Q);
+                            NewOps[1], I->getFastMathFlags(), Q, MaxRecurse);
   case Instruction::Select:
-    return simplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q);
+    return simplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse);
     break;
   case Instruction::GetElementPtr: {
     auto *GEPI = cast<GetElementPtrInst>(I);
     return simplifyGEPInst(GEPI->getSourceElementType(), NewOps[0],
-                           ArrayRef(NewOps).slice(1), GEPI->isInBounds(), Q);
+                           ArrayRef(NewOps).slice(1), GEPI->isInBounds(), Q,
+                           MaxRecurse);
   }
   case Instruction::InsertValue: {
     InsertValueInst *IV = cast<InsertValueInst>(I);
-    return simplifyInsertValueInst(NewOps[0], NewOps[1], IV->getIndices(), Q);
+    return simplifyInsertValueInst(NewOps[0], NewOps[1], IV->getIndices(), Q,
+                                   MaxRecurse);
   }
   case Instruction::InsertElement:
     return simplifyInsertElementInst(NewOps[0], NewOps[1], NewOps[2], Q);
   case Instruction::ExtractValue: {
     auto *EVI = cast<ExtractValueInst>(I);
-    return simplifyExtractValueInst(NewOps[0], EVI->getIndices(), Q);
+    return simplifyExtractValueInst(NewOps[0], EVI->getIndices(), Q,
+                                    MaxRecurse);
   }
   case Instruction::ExtractElement:
-    return simplifyExtractElementInst(NewOps[0], NewOps[1], Q);
+    return simplifyExtractElementInst(NewOps[0], NewOps[1], Q, MaxRecurse);
   case Instruction::ShuffleVector: {
     auto *SVI = cast<ShuffleVectorInst>(I);
     return simplifyShuffleVectorInst(NewOps[0], NewOps[1],
-                                     SVI->getShuffleMask(), SVI->getType(), Q);
+                                     SVI->getShuffleMask(), SVI->getType(), Q,
+                                     MaxRecurse);
   }
   case Instruction::PHI:
     return simplifyPHINode(cast<PHINode>(I), NewOps, Q);
@@ -6786,7 +6814,8 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:
 #include "llvm/IR/Instruction.def"
 #undef HANDLE_CAST_INST
-    return simplifyCastInst(I->getOpcode(), NewOps[0], I->getType(), Q);
+    return simplifyCastInst(I->getOpcode(), NewOps[0], I->getType(), Q,
+                            MaxRecurse);
   case Instruction::Alloca:
     // No simplifications for Alloca and it can't be constant folded.
     return nullptr;
@@ -6797,17 +6826,15 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 
 Value *llvm::simplifyInstructionWithOperands(Instruction *I,
                                              ArrayRef<Value *> NewOps,
-                                             const SimplifyQuery &SQ,
-                                             OptimizationRemarkEmitter *ORE) {
+                                             const SimplifyQuery &SQ) {
   assert(NewOps.size() == I->getNumOperands() &&
          "Number of operands should match the instruction!");
-  return ::simplifyInstructionWithOperands(I, NewOps, SQ, ORE);
+  return ::simplifyInstructionWithOperands(I, NewOps, SQ, RecursionLimit);
 }
 
-Value *llvm::simplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
-                                 OptimizationRemarkEmitter *ORE) {
+Value *llvm::simplifyInstruction(Instruction *I, const SimplifyQuery &SQ) {
   SmallVector<Value *, 8> Ops(I->operands());
-  Value *Result = ::simplifyInstructionWithOperands(I, Ops, SQ, ORE);
+  Value *Result = ::simplifyInstructionWithOperands(I, Ops, SQ, RecursionLimit);
 
   /// If called on unreachable code, the instruction may simplify to itself.
   /// Make life easier for users by detecting that case here, and returning a

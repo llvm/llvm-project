@@ -22,19 +22,26 @@ namespace dwarflinker_parallel {
 /// and a string body which is placed right after StringEntry.
 using StringEntry = StringMapEntry<DwarfStringPoolEntry *>;
 
-class PerThreadStringAllocator
-    : public AllocatorBase<PerThreadStringAllocator> {
+class StringAllocator : public AllocatorBase<StringAllocator> {
 public:
   inline LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size,
                                                        size_t Alignment) {
-    return ThreadLocalAllocator.Allocate(Size, Align(Alignment));
+#if LLVM_ENABLE_THREADS
+    std::lock_guard<std::mutex> Guard(AllocatorMutex);
+#endif
+
+    return Allocator.Allocate(Size, Align(Alignment));
   }
 
   // Pull in base class overloads.
-  using AllocatorBase<PerThreadStringAllocator>::Allocate;
+  using AllocatorBase<StringAllocator>::Allocate;
 
 private:
-  static thread_local BumpPtrAllocator ThreadLocalAllocator;
+#if LLVM_ENABLE_THREADS
+  std::mutex AllocatorMutex;
+#endif
+
+  BumpPtrAllocator Allocator;
 };
 
 class StringPoolEntryInfo {
@@ -56,29 +63,27 @@ public:
 
   /// \returns newly created object of KeyDataTy type.
   static inline StringEntry *create(const StringRef &Key,
-                                    PerThreadStringAllocator &Allocator) {
+                                    StringAllocator &Allocator) {
     return StringEntry::create(Key, Allocator);
   }
 };
 
-class StringPool : public ConcurrentHashTableByPtr<StringRef, StringEntry,
-                                                   PerThreadStringAllocator,
-                                                   StringPoolEntryInfo> {
+class StringPool
+    : public ConcurrentHashTableByPtr<StringRef, StringEntry, StringAllocator,
+                                      StringPoolEntryInfo> {
 public:
   StringPool()
-      : ConcurrentHashTableByPtr<StringRef, StringEntry,
-                                 PerThreadStringAllocator, StringPoolEntryInfo>(
-            Allocator) {}
+      : ConcurrentHashTableByPtr<StringRef, StringEntry, StringAllocator,
+                                 StringPoolEntryInfo>(Allocator) {}
 
   StringPool(size_t InitialSize)
-      : ConcurrentHashTableByPtr<StringRef, StringEntry,
-                                 PerThreadStringAllocator, StringPoolEntryInfo>(
-            Allocator, InitialSize) {}
+      : ConcurrentHashTableByPtr<StringRef, StringEntry, StringAllocator,
+                                 StringPoolEntryInfo>(Allocator, InitialSize) {}
 
-  PerThreadStringAllocator &getAllocatorRef() { return Allocator; }
+  StringAllocator &getAllocatorRef() { return Allocator; }
 
 private:
-  PerThreadStringAllocator Allocator;
+  StringAllocator Allocator;
 };
 
 } // end of namespace dwarflinker_parallel

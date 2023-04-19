@@ -37,7 +37,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:   %{{.*}} = arith.constant 10 : index
 //  CHECK-NEXT:   %{{.*}} = arith.constant 1 : index
 //  CHECK-NEXT:   [[ASYNC:%.*]] = arith.constant 1 : i64
-//  CHECK-NEXT:   acc.parallel async([[ASYNC]]: i64) {
+//  CHECK-NEXT:   acc.parallel async([[ASYNC]] : i64) {
 //  CHECK-NEXT:     acc.loop gang vector {
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:         scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
@@ -164,7 +164,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:   [[NUMGANG:%.*]] = arith.constant 10 : i64
 // CHECK-NEXT:   [[NUMWORKERS:%.*]] = arith.constant 10 : i64
 // CHECK-NEXT:   acc.data present(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]]: i64) num_workers([[NUMWORKERS]]: i64) private([[ARG2]]: memref<10xf32>) {
+// CHECK-NEXT:     acc.parallel num_gangs([[NUMGANG]] : i64) num_workers([[NUMWORKERS]] : i64) private([[ARG2]] : memref<10xf32>) {
 // CHECK-NEXT:       acc.loop gang {
 // CHECK-NEXT:         scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:           acc.loop worker {
@@ -250,11 +250,11 @@ func.func @testloopop() -> () {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop tile(%i64Value: i64, %i64Value: i64) {
+  acc.loop tile(%i64Value, %i64Value : i64, i64) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
-  acc.loop tile(%i32Value: i32, %i32Value: i32) {
+  acc.loop tile(%i32Value, %i32Value : i32, i32) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
@@ -268,58 +268,89 @@ func.func @testloopop() -> () {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]]: i64) {
+// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(static=[[I64VALUE]]: i64) {
+// CHECK:      acc.loop gang(static=[[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop worker([[I64VALUE]]: i64) {
+// CHECK:      acc.loop worker([[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop worker([[I32VALUE]]: i32) {
+// CHECK:      acc.loop worker([[I32VALUE]] : i32) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop worker([[IDXVALUE]]: index) {
+// CHECK:      acc.loop worker([[IDXVALUE]] : index) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop vector([[I64VALUE]]: i64) {
+// CHECK:      acc.loop vector([[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop vector([[I32VALUE]]: i32) {
+// CHECK:      acc.loop vector([[I32VALUE]] : i32) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop vector([[IDXVALUE]]: index) {
+// CHECK:      acc.loop vector([[IDXVALUE]] : index) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]]: i64) worker vector {
+// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64) worker vector {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I64VALUE]]: i64, static=[[I64VALUE]]: i64) worker([[I64VALUE]]: i64) vector([[I64VALUE]]: i64) {
+// CHECK:      acc.loop gang(num=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) worker([[I64VALUE]] : i64) vector([[I64VALUE]] : i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop gang(num=[[I32VALUE]]: i32, static=[[IDXVALUE]]: index) {
+// CHECK:      acc.loop gang(num=[[I32VALUE]] : i32, static=[[IDXVALUE]] : index) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop tile([[I64VALUE]]: i64, [[I64VALUE]]: i64) {
+// CHECK:      acc.loop tile([[I64VALUE]], [[I64VALUE]] : i64, i64) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
-// CHECK:      acc.loop tile([[I32VALUE]]: i32, [[I32VALUE]]: i32) {
+// CHECK:      acc.loop tile([[I32VALUE]], [[I32VALUE]] : i32, i32) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
+
+// -----
+
+func.func @acc_loop_multiple_block() {
+  acc.parallel {
+    acc.loop {
+      %c1 = arith.constant 1 : index
+      cf.br ^bb1(%c1 : index)
+    ^bb1(%9: index):
+      %c0 = arith.constant 0 : index
+      %12 = arith.cmpi sgt, %9, %c0 : index
+      cf.cond_br %12, ^bb2, ^bb3
+    ^bb2:
+      %c1_0 = arith.constant 1 : index
+      %c10 = arith.constant 10 : index
+      %22 = arith.subi %c10, %c1_0 : index
+      cf.br ^bb1(%22 : index)
+    ^bb3:
+      acc.yield
+    }
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_multiple_block()
+// CHECK: acc.parallel
+// CHECK: acc.loop
+// CHECK-3: ^bb{{.*}}
+// CHECK: acc.yield
+// CHECK: acc.yield
 
 // -----
 
@@ -339,7 +370,7 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel wait(%idxValue: index) {
   }
-  acc.parallel wait(%i64value: i64, %i32value: i32, %idxValue: index) {
+  acc.parallel wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
   acc.parallel num_gangs(%i64value: i64) {
   }
@@ -359,21 +390,21 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel vector_length(%idxValue: index) {
   }
-  acc.parallel copyin(%a: memref<10xf32>, %b: memref<10xf32>) {
+  acc.parallel copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
   }
-  acc.parallel copyin_readonly(%a: memref<10xf32>, %b: memref<10xf32>) {
+  acc.parallel copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
   }
-  acc.parallel copyin(%a: memref<10xf32>) copyout_zero(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  acc.parallel copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
   }
-  acc.parallel copyout(%b: memref<10xf32>, %c: memref<10x10xf32>) create(%a: memref<10xf32>) {
+  acc.parallel copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
   }
-  acc.parallel copyout_zero(%b: memref<10xf32>, %c: memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  acc.parallel copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
   }
-  acc.parallel no_create(%a: memref<10xf32>) present(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  acc.parallel no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
   }
-  acc.parallel deviceptr(%a: memref<10xf32>) attach(%b: memref<10xf32>, %c: memref<10x10xf32>) {
+  acc.parallel deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
   }
-  acc.parallel private(%a: memref<10xf32>, %c: memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  acc.parallel private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
   }
   acc.parallel {
   } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -392,53 +423,53 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK:      [[I32VALUE:%.*]] = arith.constant 1 : i32
 // CHECK:      [[IDXVALUE:%.*]] = arith.constant 1 : index
-// CHECK:      acc.parallel async([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel async([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel async([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel async([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel async([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel async([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel wait([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel wait([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel wait([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel wait([[I64VALUE]]: i64, [[I32VALUE]]: i32, [[IDXVALUE]]: index) {
+// CHECK:      acc.parallel wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel num_gangs([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel num_gangs([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_gangs([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel num_gangs([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel num_workers([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel num_workers([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel num_workers([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel num_workers([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel vector_length([[I64VALUE]]: i64) {
+// CHECK:      acc.parallel vector_length([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel vector_length([[I32VALUE]]: i32) {
+// CHECK:      acc.parallel vector_length([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel vector_length([[IDXVALUE]]: index) {
+// CHECK:      acc.parallel vector_length([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyin([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyin_readonly([[ARGA]]: memref<10xf32>, [[ARGB]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyin([[ARGA]]: memref<10xf32>) copyout_zero([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK:      acc.parallel copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyout([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) create([[ARGA]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel copyout_zero([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) create_zero([[ARGA]]: memref<10xf32>) {
+// CHECK:      acc.parallel copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel no_create([[ARGA]]: memref<10xf32>) present([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK:      acc.parallel no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel deviceptr([[ARGA]]: memref<10xf32>) attach([[ARGB]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) {
+// CHECK:      acc.parallel attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
-// CHECK:      acc.parallel private([[ARGA]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) firstprivate([[ARGB]]: memref<10xf32>) {
+// CHECK:      acc.parallel firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -453,9 +484,210 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 
 // -----
 
+// -----
+
+func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %i64value = arith.constant 1 : i64
+  %i32value = arith.constant 1 : i32
+  %idxValue = arith.constant 1 : index
+  acc.serial async(%i64value: i64) {
+  }
+  acc.serial async(%i32value: i32) {
+  }
+  acc.serial async(%idxValue: index) {
+  }
+  acc.serial wait(%i64value: i64) {
+  }
+  acc.serial wait(%i32value: i32) {
+  }
+  acc.serial wait(%idxValue: index) {
+  }
+  acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  }
+  acc.serial copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.serial copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.serial copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.serial copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
+  }
+  acc.serial copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  }
+  acc.serial no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.serial deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.serial private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
+  }
+  acc.serial {
+  } attributes {defaultAttr = #acc<defaultvalue none>}
+  acc.serial {
+  } attributes {defaultAttr = #acc<defaultvalue present>}
+  acc.serial {
+  } attributes {asyncAttr}
+  acc.serial {
+  } attributes {waitAttr}
+  acc.serial {
+  } attributes {selfAttr}
+  acc.serial {
+    acc.yield
+  } attributes {selfAttr}
+  return
+}
+
+// CHECK:      func @testserialop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK:      [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK:      [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK:      acc.serial async([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial async([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial async([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {asyncAttr}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.serial {
+// CHECK-NEXT: } attributes {selfAttr}
+// CHECK:      acc.serial {
+// CHECK:        acc.yield
+// CHECK-NEXT: } attributes {selfAttr}
+
+// -----
+
+
+func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+  %i64value = arith.constant 1 : i64
+  %i32value = arith.constant 1 : i32
+  %idxValue = arith.constant 1 : index
+  acc.kernels async(%i64value: i64) {
+  }
+  acc.kernels async(%i32value: i32) {
+  }
+  acc.kernels async(%idxValue: index) {
+  }
+  acc.kernels wait(%i64value: i64) {
+  }
+  acc.kernels wait(%i32value: i32) {
+  }
+  acc.kernels wait(%idxValue: index) {
+  }
+  acc.kernels wait(%i64value, %i32value, %idxValue : i64, i32, index) {
+  }
+  acc.kernels copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.kernels copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
+  }
+  acc.kernels copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.kernels copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
+  }
+  acc.kernels copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
+  }
+  acc.kernels no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.kernels deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
+  }
+  acc.kernels {
+  } attributes {defaultAttr = #acc<defaultvalue none>}
+  acc.kernels {
+  } attributes {defaultAttr = #acc<defaultvalue present>}
+  acc.kernels {
+  } attributes {asyncAttr}
+  acc.kernels {
+  } attributes {waitAttr}
+  acc.kernels {
+  } attributes {selfAttr}
+  acc.kernels {
+    acc.terminator
+  } attributes {selfAttr}
+  return
+}
+
+// CHECK:      func @testserialop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK:      [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK:      [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK:      [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK:      acc.kernels async([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels async([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels async([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[I64VALUE]] : i64) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[I32VALUE]] : i32) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {asyncAttr}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.kernels {
+// CHECK-NEXT: } attributes {selfAttr}
+// CHECK:      acc.kernels {
+// CHECK:        acc.terminator
+// CHECK-NEXT: } attributes {selfAttr}
+
+// -----
+
 func.func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
   %ifCond = arith.constant true
   acc.data if(%ifCond) present(%a : memref<10xf32>) {
+  }
+  acc.data present(%a : memref<10xf32>) if(%ifCond) {
   }
   acc.data present(%a, %b, %c : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
   }
@@ -492,6 +724,8 @@ func.func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf
 
 // CHECK:      func @testdataop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
 // CHECK:      [[IFCOND1:%.*]] = arith.constant true
+// CHECK:      acc.data if([[IFCOND1]]) present([[ARGA]] : memref<10xf32>) {
+// CHECK-NEXT: }
 // CHECK:      acc.data if([[IFCOND1]]) present([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.data present([[ARGA]], [[ARGB]], [[ARGC]] : memref<10xf32>, memref<10xf32>, memref<10x10xf32>) {
@@ -534,6 +768,7 @@ func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   %ifCond = arith.constant true
   acc.update async(%i64Value: i64) host(%a: memref<10xf32>)
   acc.update async(%i32Value: i32) host(%a: memref<10xf32>)
+  acc.update async(%i32Value: i32) host(%a: memref<10xf32>)
   acc.update async(%idxValue: index) host(%a: memref<10xf32>)
   acc.update wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) host(%a: memref<10xf32>)
   acc.update if(%ifCond) host(%a: memref<10xf32>)
@@ -551,6 +786,7 @@ func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:   [[IDXVALUE:%.*]] = arith.constant 1 : index
 // CHECK:   [[IFCOND:%.*]] = arith.constant true
 // CHECK:   acc.update async([[I64VALUE]] : i64) host([[ARGA]] : memref<10xf32>)
+// CHECK:   acc.update async([[I32VALUE]] : i32) host([[ARGA]] : memref<10xf32>)
 // CHECK:   acc.update async([[I32VALUE]] : i32) host([[ARGA]] : memref<10xf32>)
 // CHECK:   acc.update async([[IDXVALUE]] : index) host([[ARGA]] : memref<10xf32>)
 // CHECK:   acc.update wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) host([[ARGA]] : memref<10xf32>)
@@ -579,6 +815,7 @@ acc.wait(%i32Value: i32) async(%idxValue: index)
 acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32)
 acc.wait attributes {async}
 acc.wait(%i64Value: i64) async(%idxValue: index) wait_devnum(%i32Value: i32)
+acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32) async(%idxValue: index)
 acc.wait if(%ifCond)
 
 // CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
@@ -597,6 +834,7 @@ acc.wait if(%ifCond)
 // CHECK: acc.wait([[I64VALUE]] : i64) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait attributes {async}
 // CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
+// CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait if([[IFCOND]])
 
 // -----
@@ -613,6 +851,8 @@ acc.init device_num(%i64Value : i64)
 acc.init device_num(%i32Value : i32)
 acc.init device_num(%idxValue : index)
 acc.init if(%ifCond)
+acc.init if(%ifCond) device_num(%idxValue : index)
+acc.init device_num(%idxValue : index) if(%ifCond)
 
 // CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
@@ -626,6 +866,8 @@ acc.init if(%ifCond)
 // CHECK: acc.init device_num([[I32VALUE]] : i32)
 // CHECK: acc.init device_num([[IDXVALUE]] : index)
 // CHECK: acc.init if([[IFCOND]])
+// CHECK: acc.init device_num([[IDXVALUE]] : index) if([[IFCOND]])
+// CHECK: acc.init device_num([[IDXVALUE]] : index) if([[IFCOND]])
 
 // -----
 
@@ -641,6 +883,8 @@ acc.shutdown device_num(%i64Value : i64)
 acc.shutdown device_num(%i32Value : i32)
 acc.shutdown device_num(%idxValue : index)
 acc.shutdown if(%ifCond)
+acc.shutdown if(%ifCond) device_num(%idxValue : index)
+acc.shutdown device_num(%idxValue : index) if(%ifCond)
 
 // CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
@@ -654,6 +898,8 @@ acc.shutdown if(%ifCond)
 // CHECK: acc.shutdown device_num([[I32VALUE]] : i32)
 // CHECK: acc.shutdown device_num([[IDXVALUE]] : index)
 // CHECK: acc.shutdown if([[IFCOND]])
+// CHECK: acc.shutdown device_num([[IDXVALUE]] : index) if([[IFCOND]])
+// CHECK: acc.shutdown device_num([[IDXVALUE]] : index) if([[IFCOND]])
 
 // -----
 
@@ -670,6 +916,7 @@ func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   acc.exit_data copyout(%a : memref<10xf32>) attributes {async}
   acc.exit_data delete(%a : memref<10xf32>) attributes {wait}
   acc.exit_data async(%i64Value : i64) copyout(%a : memref<10xf32>)
+  acc.exit_data copyout(%a : memref<10xf32>) async(%i64Value : i64)
   acc.exit_data if(%ifCond) copyout(%a : memref<10xf32>)
   acc.exit_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) copyout(%a : memref<10xf32>)
 
@@ -688,6 +935,7 @@ func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK: acc.exit_data copyout([[ARGA]] : memref<10xf32>) attributes {async}
 // CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>) attributes {wait}
 // CHECK: acc.exit_data async([[I64VALUE]] : i64) copyout([[ARGA]] : memref<10xf32>)
+// CHECK: acc.exit_data async([[I64VALUE]] : i64) copyout([[ARGA]] : memref<10xf32>)
 // CHECK: acc.exit_data if([[IFCOND]]) copyout([[ARGA]] : memref<10xf32>)
 // CHECK: acc.exit_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) copyout([[ARGA]] : memref<10xf32>)
 // -----
@@ -705,6 +953,7 @@ func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10
   acc.enter_data copyin(%a : memref<10xf32>) attributes {async}
   acc.enter_data create(%a : memref<10xf32>) attributes {wait}
   acc.enter_data async(%i64Value : i64) copyin(%a : memref<10xf32>)
+  acc.enter_data copyin(%a : memref<10xf32>) async(%i64Value : i64)
   acc.enter_data if(%ifCond) copyin(%a : memref<10xf32>)
   acc.enter_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) copyin(%a : memref<10xf32>)
 
@@ -722,5 +971,148 @@ func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10
 // CHECK: acc.enter_data copyin([[ARGA]] : memref<10xf32>) attributes {async}
 // CHECK: acc.enter_data create([[ARGA]] : memref<10xf32>) attributes {wait}
 // CHECK: acc.enter_data async([[I64VALUE]] : i64) copyin([[ARGA]] : memref<10xf32>)
+// CHECK: acc.enter_data async([[I64VALUE]] : i64) copyin([[ARGA]] : memref<10xf32>)
 // CHECK: acc.enter_data if([[IFCOND]]) copyin([[ARGA]] : memref<10xf32>)
 // CHECK: acc.enter_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) copyin([[ARGA]] : memref<10xf32>)
+
+// -----
+
+func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10xf32>>, %c: memref<10x20xf32>) -> () {
+  %deviceptr = acc.deviceptr varPtr(%a : memref<10xf32>) -> memref<10xf32> {name = "arrayA"}
+  acc.parallel dataOperands(%deviceptr : memref<10xf32>) {
+  }
+
+  %present = acc.present varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  acc.data dataOperands(%present : memref<10xf32>) {
+  }
+
+  %copyin = acc.copyin varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  acc.parallel dataOperands(%copyin : memref<10xf32>) {
+  }
+
+  %copyinreadonly = acc.copyin varPtr(%a : memref<10xf32>) -> memref<10xf32> {dataClause = 2}
+  acc.kernels dataOperands(%copyinreadonly : memref<10xf32>) {
+  }
+
+  %copyinfromcopy = acc.copyin varPtr(%a : memref<10xf32>) -> memref<10xf32> {decomposedFrom = 3}
+  acc.serial dataOperands(%copyinfromcopy : memref<10xf32>) {
+  }
+  acc.copyout accPtr(%copyinfromcopy : memref<10xf32>) to varPtr(%a : memref<10xf32>) {decomposedFrom = 3}
+
+  %create = acc.create varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  %createimplicit = acc.create varPtr(%c : memref<10x20xf32>) -> memref<10x20xf32> {implicit = true}
+  acc.parallel dataOperands(%create, %createimplicit : memref<10xf32>, memref<10x20xf32>) {
+  }
+  acc.delete accPtr(%create : memref<10xf32>) {decomposedFrom = 7}
+  acc.delete accPtr(%createimplicit : memref<10x20xf32>) {decomposedFrom = 7, implicit = true}
+
+  %copyoutzero = acc.create varPtr(%a : memref<10xf32>) -> memref<10xf32> {decomposedFrom = 5}
+  acc.parallel dataOperands(%copyoutzero: memref<10xf32>) {
+  }
+  acc.copyout accPtr(%copyoutzero : memref<10xf32>) to varPtr(%a : memref<10xf32>) {dataClause = 5}
+
+  %attach = acc.attach varPtr(%b : memref<memref<10xf32>>) -> memref<memref<10xf32>>
+  acc.parallel dataOperands(%attach : memref<memref<10xf32>>) {
+  }
+  acc.detach accPtr(%attach : memref<memref<10xf32>>) {decomposedFrom = 10}
+
+  %copyinparent = acc.copyin varPtr(%a : memref<10xf32>) varPtrPtr(%b : memref<memref<10xf32>>) -> memref<10xf32> {decomposedFrom = 3}
+  acc.parallel dataOperands(%copyinparent : memref<10xf32>) {
+  }
+  acc.copyout accPtr(%copyinparent : memref<10xf32>) to varPtr(%a : memref<10xf32>) {decomposedFrom = 3}
+
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c9 = arith.constant 9 : index
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+
+  %bounds1full = acc.bounds lowerbound(%c0 : index) upperbound(%c9 : index) stride(%c1 : index)
+  %copyinfullslice1 = acc.copyin varPtr(%a : memref<10xf32>) bounds(%bounds1full) -> memref<10xf32> {name = "arrayA[0:9]"}
+  // Specify full-bounds but assume that startIdx of array reference is 1.
+  %bounds2full = acc.bounds lowerbound(%c1 : index) upperbound(%c20 : index) extent(%c20 : index) stride(%c4 : index) startIdx(%c1 : index) {strideInBytes = true}
+  %copyinfullslice2 = acc.copyin varPtr(%c : memref<10x20xf32>) bounds(%bounds1full, %bounds2full) -> memref<10x20xf32>
+  acc.parallel dataOperands(%copyinfullslice1, %copyinfullslice2 : memref<10xf32>, memref<10x20xf32>) {
+  }
+
+  %bounds1partial = acc.bounds lowerbound(%c4 : index) upperbound(%c9 : index) stride(%c1 : index)
+  %copyinpartial = acc.copyin varPtr(%a : memref<10xf32>) bounds(%bounds1partial) -> memref<10xf32> {decomposedFrom = 3}
+  acc.parallel dataOperands(%copyinpartial : memref<10xf32>) {
+  }
+  acc.copyout accPtr(%copyinpartial : memref<10xf32>) bounds(%bounds1partial) to varPtr(%a : memref<10xf32>) {decomposedFrom = 3}
+
+  return
+}
+
+// CHECK: func.func @teststructureddataclauseops([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<memref<10xf32>>, [[ARGC:%.*]]: memref<10x20xf32>) {
+// CHECK: [[DEVICEPTR:%.*]] = acc.deviceptr varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {name = "arrayA"}
+// CHECK-NEXT: acc.parallel dataOperands([[DEVICEPTR]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK: [[PRESENT:%.*]] = acc.present varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32>
+// CHECK-NEXT: acc.data dataOperands([[PRESENT]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32>
+// CHECK-NEXT: acc.parallel dataOperands([[COPYIN]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK: [[COPYINRO:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {dataClause = 2 : i64}
+// CHECK-NEXT: acc.kernels dataOperands([[COPYINRO]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK: [[COPYINCOPY:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {decomposedFrom = 3 : i64}
+// CHECK-NEXT: acc.serial dataOperands([[COPYINCOPY]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.copyout accPtr([[COPYINCOPY]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) {decomposedFrom = 3 : i64}
+// CHECK: [[CREATE:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32>
+// CHECK-NEXT: [[CREATEIMP:%.*]] = acc.create varPtr([[ARGC]] : memref<10x20xf32>) -> memref<10x20xf32> {implicit = true}
+// CHECK-NEXT: acc.parallel dataOperands([[CREATE]], [[CREATEIMP]] : memref<10xf32>, memref<10x20xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.delete accPtr([[CREATE]] : memref<10xf32>) {decomposedFrom = 7 : i64}
+// CHECK-NEXT: acc.delete accPtr([[CREATEIMP]] : memref<10x20xf32>) {decomposedFrom = 7 : i64, implicit = true}
+// CHECK: [[COPYOUTZ:%.*]] = acc.create varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {decomposedFrom = 5 : i64}
+// CHECK-NEXT: acc.parallel dataOperands([[COPYOUTZ]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.copyout accPtr([[COPYOUTZ]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) {dataClause = 5 : i64}
+// CHECK: [[ATTACH:%.*]] = acc.attach varPtr([[ARGB]] : memref<memref<10xf32>>) -> memref<memref<10xf32>>
+// CHECK-NEXT: acc.parallel dataOperands([[ATTACH]] : memref<memref<10xf32>>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.detach accPtr([[ATTACH]] : memref<memref<10xf32>>) {decomposedFrom = 10 : i64}
+// CHECK: [[COPYINP:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varPtrPtr([[ARGB]] : memref<memref<10xf32>>) -> memref<10xf32> {decomposedFrom = 3 : i64}
+// CHECK-NEXT: acc.parallel dataOperands([[COPYINP]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.copyout accPtr([[COPYINP]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) {decomposedFrom = 3 : i64}
+// CHECK-DAG: [[CON0:%.*]] = arith.constant 0 : index
+// CHECK-DAG: [[CON1:%.*]] = arith.constant 1 : index
+// CHECK-DAG: [[CON4:%.*]] = arith.constant 4 : index
+// CHECK-DAG: [[CON9:%.*]] = arith.constant 9 : index
+// CHECK-DAG: [[CON20:%.*]] = arith.constant 20 : index
+// CHECK: [[BOUNDS1F:%.*]] = acc.bounds lowerbound([[CON0]] : index) upperbound([[CON9]] : index) stride([[CON1]] : index)
+// CHECK-NEXT: [[COPYINF1:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) bounds([[BOUNDS1F]]) -> memref<10xf32> {name = "arrayA[0:9]"}
+// CHECK-NEXT: [[BOUNDS2F:%.*]] = acc.bounds lowerbound([[CON1]] : index) upperbound([[CON20]] : index) extent([[CON20]] : index) stride([[CON4]] : index) startIdx([[CON1]] : index) {strideInBytes = true}
+// CHECK-NEXT: [[COPYINF2:%.*]] = acc.copyin varPtr([[ARGC]] : memref<10x20xf32>) bounds([[BOUNDS1F]], [[BOUNDS2F]]) -> memref<10x20xf32>
+// CHECK-NEXT: acc.parallel dataOperands([[COPYINF1]], [[COPYINF2]] : memref<10xf32>, memref<10x20xf32>) {
+// CHECK-NEXT: }
+// CHECK: [[BOUNDS1P:%.*]] = acc.bounds lowerbound([[CON4]] : index) upperbound([[CON9]] : index) stride([[CON1]] : index)
+// CHECK-NEXT: [[COPYINPART:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) bounds([[BOUNDS1P]]) -> memref<10xf32> {decomposedFrom = 3 : i64}
+// CHECK-NEXT: acc.parallel dataOperands([[COPYINPART]] : memref<10xf32>) {
+// CHECK-NEXT: }
+// CHECK-NEXT: acc.copyout accPtr([[COPYINPART]] : memref<10xf32>) bounds([[BOUNDS1P]]) to varPtr([[ARGA]] : memref<10xf32>) {decomposedFrom = 3 : i64}
+
+// -----
+
+func.func @testunstructuredclauseops(%a: memref<10xf32>) -> () {
+  %copyin = acc.copyin varPtr(%a : memref<10xf32>) -> memref<10xf32> {structured = false}
+  acc.enter_data dataOperands(%copyin : memref<10xf32>)
+
+  %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) -> memref<10xf32> {decomposedFrom = 4}
+  acc.exit_data dataOperands(%devptr : memref<10xf32>)
+  acc.copyout accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) {structured = false}
+
+  return
+}
+
+// CHECK: func.func @testunstructuredclauseops([[ARGA:%.*]]: memref<10xf32>) {
+// CHECK: [[COPYIN:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {structured = false}
+// CHECK-NEXT: acc.enter_data dataOperands([[COPYIN]] : memref<10xf32>)
+// CHECK: [[DEVPTR:%.*]] = acc.getdeviceptr varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {decomposedFrom = 4 : i64}
+// CHECK-NEXT: acc.exit_data dataOperands([[DEVPTR]] : memref<10xf32>)
+// CHECK-NEXT: acc.copyout accPtr([[DEVPTR]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) {structured = false}

@@ -3496,7 +3496,7 @@ void ARMExidxSyntheticSection::finalizeContents() {
     }
     executableSections = std::move(selectedSections);
   }
-
+  // offset is within the SyntheticSection.
   size_t offset = 0;
   size = 0;
   for (InputSection *isec : executableSections) {
@@ -3538,7 +3538,10 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
            dataOffset += 4)
         write32(buf + offset + dataOffset,
                 read32(d->content().data() + dataOffset));
-      target->relocateAlloc(*d, buf + d->outSecOff);
+      // Recalculate outSecOff as finalizeAddressDependentContent()
+      // may have altered syntheticSection outSecOff.
+      d->outSecOff = offset + outSecOff;
+      target->relocateAlloc(*d, buf + offset);
       offset += d->getSize();
     } else {
       // A Linker generated CANTUNWIND section.

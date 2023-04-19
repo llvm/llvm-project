@@ -6,24 +6,33 @@
 //
 //===----------------------------------------------------------------------===//
 #include "AnalysisInternal.h"
+#include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Testing/TestAST.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace clang::include_cleaner {
 namespace {
+using testing::ElementsAre;
 
 // Specifies a test of which symbols are referenced by a piece of code.
 // Target should contain points annotated with the reference kind.
@@ -31,7 +40,9 @@ namespace {
 //   Target:      int $explicit^foo();
 //   Referencing: int x = ^foo();
 // There must be exactly one referencing location marked.
-void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
+// Returns target decls.
+std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
+                                 llvm::StringRef ReferencingCode) {
   llvm::Annotations Target(TargetCode);
   llvm::Annotations Referencing(ReferencingCode);
 
@@ -51,6 +62,7 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
   FileID TargetFile = SM.translateFile(
       llvm::cantFail(AST.fileManager().getFileRef("target.h")));
 
+  std::vector<Decl::Kind> TargetDecls;
   // Perform the walk, and capture the offsets of the referenced targets.
   std::unordered_map<RefType, std::vector<size_t>> ReferencedOffsets;
   for (Decl *D : AST.context().getTranslationUnitDecl()->decls()) {
@@ -63,6 +75,7 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
       if (NDLoc.first != TargetFile)
         return;
       ReferencedOffsets[RT].push_back(NDLoc.second);
+      TargetDecls.push_back(ND.getKind());
     });
   }
   for (auto &Entry : ReferencedOffsets)
@@ -94,13 +107,14 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
   // If there were any differences, we print the entire referencing code once.
   if (!DiagBuf.empty())
     ADD_FAILURE() << DiagBuf << "\nfrom code:\n" << ReferencingCode;
+  return TargetDecls;
 }
 
 TEST(WalkAST, DeclRef) {
   testWalk("int $explicit^x;", "int y = ^x;");
   testWalk("int $explicit^foo();", "int y = ^foo();");
   testWalk("namespace ns { int $explicit^x; }", "int y = ns::^x;");
-  testWalk("struct S { static int $explicit^x; };", "int y = S::^x;");
+  testWalk("struct $implicit^S { static int x; };", "int y = S::^x;");
   // Canonical declaration only.
   testWalk("extern int $explicit^x; int x;", "int y = ^x;");
   // Return type of `foo` isn't used.
@@ -114,25 +128,129 @@ TEST(WalkAST, TagType) {
   // One explicit call from the TypeLoc in constructor spelling, another
   // implicit reference through the constructor call.
   testWalk("struct $explicit^$implicit^S { static int x; };", "auto y = ^S();");
-  testWalk("template<typename> struct $explicit^Foo {};", "^Foo<int> x;");
-  testWalk(R"cpp(
+}
+
+TEST(WalkAST, ClassTemplates) {
+  // Explicit instantiation and (partial) specialization references primary
+  // template.
+  EXPECT_THAT(testWalk("template<typename> struct $explicit^Foo{};",
+                       "template struct ^Foo<int>;"),
+              ElementsAre(Decl::CXXRecord));
+  EXPECT_THAT(testWalk("template<typename> struct $explicit^Foo{};",
+                       "template<> struct ^Foo<int> {};"),
+              ElementsAre(Decl::CXXRecord));
+  EXPECT_THAT(testWalk("template<typename> struct $explicit^Foo{};",
+                       "template<typename T> struct ^Foo<T*> {};"),
+              ElementsAre(Decl::CXXRecord));
+
+  // Implicit instantiations references most relevant template.
+  EXPECT_THAT(
+      testWalk("template<typename> struct $explicit^Foo;", "^Foo<int> x();"),
+      ElementsAre(Decl::Kind::ClassTemplate));
+  EXPECT_THAT(
+      testWalk("template<typename> struct $explicit^Foo {};", "^Foo<int> x;"),
+      ElementsAre(Decl::CXXRecord));
+  EXPECT_THAT(testWalk(R"cpp(
     template<typename> struct Foo {};
     template<> struct $explicit^Foo<int> {};)cpp",
-           "^Foo<int> x;");
-  testWalk(R"cpp(
+                       "^Foo<int> x;"),
+              ElementsAre(Decl::ClassTemplateSpecialization));
+  EXPECT_THAT(testWalk(R"cpp(
     template<typename> struct Foo {};
-    template<typename T> struct $explicit^Foo<T*> { void x(); };)cpp",
-           "^Foo<int *> x;");
-  testWalk(R"cpp(
-    template<typename> struct Foo {};
-    template struct $explicit^Foo<int>;)cpp",
-           "^Foo<int> x;");
+    template<typename T> struct $explicit^Foo<T*> {};)cpp",
+                       "^Foo<int *> x;"),
+              ElementsAre(Decl::ClassTemplatePartialSpecialization));
+  // Incomplete instantiations don't have a specific specialization associated.
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename> struct $explicit^Foo;
+    template<typename T> struct Foo<T*>;)cpp",
+                       "^Foo<int *> x();"),
+              ElementsAre(Decl::Kind::ClassTemplate));
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename> struct $explicit^Foo {};
+    template struct Foo<int>;)cpp",
+                       "^Foo<int> x;"),
+              ElementsAre(Decl::CXXRecord));
   // FIXME: This is broken due to
   // https://github.com/llvm/llvm-project/issues/42259.
-  testWalk(R"cpp(
+  EXPECT_THAT(testWalk(R"cpp(
     template<typename T> struct $explicit^Foo { Foo(T); };
-    template<> struct Foo<int> { void get(); Foo(int); };)cpp",
-           "^Foo x(3);");
+    template<> struct Foo<int> { Foo(int); };)cpp",
+                       "^Foo x(3);"),
+              ElementsAre(Decl::ClassTemplate));
+}
+TEST(WalkAST, VarTemplates) {
+  // Explicit instantiation and (partial) specialization references primary
+  // template.
+  // FIXME: Explicit instantiations has wrong source location, they point at the
+  // primary template location (hence we drop the reference).
+  EXPECT_THAT(
+      testWalk("template<typename T> T Foo = 0;", "template int ^Foo<int>;"),
+      ElementsAre());
+  EXPECT_THAT(testWalk("template<typename T> T $explicit^Foo = 0;",
+                       "template<> int ^Foo<int> = 2;"),
+              ElementsAre(Decl::Var));
+  EXPECT_THAT(testWalk("template<typename T> T $explicit^Foo = 0;",
+                       "template<typename T> T* ^Foo<T*> = 1;"),
+              ElementsAre(Decl::Var));
+
+  // Implicit instantiations references most relevant template.
+  // FIXME: This points at implicit specialization, instead we should point to
+  // pattern.
+  EXPECT_THAT(testWalk(R"cpp(
+    template <typename T> T $explicit^Foo = 0;)cpp",
+                       "int z = ^Foo<int>;"),
+              ElementsAre(Decl::VarTemplateSpecialization));
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename T> T Foo = 0;
+    template<> int $explicit^Foo<int> = 1;)cpp",
+                       "int x = ^Foo<int>;"),
+              ElementsAre(Decl::VarTemplateSpecialization));
+  // FIXME: This points at implicit specialization, instead we should point to
+  // explicit partial specializaiton pattern.
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename T> T Foo = 0;
+    template<typename T> T* $explicit^Foo<T*> = nullptr;)cpp",
+                       "int *x = ^Foo<int *>;"),
+              ElementsAre(Decl::VarTemplateSpecialization));
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename T> T $explicit^Foo = 0;
+    template int Foo<int>;)cpp",
+                       "int x = ^Foo<int>;"),
+              ElementsAre(Decl::VarTemplateSpecialization));
+}
+TEST(WalkAST, FunctionTemplates) {
+  // Explicit instantiation and (partial) specialization references primary
+  // template.
+  // FIXME: Explicit instantiations has wrong source location, they point at the
+  // primary template location (hence we drop the reference).
+  EXPECT_THAT(testWalk("template<typename T> void foo(T) {}",
+                       "template void ^foo<int>(int);"),
+              ElementsAre());
+  // FIXME: Report specialized template as used from explicit specializations.
+  EXPECT_THAT(testWalk("template<typename T> void foo(T);",
+                       "template<> void ^foo<int>(int);"),
+              ElementsAre());
+  EXPECT_THAT(testWalk("template<typename T> void foo(T) {}",
+                       "template<typename T> void ^foo(T*) {}"),
+              ElementsAre());
+
+  // Implicit instantiations references most relevant template.
+  EXPECT_THAT(testWalk(R"cpp(
+    template <typename T> void $explicit^foo() {})cpp",
+                       "auto x = []{ ^foo<int>(); };"),
+              ElementsAre(Decl::FunctionTemplate));
+  // FIXME: DeclRefExpr points at primary template, not the specialization.
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename T> void $explicit^foo() {}
+    template<> void foo<int>(){})cpp",
+                       "auto x = []{ ^foo<int>(); };"),
+              ElementsAre(Decl::FunctionTemplate));
+  EXPECT_THAT(testWalk(R"cpp(
+    template<typename T> void $explicit^foo() {};
+    template void foo<int>();)cpp",
+                       "auto x = [] { ^foo<int>(); };"),
+              ElementsAre(Decl::FunctionTemplate));
 }
 
 TEST(WalkAST, Alias) {
@@ -215,7 +333,7 @@ TEST(WalkAST, TemplateNames) {
         template <typename T> S(T t) -> S<T>;
       }
       using ns::$explicit^S;)cpp",
-      "^S x(123);");
+           "^S x(123);");
   testWalk("template<typename> struct $explicit^S {};",
            R"cpp(
       template <template <typename> typename> struct X {};
@@ -224,6 +342,13 @@ TEST(WalkAST, TemplateNames) {
 }
 
 TEST(WalkAST, MemberExprs) {
+  testWalk("struct $implicit^S { static int f; };", "void foo() { S::^f; }");
+  testWalk("struct B { static int f; }; struct $implicit^S : B {};",
+           "void foo() { S::^f; }");
+  testWalk("struct B { static void f(); }; struct $implicit^S : B {};",
+           "void foo() { S::^f; }");
+  testWalk("struct B { static void f(); }; ",
+           "struct S : B { void foo() { ^f(); } };");
   testWalk("struct $implicit^S { void foo(); };", "void foo() { S{}.^foo(); }");
   testWalk(
       "struct S { void foo(); }; struct $implicit^X : S { using S::foo; };",

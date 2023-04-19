@@ -52,7 +52,7 @@ By design, the quality of the analysis conducted by :program:`llvm-mca` is
 inevitably affected by the quality of the scheduling models in LLVM.
 
 If you see that the performance report is not accurate for a processor,
-please `file a bug <https://bugs.llvm.org/enter_bug.cgi?product=libraries>`_
+please `file a bug <https://github.com/llvm/llvm-project/issues>`_
 against the appropriate backend.
 
 OPTIONS

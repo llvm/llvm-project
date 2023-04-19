@@ -36,14 +36,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -187,8 +184,7 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
 static bool isLexicographicallyPositive(std::vector<char> &DV) {
-  for (unsigned Level = 0; Level < DV.size(); ++Level) {
-    unsigned char Direction = DV[Level];
+  for (unsigned char Direction : DV) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')

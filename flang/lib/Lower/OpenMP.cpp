@@ -668,15 +668,14 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   }
 }
 
-static void
-createTargetDataOp(Fortran::lower::AbstractConverter &converter,
-                   const Fortran::parser::OmpClauseList &opClauseList,
-                   const llvm::omp::Directive &directive,
-                   Fortran::lower::pft::Evaluation *eval = nullptr) {
+static void createTargetOp(Fortran::lower::AbstractConverter &converter,
+                           const Fortran::parser::OmpClauseList &opClauseList,
+                           const llvm::omp::Directive &directive,
+                           Fortran::lower::pft::Evaluation *eval = nullptr) {
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  mlir::Value ifClauseOperand, deviceOperand;
+  mlir::Value ifClauseOperand, deviceOperand, threadLmtOperand;
   mlir::UnitAttr nowaitAttr;
   llvm::SmallVector<mlir::Value> useDevicePtrOperand, useDeviceAddrOperand,
       mapOperands;
@@ -777,6 +776,11 @@ createTargetDataOp(Fortran::lower::AbstractConverter &converter,
     } else if (std::get_if<Fortran::parser::OmpClause::UseDeviceAddr>(
                    &clause.u)) {
       TODO(currentLocation, "OMPD_target Use Device Addr");
+    } else if (const auto &threadLmtClause =
+                   std::get_if<Fortran::parser::OmpClause::ThreadLimit>(
+                       &clause.u)) {
+      threadLmtOperand = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(threadLmtClause->v), stmtCtx));
     } else if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u)) {
       nowaitAttr = firOpBuilder.getUnitAttr();
     } else if (const auto &mapClause =
@@ -793,7 +797,12 @@ createTargetDataOp(Fortran::lower::AbstractConverter &converter,
       ArrayAttr::get(firOpBuilder.getContext(), mapTypesAttr);
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  if (directive == llvm::omp::Directive::OMPD_target_data) {
+  if (directive == llvm::omp::Directive::OMPD_target) {
+    auto targetOp = firOpBuilder.create<omp::TargetOp>(
+        currentLocation, ifClauseOperand, deviceOperand, threadLmtOperand,
+        nowaitAttr, mapOperands, mapTypesArrayAttr);
+    createBodyOfOp(targetOp, converter, currentLocation, *eval, &opClauseList);
+  } else if (directive == llvm::omp::Directive::OMPD_target_data) {
     auto dataOp = firOpBuilder.create<omp::DataOp>(
         currentLocation, ifClauseOperand, deviceOperand, useDevicePtrOperand,
         useDeviceAddrOperand, mapOperands, mapTypesArrayAttr);
@@ -837,7 +846,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   case llvm::omp::Directive::OMPD_target_data:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
-    createTargetDataOp(converter, opClauseList, directive.v);
+    createTargetOp(converter, opClauseList, directive.v);
     break;
   case llvm::omp::Directive::OMPD_target_update:
     TODO(converter.getCurrentLocation(), "OMPD_target_update");
@@ -1053,6 +1062,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       // Map clause is exclusive to Target Data directives. It is handled
       // as part of the DataOp creation.
       continue;
+    } else if (std::get_if<Fortran::parser::OmpClause::ThreadLimit>(
+                   &clause.u)) {
+      // Handled as part of TargetOp creation.
+      continue;
     } else if (const auto &finalClause =
                    std::get_if<Fortran::parser::OmpClause::Final>(&clause.u)) {
       mlir::Value finalVal = fir::getBase(converter.genExprValue(
@@ -1120,8 +1133,10 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         /*task_reductions=*/nullptr, allocateOperands, allocatorOperands);
     createBodyOfOp(taskGroupOp, converter, currentLocation, eval,
                    &opClauseList);
+  } else if (blockDirective.v == llvm::omp::OMPD_target) {
+    createTargetOp(converter, opClauseList, blockDirective.v, &eval);
   } else if (blockDirective.v == llvm::omp::OMPD_target_data) {
-    createTargetDataOp(converter, opClauseList, blockDirective.v, &eval);
+    createTargetOp(converter, opClauseList, blockDirective.v, &eval);
   } else {
     TODO(converter.getCurrentLocation(), "Unhandled block directive");
   }
@@ -1133,7 +1148,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 ///    1 * x = x
 static int getOperationIdentity(llvm::StringRef reductionOpName,
                                 mlir::Location loc) {
-  if (reductionOpName.contains("add") || reductionOpName.contains("or"))
+  if (reductionOpName.contains("add") || reductionOpName.contains("or") ||
+      reductionOpName.contains("neqv"))
     return 0;
   if (reductionOpName.contains("multiply") || reductionOpName.contains("and") ||
       reductionOpName.contains("eqv"))
@@ -1309,6 +1325,16 @@ static omp::ReductionDeclareOp createReductionDecl(
     reductionOp = builder.createConvert(loc, type, cmpiOp);
     break;
   }
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV: {
+    Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
+    Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
+
+    Value cmpiOp = builder.create<mlir::arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne, op1I1, op2I1);
+
+    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    break;
+  }
   default:
     TODO(loc, "Reduction of some intrinsic operators is not supported");
   }
@@ -1406,6 +1432,8 @@ static std::string getReductionName(
     return "eqv_reduction";
   case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
     return "or_reduction";
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return "neqv_reduction";
   default:
     reductionName = "other_reduction";
     break;
@@ -1514,6 +1542,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
           break;
 
         default:
@@ -2279,6 +2308,7 @@ void Fortran::lower::genOpenMPReduction(
         case Fortran::parser::DefinedOperator::IntrinsicOperator::AND:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::EQV:
         case Fortran::parser::DefinedOperator::IntrinsicOperator::OR:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::NEQV:
           break;
         default:
           continue;
@@ -2337,7 +2367,8 @@ void Fortran::lower::genOpenMPReduction(
                     // Match the pattern here.
                     mlir::Operation *reductionOp =
                         findReductionChain(loadVal, &reductionVal);
-                    if (reductionOp == nullptr) continue;
+                    if (reductionOp == nullptr)
+                      continue;
                     assert(mlir::isa<mlir::arith::SelectOp>(reductionOp) &&
                            "Selection Op not found in reduction intrinsic");
                     mlir::Operation *compareOp =

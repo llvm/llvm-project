@@ -85,7 +85,7 @@
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: InlinerPass
 ; CHECK-O-NEXT: Running pass: PostOrderFunctionAttrsPass
-; CHECK-O3-NEXT: Running pass: ArgumentPromotionPass
+; CHECK-O-NEXT: Running pass: ArgumentPromotionPass
 ; CHECK-O2-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O3-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)
 ; CHECK-O-NEXT: Running pass: SROAPass
@@ -147,7 +147,6 @@
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
-; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass on loop

@@ -1105,6 +1105,15 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_ds_add_gs_reg_rtn:
+  case Intrinsic::amdgcn_ds_sub_gs_reg_rtn: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
+    Info.ptrVal = nullptr;
+    Info.fallbackAddressSpace = AMDGPUAS::STREAMOUT_REGISTER;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    return true;
+  }
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1408,14 +1417,13 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
+  }
 
-  } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return isLegalMUBUFAddressingMode(AM);
-  } else if (AS == AMDGPUAS::LOCAL_ADDRESS ||
-             AS == AMDGPUAS::REGION_ADDRESS) {
-    if (AS == AMDGPUAS::REGION_ADDRESS && !AMDGPU::hasGDS(*Subtarget))
-      return false;
 
+  if (AS == AMDGPUAS::LOCAL_ADDRESS ||
+      (AS == AMDGPUAS::REGION_ADDRESS && Subtarget->hasGDS())) {
     // Basic, single offset DS instructions allow a 16-bit unsigned immediate
     // field.
     // XXX - If doing a 4-byte aligned 8-byte type access, we effectively have
@@ -1430,8 +1438,9 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       return true;
 
     return false;
-  } else if (AS == AMDGPUAS::FLAT_ADDRESS ||
-             AS == AMDGPUAS::UNKNOWN_ADDRESS_SPACE) {
+  }
+
+  if (AS == AMDGPUAS::FLAT_ADDRESS || AS == AMDGPUAS::UNKNOWN_ADDRESS_SPACE) {
     // For an unknown address space, this usually means that this is for some
     // reason being used for pure arithmetic, and not based on some addressing
     // computation. We don't have instructions that compute pointers with any
@@ -6934,7 +6943,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx6,
                                      NumVDataDwords, NumVAddrDwords);
   }
-  assert(Opcode != -1);
+  if (Opcode == -1)
+    return Op;
 
   MachineSDNode *NewNode = DAG.getMachineNode(Opcode, DL, ResultTypes, Ops);
   if (auto MemOp = dyn_cast<MemSDNode>(Op)) {
@@ -11745,8 +11755,7 @@ SDValue SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
   if (N->getValueType(0) != MVT::i32)
     return SDValue();
 
-  auto C = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!C || C->getZExtValue() != 0)
+  if (!isNullConstant(N->getOperand(1)))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

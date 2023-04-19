@@ -1236,16 +1236,13 @@ Expected<StringRef> ELFFile<ELFT>::getSectionName(const Elf_Shdr &Section,
 /// This function returns the hash value for a symbol in the .dynsym section
 /// Name of the API remains consistent as specified in the libelf
 /// REF : http://www.sco.com/developers/gabi/latest/ch5.dynamic.html#hash
-inline unsigned hashSysV(StringRef SymbolName) {
-  unsigned h = 0, g;
-  for (char C : SymbolName) {
-    h = (h << 4) + C;
-    g = h & 0xf0000000L;
-    if (g != 0)
-      h ^= g >> 24;
-    h &= ~g;
+inline uint32_t hashSysV(StringRef SymbolName) {
+  uint32_t H = 0;
+  for (uint8_t C : SymbolName) {
+    H = (H << 4) + C;
+    H ^= (H >> 24) & 0xf0;
   }
-  return h;
+  return H & 0x0fffffff;
 }
 
 /// This function returns the hash value for a symbol in the .dynsym section

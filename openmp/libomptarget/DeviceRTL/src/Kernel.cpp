@@ -40,7 +40,7 @@ static void genericStateMachine(IdentTy *Ident) {
     ParallelRegionFnTy WorkFn = nullptr;
 
     // Wait for the signal that we have a new work function.
-    synchronize::threads();
+    synchronize::threads(atomic::seq_cst);
 
     // Retrieve the work function from the runtime.
     bool IsActive = __kmpc_kernel_parallel(&WorkFn);
@@ -56,7 +56,7 @@ static void genericStateMachine(IdentTy *Ident) {
       __kmpc_kernel_end_parallel();
     }
 
-    synchronize::threads();
+    synchronize::threads(atomic::seq_cst);
 
   } while (true);
 }
@@ -74,7 +74,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
       Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   if (IsSPMD) {
     inititializeRuntime(/* IsSPMD */ true);
-    synchronize::threadsAligned();
+    synchronize::threadsAligned(atomic::relaxed);
   } else {
     inititializeRuntime(/* IsSPMD */ false);
     // No need to wait since only the main threads will execute user
@@ -83,6 +83,10 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 
   if (IsSPMD) {
     state::assumeInitialState(IsSPMD);
+
+    // Synchronize to ensure the assertions above are in an aligned region.
+    // The barrier is eliminated later.
+    synchronize::threadsAligned(atomic::relaxed);
     return -1;
   }
 
@@ -132,7 +136,7 @@ void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
   FunctionTracingRAII();
   const bool IsSPMD =
       Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
-  state::assumeInitialState(IsSPMD);
+
   if (IsSPMD)
     return;
 

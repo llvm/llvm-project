@@ -60,10 +60,10 @@ public:
   recursive_directory_iterator(const path& __p, error_code& __ec)
       : recursive_directory_iterator(__p, directory_options::none, &__ec) {}
 
-  recursive_directory_iterator(const recursive_directory_iterator&) = default;
-  recursive_directory_iterator(recursive_directory_iterator&&) = default;
+  _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator(const recursive_directory_iterator&) = default;
+  _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator(recursive_directory_iterator&&) = default;
 
-  recursive_directory_iterator&
+  _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator&
   operator=(const recursive_directory_iterator&) = default;
 
   _LIBCPP_INLINE_VISIBILITY
@@ -77,7 +77,7 @@ public:
     return *this;
   }
 
-  ~recursive_directory_iterator() = default;
+  _LIBCPP_HIDE_FROM_ABI ~recursive_directory_iterator() = default;
 
   _LIBCPP_INLINE_VISIBILITY
   const directory_entry& operator*() const { return __dereference(); }
@@ -85,7 +85,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   const directory_entry* operator->() const { return &__dereference(); }
 
-  recursive_directory_iterator& operator++() { return __increment(); }
+  _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator& operator++() { return __increment(); }
 
   _LIBCPP_INLINE_VISIBILITY
   __dir_element_proxy operator++(int) {

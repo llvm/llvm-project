@@ -84,40 +84,38 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
-                    RegisterContext *reg_ctx, const RegisterInfo *reg_info) {
-    if (reg_info) {
-      RegisterValue reg_value;
+                    RegisterContext &reg_ctx, const RegisterInfo &reg_info,
+                    bool print_flags) {
+    RegisterValue reg_value;
+    if (!reg_ctx.ReadRegister(&reg_info, reg_value))
+      return false;
 
-      if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        strm.Indent();
+    strm.Indent();
 
-        bool prefix_with_altname = (bool)m_command_options.alternate_name;
-        bool prefix_with_name = !prefix_with_altname;
-        DumpRegisterValue(reg_value, &strm, reg_info, prefix_with_name,
-                          prefix_with_altname, m_format_options.GetFormat(), 8,
-                          exe_ctx.GetBestExecutionContextScope());
-        if ((reg_info->encoding == eEncodingUint) ||
-            (reg_info->encoding == eEncodingSint)) {
-          Process *process = exe_ctx.GetProcessPtr();
-          if (process && reg_info->byte_size == process->GetAddressByteSize()) {
-            addr_t reg_addr = reg_value.GetAsUInt64(LLDB_INVALID_ADDRESS);
-            if (reg_addr != LLDB_INVALID_ADDRESS) {
-              Address so_reg_addr;
-              if (exe_ctx.GetTargetRef()
-                      .GetSectionLoadList()
-                      .ResolveLoadAddress(reg_addr, so_reg_addr)) {
-                strm.PutCString("  ");
-                so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
-                                 Address::DumpStyleResolvedDescription);
-              }
-            }
+    bool prefix_with_altname = (bool)m_command_options.alternate_name;
+    bool prefix_with_name = !prefix_with_altname;
+    DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
+                      prefix_with_altname, m_format_options.GetFormat(), 8,
+                      exe_ctx.GetBestExecutionContextScope(), print_flags,
+                      exe_ctx.GetTargetSP());
+    if ((reg_info.encoding == eEncodingUint) ||
+        (reg_info.encoding == eEncodingSint)) {
+      Process *process = exe_ctx.GetProcessPtr();
+      if (process && reg_info.byte_size == process->GetAddressByteSize()) {
+        addr_t reg_addr = reg_value.GetAsUInt64(LLDB_INVALID_ADDRESS);
+        if (reg_addr != LLDB_INVALID_ADDRESS) {
+          Address so_reg_addr;
+          if (exe_ctx.GetTargetRef().GetSectionLoadList().ResolveLoadAddress(
+                  reg_addr, so_reg_addr)) {
+            strm.PutCString("  ");
+            so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
+                             Address::DumpStyleResolvedDescription);
           }
         }
-        strm.EOL();
-        return true;
       }
     }
-    return false;
+    strm.EOL();
+    return true;
   }
 
   bool DumpRegisterSet(const ExecutionContext &exe_ctx, Stream &strm,
@@ -142,7 +140,8 @@ public:
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
 
-        if (DumpRegister(exe_ctx, strm, reg_ctx, reg_info))
+        if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
+                                     /*print_flags=*/false))
           ++available_count;
         else
           ++unavailable_count;
@@ -162,7 +161,6 @@ protected:
     Stream &strm = result.GetOutputStream();
     RegisterContext *reg_ctx = m_exe_ctx.GetRegisterContext();
 
-    const RegisterInfo *reg_info = nullptr;
     if (command.GetArgumentCount() == 0) {
       size_t set_idx;
 
@@ -215,10 +213,10 @@ protected:
           auto arg_str = entry.ref();
           arg_str.consume_front("$");
 
-          reg_info = reg_ctx->GetRegisterInfoByName(arg_str);
-
-          if (reg_info) {
-            if (!DumpRegister(m_exe_ctx, strm, reg_ctx, reg_info))
+          if (const RegisterInfo *reg_info =
+                  reg_ctx->GetRegisterInfoByName(arg_str)) {
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
+                              /*print_flags=*/true))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'.\n",

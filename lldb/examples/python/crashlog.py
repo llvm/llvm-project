@@ -80,6 +80,7 @@ class CrashLog(symbolication.Symbolicator):
         def __init__(self, index, app_specific_backtrace):
             self.index = index
             self.id = index
+            self.images = list()
             self.frames = list()
             self.idents = list()
             self.registers = dict()
@@ -456,6 +457,11 @@ class JSONCrashLogParser(CrashLogParser):
         except:
             return None
 
+    def __init__(self, debugger, path, verbose):
+        super().__init__(debugger, path, verbose)
+        # List of DarwinImages sorted by their index.
+        self.images = list()
+
     def parse(self):
         try:
             self.parse_process_info(self.data)
@@ -506,19 +512,19 @@ class JSONCrashLogParser(CrashLogParser):
                                   exception_extra)
 
     def parse_images(self, json_images):
-        idx = 0
         for json_image in json_images:
             img_uuid = uuid.UUID(json_image['uuid'])
             low = int(json_image['base'])
-            high = int(0)
+            high = low + int(
+                json_image['size']) if 'size' in json_image else low
             name = json_image['name'] if 'name' in json_image else ''
             path = json_image['path'] if 'path' in json_image else ''
             version = ''
             darwin_image = self.crashlog.DarwinImage(low, high, name, version,
                                                      img_uuid, path,
                                                      self.verbose)
+            self.images.append(darwin_image)
             self.crashlog.images.append(darwin_image)
-            idx += 1
 
     def parse_main_image(self, json_data):
         if 'procName' in json_data:
@@ -538,6 +544,17 @@ class JSONCrashLogParser(CrashLogParser):
             frame_offset = int(json_frame['imageOffset'])
             image_addr = self.get_used_image(image_id)['base']
             pc = image_addr + frame_offset
+
+            if 'symbol' in json_frame:
+                symbol = json_frame['symbol']
+                location = int(json_frame['symbolLocation'])
+                image = self.images[image_id]
+                image.symbols[symbol] = {
+                    "name": symbol,
+                    "type": "code",
+                    "address": frame_offset - location
+                }
+
             thread.frames.append(self.crashlog.Frame(idx, pc, frame_offset))
 
             # on arm64 systems, if it jump through a null function pointer,
@@ -1014,40 +1031,25 @@ def SymbolicateCrashLog(crash_log, options):
     target = crash_log.create_target()
     if not target:
         return
-    exe_module = target.GetModuleAtIndex(0)
-    images_to_load = list()
-    loaded_images = list()
+
+
     if options.load_all_images:
-        # --load-all option was specified, load everything up
         for image in crash_log.images:
-            images_to_load.append(image)
-    else:
-        # Only load the images found in stack frames for the crashed threads
-        if options.crashed_only:
-            for thread in crash_log.threads:
-                if thread.did_crash():
-                    for ident in thread.idents:
-                        images = crash_log.find_images_with_identifier(ident)
-                        if images:
-                            for image in images:
-                                images_to_load.append(image)
-                        else:
-                            print('error: can\'t find image for identifier "%s"' % ident)
-        else:
-            for ident in crash_log.idents:
-                images = crash_log.find_images_with_identifier(ident)
-                if images:
-                    for image in images:
-                        images_to_load.append(image)
-                else:
-                    print('error: can\'t find image for identifier "%s"' % ident)
+            image.resolve = True
+    elif options.crashed_only:
+        for thread in crash_log.threads:
+            if thread.did_crash():
+                for ident in thread.idents:
+                    for image in self.crashlog.find_images_with_identifier(ident):
+                        image.resolve = True
 
     futures = []
+    loaded_images = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         def add_module(image, target):
             return image, image.add_module(target)
 
-        for image in images_to_load:
+        for image in crash_log.images:
             futures.append(executor.submit(add_module, image=image, target=target))
 
         for future in concurrent.futures.as_completed(futures):
@@ -1110,11 +1112,16 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     launch_info.SetProcessPluginName("ScriptedProcess")
     launch_info.SetScriptedProcessClassName("crashlog_scripted_process.CrashLogScriptedProcess")
     launch_info.SetScriptedProcessDictionary(structured_data)
+    launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
+
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
     if not process or error.Fail():
         raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
+
+    process.GetScriptedImplementation().set_crashlog(crashlog)
+    process.Continue()
 
     if not options.skip_status:
         @contextlib.contextmanager

@@ -529,7 +529,7 @@ def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
-                    "$_self.cast<ShapedType>().getElementType()">]>,
+                    "$_self.cast<VectorType>().getElementType()">]>,
     Arguments<(ins AnyVectorOfAnyRank:$vector,
                    Optional<AnySignlessIntegerOrIndex>:$position)>,
     Results<(outs AnyType:$result)> {
@@ -644,7 +644,7 @@ def Vector_InsertElementOp :
   Vector_Op<"insertelement", [Pure,
      TypesMatchWith<"source operand type matches element type of result",
                     "result", "source",
-                    "$_self.cast<ShapedType>().getElementType()">,
+                    "$_self.cast<VectorType>().getElementType()">,
      AllTypesMatch<["dest", "result"]>]>,
      Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest,
                     Optional<AnySignlessIntegerOrIndex>:$position)>,
@@ -1884,23 +1884,15 @@ def Vector_GatherOp :
        : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
   }];
+
   let extraClassDeclaration = [{
-    ShapedType getBaseType() {
-      return getBase().getType().cast<ShapedType>();
-    }
-    VectorType getIndexVectorType() {
-      return getIndexVec().getType().cast<VectorType>();
-    }
-    VectorType getMaskVectorType() {
-      return getMask().getType().cast<VectorType>();
-    }
-    VectorType getPassThruVectorType() {
-      return getPassThru().getType().cast<VectorType>();
-    }
-    VectorType getVectorType() {
-      return getResult().getType().cast<VectorType>();
-    }
+    ShapedType getBaseType() { return getBase().getType(); }
+    VectorType getIndexVectorType() { return getIndexVec().getType(); }
+    VectorType getMaskVectorType() { return getMask().getType(); }
+    VectorType getPassThruVectorType() { return getPassThru().getType(); }
+    VectorType getVectorType() { return getResult().getType(); }
   }];
+
   let assemblyFormat =
     "$base `[` $indices `]` `[` $index_vec `]` `,` "
     "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
@@ -1960,20 +1952,14 @@ def Vector_ScatterOp :
         : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
     ```
   }];
+
   let extraClassDeclaration = [{
-    MemRefType getMemRefType() {
-      return getBase().getType().cast<MemRefType>();
-    }
-    VectorType getIndexVectorType() {
-      return getIndexVec().getType().cast<VectorType>();
-    }
-    VectorType getMaskVectorType() {
-      return getMask().getType().cast<VectorType>();
-    }
-    VectorType getVectorType() {
-      return getValueToStore().getType().cast<VectorType>();
-    }
+    MemRefType getMemRefType() { return getBase().getType(); }
+    VectorType getIndexVectorType() { return getIndexVec().getType(); }
+    VectorType getMaskVectorType() { return getMask().getType(); }
+    VectorType getVectorType() { return getValueToStore().getType(); }
   }];
+
   let assemblyFormat =
       "$base `[` $indices `]` `[` $index_vec `]` `,` "
       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
@@ -2321,6 +2307,11 @@ def Vector_CreateMaskOp :
             3 | 0    0    0
     ```
   }];
+
+  let builders = [
+    // Build with mixed static/dynamic operands.
+    OpBuilder<(ins "VectorType":$type, "ArrayRef<OpFoldResult>":$mixedOperands)>
+  ];
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;

@@ -14,6 +14,7 @@
 #define LLVMIR_OPS
 
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "mlir/Dialect/LLVMIR/LLVMEnums.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/FunctionInterfaces.td"

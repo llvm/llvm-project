@@ -31,9 +31,9 @@ public:
 
     ~WatchpointEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override;
+    llvm::StringRef GetFlavor() const override;
 
     lldb::WatchpointEventType GetWatchpointEventType() const;
 

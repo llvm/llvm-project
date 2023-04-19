@@ -3567,12 +3567,12 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   }
 
   if (VS.isOverrideSpecified())
-    Member->addAttr(OverrideAttr::Create(Context, VS.getOverrideLoc(),
-                                         AttributeCommonInfo::AS_Keyword));
+    Member->addAttr(OverrideAttr::Create(Context, VS.getOverrideLoc()));
   if (VS.isFinalSpecified())
-    Member->addAttr(FinalAttr::Create(
-        Context, VS.getFinalLoc(), AttributeCommonInfo::AS_Keyword,
-        static_cast<FinalAttr::Spelling>(VS.isFinalSpelledSealed())));
+    Member->addAttr(FinalAttr::Create(Context, VS.getFinalLoc(),
+                                      VS.isFinalSpelledSealed()
+                                          ? FinalAttr::Keyword_sealed
+                                          : FinalAttr::Keyword_final));
 
   if (VS.getLastLocation().isValid()) {
     // Update the end location of a method that has a virt-specifiers.
@@ -7758,6 +7758,10 @@ protected:
 
     //   followed by the non-static data members of C
     for (FieldDecl *Field : Record->fields()) {
+      // C++23 [class.bit]p2:
+      //   Unnamed bit-fields are not members ...
+      if (Field->isUnnamedBitfield())
+        continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
         if (visitSubobjects(Results, Field->getType()->getAsCXXRecordDecl(),
@@ -16820,19 +16824,20 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       if (InnerCond && isa<ConceptSpecializationExpr>(InnerCond)) {
         // Drill down into concept specialization expressions to see why they
         // weren't satisfied.
-        Diag(StaticAssertLoc, diag::err_static_assert_failed)
-          << !AssertMessage << Msg.str() << AssertExpr->getSourceRange();
+        Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
+            << !AssertMessage << Msg.str() << AssertExpr->getSourceRange();
         ConstraintSatisfaction Satisfaction;
         if (!CheckConstraintSatisfaction(InnerCond, Satisfaction))
           DiagnoseUnsatisfiedConstraint(Satisfaction);
       } else if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond)
                            && !isa<IntegerLiteral>(InnerCond)) {
-        Diag(StaticAssertLoc, diag::err_static_assert_requirement_failed)
-          << InnerCondDescription << !AssertMessage
-          << Msg.str() << InnerCond->getSourceRange();
+        Diag(InnerCond->getBeginLoc(),
+             diag::err_static_assert_requirement_failed)
+            << InnerCondDescription << !AssertMessage << Msg.str()
+            << InnerCond->getSourceRange();
         DiagnoseStaticAssertDetails(InnerCond);
       } else {
-        Diag(StaticAssertLoc, diag::err_static_assert_failed)
+        Diag(AssertExpr->getBeginLoc(), diag::err_static_assert_failed)
             << !AssertMessage << Msg.str() << AssertExpr->getSourceRange();
         PrintContextStack();
       }

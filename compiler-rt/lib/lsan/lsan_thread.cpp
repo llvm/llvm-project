@@ -25,9 +25,12 @@ namespace __lsan {
 
 static ThreadRegistry *thread_registry;
 
+static Mutex mu_for_thread_context;
+static LowLevelAllocator allocator_for_thread_context;
+
 static ThreadContextBase *CreateThreadContext(u32 tid) {
-  void *mem = MmapOrDie(sizeof(ThreadContext), "ThreadContext");
-  return new (mem) ThreadContext(tid);
+  Lock lock(&mu_for_thread_context);
+  return new (allocator_for_thread_context) ThreadContext(tid);
 }
 
 void InitializeThreadRegistry() {
@@ -39,9 +42,12 @@ void InitializeThreadRegistry() {
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)
     : ThreadContextBase(tid) {}
 
+void ThreadContextLsanBase::OnStarted(void *arg) { SetCurrentThread(this); }
+
 void ThreadContextLsanBase::OnFinished() {
   AllocatorThreadFinish();
   DTLS_Destroy();
+  SetCurrentThread(nullptr);
 }
 
 u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
@@ -51,26 +57,13 @@ u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
 void ThreadContextLsanBase::ThreadStart(u32 tid, tid_t os_id,
                                         ThreadType thread_type, void *arg) {
   thread_registry->StartThread(tid, os_id, thread_type, arg);
-  SetCurrentThread(tid);
 }
 
-void ThreadFinish() {
-  thread_registry->FinishThread(GetCurrentThread());
-  SetCurrentThread(kInvalidTid);
-}
-
-ThreadContext *CurrentThreadContext() {
-  if (!thread_registry)
-    return nullptr;
-  if (GetCurrentThread() == kInvalidTid)
-    return nullptr;
-  // No lock needed when getting current thread.
-  return (ThreadContext *)thread_registry->GetThreadLocked(GetCurrentThread());
-}
+void ThreadFinish() { thread_registry->FinishThread(GetCurrentThreadId()); }
 
 void EnsureMainThreadIDIsCorrect() {
-  if (GetCurrentThread() == kMainTid)
-    CurrentThreadContext()->os_id = GetTid();
+  if (GetCurrentThreadId() == kMainTid)
+    GetCurrentThread()->os_id = GetTid();
 }
 
 ///// Interface to the common LSan module. /////

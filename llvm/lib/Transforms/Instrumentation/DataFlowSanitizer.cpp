@@ -95,8 +95,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -1256,7 +1254,7 @@ void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
   size_t Pos = Asm.find(SearchStr);
   if (Pos != std::string::npos) {
     Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
-    Pos = Asm.find("@");
+    Pos = Asm.find('@');
 
     if (Pos == std::string::npos)
       report_fatal_error(Twine("unsupported .symver: ", Asm));

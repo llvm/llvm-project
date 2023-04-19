@@ -489,7 +489,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
     // Static "shapes" are in fact "sizes".
     fillDimShape(rewriter, loc, dstTp, dstDimSizes);
   else
-    genReshapeDstShape(loc, rewriter, dstDimSizes, srcDimSizes,
+    genReshapeDstShape(rewriter, loc, dstDimSizes, srcDimSizes,
                        dstTp.getDimShape(), op.getReassociationIndices());
   const Value coo =
       params.genBuffers(dstTp, dstDimSizes).genNewCall(Action::kEmptyCOO);

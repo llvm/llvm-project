@@ -126,6 +126,12 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (NumBytes == 0)
       NumBytes = 4;
     break;
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+  case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+    // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
+    NumBytes = 36;
+    break;
+
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
@@ -7694,7 +7700,6 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
     RangeBegin = MI.getIterator();
     ++RangeLen;
-    continue;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.

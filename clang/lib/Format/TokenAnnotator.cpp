@@ -421,8 +421,7 @@ private:
           FormatToken *Next = CurrentToken->Next;
           if (PrevPrev && PrevPrev->is(tok::identifier) &&
               Prev->isOneOf(tok::star, tok::amp, tok::ampamp) &&
-              CurrentToken->is(tok::identifier) &&
-              !Next->isOneOf(tok::equal, tok::l_brace)) {
+              CurrentToken->is(tok::identifier) && Next->isNot(tok::equal)) {
             Prev->setType(TT_BinaryOperator);
             LookForDecls = false;
           }
@@ -1313,11 +1312,34 @@ private:
       if (Style.isCSharp()) {
         // `Type?)`, `Type?>`, `Type? name;` and `Type? name =` can only be
         // nullable types.
+
+        // `Type?)`, `Type?>`, `Type? name;`
+        if (Tok->Next &&
+            (Tok->Next->startsSequence(tok::question, tok::r_paren) ||
+             Tok->Next->startsSequence(tok::question, tok::greater) ||
+             Tok->Next->startsSequence(tok::question, tok::identifier,
+                                       tok::semi))) {
+          Tok->setType(TT_CSharpNullable);
+          break;
+        }
+
+        // `Type? name =`
+        if (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
+            Tok->Next->Next->is(tok::equal)) {
+          Tok->setType(TT_CSharpNullable);
+          break;
+        }
+
         // Line.MustBeDeclaration will be true for `Type? name;`.
-        if ((!Contexts.back().IsExpression && Line.MustBeDeclaration) ||
-            (Tok->Next && Tok->Next->isOneOf(tok::r_paren, tok::greater)) ||
-            (Tok->Next && Tok->Next->is(tok::identifier) && Tok->Next->Next &&
-             Tok->Next->Next->is(tok::equal))) {
+        // But not
+        // cond ? "A" : "B";
+        // cond ? id : "B";
+        // cond ? cond2 ? "A" : "B" : "C";
+        if (!Contexts.back().IsExpression && Line.MustBeDeclaration &&
+            (!Tok->Next ||
+             !Tok->Next->isOneOf(tok::identifier, tok::string_literal) ||
+             !Tok->Next->Next ||
+             !Tok->Next->Next->isOneOf(tok::colon, tok::question))) {
           Tok->setType(TT_CSharpNullable);
           break;
         }
@@ -1819,7 +1841,7 @@ private:
              Previous && Previous->Previous &&
              !Previous->Previous->isOneOf(tok::comma, tok::semi);
              Previous = Previous->Previous) {
-          if (Previous->isOneOf(tok::r_square, tok::r_paren)) {
+          if (Previous->isOneOf(tok::r_square, tok::r_paren, tok::greater)) {
             Previous = Previous->MatchingParen;
             if (!Previous)
               break;
@@ -2517,12 +2539,6 @@ private:
       return TT_PointerOrReference;
     }
 
-    // if (Class* obj { function() })
-    if (PrevToken->Tok.isAnyIdentifier() && NextToken->Tok.isAnyIdentifier() &&
-        NextToken->Next && NextToken->Next->is(tok::l_brace)) {
-      return TT_PointerOrReference;
-    }
-
     if (PrevToken->endsSequence(tok::r_square, tok::l_square, tok::kw_delete))
       return TT_UnaryOperator;
 
@@ -3032,8 +3048,8 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && Line->isComment() &&
-        NextNonCommentLine->First->NewlinesBefore <= 1 &&
+    if (NextNonCommentLine && !NextNonCommentLine->First->Finalized &&
+        Line->isComment() && NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
             Line->First->OriginalColumn) {
       const bool PPDirectiveOrImportStmt =
@@ -3707,9 +3723,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       LeftParen = &Left;
     else if (Right.is(tok::r_paren) && Right.MatchingParen)
       LeftParen = Right.MatchingParen;
-    if (LeftParen && LeftParen->Previous &&
-        isKeywordWithCondition(*LeftParen->Previous)) {
-      return true;
+    if (LeftParen) {
+      if (LeftParen->is(TT_ConditionLParen))
+        return true;
+      if (LeftParen->Previous && isKeywordWithCondition(*LeftParen->Previous))
+        return true;
     }
   }
 
@@ -3922,6 +3940,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       }
     }
   }
+  if (Style.isCSharp() && Left.is(Keywords.kw_is) && Right.is(tok::l_square))
+    return true;
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
         return Style.SpacesInContainerLiterals ||

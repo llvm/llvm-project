@@ -300,7 +300,9 @@ enum class InstrProfKind {
   FunctionEntryOnly = 0x20,
   // A memory profile collected using -fprofile=memory.
   MemProf = 0x40,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/MemProf)
+  // A temporal profile.
+  TemporalProfile = 0x80,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/TemporalProfile)
 };
 
 const std::error_category &instrprof_category();
@@ -329,6 +331,13 @@ enum class instrprof_error {
   uncompress_failed,
   empty_raw_profile,
   zlib_unavailable
+};
+
+/// An ordered list of functions identified by their NameRef found in
+/// INSTR_PROF_DATA
+struct TemporalProfTraceTy {
+  uint64_t Weight = 1;
+  std::vector<uint64_t> FunctionNameRefs;
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -1052,7 +1061,9 @@ enum ProfVersion {
   Version8 = 8,
   // Binary ids are added.
   Version9 = 9,
-  // The current version is 9.
+  // An additional (optional) temporal profile traces section is added.
+  Version10 = 10,
+  // The current version is 10.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1071,6 +1082,7 @@ struct Header {
   uint64_t HashOffset;
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;
+  uint64_t TemporalProfTracesOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.

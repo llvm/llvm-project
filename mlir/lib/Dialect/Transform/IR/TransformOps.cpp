@@ -8,9 +8,12 @@
 
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
+#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -18,11 +21,16 @@
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
 #define DEBUG_TYPE "transform-dialect"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
+
+#define DEBUG_TYPE_MATCHER "transform-matcher"
+#define DBGS_MATCHER() (llvm::dbgs() << "[" DEBUG_TYPE_MATCHER "] ")
+#define DEBUG_MATCHER(x) DEBUG_WITH_TYPE(DEBUG_TYPE_MATCHER, x)
 
 using namespace mlir;
 
@@ -35,6 +43,11 @@ static void printSequenceOpOperands(OpAsmPrinter &printer, Operation *op,
                                     Value root, Type rootType,
                                     ValueRange extraBindings,
                                     TypeRange extraBindingTypes);
+static void printForeachMatchSymbols(OpAsmPrinter &printer, Operation *op,
+                                     ArrayAttr matchers, ArrayAttr actions);
+static ParseResult parseForeachMatchSymbols(OpAsmParser &parser,
+                                            ArrayAttr &matchers,
+                                            ArrayAttr &actions);
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
@@ -181,6 +194,16 @@ bool transform::TrackingListener::isNewOp(Operation *op) const {
   return it->second.contains(op);
 }
 
+LogicalResult transform::TrackingListener::notifyMatchFailure(
+    Location loc, function_ref<void(Diagnostic &)> reasonCallback) {
+  LLVM_DEBUG({
+    Diagnostic diag(loc, DiagnosticSeverity::Remark);
+    reasonCallback(diag);
+    DBGS() << "Match Failure : " << diag.str() << "\n";
+  });
+  return failure();
+}
+
 void transform::TrackingListener::notifyOperationInserted(Operation *op) {
   newOps[op->getName()].insert(op);
 }
@@ -200,6 +223,19 @@ void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
   });
 }
 
+/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
+/// properly dominates `b` and `b` is not inside `a`.
+static bool happensBefore(Operation *a, Operation *b) {
+  do {
+    if (a->isProperAncestor(b))
+      return false;
+    if (Operation *bAncestor = a->getBlock()->findAncestorOpInBlock(*b)) {
+      return a->isBeforeInBlock(bAncestor);
+    }
+  } while ((a = a->getParentOp()));
+  return false;
+}
+
 void transform::TrackingListener::notifyOperationReplaced(
     Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
@@ -210,13 +246,30 @@ void transform::TrackingListener::notifyOperationReplaced(
     (void)replacePayloadValue(oldValue, newValue);
 
   // Replace op handle.
-  Operation *replacement = findReplacementOp(op, newValues);
-  if (succeeded(replacePayloadOp(op, replacement))) {
-    // If the op is tracked but no replacement op was found, send a
-    // notification.
-    if (!replacement)
-      notifyPayloadReplacementNotFound(op, newValues);
+  SmallVector<Value> opHandles;
+  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
+    // Op is not tracked.
+    return;
   }
+  auto hasAliveUser = [&]() {
+    for (Value v : opHandles)
+      for (Operation *user : v.getUsers())
+        if (!happensBefore(user, transformOp))
+          return true;
+    return false;
+  };
+  if (!hasAliveUser()) {
+    // The op is tracked but the corresponding handles are dead.
+    (void)replacePayloadOp(op, nullptr);
+    return;
+  }
+
+  Operation *replacement = findReplacementOp(op, newValues);
+  // If the op is tracked but no replacement op was found, send a
+  // notification.
+  if (!replacement)
+    notifyPayloadReplacementNotFound(op, newValues);
+  (void)replacePayloadOp(op, replacement);
 }
 
 //===----------------------------------------------------------------------===//
@@ -258,25 +311,6 @@ static void forwardEmptyOperands(Block *block, transform::TransformState &state,
                                  transform::TransformResults &results) {
   for (const auto &res : block->getParentOp()->getOpResults())
     results.set(res, {});
-}
-
-static void forwardTerminatorOperands(Block *block,
-                                      transform::TransformState &state,
-                                      transform::TransformResults &results) {
-  for (auto &&[terminatorOperand, result] :
-       llvm::zip(block->getTerminator()->getOperands(),
-                 block->getParentOp()->getOpResults())) {
-    if (result.getType().isa<transform::TransformHandleTypeInterface>()) {
-      results.set(result, state.getPayloadOps(terminatorOperand));
-    } else if (result.getType()
-                   .isa<transform::TransformValueHandleTypeInterface>()) {
-      results.setValues(result, state.getPayloadValues(terminatorOperand));
-    } else {
-      assert(result.getType().isa<transform::TransformParamTypeInterface>() &&
-             "unhandled transform type interface");
-      results.setParams(result, state.getParams(terminatorOperand));
-    }
-  }
 }
 
 DiagnosedSilenceableFailure
@@ -339,7 +373,8 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
     if (!failed) {
       // We will be using the clones, so cancel their scheduled deletion.
       deleteClones.release();
-      IRRewriter rewriter(getContext());
+      TrackingListener listener(state, *this);
+      IRRewriter rewriter(getContext(), &listener);
       for (const auto &kvp : llvm::zip(originals, clones)) {
         Operation *original = std::get<0>(kvp);
         Operation *clone = std::get<1>(kvp);
@@ -347,7 +382,7 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
                                                      clone);
         rewriter.replaceOp(original, clone->getResults());
       }
-      forwardTerminatorOperands(&reg.front(), state, results);
+      detail::forwardTerminatorOperands(&reg.front(), state, results);
       return DiagnosedSilenceableFailure::success();
     }
   }
@@ -408,6 +443,339 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
         return ty
             .isa<pdl::OperationType, transform::TransformHandleTypeInterface>();
       });
+}
+
+//===----------------------------------------------------------------------===//
+// ForeachMatchOp
+//===----------------------------------------------------------------------===//
+
+/// Applies matcher operations from the given `block` assigning `op` as the
+/// payload of the block's first argument. Updates `state` accordingly. If any
+/// of the matcher produces a silenceable failure, discards it (printing the
+/// content to the debug output stream) and returns failure. If any of the
+/// matchers produces a definite failure, reports it and returns failure. If all
+/// matchers in the block succeed, populates `mappings` with the payload
+/// entities associated with the block terminator operands.
+static DiagnosedSilenceableFailure
+matchBlock(Block &block, Operation *op, transform::TransformState &state,
+           SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings) {
+  assert(block.getParent() && "cannot match using a detached block");
+  auto matchScope = state.make_isolated_region_scope(*block.getParent());
+  if (failed(state.mapBlockArgument(block.getArgument(0), {op})))
+    return DiagnosedSilenceableFailure::definiteFailure();
+
+  for (Operation &match : block.without_terminator()) {
+    if (!isa<transform::MatchOpInterface>(match)) {
+      return emitDefiniteFailure(match.getLoc())
+             << "expected operations in the match part to "
+                "implement MatchOpInterface";
+    }
+    DiagnosedSilenceableFailure diag =
+        state.applyTransform(cast<transform::TransformOpInterface>(match));
+    if (diag.succeeded())
+      continue;
+
+    return diag;
+  }
+
+  // Remember the values mapped to the terminator operands so we can
+  // forward them to the action.
+  ValueRange yieldedValues = block.getTerminator()->getOperands();
+  transform::detail::prepareValueMappings(mappings, yieldedValues, state);
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+transform::ForeachMatchOp::apply(transform::TransformResults &results,
+                                 transform::TransformState &state) {
+  SmallVector<std::pair<FunctionOpInterface, FunctionOpInterface>>
+      matchActionPairs;
+  matchActionPairs.reserve(getMatchers().size());
+  SymbolTableCollection symbolTable;
+  for (auto &&[matcher, action] :
+       llvm::zip_equal(getMatchers(), getActions())) {
+    auto matcherSymbol =
+        symbolTable.lookupNearestSymbolFrom<FunctionOpInterface>(
+            getOperation(), cast<SymbolRefAttr>(matcher));
+    auto actionSymbol =
+        symbolTable.lookupNearestSymbolFrom<FunctionOpInterface>(
+            getOperation(), cast<SymbolRefAttr>(action));
+    assert(matcherSymbol && actionSymbol &&
+           "unresolved symbols not caught by the verifier");
+
+    if (matcherSymbol.isExternal())
+      return emitDefiniteFailure() << "unresolved external symbol " << matcher;
+    if (actionSymbol.isExternal())
+      return emitDefiniteFailure() << "unresolved external symbol " << action;
+
+    matchActionPairs.emplace_back(matcherSymbol, actionSymbol);
+  }
+
+  for (Operation *root : state.getPayloadOps(getRoot())) {
+    WalkResult walkResult = root->walk([&](Operation *op) {
+      // Skip over the root op itself so we don't invalidate it.
+      if (op == root)
+        return WalkResult::advance();
+
+      DEBUG_MATCHER({
+        DBGS_MATCHER() << "matching ";
+        op->print(llvm::dbgs(),
+                  OpPrintingFlags().assumeVerified().skipRegions());
+        llvm::dbgs() << " @" << op << "\n";
+      });
+
+      // Try all the match/action pairs until the first successful match.
+      for (auto [matcher, action] : matchActionPairs) {
+        SmallVector<SmallVector<MappedValue>> mappings;
+        DiagnosedSilenceableFailure diag =
+            matchBlock(matcher.getFunctionBody().front(), op, state, mappings);
+        if (diag.isDefiniteFailure())
+          return WalkResult::interrupt();
+        if (diag.isSilenceableFailure()) {
+          DEBUG_MATCHER(DBGS_MATCHER() << "matcher " << matcher.getName()
+                                       << " failed: " << diag.getMessage());
+          continue;
+        }
+
+        auto scope = state.make_isolated_region_scope(action.getFunctionBody());
+        for (auto &&[arg, map] : llvm::zip_equal(
+                 action.getFunctionBody().front().getArguments(), mappings)) {
+          if (failed(state.mapBlockArgument(arg, map)))
+            return WalkResult::interrupt();
+        }
+
+        for (Operation &transform :
+             action.getFunctionBody().front().without_terminator()) {
+          DiagnosedSilenceableFailure result =
+              state.applyTransform(cast<TransformOpInterface>(transform));
+          if (failed(result.checkAndReport()))
+            return WalkResult::interrupt();
+        }
+        break;
+      }
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted())
+      return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  // The root operation should not have been affected, so we can just reassign
+  // the payload to the result. Note that we need to consume the root handle to
+  // make sure any handles to operations inside, that could have been affected
+  // by actions, are invalidated.
+  results.set(getUpdated().cast<OpResult>(), state.getPayloadOps(getRoot()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ForeachMatchOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // Bail if invalid.
+  if (getOperation()->getNumOperands() < 1 ||
+      getOperation()->getNumResults() < 1) {
+    return modifiesPayload(effects);
+  }
+
+  consumesHandle(getRoot(), effects);
+  producesHandle(getUpdated(), effects);
+  modifiesPayload(effects);
+}
+
+/// Parses the comma-separated list of symbol reference pairs of the format
+/// `@matcher -> @action`.
+static ParseResult parseForeachMatchSymbols(OpAsmParser &parser,
+                                            ArrayAttr &matchers,
+                                            ArrayAttr &actions) {
+  StringAttr matcher;
+  StringAttr action;
+  SmallVector<Attribute> matcherList;
+  SmallVector<Attribute> actionList;
+  do {
+    if (parser.parseSymbolName(matcher) || parser.parseArrow() ||
+        parser.parseSymbolName(action)) {
+      return failure();
+    }
+    matcherList.push_back(SymbolRefAttr::get(matcher));
+    actionList.push_back(SymbolRefAttr::get(action));
+  } while (parser.parseOptionalComma().succeeded());
+
+  matchers = parser.getBuilder().getArrayAttr(matcherList);
+  actions = parser.getBuilder().getArrayAttr(actionList);
+  return success();
+}
+
+/// Prints the comma-separated list of symbol reference pairs of the format
+/// `@matcher -> @action`.
+static void printForeachMatchSymbols(OpAsmPrinter &printer, Operation *op,
+                                     ArrayAttr matchers, ArrayAttr actions) {
+  printer.increaseIndent();
+  printer.increaseIndent();
+  for (auto &&[matcher, action, idx] : llvm::zip_equal(
+           matchers, actions, llvm::seq<unsigned>(0, matchers.size()))) {
+    printer.printNewline();
+    printer << cast<SymbolRefAttr>(matcher) << " -> "
+            << cast<SymbolRefAttr>(action);
+    if (idx != matchers.size() - 1)
+      printer << ", ";
+  }
+  printer.decreaseIndent();
+  printer.decreaseIndent();
+}
+
+LogicalResult transform::ForeachMatchOp::verify() {
+  if (getMatchers().size() != getActions().size())
+    return emitOpError() << "expected the same number of matchers and actions";
+  if (getMatchers().empty())
+    return emitOpError() << "expected at least one match/action pair";
+
+  llvm::SmallPtrSet<Attribute, 8> matcherNames;
+  for (Attribute name : getMatchers()) {
+    if (matcherNames.insert(name).second)
+      continue;
+    emitWarning() << "matcher " << name
+                  << " is used more than once, only the first match will apply";
+  }
+
+  return success();
+}
+
+/// Returns `true` if both types implement one of the interfaces provided as
+/// template parameters.
+template <typename... Tys>
+static bool implementSameInterface(Type t1, Type t2) {
+  return ((isa<Tys>(t1) && isa<Tys>(t2)) || ... || false);
+}
+
+/// Returns `true` if both types implement one of the transform dialect
+/// interfaces.
+static bool implementSameTransformInterface(Type t1, Type t2) {
+  return implementSameInterface<transform::TransformHandleTypeInterface,
+                                transform::TransformParamTypeInterface,
+                                transform::TransformValueHandleTypeInterface>(
+      t1, t2);
+}
+
+/// Checks that the attributes of the function-like operation have correct
+/// consumption effect annotations. If `alsoVerifyInternal`, checks for
+/// annotations being present even if they can be inferred from the body.
+static DiagnosedSilenceableFailure
+verifyFunctionLikeConsumeAnnotations(FunctionOpInterface op,
+                                     bool alsoVerifyInternal = false) {
+  auto transformOp = cast<transform::TransformOpInterface>(op.getOperation());
+  llvm::SmallDenseSet<unsigned> consumedArguments;
+  if (!op.isExternal()) {
+    transform::getConsumedBlockArguments(op.getFunctionBody().front(),
+                                         consumedArguments);
+  }
+  for (unsigned i = 0, e = op.getNumArguments(); i < e; ++i) {
+    bool isConsumed =
+        op.getArgAttr(i, transform::TransformDialect::kArgConsumedAttrName) !=
+        nullptr;
+    bool isReadOnly =
+        op.getArgAttr(i, transform::TransformDialect::kArgReadOnlyAttrName) !=
+        nullptr;
+    if (isConsumed && isReadOnly) {
+      return transformOp.emitSilenceableError()
+             << "argument #" << i << " cannot be both readonly and consumed";
+    }
+    if ((op.isExternal() || alsoVerifyInternal) && !isConsumed && !isReadOnly) {
+      return transformOp.emitSilenceableError()
+             << "must provide consumed/readonly status for arguments of "
+                "external or called ops";
+    }
+    if (op.isExternal())
+      continue;
+
+    if (consumedArguments.contains(i) && !isConsumed && isReadOnly) {
+      return transformOp.emitSilenceableError()
+             << "argument #" << i
+             << " is consumed in the body but is not marked as such";
+    }
+    if (!consumedArguments.contains(i) && isConsumed) {
+      Diagnostic warning(op->getLoc(), DiagnosticSeverity::Warning);
+      warning << "argument #" << i
+              << " is not consumed in the body but is marked as consumed";
+      return DiagnosedSilenceableFailure::silenceableFailure(
+          std::move(warning));
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult transform::ForeachMatchOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  assert(getMatchers().size() == getActions().size());
+  auto consumedAttr =
+      StringAttr::get(getContext(), TransformDialect::kArgConsumedAttrName);
+  for (auto &&[matcher, action] :
+       llvm::zip_equal(getMatchers(), getActions())) {
+    auto matcherSymbol = dyn_cast_or_null<FunctionOpInterface>(
+        symbolTable.lookupNearestSymbolFrom(getOperation(),
+                                            cast<SymbolRefAttr>(matcher)));
+    auto actionSymbol = dyn_cast_or_null<FunctionOpInterface>(
+        symbolTable.lookupNearestSymbolFrom(getOperation(),
+                                            cast<SymbolRefAttr>(action)));
+    if (!matcherSymbol ||
+        !isa<TransformOpInterface>(matcherSymbol.getOperation()))
+      return emitError() << "unresolved matcher symbol " << matcher;
+    if (!actionSymbol ||
+        !isa<TransformOpInterface>(actionSymbol.getOperation()))
+      return emitError() << "unresolved action symbol " << action;
+
+    if (failed(verifyFunctionLikeConsumeAnnotations(matcherSymbol,
+                                                    /*alsoVerifyInternal=*/true)
+                   .checkAndReport())) {
+      return failure();
+    }
+    if (failed(verifyFunctionLikeConsumeAnnotations(actionSymbol,
+                                                    /*alsoVerifyInternal=*/true)
+                   .checkAndReport())) {
+      return failure();
+    }
+
+    ArrayRef<Type> matcherResults = matcherSymbol.getResultTypes();
+    ArrayRef<Type> actionArguments = actionSymbol.getArgumentTypes();
+    if (matcherResults.size() != actionArguments.size()) {
+      return emitError() << "mismatching number of matcher results and "
+                            "action arguments between "
+                         << matcher << " (" << matcherResults.size() << ") and "
+                         << action << " (" << actionArguments.size() << ")";
+    }
+    for (auto &&[i, matcherType, actionType] :
+         llvm::enumerate(matcherResults, actionArguments)) {
+      if (implementSameTransformInterface(matcherType, actionType))
+        continue;
+
+      return emitError() << "mismatching type interfaces for matcher result "
+                            "and action argument #"
+                         << i;
+    }
+
+    if (!actionSymbol.getResultTypes().empty()) {
+      InFlightDiagnostic diag =
+          emitError() << "action symbol is not expected to have results";
+      diag.attachNote(actionSymbol->getLoc()) << "symbol declaration";
+      return diag;
+    }
+
+    if (matcherSymbol.getArgumentTypes().size() != 1 ||
+        !implementSameTransformInterface(matcherSymbol.getArgumentTypes()[0],
+                                         getRoot().getType())) {
+      InFlightDiagnostic diag =
+          emitOpError() << "expects matcher symbol to have one argument with "
+                           "the same transform interface as the first operand";
+      diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
+      return diag;
+    }
+
+    if (matcherSymbol.getArgAttr(0, consumedAttr)) {
+      InFlightDiagnostic diag =
+          emitOpError()
+          << "does not expect matcher symbol to consume its operand";
+      diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
+      return diag;
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -649,7 +1017,7 @@ applySequenceBlock(Block &block, transform::FailurePropagationMode mode,
 
   // Forward the operation mapping for values yielded from the sequence to the
   // values produced by the sequence op.
-  forwardTerminatorOperands(&block, state, results);
+  transform::detail::forwardTerminatorOperands(&block, state, results);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -760,57 +1128,6 @@ void transform::IncludeOp::getEffects(
   }
 }
 
-template <typename... Tys>
-static bool implementSameInterface(Type t1, Type t2) {
-  return ((isa<Tys>(t1) && isa<Tys>(t2)) || ... || false);
-}
-
-/// Checks that the attributes of the named sequence operation have correct
-/// consumption effect annotations. If `alsoVerifyInternal`, checks for
-/// annotations being present even if they can be inferred from the body.
-static DiagnosedSilenceableFailure
-verifyNamedSequenceConsumeAnnotations(transform::NamedSequenceOp op,
-                                      bool alsoVerifyInternal = false) {
-  llvm::SmallDenseSet<unsigned> consumedArguments;
-  if (!op.isExternal()) {
-    transform::getConsumedBlockArguments(op.getBody().front(),
-                                         consumedArguments);
-  }
-  for (unsigned i = 0, e = op.getFunctionType().getNumInputs(); i < e; ++i) {
-    bool isConsumed =
-        op.getArgAttr(i, transform::TransformDialect::kArgConsumedAttrName) !=
-        nullptr;
-    bool isReadOnly =
-        op.getArgAttr(i, transform::TransformDialect::kArgReadOnlyAttrName) !=
-        nullptr;
-    if (isConsumed && isReadOnly) {
-      return op.emitSilenceableError()
-             << "argument #" << i << " cannot be both readonly and consumed";
-    }
-    if ((op.isExternal() || alsoVerifyInternal) && !isConsumed && !isReadOnly) {
-      return op.emitSilenceableError()
-             << "must provide consumed/readonly status for arguments of "
-                "external or called ops";
-    }
-    if (op.isExternal())
-      continue;
-
-    if (consumedArguments.contains(i) && !isConsumed && isReadOnly) {
-      return op.emitSilenceableError()
-             << "argument #" << i
-             << " is consumed in the body but is not marked as such";
-    }
-    if (!consumedArguments.contains(i) && isConsumed) {
-      Diagnostic warning(op->getLoc(), DiagnosticSeverity::Warning);
-      warning << "argument #" << i
-              << " is not consumed in the body but is marked as consumed";
-      return DiagnosedSilenceableFailure::silenceableFailure(
-          std::move(warning));
-    }
-  }
-  return DiagnosedSilenceableFailure::success();
-}
-
 LogicalResult
 transform::IncludeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Access through indirection and do additional checking because this may be
@@ -842,19 +1159,129 @@ transform::IncludeOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i) {
     Type resultType = getResult(i).getType();
     Type funcType = fnType.getResult(i);
-    if (!implementSameInterface<TransformHandleTypeInterface,
-                                TransformValueHandleTypeInterface,
-                                TransformParamTypeInterface>(resultType,
-                                                             funcType)) {
+    if (!implementSameTransformInterface(resultType, funcType)) {
       return emitOpError() << "type of result #" << i
                            << " must implement the same transform dialect "
                               "interface as the corresponding callee result";
     }
   }
 
-  return verifyNamedSequenceConsumeAnnotations(target,
-                                               /*alsoVerifyInternal=*/true)
+  return verifyFunctionLikeConsumeAnnotations(
+             cast<FunctionOpInterface>(*target),
+             /*alsoVerifyInternal=*/true)
       .checkAndReport();
+}
+
+//===----------------------------------------------------------------------===//
+// MatchOperationNameOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::MatchOperationNameOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  StringRef currentOpName = current->getName().getStringRef();
+  for (auto acceptedAttr : getOpNames().getAsRange<StringAttr>()) {
+    if (acceptedAttr.getValue() == currentOpName)
+      return DiagnosedSilenceableFailure::success();
+  }
+  return emitSilenceableError() << "wrong operation name";
+}
+
+//===----------------------------------------------------------------------===//
+// MatchParamCmpIOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchParamCmpIOp::apply(transform::TransformResults &results,
+                                   transform::TransformState &state) {
+  auto signedAPIntAsString = [&](APInt value) {
+    std::string str;
+    llvm::raw_string_ostream os(str);
+    value.print(os, /*isSigned=*/true);
+    return os.str();
+  };
+
+  ArrayRef<Attribute> params = state.getParams(getParam());
+  ArrayRef<Attribute> references = state.getParams(getReference());
+
+  if (params.size() != references.size()) {
+    return emitSilenceableError()
+           << "parameters have different payload lengths (" << params.size()
+           << " vs " << references.size() << ")";
+  }
+
+  for (auto &&[i, param, reference] : llvm::enumerate(params, references)) {
+    auto intAttr = param.dyn_cast<IntegerAttr>();
+    auto refAttr = reference.dyn_cast<IntegerAttr>();
+    if (!intAttr || !refAttr) {
+      return emitDefiniteFailure()
+             << "non-integer parameter value not expected";
+    }
+    if (intAttr.getType() != refAttr.getType()) {
+      return emitDefiniteFailure()
+             << "mismatching integer attribute types in parameter #" << i;
+    }
+    APInt value = intAttr.getValue();
+    APInt refValue = refAttr.getValue();
+
+    // TODO: this copy will not be necessary in C++20.
+    int64_t position = i;
+    auto reportError = [&](StringRef direction) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "expected parameter to be " << direction
+                                 << " " << signedAPIntAsString(refValue)
+                                 << ", got " << signedAPIntAsString(value);
+      diag.attachNote(getParam().getLoc())
+          << "value # " << position
+          << " associated with the parameter defined here";
+      return diag;
+    };
+
+    switch (getPredicate()) {
+    case MatchCmpIPredicate::eq:
+      if (value.eq(refValue))
+        break;
+      return reportError("equal to");
+    case MatchCmpIPredicate::ne:
+      if (value.ne(refValue))
+        break;
+      return reportError("not equal to");
+    case MatchCmpIPredicate::lt:
+      if (value.slt(refValue))
+        break;
+      return reportError("less than");
+    case MatchCmpIPredicate::le:
+      if (value.sle(refValue))
+        break;
+      return reportError("less than or equal to");
+    case MatchCmpIPredicate::gt:
+      if (value.sgt(refValue))
+        break;
+      return reportError("greater than");
+    case MatchCmpIPredicate::ge:
+      if (value.sge(refValue))
+        break;
+      return reportError("greater than or equal to");
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::MatchParamCmpIOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getParam(), effects);
+  onlyReadsHandle(getReference(), effects);
+}
+
+//===----------------------------------------------------------------------===//
+// ParamConstantOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ParamConstantOp::apply(transform::TransformResults &results,
+                                  transform::TransformState &state) {
+  results.setParams(cast<OpResult>(getParam()), {getValue()});
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -932,6 +1359,60 @@ void transform::NamedSequenceOp::print(OpAsmPrinter &printer) {
       getResAttrsAttrName());
 }
 
+/// Verifies that a symbol function-like transform dialect operation has the
+/// signature and the terminator that have conforming types, i.e., types
+/// implementing the same transform dialect type interface. If `allowExternal`
+/// is set, allow external symbols (declarations) and don't check the terminator
+/// as it may not exist.
+static DiagnosedSilenceableFailure
+verifyYieldingSingleBlockOp(FunctionOpInterface op, bool allowExternal) {
+  if (auto parent = op->getParentOfType<transform::TransformOpInterface>()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableFailure(op)
+        << "cannot be defined inside another transform op";
+    diag.attachNote(parent.getLoc()) << "ancestor transform op";
+    return diag;
+  }
+
+  if (op.isExternal() || op.getFunctionBody().empty()) {
+    if (allowExternal)
+      return DiagnosedSilenceableFailure::success();
+
+    return emitSilenceableFailure(op) << "cannot be external";
+  }
+
+  if (op.getFunctionBody().front().empty())
+    return emitSilenceableFailure(op) << "expected a non-empty body block";
+
+  Operation *terminator = &op.getFunctionBody().front().back();
+  if (!isa<transform::YieldOp>(terminator)) {
+    DiagnosedSilenceableFailure diag = emitSilenceableFailure(op)
+                                       << "expected '"
+                                       << transform::YieldOp::getOperationName()
+                                       << "' as terminator";
+    diag.attachNote(terminator->getLoc()) << "terminator";
+    return diag;
+  }
+
+  if (terminator->getNumOperands() != op.getResultTypes().size()) {
+    return emitSilenceableFailure(terminator)
+           << "expected terminator to have as many operands as the parent op "
+              "has results";
+  }
+  for (auto [i, operandType, resultType] : llvm::zip_equal(
+           llvm::seq<unsigned>(0, terminator->getNumOperands()),
+           terminator->getOperands().getType(), op.getResultTypes())) {
+    if (operandType == resultType)
+      continue;
+    return emitSilenceableFailure(terminator)
+           << "the type of the terminator operand #" << i
+           << " must match the type of the corresponding parent op result ("
+           << operandType << " vs " << resultType << ")";
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
 /// Verification of a NamedSequenceOp. This does not report the error
 /// immediately, so it can be used to check for op's well-formedness before the
 /// verifier runs, e.g., during trait verification.
@@ -959,7 +1440,7 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op) {
   }
 
   if (op.isExternal() || op.getBody().empty())
-    return verifyNamedSequenceConsumeAnnotations(op);
+    return verifyFunctionLikeConsumeAnnotations(cast<FunctionOpInterface>(*op));
 
   if (op.getBody().front().empty())
     return emitSilenceableFailure(op) << "expected a non-empty body block";
@@ -991,7 +1472,14 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op) {
            << operandType << " vs " << resultType << ")";
   }
 
-  return verifyNamedSequenceConsumeAnnotations(op);
+  auto funcOp = cast<FunctionOpInterface>(*op);
+  DiagnosedSilenceableFailure diag =
+      verifyFunctionLikeConsumeAnnotations(funcOp);
+  if (!diag.succeeded())
+    return diag;
+
+  return verifyYieldingSingleBlockOp(funcOp,
+                                     /*allowExternal=*/true);
 }
 
 LogicalResult transform::NamedSequenceOp::verify() {

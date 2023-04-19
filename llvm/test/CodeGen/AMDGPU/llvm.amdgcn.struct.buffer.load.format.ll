@@ -2,7 +2,8 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefixes=GFX6 %s
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefixes=GFX8PLUS %s
 ;RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck --check-prefixes=GFX11 %s
-;RUN: llc < %s -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck --check-prefixes=GFX12 %s
+;RUN: llc < %s -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck --check-prefixes=GFX12,GFX12-SDAG %s
+;RUN: llc < %s -global-isel -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck --check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 ; GFX6-LABEL: buffer_load:
@@ -351,12 +352,19 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_24bit(<4 x i32> inreg) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: buffer_load_voffset_large_24bit:
-; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_dual_mov_b32 v1, 0x800000 :: v_dual_mov_b32 v0, 0
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null idxen offen offset:8388604
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: buffer_load_voffset_large_24bit:
+; GFX12-SDAG:       ; %bb.0: ; %main_body
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0x800000 :: v_dual_mov_b32 v0, 0
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null idxen offen offset:8388604
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: buffer_load_voffset_large_24bit:
+; GFX12-GISEL:       ; %bb.0: ; %main_body
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x800000
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null idxen offen offset:8388604
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %data = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %0, i32 0, i32 16777212, i32 0, i32 0)
   ret <4 x float> %data

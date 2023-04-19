@@ -191,7 +191,7 @@ cc_library(
         # To avoid a dependency cycle.
         "include/llvm/Option/*.h",
     ]) + select({
-        "@bazel_tools//src/conditions:windows": glob([
+        "@platforms//os:windows": glob([
             "lib/Support/Windows/*.h",
             "lib/Support/Windows/*.inc",
         ]),
@@ -255,8 +255,8 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:freebsd": [
+        "@platforms//os:windows": [],
+        "@platforms//os:freebsd": [
             "-pthread",
             "-lexecinfo",
             "-ldl",
@@ -1038,7 +1038,6 @@ cc_library(
         ],
     ) + [
         "include/llvm-c/Analysis.h",
-        "include/llvm-c/Initialization.h",
     ],
     copts = llvm_copts,
     textual_hdrs = glob([
@@ -1124,7 +1123,7 @@ cc_library(
         "lib/TargetParser/*.cpp",
         "lib/TargetParser/*.h",
     ]) + select({
-        "@bazel_tools//src/conditions:windows": glob([
+        "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.h",
             "lib/TargetParser/Windows/*.inc",
         ]),
@@ -1218,7 +1217,6 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
-        ":InstCombineTableGen",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -1777,6 +1775,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-searchable-tables", "lib/Target/AMDGPU/AMDGPUGenSearchableTables.inc"),
         ],
         "tbl_deps": [
+            ":InstCombineTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -2105,7 +2104,7 @@ gentbl(
         # MSVC isn't happy with long string literals, while other compilers
         # which support them get significant compile time improvements with
         # them enabled. Ideally this flag would only be enabled on Windows via
-        # a select() on `@bazel_tools//src/conditions:windows,`, but that would
+        # a select() on `@platforms//os:windows,`, but that would
         # require refactoring gentbl from a macro into a rule.
         # TODO(#92): Refactor gentbl to support this use
         tblgen_args = "--long-string-literals=0",
@@ -2581,9 +2580,9 @@ cc_library(
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:freebsd": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:freebsd": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-lrt",
         ],
@@ -2647,9 +2646,9 @@ cc_library(
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:freebsd": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:freebsd": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-lrt",
         ],
@@ -3012,8 +3011,8 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -3521,8 +3520,8 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -4471,8 +4470,8 @@ cc_binary(
     ]),
     copts = llvm_copts,
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
     stamp = 0,
@@ -4701,8 +4700,8 @@ cc_binary(
     # isn't even used in the main binary, so we also need to force it
     # to be included.
     linkopts = select({
-        "@bazel_tools//src/conditions:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
+        "@platforms//os:windows": [],
+        "@platforms//os:macos": [],
         "//conditions:default": [
             "-rdynamic",
             "-u_ZTIi",

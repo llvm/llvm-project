@@ -397,8 +397,10 @@ public:
 
   MCFragment *getFragment(bool SetUsed = true) const {
     MCFragment *Fragment = FragmentAndHasName.getPointer();
-    if (Fragment || !isVariable())
+    if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
+    // If the symbol is a non-weak alias, get information about
+    // the aliasee. (Don't try to resolve weak aliases.)
     Fragment = getVariableValue(SetUsed)->findAssociatedFragment();
     FragmentAndHasName.setPointer(Fragment);
     return Fragment;

@@ -41,8 +41,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/User.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
@@ -981,7 +979,7 @@ PartialInlinerImpl::FunctionCloner::FunctionCloner(
 
   // Go through all Outline Candidate Regions and update all BasicBlock
   // information.
-  for (FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegionInfo :
+  for (const FunctionOutliningMultiRegionInfo::OutlineRegionInfo &RegionInfo :
        OI->ORI) {
     SmallVector<BasicBlock *, 8> Region;
     for (BasicBlock *BB : RegionInfo.Region)

@@ -63,12 +63,29 @@ void transform::LowerContractionOp::populatePatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// LowerMaskOp
+// LowerMasksOp
 //===----------------------------------------------------------------------===//
 
-void transform::LowerMaskOp::populatePatterns(RewritePatternSet &patterns) {
+void transform::LowerMasksOp::populatePatterns(RewritePatternSet &patterns) {
   populateVectorMaskOpLoweringPatterns(patterns);
+}
+
+//===----------------------------------------------------------------------===//
+// LowerMaskedTransfersOp
+//===----------------------------------------------------------------------===//
+
+void transform::LowerMaskedTransfersOp::populatePatterns(
+    RewritePatternSet &patterns) {
   populateVectorMaskLoweringPatternsForSideEffectingOps(patterns);
+}
+
+//===----------------------------------------------------------------------===//
+// MaterializeMasksOp
+//===----------------------------------------------------------------------===//
+
+void transform::MaterializeMasksOp::populatePatterns(RewritePatternSet &patterns) {
+  populateVectorMaskMaterializationPatterns(patterns,
+                                            /*force32BitVectorIndices=*/false);
 }
 
 //===----------------------------------------------------------------------===//

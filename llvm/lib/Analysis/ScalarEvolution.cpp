@@ -1212,7 +1212,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
   }
 
   // Return zero if truncating to known zeros.
-  uint32_t MinTrailingZeros = GetMinTrailingZeros(Op);
+  uint32_t MinTrailingZeros = getMinTrailingZeros(Op);
   if (MinTrailingZeros >= getTypeSizeInBits(Ty))
     return getZero(Ty);
 
@@ -1497,7 +1497,7 @@ static APInt extractConstantWithoutWrapping(ScalarEvolution &SE,
   // Find number of trailing zeros of (x + y + ...) w/o the C first:
   uint32_t TZ = BitWidth;
   for (unsigned I = 1, E = WholeAddExpr->getNumOperands(); I < E && TZ; ++I)
-    TZ = std::min(TZ, SE.GetMinTrailingZeros(WholeAddExpr->getOperand(I)));
+    TZ = std::min(TZ, SE.getMinTrailingZeros(WholeAddExpr->getOperand(I)));
   if (TZ) {
     // Set D to be as many least significant bits of C as possible while still
     // guaranteeing that adding D to (C - D + x + y + ...) won't cause a wrap:
@@ -1514,7 +1514,7 @@ static APInt extractConstantWithoutWrapping(ScalarEvolution &SE,
                                             const APInt &ConstantStart,
                                             const SCEV *Step) {
   const unsigned BitWidth = ConstantStart.getBitWidth();
-  const uint32_t TZ = SE.GetMinTrailingZeros(Step);
+  const uint32_t TZ = SE.getMinTrailingZeros(Step);
   if (TZ)
     return TZ < BitWidth ? ConstantStart.trunc(TZ).zext(BitWidth)
                          : ConstantStart;
@@ -3192,9 +3192,20 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
           for (const SCEV *AddRecOp : AddRec->operands())
             Operands.push_back(getMulExpr(Ops[0], AddRecOp, SCEV::FlagAnyWrap,
                                           Depth + 1));
-
+          // Let M be the minimum representable signed value. AddRec with nsw
+          // multiplied by -1 can have signed overflow if and only if it takes a
+          // value of M: M * (-1) would stay M and (M + 1) * (-1) would be the
+          // maximum signed value. In all other cases signed overflow is
+          // impossible.
+          auto FlagsMask = SCEV::FlagNW;
+          if (hasFlags(AddRec->getNoWrapFlags(), SCEV::FlagNSW)) {
+            auto MinInt =
+                APInt::getSignedMinValue(getTypeSizeInBits(AddRec->getType()));
+            if (getSignedRangeMin(AddRec) != MinInt)
+              FlagsMask = setFlags(FlagsMask, SCEV::FlagNSW);
+          }
           return getAddRecExpr(Operands, AddRec->getLoop(),
-                               AddRec->getNoWrapFlags(SCEV::FlagNW));
+                               AddRec->getNoWrapFlags(FlagsMask));
         }
       }
     }
@@ -6270,27 +6281,19 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
   return getGEPExpr(GEP, IndexExprs);
 }
 
-uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
+uint32_t ScalarEvolution::getMinTrailingZerosImpl(const SCEV *S) {
   switch (S->getSCEVType()) {
   case scConstant:
     return cast<SCEVConstant>(S)->getAPInt().countr_zero();
-  case scVScale:
-    return 0;
   case scTruncate: {
     const SCEVTruncateExpr *T = cast<SCEVTruncateExpr>(S);
-    return std::min(GetMinTrailingZeros(T->getOperand()),
+    return std::min(getMinTrailingZeros(T->getOperand()),
                     (uint32_t)getTypeSizeInBits(T->getType()));
   }
-  case scZeroExtend: {
-    const SCEVZeroExtendExpr *E = cast<SCEVZeroExtendExpr>(S);
-    uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
-    return OpRes == getTypeSizeInBits(E->getOperand()->getType())
-               ? getTypeSizeInBits(E->getType())
-               : OpRes;
-  }
+  case scZeroExtend:
   case scSignExtend: {
-    const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
-    uint32_t OpRes = GetMinTrailingZeros(E->getOperand());
+    const SCEVIntegralCastExpr *E = cast<SCEVIntegralCastExpr>(S);
+    uint32_t OpRes = getMinTrailingZeros(E->getOperand());
     return OpRes == getTypeSizeInBits(E->getOperand()->getType())
                ? getTypeSizeInBits(E->getType())
                : OpRes;
@@ -6298,14 +6301,16 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
   case scMulExpr: {
     const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
     // The result is the sum of all operands results.
-    uint32_t SumOpRes = GetMinTrailingZeros(M->getOperand(0));
+    uint32_t SumOpRes = getMinTrailingZeros(M->getOperand(0));
     uint32_t BitWidth = getTypeSizeInBits(M->getType());
-    for (unsigned i = 1, e = M->getNumOperands();
-         SumOpRes != BitWidth && i != e; ++i)
+    for (unsigned I = 1, E = M->getNumOperands();
+         SumOpRes != BitWidth && I != E; ++I)
       SumOpRes =
-          std::min(SumOpRes + GetMinTrailingZeros(M->getOperand(i)), BitWidth);
+          std::min(SumOpRes + getMinTrailingZeros(M->getOperand(I)), BitWidth);
     return SumOpRes;
   }
+  case scVScale:
+    return 0;
   case scUDivExpr:
     return 0;
   case scPtrToInt:
@@ -6318,9 +6323,9 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
   case scSequentialUMinExpr: {
     // The result is the min of all operands results.
     ArrayRef<const SCEV *> Ops = S->operands();
-    uint32_t MinOpRes = GetMinTrailingZeros(Ops[0]);
+    uint32_t MinOpRes = getMinTrailingZeros(Ops[0]);
     for (unsigned I = 1, E = Ops.size(); MinOpRes && I != E; ++I)
-      MinOpRes = std::min(MinOpRes, GetMinTrailingZeros(Ops[I]));
+      MinOpRes = std::min(MinOpRes, getMinTrailingZeros(Ops[I]));
     return MinOpRes;
   }
   case scUnknown: {
@@ -6336,12 +6341,12 @@ uint32_t ScalarEvolution::GetMinTrailingZerosImpl(const SCEV *S) {
   llvm_unreachable("Unknown SCEV kind!");
 }
 
-uint32_t ScalarEvolution::GetMinTrailingZeros(const SCEV *S) {
+uint32_t ScalarEvolution::getMinTrailingZeros(const SCEV *S) {
   auto I = MinTrailingZerosCache.find(S);
   if (I != MinTrailingZerosCache.end())
     return I->second;
 
-  uint32_t Result = GetMinTrailingZerosImpl(S);
+  uint32_t Result = getMinTrailingZerosImpl(S);
   auto InsertPair = MinTrailingZerosCache.insert({S, Result});
   assert(InsertPair.second && "Should insert a new key");
   return InsertPair.first->second;
@@ -6595,7 +6600,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
   // If the value has known zeros, the maximum value will have those known zeros
   // as well.
-  uint32_t TZ = GetMinTrailingZeros(S);
+  uint32_t TZ = getMinTrailingZeros(S);
   if (TZ != 0) {
     if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED)
       ConservativeResult =
@@ -7003,7 +7008,7 @@ ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
   // outside and inside the range [Min(Start, End), Max(Start, End)]. Using that
   // knowledge, let's try to prove that we are dealing with Case 1. It is so if
   // Start <= End and step is positive, or Start >= End and step is negative.
-  const SCEV *Start = AddRec->getStart();
+  const SCEV *Start = applyLoopGuards(AddRec->getStart(), AddRec->getLoop());
   ConstantRange StartRange = getRangeRef(Start, SignHint);
   ConstantRange EndRange = getRangeRef(End, SignHint);
   ConstantRange RangeBetween = StartRange.unionWith(EndRange);
@@ -8045,6 +8050,12 @@ const SCEV *ScalarEvolution::getTripCountFromExitCount(const SCEV *ExitCount,
   if (!Extend)
     return getAddExpr(ExitCount, getOne(ExitCountType));
 
+  ConstantRange ExitCountRange =
+      getRangeRef(ExitCount, RangeSignHint::HINT_RANGE_UNSIGNED);
+  if (!ExitCountRange.contains(
+          APInt::getMaxValue(ExitCountRange.getBitWidth())))
+    return getAddExpr(ExitCount, getOne(ExitCountType));
+
   auto *WiderType = Type::getIntNTy(ExitCountType->getContext(),
                                     1 + ExitCountType->getScalarSizeInBits());
   return getAddExpr(getNoopOrZeroExtend(ExitCount, WiderType),
@@ -8227,24 +8238,27 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
     return 1;
 
   // Get the trip count
-  const SCEV *TCExpr = getTripCountFromExitCount(ExitCount);
+  const SCEV *TCExpr = getTripCountFromExitCount(applyLoopGuards(ExitCount, L));
+
+  // If a trip multiple is huge (>=2^32), the trip count is still divisible by
+  // the greatest power of 2 divisor less than 2^32.
+  auto GetSmallMultiple = [](unsigned TrailingZeros) {
+    return 1U << std::min((uint32_t)31, TrailingZeros);
+  };
 
   const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
   if (!TC)
     // Attempt to factor more general cases. Returns the greatest power of
-    // two divisor. If overflow happens, the trip count expression is still
-    // divisible by the greatest power of 2 divisor returned.
-    return 1U << std::min((uint32_t)31,
-                          GetMinTrailingZeros(applyLoopGuards(TCExpr, L)));
+    // two divisor.
+    return GetSmallMultiple(getMinTrailingZeros(TCExpr));
 
   ConstantInt *Result = TC->getValue();
+  assert(Result && "SCEVConstant expected to have non-null ConstantInt");
+  assert(Result->getValue() != 0 && "trip count should never be zero");
 
-  // Guard against huge trip counts (this requires checking
-  // for zero to handle the case where the trip count == -1 and the
-  // addition wraps).
-  if (!Result || Result->getValue().getActiveBits() > 32 ||
-      Result->getValue().getActiveBits() == 0)
-    return 1;
+  // Guard against huge trip multiples.
+  if (Result->getValue().getActiveBits() > 32)
+    return GetSmallMultiple(Result->getValue().countTrailingZeros());
 
   return (unsigned)Result->getZExtValue();
 }
@@ -10099,7 +10113,7 @@ static const SCEV *SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
   //
   // B is divisible by D if and only if the multiplicity of prime factor 2 for B
   // is not less than multiplicity of this prime factor for D.
-  if (SE.GetMinTrailingZeros(B) < Mult2)
+  if (SE.getMinTrailingZeros(B) < Mult2)
     return SE.getCouldNotCompute();
 
   // 3. Compute I: the multiplicative inverse of (A / D) in arithmetic

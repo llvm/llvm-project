@@ -1365,12 +1365,16 @@ ExpectedType ASTNodeImporter::VisitTypedefType(const TypedefType *T) {
   Expected<TypedefNameDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
+
+  TypedefNameDecl *ToDecl = *ToDeclOrErr;
+  if (ToDecl->getTypeForDecl())
+    return QualType(ToDecl->getTypeForDecl(), 0);
+
   ExpectedType ToUnderlyingTypeOrErr = import(T->desugar());
   if (!ToUnderlyingTypeOrErr)
     return ToUnderlyingTypeOrErr.takeError();
 
-  return Importer.getToContext().getTypedefType(*ToDeclOrErr,
-                                                *ToUnderlyingTypeOrErr);
+  return Importer.getToContext().getTypedefType(ToDecl, *ToUnderlyingTypeOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitTypeOfExprType(const TypeOfExprType *T) {
@@ -8143,7 +8147,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXUnresolvedConstructExpr(
 
   return CXXUnresolvedConstructExpr::Create(
       Importer.getToContext(), ToType, ToTypeSourceInfo, ToLParenLoc,
-      llvm::ArrayRef(ToArgs), ToRParenLoc);
+      llvm::ArrayRef(ToArgs), ToRParenLoc, E->isListInitialization());
 }
 
 ExpectedStmt
@@ -8811,8 +8815,7 @@ public:
       return;
 
     AttributeCommonInfo ToI(ToAttrName, ToScopeName, ToAttrRange, ToScopeLoc,
-                            FromAttr->getParsedKind(), FromAttr->getSyntax(),
-                            FromAttr->getAttributeSpellingListIndex());
+                            FromAttr->getParsedKind(), FromAttr->getForm());
     // The "SemanticSpelling" is not needed to be passed to the constructor.
     // That value is recalculated from the SpellingListIndex if needed.
     ToAttr = T::Create(Importer.getToContext(),

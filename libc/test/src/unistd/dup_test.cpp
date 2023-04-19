@@ -15,7 +15,6 @@
 #include "src/unistd/write.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
 
 TEST(LlvmLibcdupTest, ReadAndWriteViaDup) {
   libc_errno = 0;

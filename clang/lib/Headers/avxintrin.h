@@ -4499,7 +4499,8 @@ _mm256_castsi256_si128(__m256i __a)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_castpd128_pd256(__m128d __a)
 {
-  return __builtin_shufflevector((__v2df)__a, (__v2df)__a, 0, 1, -1, -1);
+  return __builtin_shufflevector(
+      (__v2df)__a, (__v2df)__builtin_nondeterministic_value(__a), 0, 1, 2, 3);
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float] from a
@@ -4520,7 +4521,9 @@ _mm256_castpd128_pd256(__m128d __a)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_castps128_ps256(__m128 __a)
 {
-  return __builtin_shufflevector((__v4sf)__a, (__v4sf)__a, 0, 1, 2, 3, -1, -1, -1, -1);
+  return __builtin_shufflevector((__v4sf)__a,
+                                 (__v4sf)__builtin_nondeterministic_value(__a),
+                                 0, 1, 2, 3, 4, 5, 6, 7);
 }
 
 /// Constructs a 256-bit integer vector from a 128-bit integer vector.
@@ -4539,7 +4542,8 @@ _mm256_castps128_ps256(__m128 __a)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_castsi128_si256(__m128i __a)
 {
-  return __builtin_shufflevector((__v2di)__a, (__v2di)__a, 0, 1, -1, -1);
+  return __builtin_shufflevector(
+      (__v2di)__a, (__v2di)__builtin_nondeterministic_value(__a), 0, 1, 2, 3);
 }
 
 /// Constructs a 256-bit floating-point vector of [4 x double] from a

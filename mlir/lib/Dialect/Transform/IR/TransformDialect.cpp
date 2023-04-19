@@ -186,5 +186,3 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
   return emitError(op->getLoc())
          << "unknown attribute: " << attribute.getName();
 }
-
-#include "mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc"

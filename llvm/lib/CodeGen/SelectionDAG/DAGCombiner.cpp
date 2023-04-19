@@ -3058,6 +3058,15 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
     }
   }
 
+  // add (mul x, C), x -> mul x, C+1
+  if (N0.getOpcode() == ISD::MUL && N0.getOperand(0) == N1 &&
+      isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true) &&
+      N0.hasOneUse()) {
+    SDValue NewC = DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(1),
+                               DAG.getConstant(1, DL, VT));
+    return DAG.getNode(ISD::MUL, DL, VT, N0.getOperand(0), NewC);
+  }
+
   // If the target's bool is represented as 0/1, prefer to make this 'sub 0/1'
   // rather than 'add 0/-1' (the zext should get folded).
   // add (sext i1 Y), X --> sub X, (zext i1 Y)
@@ -7449,24 +7458,39 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
 static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                   SDNode *N) {
   EVT VT = N0.getValueType();
-  if (N0.getOpcode() == ISD::AND) {
-    SDValue N00 = N0.getOperand(0);
-    SDValue N01 = N0.getOperand(1);
+
+  auto peekThroughResize = [](SDValue V) {
+    if (V->getOpcode() == ISD::ZERO_EXTEND || V->getOpcode() == ISD::TRUNCATE)
+      return V->getOperand(0);
+    return V;
+  };
+
+  SDValue N0Resized = peekThroughResize(N0);
+  if (N0Resized.getOpcode() == ISD::AND) {
+    SDValue N1Resized = peekThroughResize(N1);
+    SDValue N00 = N0Resized.getOperand(0);
+    SDValue N01 = N0Resized.getOperand(1);
 
     // fold or (and x, y), x --> x
-    if (N00 == N1 || N01 == N1)
+    if (N00 == N1Resized || N01 == N1Resized)
       return N1;
 
     // fold (or (and X, (xor Y, -1)), Y) -> (or X, Y)
     // TODO: Set AllowUndefs = true.
-    if (getBitwiseNotOperand(N01, N00,
-                             /* AllowUndefs */ false) == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N00, N1);
+    if (SDValue NotOperand = getBitwiseNotOperand(N01, N00,
+                                                  /* AllowUndefs */ false)) {
+      if (peekThroughResize(NotOperand) == N1Resized)
+        return DAG.getNode(ISD::OR, SDLoc(N), VT,
+                           DAG.getZExtOrTrunc(N00, SDLoc(N), VT), N1);
+    }
 
     // fold (or (and (xor Y, -1), X), Y) -> (or X, Y)
-    if (getBitwiseNotOperand(N00, N01,
-                             /* AllowUndefs */ false) == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N01, N1);
+    if (SDValue NotOperand = getBitwiseNotOperand(N00, N01,
+                                                  /* AllowUndefs */ false)) {
+      if (peekThroughResize(NotOperand) == N1Resized)
+        return DAG.getNode(ISD::OR, SDLoc(N), VT,
+                           DAG.getZExtOrTrunc(N01, SDLoc(N), VT), N1);
+    }
   }
 
   if (N0.getOpcode() == ISD::XOR) {
@@ -10308,8 +10332,10 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
       return DAG.getNode(ISD::SRL, SDLoc(N), VT, N0.getOperand(0), N1);
   }
 
-  // fold (srl (ctlz x), "5") -> x  iff x has one bit set (the low bit).
+  // fold (srl (ctlz x), "5") -> x  iff x has one bit set (the low bit), and x has a power
+  // of two bitwidth. The "5" represents (log2 (bitwidth x)).
   if (N1C && N0.getOpcode() == ISD::CTLZ &&
+      isPowerOf2_32(OpSizeInBits) &&
       N1C->getAPIntValue() == Log2_32(OpSizeInBits)) {
     KnownBits Known = DAG.computeKnownBits(N0.getOperand(0));
 
@@ -16585,27 +16611,30 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
 
 /// copysign(x, fp_extend(y)) -> copysign(x, y)
 /// copysign(x, fp_round(y)) -> copysign(x, y)
+/// Operands to the functions are the type of X and Y respectively.
+static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(EVT XTy, EVT YTy) {
+  // Always fold no-op FP casts.
+  if (XTy == YTy)
+    return true;
+
+  // Do not optimize out type conversion of f128 type yet.
+  // For some targets like x86_64, configuration is changed to keep one f128
+  // value in one SSE register, but instruction selection cannot handle
+  // FCOPYSIGN on SSE registers yet.
+  if (YTy == MVT::f128)
+    return false;
+
+  return !YTy.isVector() || EnableVectorFCopySignExtendRound;
+}
+
 static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {
   SDValue N1 = N->getOperand(1);
-  if ((N1.getOpcode() == ISD::FP_EXTEND ||
-       N1.getOpcode() == ISD::FP_ROUND)) {
-    EVT N1VT = N1->getValueType(0);
-    EVT N1Op0VT = N1->getOperand(0).getValueType();
-
-    // Always fold no-op FP casts.
-    if (N1VT == N1Op0VT)
-      return true;
-
-    // Do not optimize out type conversion of f128 type yet.
-    // For some targets like x86_64, configuration is changed to keep one f128
-    // value in one SSE register, but instruction selection cannot handle
-    // FCOPYSIGN on SSE registers yet.
-    if (N1Op0VT == MVT::f128)
-      return false;
-
-    return !N1Op0VT.isVector() || EnableVectorFCopySignExtendRound;
-  }
-  return false;
+  if (N1.getOpcode() != ISD::FP_EXTEND &&
+      N1.getOpcode() != ISD::FP_ROUND)
+    return false;
+  EVT N1VT = N1->getValueType(0);
+  EVT N1Op0VT = N1->getOperand(0).getValueType();
+  return CanCombineFCOPYSIGN_EXTEND_ROUND(N1VT, N1Op0VT);
 }
 
 SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
@@ -16965,7 +16994,13 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
   }
 
   // fold (fp_round (copysign X, Y)) -> (copysign (fp_round X), Y)
-  if (N0.getOpcode() == ISD::FCOPYSIGN && N0->hasOneUse()) {
+  // Note: From a legality perspective, this is a two step transform.  First,
+  // we duplicate the fp_round to the arguments of the copysign, then we
+  // eliminate the fp_round on Y.  The second step requires an additional
+  // predicate to match the implementation above.
+  if (N0.getOpcode() == ISD::FCOPYSIGN && N0->hasOneUse() &&
+      CanCombineFCOPYSIGN_EXTEND_ROUND(VT,
+                                       N0.getValueType())) {
     SDValue Tmp = DAG.getNode(ISD::FP_ROUND, SDLoc(N0), VT,
                               N0.getOperand(0), N1);
     AddToWorklist(Tmp.getNode());

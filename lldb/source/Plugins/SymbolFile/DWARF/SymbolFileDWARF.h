@@ -214,9 +214,10 @@ public:
   llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
-  lldb_private::CompilerDeclContext FindNamespace(
-      lldb_private::ConstString name,
-      const lldb_private::CompilerDeclContext &parent_decl_ctx) override;
+  lldb_private::CompilerDeclContext
+  FindNamespace(lldb_private::ConstString name,
+                const lldb_private::CompilerDeclContext &parent_decl_ctx,
+                bool only_root_namespaces) override;
 
   void PreloadSymbols() override;
 
@@ -274,7 +275,7 @@ public:
 
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
-                   const DWARFDIE &die);
+                   const DWARFDIE &die, bool only_root_namespaces = false);
 
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
@@ -523,6 +524,9 @@ protected:
 
   void InitializeFirstCodeAddress();
 
+  void GetCompileOptions(
+      std::unordered_map<lldb::CompUnitSP, lldb_private::Args> &args) override;
+
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
 
@@ -571,7 +575,7 @@ protected:
   /// no dSYM file is being used, this file index will be set to a
   /// valid value that can be used in DIERef objects which will contain
   /// an index that identifies the .DWO or .o file.
-  std::optional<uint64_t> m_file_index = std::nullopt;
+  std::optional<uint64_t> m_file_index;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H

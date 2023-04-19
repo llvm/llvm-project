@@ -126,8 +126,46 @@ func.func @test_array_array_comp_1(%arg0: !fir.ref<!fir.array<100x!fir.type<t_ar
 // CHECK:  %[[VAL_9:.*]] = fir.field_index array_comp, !fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>
 // CHECK:  %[[VAL_10:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_11:.*]] = arith.constant 1 : index
-// CHECK:  %[[VAL_12:.*]] = fir.slice %[[VAL_11]], %[[VAL_1]], %[[VAL_10]] path %[[VAL_9]], %[[VAL_7]], %[[VAL_8]] : (index, index, index, !fir.field, index, index) -> !fir.slice<1>
+// CHECK:  %[[ANOTHER_ONE:.*]] = arith.constant 1 : index
+// CHECK:  %[[VAL_7B:.*]] = arith.subi %[[VAL_7]], %[[ANOTHER_ONE]] : index
+// CHECK:  %[[VAL_8B:.*]] = arith.subi %[[VAL_8]], %[[ANOTHER_ONE]] : index
+// CHECK:  %[[VAL_12:.*]] = fir.slice %[[VAL_11]], %[[VAL_1]], %[[VAL_10]] path %[[VAL_9]], %[[VAL_7B]], %[[VAL_8B]] : (index, index, index, !fir.field, index, index) -> !fir.slice<1>
 // CHECK:  %[[VAL_13:.*]] = fir.embox %[[VAL_3]](%[[VAL_2]]) {{\[}}%[[VAL_12]]] : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<100xf32>>
+
+
+func.func @test_array_array_comp_1_with_lbs(%arg0: !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>) {
+  %c100 = arith.constant 100 : index
+  %0 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "a"} : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>)
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %c42 = arith.constant 42 : index
+  %c43 = arith.constant 43 : index
+  %5 = fir.shape_shift %c42, %c10, %c43, %c20 : (index, index, index, index) -> !fir.shapeshift<2>
+  %c45 = arith.constant 45 : index
+  %c47 = arith.constant 47 : index
+  %6 = hlfir.designate %1#0{"array_comp"} <%5> (%c45, %c47)  shape %0 : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shapeshift<2>, index, index, !fir.shape<1>) -> !fir.box<!fir.array<100xf32>>
+  return
+}
+// CHECK-LABEL:   func.func @test_array_array_comp_1_with_lbs(
+// CHECK:           %[[VAL_1:.*]] = arith.constant 100 : index
+// CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %{{.*}}(%[[VAL_2]]) {uniq_name = "a"} : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>
+// CHECK:           %[[VAL_4:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 20 : index
+// CHECK:           %[[VAL_6:.*]] = arith.constant 42 : index
+// CHECK:           %[[VAL_7:.*]] = arith.constant 43 : index
+// CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_6]], %[[VAL_4]], %[[VAL_7]], %[[VAL_5]] : (index, index, index, index) -> !fir.shapeshift<2>
+// CHECK:           %[[VAL_9:.*]] = arith.constant 45 : index
+// CHECK:           %[[VAL_10:.*]] = arith.constant 47 : index
+// CHECK:           %[[VAL_11:.*]] = fir.field_index array_comp, !fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>
+// CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_14:.*]] = arith.subi %[[VAL_9]], %[[VAL_6]] : index
+// CHECK:           %[[VAL_15:.*]] = arith.subi %[[VAL_10]], %[[VAL_7]] : index
+// CHECK:           %[[VAL_16:.*]] = fir.slice %[[VAL_13]], %[[VAL_1]], %[[VAL_12]] path %[[VAL_11]], %[[VAL_14]], %[[VAL_15]] : (index, index, index, !fir.field, index, index) -> !fir.slice<1>
+// CHECK:           %[[VAL_17:.*]] = fir.embox %[[VAL_3]](%[[VAL_2]]) {{\[}}%[[VAL_16]]] : (!fir.ref<!fir.array<100x!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<100xf32>>
+
 
 func.func @test_array_comp_slice(%arg0: !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "ga"} : (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>) -> (!fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>, !fir.ref<!fir.type<t_array{scalar_i:i32,array_comp:!fir.array<10x20xf32>}>>)

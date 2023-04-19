@@ -32,14 +32,14 @@
 #define STR(S) MAKE_STRING(CharT, S)
 
 template <class StringT, class StringViewT>
-void test(StringT expected, StringViewT fmt, bool arg) {
+void test(StringT expected, StringViewT fmt, bool arg, std::size_t offset) {
   using CharT = typename StringT::value_type;
   auto parse_ctx = std::basic_format_parse_context<CharT>(fmt);
   std::formatter<bool, CharT> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
   auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
+  assert(it == fmt.end() - offset);
 
   StringT result;
   auto out = std::back_inserter(result);
@@ -61,9 +61,9 @@ void test_termination_condition(StringT expected, StringT f, bool arg) {
   std::basic_string_view<CharT> fmt{f};
   assert(fmt.back() == CharT('}') && "Pre-condition failure");
 
-  test(expected, fmt, arg);
+  test(expected, fmt, arg, 1);
   fmt.remove_suffix(1);
-  test(expected, fmt, arg);
+  test(expected, fmt, arg, 0);
 }
 
 template <class CharT>

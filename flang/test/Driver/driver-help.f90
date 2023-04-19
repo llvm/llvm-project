@@ -48,6 +48,8 @@
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! HELP-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
+! HELP-NEXT: -fno-version-loops-for-stride
+! HELP-NEXT:                        Do not create unit-strided loops (default)
 ! HELP-NEXT: -fopenacc              Enable OpenACC
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
@@ -55,6 +57,8 @@
 ! HELP-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring         Appends one trailing underscore to external names
+! HELP-NEXT: -fversion-loops-for-stride
+! HELP-NEXT:                        Create unit-strided versions of loops
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -gline-tables-only     Emit debug line number tables only
 ! HELP-NEXT: -g                     Generate source-level debug information
@@ -65,6 +69,9 @@
 ! HELP-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
+! HELP-NEXT: --offload-device-only   Only compile for the offloading device.
+! HELP-NEXT: --offload-host-device   Only compile for the offloading host.
+! HELP-NEXT: --offload-host-only     Only compile for the offloading host.
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: -pedantic              Warn on language extensions
 ! HELP-NEXT: -print-effective-triple Print the effective target triple
@@ -143,6 +150,8 @@
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
 ! HELP-FC1-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! HELP-FC1-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
+! HELP-FC1-NEXT: -fno-version-loops-for-stride
+! HELP-FC1-NEXT:                        Do not create unit-strided loops (default)
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp-is-device     Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug  Enable debugging in the OpenMP offloading device RTL
@@ -152,6 +161,8 @@
 ! HELP-FC1-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -funderscoring         Appends one trailing underscore to external names
+! HELP-FC1-NEXT: -fversion-loops-for-stride
+! HELP-FC1-NEXT:                        Create unit-strided versions of loops
 ! HELP-FC1-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -init-only             Only execute frontend initialization

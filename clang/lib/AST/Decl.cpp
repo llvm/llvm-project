@@ -3302,8 +3302,7 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
 
   const FunctionDecl *Definition;
   return hasBody(Definition) && Definition->isInlineSpecified() &&
-         Definition->hasAttr<AlwaysInlineAttr>() &&
-         Definition->hasAttr<GNUInlineAttr>();
+         Definition->hasAttr<AlwaysInlineAttr>();
 }
 
 bool FunctionDecl::isDestroyingOperatorDelete() const {
@@ -4887,8 +4886,13 @@ void RecordDecl::LoadFieldsFromExternalStorage() const {
   if (Decls.empty())
     return;
 
-  std::tie(FirstDecl, LastDecl) = BuildDeclChain(Decls,
-                                                 /*FieldsAlreadyLoaded=*/false);
+  auto [ExternalFirst, ExternalLast] =
+      BuildDeclChain(Decls,
+                     /*FieldsAlreadyLoaded=*/false);
+  ExternalLast->NextInContextAndBits.setPointer(FirstDecl);
+  FirstDecl = ExternalFirst;
+  if (!LastDecl)
+    LastDecl = ExternalLast;
 }
 
 bool RecordDecl::mayInsertExtraPadding(bool EmitRemark) const {

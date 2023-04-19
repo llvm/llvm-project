@@ -221,6 +221,7 @@ public:
   void printArchSpecificInfo() override;
   void printStackMap() const override;
   void printMemtag() override;
+  ArrayRef<uint8_t> getMemtagGlobalsSectionContents(uint64_t ExpectedAddr);
 
   // Hash histogram shows statistics of how efficient the hash was for the
   // dynamic symbol table. The table shows the number of hash buckets for
@@ -309,7 +310,8 @@ protected:
 
   virtual void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
-      const ArrayRef<uint8_t> AndroidNoteDesc) = 0;
+      const ArrayRef<uint8_t> AndroidNoteDesc,
+      const ArrayRef<std::pair<uint64_t, uint64_t>> Descriptors) = 0;
 
   virtual void printHashHistogram(const Elf_Hash &HashTable) const;
   virtual void printGnuHashHistogram(const Elf_GnuHash &GnuHashTable) const;
@@ -593,7 +595,8 @@ public:
   void printStackSizes() override;
   void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
-      const ArrayRef<uint8_t> AndroidNoteDesc) override;
+      const ArrayRef<uint8_t> AndroidNoteDesc,
+      const ArrayRef<std::pair<uint64_t, uint64_t>> Descriptors) override;
   void printHashHistogramStats(size_t NBucket, size_t MaxChain,
                                size_t TotalSyms, ArrayRef<size_t> Count,
                                bool IsGnu) const override;
@@ -700,7 +703,8 @@ public:
   void printStackSizes() override;
   void printMemtag(
       const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
-      const ArrayRef<uint8_t> AndroidNoteDesc) override;
+      const ArrayRef<uint8_t> AndroidNoteDesc,
+      const ArrayRef<std::pair<uint64_t, uint64_t>> Descriptors) override;
   void printSymbolSection(const Elf_Sym &Symbol, unsigned SymIndex,
                           DataRegion<Elf_Word> ShndxTable) const;
   void printHashHistogramStats(size_t NBucket, size_t MaxChain,
@@ -5298,14 +5302,14 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
     return false;
   for (const auto &KV : Props)
     OS << "    " << KV.first << ": " << KV.second << '\n';
-  OS << '\n';
   return true;
 }
 
 template <class ELFT>
 void GNUELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
-    const ArrayRef<uint8_t> AndroidNoteDesc) {
+    const ArrayRef<uint8_t> AndroidNoteDesc,
+    const ArrayRef<std::pair<uint64_t, uint64_t>> Descriptors) {
   OS << "Memtag Dynamic Entries:\n";
   if (DynamicEntries.empty())
     OS << "    < none found >\n";
@@ -5316,6 +5320,15 @@ void GNUELFDumper<ELFT>::printMemtag(
   if (!AndroidNoteDesc.empty()) {
     OS << "Memtag Android Note:\n";
     printAndroidNote(OS, ELF::NT_ANDROID_TYPE_MEMTAG, AndroidNoteDesc);
+  }
+
+  if (Descriptors.empty())
+    return;
+
+  OS << "Memtag Global Descriptors:\n";
+  for (const auto &[Addr, BytesToTag] : Descriptors) {
+    OS << "    0x" << utohexstr(Addr, /*LowerCase=*/true) << ": 0x"
+       << utohexstr(BytesToTag, /*LowerCase=*/true) << "\n";
   }
 }
 
@@ -5744,6 +5757,12 @@ const NoteType CoreNoteTypes[] = {
      "NT_ARM_HW_BREAK (AArch hardware breakpoint registers)"},
     {ELF::NT_ARM_HW_WATCH,
      "NT_ARM_HW_WATCH (AArch hardware watchpoint registers)"},
+    {ELF::NT_ARM_SVE, "NT_ARM_SVE (AArch64 SVE registers)"},
+    {ELF::NT_ARM_PAC_MASK,
+     "NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"},
+    {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
+    {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
+    {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
     {ELF::NT_PRXFPREG, "NT_PRXFPREG (user_xfpregs structure)"},
@@ -5962,19 +5981,62 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
                      /*ProcessNoteFn=*/ProcessNote, /*FinishNotesFn=*/[]() {});
 }
 
+template <class ELFT>
+ArrayRef<uint8_t>
+ELFDumper<ELFT>::getMemtagGlobalsSectionContents(uint64_t ExpectedAddr) {
+  for (const typename ELFT::Shdr &Sec : cantFail(Obj.sections())) {
+    if (Sec.sh_type != SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC)
+      continue;
+    if (Sec.sh_addr != ExpectedAddr) {
+      reportUniqueWarning(
+          "SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section was unexpectedly at 0x" +
+          Twine::utohexstr(Sec.sh_addr) +
+          ", when DT_AARCH64_MEMTAG_GLOBALS says it should be at 0x" +
+          Twine::utohexstr(ExpectedAddr));
+      return ArrayRef<uint8_t>();
+    }
+    Expected<ArrayRef<uint8_t>> Contents = Obj.getSectionContents(Sec);
+    if (auto E = Contents.takeError()) {
+      reportUniqueWarning(
+          "couldn't get SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section contents: " +
+          toString(std::move(E)));
+      return ArrayRef<uint8_t>();
+    }
+    return Contents.get();
+  }
+  return ArrayRef<uint8_t>();
+}
+
+// Reserve the lower three bits of the first byte of the step distance when
+// encoding the memtag descriptors. Found to be the best overall size tradeoff
+// when compiling Android T with full MTE globals enabled.
+constexpr uint64_t MemtagStepVarintReservedBits = 3;
+constexpr uint64_t MemtagGranuleSize = 16;
+
 template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
   if (Obj.getHeader().e_machine != EM_AARCH64) return;
   std::vector<std::pair<std::string, std::string>> DynamicEntries;
+  uint64_t MemtagGlobalsSz = 0;
+  uint64_t MemtagGlobals = 0;
   for (const typename ELFT::Dyn &Entry : dynamic_table()) {
     uintX_t Tag = Entry.getTag();
     switch (Tag) {
+    case DT_AARCH64_MEMTAG_GLOBALSSZ:
+      MemtagGlobalsSz = Entry.getVal();
+      DynamicEntries.emplace_back(Obj.getDynamicTagAsString(Tag),
+                                  getDynamicEntry(Tag, Entry.getVal()));
+      break;
+    case DT_AARCH64_MEMTAG_GLOBALS:
+      MemtagGlobals = Entry.getVal();
+      DynamicEntries.emplace_back(Obj.getDynamicTagAsString(Tag),
+                                  getDynamicEntry(Tag, Entry.getVal()));
+      break;
     case DT_AARCH64_MEMTAG_MODE:
     case DT_AARCH64_MEMTAG_HEAP:
     case DT_AARCH64_MEMTAG_STACK:
-    case DT_AARCH64_MEMTAG_GLOBALSSZ:
-    case DT_AARCH64_MEMTAG_GLOBALS:
       DynamicEntries.emplace_back(Obj.getDynamicTagAsString(Tag),
                                   getDynamicEntry(Tag, Entry.getVal()));
+      break;
     }
   }
 
@@ -5993,7 +6055,54 @@ template <typename ELFT> void ELFDumper<ELFT>::printMemtag() {
          const typename ELFT::Addr) {},
       /*ProcessNoteFn=*/FindAndroidNote, /*FinishNotesFn=*/[]() {});
 
-  printMemtag(DynamicEntries, AndroidNoteDesc);
+  ArrayRef<uint8_t> Contents = getMemtagGlobalsSectionContents(MemtagGlobals);
+  if (Contents.size() != MemtagGlobalsSz) {
+    reportUniqueWarning(
+        "mismatch between DT_AARCH64_MEMTAG_GLOBALSSZ (0x" +
+        Twine::utohexstr(MemtagGlobalsSz) +
+        ") and SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC section size (0x" +
+        Twine::utohexstr(Contents.size()) + ")");
+    Contents = ArrayRef<uint8_t>();
+  }
+
+  std::vector<std::pair<uint64_t, uint64_t>> GlobalDescriptors;
+  uint64_t Address = 0;
+  // See the AArch64 MemtagABI document for a description of encoding scheme:
+  // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#83encoding-of-sht_aarch64_memtag_globals_dynamic
+  for (size_t I = 0; I < Contents.size();) {
+    const char *Error = nullptr;
+    unsigned DecodedBytes = 0;
+    uint64_t Value = decodeULEB128(Contents.data() + I, &DecodedBytes,
+                                   Contents.end(), &Error);
+    I += DecodedBytes;
+    if (Error) {
+      reportUniqueWarning(
+          "error decoding distance uleb, " + Twine(DecodedBytes) +
+          " byte(s) into SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC: " + Twine(Error));
+      GlobalDescriptors.clear();
+      break;
+    }
+    uint64_t Distance = Value >> MemtagStepVarintReservedBits;
+    uint64_t GranulesToTag = Value & ((1 << MemtagStepVarintReservedBits) - 1);
+    if (GranulesToTag == 0) {
+      GranulesToTag = decodeULEB128(Contents.data() + I, &DecodedBytes,
+                                    Contents.end(), &Error) +
+                      1;
+      I += DecodedBytes;
+      if (Error) {
+        reportUniqueWarning(
+            "error decoding size-only uleb, " + Twine(DecodedBytes) +
+            " byte(s) into SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC: " + Twine(Error));
+        GlobalDescriptors.clear();
+        break;
+      }
+    }
+    Address += Distance * MemtagGranuleSize;
+    GlobalDescriptors.emplace_back(Address, GranulesToTag * MemtagGranuleSize);
+    Address += GranulesToTag * MemtagGranuleSize;
+  }
+
+  printMemtag(DynamicEntries, AndroidNoteDesc, GlobalDescriptors);
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printELFLinkerOptions() {
@@ -7178,14 +7287,14 @@ void LLVMELFDumper<ELFT>::printHashHistogramStats(size_t NBucket,
   StringRef BucketName = IsGnu ? "Bucket" : "Chain";
   StringRef ListName = IsGnu ? "Buckets" : "Chains";
   DictScope Outer(W, HistName);
-  W.printNumber("TotalBuckets", static_cast<uint64_t>(NBucket));
+  W.printNumber("TotalBuckets", NBucket);
   ListScope Buckets(W, ListName);
   size_t CumulativeNonZero = 0;
   for (size_t I = 0; I < MaxChain; ++I) {
     CumulativeNonZero += Count[I] * I;
     DictScope Bucket(W, BucketName);
-    W.printNumber("Length", static_cast<uint64_t>(I));
-    W.printNumber("Count", static_cast<uint64_t>(Count[I]));
+    W.printNumber("Length", I);
+    W.printNumber("Count", Count[I]);
     W.printNumber("Percentage", (float)(Count[I] * 100.0) / NBucket);
     W.printNumber("Coverage", (float)(CumulativeNonZero * 100.0) / TotalSyms);
   }
@@ -7343,10 +7452,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         W.printNumber("ID", BBE.ID);
         W.printHex("Offset", BBE.Offset);
         W.printHex("Size", BBE.Size);
-        W.printBoolean("HasReturn", BBE.HasReturn);
-        W.printBoolean("HasTailCall", BBE.HasTailCall);
-        W.printBoolean("IsEHPad", BBE.IsEHPad);
-        W.printBoolean("CanFallThrough", BBE.CanFallThrough);
+        W.printBoolean("HasReturn", BBE.hasReturn());
+        W.printBoolean("HasTailCall", BBE.hasTailCall());
+        W.printBoolean("IsEHPad", BBE.isEHPad());
+        W.printBoolean("CanFallThrough", BBE.canFallThrough());
       }
     }
   }
@@ -7416,16 +7525,29 @@ static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
 template <class ELFT>
 void LLVMELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
-    const ArrayRef<uint8_t> AndroidNoteDesc) {
-  ListScope L(W, "Memtag Dynamic Entries:");
-  if (DynamicEntries.empty())
-    W.printString("< none found >");
-  for (const auto &DynamicEntryKV : DynamicEntries)
-    W.printString(DynamicEntryKV.first, DynamicEntryKV.second);
+    const ArrayRef<uint8_t> AndroidNoteDesc,
+    const ArrayRef<std::pair<uint64_t, uint64_t>> Descriptors) {
+  {
+    ListScope L(W, "Memtag Dynamic Entries:");
+    if (DynamicEntries.empty())
+      W.printString("< none found >");
+    for (const auto &DynamicEntryKV : DynamicEntries)
+      W.printString(DynamicEntryKV.first, DynamicEntryKV.second);
+  }
 
   if (!AndroidNoteDesc.empty()) {
     ListScope L(W, "Memtag Android Note:");
     printAndroidNoteLLVMStyle(ELF::NT_ANDROID_TYPE_MEMTAG, AndroidNoteDesc, W);
+  }
+
+  if (Descriptors.empty())
+    return;
+
+  {
+    ListScope L(W, "Memtag Global Descriptors:");
+    for (const auto &[Addr, BytesToTag] : Descriptors) {
+      W.printHex("0x" + utohexstr(Addr), BytesToTag);
+    }
   }
 }
 

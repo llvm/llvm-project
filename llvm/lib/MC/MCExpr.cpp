@@ -1000,8 +1000,6 @@ MCFragment *MCExpr::findAssociatedFragment() const {
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
     const MCSymbol &Sym = SRE->getSymbol();
-    if (Sym.isWeakExternal())
-      return nullptr;
     return Sym.getFragment();
   }
 

@@ -1651,10 +1651,25 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   // Some instrumentations create special TargetOpcode at the start which
   // expands to special code sequences which must be present.
   auto First = MBB.getFirstNonDebugInstr();
-  if (First != MBB.end() &&
-      (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
-       First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER))
+  if (First == MBB.end())
+    return true;
+
+  if (First->getOpcode() == TargetOpcode::FENTRY_CALL ||
+      First->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER)
     return false;
 
+  // Some instrumentations create special pseudo-instructions at or just before
+  // the end that must be present.
+  auto Last = MBB.getLastNonDebugInstr();
+  if (Last->getOpcode() == TargetOpcode::PATCHABLE_RET ||
+      Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
+    return false;
+
+  if (Last != First && Last->isReturn()) {
+    --Last;
+    if (Last->getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_EXIT ||
+        Last->getOpcode() == TargetOpcode::PATCHABLE_TAIL_CALL)
+      return false;
+  }
   return true;
 }

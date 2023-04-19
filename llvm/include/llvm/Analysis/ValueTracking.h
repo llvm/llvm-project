@@ -238,6 +238,56 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
+
+  /// Return true if it's known this can never be a nan.
+  bool isKnownNeverNaN() const {
+    return (KnownFPClasses & fcNan) == fcNone;
+  }
+
+  /// Return true if it's known this can never be an infinity.
+  bool isKnownNeverInfinity() const {
+    return (KnownFPClasses & fcInf) == fcNone;
+  }
+
+  /// Return true if it's known this can never be +infinity.
+  bool isKnownNeverPosInfinity() const {
+    return (KnownFPClasses & fcPosInf) == fcNone;
+  }
+
+  /// Return true if it's known this can never be -infinity.
+  bool isKnownNeverNegInfinity() const {
+    return (KnownFPClasses & fcNegInf) == fcNone;
+  }
+
+  /// Return true if it's known this can never be a subnormal
+  bool isKnownNeverSubnormal() const {
+    return (KnownFPClasses & fcSubnormal) == fcNone;
+  }
+
+  /// Return true if it's known this can never be a zero. This means a literal
+  /// [+-]0, and does not include denormal inputs implicitly treated as [+-]0.
+  bool isKnownNeverZero() const {
+    return (KnownFPClasses & fcZero) == fcNone;
+  }
+
+  /// Return true if it's know this can never be interpreted as a zero. This
+  /// extends isKnownNeverZero to cover the case where the assumed
+  /// floating-point mode for the function interprets denormals as zero.
+  bool isKnownNeverLogicalZero(const Function &F, Type *Ty) const;
+
+  /// Return true if we can prove that the analyzed floating-point value is
+  /// either NaN or never less than -0.0.
+  ///
+  ///      NaN --> true
+  ///       +0 --> true
+  ///       -0 --> true
+  ///   x > +0 --> true
+  ///   x < -0 --> false
+  bool cannotBeOrderedLessThanZero() const {
+    const FPClassTest OrderedNegMask = fcNegSubnormal | fcNegNormal | fcNegInf;
+    return (KnownFPClasses & OrderedNegMask) == fcNone;
+  }
+
   KnownFPClass &operator|=(const KnownFPClass &RHS) {
     KnownFPClasses = KnownFPClasses | RHS.KnownFPClasses;
 
@@ -740,7 +790,7 @@ void getGuaranteedWellDefinedOps(const Instruction *I,
 /// when I is executed with any operands which appear in KnownPoison holding
 /// a poison value at the point of execution.
 bool mustTriggerUB(const Instruction *I,
-                   const SmallSet<const Value *, 16> &KnownPoison);
+                   const SmallPtrSetImpl<const Value *> &KnownPoison);
 
 /// Return true if this function can prove that if Inst is executed
 /// and yields a poison value or undef bits, then that will trigger

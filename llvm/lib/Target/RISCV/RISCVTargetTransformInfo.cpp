@@ -258,6 +258,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              TTI::TargetCostKind CostKind,
                                              int Index, VectorType *SubTp,
                                              ArrayRef<const Value *> Args) {
+  Kind = improveShuffleKindFromMask(Kind, Mask);
+
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   // First, handle cases where having a fixed length vector enables us to
@@ -624,6 +626,40 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::nxv2f64, 9},
     {Intrinsic::roundeven, MVT::nxv4f64, 9},
     {Intrinsic::roundeven, MVT::nxv8f64, 9},
+    {Intrinsic::rint, MVT::v2f32, 7},
+    {Intrinsic::rint, MVT::v4f32, 7},
+    {Intrinsic::rint, MVT::v8f32, 7},
+    {Intrinsic::rint, MVT::v16f32, 7},
+    {Intrinsic::rint, MVT::nxv1f32, 7},
+    {Intrinsic::rint, MVT::nxv2f32, 7},
+    {Intrinsic::rint, MVT::nxv4f32, 7},
+    {Intrinsic::rint, MVT::nxv8f32, 7},
+    {Intrinsic::rint, MVT::nxv16f32, 7},
+    {Intrinsic::rint, MVT::v2f64, 7},
+    {Intrinsic::rint, MVT::v4f64, 7},
+    {Intrinsic::rint, MVT::v8f64, 7},
+    {Intrinsic::rint, MVT::v16f64, 7},
+    {Intrinsic::rint, MVT::nxv1f64, 7},
+    {Intrinsic::rint, MVT::nxv2f64, 7},
+    {Intrinsic::rint, MVT::nxv4f64, 7},
+    {Intrinsic::rint, MVT::nxv8f64, 7},
+    {Intrinsic::nearbyint, MVT::v2f32, 9},
+    {Intrinsic::nearbyint, MVT::v4f32, 9},
+    {Intrinsic::nearbyint, MVT::v8f32, 9},
+    {Intrinsic::nearbyint, MVT::v16f32, 9},
+    {Intrinsic::nearbyint, MVT::nxv1f32, 9},
+    {Intrinsic::nearbyint, MVT::nxv2f32, 9},
+    {Intrinsic::nearbyint, MVT::nxv4f32, 9},
+    {Intrinsic::nearbyint, MVT::nxv8f32, 9},
+    {Intrinsic::nearbyint, MVT::nxv16f32, 9},
+    {Intrinsic::nearbyint, MVT::v2f64, 9},
+    {Intrinsic::nearbyint, MVT::v4f64, 9},
+    {Intrinsic::nearbyint, MVT::v8f64, 9},
+    {Intrinsic::nearbyint, MVT::v16f64, 9},
+    {Intrinsic::nearbyint, MVT::nxv1f64, 9},
+    {Intrinsic::nearbyint, MVT::nxv2f64, 9},
+    {Intrinsic::nearbyint, MVT::nxv4f64, 9},
+    {Intrinsic::nearbyint, MVT::nxv8f64, 9},
     {Intrinsic::bswap, MVT::v2i16, 3},
     {Intrinsic::bswap, MVT::v4i16, 3},
     {Intrinsic::bswap, MVT::v8i16, 3},
@@ -1165,14 +1201,14 @@ unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
 
 InstructionCost
 RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                     bool IsUnsigned,
+                                     bool IsUnsigned, FastMathFlags FMF,
                                      TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (Ty->getScalarSizeInBits() > ST->getELEN())
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
+    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Ty->getElementType()->isIntegerTy(1))
@@ -1227,7 +1263,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);

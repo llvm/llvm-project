@@ -3097,7 +3097,12 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       assert(UseMI.getOperand(1).getReg().isVirtual());
     }
 
-    UseMI.setDesc(get(NewOpc));
+    const MCInstrDesc &NewMCID = get(NewOpc);
+    if (DstReg.isPhysical() &&
+        !RI.getRegClass(NewMCID.operands()[0].RegClass)->contains(DstReg))
+      return false;
+
+    UseMI.setDesc(NewMCID);
     UseMI.getOperand(1).ChangeToImmediate(Imm.getSExtValue());
     UseMI.addImplicitDefUseOperands(*UseMI.getParent()->getParent());
     return true;
@@ -4622,7 +4627,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
-  if (isDS(MI) && !AMDGPU::hasGDS(ST)) {
+  if (isDS(MI) && !ST.hasGDS()) {
     const MachineOperand *GDSOp = getNamedOperand(MI, AMDGPU::OpName::gds);
     if (GDSOp && GDSOp->getImm() != 0) {
       ErrInfo = "GDS is not supported on this subtarget";
@@ -4958,30 +4963,30 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_CMP_NLE_F32: return AMDGPU::V_CMP_NLE_F32_e64;
   case AMDGPU::S_CMP_NEQ_F32: return AMDGPU::V_CMP_NEQ_F32_e64;
   case AMDGPU::S_CMP_NLT_F32: return AMDGPU::V_CMP_NLT_F32_e64;
-  case AMDGPU::S_CMP_LT_F16: return AMDGPU::V_CMP_LT_F16_e64;
-  case AMDGPU::S_CMP_EQ_F16: return AMDGPU::V_CMP_EQ_F16_e64;
-  case AMDGPU::S_CMP_LE_F16: return AMDGPU::V_CMP_LE_F16_e64;
-  case AMDGPU::S_CMP_GT_F16: return AMDGPU::V_CMP_GT_F16_e64;
-  case AMDGPU::S_CMP_LG_F16: return AMDGPU::V_CMP_LG_F16_e64;
-  case AMDGPU::S_CMP_GE_F16: return AMDGPU::V_CMP_GE_F16_e64;
-  case AMDGPU::S_CMP_O_F16: return AMDGPU::V_CMP_O_F16_e64;
-  case AMDGPU::S_CMP_U_F16: return AMDGPU::V_CMP_U_F16_e64;
-  case AMDGPU::S_CMP_NGE_F16: return AMDGPU::V_CMP_NGE_F16_e64;
-  case AMDGPU::S_CMP_NLG_F16: return AMDGPU::V_CMP_NLG_F16_e64;
-  case AMDGPU::S_CMP_NGT_F16: return AMDGPU::V_CMP_NGT_F16_e64;
-  case AMDGPU::S_CMP_NLE_F16: return AMDGPU::V_CMP_NLE_F16_e64;
-  case AMDGPU::S_CMP_NEQ_F16: return AMDGPU::V_CMP_NEQ_F16_e64;
-  case AMDGPU::S_CMP_NLT_F16: return AMDGPU::V_CMP_NLT_F16_e64;
+  case AMDGPU::S_CMP_LT_F16: return AMDGPU::V_CMP_LT_F16_t16_e64;
+  case AMDGPU::S_CMP_EQ_F16: return AMDGPU::V_CMP_EQ_F16_t16_e64;
+  case AMDGPU::S_CMP_LE_F16: return AMDGPU::V_CMP_LE_F16_t16_e64;
+  case AMDGPU::S_CMP_GT_F16: return AMDGPU::V_CMP_GT_F16_t16_e64;
+  case AMDGPU::S_CMP_LG_F16: return AMDGPU::V_CMP_LG_F16_t16_e64;
+  case AMDGPU::S_CMP_GE_F16: return AMDGPU::V_CMP_GE_F16_t16_e64;
+  case AMDGPU::S_CMP_O_F16: return AMDGPU::V_CMP_O_F16_t16_e64;
+  case AMDGPU::S_CMP_U_F16: return AMDGPU::V_CMP_U_F16_t16_e64;
+  case AMDGPU::S_CMP_NGE_F16: return AMDGPU::V_CMP_NGE_F16_t16_e64;
+  case AMDGPU::S_CMP_NLG_F16: return AMDGPU::V_CMP_NLG_F16_t16_e64;
+  case AMDGPU::S_CMP_NGT_F16: return AMDGPU::V_CMP_NGT_F16_t16_e64;
+  case AMDGPU::S_CMP_NLE_F16: return AMDGPU::V_CMP_NLE_F16_t16_e64;
+  case AMDGPU::S_CMP_NEQ_F16: return AMDGPU::V_CMP_NEQ_F16_t16_e64;
+  case AMDGPU::S_CMP_NLT_F16: return AMDGPU::V_CMP_NLT_F16_t16_e64;
   case AMDGPU::V_S_EXP_F32_e64: return AMDGPU::V_EXP_F32_e64;
-  case AMDGPU::V_S_EXP_F16_e64: return AMDGPU::V_EXP_F16_e64;
+  case AMDGPU::V_S_EXP_F16_e64: return AMDGPU::V_EXP_F16_t16_e64;
   case AMDGPU::V_S_LOG_F32_e64: return AMDGPU::V_LOG_F32_e64;
-  case AMDGPU::V_S_LOG_F16_e64: return AMDGPU::V_LOG_F16_e64;
+  case AMDGPU::V_S_LOG_F16_e64: return AMDGPU::V_LOG_F16_t16_e64;
   case AMDGPU::V_S_RCP_F32_e64: return AMDGPU::V_RCP_F32_e64;
-  case AMDGPU::V_S_RCP_F16_e64: return AMDGPU::V_RCP_F16_e64;
+  case AMDGPU::V_S_RCP_F16_e64: return AMDGPU::V_RCP_F16_t16_e64;
   case AMDGPU::V_S_RSQ_F32_e64: return AMDGPU::V_RSQ_F32_e64;
-  case AMDGPU::V_S_RSQ_F16_e64: return AMDGPU::V_RSQ_F16_e64;
+  case AMDGPU::V_S_RSQ_F16_e64: return AMDGPU::V_RSQ_F16_t16_e64;
   case AMDGPU::V_S_SQRT_F32_e64: return AMDGPU::V_SQRT_F32_e64;
-  case AMDGPU::V_S_SQRT_F16_e64: return AMDGPU::V_SQRT_F16_e64;
+  case AMDGPU::V_S_SQRT_F16_e64: return AMDGPU::V_SQRT_F16_t16_e64;
   }
   llvm_unreachable(
       "Unexpected scalar opcode without corresponding vector one!");
@@ -6825,7 +6830,6 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
   legalizeOperands(*NewInstr, MDT);
   if (NewDstReg)
     addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
-  return;
 }
 
 // Add/sub require special handling to deal with carry outs.

@@ -231,7 +231,7 @@ private:  // Parser methods.
   bool ParseDefm(MultiClass *CurMultiClass);
   bool ParseDef(MultiClass *CurMultiClass);
   bool ParseDefset();
-  bool ParseDefvar();
+  bool ParseDefvar(Record *CurRec = nullptr);
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseIf(MultiClass *CurMultiClass);
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);

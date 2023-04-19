@@ -2942,7 +2942,7 @@ public:
       return ArrayRef(MemRefs.getAddrOfPtr1(), 1);
 
     // Otherwise we have an actual array.
-    return ArrayRef(MemRefs.get<MachineMemOperand **>(), NumMemRefs);
+    return ArrayRef(cast<MachineMemOperand **>(MemRefs), NumMemRefs);
   }
   mmo_iterator memoperands_begin() const { return memoperands().begin(); }
   mmo_iterator memoperands_end() const { return memoperands().end(); }

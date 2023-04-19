@@ -38,6 +38,8 @@
 
 # RUN: llvm-ifs --output-elf=- --target=riscv64-linux-gnu %s | llvm-readelf -h - | FileCheck %s --check-prefix=MACHINE
 
+# RUN: not llvm-ifs --output-elf=- --arch=riscv64 --endianness=little --bitwidth=64 %s 2>&1 | FileCheck %s -DMSG=riscv64 --check-prefix=ARCHERR
+
 --- !ifs-v1
 IfsVersion: 3.0
 NeededLibs:
@@ -207,3 +209,5 @@ Symbols:
 # CONFLICTERR: error: Supplied [[MSG]] conflicts with the text stub
 
 # MACHINE: Machine: RISC-V
+
+# ARCHERR: error: unknown arch '[[MSG]]'

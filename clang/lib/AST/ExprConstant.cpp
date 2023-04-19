@@ -13142,12 +13142,12 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     if (LHSValue.getDecl() && LHSValue.getDecl()->isWeak()) {
       Info.FFDiag(E, diag::note_constexpr_mem_pointer_weak_comparison)
           << LHSValue.getDecl();
-      return true;
+      return false;
     }
     if (RHSValue.getDecl() && RHSValue.getDecl()->isWeak()) {
       Info.FFDiag(E, diag::note_constexpr_mem_pointer_weak_comparison)
           << RHSValue.getDecl();
-      return true;
+      return false;
     }
 
     // C++11 [expr.eq]p2:

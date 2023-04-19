@@ -154,9 +154,9 @@ private:
   using EdgeSet = MachineGadgetGraph::EdgeSet;
   using NodeSet = MachineGadgetGraph::NodeSet;
 
-  const X86Subtarget *STI;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  const X86Subtarget *STI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
   std::unique_ptr<MachineGadgetGraph>
   getGadgetGraph(MachineFunction &MF, const MachineLoopInfo &MLI,

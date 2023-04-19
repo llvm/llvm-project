@@ -1347,6 +1347,8 @@ static void extractTypesFromDWPDWARF5(
     MCStreamer &Streamer, StringRef Contents, uint64_t DWOId) {
   std::vector<const DWARFUnitIndex::Entry::SectionContribution *>
       TUContributions;
+  if (!TypeSignaturesPerCU.count(DWOId))
+    return;
   for (const uint64_t Val : TypeSignaturesPerCU.at(DWOId)) {
     const DWARFUnitIndex::Entry *TUE = TUIndex.getFromHash(Val);
     const DWARFUnitIndex::Entry::SectionContribution *C =

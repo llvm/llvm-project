@@ -2668,12 +2668,14 @@ void ASTContext::CollectInheritedProtocols(const Decl *CDecl,
 }
 
 static bool unionHasUniqueObjectRepresentations(const ASTContext &Context,
-                                                const RecordDecl *RD) {
+                                                const RecordDecl *RD,
+                                                bool CheckIfTriviallyCopyable) {
   assert(RD->isUnion() && "Must be union type");
   CharUnits UnionSize = Context.getTypeSizeInChars(RD->getTypeForDecl());
 
   for (const auto *Field : RD->fields()) {
-    if (!Context.hasUniqueObjectRepresentations(Field->getType()))
+    if (!Context.hasUniqueObjectRepresentations(Field->getType(),
+                                                CheckIfTriviallyCopyable))
       return false;
     CharUnits FieldSize = Context.getTypeSizeInChars(Field->getType());
     if (FieldSize != UnionSize)
@@ -2696,21 +2698,25 @@ static int64_t getSubobjectOffset(const CXXRecordDecl *RD,
 
 static std::optional<int64_t>
 structHasUniqueObjectRepresentations(const ASTContext &Context,
-                                     const RecordDecl *RD);
+                                     const RecordDecl *RD,
+                                     bool CheckIfTriviallyCopyable);
 
 static std::optional<int64_t>
-getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
+getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
+                       bool CheckIfTriviallyCopyable) {
   if (Field->getType()->isRecordType()) {
     const RecordDecl *RD = Field->getType()->getAsRecordDecl();
     if (!RD->isUnion())
-      return structHasUniqueObjectRepresentations(Context, RD);
+      return structHasUniqueObjectRepresentations(Context, RD,
+                                                  CheckIfTriviallyCopyable);
   }
 
   // A _BitInt type may not be unique if it has padding bits
   // but if it is a bitfield the padding bits are not used.
   bool IsBitIntType = Field->getType()->isBitIntType();
   if (!Field->getType()->isReferenceType() && !IsBitIntType &&
-      !Context.hasUniqueObjectRepresentations(Field->getType()))
+      !Context.hasUniqueObjectRepresentations(Field->getType(),
+                                              CheckIfTriviallyCopyable))
     return std::nullopt;
 
   int64_t FieldSizeInBits =
@@ -2730,25 +2736,28 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context) {
       return std::nullopt;
     }
     FieldSizeInBits = BitfieldSize;
-  } else if (IsBitIntType &&
-             !Context.hasUniqueObjectRepresentations(Field->getType())) {
+  } else if (IsBitIntType && !Context.hasUniqueObjectRepresentations(
+                                 Field->getType(), CheckIfTriviallyCopyable)) {
     return std::nullopt;
   }
   return FieldSizeInBits;
 }
 
 static std::optional<int64_t>
-getSubobjectSizeInBits(const CXXRecordDecl *RD, const ASTContext &Context) {
-  return structHasUniqueObjectRepresentations(Context, RD);
+getSubobjectSizeInBits(const CXXRecordDecl *RD, const ASTContext &Context,
+                       bool CheckIfTriviallyCopyable) {
+  return structHasUniqueObjectRepresentations(Context, RD,
+                                              CheckIfTriviallyCopyable);
 }
 
 template <typename RangeT>
 static std::optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
     const RangeT &Subobjects, int64_t CurOffsetInBits,
-    const ASTContext &Context, const clang::ASTRecordLayout &Layout) {
+    const ASTContext &Context, const clang::ASTRecordLayout &Layout,
+    bool CheckIfTriviallyCopyable) {
   for (const auto *Subobject : Subobjects) {
     std::optional<int64_t> SizeInBits =
-        getSubobjectSizeInBits(Subobject, Context);
+        getSubobjectSizeInBits(Subobject, Context, CheckIfTriviallyCopyable);
     if (!SizeInBits)
       return std::nullopt;
     if (*SizeInBits != 0) {
@@ -2763,7 +2772,8 @@ static std::optional<int64_t> structSubobjectsHaveUniqueObjectRepresentations(
 
 static std::optional<int64_t>
 structHasUniqueObjectRepresentations(const ASTContext &Context,
-                                     const RecordDecl *RD) {
+                                     const RecordDecl *RD,
+                                     bool CheckIfTriviallyCopyable) {
   assert(!RD->isUnion() && "Must be struct/class type");
   const auto &Layout = Context.getASTRecordLayout(RD);
 
@@ -2784,8 +2794,8 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
     });
 
     std::optional<int64_t> OffsetAfterBases =
-        structSubobjectsHaveUniqueObjectRepresentations(Bases, CurOffsetInBits,
-                                                        Context, Layout);
+        structSubobjectsHaveUniqueObjectRepresentations(
+            Bases, CurOffsetInBits, Context, Layout, CheckIfTriviallyCopyable);
     if (!OffsetAfterBases)
       return std::nullopt;
     CurOffsetInBits = *OffsetAfterBases;
@@ -2793,7 +2803,8 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
 
   std::optional<int64_t> OffsetAfterFields =
       structSubobjectsHaveUniqueObjectRepresentations(
-          RD->fields(), CurOffsetInBits, Context, Layout);
+          RD->fields(), CurOffsetInBits, Context, Layout,
+          CheckIfTriviallyCopyable);
   if (!OffsetAfterFields)
     return std::nullopt;
   CurOffsetInBits = *OffsetAfterFields;
@@ -2801,7 +2812,8 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
   return CurOffsetInBits;
 }
 
-bool ASTContext::hasUniqueObjectRepresentations(QualType Ty) const {
+bool ASTContext::hasUniqueObjectRepresentations(
+    QualType Ty, bool CheckIfTriviallyCopyable) const {
   // C++17 [meta.unary.prop]:
   //   The predicate condition for a template specialization
   //   has_unique_object_representations<T> shall be
@@ -2823,16 +2835,17 @@ bool ASTContext::hasUniqueObjectRepresentations(QualType Ty) const {
 
   // Arrays are unique only if their element type is unique.
   if (Ty->isArrayType())
-    return hasUniqueObjectRepresentations(getBaseElementType(Ty));
+    return hasUniqueObjectRepresentations(getBaseElementType(Ty),
+                                          CheckIfTriviallyCopyable);
 
   // (9.1) - T is trivially copyable...
-  if (!Ty.isTriviallyCopyableType(*this))
+  if (CheckIfTriviallyCopyable && !Ty.isTriviallyCopyableType(*this))
     return false;
 
   // All integrals and enums are unique.
   if (Ty->isIntegralOrEnumerationType()) {
     // Except _BitInt types that have padding bits.
-    if (const auto *BIT = dyn_cast<BitIntType>(Ty))
+    if (const auto *BIT = Ty->getAs<BitIntType>())
       return getTypeSize(BIT) == BIT->getNumBits();
 
     return true;
@@ -2854,10 +2867,11 @@ bool ASTContext::hasUniqueObjectRepresentations(QualType Ty) const {
       return false;
 
     if (Record->isUnion())
-      return unionHasUniqueObjectRepresentations(*this, Record);
+      return unionHasUniqueObjectRepresentations(*this, Record,
+                                                 CheckIfTriviallyCopyable);
 
-    std::optional<int64_t> StructSize =
-        structHasUniqueObjectRepresentations(*this, Record);
+    std::optional<int64_t> StructSize = structHasUniqueObjectRepresentations(
+        *this, Record, CheckIfTriviallyCopyable);
 
     return StructSize && *StructSize == static_cast<int64_t>(getTypeSize(Ty));
   }
@@ -13082,7 +13096,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
 static auto unwrapSugar(SplitQualType &T, Qualifiers &QTotal) {
   SmallVector<SplitQualType, 8> R;
   while (true) {
-    QTotal += T.Quals;
+    QTotal.addConsistentQualifiers(T.Quals);
     QualType NT = T.Ty->getLocallyUnqualifiedSingleStepDesugaredType();
     if (NT == QualType(T.Ty, 0))
       break;

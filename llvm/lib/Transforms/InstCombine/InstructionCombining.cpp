@@ -33,7 +33,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -77,7 +76,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -194,6 +192,10 @@ std::optional<Value *> InstCombiner::targetSimplifyDemandedVectorEltsIntrinsic(
         SimplifyAndSetOp);
   }
   return std::nullopt;
+}
+
+bool InstCombiner::isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
+  return TTI.isValidAddrSpaceCast(FromAS, ToAS);
 }
 
 Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
@@ -1026,21 +1028,29 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
   return SelectInst::Create(X, TVal, FVal);
 }
 
-static Constant *constantFoldOperationIntoSelectOperand(
-    Instruction &I, SelectInst *SI, Value *SO) {
-  auto *ConstSO = dyn_cast<Constant>(SO);
-  if (!ConstSO)
-    return nullptr;
-
+static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
+                                                        SelectInst *SI,
+                                                        bool IsTrueArm) {
   SmallVector<Constant *> ConstOps;
   for (Value *Op : I.operands()) {
-    if (Op == SI)
-      ConstOps.push_back(ConstSO);
-    else if (auto *C = dyn_cast<Constant>(Op))
-      ConstOps.push_back(C);
-    else
+    CmpInst::Predicate Pred;
+    Constant *C = nullptr;
+    if (Op == SI) {
+      C = dyn_cast<Constant>(IsTrueArm ? SI->getTrueValue()
+                                       : SI->getFalseValue());
+    } else if (match(SI->getCondition(),
+                     m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
+               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+      // Pass
+    } else {
+      C = dyn_cast<Constant>(Op);
+    }
+    if (C == nullptr)
       return nullptr;
+
+    ConstOps.push_back(C);
   }
+
   return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
 }
 
@@ -1083,8 +1093,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   }
 
   // Make sure that one of the select arms constant folds successfully.
-  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, TV);
-  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, FV);
+  Value *NewTV = constantFoldOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ true);
+  Value *NewFV = constantFoldOperationIntoSelectOperand(Op, SI, /*IsTrueArm*/ false);
   if (!NewTV && !NewFV)
     return nullptr;
 
@@ -1934,39 +1944,6 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   // indices of the two getelementptr instructions into a single instruction.
   if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
     return nullptr;
-
-  if (Src->getResultElementType() == GEP.getSourceElementType() &&
-      Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
-      Src->hasOneUse()) {
-    Value *GO1 = GEP.getOperand(1);
-    Value *SO1 = Src->getOperand(1);
-
-    if (LI) {
-      // Try to reassociate loop invariant GEP chains to enable LICM.
-      if (Loop *L = LI->getLoopFor(GEP.getParent())) {
-        // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
-        // invariant: this breaks the dependence between GEPs and allows LICM
-        // to hoist the invariant part out of the loop.
-        if (L->isLoopInvariant(GO1) && !L->isLoopInvariant(SO1)) {
-          // The swapped GEPs are inbounds if both original GEPs are inbounds
-          // and the sign of the offsets is the same. For simplicity, only
-          // handle both offsets being non-negative.
-          bool IsInBounds = Src->isInBounds() && GEP.isInBounds() &&
-                            isKnownNonNegative(SO1, DL, 0, &AC, &GEP, &DT) &&
-                            isKnownNonNegative(GO1, DL, 0, &AC, &GEP, &DT);
-          // Put NewSrc at same location as %src.
-          Builder.SetInsertPoint(cast<Instruction>(Src));
-          Value *NewSrc = Builder.CreateGEP(GEP.getSourceElementType(),
-                                            Src->getPointerOperand(), GO1,
-                                            Src->getName(), IsInBounds);
-          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
-              GEP.getSourceElementType(), NewSrc, {SO1});
-          NewGEP->setIsInBounds(IsInBounds);
-          return NewGEP;
-        }
-      }
-    }
-  }
 
   // Note that if our source is a gep chain itself then we wait for that
   // chain to be resolved before we perform this transformation.  This
@@ -4396,10 +4373,6 @@ INITIALIZE_PASS_END(InstructionCombiningPass, "instcombine",
 // Initialization Routines
 void llvm::initializeInstCombine(PassRegistry &Registry) {
   initializeInstructionCombiningPassPass(Registry);
-}
-
-void LLVMInitializeInstCombine(LLVMPassRegistryRef R) {
-  initializeInstructionCombiningPassPass(*unwrap(R));
 }
 
 FunctionPass *llvm::createInstructionCombiningPass() {

@@ -31,8 +31,11 @@
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
+#include "mlir/Conversion/OpenACCToLLVM/ConvertOpenACCToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -41,7 +44,6 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <mlir/IR/ValueRange.h>
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
@@ -51,7 +53,7 @@ namespace fir {
 #define DEBUG_TYPE "flang-codegen"
 
 // fir::LLVMTypeConverter for converting to LLVM IR dialect types.
-#include "TypeConverter.h"
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
@@ -1269,119 +1271,42 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
       mlir::Type boxEleTy, mlir::ValueRange lenParams = {}) const {
     auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
-    auto getKindMap = [&]() -> fir::KindMapping & {
-      return this->lowerTy().getKindMap();
-    };
-    auto doInteger =
-        [&](mlir::Type type,
-            unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      int typeCode = fir::integerBitsToTypeCode(width);
-      return {
-          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(type)),
-          this->genConstantOffset(loc, rewriter, typeCode)};
-    };
-    auto doLogical =
-        [&](mlir::Type type,
-            unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      int typeCode = fir::logicalBitsToTypeCode(width);
-      return {
-          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(type)),
-          this->genConstantOffset(loc, rewriter, typeCode)};
-    };
-    auto doFloat = [&](mlir::Type type,
-                       unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      int typeCode = fir::realBitsToTypeCode(width);
-      return {
-          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(type)),
-          this->genConstantOffset(loc, rewriter, typeCode)};
-    };
-    auto doComplex =
-        [&](mlir::Type type,
-            unsigned width) -> std::tuple<mlir::Value, mlir::Value> {
-      auto typeCode = fir::complexBitsToTypeCode(width);
-      return {
-          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(type)),
-          this->genConstantOffset(loc, rewriter, typeCode)};
-    };
-    auto doCharacter = [&](fir::CharacterType type, mlir::ValueRange lenParams)
-        -> std::tuple<mlir::Value, mlir::Value> {
-      unsigned bitWidth = getKindMap().getCharacterBitsize(type.getFKind());
-      auto typeCode = fir::characterBitsToTypeCode(bitWidth);
-      auto typeCodeVal = this->genConstantOffset(loc, rewriter, typeCode);
-
-      bool lengthIsConst = (type.getLen() != fir::CharacterType::unknownLen());
-      mlir::Value eleSize =
-          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(type));
-
-      if (!lengthIsConst) {
-        // If length is constant, then the fir::CharacterType will be
-        // represented as an array of known size of elements having
-        // the corresponding LLVM type. In this case eleSize already
-        // holds correct memory size. If length is not constant, then
-        // the fir::CharacterType will decay to a scalar type,
-        // so we have to multiply it by the non-constant length
-        // to get its size in memory.
+    if (auto eleTy = fir::dyn_cast_ptrEleTy(boxEleTy))
+      boxEleTy = eleTy;
+    if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>())
+      return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy(), lenParams);
+    if (boxEleTy.isa<mlir::NoneType>()) // unlimited polymorphic or assumed type
+      return {rewriter.create<mlir::LLVM::ConstantOp>(loc, i64Ty, 0),
+              this->genConstantOffset(loc, rewriter, CFI_type_other)};
+    mlir::Value typeCodeVal = this->genConstantOffset(
+        loc, rewriter,
+        fir::getTypeCode(boxEleTy, this->lowerTy().getKindMap()));
+    if (fir::isa_integer(boxEleTy) || boxEleTy.dyn_cast<fir::LogicalType>() ||
+        fir::isa_real(boxEleTy) || fir::isa_complex(boxEleTy))
+      return {genTypeStrideInBytes(loc, i64Ty, rewriter,
+                                   this->convertType(boxEleTy)),
+              typeCodeVal};
+    if (auto charTy = boxEleTy.dyn_cast<fir::CharacterType>()) {
+      mlir::Value size =
+          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(charTy));
+      if (charTy.getLen() == fir::CharacterType::unknownLen()) {
+        // Multiply the single character size by the length.
         assert(!lenParams.empty());
         auto len64 = FIROpConversion<OP>::integerCast(loc, rewriter, i64Ty,
                                                       lenParams.back());
-        eleSize =
-            rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, eleSize, len64);
+        size = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, size, len64);
       }
-      return {eleSize, typeCodeVal};
+      return {size, typeCodeVal};
     };
-    // Pointer-like types.
-    if (auto eleTy = fir::dyn_cast_ptrEleTy(boxEleTy))
-      boxEleTy = eleTy;
-    // Integer types.
-    if (fir::isa_integer(boxEleTy)) {
-      if (auto ty = boxEleTy.dyn_cast<mlir::IntegerType>())
-        return doInteger(ty, ty.getWidth());
-      auto ty = boxEleTy.cast<fir::IntegerType>();
-      return doInteger(ty, getKindMap().getIntegerBitsize(ty.getFKind()));
-    }
-    // Floating point types.
-    if (fir::isa_real(boxEleTy)) {
-      if (auto ty = boxEleTy.dyn_cast<mlir::FloatType>())
-        return doFloat(ty, ty.getWidth());
-      auto ty = boxEleTy.cast<fir::RealType>();
-      return doFloat(ty, getKindMap().getRealBitsize(ty.getFKind()));
-    }
-    // Complex types.
-    if (fir::isa_complex(boxEleTy)) {
-      if (auto ty = boxEleTy.dyn_cast<mlir::ComplexType>())
-        return doComplex(
-            ty, ty.getElementType().cast<mlir::FloatType>().getWidth());
-      auto ty = boxEleTy.cast<fir::ComplexType>();
-      return doComplex(ty, getKindMap().getRealBitsize(ty.getFKind()));
-    }
-    // Character types.
-    if (auto ty = boxEleTy.dyn_cast<fir::CharacterType>())
-      return doCharacter(ty, lenParams);
-    // Logical type.
-    if (auto ty = boxEleTy.dyn_cast<fir::LogicalType>())
-      return doLogical(ty, getKindMap().getLogicalBitsize(ty.getFKind()));
-    // Array types.
-    if (auto seqTy = boxEleTy.dyn_cast<fir::SequenceType>())
-      return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy(), lenParams);
-    // Derived-type types.
-    if (boxEleTy.isa<fir::RecordType>()) {
-      auto eleSize = genTypeStrideInBytes(loc, i64Ty, rewriter,
-                                          this->convertType(boxEleTy));
-      return {eleSize,
-              this->genConstantOffset(loc, rewriter, fir::derivedToTypeCode())};
-    }
-    // Reference type.
     if (fir::isa_ref_type(boxEleTy)) {
       auto ptrTy = mlir::LLVM::LLVMPointerType::get(
           mlir::LLVM::LLVMVoidType::get(rewriter.getContext()));
-      mlir::Value size = genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy);
-      return {size, this->genConstantOffset(loc, rewriter, CFI_type_cptr)};
+      return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy), typeCodeVal};
     }
-    // Unlimited polymorphic or assumed type. Use 0 and CFI_type_other since the
-    // information is not none at this point.
-    if (boxEleTy.isa<mlir::NoneType>())
-      return {rewriter.create<mlir::LLVM::ConstantOp>(loc, i64Ty, 0),
-              this->genConstantOffset(loc, rewriter, CFI_type_other)};
+    if (boxEleTy.isa<fir::RecordType>())
+      return {genTypeStrideInBytes(loc, i64Ty, rewriter,
+                                   this->convertType(boxEleTy)),
+              typeCodeVal};
     fir::emitFatalError(loc, "unhandled type in fir.box code generation");
   }
 
@@ -1520,6 +1445,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   std::tuple<fir::BaseBoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(BOX box, mlir::Type inputType,
                        mlir::ConversionPatternRewriter &rewriter, unsigned rank,
+                       [[maybe_unused]] mlir::ValueRange substrParams,
                        mlir::ValueRange lenParams, mlir::Value sourceBox = {},
                        mlir::Type sourceBoxType = {}) const {
     auto loc = box.getLoc();
@@ -1529,7 +1455,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
     if constexpr (!std::is_same_v<BOX, fir::EmboxOp>) {
       if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
-        typeparams.push_back(box.getSubstr()[1]);
+        typeparams.push_back(substrParams[1]);
     }
 
     // Write each of the fields with the appropriate values.
@@ -1561,6 +1487,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   std::tuple<fir::BaseBoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(fir::cg::XReboxOp box, mlir::Value loweredBox,
                        mlir::ConversionPatternRewriter &rewriter, unsigned rank,
+                       mlir::ValueRange substrParams,
                        mlir::ValueRange lenParams,
                        mlir::Value typeDesc = {}) const {
     auto loc = box.getLoc();
@@ -1568,7 +1495,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     auto inputBoxTy = box.getBox().getType().dyn_cast<fir::BaseBoxType>();
     llvm::SmallVector<mlir::Value> typeparams = lenParams;
     if (!box.getSubstr().empty() && fir::hasDynamicSize(boxTy.getEleTy()))
-      typeparams.push_back(box.getSubstr()[1]);
+      typeparams.push_back(substrParams[1]);
 
     auto [eleSize, cfiTy] =
         getSizeAndTypeCode(loc, rewriter, boxTy.getEleTy(), typeparams);
@@ -1735,8 +1662,8 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     assert(!embox.getShape() && "There should be no dims on this embox op");
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         embox, fir::unwrapRefType(embox.getMemref().getType()), rewriter,
-        /*rank=*/0, /*lenParams=*/operands.drop_front(1), sourceBox,
-        sourceBoxType);
+        /*rank=*/0, /*substrParams=*/mlir::ValueRange{},
+        adaptor.getTypeparams(), sourceBox, sourceBoxType);
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
     if (fir::isDerivedTypeWithLenParams(boxTy)) {
       TODO(embox.getLoc(),
@@ -1766,7 +1693,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     }
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         xbox, fir::unwrapRefType(xbox.getMemref().getType()), rewriter,
-        xbox.getOutRank(), operands.drop_front(xbox.lenParamOffset()),
+        xbox.getOutRank(), adaptor.getSubstr(), adaptor.getLenParams(),
         sourceBox, sourceBoxType);
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
@@ -1989,7 +1916,7 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
 
     auto [boxTy, dest, eleSize] =
         consDescriptorPrefix(rebox, loweredBox, rewriter, rebox.getOutRank(),
-                             lenParams, typeDescAddr);
+                             adaptor.getSubstr(), lenParams, typeDescAddr);
 
     // Read input extents, strides, and base address
     llvm::SmallVector<mlir::Value> inputExtents;
@@ -2445,7 +2372,16 @@ struct XArrayCoorOpConversion
         rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, ty, addr);
         return mlir::success();
       }
-      auto casted = rewriter.create<mlir::LLVM::BitcastOp>(loc, baseTy, addr);
+      // Cast the element address from void* to the derived type so that the
+      // derived type members can be addresses via a GEP using the index of
+      // components.
+      mlir::Type elementType =
+          baseTy.cast<mlir::LLVM::LLVMPointerType>().getElementType();
+      while (auto arrayTy = elementType.dyn_cast<mlir::LLVM::LLVMArrayType>())
+        elementType = arrayTy.getElementType();
+      mlir::Type elementPtrType = mlir::LLVM::LLVMPointerType::get(elementType);
+      auto casted =
+          rewriter.create<mlir::LLVM::BitcastOp>(loc, elementPtrType, addr);
       args.clear();
       args.push_back(0);
       if (!coor.getLenParams().empty()) {
@@ -3513,87 +3449,42 @@ struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
   }
 };
 
-static mlir::LogicalResult getDivc3(fir::DivcOp op,
-                                    mlir::ConversionPatternRewriter &rewriter,
-                                    std::string funcName, mlir::Type returnType,
-                                    llvm::SmallVector<mlir::Type> argType,
-                                    llvm::SmallVector<mlir::Value> args) {
-  auto module = op->getParentOfType<mlir::ModuleOp>();
-  auto loc = op.getLoc();
-  if (mlir::LLVM::LLVMFuncOp divideFunc =
-          module.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName)) {
-    auto call = rewriter.create<mlir::LLVM::CallOp>(
-        loc, returnType, mlir::SymbolRefAttr::get(divideFunc), args);
-    rewriter.replaceOp(op, call->getResults());
-    return mlir::success();
-  }
-  mlir::OpBuilder moduleBuilder(
-      op->getParentOfType<mlir::ModuleOp>().getBodyRegion());
-  auto divideFunc = moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
-      rewriter.getUnknownLoc(), funcName,
-      mlir::LLVM::LLVMFunctionType::get(returnType, argType,
-                                        /*isVarArg=*/false));
-  auto call = rewriter.create<mlir::LLVM::CallOp>(
-      loc, returnType, mlir::SymbolRefAttr::get(divideFunc), args);
-  rewriter.replaceOp(op, call->getResults());
-  return mlir::success();
-}
-
-///  complex division
+/// Inlined complex division
 struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
   using FIROpConversion::FIROpConversion;
 
   mlir::LogicalResult
   matchAndRewrite(fir::DivcOp divc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    // TODO: Can we use a call to __divdc3 instead?
+    // Just generate inline code for now.
     // given: (x + iy) / (x' + iy')
     // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
     mlir::Value a = adaptor.getOperands()[0];
     mlir::Value b = adaptor.getOperands()[1];
     auto loc = divc.getLoc();
     mlir::Type eleTy = convertType(getComplexEleTy(divc.getType()));
-    llvm::SmallVector<mlir::Type> argTy = {eleTy, eleTy, eleTy, eleTy};
-    mlir::Type firReturnTy = divc.getType();
-    mlir::Type ty = convertType(firReturnTy);
+    mlir::Type ty = convertType(divc.getType());
     auto x0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, a, 0);
     auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, a, 1);
     auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 0);
     auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 1);
-
-    fir::KindTy kind = (firReturnTy.dyn_cast<fir::ComplexType>()).getFKind();
-    mlir::SmallVector<mlir::Value> args = {x0, y0, x1, y1};
-    switch (kind) {
-    default:
-      llvm_unreachable("Unsupported complex type");
-    case 4:
-      return getDivc3(divc, rewriter, "__divsc3", ty, argTy, args);
-    case 8:
-      return getDivc3(divc, rewriter, "__divdc3", ty, argTy, args);
-    case 10:
-      return getDivc3(divc, rewriter, "__divxc3", ty, argTy, args);
-    case 16:
-      return getDivc3(divc, rewriter, "__divtc3", ty, argTy, args);
-    case 3:
-    case 2:
-      // No library function for bfloat or half in compiler_rt, generate
-      // inline instead
-      auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1);
-      auto x1x1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x1, x1);
-      auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1);
-      auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1);
-      auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1);
-      auto y1y1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y1, y1);
-      auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, x1x1, y1y1);
-      auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xx, yy);
-      auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, yx, xy);
-      auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rrn, d);
-      auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rin, d);
-      auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
-      auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ra, rr, 0);
-      auto r0 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, r1, ri, 1);
-      rewriter.replaceOp(divc, r0.getResult());
-      return mlir::success();
-    }
+    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1);
+    auto x1x1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x1, x1);
+    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1);
+    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1);
+    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1);
+    auto y1y1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y1, y1);
+    auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, x1x1, y1y1);
+    auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xx, yy);
+    auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, yx, xy);
+    auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rrn, d);
+    auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rin, d);
+    auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
+    auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ra, rr, 0);
+    auto r0 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, r1, ri, 1);
+    rewriter.replaceOp(divc, r0.getResult());
+    return mlir::success();
   }
 };
 
@@ -3637,6 +3528,29 @@ struct MustBeDeadConversion : public FIROpConversion<FromOp> {
       return rewriter.notifyMatchFailure(op, "op must be dead");
     rewriter.eraseOp(op);
     return mlir::success();
+  }
+};
+
+struct UnrealizedConversionCastOpConversion
+    : public FIROpConversion<mlir::UnrealizedConversionCastOp> {
+  using FIROpConversion::FIROpConversion;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::UnrealizedConversionCastOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    assert(op.getOutputs().getTypes().size() == 1 && "expect a single type");
+    mlir::Type convertedType = convertType(op.getOutputs().getTypes()[0]);
+    if (convertedType == adaptor.getInputs().getTypes()[0]) {
+      rewriter.replaceOp(op, adaptor.getInputs());
+      return mlir::success();
+    }
+
+    convertedType = adaptor.getInputs().getTypes()[0];
+    if (convertedType == op.getOutputs().getType()[0]) {
+      rewriter.replaceOp(op, adaptor.getInputs());
+      return mlir::success();
+    }
+    return mlir::failure();
   }
 };
 
@@ -3762,9 +3676,11 @@ public:
         SliceOpConversion, StoreOpConversion, StringLitOpConversion,
         SubcOpConversion, TypeDescOpConversion, UnboxCharOpConversion,
         UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
-        XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
-        ZeroOpConversion>(typeConverter, options);
+        UnrealizedConversionCastOpConversion, XArrayCoorOpConversion,
+        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
+                                                                  options);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::populateOpenACCToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
@@ -3781,6 +3697,7 @@ public:
     // legalize conversion of OpenMP operations without regions.
     mlir::configureOpenMPToLLVMConversionLegality(target, typeConverter);
     target.addLegalDialect<mlir::omp::OpenMPDialect>();
+    target.addLegalDialect<mlir::acc::OpenACCDialect>();
 
     // required NOPs for applying a full conversion
     target.addLegalOp<mlir::ModuleOp>();

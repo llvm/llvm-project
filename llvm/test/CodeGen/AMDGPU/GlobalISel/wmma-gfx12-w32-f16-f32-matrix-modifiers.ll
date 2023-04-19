@@ -437,11 +437,16 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negC_pack(<8 x half> %A, <8 x 
 ; GFX12-NEXT:    flat_load_b128 v[12:15], v[8:9]
 ; GFX12-NEXT:    flat_load_b128 v[16:19], v[8:9] offset:16
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x101
-; GFX12-NEXT:    v_perm_b32 v12, v13, v12, 0x5040100
-; GFX12-NEXT:    v_perm_b32 v13, v15, v14, 0x5040100
+; GFX12-NEXT:    v_and_b32_e32 v8, 0xffff, v12
+; GFX12-NEXT:    v_and_b32_e32 v9, 0xffff, v14
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    v_perm_b32 v14, v17, v16, 0x5040100
-; GFX12-NEXT:    v_perm_b32 v15, v19, v18, 0x5040100
+; GFX12-NEXT:    v_and_b32_e32 v14, 0xffff, v16
+; GFX12-NEXT:    v_and_b32_e32 v16, 0xffff, v18
+; GFX12-NEXT:    v_lshl_or_b32 v12, v13, 16, v8
+; GFX12-NEXT:    v_lshl_or_b32 v13, v15, 16, v9
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX12-NEXT:    v_lshl_or_b32 v14, v17, 16, v14
+; GFX12-NEXT:    v_lshl_or_b32 v15, v19, 16, v16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_wmma_f16_16x16x16_f16 v[12:15], v[0:3], v[4:7], v[12:15] neg_lo:[0,0,1]
 ; GFX12-NEXT:    global_store_b128 v[10:11], v[12:15], off

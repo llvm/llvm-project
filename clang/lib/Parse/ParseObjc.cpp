@@ -408,7 +408,7 @@ static void addContextSensitiveTypeNullability(Parser &P,
   auto getNullabilityAttr = [&](AttributePool &Pool) -> ParsedAttr * {
     return Pool.create(P.getNullabilityKeyword(nullability),
                        SourceRange(nullabilityLoc), nullptr, SourceLocation(),
-                       nullptr, 0, ParsedAttr::AS_ContextSensitiveKeyword);
+                       nullptr, 0, ParsedAttr::Form::ContextSensitiveKeyword());
   };
 
   if (D.getNumTypeObjects() > 0) {

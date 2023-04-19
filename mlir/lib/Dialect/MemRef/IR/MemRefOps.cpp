@@ -1895,7 +1895,7 @@ LogicalResult ReinterpretCastOp::verify() {
       !ShapedType::isDynamic(expectedOffset) &&
       resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
-           << resultOffset << " instead of " << expectedOffset;
+           << expectedOffset << " instead of " << resultOffset;
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
@@ -3236,7 +3236,7 @@ ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
 LogicalResult TransposeOp::verify() {
   if (!getPermutation().isPermutation())
     return emitOpError("expected a permutation map");
-  if (getPermutation().getNumDims() != getShapedType().getRank())
+  if (getPermutation().getNumDims() != getIn().getType().getRank())
     return emitOpError("expected a permutation map of same rank as the input");
 
   auto srcType = getIn().getType().cast<MemRefType>();

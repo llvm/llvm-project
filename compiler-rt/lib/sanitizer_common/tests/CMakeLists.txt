@@ -113,6 +113,8 @@ endif()
 # The default stack size for clang is 8M.
 if(MSVC)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0xC00000)
+elseif (MINGW)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,--stack=0xC00000)
 endif()
 
 set(SANITIZER_TEST_LINK_LIBS)

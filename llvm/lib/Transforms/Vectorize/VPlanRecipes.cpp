@@ -109,6 +109,14 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
+  case VPInstructionSC:
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    default:
+      return true;
+    case VPInstruction::FirstOrderRecurrenceSplice:
+      return false;
+    }
+    llvm_unreachable("unhandled opcode above");
   case VPDerivedIVSC:
   case VPPredInstPHISC:
     return false;
@@ -116,6 +124,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();
   case VPWidenIntOrFpInductionSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPWidenPointerInductionSC:
   case VPWidenCanonicalIVSC:
   case VPWidenPHISC:
@@ -735,8 +744,13 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
+  // The step may be defined by a recipe in the preheader (e.g. if it requires
+  // SCEV expansion), but for the canonical induction the step is required to be
+  // 1, which is represented as live-in.
+  if (getStepValue()->getDefiningRecipe())
+    return false;
+  auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  auto *StepC = dyn_cast<SCEVConstant>(getInductionDescriptor().getStep());
   return StartC && StartC->isZero() && StepC && StepC->isOne();
 }
 
@@ -1091,20 +1105,22 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-bool VPCanonicalIVPHIRecipe::isCanonical(const InductionDescriptor &ID,
-                                         Type *Ty) const {
-  if (Ty != getScalarType())
+bool VPCanonicalIVPHIRecipe::isCanonical(
+    InductionDescriptor::InductionKind Kind, VPValue *Start, VPValue *Step,
+    Type *Ty) const {
+  // The types must match and it must be an integer induction.
+  if (Ty != getScalarType() || Kind != InductionDescriptor::IK_IntInduction)
     return false;
-  // The start value of ID must match the start value of this canonical
-  // induction.
-  if (getStartValue()->getLiveInIRValue() != ID.getStartValue())
+  // Start must match the start value of this canonical induction.
+  if (Start != getStartValue())
     return false;
 
-  ConstantInt *Step = ID.getConstIntStepValue();
-  // ID must also be incremented by one. IK_IntInduction always increment the
-  // induction by Step, but the binary op may not be set.
-  return ID.getKind() == InductionDescriptor::IK_IntInduction && Step &&
-         Step->isOne();
+  // If the step is defined by a recipe, it is not a ConstantInt.
+  if (Step->getDefiningRecipe())
+    return false;
+
+  ConstantInt *StepC = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
+  return StepC && StepC->isOne();
 }
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {

@@ -6115,6 +6115,7 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
 bool MasmParser::parseDirectiveComment(SMLoc DirectiveLoc) {
   std::string FirstLine = parseStringTo(AsmToken::EndOfStatement);
   size_t DelimiterEnd = FirstLine.find_first_of("\b\t\v\f\r\x1A ");
+  assert(DelimiterEnd != std::string::npos);
   StringRef Delimiter = StringRef(FirstLine).take_front(DelimiterEnd);
   if (Delimiter.empty())
     return Error(DirectiveLoc, "no delimiter in 'comment' directive");

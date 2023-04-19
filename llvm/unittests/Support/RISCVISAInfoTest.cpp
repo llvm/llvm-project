@@ -473,3 +473,19 @@ TEST(ToFeatureVector, UnsupportedExtensionsAreDropped) {
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   EXPECT_THAT((*MaybeISAInfo)->toFeatureVector(), ElementsAre("+m"));
 }
+
+TEST(OrderedExtensionMap, ExtensionsAreCorrectlyOrdered) {
+  RISCVISAInfo::OrderedExtensionMap Exts;
+  for (auto ExtName : {"y", "l", "m", "c", "i", "xfoo", "xbar", "sfoo", "sbar",
+                       "zmfoo", "zzfoo", "zfinx", "zicsr"})
+    Exts[ExtName] = {1, 0};
+
+  std::vector<std::string> ExtNames;
+  for (const auto &Ext : Exts)
+    ExtNames.push_back(Ext.first);
+
+  // FIXME: 'l' and 'y' should be ordered after 'i', 'm', 'c'.
+  EXPECT_THAT(ExtNames,
+              ElementsAre("i", "m", "l", "c", "y", "zicsr", "zmfoo", "zfinx",
+                           "zzfoo", "sbar", "sfoo", "xbar", "xfoo"));
+}

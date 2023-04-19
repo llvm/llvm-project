@@ -122,12 +122,52 @@ def LowerContractionOp : TransformWithPatternsOp<"vector.lower_contraction"> {
   }];
 }
 
-def LowerMaskOp : TransformWithPatternsOp<"vector.lower_mask"> {
+def LowerMasksOp : TransformWithPatternsOp<"vector.lower_masks"> {
   let description = [{
-    Indicates that the vector mask operations nested under the isolated from
-    above op `target` should be lowered to finer-grained vector primitives.
+    Indicates that the vector.create_mask and vector.constant_mask operations
+    nested under the isolated from above op `target` should be lowered to
+    finer-grained vector primitives.
 
     This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$results);
+
+  let assemblyFormat = [{
+    $target
+    attr-dict
+    `:` functional-type($target, results)
+  }];
+}
+
+def LowerMaskedTransfersOp : TransformWithPatternsOp<"vector.lower_masked_transfers"> {
+  let description = [{
+    Indicates that masked vector.transfer and vector.gather operations nested
+    under the isolated from above op `target` should be lowered to finer-grained
+    vector primitives.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$results);
+
+  let assemblyFormat = [{
+    $target
+    attr-dict
+    `:` functional-type($target, results)
+  }];
+}
+
+def MaterializeMasksOp : TransformWithPatternsOp<"vector.materialize_masks"> {
+  let description = [{
+    Indicates that mask operations nested under the isolated from above op 
+    `target` should be lowered to fine-grained arithemtic operations.
+
+    This is usually the last step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
   }];
 

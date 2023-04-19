@@ -1843,26 +1843,35 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
   assert(ID && "Store instruction must have DIAssignID metadata");
   (void)ID;
 
+  const uint64_t StoreStartBit = Info.OffsetInBits;
+  const uint64_t StoreEndBit = Info.OffsetInBits + Info.SizeInBits;
+
+  uint64_t FragStartBit = StoreStartBit;
+  uint64_t FragEndBit = StoreEndBit;
+
   bool StoreToWholeVariable = Info.StoreToWholeAlloca;
   if (auto Size = VarRec.Var->getSizeInBits()) {
-    // Discard stores to bits outside this variable. NOTE: trackAssignments
-    // doesn't understand base expressions yet, so all variables that reach
-    // here are guaranteed to start at offset 0 in the alloca.
-    // TODO: Could we truncate the fragment expression instead of discarding
-    // the assignment?
-    if (Info.OffsetInBits + Info.SizeInBits > *Size)
+    // NOTE: trackAssignments doesn't understand base expressions yet, so all
+    // variables that reach here are guaranteed to start at offset 0 in the
+    // alloca.
+    const uint64_t VarStartBit = 0;
+    const uint64_t VarEndBit = *Size;
+
+    // FIXME: trim FragStartBit when nonzero VarStartBit is supported.
+    FragEndBit = std::min(FragEndBit, VarEndBit);
+
+    // Discard stores to bits outside this variable.
+    if (FragStartBit >= FragEndBit)
       return nullptr;
-    // FIXME: As noted above - only variables at offset 0 are handled
-    // currently.
-    StoreToWholeVariable = Info.OffsetInBits == /*VarOffsetInAlloca*/ 0 &&
-                           Info.SizeInBits == *Size;
+
+    StoreToWholeVariable = FragStartBit <= VarStartBit && FragEndBit >= *Size;
   }
 
   DIExpression *Expr =
       DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
   if (!StoreToWholeVariable) {
-    auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
-                                                    Info.SizeInBits);
+    auto R = DIExpression::createFragmentExpression(Expr, FragStartBit,
+                                                    FragEndBit - FragStartBit);
     assert(R.has_value() && "failed to create fragment expression");
     Expr = *R;
   }
@@ -1989,8 +1998,13 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
       // leave dbg.declares with non-empty expressions in place.
       if (DDI->getExpression()->getNumElements() != 0)
         continue;
+      if (!DDI->getAddress())
+        continue;
       if (AllocaInst *Alloca =
               dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
+        // FIXME: Skip VLAs for now (let these variables use dbg.declares).
+        if (!Alloca->isStaticAlloca())
+          continue;
         DbgDeclares[Alloca].insert(DDI);
         Vars[Alloca].insert(VarRecord(DDI));
       }
@@ -2016,10 +2030,14 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
     (void)Markers;
     for (DbgDeclareInst *DDI : P.second) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
-      // describing the same variable (i.e. check that this dbg.declare
-      // has been replaced by a dbg.assign).
+      // describing the same variable (i.e. check that this dbg.declare has
+      // been replaced by a dbg.assign). Use DebugVariableAggregate to Discard
+      // the fragment part because trackAssignments may alter the
+      // fragment. e.g. if the alloca is smaller than the variable, then
+      // trackAssignments will create an alloca-sized fragment for the
+      // dbg.assign.
       assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
-        return DebugVariable(DAI) == DebugVariable(DDI);
+        return DebugVariableAggregate(DAI) == DebugVariableAggregate(DDI);
       }));
       // Delete DDI because the variable location is now tracked using
       // assignment tracking.

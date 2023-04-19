@@ -15,6 +15,8 @@ add_flang_library(FIRTransforms
   SimplifyIntrinsics.cpp
   AddDebugFoundation.cpp
   PolymorphicOpConversion.cpp
+  OpenACC/OpenACCDataOperandConversion.cpp
+  LoopVersioning.cpp
 
   DEPENDS
   FIRDialect
@@ -22,6 +24,7 @@ add_flang_library(FIRTransforms
 
   LINK_LIBS
   FIRBuilder
+  FIRCodeGen
   FIRDialect
   FIRDialectSupport
   FIRSupport
@@ -29,7 +32,9 @@ add_flang_library(FIRTransforms
   MLIRAffineUtils
   MLIRFuncDialect
   MLIRLLVMDialect
+  MLIRLLVMCommonConversion
   MLIRMathTransforms
   MLIROpenACCDialect
+  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
 )

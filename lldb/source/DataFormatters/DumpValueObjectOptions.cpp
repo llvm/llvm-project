@@ -16,7 +16,8 @@ using namespace lldb_private;
 DumpValueObjectOptions::DumpValueObjectOptions()
     : m_summary_sp(), m_root_valobj_name(),
       m_max_ptr_depth(PointerDepth{PointerDepth::Mode::Default, 0}),
-      m_decl_printing_helper(), m_pointer_as_array(), m_use_synthetic(true),
+      m_decl_printing_helper(), m_child_printing_decider(),
+      m_pointer_as_array(), m_use_synthetic(true),
       m_scope_already_checked(false), m_flat_output(false), m_ignore_cap(false),
       m_show_types(false), m_show_location(false), m_use_objc(false),
       m_hide_root_type(false), m_hide_root_name(false), m_hide_name(false),
@@ -47,6 +48,12 @@ DumpValueObjectOptions::SetMaximumDepth(uint32_t depth, bool is_default) {
 DumpValueObjectOptions &
 DumpValueObjectOptions::SetDeclPrintingHelper(DeclPrintingHelper helper) {
   m_decl_printing_helper = helper;
+  return *this;
+}
+
+DumpValueObjectOptions &
+DumpValueObjectOptions::SetChildPrintingDecider(ChildPrintingDecider decider) {
+  m_child_printing_decider = decider;
   return *this;
 }
 

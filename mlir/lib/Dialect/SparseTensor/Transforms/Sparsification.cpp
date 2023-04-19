@@ -83,9 +83,14 @@ inline static bool includesUndef(SortMask mask) {
 class AffineDimFinder : public AffineExprVisitor<AffineDimFinder> {
 public:
   explicit AffineDimFinder(linalg::GenericOp op)
-      : iterTypes(op.getIteratorTypesArray()) {}
+      : iterTypes(op.getIteratorTypes()) {}
+
+  // Overrides method from AffineExprVisitor.
   void visitDimExpr(AffineDimExpr expr) {
-    if (pickedDim == nullptr || pickIterType == iterTypes[expr.getPosition()]) {
+    if (pickedDim == nullptr ||
+        pickIterType == iterTypes[expr.getPosition()]
+                            .cast<linalg::IteratorTypeAttr>()
+                            .getValue()) {
       pickedDim = expr;
     }
   }
@@ -106,11 +111,12 @@ private:
   /// The iterator type that we want.
   utils::IteratorType pickIterType;
   /// The mapping between dim=>iterator type.
-  SmallVector<utils::IteratorType> iterTypes;
+  ArrayAttr iterTypes;
 };
 
 // Flattens an affine expression into a list of AffineDimExprs.
 struct AffineDimCollector : public AffineExprVisitor<AffineDimCollector> {
+  // Overrides method from AffineExprVisitor.
   void visitDimExpr(AffineDimExpr expr) { dims.push_back(expr); }
   SmallVector<AffineDimExpr> dims;
 };
@@ -306,7 +312,7 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
         // else increase min(d0_1, d0_2).
         return false;
       }
-      merger.setLoopDependentTensorLevel(ldx, tensor, lvl);
+      merger.setLoopDependentTensorLevel(ldx, tensor, lvl, dlt);
     }
     return true;
   }
@@ -774,10 +780,6 @@ static bool computeIterationGraph(CodegenEnv &env, SortMask mask,
   for (OpOperand &t : env.op()->getOpOperands()) {
     // Get map and encoding.
     const auto enc = getSparseTensorEncoding(t.get().getType());
-    assert(env.op().getMatchingIndexingMap(&t).getNumDims() +
-               getNumNonTrivialIdxExpOnSparseLvls(env.op()) ==
-           numLoops);
-
     // Skips dense inputs/outputs when not requested.
     const bool isDenseInput = !enc && env.op().isDpsInput(&t);
     const bool isDenseOutput = !enc && !isDenseInput;
@@ -1482,11 +1484,12 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
                                            std::optional<Level> lvl,
                                            DimLevelType dlt, bool isIdxReduc) {
     assert(env.merger().loop(b) == idx);
-    // FIXME: Dense index reduction can reuse the universal index as well.
-    if (!isIdxReduc && (isDenseDLT(dlt) || isUndefDLT(dlt))) {
+    if (isDenseDLT(dlt) || isUndefDLT(dlt))
       needsUniv = true;
-    } else {
-      // sparse/singleton levels.
+    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) || isIdxReduc) {
+      // Only when this is a index reduction loop, can the dlt be undefined.
+      assert(!isUndefDLT(dlt) || isIdxReduc);
+      // sparse/singleton levels, or a dense/sparse index reduction loop.
       tids.push_back(tid);
       lvls.push_back(*lvl);
     }
@@ -1498,8 +1501,7 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
   // consumed by a subsequent lattice point.
   if (needsUniv) {
     for (const LatPointId li : env.set(lts).drop_front())
-      if (!env.merger().hasAnySparse(env.lat(li).simple) &&
-          !env.merger().hasSparseIdxReduction(env.lat(li).simple))
+      if (!env.merger().hasAnySparse(env.lat(li).simple))
         return true;
   }
   return false;
@@ -1580,7 +1582,7 @@ static bool translateBitsToTidLvlPairs(
           tids.push_back(tid);
           lvls.push_back(*lvl);
           numloopCond++;
-        } else if (isDenseDLT(dlt)) {
+        } else if (isDenseDLT(dlt) || isIdxReduc) {
           tids.push_back(tid);
           lvls.push_back(*lvl);
         } else {
@@ -1680,14 +1682,17 @@ static std::pair<Operation *, bool> startLoop(CodegenEnv &env,
 
 /// Ends a single loop in current sequence. Returns new values for needsUniv.
 static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
-                    LoopId idx, LatPointId li, bool needsUniv) {
-  // End a while-loop.
-  if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
-    finalizeWhileOp(env, rewriter, idx, needsUniv, whileOp);
-  } else if (auto forOp = dyn_cast<scf::ForOp>(loop)) {
-    // Any iteration of a reduction for-loop creates a valid lex insert.
+                    LoopId idx, LatPointId li, bool needsUniv,
+                    bool isSingleCond) {
+
+  if (isSingleCond) {
+    // Either a for-loop or a while-loop that iterates over a slice.
+    // Any iteration creates a valid lex insert.
     if (env.isReduc() && env.getValidLexInsert())
       env.setValidLexInsert(constantI1(rewriter, env.op().getLoc(), true));
+  } else if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
+    // End a while-loop.
+    finalizeWhileOp(env, rewriter, idx, needsUniv, whileOp);
   } else {
     needsUniv = false;
   }
@@ -1701,10 +1706,10 @@ static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
 }
 
 /// Ends a loop sequence at given level.
-static void endLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
-                       LoopOrd at, LoopId idx, LoopId ldx) {
+static void endLoopSeq(CodegenEnv &env, OpBuilder &builder, unsigned exp,
+                       unsigned at, unsigned idx, unsigned ldx) {
   assert(!env.getLoopVar(idx));
-  env.emitter().exitCurrentLoopSeq();
+  env.emitter().exitCurrentLoopSeq(builder, env.op().getLoc());
   // Unmark bookkeeping of invariants and loop index.
   genInvariants(env, builder, exp, ldx, /*atStart=*/false);
   // Finalize access pattern expansion for sparse tensor output.
@@ -1769,7 +1774,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
     }
 
     // End a loop.
-    needsUniv = endLoop(env, rewriter, loop, idx, li, needsUniv);
+    needsUniv = endLoop(env, rewriter, loop, idx, li, needsUniv, isSingleCond);
   }
 
   // End a loop sequence.

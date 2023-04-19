@@ -2735,11 +2735,11 @@ def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
 def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Don't Use the new driver for offloading compilation.">;
-def offload_device_only : Flag<["--"], "offload-device-only">,
+def offload_device_only : Flag<["--"], "offload-device-only">, Flags<[FlangOption]>,
   HelpText<"Only compile for the offloading device.">;
-def offload_host_only : Flag<["--"], "offload-host-only">,
+def offload_host_only : Flag<["--"], "offload-host-only">, Flags<[FlangOption]>,
   HelpText<"Only compile for the offloading host.">;
-def offload_host_device : Flag<["--"], "offload-host-device">,
+def offload_host_device : Flag<["--"], "offload-host-device">, Flags<[FlangOption]>,
   HelpText<"Only compile for the offloading host.">;
 def cuda_device_only : Flag<["--"], "cuda-device-only">, Alias<offload_device_only>,
   HelpText<"Compile CUDA code for device only">;
@@ -5167,7 +5167,9 @@ def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
 defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
   PosFlag<SetTrue, [], "Attempt to allocate array temporaries on the stack, no matter their size">,
   NegFlag<SetFalse, [], "Allocate array temporaries on the heap (default)">>;
-
+defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
+  PosFlag<SetTrue, [], "Create unit-strided versions of loops">,
+   NegFlag<SetFalse, [], "Do not create unit-strided loops (default)">>;
 } // let Flags = [FC1Option, FlangOption, FlangOnlyOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -5811,7 +5813,7 @@ def fctor_dtor_return_this : Flag<["-"], "fctor-dtor-return-this">,
            "and non-deleting destructors. (No effect on Microsoft ABI)">,
   MarshallingInfoFlag<CodeGenOpts<"CtorDtorReturnThis">>;
 
-def experimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignment-tracking=">,
+def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignment-tracking=">,
   Group<f_Group>, CodeGenOpts<"EnableAssignmentTracking">,
   NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
   Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,

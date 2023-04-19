@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Utils/IndexingUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "llvm/ADT/StringSet.h"
@@ -83,54 +84,6 @@ bool isParallelIterator(utils::IteratorType iteratorType);
 
 /// Check if iterator type  has "reduction" semantics.
 bool isReductionIterator(utils::IteratorType iteratorType);
-
-/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
-/// the type of `source`.
-Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
-OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
-                               int64_t dim);
-
-/// Given an operation, retrieves the value of each dynamic dimension through
-/// constructing the necessary DimOp operators.
-SmallVector<Value, 4> getDynOperands(Location loc, Value val, OpBuilder &b);
-
-/// Computes an upper bound for the result `value` of an index computation.
-/// Translates AffineMinOps and AffineApplyOps along the use-def chains of the
-/// index computation to affine constraints and projects out intermediate
-/// values. The method sets `boundMap` to an affine map that given
-/// `boundOperands` evaluates to an upper bound for the index computation.
-///
-/// If constantRequired is true, only returns the constant bounds (potentially
-/// over-approximating) and fails when not possible.
-///
-/// Example:
-/// ```
-/// %dim0 = dim %tensor, %c0
-/// %dim1 = dim %tensor, %c1
-/// %0 = affine.min affine.map<(d0) -> (40, d0)> (%dim0)
-/// %1 = affine.apply affine.map<(d0, d1) -> (d0 + d1)> (%0, %dim1)
-/// ```
-/// getUpperBoundForIndex(%1, boundMap, boundOperands)
-/// set the output parameters to:
-/// - boundMap = affine.map<(d0) -> (d0 + 40)>
-/// - boundOperands = [%dim1]
-void getUpperBoundForIndex(Value value, AffineMap &boundMap,
-                           SmallVectorImpl<Value> &boundOperands,
-                           bool constantRequired = false);
-
-/// Returns a constant upper bound for the result `value` of an index
-/// computation. Calls `getUpperBoundForIndex` and returns a constant upper
-/// bound if the result of `boundMap` is a constant expression and failure
-/// otherwise.
-///
-/// Example:
-/// ```
-/// %0 = affine.min affine.map<(d0) -> (40, d0)> (%d0)
-/// %1 = affine.apply affine.map<(d0) -> (d0 + 2)> (%0)
-/// ```
-/// getConstantUpperBoundForIndex(%1) returns 42
-/// (boundsMap = affine.map<() -> (42)>)
-FailureOr<int64_t> getConstantUpperBoundForIndex(Value value);
 
 /// Create a tensor::PadOp that pads `source` to the size of the statically
 /// sized `type` whose static sizes are assumed to be greater than the dynamic
@@ -309,6 +262,7 @@ struct FusionInfo {
 /// transformation).
 FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
+
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a

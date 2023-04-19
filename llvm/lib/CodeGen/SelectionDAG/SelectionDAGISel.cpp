@@ -1345,6 +1345,11 @@ static bool isFoldedOrDeadInstruction(const Instruction *I,
 static void processDbgDeclare(FunctionLoweringInfo &FuncInfo,
                               const Value *Address, DIExpression *Expr,
                               DILocalVariable *Var, DebugLoc DbgLoc) {
+  if (!Address) {
+    LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *Var
+                      << " (bad address)\n");
+    return;
+  }
   MachineFunction *MF = FuncInfo.MF;
   const DataLayout &DL = MF->getDataLayout();
 
@@ -1386,13 +1391,7 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
   for (const BasicBlock &BB : *FuncInfo.Fn) {
     for (const Instruction &I : BB) {
       if (const DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(&I)) {
-        Value *Address = DI->getAddress();
-        if (!Address) {
-          LLVM_DEBUG(dbgs() << "processDbgDeclares skipping " << *DI
-                            << " (bad address)\n");
-          continue;
-        }
-        processDbgDeclare(FuncInfo, Address, DI->getExpression(),
+        processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
                           DI->getVariable(), DI->getDebugLoc());
       }
     }
@@ -1449,7 +1448,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
                                  Fn.getSubprogram(),
                                  &Fn.getEntryBlock());
       R << "FastISel didn't lower all arguments: "
-        << ore::NV("Prototype", Fn.getType());
+        << ore::NV("Prototype", Fn.getFunctionType());
       reportFastISelFailure(*MF, *ORE, R, EnableFastISelAbort > 1);
 
       // Use SelectionDAG argument lowering

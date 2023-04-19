@@ -161,6 +161,12 @@ Changes to the RISC-V Backend
 * I, F, D, and A extension versions have been update to the 20191214 spec versions.
   New version I2.1, F2.2, D2.2, A2.1. This should not impact code generation.
   Immpacts versions accepted in ``-march`` and reported in ELF attributes.
+* Changed the ShadowCallStack register from ``x18`` (``s2``) to ``x3``
+  (``gp``). Note this breaks the existing non-standard ABI for ShadowCallStack
+  on RISC-V, but conforms with the new "platform register" defined in the
+  RISC-V psABI (for more details see the 
+  `psABI discussion <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/370>`_).
+* Added support for Zfa extension version 0.2.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -186,6 +192,11 @@ Changes to the C API
   have been removed.
 * Removed ``LLVMPassManagerBuilderRef`` and functions interacting with it.
   These belonged to the no longer supported legacy pass manager.
+* Functions for initializing legacy passes like ``LLVMInitializeInstCombine``
+  have been removed. Calls to such functions can simply be dropped, as they are
+  no longer necessary.
+* ``LLVMPassRegistryRef`` and ``LLVMGetGlobalPassRegistry``, which were only
+  useful in conjunction with initialization functions, have been removed.
 * As part of the opaque pointer transition, ``LLVMGetElementType`` no longer
   gives the pointee type of a pointer type.
 * The following functions for creating constant expressions have been removed,
@@ -245,6 +256,12 @@ Changes to LLDB
 
 * LLDB is now able to show the subtype of signals found in a core file. For example
   memory tagging specific segfaults such as ``SIGSEGV: sync tag check fault``.
+
+* LLDB can now display register fields if they are described in target XML sent
+  by a debug server such as ``gdbserver`` (``lldb-server`` does not currently produce
+  this information). Fields are only printed when reading named registers, for
+  example ``register read cpsr``. They are not shown when reading a register set,
+  ``register read -s 0``.
 
 Changes to Sanitizers
 ---------------------

@@ -429,8 +429,19 @@ public:
         triples = genFullSliceTriples(builder, loc, baseEntity);
         sliceFields.push_back(fieldIndex);
         // Add indices in the field path for "array%array_comp(indices)"
-        // case.
-        sliceFields.append(subscripts.begin(), subscripts.end());
+        // case. The indices of components provided to the sliceOp must
+        // be zero based (fir.slice has no knowledge of the component
+        // lower bounds). The component lower bounds are applied here.
+        if (!subscripts.empty()) {
+          llvm::SmallVector<mlir::Value> lbounds = hlfir::genLowerbounds(
+              loc, builder, designate.getComponentShape(), subscripts.size());
+          for (auto [i, lb] : llvm::zip(subscripts, lbounds)) {
+            mlir::Value iIdx = builder.createConvert(loc, idxTy, i);
+            mlir::Value lbIdx = builder.createConvert(loc, idxTy, lb);
+            sliceFields.emplace_back(
+                builder.create<mlir::arith::SubIOp>(loc, iIdx, lbIdx));
+          }
+        }
       } else {
         // Otherwise, this is an array section with triplets.
         auto undef = builder.create<fir::UndefOp>(loc, idxTy);
@@ -633,6 +644,30 @@ public:
   }
 };
 
+class GetExtentOpConversion
+    : public mlir::OpRewritePattern<hlfir::GetExtentOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::GetExtentOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::GetExtentOp getExtentOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Value shape = getExtentOp.getShape();
+    mlir::Operation *shapeOp = shape.getDefiningOp();
+    // the hlfir.shape_of operation which led to the creation of this get_extent
+    // operation should now have been lowered to a fir.shape operation
+    if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
+      fir::ShapeType shapeTy = shape.getType().cast<fir::ShapeType>();
+      llvm::APInt dim = getExtentOp.getDim();
+      uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
+      mlir::Value extent = s.getExtents()[dimVal];
+      rewriter.replaceOp(getExtentOp, extent);
+      return mlir::success();
+    }
+    return mlir::failure();
+  }
+};
+
 class ConvertHLFIRtoFIR
     : public hlfir::impl::ConvertHLFIRtoFIRBase<ConvertHLFIRtoFIR> {
 public:
@@ -646,8 +681,8 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<AssignOpConversion, CopyInOpConversion, CopyOutOpConversion,
                     DeclareOpConversion, DesignateOpConversion,
-                    NoReassocOpConversion, NullOpConversion,
-                    ParentComponentOpConversion>(context);
+                    GetExtentOpConversion, NoReassocOpConversion,
+                    NullOpConversion, ParentComponentOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalDialect<hlfir::hlfirDialect>();
     target.markUnknownOpDynamicallyLegal(

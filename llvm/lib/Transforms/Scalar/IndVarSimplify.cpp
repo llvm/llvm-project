@@ -64,15 +64,12 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -407,8 +404,8 @@ bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
     PHIs.push_back(&PN);
 
   bool Changed = false;
-  for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
-    if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHIs[i]))
+  for (WeakTrackingVH &PHI : PHIs)
+    if (PHINode *PN = dyn_cast_or_null<PHINode>(&*PHI))
       Changed |= handleFloatingPointIV(L, PN);
 
   // If the loop previously had floating-point IV, ScalarEvolution

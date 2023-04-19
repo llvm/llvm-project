@@ -47,6 +47,7 @@ public:
 private:
   uptr Base = 0;
   uptr Capacity = 0;
+  uptr MappedBase = 0;
   MapPlatformData Data = {};
 };
 

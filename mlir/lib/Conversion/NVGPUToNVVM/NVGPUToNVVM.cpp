@@ -367,7 +367,9 @@ static void emitCpAsyncOpZfillAsm(Location loc, Value dstPtr, Value srcPtr,
                                   ConversionPatternRewriter &rewriter) {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
-  const char *asmStr = "cp.async.cg.shared.global [$0], [$1], $2, $3;\n";
+
+  const char *cpAsyncCgStr = "cp.async.cg.shared.global [$0], [$1], $2, $3;\n";
+  const char *cpAsyncCaStr = "cp.async.ca.shared.global [$0], [$1], $2, $3;\n";
   const char *asmConstraints = "r,l,n,r";
 
   Value c3I32 = rewriter.create<LLVM::ConstantOp>(
@@ -381,6 +383,19 @@ static void emitCpAsyncOpZfillAsm(Location loc, Value dstPtr, Value srcPtr,
       loc, rewriter.create<LLVM::MulOp>(loc, bitwidth, srcElementsI32), c3I32);
 
   SmallVector<Value> asmVals{dstPtr, srcPtr, dstBytes, srcBytes};
+
+  // Pick the right asm string based on the dstBytes which is a compile-time
+  // constant.
+  auto dstByteConstOp =
+      dyn_cast<mlir::LLVM::ConstantOp>(dstBytes.getDefiningOp());
+  auto dstByteAttr = dstByteConstOp.getValue().dyn_cast<mlir::IntegerAttr>();
+  int64_t dstByteVal = dstByteAttr.getValue().getSExtValue();
+
+  assert((dstByteVal == 4 || dstByteVal == 8 || dstByteVal == 16) &&
+          "cp.async byte copy size must be 4, 8 or 16");
+  // Cache global (.cg) for 16 dst bytes, Cache all (.ca) for sizes other than
+  // 16 dst bytes.
+  const char *asmStr = (dstByteVal == 16) ? cpAsyncCgStr : cpAsyncCaStr;
 
   rewriter.create<LLVM::InlineAsmOp>(
       loc, LLVM::LLVMVoidType::get(rewriter.getContext()),

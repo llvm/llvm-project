@@ -84,14 +84,11 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -1001,13 +998,13 @@ static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
           DL->getTypeSizeInBits(IntPtr) &&
       SE->isLoopEntryGuardedByCond(
           CurLoop, ICmpInst::ICMP_NE, BECount,
-          SE->getNegativeSCEV(SE->getOne(BECount->getType())))) {
+          SE->getMinusOne(BECount->getType()))) {
     TripCountS = SE->getZeroExtendExpr(
-        SE->getAddExpr(BECount, SE->getOne(BECount->getType()), SCEV::FlagNUW),
+        SE->getAddExpr(BECount, SE->getOne(BECount->getType())),
         IntPtr);
   } else {
     TripCountS = SE->getAddExpr(SE->getTruncateOrZeroExtend(BECount, IntPtr),
-                                SE->getOne(IntPtr), SCEV::FlagNUW);
+                                SE->getOne(IntPtr));
   }
 
   return TripCountS;

@@ -9,42 +9,41 @@ from lldb.plugins.scripted_process import ScriptedThread
 from lldb.macosx.crashlog import CrashLog,CrashLogParser
 
 class CrashLogScriptedProcess(ScriptedProcess):
-    def parse_crashlog(self):
-        crashlog_parser = CrashLogParser.create(self.dbg, self.crashlog_path, False)
-        crash_log = crashlog_parser.parse()
-
-        self.pid = crash_log.process_id
-        self.addr_mask = crash_log.addr_mask
-        self.crashed_thread_idx = crash_log.crashed_thread_idx
+    def set_crashlog(self, crashlog):
+        self.crashlog = crashlog
+        self.pid = self.crashlog.process_id
+        self.addr_mask = self.crashlog.addr_mask
+        self.crashed_thread_idx = self.crashlog.crashed_thread_idx
         self.loaded_images = []
-        self.exception = crash_log.exception
+        self.exception = self.crashlog.exception
         self.app_specific_thread = None
-        if hasattr(crash_log, 'asi'):
-            self.metadata['asi'] = crash_log.asi
-        if hasattr(crash_log, 'asb'):
-            self.extended_thread_info = crash_log.asb
+        if hasattr(self.crashlog, 'asi'):
+            self.metadata['asi'] = self.crashlog.asi
+        if hasattr(self.crashlog, 'asb'):
+            self.extended_thread_info = self.crashlog.asb
 
-        def load_images(self, images):
-            #TODO: Add to self.loaded_images and load images in lldb
-            if images:
-                for image in images:
-                    if image not in self.loaded_images:
-                        if image.uuid == uuid.UUID(int=0):
-                            continue
-                        err = image.add_module(self.target)
-                        if err:
-                            # Append to SBCommandReturnObject
-                            print(err)
-                        else:
-                            self.loaded_images.append(image)
+        if self.load_all_images:
+            for image in self.crashlog.images:
+                image.resolve = True
+        else:
+            for thread in self.crashlog.threads:
+                if thread.did_crash():
+                    for ident in thread.idents:
+                        for image in self.crashlog.find_images_with_identifier(ident):
+                            image.resolve = True
 
-        for thread in crash_log.threads:
-            if self.load_all_images:
-                load_images(self, crash_log.images)
-            elif thread.did_crash():
-                for ident in thread.idents:
-                    load_images(self, crash_log.find_images_with_identifier(ident))
+        for image in self.crashlog.images:
+            if image not in self.loaded_images:
+                if image.uuid == uuid.UUID(int=0):
+                    continue
+                err = image.add_module(self.target)
+                if err:
+                    # Append to SBCommandReturnObject
+                    print(err)
+                else:
+                    self.loaded_images.append(image)
 
+        for thread in self.crashlog.threads:
             if hasattr(thread, 'app_specific_backtrace') and thread.app_specific_backtrace:
                 # We don't want to include the Application Specific Backtrace
                 # Thread into the Scripted Process' Thread list.
@@ -92,7 +91,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.crashed_thread_idx = 0
         self.exception = None
         self.extended_thread_info = None
-        self.parse_crashlog()
 
     def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
         # NOTE: CrashLogs don't contain any memory.
@@ -102,9 +100,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
         # TODO: Iterate over corefile_target modules and build a data structure
         # from it.
         return self.loaded_images
-
-    def get_process_id(self) -> int:
-        return self.pid
 
     def should_stop(self) -> bool:
         return True
