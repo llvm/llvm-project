@@ -694,7 +694,7 @@ define float @uitofp_i32_to_f32(i32 %arg) {
 
 define float @sitofp_i32_to_f32(i32 %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf) float @sitofp_i32_to_f32
+; CHECK-LABEL: define nofpclass(nan inf nzero) float @sitofp_i32_to_f32
 ; CHECK-SAME: (i32 [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i32 [[ARG]] to float
 ; CHECK-NEXT:    ret float [[CVT]]
@@ -716,7 +716,7 @@ define <2 x float> @uitofp_v2i32_to_v2f32(<2 x i32> %arg) {
 
 define <2 x float> @sitofp_v2i32_to_v2i32(<2 x i32> %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan inf) <2 x float> @sitofp_v2i32_to_v2i32
+; CHECK-LABEL: define nofpclass(nan inf nzero) <2 x float> @sitofp_v2i32_to_v2i32
 ; CHECK-SAME: (<2 x i32> [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <2 x i32> [[ARG]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[CVT]]
@@ -738,7 +738,7 @@ define half @uitofp_i17_to_f16(i17 %arg) {
 
 define half @sitofp_i17_to_f16(i17 %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan) half @sitofp_i17_to_f16
+; CHECK-LABEL: define nofpclass(nan nzero) half @sitofp_i17_to_f16
 ; CHECK-SAME: (i17 [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp i17 [[ARG]] to half
 ; CHECK-NEXT:    ret half [[CVT]]
@@ -760,7 +760,7 @@ define <2 x half> @uitofp_v2i17_to_v2f16(<2 x i17> %arg) {
 
 define <2 x half> @sitofp_v2i17_to_v2i17(<2 x i17> %arg) {
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan) <2 x half> @sitofp_v2i17_to_v2i17
+; CHECK-LABEL: define nofpclass(nan nzero) <2 x half> @sitofp_v2i17_to_v2i17
 ; CHECK-SAME: (<2 x i17> [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[CVT:%.*]] = sitofp <2 x i17> [[ARG]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[CVT]]

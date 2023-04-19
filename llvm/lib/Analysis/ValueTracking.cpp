@@ -4627,6 +4627,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   case Instruction::UIToFP: {
     // Cannot produce nan
     Known.knownNot(fcNan);
+
+    // sitofp and uitofp turn into +0.0 for zero.
+    Known.knownNot(fcNegZero);
     if (Op->getOpcode() == Instruction::UIToFP)
       Known.signBitIsZero();
 
