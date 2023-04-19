@@ -238,7 +238,7 @@ static bool CheckStmtInlineAttr(Sema &SemaRef, const Stmt *OrigSt,
            << A;
   }
 
-  for (auto Tup :
+  for (const auto &Tup :
        llvm::zip_longest(OrigCEF.getCallExprs(), CEF.getCallExprs())) {
     // If the original call expression already had a callee, we already
     // diagnosed this, so skip it here. We can't skip if there isn't a 1:1
