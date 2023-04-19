@@ -534,6 +534,7 @@ void CGDebugInfo::CreateCompileUnit() {
   // Get absolute path name.
   SourceManager &SM = CGM.getContext().getSourceManager();
   auto &CGO = CGM.getCodeGenOpts();
+  const LangOptions &LO = CGM.getLangOpts();
   std::string MainFileName = CGO.MainFileName;
   if (MainFileName.empty())
     MainFileName = "<stdin>";
@@ -548,9 +549,15 @@ void CGDebugInfo::CreateCompileUnit() {
     MainFileDir = std::string(MainFile->getDir().getName());
     if (!llvm::sys::path::is_absolute(MainFileName)) {
       llvm::SmallString<1024> MainFileDirSS(MainFileDir);
-      llvm::sys::path::append(MainFileDirSS, MainFileName);
-      MainFileName =
-          std::string(llvm::sys::path::remove_leading_dotslash(MainFileDirSS));
+      llvm::sys::path::Style Style =
+          LO.UseTargetPathSeparator
+              ? (CGM.getTarget().getTriple().isOSWindows()
+                     ? llvm::sys::path::Style::windows_backslash
+                     : llvm::sys::path::Style::posix)
+              : llvm::sys::path::Style::native;
+      llvm::sys::path::append(MainFileDirSS, Style, MainFileName);
+      MainFileName = std::string(
+          llvm::sys::path::remove_leading_dotslash(MainFileDirSS, Style));
     }
     // If the main file name provided is identical to the input file name, and
     // if the input file is a preprocessed source, use the module name for
@@ -566,7 +573,6 @@ void CGDebugInfo::CreateCompileUnit() {
   }
 
   llvm::dwarf::SourceLanguage LangTag;
-  const LangOptions &LO = CGM.getLangOpts();
   if (LO.CPlusPlus) {
     if (LO.ObjC)
       LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
