@@ -321,6 +321,20 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    def test_flags_register_size_mismatch(self):
+        # If the size of the flag set found does not match the size of the
+        # register, we discard the flags.
+        self.setup_register_test("""\
+          <flags id="cpsr_flags" size="8">
+            <field name="C" start="0" end="0"/>
+          </flags>
+          <reg name="pc" bitsize="64"/>
+          <reg name="cpsr" regnum="33" bitsize="32" type="cpsr_flags"/>""")
+
+        self.expect("register read cpsr", substrs=["(C = 1)"], matching=False)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
     def test_flags_set_even_if_format_set(self):
         # lldb also sends "format". If that is set, we should still read the
         # flags type.
@@ -439,7 +453,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             'core.xml' : dedent("""\
                 <?xml version="1.0"?>
                 <feature name="org.gnu.gdb.aarch64.core">
-                  <flags id="x0_flags" size="4">
+                  <flags id="x0_flags" size="8">
                     <field name="B" start="0" end="0"/>
                   </flags>
                   <reg name="pc" bitsize="64"/>
@@ -475,23 +489,23 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
             'core.xml' : dedent("""\
                 <?xml version="1.0"?>
                 <feature name="org.gnu.gdb.aarch64.core">
-                  <flags id="my_flags" size="4">
+                  <flags id="my_flags" size="8">
                     <field name="correct" start="0" end="0"/>
                   </flags>
                   <reg name="pc" bitsize="64"/>
                   <reg name="x0" regnum="0" bitsize="64" type="my_flags"/>
                 </feature>"""),
-            # The my_flags here is ignored, so cpsr will use the my_flags from above.
+            # The my_flags here is ignored, so x1 will use the my_flags from above.
             'core-2.xml' : dedent("""\
                 <?xml version="1.0"?>
                 <feature name="org.gnu.gdb.aarch64.core">
-                  <flags id="my_flags" size="4">
+                  <flags id="my_flags" size="8">
                     <field name="incorrect" start="0" end="0"/>
                   </flags>
-                  <reg name="cpsr" regnum="33" bitsize="32" type="my_flags"/>
+                  <reg name="x1" regnum="33" bitsize="64" type="my_flags"/>
                 </feature>
             """),
         })
 
         self.expect("register read x0", substrs=["(correct = 1)"])
-        self.expect("register read cpsr", substrs=["(correct = 1)"])
+        self.expect("register read x1", substrs=["(correct = 1)"])

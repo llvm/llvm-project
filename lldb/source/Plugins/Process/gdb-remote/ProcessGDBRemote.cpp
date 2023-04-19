@@ -4341,8 +4341,19 @@ bool ParseRegisters(
           // gdb_type could reference some flags type defined in XML.
           llvm::StringMap<std::unique_ptr<RegisterFlags>>::iterator it =
               registers_flags_types.find(gdb_type);
-          if (it != registers_flags_types.end())
-            reg_info.flags_type = it->second.get();
+          if (it != registers_flags_types.end()) {
+            auto flags_type = it->second.get();
+            if (reg_info.byte_size == flags_type->GetSize())
+              reg_info.flags_type = flags_type;
+            else
+              LLDB_LOGF(log,
+                        "ProcessGDBRemote::ParseRegisters Size of register "
+                        "flags %s (%d bytes) for "
+                        "register %s does not match the register size (%d "
+                        "bytes). Ignoring this set of flags.",
+                        flags_type->GetID().c_str(), flags_type->GetSize(),
+                        reg_info.name.AsCString(), reg_info.byte_size);
+          }
 
           // There's a slim chance that the gdb_type name is both a flags type
           // and a simple type. Just in case, look for that too (setting both
