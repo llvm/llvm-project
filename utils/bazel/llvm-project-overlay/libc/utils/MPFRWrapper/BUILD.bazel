@@ -47,6 +47,5 @@ cc_library(
         "//libc/test/UnitTest:LibcUnitTest",
         "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_impl",
-        "//libc/utils/testutils:libc_test_utils",
     ],
 )

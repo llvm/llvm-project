@@ -11,9 +11,9 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 #include <math.h>
 
@@ -196,7 +196,7 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
 
 #define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
   do {                                                                         \
-    using namespace __llvm_libc::testutils;                                    \
+    using namespace __llvm_libc::fputil::testing;                              \
     ForceRoundingMode __r1(RoundingMode::Nearest);                             \
     EXPECT_FP_EQ((expected), (actual));                                        \
     ForceRoundingMode __r2(RoundingMode::Upward);                              \

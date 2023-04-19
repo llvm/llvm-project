@@ -11,7 +11,8 @@
 #include <fenv.h>
 
 namespace __llvm_libc {
-namespace testutils {
+namespace fputil {
+namespace testing {
 
 int get_fe_rounding(RoundingMode mode) {
   switch (mode) {
@@ -44,5 +45,6 @@ ForceRoundingMode::~ForceRoundingMode() {
     fesetround(old_rounding_mode);
 }
 
-} // namespace testutils
+} // namespace testing
+} // namespace fputil
 } // namespace __llvm_libc
