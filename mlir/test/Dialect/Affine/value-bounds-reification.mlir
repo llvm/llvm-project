@@ -1,10 +1,18 @@
 // RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args" \
 // RUN:     -verify-diagnostics -split-input-file | FileCheck %s
 
+// RUN: mlir-opt %s -test-affine-reify-value-bounds="reify-to-func-args use-arith-ops" \
+// RUN:     -verify-diagnostics -split-input-file | FileCheck %s --check-prefix=CHECK-ARITH
+
 // CHECK-LABEL: func @reify_through_chain(
 //  CHECK-SAME:     %[[sz0:.*]]: index, %[[sz2:.*]]: index
 //       CHECK:   %[[c10:.*]] = arith.constant 10 : index
 //       CHECK:   return %[[sz0]], %[[c10]], %[[sz2]]
+
+// CHECK-ARITH-LABEL: func @reify_through_chain(
+//  CHECK-ARITH-SAME:     %[[sz0:.*]]: index, %[[sz2:.*]]: index
+//       CHECK-ARITH:   %[[c10:.*]] = arith.constant 10 : index
+//       CHECK-ARITH:   return %[[sz0]], %[[c10]], %[[sz2]]
 func.func @reify_through_chain(%sz0: index, %sz2: index) -> (index, index, index) {
   %c2 = arith.constant 2 : index
   %0 = tensor.empty(%sz0, %sz2) : tensor<?x10x?xf32>
