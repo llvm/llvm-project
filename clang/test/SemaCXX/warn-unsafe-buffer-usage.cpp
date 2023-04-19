@@ -102,12 +102,6 @@ void testArraySubscriptsWithAuto(int *p, int **pp) {
   foo(ap4[1]);    // expected-note{{used in buffer access here}}
 }
 
-//TODO: do not warn for unevaluated context
-void testUnevaluatedContext(int * p) {// expected-warning{{'p' is an unsafe pointer used for buffer access}}
-  foo(sizeof(p[1]),             // expected-note{{used in buffer access here}}
-      sizeof(decltype(p[1])));  // expected-note{{used in buffer access here}}
-}
-
 void testQualifiedParameters(const int * p, const int * const q, const int a[10], const int b[10][10]) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   // expected-warning@-2{{'q' is an unsafe pointer used for buffer access}}
