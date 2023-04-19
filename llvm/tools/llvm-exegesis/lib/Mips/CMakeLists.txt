@@ -4,12 +4,12 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
-  Mips
-  Exegesis
   Core
+  Exegesis
+  MC
+  Mips
   Support
   TargetParser
-  MC
   )
 
 add_llvm_library(LLVMExegesisMips

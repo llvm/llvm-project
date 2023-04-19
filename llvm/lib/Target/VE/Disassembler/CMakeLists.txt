@@ -2,10 +2,10 @@ add_llvm_component_library(LLVMVEDisassembler
   VEDisassembler.cpp
 
   LINK_COMPONENTS
-  MCDisassembler
   MC
-  VEInfo
+  MCDisassembler
   Support
+  VEInfo
 
   ADD_TO_COMPONENT
   VE

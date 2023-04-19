@@ -80,7 +80,7 @@ add_llvm_target(WebAssemblyCodeGen
 
   ADD_TO_COMPONENT
   WebAssembly
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

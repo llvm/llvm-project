@@ -4,11 +4,11 @@ include_directories(
   )
 
 set(LLVM_LINK_COMPONENTS
+  CodeGen
+  Core
   LoongArchCodeGen
   LoongArchDesc
   LoongArchInfo
-  CodeGen
-  Core
   MC
   MIRParser
   SelectionDAG

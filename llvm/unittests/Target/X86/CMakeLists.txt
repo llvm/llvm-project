@@ -8,10 +8,10 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   CodeGen
   Core
-  Passes
   InstCombine
   MC
   MIRParser
+  Passes
   Support
   Target
   TargetParser

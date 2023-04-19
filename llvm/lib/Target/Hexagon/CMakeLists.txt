@@ -87,7 +87,7 @@ add_llvm_target(HexagonCodeGen
 
   ADD_TO_COMPONENT
   Hexagon
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)
