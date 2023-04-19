@@ -208,12 +208,12 @@ define void @shl_i32_16_ptr(i32 %a, ptr %ptr) {
 ; CHECK-LABEL: shl_i32_16_ptr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    movw r30, r20
-; CHECK-NEXT:    std Z+2, r22
 ; CHECK-NEXT:    std Z+3, r23
+; CHECK-NEXT:    std Z+2, r22
 ; CHECK-NEXT:    ldi r24, 0
 ; CHECK-NEXT:    ldi r25, 0
-; CHECK-NEXT:    st Z, r24
 ; CHECK-NEXT:    std Z+1, r25
+; CHECK-NEXT:    st Z, r24
 ; CHECK-NEXT:    ret
   %res = shl i32 %a, 16
   store i32 %res, ptr %ptr

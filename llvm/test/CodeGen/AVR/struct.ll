@@ -11,23 +11,23 @@ define void @foo10(%struct.s10* sret(%struct.s10) %0, i16 %1, i16 %2, i16 %3) ad
 ; CHECKA:       ; %bb.0:
 ; CHECKA-NEXT:    mov r30, r24
 ; CHECKA-NEXT:    mov r31, r25
-; CHECKA-NEXT:    std Z+4, r22
 ; CHECKA-NEXT:    std Z+5, r23
-; CHECKA-NEXT:    std Z+2, r20
+; CHECKA-NEXT:    std Z+4, r22
 ; CHECKA-NEXT:    std Z+3, r21
-; CHECKA-NEXT:    st Z, r18
+; CHECKA-NEXT:    std Z+2, r20
 ; CHECKA-NEXT:    std Z+1, r19
+; CHECKA-NEXT:    st Z, r18
 ; CHECKA-NEXT:    ret
 ;
 ; CHECKB-LABEL: foo10:
 ; CHECKB:       ; %bb.0:
 ; CHECKB-NEXT:    movw r30, r24
-; CHECKB-NEXT:    std Z+4, r22
 ; CHECKB-NEXT:    std Z+5, r23
-; CHECKB-NEXT:    std Z+2, r20
+; CHECKB-NEXT:    std Z+4, r22
 ; CHECKB-NEXT:    std Z+3, r21
-; CHECKB-NEXT:    st Z, r18
+; CHECKB-NEXT:    std Z+2, r20
 ; CHECKB-NEXT:    std Z+1, r19
+; CHECKB-NEXT:    st Z, r18
 ; CHECKB-NEXT:    ret
   %5 = getelementptr inbounds %struct.s10, %struct.s10* %0, i16 0, i32 0
   store i16 %3, i16* %5
