@@ -1,7 +1,9 @@
 #include "test/UnitTest/TestLogger.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h" //write_to_stderr
+#include "src/__support/OSUtil/io.h" // write_to_stderr
+
+#include <stdint.h>
 
 namespace __llvm_libc {
 namespace testing {
@@ -23,9 +25,19 @@ template <> TestLogger &TestLogger::operator<< <const char *>(const char *str) {
   return *this << cpp::string_view(str);
 }
 
+// char* specialization
+template <> TestLogger &TestLogger::operator<< <char *>(char *str) {
+  return *this << cpp::string_view(str);
+}
+
 // char specialization
 template <> TestLogger &TestLogger::operator<<(char ch) {
   return *this << cpp::string_view(&ch, 1);
+}
+
+// void * specialization
+template <> TestLogger &TestLogger::operator<<(void *addr) {
+  return *this << "0x" << cpp::to_string(reinterpret_cast<uintptr_t>(addr));
 }
 
 template <typename T> TestLogger &TestLogger::operator<<(T t) {

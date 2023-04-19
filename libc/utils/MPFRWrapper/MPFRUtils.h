@@ -156,27 +156,30 @@ template <typename T>
 void explain_unary_operation_single_output_error(Operation op, T input,
                                                  T match_value,
                                                  double ulp_tolerance,
-                                                 RoundingMode rounding,
-                                                 testutils::StreamWrapper &OS);
+                                                 RoundingMode rounding);
 template <typename T>
 void explain_unary_operation_two_outputs_error(
     Operation op, T input, const BinaryOutput<T> &match_value,
-    double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
+    double ulp_tolerance, RoundingMode rounding);
 template <typename T>
 void explain_binary_operation_two_outputs_error(
     Operation op, const BinaryInput<T> &input,
     const BinaryOutput<T> &match_value, double ulp_tolerance,
-    RoundingMode rounding, testutils::StreamWrapper &OS);
+    RoundingMode rounding);
 
 template <typename T>
-void explain_binary_operation_one_output_error(
-    Operation op, const BinaryInput<T> &input, T match_value,
-    double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
+void explain_binary_operation_one_output_error(Operation op,
+                                               const BinaryInput<T> &input,
+                                               T match_value,
+                                               double ulp_tolerance,
+                                               RoundingMode rounding);
 
 template <typename T>
-void explain_ternary_operation_one_output_error(
-    Operation op, const TernaryInput<T> &input, T match_value,
-    double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
+void explain_ternary_operation_one_output_error(Operation op,
+                                                const TernaryInput<T> &input,
+                                                T match_value,
+                                                double ulp_tolerance,
+                                                RoundingMode rounding);
 
 template <Operation op, bool silent, typename InputType, typename OutputType>
 class MPFRMatcher : public testing::Matcher<OutputType> {
@@ -196,8 +199,8 @@ public:
 
   // This method is marked with NOLINT because it the name `explainError`
   // does not confirm to the coding style.
-  void explainError(testutils::StreamWrapper &OS) override { // NOLINT
-    explain_error(input, match_value, OS);
+  void explainError() override { // NOLINT
+    explain_error(input, match_value);
   }
 
   // Whether the `explainError` step is skipped or not.
@@ -230,38 +233,30 @@ private:
                                                 rounding);
   }
 
-  template <typename T>
-  void explain_error(T in, T out, testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(T in, T out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
-                                                rounding, OS);
+                                                rounding);
   }
 
-  template <typename T>
-  void explain_error(T in, const BinaryOutput<T> &out,
-                     testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(T in, const BinaryOutput<T> &out) {
     explain_unary_operation_two_outputs_error(op, in, out, ulp_tolerance,
-                                              rounding, OS);
+                                              rounding);
   }
 
   template <typename T>
-  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out,
-                     testutils::StreamWrapper &OS) {
+  void explain_error(const BinaryInput<T> &in, const BinaryOutput<T> &out) {
     explain_binary_operation_two_outputs_error(op, in, out, ulp_tolerance,
-                                               rounding, OS);
+                                               rounding);
   }
 
-  template <typename T>
-  void explain_error(const BinaryInput<T> &in, T out,
-                     testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(const BinaryInput<T> &in, T out) {
     explain_binary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                              rounding, OS);
+                                              rounding);
   }
 
-  template <typename T>
-  void explain_error(const TernaryInput<T> &in, T out,
-                     testutils::StreamWrapper &OS) {
+  template <typename T> void explain_error(const TernaryInput<T> &in, T out) {
     explain_ternary_operation_one_output_error(op, in, out, ulp_tolerance,
-                                               rounding, OS);
+                                               rounding);
   }
 };
 
