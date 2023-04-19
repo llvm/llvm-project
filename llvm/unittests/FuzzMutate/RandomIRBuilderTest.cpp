@@ -420,18 +420,18 @@ TEST(RandomIRBuilderTest, findOrCreateGlobalVariable) {
 
   // Find existing global
   std::unique_ptr<Module> M1 = parseAssembly(SourceCode, Ctx);
-  IB.findOrCreateGlobalVariable(&*M1, {}, fuzzerop::onlyType(Types[0]));
+  IB.findOrCreateGlobalVariable(&*M1, {}, fuzzerop::onlyType(Types[1]));
   ASSERT_FALSE(verifyModule(*M1, &errs()));
   unsigned NumGV1 = M1->getNumNamedValues();
   auto [GV1, DidCreate1] =
-      IB.findOrCreateGlobalVariable(&*M1, {}, fuzzerop::onlyType(Types[0]));
+      IB.findOrCreateGlobalVariable(&*M1, {}, fuzzerop::onlyType(Types[1]));
   ASSERT_FALSE(verifyModule(*M1, &errs()));
   ASSERT_EQ(M1->getNumNamedValues(), NumGV1 + DidCreate1);
 
   // Create new global
   std::unique_ptr<Module> M2 = parseAssembly(SourceCode, Ctx);
   auto [GV2, DidCreate2] =
-      IB.findOrCreateGlobalVariable(&*M1, {}, fuzzerop::onlyType(Types[1]));
+      IB.findOrCreateGlobalVariable(&*M2, {}, fuzzerop::onlyType(Types[2]));
   ASSERT_FALSE(verifyModule(*M2, &errs()));
   ASSERT_TRUE(DidCreate2);
 }
