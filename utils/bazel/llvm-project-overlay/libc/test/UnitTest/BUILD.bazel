@@ -108,6 +108,7 @@ cc_library(
         "StringUtils.h",
     ],
     deps = [
+        "//libc:__support_cpp_string",
         "//libc:__support_cpp_type_traits",
     ],
 )
