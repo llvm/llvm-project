@@ -76,7 +76,8 @@ static void handle_error(const char *msg) {
   exit(EXIT_FAILURE);
 }
 
-int load(int argc, char **argv, char **envp, void *image, size_t size) {
+int load(int argc, char **argv, char **envp, void *image, size_t size,
+         const LaunchParameters &params) {
   if (CUresult err = cuInit(0))
     handle_error(err);
 
@@ -157,10 +158,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size) {
   server.reset(server_inbox, server_outbox, buffer);
 
   // Call the kernel with the given arguments.
-  if (CUresult err =
-          cuLaunchKernel(function, /*gridDimX=*/1, /*gridDimY=*/1,
-                         /*gridDimZ=*/1, /*blockDimX=*/1, /*blockDimY=*/1,
-                         /*bloackDimZ=*/1, 0, stream, nullptr, args_config))
+  if (CUresult err = cuLaunchKernel(
+          function, params.num_blocks_x, params.num_blocks_y,
+          params.num_blocks_z, params.num_threads_x, params.num_threads_y,
+          params.num_threads_z, 0, stream, nullptr, args_config))
     handle_error(err);
 
   // Wait until the kernel has completed execution on the device. Periodically

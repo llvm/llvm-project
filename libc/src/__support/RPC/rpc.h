@@ -20,6 +20,7 @@
 
 #include "rpc_util.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/GPU/utils.h"
 
 #include <stdint.h>
 

@@ -1131,15 +1131,23 @@ void FIROpsDialect::registerTypes() {
            LogicalType, LLVMPointerType, PointerType, RealType, RecordType,
            ReferenceType, SequenceType, ShapeType, ShapeShiftType, ShiftType,
            SliceType, TypeDescType, fir::VectorType>();
-  fir::ReferenceType::attachInterface<PointerLikeModel<fir::ReferenceType>>(
+  fir::ReferenceType::attachInterface<
+      OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
+  fir::ReferenceType::attachInterface<
+      OpenACCPointerLikeModel<fir::ReferenceType>>(*getContext());
+
+  fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(
+      *getContext());
+  fir::PointerType::attachInterface<OpenACCPointerLikeModel<fir::PointerType>>(
       *getContext());
 
-  fir::PointerType::attachInterface<PointerLikeModel<fir::PointerType>>(
+  fir::HeapType::attachInterface<OpenMPPointerLikeModel<fir::HeapType>>(
       *getContext());
-
-  fir::HeapType::attachInterface<AlternativePointerLikeModel<fir::HeapType>>(
+  fir::HeapType::attachInterface<OpenACCPointerLikeModel<fir::HeapType>>(
       *getContext());
 
   fir::LLVMPointerType::attachInterface<
-      AlternativePointerLikeModel<fir::LLVMPointerType>>(*getContext());
+      OpenMPPointerLikeModel<fir::LLVMPointerType>>(*getContext());
+  fir::LLVMPointerType::attachInterface<
+      OpenACCPointerLikeModel<fir::LLVMPointerType>>(*getContext());
 }
