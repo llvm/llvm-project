@@ -96,21 +96,12 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // regions, walk forward through memory until a region is found that has
   // adequate space for our allocation.
   if (process_is_alive) {
-    uint64_t end_of_memory;
-    switch (process_sp->GetAddressByteSize()) {
-    case 2:
-      end_of_memory = 0xffffull;
-      break;
-    case 4:
-      end_of_memory = 0xffffffffull;
-      break;
-    case 8:
-      end_of_memory = 0xffffffffffffffffull;
-      break;
-    default:
-      lldbassert(false && "Invalid address size.");
-      return LLDB_INVALID_ADDRESS;
-    }
+    const uint64_t end_of_memory = process_sp->GetAddressByteSize() == 8
+                                       ? 0xffffffffffffffffull
+                                       : 0xffffffffull;
+
+    lldbassert(process_sp->GetAddressByteSize() == 4 ||
+               end_of_memory != 0xffffffffull);
 
     MemoryRegionInfo region_info;
     Status err = process_sp->GetMemoryRegionInfo(ret, region_info);
@@ -146,31 +137,26 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
   // We've tried our algorithm, and it didn't work.  Now we have to reset back
   // to the end of the allocations we've already reported, or use a 'sensible'
   // default if this is our first allocation.
+
   if (m_allocations.empty()) {
     uint32_t address_byte_size = GetAddressByteSize();
     if (address_byte_size != UINT32_MAX) {
       switch (address_byte_size) {
-      case 2:
-        ret = 0x8000ull;
+      case 8:
+        ret = 0xdead0fff00000000ull;
         break;
       case 4:
         ret = 0xee000000ull;
         break;
-      case 8:
-        ret = 0xdead0fff00000000ull;
-        break;
       default:
-        lldbassert(false && "Invalid address size.");
-        return LLDB_INVALID_ADDRESS;
+        break;
       }
     }
   } else {
     auto back = m_allocations.rbegin();
     lldb::addr_t addr = back->first;
     size_t alloc_size = back->second.m_size;
-    auto arch = target_sp->GetArchitecture().GetTriple().getArch();
-    auto align = arch == llvm::Triple::msp430 ? 512 : 4096;
-    ret = llvm::alignTo(addr + alloc_size, align);
+    ret = llvm::alignTo(addr + alloc_size, 4096);
   }
 
   return ret;

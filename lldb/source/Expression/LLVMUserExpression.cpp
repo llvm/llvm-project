@@ -367,9 +367,7 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
       Status alloc_error;
 
-      auto arch = target->GetArchitecture().GetTriple().getArch();
-      const size_t stack_frame_size =
-          arch == llvm::Triple::msp430 ? 512 : 512 * 1024;
+      const size_t stack_frame_size = 512 * 1024;
 
       const bool zero_memory = false;
 
