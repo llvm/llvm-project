@@ -307,6 +307,8 @@ Bug Fixes in This Version
   bit-fields. This fixes:
   (`#61355 <https://github.com/llvm/llvm-project/issues/61335>`_) and
   (`#61417 <https://github.com/llvm/llvm-project/issues/61417>`_)
+- Fix crash after suggesting typo correction to constexpr if condition.
+  (`#61885 <https://github.com/llvm/llvm-project/issues/61885>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -12891,20 +12891,22 @@ public:
     Decl *ConditionVar;
     FullExprArg Condition;
     bool Invalid;
-    bool HasKnownValue;
-    bool KnownValue;
+    std::optional<bool> KnownValue;
 
     friend class Sema;
     ConditionResult(Sema &S, Decl *ConditionVar, FullExprArg Condition,
                     bool IsConstexpr)
-        : ConditionVar(ConditionVar), Condition(Condition), Invalid(false),
-          HasKnownValue(IsConstexpr && Condition.get() &&
-                        !Condition.get()->isValueDependent()),
-          KnownValue(HasKnownValue &&
-                     !!Condition.get()->EvaluateKnownConstInt(S.Context)) {}
+        : ConditionVar(ConditionVar), Condition(Condition), Invalid(false) {
+      if (IsConstexpr && Condition.get()) {
+        if (std::optional<llvm::APSInt> Val =
+                Condition.get()->getIntegerConstantExpr(S.Context)) {
+          KnownValue = !!(*Val);
+        }
+      }
+    }
     explicit ConditionResult(bool Invalid)
         : ConditionVar(nullptr), Condition(nullptr), Invalid(Invalid),
-          HasKnownValue(false), KnownValue(false) {}
+          KnownValue(std::nullopt) {}
 
   public:
     ConditionResult() : ConditionResult(false) {}
@@ -12913,11 +12915,7 @@ public:
       return std::make_pair(cast_or_null<VarDecl>(ConditionVar),
                             Condition.get());
     }
-    std::optional<bool> getKnownValue() const {
-      if (!HasKnownValue)
-        return std::nullopt;
-      return KnownValue;
-    }
+    std::optional<bool> getKnownValue() const { return KnownValue; }
   };
   static ConditionResult ConditionError() { return ConditionResult(true); }
 
