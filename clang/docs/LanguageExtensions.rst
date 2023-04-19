@@ -1508,6 +1508,9 @@ The following type trait primitives are supported by Clang. Those traits marked
   functionally equivalent to copying the underlying bytes and then dropping the
   source object on the floor. This is true of trivial types and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+* ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
+  objects of the provided type is known to be equivalent to comparing their
+  value representations.
 * ``__is_unbounded_array`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_unsigned`` (C++, Embarcadero):
@@ -4933,7 +4936,7 @@ Note, all of debugging pragmas are subject to change.
 `dump`
 ------
 Accepts either a single identifier or an expression. When a single identifier is passed,
-the lookup results for the identifier are printed to `stderr`. When an expression is passed, 
+the lookup results for the identifier are printed to `stderr`. When an expression is passed,
 the AST for the expression is printed to `stderr`. The expression is an unevaluated operand,
 so things like overload resolution and template instantiations are performed,
 but the expression has no runtime effects.
