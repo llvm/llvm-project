@@ -77,7 +77,7 @@ llvm::Error IncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                       SymbolNameKind NameKind) const {
   auto Sym = (NameKind == LinkerName) ? Jit->lookupLinkerMangled(Name)
@@ -85,7 +85,7 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
 
   if (!Sym)
     return Sym.takeError();
-  return Sym->getValue();
+  return Sym;
 }
 
 } // end namespace clang
