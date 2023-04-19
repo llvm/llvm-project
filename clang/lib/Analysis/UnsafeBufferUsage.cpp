@@ -35,10 +35,9 @@ public:
   MatchDescendantVisitor(const internal::DynTypedMatcher *Matcher,
                          internal::ASTMatchFinder *Finder,
                          internal::BoundNodesTreeBuilder *Builder,
-                         internal::ASTMatchFinder::BindKind Bind,
-                         const bool ignoreUnevaluatedContext)
+                         internal::ASTMatchFinder::BindKind Bind)
       : Matcher(Matcher), Finder(Finder), Builder(Builder), Bind(Bind),
-        Matches(false), ignoreUnevaluatedContext(ignoreUnevaluatedContext) {}
+        Matches(false) {}
 
   // Returns true if a match is found in a subtree of `DynNode`, which belongs
   // to the same callable of `DynNode`.
@@ -69,48 +68,6 @@ public:
       return true;
     // Traverse descendants
     return VisitorBase::TraverseDecl(Node);
-  }
-
-  bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) {
-    // These are unevaluated, except the result expression.
-    if(ignoreUnevaluatedContext)
-      return TraverseStmt(Node->getResultExpr());
-    return VisitorBase::TraverseGenericSelectionExpr(Node);
-  }
-
-  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) {
-    // Unevaluated context.
-    if(ignoreUnevaluatedContext)
-      return true;
-    return VisitorBase::TraverseUnaryExprOrTypeTraitExpr(Node);
-  }
-
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) {
-    // Unevaluated context.
-    if(ignoreUnevaluatedContext)
-      return true;
-    return VisitorBase::TraverseTypeOfExprTypeLoc(Node);
-  }
-
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) {
-    // Unevaluated context.
-    if(ignoreUnevaluatedContext)
-      return true;
-    return VisitorBase::TraverseDecltypeTypeLoc(Node);
-  }
-
-  bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) {
-    // Unevaluated context.
-    if(ignoreUnevaluatedContext)
-      return true;
-    return VisitorBase::TraverseCXXNoexceptExpr(Node);
-  }
-
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) {
-    // Unevaluated context.
-    if(ignoreUnevaluatedContext)
-      return true;
-    return VisitorBase::TraverseCXXTypeidExpr(Node);
   }
 
   bool TraverseStmt(Stmt *Node, DataRecursionQueue *Queue = nullptr) {
@@ -154,7 +111,6 @@ private:
   internal::BoundNodesTreeBuilder ResultBindings;
   const internal::ASTMatchFinder::BindKind Bind;
   bool Matches;
-  bool ignoreUnevaluatedContext;
 };
 
 // Because we're dealing with raw pointers, let's define what we mean by that.
@@ -165,18 +121,11 @@ static auto hasPointerType() {
 static auto hasArrayType() {
     return hasType(hasCanonicalType(arrayType()));
 }
-
-AST_MATCHER_P(Stmt, forEachDescendantEvaluatedStmt, internal::Matcher<Stmt>, innerMatcher) {
+  
+AST_MATCHER_P(Stmt, forEveryDescendant, internal::Matcher<Stmt>, innerMatcher) {
   const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
 
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All, true);
-  return Visitor.findMatch(DynTypedNode::create(Node));
-}
-
-AST_MATCHER_P(Stmt, forEachDescendantStmt, internal::Matcher<Stmt>, innerMatcher) {
-  const DynTypedMatcher &DTM = static_cast<DynTypedMatcher>(innerMatcher);
-
-  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All, false);
+  MatchDescendantVisitor Visitor(&DTM, Finder, Builder, ASTMatchFinder::BK_All);
   return Visitor.findMatch(DynTypedNode::create(Node));
 }
 
@@ -921,31 +870,32 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler) {
 
   // clang-format off
   M.addMatcher(
-    stmt(eachOf(
+    stmt(forEveryDescendant(
+      eachOf(
       // A `FixableGadget` matcher and a `WarningGadget` matcher should not disable
       // each other (they could if they were put in the same `anyOf` group).
       // We also should make sure no two `FixableGadget` (resp. `WarningGadget`) matchers
       // match for the same node, so that we can group them
       // in one `anyOf` group (for better performance via short-circuiting).
-      forEachDescendantStmt(stmt(eachOf(
+      stmt(eachOf(
 #define FIXABLE_GADGET(x)                                                              \
         x ## Gadget::matcher().bind(#x),
-#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
-        // In parallel, match all DeclRefExprs so that to find out
-        // whether there are any uncovered by gadgets.
-        declRefExpr(anyOf(hasPointerType(), hasArrayType()), to(varDecl())).bind("any_dre")
-      ))),
-      forEachDescendantEvaluatedStmt(stmt(anyOf(
-        // Add Gadget::matcher() for every gadget in the registry.
-#define WARNING_GADGET(x)                                                              \
-        allOf(x ## Gadget::matcher().bind(#x), notInSafeBufferOptOut(&Handler)),
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
         // Also match DeclStmts because we'll need them when fixing
         // their underlying VarDecls that otherwise don't have
         // any backreferences to DeclStmts.
         declStmt().bind("any_ds")
-      ))
-    ))),
+      )),
+      stmt(anyOf(
+        // Add Gadget::matcher() for every gadget in the registry.
+#define WARNING_GADGET(x)                                                              \
+        allOf(x ## Gadget::matcher().bind(#x), notInSafeBufferOptOut(&Handler)),
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+        // In parallel, match all DeclRefExprs so that to find out
+        // whether there are any uncovered by gadgets.
+        declRefExpr(anyOf(hasPointerType(), hasArrayType()), to(varDecl())).bind("any_dre")
+      )))
+    )),
     &CB
   );
   // clang-format on
