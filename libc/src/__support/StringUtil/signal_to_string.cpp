@@ -12,6 +12,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/StringUtil/message_mapper.h"
+#include "src/__support/StringUtil/tables/signal_table.h"
 #include "src/__support/integer_to_string.h"
 
 #include <signal.h>
@@ -33,50 +34,15 @@ constexpr size_t max_buff_size() {
 constexpr size_t SIG_BUFFER_SIZE = max_buff_size();
 thread_local char signal_buffer[SIG_BUFFER_SIZE];
 
-constexpr MsgMapping raw_sig_array[] = {
-    MsgMapping(SIGHUP, "Hangup"), MsgMapping(SIGINT, "Interrupt"),
-    MsgMapping(SIGQUIT, "Quit"), MsgMapping(SIGILL, "Illegal instruction"),
-    MsgMapping(SIGTRAP, "Trace/breakpoint trap"),
-    MsgMapping(SIGABRT, "Aborted"), MsgMapping(SIGBUS, "Bus error"),
-    MsgMapping(SIGFPE, "Floating point exception"),
-    MsgMapping(SIGKILL, "Killed"), MsgMapping(SIGUSR1, "User defined signal 1"),
-    MsgMapping(SIGSEGV, "Segmentation fault"),
-    MsgMapping(SIGUSR2, "User defined signal 2"),
-    MsgMapping(SIGPIPE, "Broken pipe"), MsgMapping(SIGALRM, "Alarm clock"),
-    MsgMapping(SIGTERM, "Terminated"),
-    // SIGSTKFLT (may not exist)
-    MsgMapping(SIGCHLD, "Child exited"), MsgMapping(SIGCONT, "Continued"),
-    MsgMapping(SIGSTOP, "Stopped (signal)"), MsgMapping(SIGTSTP, "Stopped"),
-    MsgMapping(SIGTTIN, "Stopped (tty input)"),
-    MsgMapping(SIGTTOU, "Stopped (tty output)"),
-    MsgMapping(SIGURG, "Urgent I/O condition"),
-    MsgMapping(SIGXCPU, "CPU time limit exceeded"),
-    MsgMapping(SIGXFSZ, "File size limit exceeded"),
-    MsgMapping(SIGVTALRM, "Virtual timer expired"),
-    MsgMapping(SIGPROF, "Profiling timer expired"),
-    MsgMapping(SIGWINCH, "Window changed"), MsgMapping(SIGPOLL, "I/O possible"),
-    // SIGPWR (may not exist)
-    MsgMapping(SIGSYS, "Bad system call"),
+constexpr size_t RAW_ARRAY_LEN = PLATFORM_SIGNALS.size();
+constexpr size_t TOTAL_STR_LEN =
+    total_str_len(PLATFORM_SIGNALS.data(), RAW_ARRAY_LEN);
 
-#ifdef SIGSTKFLT
-    MsgMapping(SIGSTKFLT, "Stack fault"), // unused
-#endif
-#ifdef SIGPWR
-    MsgMapping(SIGPWR, "Power failure"), // ignored
-#endif
-};
-
-// Since the string_mappings array is a map from signal numbers to their
-// corresponding strings, we have to have an array large enough we can use the
-// signal numbers as indexes. The highest signal is SIGSYS at 31, so an array of
-// 32 elements will be large enough to hold all of them.
-constexpr size_t SIG_ARRAY_SIZE = 32;
-
-constexpr size_t RAW_ARRAY_LEN = sizeof(raw_sig_array) / sizeof(MsgMapping);
-constexpr size_t TOTAL_STR_LEN = total_str_len(raw_sig_array, RAW_ARRAY_LEN);
+constexpr size_t SIG_ARRAY_SIZE =
+    max_key_val(PLATFORM_SIGNALS.data(), RAW_ARRAY_LEN) + 1;
 
 static constexpr MessageMapper<SIG_ARRAY_SIZE, TOTAL_STR_LEN>
-    signal_mapper(raw_sig_array, RAW_ARRAY_LEN);
+    signal_mapper(PLATFORM_SIGNALS.data(), RAW_ARRAY_LEN);
 
 cpp::string_view build_signal_string(int sig_num, cpp::span<char> buffer) {
   cpp::string_view base_str;
