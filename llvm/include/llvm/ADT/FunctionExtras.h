@@ -60,21 +60,20 @@ namespace detail {
 template <typename T>
 using EnableIfTrivial =
     std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
-                     std::is_trivially_destructible<T>::value>;
+                     std::is_trivially_destructible_v<T>>;
 template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
-    std::enable_if_t<!std::is_same<remove_cvref_t<CallableT>, ThisT>::value>;
+    std::enable_if_t<!std::is_same_v<remove_cvref_t<CallableT>, ThisT>>;
 template <typename CallableT, typename Ret, typename... Params>
-using EnableIfCallable = std::enable_if_t<std::disjunction<
+using EnableIfCallable = std::enable_if_t<std::disjunction_v<
     std::is_void<Ret>,
     std::is_same<decltype(std::declval<CallableT>()(std::declval<Params>()...)),
                  Ret>,
     std::is_same<const decltype(std::declval<CallableT>()(
                      std::declval<Params>()...)),
                  Ret>,
-    std::is_convertible<decltype(std::declval<CallableT>()(
-                            std::declval<Params>()...)),
-                        Ret>>::value>;
+    std::is_convertible<
+        decltype(std::declval<CallableT>()(std::declval<Params>()...)), Ret>>>;
 
 template <typename ReturnT, typename... ParamTs> class UniqueFunctionBase {
 protected:
@@ -97,7 +96,7 @@ protected:
   // It doesn't have to be exact though, and in one way it is more strict
   // because we want to still be able to observe either moves *or* copies.
   template <typename T> struct AdjustedParamTBase {
-    static_assert(!std::is_reference<T>::value,
+    static_assert(!std::is_reference_v<T>,
                   "references should be handled by template specialization");
     using type = std::conditional_t<
         llvm::is_trivially_copy_constructible<T>::value &&
