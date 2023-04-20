@@ -316,3 +316,15 @@ func.func @cast_away_insert_leading_one_dims_non_one_dest(%s: vector<1x4xf32>, %
   %0 = vector.insert %s, %v [5] : vector<1x4xf32> into vector<8x1x4xf32>
   return %0: vector<8x1x4xf32>
 }
+
+// CHECK-LABEL: func @cast_away_insert_leading_one_dims_one_two_dest
+//  CHECK-SAME: (%[[S:.+]]: vector<1x8xi1>, %[[V:.+]]: vector<1x1x8x1x8xi1>)
+//       CHECK:   %[[EXTRACTS:.+]] = vector.extract %[[S]][0] : vector<1x8xi1>
+//       CHECK:   %[[EXTRACTV:.+]] = vector.extract %[[V]][0, 0] : vector<1x1x8x1x8xi1>
+//       CHECK:   %[[INSERT:.+]] = vector.insert %[[EXTRACTS]], %[[EXTRACTV]] [7, 0] : vector<8xi1> into vector<8x1x8xi1>
+//       CHECK:   %[[BCAST:.+]] = vector.broadcast %[[INSERT]] : vector<8x1x8xi1> to vector<1x1x8x1x8xi1>
+//       CHECK:   return %[[BCAST]]
+func.func @cast_away_insert_leading_one_dims_one_two_dest(%s: vector<1x8xi1>, %v: vector<1x1x8x1x8xi1>) -> vector<1x1x8x1x8xi1> {
+  %0 = vector.insert %s, %v [0, 0, 7] : vector<1x8xi1> into vector<1x1x8x1x8xi1>
+  return %0: vector<1x1x8x1x8xi1>
+}
