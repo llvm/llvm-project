@@ -583,7 +583,6 @@ mutex cstdint
 mutex cstdlib
 mutex cstring
 mutex ctime
-mutex functional
 mutex initializer_list
 mutex iosfwd
 mutex limits
@@ -814,7 +813,6 @@ string cstdio
 string cstdlib
 string cstring
 string cwchar
-string functional
 string initializer_list
 string iosfwd
 string iterator
@@ -826,7 +824,6 @@ string tuple
 string type_traits
 string typeinfo
 string utility
-string vector
 string version
 string_view algorithm
 string_view compare
@@ -837,7 +834,6 @@ string_view cstdio
 string_view cstdlib
 string_view cstring
 string_view cwchar
-string_view functional
 string_view initializer_list
 string_view iosfwd
 string_view iterator
@@ -972,7 +968,9 @@ variant typeinfo
 variant utility
 variant version
 vector algorithm
+vector array
 vector atomic
+vector cerrno
 vector climits
 vector compare
 vector concepts
@@ -983,8 +981,11 @@ vector cstring
 vector initializer_list
 vector iosfwd
 vector limits
+vector locale
 vector new
 vector stdexcept
+vector string
+vector string_view
 vector tuple
 vector type_traits
 vector typeinfo
