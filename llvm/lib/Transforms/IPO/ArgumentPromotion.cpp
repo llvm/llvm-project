@@ -781,6 +781,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
   DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> ArgsToPromote;
+  unsigned NumArgsAfterPromote = F->getFunctionType()->getNumParams();
   for (Argument *PtrArg : PointerArgs) {
     // Replace sret attribute with noalias. This reduces register pressure by
     // avoiding a register copy.
@@ -804,6 +805,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
         Types.push_back(Pair.second.Ty);
 
       if (areTypesABICompatible(Types, *F, TTI)) {
+        NumArgsAfterPromote += ArgParts.size() - 1;
         ArgsToPromote.insert({PtrArg, std::move(ArgParts)});
       }
     }
@@ -811,6 +813,9 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
 
   // No promotable pointer arguments.
   if (ArgsToPromote.empty())
+    return nullptr;
+
+  if (NumArgsAfterPromote > TTI.getMaxNumArgs())
     return nullptr;
 
   return doPromotion(F, FAM, ArgsToPromote);
