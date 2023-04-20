@@ -71,6 +71,7 @@ chrono ctime
 chrono initializer_list
 chrono limits
 chrono locale
+chrono new
 chrono optional
 chrono ostream
 chrono ratio
@@ -79,7 +80,6 @@ chrono stdexcept
 chrono string
 chrono string_view
 chrono tuple
-chrono vector
 chrono version
 cinttypes cstdint
 cmath version
@@ -225,6 +225,7 @@ format cstdlib
 format initializer_list
 format limits
 format locale
+format new
 format optional
 format queue
 format stack
@@ -232,7 +233,6 @@ format stdexcept
 format string
 format string_view
 format tuple
-format vector
 format version
 forward_list compare
 forward_list cstddef
@@ -582,12 +582,12 @@ thread ctime
 thread iosfwd
 thread limits
 thread locale
+thread new
 thread ratio
 thread stdexcept
 thread string
 thread string_view
 thread tuple
-thread vector
 thread version
 tuple compare
 tuple cstddef
