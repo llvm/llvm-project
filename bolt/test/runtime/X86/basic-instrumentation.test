@@ -1,6 +1,6 @@
 # Try to instrument a very fast test. Input bin will not execute any code during
 # runtime besides returning zero in main, so it is a good trivial case.
-REQUIRES: system-linux
+REQUIRES: system-linux,bolt-runtime
 
 RUN: %clang %p/Inputs/basic-instrumentation.s -Wl,-q -o %t.exe
 RUN: llvm-bolt %t.exe -o %t --instrument \
