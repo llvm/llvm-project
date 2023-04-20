@@ -657,8 +657,8 @@ public:
 // Definition for isSuperRegister. Put it down here since it needs the
 // iterator defined above in addition to the MCRegisterInfo class itself.
 inline bool MCRegisterInfo::isSuperRegister(MCRegister RegA, MCRegister RegB) const{
-  for (MCSuperRegIterator I(RegA, this); I.isValid(); ++I)
-    if (*I == RegB)
+  for (MCPhysReg I : superregs(RegA))
+    if (I == RegB)
       return true;
   return false;
 }

@@ -205,8 +205,8 @@ void RegScavenger::forward() {
             break;
           }
         bool SuperUsed = false;
-        for (MCSuperRegIterator SR(Reg, TRI); SR.isValid(); ++SR) {
-          if (isRegUsed(*SR)) {
+        for (MCPhysReg SR : TRI->superregs(Reg)) {
+          if (isRegUsed(SR)) {
             SuperUsed = true;
             break;
           }

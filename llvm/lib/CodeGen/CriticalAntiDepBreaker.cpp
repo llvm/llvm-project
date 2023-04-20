@@ -213,9 +213,8 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
 
     if (MO.isUse() && Special) {
       if (!KeepRegs.test(Reg)) {
-        for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-             SubRegs.isValid(); ++SubRegs)
-          KeepRegs.set(*SubRegs);
+        for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
+          KeepRegs.set(SubReg);
       }
     }
   }
@@ -238,13 +237,11 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
     // itself can't be changed.
     if (MI.isRegTiedToUseOperand(I) &&
         Classes[Reg] == reinterpret_cast<TargetRegisterClass *>(-1)) {
-      for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
-           SubRegs.isValid(); ++SubRegs) {
-        KeepRegs.set(*SubRegs);
+      for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
+        KeepRegs.set(SubReg);
       }
-      for (MCSuperRegIterator SuperRegs(Reg, TRI);
-           SuperRegs.isValid(); ++SuperRegs) {
-        KeepRegs.set(*SuperRegs);
+      for (MCPhysReg SuperReg : TRI->superregs(Reg)) {
+        KeepRegs.set(SuperReg);
       }
     }
   }
@@ -264,8 +261,8 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
 
       if (MO.isRegMask()) {
         auto ClobbersPhysRegAndSubRegs = [&](unsigned PhysReg) {
-          for (MCSubRegIterator SRI(PhysReg, TRI, true); SRI.isValid(); ++SRI)
-            if (!MO.clobbersPhysReg(*SRI))
+          for (MCPhysReg SR : TRI->subregs_inclusive(PhysReg))
+            if (!MO.clobbersPhysReg(SR))
               return false;
 
           return true;
@@ -297,8 +294,7 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
 
       // For the reg itself and all subregs: update the def to current;
       // reset the kill state, any restrictions, and references.
-      for (MCSubRegIterator SRI(Reg, TRI, true); SRI.isValid(); ++SRI) {
-        unsigned SubregReg = *SRI;
+      for (MCPhysReg SubregReg : TRI->subregs_inclusive(Reg)) {
         DefIndices[SubregReg] = Count;
         KillIndices[SubregReg] = ~0u;
         Classes[SubregReg] = nullptr;
@@ -307,8 +303,8 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
           KeepRegs.reset(SubregReg);
       }
       // Conservatively mark super-registers as unusable.
-      for (MCSuperRegIterator SR(Reg, TRI); SR.isValid(); ++SR)
-        Classes[*SR] = reinterpret_cast<TargetRegisterClass *>(-1);
+      for (MCPhysReg SR : TRI->superregs(Reg))
+        Classes[SR] = reinterpret_cast<TargetRegisterClass *>(-1);
     }
   }
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
