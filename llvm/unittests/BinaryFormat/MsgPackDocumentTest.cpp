@@ -33,7 +33,8 @@ TEST(MsgPackDocument, TestReadInt) {
 TEST(MsgPackDocument, TestReadBinary) {
   Document Doc;
   uint8_t data[] = {1, 2, 3, 4};
-  bool Ok = Doc.readFromBlob(StringRef("\xC4\x4\x1\x2\x3\x4", 6), /*Multi=*/false);
+  bool Ok =
+      Doc.readFromBlob(StringRef("\xC4\x4\x1\x2\x3\x4", 6), /*Multi=*/false);
   ASSERT_TRUE(Ok);
   ASSERT_EQ(Doc.getRoot().getKind(), Type::Binary);
   ASSERT_EQ(Doc.getRoot().getBinary().getBuffer(),
