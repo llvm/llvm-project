@@ -4505,7 +4505,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op)) {
-      switch (II->getIntrinsicID()) {
+      const Intrinsic::ID IID = II->getIntrinsicID();
+      switch (IID) {
       case Intrinsic::fabs:
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
@@ -4576,6 +4577,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
         break;
       }
+      case Intrinsic::experimental_constrained_sitofp:
+      case Intrinsic::experimental_constrained_uitofp:
+        // Cannot produce nan
+        Known.knownNot(fcNan);
+
+        // sitofp and uitofp turn into +0.0 for zero.
+        Known.knownNot(fcNegZero);
+        if (IID == Intrinsic::experimental_constrained_uitofp)
+          Known.signBitIsZero();
+
+        // TODO: Copy inf handling from instructions
+        break;
       default:
         break;
       }
