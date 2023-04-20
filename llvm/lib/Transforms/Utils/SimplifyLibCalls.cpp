@@ -1709,7 +1709,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
         CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
         TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t10hot_cold_t, HotCold);
   default:
-    assert(false);
+    return nullptr;
   }
 }
 
