@@ -151,7 +151,8 @@ void call_atexit_callbacks(ThreadAttributes *attrib) {
   attrib->atexit_callback_mgr->call();
   for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
     TSSValueUnit &unit = tss_values[i];
-    if (unit.dtor != nullptr)
+    // Both dtor and value need to nonnull to call dtor
+    if (unit.dtor != nullptr && unit.payload != nullptr)
       unit.dtor(unit.payload);
   }
 }
