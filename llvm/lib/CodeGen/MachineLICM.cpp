@@ -118,8 +118,8 @@ namespace {
     const MachineFrameInfo *MFI = nullptr;
     MachineRegisterInfo *MRI = nullptr;
     TargetSchedModel SchedModel;
-    bool PreRegAlloc;
-    bool HasProfileData;
+    bool PreRegAlloc = false;
+    bool HasProfileData = false;
 
     // Various analyses that we use...
     AliasAnalysis *AA = nullptr;               // Alias analysis info.
@@ -128,8 +128,8 @@ namespace {
     MachineDominatorTree *DT = nullptr; // Machine dominator tree for the cur loop
 
     // State that is updated as we process loops
-    bool         Changed;          // True if a loop is changed.
-    bool         FirstInLoop;      // True if it's the first LICM in the loop.
+    bool Changed = false;           // True if a loop is changed.
+    bool FirstInLoop = false;       // True if it's the first LICM in the loop.
     MachineLoop *CurLoop = nullptr; // The current loop we are working on.
     MachineBasicBlock *CurPreheader = nullptr; // The preheader for CurLoop.
 
@@ -163,7 +163,7 @@ namespace {
     // If a MBB does not dominate loop exiting blocks then it may not safe
     // to hoist loads from this block.
     // Tri-state: 0 - false, 1 - true, 2 - unknown
-    unsigned SpeculationState;
+    unsigned SpeculationState = SpeculateUnknown;
 
   public:
     MachineLICMBase(char &PassID, bool PreRegAlloc)

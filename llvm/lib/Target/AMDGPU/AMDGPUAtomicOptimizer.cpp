@@ -38,8 +38,23 @@ struct ReplacementInfo {
   bool ValDivergent;
 };
 
-class AMDGPUAtomicOptimizer : public FunctionPass,
-                              public InstVisitor<AMDGPUAtomicOptimizer> {
+class AMDGPUAtomicOptimizer : public FunctionPass {
+public:
+  static char ID;
+
+  AMDGPUAtomicOptimizer() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+  }
+};
+
+class AMDGPUAtomicOptimizerImpl
+    : public InstVisitor<AMDGPUAtomicOptimizerImpl> {
 private:
   SmallVector<ReplacementInfo, 8> ToReplace;
   const UniformityInfo *UA;
@@ -53,21 +68,19 @@ private:
   Value *buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op, Value *V,
                    Value *const Identity) const;
   Value *buildShiftRight(IRBuilder<> &B, Value *V, Value *const Identity) const;
+
   void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
                       bool ValDivergent) const;
 
 public:
-  static char ID;
+  AMDGPUAtomicOptimizerImpl() = delete;
 
-  AMDGPUAtomicOptimizer() : FunctionPass(ID) {}
+  AMDGPUAtomicOptimizerImpl(const UniformityInfo *UA, const DataLayout *DL,
+                            DominatorTree *DT, const GCNSubtarget *ST,
+                            bool IsPixelShader)
+      : UA(UA), DL(DL), DT(DT), ST(ST), IsPixelShader(IsPixelShader) {}
 
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
-  }
+  bool run(Function &F);
 
   void visitAtomicRMWInst(AtomicRMWInst &I);
   void visitIntrinsicInst(IntrinsicInst &I);
@@ -84,15 +97,40 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
     return false;
   }
 
-  UA = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  DL = &F.getParent()->getDataLayout();
+  const UniformityInfo *UA =
+      &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  const DataLayout *DL = &F.getParent()->getDataLayout();
+
   DominatorTreeWrapperPass *const DTW =
       getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DT = DTW ? &DTW->getDomTree() : nullptr;
+  DominatorTree *DT = DTW ? &DTW->getDomTree() : nullptr;
+
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  ST = &TM.getSubtarget<GCNSubtarget>(F);
-  IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
+  const GCNSubtarget *ST = &TM.getSubtarget<GCNSubtarget>(F);
+
+  bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
+
+  return AMDGPUAtomicOptimizerImpl(UA, DL, DT, ST, IsPixelShader).run(F);
+}
+
+PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
+                                                 FunctionAnalysisManager &AM) {
+
+  const auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
+  const DataLayout *DL = &F.getParent()->getDataLayout();
+
+  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  const GCNSubtarget *ST = &TM.getSubtarget<GCNSubtarget>(F);
+
+  bool IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
+
+  return AMDGPUAtomicOptimizerImpl(UA, DL, DT, ST, IsPixelShader).run(F)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
+bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
 
   visit(F);
 
@@ -107,7 +145,7 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
   return Changed;
 }
 
-void AMDGPUAtomicOptimizer::visitAtomicRMWInst(AtomicRMWInst &I) {
+void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
   default:
@@ -162,7 +200,7 @@ void AMDGPUAtomicOptimizer::visitAtomicRMWInst(AtomicRMWInst &I) {
   ToReplace.push_back(Info);
 }
 
-void AMDGPUAtomicOptimizer::visitIntrinsicInst(IntrinsicInst &I) {
+void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   AtomicRMWInst::BinOp Op;
 
   switch (I.getIntrinsicID()) {
@@ -283,9 +321,10 @@ static Value *buildNonAtomicBinOp(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
 
 // Use the builder to create a reduction of V across the wavefront, with all
 // lanes active, returning the same result in all lanes.
-Value *AMDGPUAtomicOptimizer::buildReduction(IRBuilder<> &B,
-                                             AtomicRMWInst::BinOp Op, Value *V,
-                                             Value *const Identity) const {
+Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
+                                                 AtomicRMWInst::BinOp Op,
+                                                 Value *V,
+                                                 Value *const Identity) const {
   Type *const Ty = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
@@ -328,8 +367,9 @@ Value *AMDGPUAtomicOptimizer::buildReduction(IRBuilder<> &B,
 
 // Use the builder to create an inclusive scan of V across the wavefront, with
 // all lanes active.
-Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
-                                        Value *V, Value *const Identity) const {
+Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
+                                            AtomicRMWInst::BinOp Op, Value *V,
+                                            Value *const Identity) const {
   Type *const Ty = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
@@ -385,8 +425,8 @@ Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
 
 // Use the builder to create a shift right of V across the wavefront, with all
 // lanes active, to turn an inclusive scan into an exclusive scan.
-Value *AMDGPUAtomicOptimizer::buildShiftRight(IRBuilder<> &B, Value *V,
-                                              Value *const Identity) const {
+Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
+                                                  Value *const Identity) const {
   Type *const Ty = V->getType();
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
@@ -456,10 +496,10 @@ static Value *buildMul(IRBuilder<> &B, Value *LHS, Value *RHS) {
   return (CI && CI->isOne()) ? RHS : B.CreateMul(LHS, RHS);
 }
 
-void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
-                                           AtomicRMWInst::BinOp Op,
-                                           unsigned ValIdx,
-                                           bool ValDivergent) const {
+void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
+                                               AtomicRMWInst::BinOp Op,
+                                               unsigned ValIdx,
+                                               bool ValDivergent) const {
   // Start building just before the instruction.
   IRBuilder<> B(&I);
 
