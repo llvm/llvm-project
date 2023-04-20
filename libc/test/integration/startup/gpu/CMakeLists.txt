@@ -12,3 +12,12 @@ add_integration_test(
     FRANCE=Paris
     GERMANY=Berlin
 )
+
+add_integration_test(
+  startup_rpc_test
+  SUITE libc-startup-tests
+  SRCS
+    rpc_test.cpp
+  DEPENDS
+    libc.src.__support.RPC.rpc_client
+)

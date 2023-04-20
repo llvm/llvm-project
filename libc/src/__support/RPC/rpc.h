@@ -34,6 +34,7 @@ enum Opcode : uint16_t {
   NOOP = 0,
   PRINT_TO_STDERR = 1,
   EXIT = 2,
+  TEST_INCREMENT = 3,
 };
 
 /// A fixed size channel used to communicate between the RPC client and server.
