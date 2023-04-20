@@ -571,6 +571,11 @@ namespace llvm {
   /// caller saved registers with stack slots.
   extern char &FixupStatepointCallerSavedID;
 
+  /// This pass fixes stackmaps by moving the STACKMAP instruction back to its
+  /// pre-regalloc location, and reverting its operands back to the original
+  /// values (before spill reloads).
+  extern char &FixStackmapsSpillReloadsID;
+
   /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();

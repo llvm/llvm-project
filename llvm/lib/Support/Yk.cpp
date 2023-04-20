@@ -23,7 +23,8 @@ bool YkStackMapOffsetFix;
 static cl::opt<bool, true> YkStackMapOffsetFixParser(
     "yk-stackmap-offset-fix",
     cl::desc("Apply a fix to stackmaps that corrects the reported instruction "
-             "offset in the presence of calls."),
+             "offset in the presence of calls. (deprecated by "
+             "yk-stackmap-spillreloads-fix)"),
     cl::NotHidden, cl::location(YkStackMapOffsetFix));
 
 bool YkStackMapAdditionalLocs;
@@ -31,3 +32,10 @@ static cl::opt<bool, true> YkStackMapAdditionalLocsParser(
     "yk-stackmap-add-locs",
     cl::desc("Encode additional locations for registers into stackmaps."),
     cl::NotHidden, cl::location(YkStackMapAdditionalLocs));
+
+bool YkStackmapsSpillReloadsFix;
+static cl::opt<bool, true> YkStackMapSpillFixParser(
+    "yk-stackmap-spillreloads-fix",
+    cl::desc("Revert stackmaps and its operands after the register allocator "
+             "has emitted spill reloads."),
+    cl::NotHidden, cl::location(YkStackmapsSpillReloadsFix));
