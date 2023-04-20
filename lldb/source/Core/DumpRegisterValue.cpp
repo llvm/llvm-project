@@ -17,25 +17,9 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-private-types.h"
-
-#if !defined(__has_builtin)
-#define __has_builtin(x) 0
-#endif
-
-#if __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap64)
-#define bswap_32(x) __builtin_bswap32(x)
-#define bswap_64(x) __builtin_bswap64(x)
-#elif defined(_MSC_VER)
-#define bswap_32(x) _byteswap_ulong(x)
-#define bswap_64(x) _byteswap_uint64(x)
-#else
-#include <byteswap.h>
-#endif
+#include "llvm/ADT/bit.h"
 
 using namespace lldb;
-
-static uint32_t swap_value(uint32_t v) { return bswap_32(v); }
-static uint64_t swap_value(uint64_t v) { return bswap_64(v); }
 
 template <typename T>
 static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
@@ -55,7 +39,7 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
 
   // Then we need to match the target's endian on a byte level as well.
   if (lldb_private::endian::InlHostByteOrder() != target_order)
-    value = swap_value(value);
+    value = llvm::byteswap(value);
 
   lldb_private::DataExtractor data_extractor{
       &value, sizeof(T), lldb_private::endian::InlHostByteOrder(), 8};
