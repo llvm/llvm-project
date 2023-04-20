@@ -596,7 +596,6 @@ set(files
   __thread/timed_backoff_policy.h
   __threading_support
   __tree
-  __tuple/apply_cv.h
   __tuple/make_tuple_types.h
   __tuple/pair_like.h
   __tuple/sfinae_helpers.h
