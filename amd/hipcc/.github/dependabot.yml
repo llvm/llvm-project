@@ -6,7 +6,7 @@
 version: 2
 updates:
   - package-ecosystem: "pip" # See documentation for possible values
-    directory: "/" # Location of package manifests
+    directory: "/docs/.sphinx" # Location of package manifests
     open-pull-requests-limit: 10
     schedule:
       interval: "daily"
