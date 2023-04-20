@@ -14933,10 +14933,9 @@ Follows the IEEE-754 semantics for minNum, except for handling of
 signaling NaNs. This match's the behavior of libm's fmin.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN. The returned NaN is always
-quiet. If the operands compare equal, returns a value that compares
-equal to both operands. This means that fmin(+/-0.0, +/-0.0) could
-return either -0.0 or 0.0.
+NaN only if both operands are NaN. If the operands compare equal,
+returns either one of the operands. For example, this means that
+fmin(+0.0, -0.0) returns either operand.
 
 Unlike the IEEE-754 2008 behavior, this does not distinguish between
 signaling and quiet NaN inputs. If a target's implementation follows
@@ -14984,10 +14983,9 @@ Follows the IEEE-754 semantics for maxNum except for the handling of
 signaling NaNs. This matches the behavior of libm's fmax.
 
 If either operand is a NaN, returns the other non-NaN operand. Returns
-NaN only if both operands are NaN. The returned NaN is always
-quiet. If the operands compare equal, returns a value that compares
-equal to both operands. This means that fmax(+/-0.0, +/-0.0) could
-return either -0.0 or 0.0.
+NaN only if both operands are NaN. If the operands compare equal,
+returns either one of the operands. For example, this means that
+fmax(+0.0, -0.0) returns either -0.0 or 0.0.
 
 Unlike the IEEE-754 2008 behavior, this does not distinguish between
 signaling and quiet NaN inputs. If a target's implementation follows
