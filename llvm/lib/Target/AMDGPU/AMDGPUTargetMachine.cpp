@@ -650,6 +650,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUUnifyDivergentExitNodesPass());
           return true;
         }
+        if (PassName == "amdgpu-atomic-optimizer") {
+          PM.addPass(AMDGPUAtomicOptimizerPass(*this));
+          return true;
+        }
         return false;
       });
 
