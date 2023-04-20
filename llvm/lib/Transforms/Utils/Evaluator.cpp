@@ -413,16 +413,28 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           }
 
           Constant *Val = getVal(MSI->getValue());
-          APInt Len = LenC->getValue();
-          while (Len != 0) {
-            Constant *DestVal = ComputeLoadResult(GV, Val->getType(), Offset);
-            if (DestVal != Val) {
-              LLVM_DEBUG(dbgs() << "Memset is not a no-op at offset "
-                                << Offset << " of " << *GV << ".\n");
+          // Avoid the byte-per-byte scan if we're memseting a zeroinitializer
+          // to zero.
+          if (!Val->isNullValue() || MutatedMemory.contains(GV) ||
+              !GV->hasDefinitiveInitializer() ||
+              !GV->getInitializer()->isNullValue()) {
+            APInt Len = LenC->getValue();
+            if (Len.ugt(64 * 1024)) {
+              LLVM_DEBUG(dbgs() << "Not evaluating large memset of size "
+                                << Len << "\n");
               return false;
             }
-            ++Offset;
-            --Len;
+
+            while (Len != 0) {
+              Constant *DestVal = ComputeLoadResult(GV, Val->getType(), Offset);
+              if (DestVal != Val) {
+                LLVM_DEBUG(dbgs() << "Memset is not a no-op at offset "
+                                  << Offset << " of " << *GV << ".\n");
+                return false;
+              }
+              ++Offset;
+              --Len;
+            }
           }
 
           LLVM_DEBUG(dbgs() << "Ignoring no-op memset.\n");
