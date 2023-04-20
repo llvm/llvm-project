@@ -6287,68 +6287,6 @@ getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
   return {IntrinsicCost, LibCost};
 }
 
-/// Compute the cost of creating a vector of type \p VecTy containing the
-/// extracted values from \p VL.
-static InstructionCost
-computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
-                   TargetTransformInfo::ShuffleKind ShuffleKind,
-                   ArrayRef<int> Mask, TargetTransformInfo &TTI) {
-  unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
-
-  if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc || !NumOfParts ||
-      VecTy->getNumElements() < NumOfParts)
-    return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
-
-  bool AllConsecutive = true;
-  unsigned EltsPerVector = VecTy->getNumElements() / NumOfParts;
-  unsigned Idx = -1;
-  InstructionCost Cost = 0;
-
-  // Process extracts in blocks of EltsPerVector to check if the source vector
-  // operand can be re-used directly. If not, add the cost of creating a shuffle
-  // to extract the values into a vector register.
-  SmallVector<int> RegMask(EltsPerVector, UndefMaskElem);
-  for (auto *V : VL) {
-    ++Idx;
-
-    // Reached the start of a new vector registers.
-    if (Idx % EltsPerVector == 0) {
-      RegMask.assign(EltsPerVector, UndefMaskElem);
-      AllConsecutive = true;
-      continue;
-    }
-
-    // Need to exclude undefs from analysis.
-    if (isa<UndefValue>(V) || Mask[Idx] == UndefMaskElem)
-      continue;
-
-    // Check all extracts for a vector register on the target directly
-    // extract values in order.
-    unsigned CurrentIdx = *getExtractIndex(cast<Instruction>(V));
-    if (!isa<UndefValue>(VL[Idx - 1]) && Mask[Idx - 1] != UndefMaskElem) {
-      unsigned PrevIdx = *getExtractIndex(cast<Instruction>(VL[Idx - 1]));
-      AllConsecutive &= PrevIdx + 1 == CurrentIdx &&
-                        CurrentIdx % EltsPerVector == Idx % EltsPerVector;
-      RegMask[Idx % EltsPerVector] = CurrentIdx % EltsPerVector;
-    }
-
-    if (AllConsecutive)
-      continue;
-
-    // Skip all indices, except for the last index per vector block.
-    if ((Idx + 1) % EltsPerVector != 0 && Idx + 1 != VL.size())
-      continue;
-
-    // If we have a series of extracts which are not consecutive and hence
-    // cannot re-use the source vector register directly, compute the shuffle
-    // cost to extract the vector with EltsPerVector elements.
-    Cost += TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteSingleSrc,
-        FixedVectorType::get(VecTy->getElementType(), EltsPerVector), RegMask);
-  }
-  return Cost;
-}
-
 /// Build shuffle mask for shuffle graph entries and lists of main and alternate
 /// operations operands.
 static void
@@ -6921,11 +6859,74 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 : R.getGatherCost(Gathers, !Root && VL.equals(Gathers)));
   };
 
+  /// Compute the cost of creating a vector of type \p VecTy containing the
+  /// extracted values from \p VL.
+  InstructionCost computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
+                                     TTI::ShuffleKind ShuffleKind) {
+    auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
+    unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
+
+    if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc ||
+        !NumOfParts || VecTy->getNumElements() < NumOfParts)
+      return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
+
+    bool AllConsecutive = true;
+    unsigned EltsPerVector = VecTy->getNumElements() / NumOfParts;
+    unsigned Idx = -1;
+    InstructionCost Cost = 0;
+
+    // Process extracts in blocks of EltsPerVector to check if the source vector
+    // operand can be re-used directly. If not, add the cost of creating a
+    // shuffle to extract the values into a vector register.
+    SmallVector<int> RegMask(EltsPerVector, UndefMaskElem);
+    for (auto *V : VL) {
+      ++Idx;
+
+      // Reached the start of a new vector registers.
+      if (Idx % EltsPerVector == 0) {
+        RegMask.assign(EltsPerVector, UndefMaskElem);
+        AllConsecutive = true;
+        continue;
+      }
+
+      // Need to exclude undefs from analysis.
+      if (isa<UndefValue>(V) || Mask[Idx] == UndefMaskElem)
+        continue;
+
+      // Check all extracts for a vector register on the target directly
+      // extract values in order.
+      unsigned CurrentIdx = *getExtractIndex(cast<Instruction>(V));
+      if (!isa<UndefValue>(VL[Idx - 1]) && Mask[Idx - 1] != UndefMaskElem) {
+        unsigned PrevIdx = *getExtractIndex(cast<Instruction>(VL[Idx - 1]));
+        AllConsecutive &= PrevIdx + 1 == CurrentIdx &&
+                          CurrentIdx % EltsPerVector == Idx % EltsPerVector;
+        RegMask[Idx % EltsPerVector] = CurrentIdx % EltsPerVector;
+      }
+
+      if (AllConsecutive)
+        continue;
+
+      // Skip all indices, except for the last index per vector block.
+      if ((Idx + 1) % EltsPerVector != 0 && Idx + 1 != VL.size())
+        continue;
+
+      // If we have a series of extracts which are not consecutive and hence
+      // cannot re-use the source vector register directly, compute the shuffle
+      // cost to extract the vector with EltsPerVector elements.
+      Cost += TTI.getShuffleCost(
+          TargetTransformInfo::SK_PermuteSingleSrc,
+          FixedVectorType::get(VecTy->getElementType(), EltsPerVector),
+          RegMask);
+    }
+    return Cost;
+  }
+
 public:
   ShuffleCostEstimator(TargetTransformInfo &TTI,
                        ArrayRef<Value *> VectorizedVals, BoUpSLP &R)
       : TTI(TTI), VectorizedVals(VectorizedVals), R(R) {}
-  Value *adjustExtracts(const TreeEntry *E, ArrayRef<int> Mask) {
+  Value *adjustExtracts(const TreeEntry *E, ArrayRef<int> Mask,
+                        TTI::ShuffleKind ShuffleKind) {
     if (Mask.empty())
       return nullptr;
     Value *VecBase = nullptr;
@@ -7011,6 +7012,12 @@ public:
                                    VecTy, std::nullopt, CostKind, 0, EEVTy);
       }
     }
+    // Check that gather of extractelements can be represented as just a
+    // shuffle of a single/two vectors the scalars are extracted from.
+    // Found the bunch of extractelement instructions that must be gathered
+    // into a vector and can be represented as a permutation elements in a
+    // single input vector or of 2 input vectors.
+    Cost += computeExtractCost(VL, Mask, ShuffleKind);
     InVectors.assign(1, Constant::getNullValue(VecTy));
     return VecBase;
   }
@@ -7113,7 +7120,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       IgnoredVals.assign(UserIgnoreList->begin(), UserIgnoreList->end());
 
     bool Resized = false;
-    if (Value *VecBase = Estimator.adjustExtracts(E, ExtractMask))
+    if (Value *VecBase = Estimator.adjustExtracts(
+            E, ExtractMask, ExtractShuffle.value_or(TTI::SK_PermuteTwoSrc)))
       if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
         if (VF == VecBaseTy->getNumElements() && GatheredScalars.size() != VF) {
           Resized = true;
@@ -7168,22 +7176,13 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               GatheredScalars.front()->getType(), GatheredScalars.size())));
       return Estimator.finalize(E->ReuseShuffleIndices);
     }
-    InstructionCost Cost = 0;
-    if (ExtractShuffle) {
-      // Check that gather of extractelements can be represented as just a
-      // shuffle of a single/two vectors the scalars are extracted from.
-      // Found the bunch of extractelement instructions that must be gathered
-      // into a vector and can be represented as a permutation elements in a
-      // single input vector or of 2 input vectors.
-      Cost += computeExtractCost(VL, VecTy, *ExtractShuffle, ExtractMask, *TTI);
-    }
     Estimator.gather(
         GatheredScalars,
         VL.equals(GatheredScalars)
             ? nullptr
             : Constant::getNullValue(FixedVectorType::get(
                   GatheredScalars.front()->getType(), GatheredScalars.size())));
-    return Cost + Estimator.finalize(E->ReuseShuffleIndices);
+    return Estimator.finalize(E->ReuseShuffleIndices);
   }
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
