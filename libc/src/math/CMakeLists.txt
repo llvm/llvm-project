@@ -43,7 +43,6 @@ endfunction()
 add_math_entrypoint_object(acosf)
 add_math_entrypoint_object(acoshf)
 
-add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
 add_math_entrypoint_object(asinhf)
 
@@ -152,8 +151,6 @@ add_math_entrypoint_object(nearbyintl)
 add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
-
-add_math_entrypoint_object(pow)
 
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)
