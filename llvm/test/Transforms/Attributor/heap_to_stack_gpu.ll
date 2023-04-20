@@ -741,6 +741,21 @@ bb:
   ret void
 }
 
+define void @convert_large_kmpc_alloc_shared() {
+; CHECK-LABEL: define {{[^@]+}}@convert_large_kmpc_alloc_shared() {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 256, align 1, addrspace(5)
+; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
+; CHECK-NEXT:    tail call void @usei8(ptr noalias nocapture nofree [[MALLOC_CAST]]) #[[ATTR7]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %i = tail call noalias ptr @__kmpc_alloc_shared(i64 256)
+  tail call void @usei8(ptr nocapture nofree %i) nosync nounwind willreturn
+  tail call void @__kmpc_free_shared(ptr %i, i64 256)
+  ret void
+}
+
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
