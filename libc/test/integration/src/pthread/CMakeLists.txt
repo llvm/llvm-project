@@ -116,3 +116,17 @@ add_integration_test(
     libc.src.pthread.pthread_join
     libc.src.__support.CPP.atomic
 )
+
+add_integration_test(
+  pthread_join_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_join_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.include.errno
+    libc.include.stdio
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)

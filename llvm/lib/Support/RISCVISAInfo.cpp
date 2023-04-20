@@ -145,15 +145,19 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"ztso", RISCVExtensionVersion{0, 1}},
 
     // vector crypto
-    {"zvkb", RISCVExtensionVersion{0, 3}},
-    {"zvkg", RISCVExtensionVersion{0, 3}},
-    {"zvkn", RISCVExtensionVersion{0, 3}},
-    {"zvknha", RISCVExtensionVersion{0, 3}},
-    {"zvknhb", RISCVExtensionVersion{0, 3}},
-    {"zvkned", RISCVExtensionVersion{0, 3}},
-    {"zvks", RISCVExtensionVersion{0, 3}},
-    {"zvksed", RISCVExtensionVersion{0, 3}},
-    {"zvksh", RISCVExtensionVersion{0, 3}},
+    {"zvbb", RISCVExtensionVersion{0, 5}},
+    {"zvbc", RISCVExtensionVersion{0, 5}},
+    {"zvkg", RISCVExtensionVersion{0, 5}},
+    {"zvkn", RISCVExtensionVersion{0, 5}},
+    {"zvkned", RISCVExtensionVersion{0, 5}},
+    {"zvkng", RISCVExtensionVersion{0, 5}},
+    {"zvknha", RISCVExtensionVersion{0, 5}},
+    {"zvknhb", RISCVExtensionVersion{0, 5}},
+    {"zvks", RISCVExtensionVersion{0, 5}},
+    {"zvksed", RISCVExtensionVersion{0, 5}},
+    {"zvksg", RISCVExtensionVersion{0, 5}},
+    {"zvksh", RISCVExtensionVersion{0, 5}},
+    {"zvkt", RISCVExtensionVersion{0, 5}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
@@ -880,8 +884,17 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "'zvl*b' requires 'v' or 'zve*' extension to also be specified");
 
-  if ((Exts.count("zvkb") || Exts.count("zvkg") || Exts.count("zvkn") ||
-       Exts.count("zvknha") || Exts.count("zvkned") || Exts.count("zvks") ||
+  if (Exts.count("zvbb") && !HasVector)
+    return createStringError(
+        errc::invalid_argument,
+        "'zvbb' requires 'v' or 'zve*' extension to also be specified");
+
+  if (Exts.count("zvbc") && !Exts.count("zve64x"))
+    return createStringError(
+        errc::invalid_argument,
+        "'zvbc' requires 'v' or 'zve64*' extension to also be specified");
+
+  if ((Exts.count("zvkg") || Exts.count("zvkned") || Exts.count("zvknha") ||
        Exts.count("zvksed") || Exts.count("zvksh")) &&
       !HasVector)
     return createStringError(
@@ -930,9 +943,13 @@ static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
                                        "zkne", "zknd", "zknh"};
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
 static const char *ImpliedExtsZvfh[] = {"zve32f"};
-static const char *ImpliedExtsZvkn[] = {"zvkned", "zvknhb", "zvkb"};
+static const char *ImpliedExtsZvkn[] = {"zvbb", "zvbc", "zvkned", "zvknhb",
+                                        "zvkt"};
+static const char *ImpliedExtsZvkng[] = {"zvkg", "zvkn"};
 static const char *ImpliedExtsZvknhb[] = {"zvknha"};
-static const char *ImpliedExtsZvks[] = {"zvksed", "zvksh", "zvkb"};
+static const char *ImpliedExtsZvks[] = {"zvbb", "zvbc", "zvksed", "zvksh",
+                                        "zvkt"};
+static const char *ImpliedExtsZvksg[] = {"zvks", "zvkg"};
 static const char *ImpliedExtsXsfvcp[] = {"zve32x"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsZcb[] = {"zca"};
@@ -974,8 +991,10 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zve64x"}, {ImpliedExtsZve64x}},
     {{"zvfh"}, {ImpliedExtsZvfh}},
     {{"zvkn"}, {ImpliedExtsZvkn}},
+    {{"zvkng"}, {ImpliedExtsZvkng}},
     {{"zvknhb"}, {ImpliedExtsZvknhb}},
     {{"zvks"}, {ImpliedExtsZvks}},
+    {{"zvksg"}, {ImpliedExtsZvksg}},
     {{"zvl1024b"}, {ImpliedExtsZvl1024b}},
     {{"zvl128b"}, {ImpliedExtsZvl128b}},
     {{"zvl16384b"}, {ImpliedExtsZvl16384b}},

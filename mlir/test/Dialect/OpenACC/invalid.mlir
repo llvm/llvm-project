@@ -198,3 +198,10 @@ acc.enter_data wait(%cst: index) create(%value : memref<10xf32>) attributes {wai
 %value = memref.alloc() : memref<10xf32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
 acc.enter_data wait_devnum(%cst: index) create(%value : memref<10xf32>)
+
+// -----
+
+%0 = arith.constant 1.0 : f32
+// expected-error@+1 {{operand #0 must be integer or index, but got 'f32'}}
+%1 = acc.bounds lowerbound(%0 : f32)
+

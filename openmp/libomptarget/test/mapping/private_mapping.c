@@ -11,7 +11,7 @@ int main() {
 
   for (int i=0; i<16; i++) sum[i] = 10000;
 
-#pragma omp target teams distribute parallel for map(tofrom : sum)             \
+#pragma omp target teams distribute parallel for map(tofrom : sum[:16])       \
     firstprivate(data1, data2, data3)
   for (int i = 0; i < 16; ++i) {
     for (int j = 0; j < 3; ++j) {

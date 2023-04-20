@@ -40,7 +40,7 @@ Type matchContainerType(Type element, Type container) {
   return element;
 }
 
-Attribute getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
+TypedAttr getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
   if (auto shapedTy = type.dyn_cast<ShapedType>()) {
     Type eTy = shapedTy.getElementType();
     APInt valueInt(eTy.getIntOrFloatBitWidth(), value);

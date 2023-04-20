@@ -128,15 +128,23 @@ def rnum_2_14 : Operand<XLenVT>, ImmLeaf<XLenVT,
   let OperandNamespace = "RISCVOp";
 }
 
-let Predicates = [HasStdExtZvkb] in {
-  defm VANDN_V : VALU_IV_V_X<"vandn", 0b000001>;
-  def VBREV8_V : VALUVs2<0b010010, 0b01000, OPMVV, "vbrev8.v">;
-  defm VCLMUL_V : VCLMUL_MV_V_X<"vclmul", 0b001100>;
+let Predicates = [HasStdExtZvbb] in {
+  defm VANDN_V  : VALU_IV_V_X<"vandn", 0b000001>;
+  def  VBREV8_V : VALUVs2<0b010010, 0b01000, OPMVV, "vbrev8.v">;
+  def  VBREV_V  : VALUVs2<0b010010, 0b01010, OPMVV, "vbrev.v">;
+  def  VCLZ_V   : VALUVs2<0b010010, 0b01100, OPMVV, "vclz.v">;
+  def  VCPOP_V  : VALUVs2<0b010010, 0b01110, OPMVV, "vcpop.v">;
+  def  VCTZ_V   : VALUVs2<0b010010, 0b01101, OPMVV, "vctz.v">;
+  def  VREV8_V  : VALUVs2<0b010010, 0b01001, OPMVV, "vrev8.v">;
+  defm VROL_V   : VALU_IV_V_X<"vrol", 0b010101>;
+  defm VROR_V   : VROR_IV_V_X_I<"vror", 0b010100>;
+  defm VWSLL_V  : VALU_IV_V_X_I<"vwsll", 0b110101, uimm5>;
+} // Predicates = [HasStdExtZvbb]
+
+let Predicates = [HasStdExtZvbc] in {
+  defm VCLMUL_V  : VCLMUL_MV_V_X<"vclmul", 0b001100>;
   defm VCLMULH_V : VCLMUL_MV_V_X<"vclmulh", 0b001101>;
-  def VREV8_V : VALUVs2<0b010010, 0b01001, OPMVV, "vrev8.v">;
-  defm VROL_V : VALU_IV_V_X<"vrol", 0b010101>;
-  defm VROR_V : VROR_IV_V_X_I<"vror", 0b010100>;
-} // Predicates = [HasStdExtZvkb]
+} // Predicates = [HasStdExtZvbc]
 
 let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
   def VGHSH_VV : PALUVVNoVm<0b101100, OPMVV, "vghsh.vv">;
@@ -150,21 +158,21 @@ let Predicates = [HasStdExtZvknha], RVVConstraint = NoConstraint in {
 } // Predicates = [HasStdExtZvknha]
 
 let Predicates = [HasStdExtZvkned], RVVConstraint = NoConstraint in {
-  defm VAESDF : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
-  defm VAESDM : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
-  defm VAESEF : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
-  defm VAESEM : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
-  def VAESKF1_VI : VAESKF_MV_I<0b100010, "vaeskf1.vi", rnum_1_10>;
-  def VAESKF2_VI : VAESKF_MV_I<0b101010, "vaeskf2.vi", rnum_2_14>;
-  def VAESZ_VS : PALUVs2NoVm<0b101001, 0b00111, OPMVV, "vaesz.vs">;
+  defm VAESDF     : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
+  defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
+  defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
+  defm VAESEM     : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
+  def  VAESKF1_VI : VAESKF_MV_I<0b100010, "vaeskf1.vi", rnum_1_10>;
+  def  VAESKF2_VI : VAESKF_MV_I<0b101010, "vaeskf2.vi", rnum_2_14>;
+  def  VAESZ_VS   : PALUVs2NoVm<0b101001, 0b00111, OPMVV, "vaesz.vs">;
 } // Predicates = [HasStdExtZvkned]
 
 let Predicates = [HasStdExtZvksed], RVVConstraint = NoConstraint in {
-  def VSM4K_VI : PALUVINoVm<0b100001, "vsm4k.vi", rnum_0_7>;
-  defm VSM4R : VAES_MV_V_S<0b101000, 0b101001, 0b10000, OPMVV, "vsm4r">;
+  def  VSM4K_VI : PALUVINoVm<0b100001, "vsm4k.vi", rnum_0_7>;
+  defm VSM4R    : VAES_MV_V_S<0b101000, 0b101001, 0b10000, OPMVV, "vsm4r">;
 } // Predicates = [HasStdExtZvksed]
 
 let Predicates = [HasStdExtZvksh], RVVConstraint = NoConstraint in {
-  def VSM3C_VI : PALUVINoVm<0b101011, "vsm3c.vi", uimm5>;
+  def VSM3C_VI  : PALUVINoVm<0b101011, "vsm3c.vi", uimm5>;
   def VSM3ME_VV : PALUVVNoVm<0b100000, OPMVV, "vsm3me.vv">;
 } // Predicates = [HasStdExtZvksh]
