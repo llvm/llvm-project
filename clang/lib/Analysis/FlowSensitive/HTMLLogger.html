@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<!-- HTMLLogger.cpp ----------------------------------------------------
+
+ Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ See https://llvm.org/LICENSE.txt for license information.
+ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+//===------------------------------------------------------------------------>
+
+<head>
+<?INJECT?>
+</head>
+
+<body>
+
+<section id="timeline" data-selection="">
+<header>Timeline</header>
+<template data-for="entry in timeline">
+  <div id="{{entry.block}}:{{entry.iter}}" data-bb="{{entry.block}}" class="entry">{{entry.block}} ({{entry.iter}})</div>
+</template>
+</section>
+
+<section id="function" data-selection="">
+<header>Function</header>
+<div id="code"></div>
+<div id="cfg"></div>
+</section>
+
+<section id="block" data-selection="bb">
+<header><template>Block {{selection.bb}}</template></header>
+<div id="iterations">
+  <template data-for="i in Array(cfg[selection.bb].iters).keys()">
+    <a class="chooser {{selection.bb}}:{{i+1}}" data-iter="{{selection.bb}}:{{i+1}}">Iteration {{i+1}}</a>
+  </template>
+</div>
+<table id="bb-elements">
+<template data-for="elt in cfg[selection.bb].elements">
+  <tr id="{{selection.bb}}.{{elt_index}}">
+    <td class="{{selection.bb}}">{{selection.bb}}.{{elt_index}}</td>
+    <td>{{elt}}</td>
+  </tr>
+</template>
+</table>
+</section>
+
+<section id="element" data-selection="iter,elt">
+<template data-let="state = states[selection.iter + '_' + selection.elt]">
+<header>
+  <template data-if="state.element == 0">{{state.block}} (iteration {{state.iter}}) initial state</template>
+  <template data-if="state.element != 0">Element {{selection.elt}} (iteration {{state.iter}})</template>
+</header>
+<template data-if="state.logs">
+  <h2>Logs</h2>
+  <pre>{{state.logs}}</pre>
+</template>
+<h2>Built-in lattice</h2>
+<pre>{{state.builtinLattice}}</pre>
+</template>
+</section>
+
+<script>
+addBBColors(Object.keys(HTMLLoggerData.cfg).length);
+watchSelection(HTMLLoggerData);
+updateSelection({}, HTMLLoggerData);
+// Copy code and cfg from <template>s into the body.
+for (tmpl of document.querySelectorAll('template[data-copy]'))
+  document.getElementById(tmpl.dataset.copy).replaceChildren(
+      ...tmpl.content.cloneNode(/*deep=*/true).childNodes);
+</script>
+
+</body>
+</html>
