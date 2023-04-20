@@ -39,12 +39,12 @@ void InitializeThreadRegistry() {
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)
     : ThreadContextBase(tid) {}
 
-void ThreadContextLsanBase::OnStarted(void *arg) { SetCurrentThread(tid); }
+void ThreadContextLsanBase::OnStarted(void *arg) { SetCurrentThread(this); }
 
 void ThreadContextLsanBase::OnFinished() {
   AllocatorThreadFinish();
   DTLS_Destroy();
-  SetCurrentThread(kInvalidTid);
+  SetCurrentThread(nullptr);
 }
 
 u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
@@ -58,19 +58,9 @@ void ThreadContextLsanBase::ThreadStart(u32 tid, tid_t os_id,
 
 void ThreadFinish() { thread_registry->FinishThread(GetCurrentThreadId()); }
 
-ThreadContext *CurrentThreadContext() {
-  if (!thread_registry)
-    return nullptr;
-  if (GetCurrentThreadId() == kInvalidTid)
-    return nullptr;
-  // No lock needed when getting current thread.
-  return (ThreadContext *)thread_registry->GetThreadLocked(
-      GetCurrentThreadId());
-}
-
 void EnsureMainThreadIDIsCorrect() {
   if (GetCurrentThreadId() == kMainTid)
-    CurrentThreadContext()->os_id = GetTid();
+    GetCurrentThread()->os_id = GetTid();
 }
 
 ///// Interface to the common LSan module. /////
