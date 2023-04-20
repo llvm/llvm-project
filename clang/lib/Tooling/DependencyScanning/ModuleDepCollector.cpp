@@ -293,6 +293,8 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
       MutableCI.getFileSystemOpts().CASFileSystemRootID, "");
   llvm::SaveAndRestore<std::vector<std::string>> RestorePrefixMappings(
       MutableCI.getFrontendOpts().PathPrefixMappings, {});
+  llvm::SaveAndRestore<CASOptions> RestoreCASOptions(
+      MutableCI.getCASOpts(), {});
 
   // Hash the BuildInvocation without any input files.
   SmallVector<const char *, 32> Args;
