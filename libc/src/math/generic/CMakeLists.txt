@@ -1384,18 +1384,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  asin
-  SRCS
-    asin.cpp
-  HDRS
-    ../asin.h
-  DEPENDS
-    .asinf
-  COMPILE_OPTIONS
-    -O3
-)
-
-add_entrypoint_object(
   acosf
   SRCS
     acosf.cpp
@@ -1424,19 +1412,6 @@ add_entrypoint_object(
     .math_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.optimization
-  COMPILE_OPTIONS
-    -O3
-)
-
-add_entrypoint_object(
-  pow
-  SRCS
-    pow.cpp
-  HDRS
-    ../pow.h
-  DEPENDS
-    .expf
-    .logf
   COMPILE_OPTIONS
     -O3
 )
