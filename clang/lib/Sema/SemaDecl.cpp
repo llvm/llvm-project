@@ -8693,7 +8693,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   }
 
   // Check that SVE types are only used in functions with SVE available.
-  if (T->isSVESizelessBuiltinType() && CurContext->isFunctionOrMethod()) {
+  if (T->isSVESizelessBuiltinType() && isa<FunctionDecl>(CurContext)) {
     const FunctionDecl *FD = cast<FunctionDecl>(CurContext);
     llvm::StringMap<bool> CallerFeatureMap;
     Context.getFunctionFeatureMap(CallerFeatureMap, FD);
