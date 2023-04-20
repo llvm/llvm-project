@@ -14,8 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Loader.h"
-
-#include "src/__support/RPC/rpc.h"
+#include "Server.h"
 
 #include <hsa/hsa.h>
 #include <hsa/hsa_ext_amd.h>
@@ -38,30 +37,6 @@ struct kernel_args_t {
   void *outbox;
   void *buffer;
 };
-
-static __llvm_libc::rpc::Server server;
-
-/// Queries the RPC client at least once and performs server-side work if there
-/// are any active requests.
-void handle_server() {
-  while (server.handle(
-      [&](__llvm_libc::rpc::Buffer *buffer) {
-        switch (static_cast<__llvm_libc::rpc::Opcode>(buffer->data[0])) {
-        case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
-          fputs(reinterpret_cast<const char *>(&buffer->data[1]), stderr);
-          break;
-        }
-        case __llvm_libc::rpc::Opcode::EXIT: {
-          exit(buffer->data[1]);
-          break;
-        }
-        default:
-          return;
-        };
-      },
-      [](__llvm_libc::rpc::Buffer *buffer) {}))
-    ;
-}
 
 /// Print the error code and exit if \p code indicates an error.
 static void handle_error(hsa_status_t code) {
@@ -376,7 +351,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(server_inbox, server_outbox, buffer);
+  server.reset(&lock, server_inbox, server_outbox, buffer);
 
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
