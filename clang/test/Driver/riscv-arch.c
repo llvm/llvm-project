@@ -253,6 +253,11 @@
 // RV32X: error: invalid arch name 'rv32xabc',
 // RV32X: first letter should be 'e', 'i' or 'g'
 
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32sxabc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32SX %s
+// RV32SX: error: invalid arch name 'rv32sxabc',
+// RV32SX: first letter should be 'e', 'i' or 'g'
+
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32sabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32S %s
 // RV32S: error: invalid arch name 'rv32sabc',
@@ -263,15 +268,21 @@
 // RV32X-NAME: error: invalid arch name 'rv32ix',
 // RV32X-NAME: non-standard user-level extension name missing after 'x'
 
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32isx -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32SX-NAME %s
+// RV32SX-NAME: error: invalid arch name 'rv32isx',
+// RV32SX-NAME: non-standard supervisor-level extension
+// RV32SX-NAME: name missing after 'sx'
+
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32is -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32S-NAME %s
 // RV32S-NAME: error: invalid arch name 'rv32is',
 // RV32S-NAME: standard supervisor-level extension
 // RV32S-NAME: name missing after 's'
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32ix_s -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32ix_s_sx -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32ALL-NAME %s
-// RV32ALL-NAME: error: invalid arch name 'rv32ix_s',
+// RV32ALL-NAME: error: invalid arch name 'rv32ix_s_sx',
 // RV32ALL-NAME: non-standard user-level extension
 // RV32ALL-NAME: name missing after 'x'
 
@@ -285,9 +296,14 @@
 // RV32S-UNS: error: invalid arch name 'rv32isa',
 // RV32S-UNS: unsupported standard supervisor-level extension 'sa'
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32isp_xabc -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32isxabc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32SX-UNS %s
+// RV32SX-UNS: error: invalid arch name 'rv32isxabc',
+// RV32SX-UNS: unsupported non-standard supervisor-level extension 'sxabc'
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32isp_xabc_sxlw -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32ALL %s
-// RV32ALL: error: invalid arch name 'rv32isp_xabc',
+// RV32ALL: error: invalid arch name 'rv32isp_xabc_sxlw',
 // RV32ALL: unsupported standard supervisor-level extension 'sp'
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32i20 -### %s \
@@ -320,6 +336,11 @@
 // RV32-SMINOR0: error: invalid arch name 'rv32ist2p0',
 // RV32-SMINOR0: unsupported version number 2.0 for extension 'st'
 
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32isxt2p1 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-SXMINOR1 %s
+// RV32-SXMINOR1: error: invalid arch name 'rv32isxt2p1', unsupported
+// RV32-SXMINOR1: version number 2.1 for extension 'sxt'
+
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ixabc_ -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-XSEP %s
 // RV32-XSEP: error: invalid arch name 'rv32ixabc_',
@@ -336,6 +357,12 @@
 // RV32-X-ORDER: standard supervisor-level extension not given
 // RV32-X-ORDER: in canonical order 'sabc'
 
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32isxabc_sdef -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-S-ORDER %s
+// RV32-S-ORDER: error: invalid arch name 'rv32isxabc_sdef',
+// RV32-S-ORDER: standard supervisor-level extension not given
+// RV32-S-ORDER: in canonical order 'sdef'
+
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ixabc_xabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-XDUP %s
 // RV32-XDUP: error: invalid arch name 'rv32ixabc_xabc',
@@ -346,10 +373,10 @@
 // RV32-X-X-INVAL: error: invalid arch name 'rv32ixabc_xdef', unsupported
 // RV32-X-X-INVAL: non-standard user-level extension 'xabc'
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32isdef_xabc -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-X-S-INVAL %s
-// RV32-X-S-INVAL: error: invalid arch name 'rv32isdef_xabc',
-// RV32-X-S-INVAL: unsupported standard supervisor-level extension 'sdef'
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32isdef_xabc_sxghi -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-X-S-SX-INVAL %s
+// RV32-X-S-SX-INVAL: error: invalid arch name 'rv32isdef_xabc_sxghi',
+// RV32-X-S-SX-INVAL: unsupported standard supervisor-level extension 'sdef'
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
