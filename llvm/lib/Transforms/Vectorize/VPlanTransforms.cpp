@@ -657,9 +657,10 @@ static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
   return VPDT.properlyDominates(ParentA, ParentB);
 }
 
-// Sink users of \p FOR after the recipe defining the previous value \p Previous
-// of the recurrence.
-static void
+/// Sink users of \p FOR after the recipe defining the previous value \p
+/// Previous of the recurrence. \returns true if all users of \p FOR could be
+/// re-arranged as needed or false if it is not possible.
+static bool
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
                                  VPRecipeBase *Previous,
                                  VPDominatorTree &VPDT) {
@@ -668,15 +669,18 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
   SmallPtrSet<VPRecipeBase *, 8> Seen;
   Seen.insert(Previous);
   auto TryToPushSinkCandidate = [&](VPRecipeBase *SinkCandidate) {
-    assert(
-        SinkCandidate != Previous &&
-        "The previous value cannot depend on the users of the recurrence phi.");
+    // The previous value must not depend on the users of the recurrence phi. In
+    // that case, FOR is not a fixed order recurrence.
+    if (SinkCandidate == Previous)
+      return false;
+
     if (isa<VPHeaderPHIRecipe>(SinkCandidate) ||
         !Seen.insert(SinkCandidate).second ||
         properlyDominates(Previous, SinkCandidate, VPDT))
-      return;
+      return true;
 
     WorkList.push_back(SinkCandidate);
+    return true;
   };
 
   // Recursively sink users of FOR after Previous.
@@ -687,7 +691,8 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
            "only recipes with a single defined value expected");
     for (VPUser *User : Current->getVPSingleValue()->users()) {
       if (auto *R = dyn_cast<VPRecipeBase>(User))
-        TryToPushSinkCandidate(R);
+        if (!TryToPushSinkCandidate(R))
+          return false;
     }
   }
 
@@ -704,9 +709,10 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
     SinkCandidate->moveAfter(Previous);
     Previous = SinkCandidate;
   }
+  return true;
 }
 
-void VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
+bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
                                                   VPBuilder &Builder) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
@@ -729,7 +735,8 @@ void VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT);
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT))
+      return false;
 
     // Introduce a recipe to combine the incoming and previous values of a
     // fixed-order recurrence.
@@ -748,4 +755,5 @@ void VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     // all users.
     RecurSplice->setOperand(0, FOR);
   }
+  return true;
 }
