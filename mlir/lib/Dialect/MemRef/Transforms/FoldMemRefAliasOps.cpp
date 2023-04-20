@@ -19,6 +19,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
@@ -26,6 +27,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "fold-memref-alias-ops"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 namespace mlir {
 namespace memref {
@@ -282,6 +287,17 @@ public:
 
     return success();
   }
+};
+
+/// Folds nvgpu.device_async_copy subviews into the copy itself. This pattern
+/// is folds subview on src and dst memref of the copy.
+class NvgpuAsyncCopyOpSubViewOpFolder final
+    : public OpRewritePattern<nvgpu::DeviceAsyncCopyOp> {
+public:
+  using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(nvgpu::DeviceAsyncCopyOp copyOp,
+                                PatternRewriter &rewriter) const override;
 };
 } // namespace
 
@@ -580,6 +596,59 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
   return success();
 }
 
+LogicalResult NvgpuAsyncCopyOpSubViewOpFolder::matchAndRewrite(
+    nvgpu::DeviceAsyncCopyOp copyOp, PatternRewriter &rewriter) const {
+
+  LLVM_DEBUG(DBGS() << "copyOp       : " << copyOp << "\n");
+
+  auto srcSubViewOp =
+      copyOp.getSrc().template getDefiningOp<memref::SubViewOp>();
+  auto dstSubViewOp =
+      copyOp.getDst().template getDefiningOp<memref::SubViewOp>();
+
+  if (!(srcSubViewOp || dstSubViewOp))
+    return rewriter.notifyMatchFailure(copyOp, "does not use subview ops for "
+                                               "source or destination");
+
+  // If the source is a subview, we need to resolve the indices.
+  SmallVector<Value> srcindices(copyOp.getSrcIndices().begin(),
+                                copyOp.getSrcIndices().end());
+  SmallVector<Value> foldedSrcIndices(srcindices);
+
+  if (srcSubViewOp) {
+    LLVM_DEBUG(DBGS() << "srcSubViewOp : " << srcSubViewOp << "\n");
+    resolveIndicesIntoOpWithOffsetsAndStrides(
+        rewriter, copyOp.getLoc(), srcSubViewOp.getMixedOffsets(),
+        srcSubViewOp.getMixedStrides(), srcSubViewOp.getDroppedDims(),
+        srcindices, foldedSrcIndices);
+  }
+
+  // If the destination is a subview, we need to resolve the indices.
+  SmallVector<Value> dstindices(copyOp.getDstIndices().begin(),
+                                copyOp.getDstIndices().end());
+  SmallVector<Value> foldedDstIndices(dstindices);
+
+  if (dstSubViewOp) {
+    LLVM_DEBUG(DBGS() << "dstSubViewOp : " << dstSubViewOp << "\n");
+    resolveIndicesIntoOpWithOffsetsAndStrides(
+        rewriter, copyOp.getLoc(), dstSubViewOp.getMixedOffsets(),
+        dstSubViewOp.getMixedStrides(), dstSubViewOp.getDroppedDims(),
+        dstindices, foldedDstIndices);
+  }
+
+  // Replace the copy op with a new copy op that uses the source and destination
+  // of the subview.
+  rewriter.replaceOpWithNewOp<nvgpu::DeviceAsyncCopyOp>(
+      copyOp, nvgpu::DeviceAsyncTokenType::get(copyOp.getContext()),
+      (dstSubViewOp ? dstSubViewOp.getSource() : copyOp.getDst()),
+      foldedDstIndices,
+      (srcSubViewOp ? srcSubViewOp.getSource() : copyOp.getSrc()),
+      foldedSrcIndices, copyOp.getDstElements(), copyOp.getSrcElements(),
+      copyOp.getBypassL1Attr());
+
+  return success();
+}
+
 void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
   patterns.add<LoadOpOfSubViewOpFolder<AffineLoadOp>,
                LoadOpOfSubViewOpFolder<memref::LoadOp>,
@@ -597,7 +666,8 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                LoadOpOfCollapseShapeOpFolder<memref::LoadOp>,
                StoreOpOfCollapseShapeOpFolder<AffineStoreOp>,
                StoreOpOfCollapseShapeOpFolder<memref::StoreOp>,
-               SubViewOfSubViewFolder>(patterns.getContext());
+               SubViewOfSubViewFolder, NvgpuAsyncCopyOpSubViewOpFolder>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
