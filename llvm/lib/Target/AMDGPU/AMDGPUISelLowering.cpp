@@ -4185,9 +4185,13 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       return Result;
     }
 
-    if (BCSrc.getOpcode() == ISD::SELECT && VT == MVT::f32) {
+    if (BCSrc.getOpcode() == ISD::SELECT && VT == MVT::f32 &&
+        BCSrc.hasOneUse()) {
       // fneg (bitcast (f32 (select cond, i32:lhs, i32:rhs))) ->
       //   select cond, (bitcast i32:lhs to f32), (bitcast i32:rhs to f32)
+
+      // TODO: Cast back result for multiple uses is beneficial in some cases.
+
       SDValue LHS =
           DAG.getNode(ISD::BITCAST, SL, MVT::f32, BCSrc.getOperand(1));
       SDValue RHS =
@@ -4196,12 +4200,8 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
       SDValue NegLHS = DAG.getNode(ISD::FNEG, SL, MVT::f32, LHS);
       SDValue NegRHS = DAG.getNode(ISD::FNEG, SL, MVT::f32, RHS);
 
-      SDValue NewSelect = DAG.getNode(ISD::SELECT, SL, MVT::f32,
-                                      BCSrc.getOperand(0), NegLHS, NegRHS);
-      if (!BCSrc.hasOneUse())
-        DAG.ReplaceAllUsesWith(BCSrc,
-                               DAG.getNode(ISD::FNEG, SL, VT, NewSelect));
-      return NewSelect;
+      return DAG.getNode(ISD::SELECT, SL, MVT::f32, BCSrc.getOperand(0), NegLHS,
+                         NegRHS);
     }
 
     return SDValue();

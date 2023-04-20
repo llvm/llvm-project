@@ -826,7 +826,7 @@ cc_library(
 )
 
 genrule(
-    name = "HTMLLogger_gen",
+    name = "analysis_htmllogger_gen",
     outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
     srcs = [
         "lib/Analysis/FlowSensitive/HTMLLogger.html",
@@ -845,7 +845,7 @@ cc_library(
         "lib/Analysis/*.cpp",
         "lib/Analysis/*.h",
     ]) + [
-        "lib/Analysis/FlowSensitive/HTMLLogger.inc",
+        ":analysis_htmllogger_gen"
     ],
     hdrs = glob([
         "include/clang/Analysis/**/*.h",
@@ -858,7 +858,6 @@ cc_library(
         "include/clang/Analysis/**/*.def",
     ]),
     deps = [
-        ":HTMLLogger_gen",
         ":ast",
         ":ast_matchers",
         ":basic",
