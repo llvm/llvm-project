@@ -403,6 +403,11 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
     g = builder.create<mlir::cir::GlobalOp>(loc, name, t, isCst);
     if (!curCGF)
       CGM.getModule().push_back(g);
+
+    // Default to private until we can judge based on the initializer,
+    // since MLIR doesn't allow public declarations.
+    mlir::SymbolTable::setSymbolVisibility(
+        g, mlir::SymbolTable::Visibility::Private);
   }
   return g;
 }
@@ -439,8 +444,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
         auto LT = mlir::cir::GlobalLinkageKind::ExternalLinkage;
         Entry.setLinkageAttr(
             mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), LT));
-        mlir::SymbolTable::setSymbolVisibility(
-            Entry, getMLIRVisibilityFromCIRLinkage(LT));
+        mlir::SymbolTable::setSymbolVisibility(Entry, getMLIRVisibility(Entry));
       }
     }
 
@@ -776,7 +780,7 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   }
 
   // Set initializer and finalize emission
-  GV.setInitialValueAttr(Init);
+  CIRGenModule::setInitializer(GV, Init);
   if (emitter)
     emitter->finalize(GV);
 
@@ -942,9 +946,7 @@ generateStringLiteral(mlir::Location loc, mlir::TypedAttr C,
   GV.setAlignmentAttr(CGM.getSize(Alignment));
   GV.setLinkageAttr(
       mlir::cir::GlobalLinkageKindAttr::get(CGM.getBuilder().getContext(), LT));
-  mlir::SymbolTable::setSymbolVisibility(
-      GV, CIRGenModule::getMLIRVisibilityFromCIRLinkage(LT));
-  GV.setInitialValueAttr(C);
+  CIRGenModule::setInitializer(GV, C);
 
   // TODO(cir)
   assert(!cir::UnimplementedFeature::threadLocal() && "NYI");
@@ -1245,6 +1247,23 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
     return true;
 
   return false;
+}
+
+void CIRGenModule::setInitializer(mlir::cir::GlobalOp &global,
+                                  mlir::Attribute value) {
+  // Recompute visibility when updating initializer.
+  global.setInitialValueAttr(value);
+  mlir::SymbolTable::setSymbolVisibility(
+      global, CIRGenModule::getMLIRVisibility(global));
+}
+
+mlir::SymbolTable::Visibility
+CIRGenModule::getMLIRVisibility(mlir::cir::GlobalOp op) {
+  // MLIR doesn't accept public symbols declarations (only
+  // definitions).
+  if (op.isDeclaration())
+    return mlir::SymbolTable::Visibility::Private;
+  return getMLIRVisibilityFromCIRLinkage(op.getLinkage());
 }
 
 mlir::SymbolTable::Visibility CIRGenModule::getMLIRVisibilityFromCIRLinkage(
@@ -2083,8 +2102,8 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   // Set up extra information and add to the module
   GV.setLinkageAttr(
       mlir::cir::GlobalLinkageKindAttr::get(builder.getContext(), Linkage));
-  mlir::SymbolTable::setSymbolVisibility(
-      GV, CIRGenModule::getMLIRVisibilityFromCIRLinkage(Linkage));
+  mlir::SymbolTable::setSymbolVisibility(GV,
+                                         CIRGenModule::getMLIRVisibility(GV));
 
   if (OldGV) {
     // Replace occurrences of the old variable if needed.

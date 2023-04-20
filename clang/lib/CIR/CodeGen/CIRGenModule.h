@@ -472,8 +472,11 @@ public:
   /// Visibility and Linkage
   /// -------
 
+  static void setInitializer(mlir::cir::GlobalOp &op, mlir::Attribute value);
   static mlir::SymbolTable::Visibility
   getMLIRVisibilityFromCIRLinkage(mlir::cir::GlobalLinkageKind GLK);
+  static mlir::SymbolTable::Visibility
+  getMLIRVisibility(mlir::cir::GlobalOp op);
   mlir::cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl GD);
   mlir::cir::GlobalLinkageKind
   getCIRLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,

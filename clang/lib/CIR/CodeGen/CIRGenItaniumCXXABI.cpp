@@ -1198,8 +1198,7 @@ mlir::cir::GlobalOp CIRGenItaniumRTTIBuilder::GetAddrOfTypeName(
 
   auto GV = CGM.createOrReplaceCXXRuntimeVariable(loc, Name, Init.getType(),
                                                   Linkage, Align);
-
-  GV.setInitialValueAttr(Init);
+  CIRGenModule::setInitializer(GV, Init);
   return GV;
 }
 
@@ -1430,14 +1429,14 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
   assert(!UnimplementedFeature::setPartition());
   assert(!UnimplementedFeature::setDSOLocal());
   mlir::SymbolTable::setSymbolVisibility(
-      TypeName, CIRGenModule::getMLIRVisibilityFromCIRLinkage(Linkage));
+      TypeName, CIRGenModule::getMLIRVisibility(TypeName));
 
   // TODO(cir): setup other bits for GV
   assert(!UnimplementedFeature::setDLLStorageClass());
   assert(!UnimplementedFeature::setPartition());
   assert(!UnimplementedFeature::setDSOLocal());
-  mlir::SymbolTable::setSymbolVisibility(
-      GV, CIRGenModule::getMLIRVisibilityFromCIRLinkage(Linkage));
+  mlir::SymbolTable::setSymbolVisibility(GV,
+                                         CIRGenModule::getMLIRVisibility(GV));
 
   return mlir::cir::GlobalViewAttr::get(
       builder.getInt8PtrTy(),
