@@ -135,13 +135,13 @@ class ShrinkWrap : public MachineFunctionPass {
   MachineOptimizationRemarkEmitter *ORE = nullptr;
 
   /// Frequency of the Entry block.
-  uint64_t EntryFreq;
+  uint64_t EntryFreq = 0;
 
   /// Current opcode for frame setup.
-  unsigned FrameSetupOpcode;
+  unsigned FrameSetupOpcode = ~0u;
 
   /// Current opcode for frame destroy.
-  unsigned FrameDestroyOpcode;
+  unsigned FrameDestroyOpcode = ~0u;
 
   /// Stack pointer register, used by llvm.{savestack,restorestack}
   Register SP;
