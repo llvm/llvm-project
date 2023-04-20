@@ -1012,6 +1012,14 @@ module std [system] {
   module iosfwd {
     header "iosfwd"
     export *
+    module __iosfwd {
+      module fstream_fwd   { private header "__fwd/fstream.h" }
+      module ios_fwd       { private header "__fwd/ios.h" }
+      module istream_fwd   { private header "__fwd/istream.h" }
+      module ostream_fwd   { private header "__fwd/ostream.h" }
+      module sstream_fwd   { private header "__fwd/sstream.h" }
+      module streambuf_fwd { private header "__fwd/streambuf.h" }
+    }
   }
   module iostream {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
