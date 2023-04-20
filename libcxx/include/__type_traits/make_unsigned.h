@@ -70,7 +70,7 @@ template <> struct __make_unsigned<__uint128_t,        true> {typedef __uint128_
 #  endif
 
 template <class _Tp>
-using __make_unsigned_t = typename __apply_cv<_Tp, typename __make_unsigned<__remove_cv_t<_Tp> >::type>::type;
+using __make_unsigned_t = __apply_cv_t<_Tp, typename __make_unsigned<__remove_cv_t<_Tp> >::type>;
 
 #endif // __has_builtin(__make_unsigned)
 

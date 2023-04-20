@@ -1467,7 +1467,6 @@ module std [system] {
     header "tuple"
     export *
 
-    module apply_cv         { private header "__tuple/apply_cv.h" }
     module get_fwd          { private header "__fwd/get.h" }
     module make_tuple_types { private header "__tuple/make_tuple_types.h" }
     module pair_like        { private header "__tuple/pair_like.h" }

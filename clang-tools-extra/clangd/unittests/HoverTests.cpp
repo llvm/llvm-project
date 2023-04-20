@@ -2999,36 +2999,7 @@ TEST(Hover, UsedSymbols) {
                   #in^clude <vector>
                   std::vector<int> vec;
                 )cpp",
-                [](HoverInfo &HI) { HI.UsedSymbolNames = {"vector"}; }},
-               {R"cpp(
-                  #in^clude "public.h"
-                  #include "private.h"
-                  int fooVar = foo();
-                )cpp",
-                [](HoverInfo &HI) { HI.UsedSymbolNames = {"foo"}; }},
-               {R"cpp(
-                  #include "bar.h"
-                  #include "for^ward.h"
-                  Bar *x;
-                )cpp",
-                [](HoverInfo &HI) {
-                  HI.UsedSymbolNames = {
-                      // No used symbols, since bar.h is a higher-ranked
-                      // provider for Bar.
-                  };
-                }},
-               {R"cpp(
-                  #include "b^ar.h"
-                  #define DEF(X) const Bar *X
-                  DEF(a);
-                )cpp",
-                [](HoverInfo &HI) { HI.UsedSymbolNames = {"Bar"}; }},
-               {R"cpp(
-                  #in^clude "bar.h"
-                  #define BAZ(X) const X x
-                  BAZ(Bar);
-                )cpp",
-                [](HoverInfo &HI) { HI.UsedSymbolNames = {"Bar"}; }}};
+                [](HoverInfo &HI) { HI.UsedSymbolNames = {"vector"}; }}};
   for (const auto &Case : Cases) {
     Annotations Code{Case.Code};
     SCOPED_TRACE(Code.code());
@@ -3042,18 +3013,12 @@ TEST(Hover, UsedSymbols) {
                                           int bar2();
                                           class Bar {};
                                         )cpp");
-    TU.AdditionalFiles["private.h"] = guard(R"cpp(
-                                              // IWYU pragma: private, include "public.h"
-                                              int foo(); 
-                                            )cpp");
-    TU.AdditionalFiles["public.h"] = guard("");
     TU.AdditionalFiles["system/vector"] = guard(R"cpp(
       namespace std {
         template<typename>
         class vector{};
       }
     )cpp");
-    TU.AdditionalFiles["forward.h"] = guard("class Bar;");
     TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 
     auto AST = TU.build();

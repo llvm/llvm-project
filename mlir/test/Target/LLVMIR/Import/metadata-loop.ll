@@ -323,3 +323,23 @@ end:
 !1 = distinct !{!1, !2}
 !2 = !{!"llvm.loop.parallel_accesses", !0, !3}
 !3 = distinct !{}
+
+; // -----
+
+; Verify the unused access group is not imported.
+; CHECK:   llvm.metadata @__llvm_global_metadata {
+; CHECK-COUNT1: llvm.access_group
+
+; CHECK-LABEL: @unused_parallel_access
+define void @unused_parallel_access(ptr %arg) {
+entry:
+  %0 = load i32, ptr %arg, !llvm.access.group !0
+  br label %end, !llvm.loop !1
+end:
+  ret void
+}
+
+!0 = distinct !{}
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.parallel_accesses", !0, !3}
+!3 = distinct !{}

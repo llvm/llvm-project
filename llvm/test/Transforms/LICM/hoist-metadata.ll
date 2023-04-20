@@ -3,6 +3,7 @@
 
 declare void @foo(...) memory(none)
 
+; We can preserve all metadata on instructions that are guaranteed to execute.
 define void @test_unconditional(i1 %c, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-LABEL: define void @test_unconditional
 ; CHECK-SAME: (i1 [[C:%.*]], ptr align 8 dereferenceable(8) [[P:%.*]]) {
@@ -29,12 +30,14 @@ exit:
   ret void
 }
 
+; We cannot preserve UB-implying metadata on instructions that are speculated.
+; However, we can preserve poison-implying metadata.
 define void @test_conditional(i1 %c, i1 %c2, ptr dereferenceable(8) align 8 %p) {
 ; CHECK-LABEL: define void @test_conditional
 ; CHECK-SAME: (i1 [[C:%.*]], i1 [[C2:%.*]], ptr align 8 dereferenceable(8) [[P:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8
-; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P]], align 8, !nonnull !1
+; CHECK-NEXT:    [[V3:%.*]] = load ptr, ptr [[P]], align 8, !align !2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[LATCH:%.*]]
