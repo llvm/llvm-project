@@ -382,8 +382,6 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
       int RC = cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
       if (RC != 0)
         return RC;
-      // FIXME: cc1_main should possibly clean up global state itself.
-      llvm::remove_fatal_error_handler();
     }
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
   }

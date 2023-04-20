@@ -1220,7 +1220,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
 
-  auto FinishDiagnosticClient = llvm::make_scope_exit([&]() {
+  auto FinishDiagnosticClient = [&]() {
     // Notify the diagnostic client that all files were processed.
     Clang->getDiagnosticClient().finish();
 
@@ -1228,7 +1228,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     // potentially about to delete. Uninstall the handler now so that any
     // later errors use the default handling behavior instead.
     llvm::remove_fatal_error_handler();
-  });
+  };
+  auto FinishDiagnosticClientScope =
+      llvm::make_scope_exit([&]() { FinishDiagnosticClient(); });
 
   if (!Success)
     return 1;
@@ -1241,8 +1243,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (std::optional<int> Status = JobCache.tryReplayCachedResult(*Clang))
     return *Status; // FIXME: Should write out timers before exiting!
 
-  // ExecuteAction takes responsibility.
-  FinishDiagnosticClient.release();
+  Clang->getFrontendOpts().MayEmitDiagnosticsAfterProcessingSourceFiles = true;
 
   // Execute the frontend actions.
   {
@@ -1293,6 +1294,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       llvm::timeTraceProfilerCleanup();
     }
   }
+
+  // Call this before the Clang pointer is moved below.
+  FinishDiagnosticClient();
+  FinishDiagnosticClientScope.release();
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {

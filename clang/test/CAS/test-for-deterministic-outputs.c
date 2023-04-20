@@ -19,19 +19,20 @@
 // CACHE-SKIPPED: remark: compile job cache skipped
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache -Wreproducible-caching 2> %t/out.txt
-// RUN: FileCheck %s --check-prefix=CACHE-WARN --input-file=%t/out.txt
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache -Wreproducible-caching -serialize-diagnostics %t/t.dia 2> %t/out.txt
+// RUN: FileCheck %s --check-prefix=CACHE-WARN --input-file=%t/out.txt -DREMARK=remark
+// RUN: c-index-test -read-diagnostics %t/t.dia 2>&1 | FileCheck %s --check-prefix=CACHE-WARN -DREMARK=warning
 
 /// Check still a cache miss.
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Rcompile-job-cache -Wreproducible-caching 2> %t/out.txt
-// RUN: FileCheck %s --check-prefix=CACHE-WARN --input-file=%t/out.txt
+// RUN: FileCheck %s --check-prefix=CACHE-WARN --input-file=%t/out.txt -DREMARK=remark
 
-// CACHE-WARN: remark: compile job cache miss
+// CACHE-WARN: [[REMARK]]: compile job cache miss
 // CACHE-WARN: warning: encountered non-reproducible token, caching will be skipped
 // CACHE-WARN: warning: encountered non-reproducible token, caching will be skipped
 // CACHE-WARN: warning: encountered non-reproducible token, caching will be skipped
-// CACHE-WARN: remark: compile job cache skipped
+// CACHE-WARN: [[REMARK]]: compile job cache skipped
 
 /// Check -Werror doesn't actually error when we use the launcher.
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
