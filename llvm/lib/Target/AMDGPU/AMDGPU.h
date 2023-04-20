@@ -233,6 +233,14 @@ private:
   TargetMachine &TM;
 };
 
+struct AMDGPUAtomicOptimizerPass : PassInfoMixin<AMDGPUAtomicOptimizerPass> {
+  AMDGPUAtomicOptimizerPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
+
 Pass *createAMDGPUStructurizeCFGPass();
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
                                   CodeGenOpt::Level OptLevel);
