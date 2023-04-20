@@ -1128,7 +1128,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasVInstructions())
     setTargetDAGCombine({ISD::FCOPYSIGN, ISD::MGATHER, ISD::MSCATTER,
                          ISD::VP_GATHER, ISD::VP_SCATTER, ISD::SRA, ISD::SRL,
-                         ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR});
+                         ISD::SHL, ISD::STORE, ISD::SPLAT_VECTOR,
+                         ISD::CONCAT_VECTORS});
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
   if (Subtarget.useRVVForFixedLengthVectors())
@@ -11147,6 +11148,136 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   return tryFoldSelectIntoOp(N, DAG, FalseVal, TrueVal, /*Swapped*/true);
 }
 
+// If we're concatenating a series of vector loads like
+// concat_vectors (load v4i8, p+0), (load v4i8, p+n), (load v4i8, p+n*2) ...
+// Then we can turn this into a strided load by widening the vector elements
+// vlse32 p, stride=n
+static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
+                                            const RISCVSubtarget &Subtarget,
+                                            const RISCVTargetLowering &TLI) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Only perform this combine on legal MVTs.
+  if (!TLI.isTypeLegal(VT))
+    return SDValue();
+
+  // TODO: Potentially extend this to scalable vectors
+  if (VT.isScalableVector())
+    return SDValue();
+
+  auto *BaseLd = dyn_cast<LoadSDNode>(N->getOperand(0));
+  if (!BaseLd || !BaseLd->isSimple() || !ISD::isNormalLoad(BaseLd) ||
+      !SDValue(BaseLd, 0).hasOneUse())
+    return SDValue();
+
+  EVT BaseLdVT = BaseLd->getValueType(0);
+  SDValue BasePtr = BaseLd->getBasePtr();
+
+  // Go through the loads and check that they're strided
+  SDValue CurPtr = BasePtr;
+  SDValue Stride;
+  Align Align = BaseLd->getAlign();
+
+  for (SDValue Op : N->ops().drop_front()) {
+    auto *Ld = dyn_cast<LoadSDNode>(Op);
+    if (!Ld || !Ld->isSimple() || !Op.hasOneUse() ||
+        Ld->getChain() != BaseLd->getChain() || !ISD::isNormalLoad(Ld) ||
+        Ld->getValueType(0) != BaseLdVT)
+      return SDValue();
+
+    SDValue Ptr = Ld->getBasePtr();
+    // Check that each load's pointer is (add CurPtr, Stride)
+    if (Ptr.getOpcode() != ISD::ADD || Ptr.getOperand(0) != CurPtr)
+      return SDValue();
+    SDValue Offset = Ptr.getOperand(1);
+    if (!Stride)
+      Stride = Offset;
+    else if (Offset != Stride)
+      return SDValue();
+
+    // The common alignment is the most restrictive (smallest) of all the loads
+    Align = std::min(Align, Ld->getAlign());
+
+    CurPtr = Ptr;
+  }
+
+  // A special case is if the stride is exactly the width of one of the loads,
+  // in which case it's contiguous and can be combined into a regular vle
+  // without changing the element size
+  if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
+      ConstStride &&
+      ConstStride->getZExtValue() == BaseLdVT.getFixedSizeInBits() / 8) {
+    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+        BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(),
+        VT.getStoreSize(), Align);
+    // Can't do the combine if the load isn't naturally aligned with the element
+    // type
+    if (!TLI.allowsMemoryAccessForAlignment(*DAG.getContext(),
+                                            DAG.getDataLayout(), VT, *MMO))
+      return SDValue();
+
+    SDValue WideLoad = DAG.getLoad(VT, DL, BaseLd->getChain(), BasePtr, MMO);
+    for (SDValue Ld : N->ops())
+      DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), WideLoad);
+    return WideLoad;
+  }
+
+  // Get the widened scalar type, e.g. v4i8 -> i64
+  unsigned WideScalarBitWidth =
+      BaseLdVT.getScalarSizeInBits() * BaseLdVT.getVectorNumElements();
+  MVT WideScalarVT = MVT::getIntegerVT(WideScalarBitWidth);
+
+  // Get the vector type for the strided load, e.g. 4 x v4i8 -> v4i64
+  MVT WideVecVT = MVT::getVectorVT(WideScalarVT, N->getNumOperands());
+  if (!TLI.isTypeLegal(WideVecVT))
+    return SDValue();
+
+  MVT ContainerVT = TLI.getContainerForFixedLengthVector(WideVecVT);
+  SDValue VL =
+      getDefaultVLOps(WideVecVT, ContainerVT, DL, DAG, Subtarget).second;
+  SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+  SDValue IntID =
+      DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, Subtarget.getXLenVT());
+  SDValue Ops[] = {BaseLd->getChain(),
+                   IntID,
+                   DAG.getUNDEF(ContainerVT),
+                   BasePtr,
+                   Stride,
+                   VL};
+
+  uint64_t MemSize;
+  if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride))
+    // total size = (elsize * n) + (stride - elsize) * (n-1)
+    //            = elsize + stride * (n-1)
+    MemSize = WideScalarVT.getSizeInBits() +
+              ConstStride->getSExtValue() * (N->getNumOperands() - 1);
+  else
+    // If Stride isn't constant, then we can't know how much it will load
+    MemSize = MemoryLocation::UnknownSize;
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(), MemSize,
+      Align);
+
+  // Can't do the combine if the common alignment isn't naturally aligned with
+  // the new element type
+  if (!TLI.allowsMemoryAccessForAlignment(*DAG.getContext(),
+                                          DAG.getDataLayout(), WideVecVT, *MMO))
+    return SDValue();
+
+  SDValue StridedLoad = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                                Ops, WideVecVT, MMO);
+  for (SDValue Ld : N->ops())
+    DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), StridedLoad);
+
+  // Note: Perform the bitcast before the convertFromScalableVector so we have
+  // balanced pairs of convertFromScalable/convertToScalable
+  SDValue Res = DAG.getBitcast(
+      TLI.getContainerForFixedLengthVector(VT.getSimpleVT()), StridedLoad);
+  return convertFromScalableVector(VT, Res, DAG, Subtarget);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -11654,6 +11785,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return Gather;
     break;
   }
+  case ISD::CONCAT_VECTORS:
+    if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
+      return V;
+    break;
   case RISCVISD::VMV_V_X_VL: {
     // Tail agnostic VMV.V.X only demands the vector element bitwidth from the
     // scalar input.
