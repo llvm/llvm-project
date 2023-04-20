@@ -3,6 +3,10 @@
 
 // REQUIRES: lsan-standalone
 
+// For unknown reason linker can't resolve GetCurrentThread on
+// https://ci.chromium.org/p/chromium/builders/try/mac_upload_clang.
+// UNSUPPORTED: darwin
+
 #include <pthread.h>
 #include <stdlib.h>
 #include <vector>
