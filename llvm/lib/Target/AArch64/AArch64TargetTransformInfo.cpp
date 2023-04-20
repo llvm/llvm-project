@@ -523,6 +523,52 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::fshl:
+  case Intrinsic::fshr: {
+    if (ICA.getArgs().empty())
+      break;
+
+    // TODO: Add handling for fshl where third argument is not a constant.
+    const TTI::OperandValueInfo OpInfoZ = TTI::getOperandInfo(ICA.getArgs()[2]);
+    if (!OpInfoZ.isConstant())
+      break;
+
+    const auto LegalisationCost = getTypeLegalizationCost(RetTy);
+    if (OpInfoZ.isUniform()) {
+      // FIXME: The costs could be lower if the codegen is better.
+      static const CostTblEntry FshlTbl[] = {
+          {Intrinsic::fshl, MVT::v4i32, 3}, // ushr + shl + orr
+          {Intrinsic::fshl, MVT::v2i64, 3}, {Intrinsic::fshl, MVT::v16i8, 4},
+          {Intrinsic::fshl, MVT::v8i16, 4}, {Intrinsic::fshl, MVT::v2i32, 3},
+          {Intrinsic::fshl, MVT::v8i8, 4},  {Intrinsic::fshl, MVT::v4i16, 4}};
+      // Costs for both fshl & fshr are the same, so just pass Intrinsic::fshl
+      // to avoid having to duplicate the costs.
+      const auto *Entry =
+          CostTableLookup(FshlTbl, Intrinsic::fshl, LegalisationCost.second);
+      if (Entry)
+        return LegalisationCost.first * Entry->Cost;
+    }
+
+    auto TyL = getTypeLegalizationCost(RetTy);
+    if (!RetTy->isIntegerTy())
+      break;
+
+    // Estimate cost manually, as types like i8 and i16 will get promoted to
+    // i32 and CostTableLookup will ignore the extra conversion cost.
+    bool HigherCost = (RetTy->getScalarSizeInBits() != 32 &&
+                       RetTy->getScalarSizeInBits() < 64) ||
+                      (RetTy->getScalarSizeInBits() % 64 != 0);
+    unsigned ExtraCost = HigherCost ? 1 : 0;
+    if (RetTy->getScalarSizeInBits() == 32 ||
+        RetTy->getScalarSizeInBits() == 64)
+      ExtraCost = 0; // fhsl/fshr for i32 and i64 can be lowered to a single
+                     // extr instruction.
+    else if (HigherCost)
+      ExtraCost = 1;
+    else
+      break;
+    return TyL.first + ExtraCost;
+  }
   default:
     break;
   }
