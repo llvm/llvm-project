@@ -471,7 +471,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM1]]: i32) {
+!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM1]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -485,7 +485,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM2]]: i32) {
+!CHECK-NEXT:   acc.loop gang(num=[[GANGNUM2]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -524,7 +524,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
-!CHECK:        acc.loop vector([[CONSTANT128]]: i32) {
+!CHECK:        acc.loop vector([[CONSTANT128]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -538,7 +538,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-!CHECK:        acc.loop vector([[VECTORLENGTH]]: i32) {
+!CHECK:        acc.loop vector([[VECTORLENGTH]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -565,7 +565,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
-!CHECK:        acc.loop worker([[WORKER128]]: i32) {
+!CHECK:        acc.loop worker([[WORKER128]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -615,7 +615,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[TILESIZE:%.*]] = arith.constant 2 : i32
-!CHECK:        acc.loop tile([[TILESIZE]]: i32) {
+!CHECK:        acc.loop tile([[TILESIZE]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -629,7 +629,7 @@ subroutine acc_kernels_loop
 
 !CHECK:      acc.kernels {
 !CHECK:        [[TILESIZEM1:%.*]] = arith.constant -1 : i32
-!CHECK:        acc.loop tile([[TILESIZEM1]]: i32) {
+!CHECK:        acc.loop tile([[TILESIZEM1]] : i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -646,7 +646,7 @@ subroutine acc_kernels_loop
 !CHECK:      acc.kernels {
 !CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 !CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-!CHECK:        acc.loop tile([[TILESIZE1]]: i32, [[TILESIZE2]]: i32) {
+!CHECK:        acc.loop tile([[TILESIZE1]], [[TILESIZE2]] : i32, i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}
@@ -674,7 +674,7 @@ subroutine acc_kernels_loop
   END DO
 
 !CHECK:      acc.kernels {
-!CHECK:        acc.loop tile(%{{.*}}: i32, %{{.*}}: i32) {
+!CHECK:        acc.loop tile(%{{.*}}, %{{.*}} : i32, i32) {
 !CHECK:          fir.do_loop
 !CHECK:          acc.yield
 !CHECK-NEXT:   }{{$}}

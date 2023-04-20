@@ -547,32 +547,39 @@ def OpenACC_LoopOp : OpenACC_Op<"loop", [AttrSizedOperandSegments]> {
                        UnitAttr:$seq,
                        UnitAttr:$independent,
                        UnitAttr:$auto_,
+                       UnitAttr:$hasGang,
+                       UnitAttr:$hasWorker,
+                       UnitAttr:$hasVector,
                        Variadic<IntOrIndex>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
-                       Variadic<AnyType>:$reductionOperands,
-                       DefaultValuedAttr<I64Attr, "0">:$exec_mapping);
+                       Variadic<AnyType>:$reductionOperands);
 
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    static StringRef getCollapseAttrStrName() { return "collapse"; }
-    static StringRef getSeqAttrStrName() { return "seq"; }
-    static StringRef getIndependentAttrStrName() { return "independent"; }
     static StringRef getAutoAttrStrName() { return "auto"; }
-    static StringRef getExecutionMappingAttrStrName() { return "exec_mapping"; }
-    static StringRef getGangKeyword() { return "gang"; }
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangStaticKeyword() { return "static"; }
-    static StringRef getVectorKeyword() { return "vector"; }
-    static StringRef getWorkerKeyword() { return "worker"; }
-    static StringRef getTileKeyword() { return "tile"; }
-    static StringRef getPrivateKeyword() { return "private"; }
-    static StringRef getReductionKeyword() { return "reduction"; }
   }];
+
   let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist(
+        `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangStatic, type($gangStatic), $hasGang)
+      | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
+      | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
+      | `tile` `(` $tileOperands `:` type($tileOperands) `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+    )
+    $region
+    ( `(` type($results)^ `)` )?
+    attr-dict-with-keyword
+  }];
+
   let hasVerifier = 1;
 }
 
