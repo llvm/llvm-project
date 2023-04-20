@@ -1493,6 +1493,8 @@ Status Process::Resume() {
   return error;
 }
 
+static const char *g_resume_sync_name = "lldb.Process.ResumeSynchronous.hijack";
+
 Status Process::ResumeSynchronous(Stream *stream) {
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOGF(log, "Process::ResumeSynchronous -- locking run lock");
@@ -1503,7 +1505,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener(ResumeSynchronousHijackListenerName.data()));
+      Listener::MakeListener(g_resume_sync_name));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -1529,8 +1531,9 @@ Status Process::ResumeSynchronous(Stream *stream) {
 
 bool Process::StateChangedIsExternallyHijacked() {
   if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
-    llvm::StringRef hijacking_name = GetHijackingListenerName();
-    if (hijacking_name.starts_with("lldb.internal"))
+    const char *hijacking_name = GetHijackingListenerName();
+    if (hijacking_name &&
+        strcmp(hijacking_name, g_resume_sync_name))
       return true;
   }
   return false;
@@ -1538,8 +1541,9 @@ bool Process::StateChangedIsExternallyHijacked() {
 
 bool Process::StateChangedIsHijackedForSynchronousResume() {
   if (IsHijackedForEvent(eBroadcastBitStateChanged)) {
-    llvm::StringRef hijacking_name = GetHijackingListenerName();
-    if (hijacking_name == ResumeSynchronousHijackListenerName)
+    const char *hijacking_name = GetHijackingListenerName();
+    if (hijacking_name &&
+        strcmp(hijacking_name, g_resume_sync_name) == 0)
       return true;
   }
   return false;
