@@ -31,6 +31,8 @@ def deprecated_driver_command : F<"deprecated-driver-command", "use a single dri
 
 defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-resource-dir' argument">;
 
+def print_timing : F<"print-timing", "Print timing information">;
+
 def verbose : F<"v", "Use verbose output">;
 
 def round_trip_args : F<"round-trip-args", "verify that command-line arguments are canonical by parsing and re-serializing">;

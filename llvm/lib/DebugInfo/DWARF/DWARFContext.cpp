@@ -869,6 +869,8 @@ void fixupIndexV5(const DWARFObject &DObj, DWARFContext &C,
       Offset = Header.getNextUnitOffset();
     }
   });
+  if (Map.empty())
+    return;
   for (DWARFUnitIndex::Entry &E : Index.getMutableRows()) {
     if (!E.isValid())
       continue;

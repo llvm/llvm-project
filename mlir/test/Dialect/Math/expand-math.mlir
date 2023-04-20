@@ -141,9 +141,10 @@ func.func @floorf_func(%a: f64) -> f64 {
   // CHECK-DAG:   [[CST_0:%.+]] = arith.constant -1.000
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf olt, [[ARG0]], [[CST]]
   // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
-  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
   // CHECK-NEXT:   return [[ADDF]]
   %ret = math.floor %a : f64
   return %ret : f64
@@ -158,9 +159,10 @@ func.func @ceilf_func(%a: f64) -> f64 {
   // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 1.000
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
-  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[CVTF]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
   // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
-  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
   // CHECK-NEXT:   return [[ADDF]]
   %ret = math.ceil %a : f64
   return %ret : f64
@@ -193,19 +195,26 @@ func.func @exp2f_func_tensor(%a: tensor<1xf32>) -> tensor<1xf32> {
 // -----
 
 // CHECK-LABEL:      func @roundf_func
-// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
-func.func @roundf_func(%a: f64) -> f64 {
-  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
-  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 5.000000e-01
-  // CHECK-DAG:   [[CST_1:%.+]] = arith.constant -5.000000e-01
-  // CHECK-DAG:  [[COMP:%.+]] = arith.cmpf oge, [[ARG0]], [[CST]]
-  // CHECK-DAG:  [[SEL:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST_1]]
-  // CHECK-DAG:  [[ADDF:%.+]] = arith.addf [[ARG0]], [[SEL]]
-  // CHECK-DAG:   [[CVTI:%.+]] = arith.fptosi [[ADDF]]
-  // CHECK-DAG:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
-  // CHECK:   return [[CVTF]]
-  %ret = math.round %a : f64
-  return %ret : f64
+// CHECK-SAME:      (%[[ARG0:.*]]: f32) -> f32
+func.func @roundf_func(%a: f32) -> f32 {
+  // CHECK-DAG:       %[[HALF:.*]] = arith.constant 5.000000e-01
+  // CHECK-DAG:       %[[C23:.*]] = arith.constant 23
+  // CHECK-DAG:       %[[C127:.*]] = arith.constant 127
+  // CHECK-DAG:       %[[EXP_MASK:.*]] = arith.constant 255
+  // CHECK-DAG:       %[[SHIFT:.*]] = math.copysign %[[HALF]], %[[ARG0]]
+  // CHECK-DAG:       %[[ARG_SHIFTED:.*]] = arith.addf %[[ARG0]], %[[SHIFT]]
+  // CHECK-DAG:       %[[FIXED_CONVERT:.*]] = arith.fptosi %[[ARG_SHIFTED]]
+  // CHECK-DAG:       %[[FP_FIXED_CONVERT_0:.*]] = arith.sitofp %[[FIXED_CONVERT]]
+  // CHECK-DAG:       %[[FP_FIXED_CONVERT_1:.*]] = math.copysign %[[FP_FIXED_CONVERT_0]], %[[ARG_SHIFTED]]
+  // CHECK-DAG:       %[[ARG_BITCAST:.*]] = arith.bitcast %[[ARG0]] : f32 to i32
+  // CHECK-DAG:       %[[ARG_BITCAST_SHIFTED:.*]] = arith.shrui %[[ARG_BITCAST]], %[[C23]]
+  // CHECK-DAG:       %[[ARG_EXP:.*]] = arith.andi %[[ARG_BITCAST_SHIFTED]], %[[EXP_MASK]]
+  // CHECK-DAG:       %[[ARG_BIASED_EXP:.*]] = arith.subi %[[ARG_EXP]], %[[C127]]
+  // CHECK-DAG:       %[[IS_SPECIAL_VAL:.*]] = arith.cmpi sge, %[[ARG_BIASED_EXP]], %[[C23]]
+  // CHECK-DAG:       %[[RESULT:.*]] = arith.select %[[IS_SPECIAL_VAL]], %[[ARG0]], %[[FP_FIXED_CONVERT_1]]
+  // CHECK:           return %[[RESULT]]
+  %ret = math.round %a : f32
+  return %ret : f32
 }
 
 // -----
@@ -220,3 +229,105 @@ func.func @powf_func(%a: f64, %b: f64) ->f64 {
   %ret = math.powf %a, %b : f64
   return %ret : f64
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @roundeven
+func.func @roundeven(%arg: f32) -> f32 {
+  %res = math.roundeven %arg : f32
+  return %res : f32
+}
+
+// CHECK-SAME:                   %[[VAL_0:.*]]: f32) -> f32 {
+// CHECK-DAG: %[[C_0:.*]] = arith.constant 0 : i32
+// CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : i32
+// CHECK-DAG: %[[C_NEG_1:.*]] = arith.constant -1 : i32
+// CHECK-DAG: %[[C_1_FLOAT:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-DAG: %[[C_23:.*]] = arith.constant 23 : i32
+// CHECK-DAG: %[[C_31:.*]] = arith.constant 31 : i32
+// CHECK-DAG: %[[C_127:.*]] = arith.constant 127 : i32
+// CHECK-DAG: %[[C_4194304:.*]] = arith.constant 4194304 : i32
+// CHECK-DAG: %[[C_8388607:.*]] = arith.constant 8388607 : i32
+// CHECK-DAG: %[[EXP_MASK:.*]] = arith.constant 255 : i32
+// CHECK-DAG: %[[HALF:.*]] = arith.constant 5.000000e-01
+
+// CHECK:     %[[OPERAND_BITCAST:.*]] = arith.bitcast %[[VAL_0]] : f32 to i32
+
+// Calculate `math.round(operand)` using expansion pattern for `round` and
+// bitcast result to i32
+// CHECK:     %[[SHIFT:.*]] = math.copysign %[[HALF]], %[[VAL_0]]
+// CHECK:     %[[ARG_SHIFTED:.*]] = arith.addf %[[VAL_0]], %[[SHIFT]]
+// CHECK:     %[[FIXED_CONVERT:.*]] = arith.fptosi %[[ARG_SHIFTED]]
+// CHECK:     %[[FP_FIXED_CONVERT_0:.*]] = arith.sitofp %[[FIXED_CONVERT]]
+// CHECK:     %[[FP_FIXED_CONVERT_1:.*]] = math.copysign %[[FP_FIXED_CONVERT_0]], %[[ARG_SHIFTED]]
+// CHECK:     %[[ARG_BITCAST:.*]] = arith.bitcast %[[VAL_0]] : f32 to i32
+// CHECK:     %[[ARG_BITCAST_SHIFTED:.*]] = arith.shrui %[[ARG_BITCAST]], %[[C_23]]
+// CHECK:     %[[ARG_EXP:.*]] = arith.andi %[[ARG_BITCAST_SHIFTED]], %[[EXP_MASK]]
+// CHECK:     %[[ARG_BIASED_EXP:.*]] = arith.subi %[[ARG_EXP]], %[[C_127]]
+// CHECK:     %[[IS_SPECIAL_VAL:.*]] = arith.cmpi sge, %[[ARG_BIASED_EXP]], %[[C_23]]
+// CHECK:     %[[ROUND:.*]] = arith.select %[[IS_SPECIAL_VAL]], %[[VAL_0]], %[[FP_FIXED_CONVERT_1]]
+// CHECK:     %[[ROUND_BITCAST:.*]] = arith.bitcast %[[ROUND]] : f32 to i32
+
+// Get biased exponents of `round` and `operand`
+// CHECK:     %[[SHIFTED_OPERAND_BITCAST:.*]] = arith.shrui %[[OPERAND_BITCAST]], %[[C_23]] : i32
+// CHECK:     %[[OPERAND_EXP:.*]] = arith.andi %[[SHIFTED_OPERAND_BITCAST]], %[[EXP_MASK]] : i32
+// CHECK:     %[[OPERAND_BIASED_EXP:.*]] = arith.subi %[[OPERAND_EXP]], %[[C_127]] : i32
+// CHECK:     %[[SHIFTED_ROUND_BITCAST:.*]] = arith.shrui %[[ROUND_BITCAST]], %[[C_23]] : i32
+// CHECK:     %[[ROUND_EXP:.*]] = arith.andi %[[SHIFTED_ROUND_BITCAST]], %[[EXP_MASK]] : i32
+// CHECK:     %[[ROUND_BIASED_EXP:.*]] = arith.subi %[[ROUND_EXP]], %[[C_127]] : i32
+
+// Determine if `ROUND_BITCAST` is an even whole number or a special value
+// +-inf, +-nan.
+//   Mask mantissa of `ROUND_BITCAST` with a mask shifted to the right by
+//   `ROUND_BIASED_EXP - 1`
+//   CHECK-DAG: %[[ROUND_BIASED_EXP_MINUS_1:.*]] = arith.subi %[[ROUND_BIASED_EXP]], %[[C_1]] : i32
+//   CHECK-DAG: %[[CLAMPED_SHIFT_0:.*]] = arith.maxsi %[[ROUND_BIASED_EXP_MINUS_1]], %[[C_0]] : i32
+//   CHECK-DAG: %[[CLAMPED_SHIFT_1:.*]] = arith.minsi %[[CLAMPED_SHIFT_0]], %[[C_31]] : i32
+//   CHECK-DAG: %[[SHIFTED_MANTISSA_MASK_0:.*]] = arith.shrui %[[C_8388607]], %[[CLAMPED_SHIFT_1]] : i32
+//   CHECK-DAG: %[[ROUND_MASKED_MANTISSA:.*]] = arith.andi %[[ROUND_BITCAST]], %[[SHIFTED_MANTISSA_MASK_0]] : i32
+
+//   `ROUND_BITCAST` is not even whole number or special value if masked
+//   mantissa is != 0 or `ROUND_BIASED_EXP == 0`
+//   CHECK-DAG: %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_0:.*]] = arith.cmpi ne, %[[ROUND_MASKED_MANTISSA]], %[[C_0]] : i32
+//   CHECK-DAG: %[[ROUND_BIASED_EXP_EQ_0:.*]] = arith.cmpi eq, %[[ROUND_BIASED_EXP]], %[[C_0]] : i32
+//   CHECK-DAG: %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_1:.*]] = arith.ori %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_0]], %[[ROUND_BIASED_EXP_EQ_0]] : i1
+
+// Determine if operand is halfway between two integer values
+// CHECK:     %[[OPERAND_BIASED_EXP_EQ_NEG_1:.*]] = arith.cmpi eq, %[[OPERAND_BIASED_EXP]], %[[C_NEG_1]] : i32
+// CHECK:     %[[CLAMPED_SHIFT_2:.*]] = arith.maxsi %[[OPERAND_BIASED_EXP]], %[[C_0]] : i32
+// CHECK:     %[[CLAMPED_SHIFT_3:.*]] = arith.minsi %[[CLAMPED_SHIFT_2]], %[[C_31]] : i32
+// CHECK:     %[[SHIFTED_2_TO_22:.*]] = arith.shrui %[[C_4194304]], %[[CLAMPED_SHIFT_3]] : i32
+
+//   A value with `0 <= BIASED_EXP < 23` is halfway between two consecutive
+//   integers if the bit at index `BIASED_EXP` starting from the left in the
+//   mantissa is 1 and all the bits to the right are zero. For the case where
+//   `BIASED_EXP == -1, the expected mantissa is all zeros.
+//   CHECK:     %[[EXPECTED_OPERAND_MASKED_MANTISSA:.*]] = arith.select %[[OPERAND_BIASED_EXP_EQ_NEG_1]], %[[C_0]], %[[SHIFTED_2_TO_22]] : i32
+
+//   Mask mantissa of `OPERAND_BITCAST` with a mask shifted to the right by
+//   `OPERAND_BIASED_EXP`
+//   CHECK:     %[[CLAMPED_SHIFT_4:.*]] = arith.maxsi %[[OPERAND_BIASED_EXP]], %[[C_0]] : i32
+//   CHECK:     %[[CLAMPED_SHIFT_5:.*]] = arith.minsi %[[CLAMPED_SHIFT_4]], %[[C_31]] : i32
+//   CHECK:     %[[SHIFTED_MANTISSA_MASK_1:.*]] = arith.shrui %[[C_8388607]], %[[CLAMPED_SHIFT_5]] : i32
+//   CHECK:     %[[OPERAND_MASKED_MANTISSA:.*]] = arith.andi %[[OPERAND_BITCAST]], %[[SHIFTED_MANTISSA_MASK_1]] : i32
+
+//   The operand is halfway between two integers if the masked mantissa is equal
+//   to the expected mantissa and the biased exponent is in the range
+//   [-1,  23).
+//   CHECK-DAG: %[[OPERAND_BIASED_EXP_GE_NEG_1:.*]] = arith.cmpi sge, %[[OPERAND_BIASED_EXP]], %[[C_NEG_1]] : i32
+//   CHECK-DAG: %[[OPERAND_BIASED_EXP_LT_23:.*]] = arith.cmpi slt, %[[OPERAND_BIASED_EXP]], %[[C_23]] : i32
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_0:.*]] = arith.cmpi eq, %[[OPERAND_MASKED_MANTISSA]], %[[EXPECTED_OPERAND_MASKED_MANTISSA]] : i32
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_1:.*]] = arith.andi %[[OPERAND_IS_HALFWAY_0]], %[[OPERAND_BIASED_EXP_LT_23]] : i1
+//   CHECK-DAG: %[[OPERAND_IS_HALFWAY_2:.*]] = arith.andi %[[OPERAND_IS_HALFWAY_1]], %[[OPERAND_BIASED_EXP_GE_NEG_1]] : i1
+
+// Adjust rounded operand with `round(operand) - sign(operand)` to correct the
+// case where `round` rounded in the oppositve direction of `roundeven`.
+// CHECK:     %[[SIGN:.*]] = math.copysign %[[C_1_FLOAT]], %[[VAL_0]] : f32
+// CHECK:     %[[ROUND_SHIFTED:.*]] = arith.subf %[[ROUND]], %[[SIGN]] : f32
+// CHECK:     %[[NEEDS_SHIFT:.*]] = arith.andi %[[ROUND_IS_NOT_EVEN_OR_SPECIAL_1]], %[[OPERAND_IS_HALFWAY_2]] : i1
+// CHECK:     %[[RESULT:.*]] = arith.select %[[NEEDS_SHIFT]], %[[ROUND_SHIFTED]], %[[ROUND]] : f32
+
+// The `x - sign` adjustment does not preserve the sign when we are adjusting the value -1 to -0.
+// CHECK:     %[[COPYSIGN:.*]] = math.copysign %[[RESULT]], %[[VAL_0]] : f32
+
+// CHECK: return %[[COPYSIGN]] : f32
