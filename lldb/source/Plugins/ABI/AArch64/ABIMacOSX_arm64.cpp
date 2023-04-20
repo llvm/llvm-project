@@ -816,15 +816,12 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
 
 lldb::addr_t ABIMacOSX_arm64::FixAddress(addr_t pc, addr_t mask) {
   lldb::addr_t pac_sign_extension = 0x0080000000000000ULL;
-  // Darwin systems originally couldn't determine the proper value
-  // dynamically, so the most common value was hardcoded.  This has
-  // largely been cleaned up, but there are still a handful of
-  // environments that assume the default value is set to this value
-  // and there's no dynamic value to correct it.
-  // When no mask is specified, set it to 39 bits of addressing (0..38).
+  // When no mask is specified, clear/set the top byte; preserve
+  // the low 55 bits (00..54) for addressing and bit 55 to indicate
+  // sign.
   if (mask == 0) {
-    // ~((1ULL<<39)-1)
-    mask = 0xffffff8000000000;
+    // ~((1ULL<<55)-1)
+    mask = 0xff80000000000000;
   }
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
 }
