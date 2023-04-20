@@ -928,13 +928,6 @@ void AsmPrinter::emitFunctionHeader() {
   if (F.hasFnAttribute(Attribute::Cold))
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
-  if (isVerbose()) {
-    F.printAsOperand(OutStreamer->getCommentOS(),
-                     /*PrintType=*/false, F.getParent());
-    emitFunctionHeaderComment();
-    OutStreamer->getCommentOS() << '\n';
-  }
-
   // Emit the prefix data.
   if (F.hasPrefixData()) {
     if (MAI->hasSubsectionsViaSymbols()) {
@@ -976,6 +969,13 @@ void AsmPrinter::emitFunctionHeader() {
     // May be reassigned when emitting the body, to reference the label after
     // the initial BTI (AArch64) or endbr32/endbr64 (x86).
     CurrentPatchableFunctionEntrySym = CurrentFnBegin;
+  }
+
+  if (isVerbose()) {
+    F.printAsOperand(OutStreamer->getCommentOS(),
+                     /*PrintType=*/false, F.getParent());
+    emitFunctionHeaderComment();
+    OutStreamer->getCommentOS() << '\n';
   }
 
   // Emit the function descriptor. This is a virtual function to allow targets
