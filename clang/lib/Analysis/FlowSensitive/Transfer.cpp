@@ -403,6 +403,18 @@ public:
       Env.setValue(Loc, NullPointerVal);
       break;
     }
+    case CK_FunctionToPointerDecay: {
+      StorageLocation *PointeeLoc =
+          Env.getStorageLocation(*SubExpr, SkipPast::Reference);
+      if (PointeeLoc == nullptr)
+        break;
+
+      auto &PointerLoc = Env.createStorageLocation(*S);
+      auto &PointerVal = Env.create<PointerValue>(*PointeeLoc);
+      Env.setStorageLocation(*S, PointerLoc);
+      Env.setValue(PointerLoc, PointerVal);
+      break;
+    }
     default:
       break;
     }
