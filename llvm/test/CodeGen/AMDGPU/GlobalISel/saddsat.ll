@@ -1157,20 +1157,6 @@ define i32 @v_saddsat_i32(i32 %lhs, i32 %rhs) {
 }
 
 define amdgpu_ps i32 @s_saddsat_i32(i32 inreg %lhs, i32 inreg %rhs) {
-; GCN-LABEL: s_saddsat_i32:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_cmp_gt_i32 s0, 0
-; GCN-NEXT:    s_cselect_b32 s2, s0, 0
-; GCN-NEXT:    s_sub_i32 s2, 0x7fffffff, s2
-; GCN-NEXT:    s_cmp_lt_i32 s0, 0
-; GCN-NEXT:    s_cselect_b32 s3, s0, 0
-; GCN-NEXT:    s_sub_i32 s3, 0x80000000, s3
-; GCN-NEXT:    s_cmp_gt_i32 s3, s1
-; GCN-NEXT:    s_cselect_b32 s1, s3, s1
-; GCN-NEXT:    s_cmp_lt_i32 s1, s2
-; GCN-NEXT:    s_cselect_b32 s1, s1, s2
-; GCN-NEXT:    s_add_i32 s0, s0, s1
-; GCN-NEXT:    ; return to shader part epilog
 ; GFX6-LABEL: s_saddsat_i32:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_min_i32 s3, s0, 0
