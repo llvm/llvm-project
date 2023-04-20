@@ -225,17 +225,13 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
       "unsupported standard supervisor-level extension 'smadeup'");
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64g_sxmadeup", true).takeError()),
-      "unsupported non-standard supervisor-level extension 'sxmadeup'");
-  EXPECT_EQ(
-      toString(
           RISCVISAInfo::parseArchString("rv64g_xmadeup", true).takeError()),
       "unsupported non-standard user-level extension 'xmadeup'");
 }
 
 TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32ib", "rv32i_zmadeup", "rv64i_smadeup",
-                          "rv32i_sxmadeup", "rv64i_xmadeup"}) {
+  for (StringRef Input : {"rv32ib", "rv32i_zmadeup",
+                          "rv64i_smadeup", "rv64i_xmadeup"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo &Info = **MaybeISAInfo;
