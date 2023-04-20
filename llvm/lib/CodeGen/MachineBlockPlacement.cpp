@@ -411,7 +411,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// True:  use block profile count to compute tail duplication cost.
   /// False: use block frequency to compute tail duplication cost.
-  bool UseProfileCount;
+  bool UseProfileCount = false;
 
   /// Allocator and owner of BlockChain structures.
   ///

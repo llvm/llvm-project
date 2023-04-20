@@ -22,12 +22,11 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
 namespace mlir {
+namespace affine {
+
 class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
-
-/// TODO: These should be renamed if they are on the mlir namespace.
-///       Ideally, they should go in a mlir::affine:: namespace.
 
 /// A utility function to check if a value is defined at the top level of an
 /// op with trait `AffineScope` or is a region argument for such an op. A value
@@ -438,13 +437,18 @@ SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
 /// argument.
 void fullyComposeAffineMapAndOperands(AffineMap *map,
                                       SmallVectorImpl<Value> *operands);
+
+} // namespace affine
 } // namespace mlir
+
 #include "mlir/Dialect/Affine/IR/AffineOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Affine/IR/AffineOps.h.inc"
 
 namespace mlir {
+namespace affine {
+
 /// Returns true if the provided value is the induction variable of an
 /// AffineForOp.
 bool isAffineForInductionVar(Value val);
@@ -537,6 +541,7 @@ private:
   friend class AffineForOp;
 };
 
+} // namespace affine
 } // namespace mlir
 
 #endif

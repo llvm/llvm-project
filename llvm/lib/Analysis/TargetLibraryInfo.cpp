@@ -474,6 +474,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_ZnajSt11align_val_tRKSt9nothrow_t);
     TLI.setUnavailable(LibFunc_Znam);
     TLI.setUnavailable(LibFunc_ZnamRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnamRKSt9nothrow_t10hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_t);
     TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t);
     TLI.setUnavailable(LibFunc_Znwj);
@@ -482,8 +483,15 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t);
     TLI.setUnavailable(LibFunc_Znwm);
     TLI.setUnavailable(LibFunc_ZnwmRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_ZnwmRKSt9nothrow_t10hot_cold_t);
     TLI.setUnavailable(LibFunc_ZnwmSt11align_val_t);
     TLI.setUnavailable(LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t);
+    TLI.setUnavailable(LibFunc_Znwm10hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_t10hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t10hot_cold_t);
+    TLI.setUnavailable(LibFunc_Znam10hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_t10hot_cold_t);
+    TLI.setUnavailable(LibFunc_ZnamSt11align_val_tRKSt9nothrow_t10hot_cold_t);
   } else {
     // Not MSVC, assume it's Itanium.
     TLI.setUnavailable(LibFunc_msvc_new_int);

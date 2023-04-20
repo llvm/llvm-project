@@ -24,7 +24,7 @@ def FoldMemRefAliasOps : Pass<"fold-memref-alias-ops"> {
   }];
   let constructor = "mlir::memref::createFoldMemRefAliasOpsPass()";
   let dependentDialects = [
-      "AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+      "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
   ];
 }
 
@@ -156,7 +156,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   ```
   }];
   let constructor = "mlir::memref::createNormalizeMemRefsPass()";
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def ResolveRankedShapeTypeResultDims :
@@ -184,7 +184,7 @@ def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   }];
   let constructor = "mlir::memref::createResolveShapedTypeResultDimsPass()";
   let dependentDialects = [
-    "AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];
 }
 
@@ -199,7 +199,7 @@ def ExpandStridedMetadata : Pass<"expand-strided-metadata"> {
   }];
   let constructor = "mlir::memref::createExpandStridedMetadataPass()";
   let dependentDialects = [
-      "AffineDialect", "memref::MemRefDialect"
+      "affine::AffineDialect", "memref::MemRefDialect"
   ];
 }
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES

@@ -636,7 +636,7 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
   Location loc = getOperation()->getLoc();
   IRRewriter rewriter(b);
   SmallVector<OpFoldResult> allResultDimValues =
-      makeComposedFoldedMultiResultAffineApply(
+      affine::makeComposedFoldedMultiResultAffineApply(
           rewriter, loc, resultShapesFromInputShapesMap,
           createFlatListOfOperandDims(b, loc));
   int64_t pos = 0;

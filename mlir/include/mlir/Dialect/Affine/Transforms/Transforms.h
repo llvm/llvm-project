@@ -18,7 +18,6 @@
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
-class AffineApplyOp;
 class Location;
 class OpBuilder;
 class OpFoldResult;
@@ -29,6 +28,9 @@ class Value;
 namespace presburger {
 enum class BoundType;
 } // namespace presburger
+
+namespace affine {
+class AffineApplyOp;
 
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).
@@ -83,6 +85,7 @@ FailureOr<OpFoldResult> reifyShapedValueDimBound(
     ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
     bool closedUB = false);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H

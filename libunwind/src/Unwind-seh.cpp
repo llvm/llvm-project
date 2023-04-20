@@ -212,10 +212,18 @@ __libunwind_seh_personality(int version, _Unwind_Action state,
   ms_exc.ExceptionInformation[2] = state;
   DISPATCHER_CONTEXT *disp_ctx =
       __unw_seh_get_disp_ctx((unw_cursor_t *)context);
+  _LIBUNWIND_TRACE_UNWINDING("__libunwind_seh_personality() calling "
+                             "LanguageHandler %p(%p, %p, %p, %p)",
+                             (void *)disp_ctx->LanguageHandler, (void *)&ms_exc,
+                             (void *)disp_ctx->EstablisherFrame,
+                             (void *)disp_ctx->ContextRecord, (void *)disp_ctx);
   EXCEPTION_DISPOSITION ms_act = disp_ctx->LanguageHandler(&ms_exc,
                                                            (PVOID)disp_ctx->EstablisherFrame,
                                                            disp_ctx->ContextRecord,
                                                            disp_ctx);
+  _LIBUNWIND_TRACE_UNWINDING("__libunwind_seh_personality() LanguageHandler "
+                             "returned %d",
+                             (int)ms_act);
   switch (ms_act) {
   case ExceptionContinueExecution: return _URC_END_OF_STACK;
   case ExceptionContinueSearch: return _URC_CONTINUE_UNWIND;

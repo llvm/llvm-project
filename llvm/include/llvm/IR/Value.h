@@ -744,6 +744,11 @@ public:
         static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
 
+  /// If this ptr is provably equal to \p Other plus a constant offset, return
+  /// that offset in bytes. Essentially `ptr this` subtract `ptr Other`.
+  std::optional<int64_t> getPointerOffsetFrom(const Value *Other,
+                                              const DataLayout &DL) const;
+
   /// Return true if the memory object referred to by V can by freed in the
   /// scope for which the SSA value defining the allocation is statically
   /// defined.  E.g.  deallocation after the static scope of a value does not

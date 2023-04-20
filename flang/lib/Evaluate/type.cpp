@@ -88,6 +88,36 @@ bool IsDescriptor(const Symbol &symbol) {
       },
       symbol.details());
 }
+
+bool IsPassedViaDescriptor(const Symbol &symbol) {
+  if (!IsDescriptor(symbol)) {
+    return false;
+  }
+  if (const auto *object{
+          symbol.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (object->isDummy()) {
+      if (object->type() &&
+          object->type()->category() == DeclTypeSpec::Character) {
+        return false;
+      }
+      if (object->IsAssumedSize()) {
+        return false;
+      }
+      bool isExplicitShape{true};
+      for (const ShapeSpec &shapeSpec : object->shape()) {
+        if (!shapeSpec.lbound().GetExplicit() ||
+            !shapeSpec.ubound().GetExplicit()) {
+          isExplicitShape = false;
+          break;
+        }
+      }
+      if (isExplicitShape) {
+        return false; // explicit shape but non-constant bounds
+      }
+    }
+  }
+  return true;
+}
 } // namespace Fortran::semantics
 
 namespace Fortran::evaluate {
@@ -471,6 +501,21 @@ static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
 // See 7.3.2.3 (5) & 15.5.2.4
 bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
   return AreCompatibleTypes(*this, that, false, true);
+}
+
+bool DynamicType::IsTkCompatibleWith(
+    const DynamicType &that, common::IgnoreTKRSet ignoreTKR) const {
+  if (ignoreTKR.test(common::IgnoreTKR::Type) &&
+      (category() == TypeCategory::Derived ||
+          that.category() == TypeCategory::Derived ||
+          category() != that.category())) {
+    return true;
+  } else if (ignoreTKR.test(common::IgnoreTKR::Kind) &&
+      category() == that.category()) {
+    return true;
+  } else {
+    return AreCompatibleTypes(*this, that, false, true);
+  }
 }
 
 bool DynamicType::IsTkLenCompatibleWith(const DynamicType &that) const {

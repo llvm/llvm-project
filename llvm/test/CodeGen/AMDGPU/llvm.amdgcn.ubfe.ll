@@ -1044,7 +1044,6 @@ define amdgpu_kernel void @bfe_u32_test_14(ptr addrspace(1) %out, ptr addrspace(
   store i32 %bfe, ptr addrspace(1) %out, align 4 ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_0(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_0:
 ; SI:       ; %bb.0:
@@ -1070,7 +1069,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_0(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_1(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_1:
 ; SI:       ; %bb.0:
@@ -1096,7 +1094,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_1(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_2(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_2:
 ; SI:       ; %bb.0:
@@ -1122,7 +1119,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_2(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_3(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_3:
 ; SI:       ; %bb.0:
@@ -1148,7 +1144,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_3(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_4(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_4:
 ; SI:       ; %bb.0:
@@ -1174,7 +1169,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_4(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_5(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_5:
 ; SI:       ; %bb.0:
@@ -1200,7 +1194,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_5(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_6(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_6:
 ; SI:       ; %bb.0:
@@ -1226,7 +1219,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_6(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_7(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_7:
 ; SI:       ; %bb.0:
@@ -1252,7 +1244,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_7(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_8(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_8:
 ; SI:       ; %bb.0:
@@ -1278,7 +1269,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_8(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_9(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_9:
 ; SI:       ; %bb.0:
@@ -1304,7 +1294,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_9(ptr addrspace(1) %out) #
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_10(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_10:
 ; SI:       ; %bb.0:
@@ -1330,7 +1319,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_10(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_11(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_11:
 ; SI:       ; %bb.0:
@@ -1356,7 +1344,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_11(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_12(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_12:
 ; SI:       ; %bb.0:
@@ -1382,7 +1369,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_12(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_13(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_13:
 ; SI:       ; %bb.0:
@@ -1408,7 +1394,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_13(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_14(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_14:
 ; SI:       ; %bb.0:
@@ -1434,7 +1419,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_14(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_15(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_15:
 ; SI:       ; %bb.0:
@@ -1460,7 +1444,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_15(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_16(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_16:
 ; SI:       ; %bb.0:
@@ -1486,7 +1469,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_16(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_17(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_17:
 ; SI:       ; %bb.0:
@@ -1512,7 +1494,6 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_17(ptr addrspace(1) %out) 
   ret void
 }
 
-; EG-NOT: BFE
 define amdgpu_kernel void @bfe_u32_constant_fold_test_18(ptr addrspace(1) %out) #0 {
 ; SI-LABEL: bfe_u32_constant_fold_test_18:
 ; SI:       ; %bb.0:

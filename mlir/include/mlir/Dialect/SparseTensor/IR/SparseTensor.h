@@ -101,6 +101,10 @@ inline MemRefType getMemRefType(T t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
+/// Returns true iff the given sparse tensor encoding attribute has a trailing
+/// COO region starting at the given level.
+bool isCOOType(SparseTensorEncodingAttr enc, Level startLvl, bool isUnique);
+
 /// Returns true iff the given type is a COO type where the last level
 /// is unique.
 bool isUniqueCOOType(Type tp);

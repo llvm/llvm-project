@@ -66,11 +66,12 @@ endfunction()
 
 # Obtains NVPTX specific arguments for compilation.
 # The PTX feature is primarily based on the CUDA toolchain version. We want to
-# be able to target NVPTX without an existing architecture, so we need to set
-# this manually. This simply sets the PTX feature to the minimum required for
-# the features we wish to use on that target.
+# be able to target NVPTX without an existing CUDA installation, so we need to
+# set this manually. This simply sets the PTX feature to the minimum required
+# for the features we wish to use on that target.
 # Adjust as needed for desired PTX features.
 function(get_nvptx_compile_options output_var gpu_arch)
+  set(nvptx_options "")
   list(APPEND nvptx_options "-march=${gpu_arch}")
   if(${gpu_arch} STREQUAL "sm_35")
     list(APPEND nvptx_options "--cuda-feature=+ptx42")

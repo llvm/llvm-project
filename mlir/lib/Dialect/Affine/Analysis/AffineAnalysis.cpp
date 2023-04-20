@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "affine-analysis"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
 
 /// Get the value that is being reduced by `pos`-th reduction in the loop if
@@ -78,7 +79,7 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
 }
 
 /// Populate `supportedReductions` with descriptors of the supported reductions.
-void mlir::getSupportedReductions(
+void mlir::affine::getSupportedReductions(
     AffineForOp forOp, SmallVectorImpl<LoopReduction> &supportedReductions) {
   unsigned numIterArgs = forOp.getNumIterOperands();
   if (numIterArgs == 0)
@@ -94,8 +95,8 @@ void mlir::getSupportedReductions(
 /// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
 /// provided, populates it with descriptors of the parallelizable reductions and
 /// treats them as not preventing parallelization.
-bool mlir::isLoopParallel(AffineForOp forOp,
-                          SmallVectorImpl<LoopReduction> *parallelReductions) {
+bool mlir::affine::isLoopParallel(
+    AffineForOp forOp, SmallVectorImpl<LoopReduction> *parallelReductions) {
   unsigned numIterArgs = forOp.getNumIterOperands();
 
   // Loop is not parallel if it has SSA loop-carried dependences and reduction
@@ -132,7 +133,7 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
-bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
+bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(),
                    [](Type type) { return type.isa<BaseMemRefType>(); }))
@@ -186,7 +187,7 @@ bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
 /// and ending at operands which are not defined by AffineApplyOps.
 // TODO: Add a method to AffineApplyOp which forward substitutes the
 // AffineApplyOp into any user AffineApplyOps.
-void mlir::getReachableAffineApplyOps(
+void mlir::affine::getReachableAffineApplyOps(
     ArrayRef<Value> operands, SmallVectorImpl<Operation *> &affineApplyOps) {
   struct State {
     // The ssa value for this node in the DFS traversal.
@@ -236,8 +237,8 @@ void mlir::getReachableAffineApplyOps(
 // FlatAffineValueConstraints. (For eg., by using iv - lb % step = 0 and/or by
 // introducing a method in FlatAffineValueConstraints
 // setExprStride(ArrayRef<int64_t> expr, int64_t stride)
-LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
-                                FlatAffineValueConstraints *domain) {
+LogicalResult mlir::affine::getIndexSet(MutableArrayRef<Operation *> ops,
+                                        FlatAffineValueConstraints *domain) {
   SmallVector<Value, 4> indices;
   SmallVector<Operation *, 8> loopOps;
   size_t numDims = 0;
@@ -594,7 +595,7 @@ void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
 //
 //
 // TODO: Support AffineExprs mod/floordiv/ceildiv.
-DependenceResult mlir::checkMemrefAccessDependence(
+DependenceResult mlir::affine::checkMemrefAccessDependence(
     const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
     unsigned loopDepth, FlatAffineValueConstraints *dependenceConstraints,
     SmallVector<DependenceComponent, 2> *dependenceComponents, bool allowRAR) {
@@ -671,7 +672,7 @@ DependenceResult mlir::checkMemrefAccessDependence(
 
 /// Gathers dependence components for dependences between all ops in loop nest
 /// rooted at 'forOp' at loop depths in range [1, maxLoopDepth].
-void mlir::getDependenceComponents(
+void mlir::affine::getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.

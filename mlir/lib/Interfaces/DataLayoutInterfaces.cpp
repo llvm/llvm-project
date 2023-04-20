@@ -483,13 +483,13 @@ unsigned mlir::DataLayout::getTypePreferredAlignment(Type t) const {
 
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   checkValid();
-  MLIRContext *context = scope->getContext();
   if (allocaMemorySpace)
     return *allocaMemorySpace;
   DataLayoutEntryInterface entry;
   if (originalLayout)
     entry = originalLayout.getSpecForIdentifier(
-        originalLayout.getAllocaMemorySpaceIdentifier(context));
+        originalLayout.getAllocaMemorySpaceIdentifier(
+            originalLayout.getContext()));
   if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
     allocaMemorySpace = iface.getAllocaMemorySpace(entry);
   else
@@ -499,13 +499,13 @@ mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
 
 unsigned mlir::DataLayout::getStackAlignment() const {
   checkValid();
-  MLIRContext *context = scope->getContext();
   if (stackAlignment)
     return *stackAlignment;
   DataLayoutEntryInterface entry;
   if (originalLayout)
     entry = originalLayout.getSpecForIdentifier(
-        originalLayout.getStackAlignmentIdentifier(context));
+        originalLayout.getStackAlignmentIdentifier(
+            originalLayout.getContext()));
   if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
     stackAlignment = iface.getStackAlignment(entry);
   else

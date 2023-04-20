@@ -94,7 +94,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
       auto loop = dyn_cast<LoopLikeOpInterface>(transferRead->getParentOp());
       LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
                         << "\n");
-      if (!isa_and_nonnull<scf::ForOp, AffineForOp>(loop))
+      if (!isa_and_nonnull<scf::ForOp, affine::AffineForOp>(loop))
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
@@ -200,7 +200,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
             // the walk.
             return WalkResult::interrupt();
           })
-          .Case<AffineForOp>([&](AffineForOp affineForOp) {
+          .Case<affine::AffineForOp>([&](affine::AffineForOp affineForOp) {
             auto newForOp = replaceForOpWithNewYields(
                 b, affineForOp, transferRead.getVector(),
                 SmallVector<Value>{transferWrite.getVector()},

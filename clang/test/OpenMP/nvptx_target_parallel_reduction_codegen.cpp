@@ -113,14 +113,14 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP4:%.*]] = bitcast double* [[TMP0]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 8
 // CHECK-64-NEXT:    [[TMP5:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, double*)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP5]], i64 1)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, double*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined to i8*), i8* null, i8** [[TMP5]], i64 1)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], double* noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -207,7 +207,7 @@ int bar(int n){
 // CHECK-64:       then:
 // CHECK-64-NEXT:    [[TMP36:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK-64-NEXT:    [[TMP37:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-64-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR3:[0-9]+]]
+// CHECK-64-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR3:[0-9]+]]
 // CHECK-64-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-64:       else:
 // CHECK-64-NEXT:    br label [[IFCONT]]
@@ -314,14 +314,14 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP6:%.*]] = bitcast float* [[TMP1]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 8
 // CHECK-64-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i8*, float*)* @__omp_outlined__1 to i8*), i8* null, i8** [[TMP7]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i8*, float*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined to i8*), i8* null, i8** [[TMP7]], i64 2)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[C:%.*]], float* noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -355,7 +355,7 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP8:%.*]] = bitcast float* [[D2]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP8]], i8** [[TMP7]], align 8
 // CHECK-64-NEXT:    [[TMP9:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// CHECK-64-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]], i32 2, i64 16, i8* [[TMP9]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func3, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func4)
+// CHECK-64-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]], i32 2, i64 16, i8* [[TMP9]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func1, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func2)
 // CHECK-64-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 1
 // CHECK-64-NEXT:    br i1 [[TMP11]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-64:       .omp.reduction.then:
@@ -376,7 +376,7 @@ int bar(int n){
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func3
+// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func1
 // CHECK-64-SAME: (i8* noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
@@ -442,7 +442,7 @@ int bar(int n){
 // CHECK-64:       then:
 // CHECK-64-NEXT:    [[TMP48:%.*]] = bitcast [2 x i8*]* [[TMP5]] to i8*
 // CHECK-64-NEXT:    [[TMP49:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-64-NEXT:    call void @"_omp$reduction$reduction_func2"(i8* [[TMP48]], i8* [[TMP49]]) #[[ATTR3]]
+// CHECK-64-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP48]], i8* [[TMP49]]) #[[ATTR3]]
 // CHECK-64-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-64:       else:
 // CHECK-64-NEXT:    br label [[IFCONT]]
@@ -473,7 +473,7 @@ int bar(int n){
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func4
+// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func2
 // CHECK-64-SAME: (i8* noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
@@ -571,14 +571,14 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP1]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP7]], i8** [[TMP6]], align 8
 // CHECK-64-NEXT:    [[TMP8:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i16*)* @__omp_outlined__5 to i8*), i8* null, i8** [[TMP8]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i16*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined to i8*), i8* null, i8** [[TMP8]], i64 2)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@__omp_outlined__5
+// CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined
 // CHECK-64-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR1]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -622,7 +622,7 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP10:%.*]] = bitcast i16* [[B2]] to i8*
 // CHECK-64-NEXT:    store i8* [[TMP10]], i8** [[TMP9]], align 8
 // CHECK-64-NEXT:    [[TMP11:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// CHECK-64-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]], i32 2, i64 16, i8* [[TMP11]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func7, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func8)
+// CHECK-64-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]], i32 2, i64 16, i8* [[TMP11]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func3, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func4)
 // CHECK-64-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], 1
 // CHECK-64-NEXT:    br i1 [[TMP13]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-64:       .omp.reduction.then:
@@ -651,7 +651,7 @@ int bar(int n){
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func7
+// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func3
 // CHECK-64-SAME: (i8* noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
@@ -718,7 +718,7 @@ int bar(int n){
 // CHECK-64:       then:
 // CHECK-64-NEXT:    [[TMP49:%.*]] = bitcast [2 x i8*]* [[TMP5]] to i8*
 // CHECK-64-NEXT:    [[TMP50:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-64-NEXT:    call void @"_omp$reduction$reduction_func6"(i8* [[TMP49]], i8* [[TMP50]]) #[[ATTR3]]
+// CHECK-64-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP49]], i8* [[TMP50]]) #[[ATTR3]]
 // CHECK-64-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-64:       else:
 // CHECK-64-NEXT:    br label [[IFCONT]]
@@ -751,7 +751,7 @@ int bar(int n){
 // CHECK-64-NEXT:    ret void
 //
 //
-// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func8
+// CHECK-64-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func4
 // CHECK-64-SAME: (i8* noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 8
@@ -845,14 +845,14 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP4:%.*]] = bitcast double* [[TMP0]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
 // CHECK-32-NEXT:    [[TMP5:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, double*)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP5]], i32 1)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, double*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined to i8*), i8* null, i8** [[TMP5]], i32 1)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], double* noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -939,7 +939,7 @@ int bar(int n){
 // CHECK-32:       then:
 // CHECK-32-NEXT:    [[TMP36:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK-32-NEXT:    [[TMP37:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-32-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR3:[0-9]+]]
+// CHECK-32-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR3:[0-9]+]]
 // CHECK-32-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32:       else:
 // CHECK-32-NEXT:    br label [[IFCONT]]
@@ -1046,14 +1046,14 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP6:%.*]] = bitcast float* [[TMP1]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 4
 // CHECK-32-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i8*, float*)* @__omp_outlined__1 to i8*), i8* null, i8** [[TMP7]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i8*, float*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined to i8*), i8* null, i8** [[TMP7]], i32 2)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[C:%.*]], float* noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -1087,7 +1087,7 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP8:%.*]] = bitcast float* [[D2]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP8]], i8** [[TMP7]], align 4
 // CHECK-32-NEXT:    [[TMP9:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// CHECK-32-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]], i32 2, i32 8, i8* [[TMP9]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func3, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func4)
+// CHECK-32-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]], i32 2, i32 8, i8* [[TMP9]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func1, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func2)
 // CHECK-32-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 1
 // CHECK-32-NEXT:    br i1 [[TMP11]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32:       .omp.reduction.then:
@@ -1108,7 +1108,7 @@ int bar(int n){
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func3
+// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func1
 // CHECK-32-SAME: (i8* noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -1174,7 +1174,7 @@ int bar(int n){
 // CHECK-32:       then:
 // CHECK-32-NEXT:    [[TMP48:%.*]] = bitcast [2 x i8*]* [[TMP5]] to i8*
 // CHECK-32-NEXT:    [[TMP49:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-32-NEXT:    call void @"_omp$reduction$reduction_func2"(i8* [[TMP48]], i8* [[TMP49]]) #[[ATTR3]]
+// CHECK-32-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP48]], i8* [[TMP49]]) #[[ATTR3]]
 // CHECK-32-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32:       else:
 // CHECK-32-NEXT:    br label [[IFCONT]]
@@ -1205,7 +1205,7 @@ int bar(int n){
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func4
+// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func2
 // CHECK-32-SAME: (i8* noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -1303,14 +1303,14 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP1]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP7]], i8** [[TMP6]], align 4
 // CHECK-32-NEXT:    [[TMP8:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i16*)* @__omp_outlined__5 to i8*), i8* null, i8** [[TMP8]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i16*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined to i8*), i8* null, i8** [[TMP8]], i32 2)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@__omp_outlined__5
+// CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined
 // CHECK-32-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR1]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -1354,7 +1354,7 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP10:%.*]] = bitcast i16* [[B2]] to i8*
 // CHECK-32-NEXT:    store i8* [[TMP10]], i8** [[TMP9]], align 4
 // CHECK-32-NEXT:    [[TMP11:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// CHECK-32-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]], i32 2, i32 8, i8* [[TMP11]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func7, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func8)
+// CHECK-32-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]], i32 2, i32 8, i8* [[TMP11]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func3, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func4)
 // CHECK-32-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], 1
 // CHECK-32-NEXT:    br i1 [[TMP13]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32:       .omp.reduction.then:
@@ -1383,7 +1383,7 @@ int bar(int n){
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func7
+// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func3
 // CHECK-32-SAME: (i8* noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -1450,7 +1450,7 @@ int bar(int n){
 // CHECK-32:       then:
 // CHECK-32-NEXT:    [[TMP49:%.*]] = bitcast [2 x i8*]* [[TMP5]] to i8*
 // CHECK-32-NEXT:    [[TMP50:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-32-NEXT:    call void @"_omp$reduction$reduction_func6"(i8* [[TMP49]], i8* [[TMP50]]) #[[ATTR3]]
+// CHECK-32-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP49]], i8* [[TMP50]]) #[[ATTR3]]
 // CHECK-32-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32:       else:
 // CHECK-32-NEXT:    br label [[IFCONT]]
@@ -1483,7 +1483,7 @@ int bar(int n){
 // CHECK-32-NEXT:    ret void
 //
 //
-// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func8
+// CHECK-32-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func4
 // CHECK-32-SAME: (i8* noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -1577,14 +1577,14 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = bitcast double* [[TMP0]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP4]], i8** [[TMP3]], align 4
 // CHECK-32-EX-NEXT:    [[TMP5:%.*]] = bitcast [1 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, double*)* @__omp_outlined__ to i8*), i8* null, i8** [[TMP5]], i32 1)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, double*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined to i8*), i8* null, i8** [[TMP5]], i32 1)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], double* noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -1671,7 +1671,7 @@ int bar(int n){
 // CHECK-32-EX:       then:
 // CHECK-32-EX-NEXT:    [[TMP36:%.*]] = bitcast [1 x i8*]* [[TMP5]] to i8*
 // CHECK-32-EX-NEXT:    [[TMP37:%.*]] = bitcast [1 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-32-EX-NEXT:    call void @"_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR3:[0-9]+]]
+// CHECK-32-EX-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP36]], i8* [[TMP37]]) #[[ATTR3:[0-9]+]]
 // CHECK-32-EX-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32-EX:       else:
 // CHECK-32-EX-NEXT:    br label [[IFCONT]]
@@ -1778,14 +1778,14 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP6:%.*]] = bitcast float* [[TMP1]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP6]], i8** [[TMP5]], align 4
 // CHECK-32-EX-NEXT:    [[TMP7:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i8*, float*)* @__omp_outlined__1 to i8*), i8* null, i8** [[TMP7]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i8*, float*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined to i8*), i8* null, i8** [[TMP7]], i32 2)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__1
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i8* noundef nonnull align 1 dereferenceable(1) [[C:%.*]], float* noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -1819,7 +1819,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP8:%.*]] = bitcast float* [[D2]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP8]], i8** [[TMP7]], align 4
 // CHECK-32-EX-NEXT:    [[TMP9:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]], i32 2, i32 8, i8* [[TMP9]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func3, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func4)
+// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]], i32 2, i32 8, i8* [[TMP9]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func1, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func2)
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 1
 // CHECK-32-EX-NEXT:    br i1 [[TMP11]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32-EX:       .omp.reduction.then:
@@ -1840,7 +1840,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func3
+// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func1
 // CHECK-32-EX-SAME: (i8* noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -1906,7 +1906,7 @@ int bar(int n){
 // CHECK-32-EX:       then:
 // CHECK-32-EX-NEXT:    [[TMP48:%.*]] = bitcast [2 x i8*]* [[TMP5]] to i8*
 // CHECK-32-EX-NEXT:    [[TMP49:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-32-EX-NEXT:    call void @"_omp$reduction$reduction_func2"(i8* [[TMP48]], i8* [[TMP49]]) #[[ATTR3]]
+// CHECK-32-EX-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP48]], i8* [[TMP49]]) #[[ATTR3]]
 // CHECK-32-EX-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32-EX:       else:
 // CHECK-32-EX-NEXT:    br label [[IFCONT]]
@@ -1937,7 +1937,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func4
+// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func2
 // CHECK-32-EX-SAME: (i8* noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -2035,14 +2035,14 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP1]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP7]], i8** [[TMP6]], align 4
 // CHECK-32-EX-NEXT:    [[TMP8:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i16*)* @__omp_outlined__5 to i8*), i8* null, i8** [[TMP8]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, i16*)* @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined to i8*), i8* null, i8** [[TMP8]], i32 2)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(%struct.ident_t* @[[GLOB1]], i8 2)
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@__omp_outlined__5
+// CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined
 // CHECK-32-EX-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i32* noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i16* noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR1]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 4
@@ -2086,7 +2086,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP10:%.*]] = bitcast i16* [[B2]] to i8*
 // CHECK-32-EX-NEXT:    store i8* [[TMP10]], i8** [[TMP9]], align 4
 // CHECK-32-EX-NEXT:    [[TMP11:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_RED_LIST]] to i8*
-// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]], i32 2, i32 8, i8* [[TMP11]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func7, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func8)
+// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_nvptx_parallel_reduce_nowait_v2(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]], i32 2, i32 8, i8* [[TMP11]], void (i8*, i16, i16, i16)* @_omp_reduction_shuffle_and_reduce_func3, void (i8*, i32)* @_omp_reduction_inter_warp_copy_func4)
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], 1
 // CHECK-32-EX-NEXT:    br i1 [[TMP13]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // CHECK-32-EX:       .omp.reduction.then:
@@ -2115,7 +2115,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func7
+// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_shuffle_and_reduce_func3
 // CHECK-32-EX-SAME: (i8* noundef [[TMP0:%.*]], i16 noundef signext [[TMP1:%.*]], i16 noundef signext [[TMP2:%.*]], i16 noundef signext [[TMP3:%.*]]) #[[ATTR2]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4
@@ -2182,7 +2182,7 @@ int bar(int n){
 // CHECK-32-EX:       then:
 // CHECK-32-EX-NEXT:    [[TMP49:%.*]] = bitcast [2 x i8*]* [[TMP5]] to i8*
 // CHECK-32-EX-NEXT:    [[TMP50:%.*]] = bitcast [2 x i8*]* [[DOTOMP_REDUCTION_REMOTE_REDUCE_LIST]] to i8*
-// CHECK-32-EX-NEXT:    call void @"_omp$reduction$reduction_func6"(i8* [[TMP49]], i8* [[TMP50]]) #[[ATTR3]]
+// CHECK-32-EX-NEXT:    call void @"{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined_omp$reduction$reduction_func"(i8* [[TMP49]], i8* [[TMP50]]) #[[ATTR3]]
 // CHECK-32-EX-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32-EX:       else:
 // CHECK-32-EX-NEXT:    br label [[IFCONT]]
@@ -2215,7 +2215,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    ret void
 //
 //
-// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func8
+// CHECK-32-EX-LABEL: define {{[^@]+}}@_omp_reduction_inter_warp_copy_func4
 // CHECK-32-EX-SAME: (i8* noundef [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR2]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i8*, align 4

@@ -63,16 +63,14 @@ define <2 x i256> @load_zext_v2i64i256(ptr %ap) #0 {
 define <16 x i32> @load_sext_v16i8i32(ptr %ap)  #0 {
 ; CHECK-LABEL: load_sext_v16i8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    sunpklo z3.h, z1.b
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z4.h, z1.b
-; CHECK-NEXT:    sunpklo z0.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    sunpklo z2.s, z4.h
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    sunpklo z1.s, z3.h
-; CHECK-NEXT:    sunpklo z3.s, z4.h
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    mov w9, #8 // =0x8
+; CHECK-NEXT:    mov w10, #12 // =0xc
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x0, x9]
+; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, x10]
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2
@@ -86,10 +84,10 @@ define <16 x i32> @load_sext_v16i8i32(ptr %ap)  #0 {
 define <8 x i32> @load_sext_v8i16i32(ptr %ap)  #0 {
 ; CHECK-LABEL: load_sext_v8i16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    sunpklo z0.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
@@ -165,25 +163,22 @@ define <2 x i256> @load_sext_v2i64i256(ptr %ap) #0 {
 define <16 x i64> @load_zext_v16i16i64(ptr %ap)  #0 {
 ; CHECK-LABEL: load_zext_v16i16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    uunpklo z7.s, z1.h
-; CHECK-NEXT:    uunpklo z0.d, z3.s
-; CHECK-NEXT:    uunpklo z5.s, z2.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
-; CHECK-NEXT:    uunpklo z16.s, z2.h
-; CHECK-NEXT:    uunpklo z4.d, z5.s
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
-; CHECK-NEXT:    uunpklo z2.d, z7.s
-; CHECK-NEXT:    uunpklo z6.d, z16.s
-; CHECK-NEXT:    ext z7.b, z7.b, z7.b, #8
-; CHECK-NEXT:    ext z16.b, z16.b, z16.b, #8
-; CHECK-NEXT:    uunpklo z1.d, z3.s
-; CHECK-NEXT:    uunpklo z5.d, z5.s
-; CHECK-NEXT:    uunpklo z3.d, z7.s
-; CHECK-NEXT:    uunpklo z7.d, z16.s
+; CHECK-NEXT:    mov x8, #2 // =0x2
+; CHECK-NEXT:    mov x9, #4 // =0x4
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov x10, #6 // =0x6
+; CHECK-NEXT:    mov x11, #8 // =0x8
+; CHECK-NEXT:    mov x12, #10 // =0xa
+; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    mov x8, #12 // =0xc
+; CHECK-NEXT:    ld1h { z2.d }, p0/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    mov x9, #14 // =0xe
+; CHECK-NEXT:    ld1h { z3.d }, p0/z, [x0, x10, lsl #1]
+; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x0, x11, lsl #1]
+; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x12, lsl #1]
+; CHECK-NEXT:    ld1h { z6.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x9, lsl #1]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $z2

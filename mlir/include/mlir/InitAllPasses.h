@@ -55,7 +55,7 @@ inline void registerAllPasses() {
   registerConversionPasses();
 
   // Dialect passes
-  registerAffinePasses();
+  affine::registerAffinePasses();
   registerAsyncPasses();
   arith::registerArithPasses();
   bufferization::registerBufferizationPasses();

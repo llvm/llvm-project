@@ -6,6 +6,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.atomic
+    libc.src.__support.GPU.utils
 )
 
 add_object_library(
