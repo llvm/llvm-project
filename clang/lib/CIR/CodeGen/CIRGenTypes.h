@@ -163,7 +163,7 @@ public:
   mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
 
   std::unique_ptr<CIRGenRecordLayout>
-  computeRecordLayout(const clang::RecordDecl *D, mlir::cir::StructType &Ty);
+  computeRecordLayout(const clang::RecordDecl *D, mlir::cir::StructType *Ty);
 
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
