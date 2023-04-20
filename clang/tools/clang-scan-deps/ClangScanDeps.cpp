@@ -19,6 +19,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/TargetParser/Host.h"
 #include <mutex>
 #include <optional>
@@ -90,6 +92,7 @@ static std::vector<std::string> ModuleDepTargets;
 static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
+static bool PrintTiming;
 static std::vector<const char *> CommandLine;
 
 #ifndef NDEBUG
@@ -199,6 +202,8 @@ static void ParseArgs(int argc, char **argv) {
     }
     ResourceDirRecipe = *Kind;
   }
+
+  PrintTiming = Args.hasArg(OPT_print_timing);
 
   Verbose = Args.hasArg(OPT_verbose);
 
@@ -857,6 +862,10 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     llvm::outs() << "Running clang-scan-deps on " << Inputs.size()
                  << " files using " << Pool.getThreadCount() << " workers\n";
   }
+
+  llvm::Timer T;
+  T.startTimer();
+
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
     Pool.async([&, I]() {
       llvm::StringSet<> AlreadySeenModules;
@@ -945,6 +954,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
     });
   }
   Pool.wait();
+
+  T.stopTimer();
+  if (PrintTiming)
+    llvm::errs() << llvm::format(
+        "clang-scan-deps timing: %0.2fs wall, %0.2fs process\n",
+        T.getTotalTime().getWallTime(), T.getTotalTime().getProcessTime());
 
   if (RoundTripArgs)
     if (FD && FD->roundTripCommands(llvm::errs()))
