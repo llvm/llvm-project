@@ -57,6 +57,6 @@ transform.sequence failures(propagate) {
     : (!pdl.operation) -> !pdl.operation
 
   %func_8 = transform.vector.lower_transpose %func_7
-    lowering_strategy = "shuffle"
+    lowering_strategy = "shuffle_1d"
       : (!pdl.operation) -> !pdl.operation
 }
