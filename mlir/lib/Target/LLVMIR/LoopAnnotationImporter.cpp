@@ -396,8 +396,10 @@ LoopMetadataConversion::convertParallelAccesses() {
   for (llvm::MDNode *node : *nodes) {
     FailureOr<SmallVector<SymbolRefAttr>> accessGroups =
         loopAnnotationImporter.lookupAccessGroupAttrs(node);
-    if (failed(accessGroups))
-      return emitWarning(loc) << "could not lookup access group";
+    if (failed(accessGroups)) {
+      emitWarning(loc) << "could not lookup access group";
+      continue;
+    }
     llvm::append_range(refs, *accessGroups);
   }
   return refs;
