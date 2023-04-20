@@ -1172,20 +1172,12 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
             UsedSymbols.contains(Ref.Target))
           return;
 
-        for (const include_cleaner::Header &H : Providers) {
-          auto MatchingIncludes = ConvertedMainFileIncludes.match(H);
-          // No match for this provider in the main file.
-          if (MatchingIncludes.empty())
-            continue;
+        auto Provider =
+            firstMatchedProvider(ConvertedMainFileIncludes, Providers);
+        if (!Provider || HoveredInclude.match(*Provider).empty())
+          return;
 
-          // Check if the hovered include matches this provider.
-          if (!HoveredInclude.match(H).empty())
-            UsedSymbols.insert(Ref.Target);
-
-          // Don't look for rest of the providers once we've found a match
-          // in the main file.
-          break;
-        }
+        UsedSymbols.insert(Ref.Target);
       });
 
   for (const auto &UsedSymbolDecl : UsedSymbols)
