@@ -12,10 +12,10 @@ void x86_64_device_isa_selected() {
   bar();
 }
 // CHECK-LABEL: void @_Z26x86_64_device_isa_selectedv()
-// CHECK: ...) @__kmpc_fork_call{{.*}}@_Z26x86_64_device_isa_selectedv.omp_outlined
+// CHECK: ...) @__kmpc_fork_call{{.*}}@.omp_outlined.
 // CHECK: ret void
 
-// CHECK: define internal void @_Z26x86_64_device_isa_selectedv.omp_outlined(
+// CHECK: define internal void @.omp_outlined.(
 // CHECK: @_Z3barv
 // CHECK: ret void
 

@@ -60,10 +60,10 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[TMP0:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK-NEXT:   store i32 1, ptr [[TMP0]], align 4
 // CHECK-NEXT:   [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
-// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @test_omp_parallel_copyin.omp_outlined, ptr [[A_ADDR]], ptr [[TMP1]])
+// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @.omp_outlined., ptr [[A_ADDR]], ptr [[TMP1]])
 // CHECK-NEXT:   ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_copyin.omp_outlined
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -163,10 +163,10 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[TMP0:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK-NEXT:   store i32 2, ptr [[TMP0]], align 4
 // CHECK-NEXT:   [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
-// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @test_omp_parallel_for_copyin.omp_outlined, ptr [[A_ADDR]], ptr [[TMP1]])
+// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @.omp_outlined..1, ptr [[A_ADDR]], ptr [[TMP1]])
 // CHECK-NEXT:   ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_for_copyin.omp_outlined
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined..1
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -263,10 +263,10 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[TMP0:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK-NEXT:   store i32 3, ptr [[TMP0]], align 4
 // CHECK-NEXT:   [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
-// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @test_omp_parallel_for_simd_copyin.omp_outlined, ptr [[A_ADDR]], ptr [[TMP1]])
+// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @.omp_outlined..2, ptr [[A_ADDR]], ptr [[TMP1]])
 // CHECK-NEXT:   ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_for_simd_copyin.omp_outlined
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined..2
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -372,10 +372,10 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[TMP0:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK-NEXT:   store i32 4, ptr [[TMP0]], align 4
 // CHECK-NEXT:   [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
-// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @test_omp_parallel_sections_copyin.omp_outlined, ptr [[A_ADDR]], ptr [[B_ADDR]], ptr [[TMP1]])
+// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 3, ptr @.omp_outlined..3, ptr [[A_ADDR]], ptr [[B_ADDR]], ptr [[TMP1]])
 // CHECK-NEXT:   ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_sections_copyin.omp_outlined
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined..3
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -467,10 +467,10 @@ void test_omp_parallel_master_copyin(int *a) {
 // CHECK-NEXT:   [[TMP0:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
 // CHECK-NEXT:   store i32 5, ptr [[TMP0]], align 4
 // CHECK-NEXT:   [[TMP1:%.*]] = call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
-// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @test_omp_parallel_master_copyin.omp_outlined, ptr [[A_ADDR]], ptr [[TMP1]])
+// CHECK-NEXT:   call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 2, ptr @.omp_outlined..4, ptr [[A_ADDR]], ptr [[TMP1]])
 // CHECK-NEXT:   ret void
 //
-// CHECK-LABEL: define {{[^@]+}}@test_omp_parallel_master_copyin.omp_outlined
+// CHECK-LABEL: define {{[^@]+}}@.omp_outlined..4
 // CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8

@@ -5,7 +5,7 @@
 // expected-no-diagnostics
 
 
-/*===-----------------------------------------------------------------------===
+/*===-----------------------------------------------------------------------=== 
 
 Inspired from SOLLVE tests:
  - 5.0/metadirective/test_metadirective_arch_is_nvidia.c
@@ -17,7 +17,7 @@ Inspired from SOLLVE tests:
 #define N 1024
 
 int metadirective1() {
-
+   
    int v1[N], v2[N], v3[N];
 
    int target_device_num, host_device_num, default_device;
@@ -38,28 +38,28 @@ int metadirective1() {
    return errors;
 }
 
-// CHECK: define weak_odr protected amdgpu_kernel void @[[METADIRECTIVE:.+metadirective1[a-z0-9_]+]]
+// CHECK-LABEL: define weak_odr protected amdgpu_kernel void {{.+}}metadirective1
 // CHECK: entry:
 // CHECK: %{{[0-9]}} = call i32 @__kmpc_target_init
 // CHECK: user_code.entry:
-// CHECK: call void @[[METADIRECTIVE]]_omp_outlined
+// CHECK: call void @__omp_outlined__
 // CHECK-NOT: call void @__kmpc_parallel_51
 // CHECK: ret void
 
 
-// CHECK: define internal void @[[METADIRECTIVE]]_omp_outlined
+// CHECK-LABEL: define internal void @__omp_outlined__
 // CHECK: entry:
 // CHECK: call void @__kmpc_distribute_static_init
-// CHECK: omp.loop.exit:
+// CHECK: omp.loop.exit:  
 // CHECK: call void @__kmpc_distribute_static_fini
 
 
-// CHECK: define internal void @[[METADIRECTIVE]]_omp_outlined_omp_outlined
+// CHECK-LABEL: define internal void @__omp_outlined__.{{[0-9]+}}
 // CHECK: entry:
 // CHECK: call void @__kmpc_for_static_init_4
 // CHECK: omp.inner.for.body:
 // CHECK: store atomic {{.*}} monotonic
-// CHECK: omp.loop.exit:
+// CHECK: omp.loop.exit:                                    
 // CHECK-NEXT: call void @__kmpc_distribute_static_fini
 // CHECK-NEXT: ret void
 

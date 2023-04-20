@@ -41,7 +41,7 @@ int foo2() {
   return 0;
 }
 
-// CHECK: define internal void @_Z4foo3iPfS_.omp_outlined.omp.reduction.reduction_func(ptr noundef %0, ptr noundef %1) [[ATTR0]] {
+// CHECK: define internal void @.omp.reduction.reduction_func(ptr noundef %0, ptr noundef %1) [[ATTR0]] {
 
 float foo3(int n, float *a, float *b) {
   int i;
