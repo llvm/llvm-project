@@ -771,6 +771,9 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
   std::tie(start_address, end_address) = *maybe_start_and_end;
 
   auto *section_list = object_file->GetSectionList();
+  if (section_list->GetSize() == 0)
+    return false;
+
   auto segment_iter = llvm::find_if(*section_list, [&](auto segment) {
     return segment->GetName() == segment_name.begin();
   });
@@ -813,11 +816,12 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
         std::memcpy(Buf, data.begin(), size);
 
         // The section's address is the start address for this image
-        // added with the section's virtual address. We need to use the
-        // virtual address instead of the file offset because the offsets
-        // encoded in the reflection section are calculated in the virtual
-        // address space.
-        auto address = start_address + section->GetFileAddress();
+        // added with the section's virtual address subtracting the start of the
+        // module's address. We need to use the virtual address instead of the
+        // file offset because the offsets encoded in the reflection section are
+        // calculated in the virtual address space.
+        auto address = start_address + section->GetFileAddress() -
+                       section_list->GetSectionAtIndex(0)->GetFileAddress();
         assert(address <= end_address && "Address outside of range!");
 
         swift::remote::RemoteRef<void> remote_ref(address, Buf);
