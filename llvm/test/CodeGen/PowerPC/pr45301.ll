@@ -12,21 +12,21 @@ define dso_local void @g(ptr %agg.result) local_unnamed_addr #0 {
 ; CHECK-NEXT:    bl i
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addis r4, r2, g@toc@ha
-; CHECK-NEXT:    addi r4, r4, g@toc@l
-; CHECK-NEXT:    ld r5, 16(r4)
-; CHECK-NEXT:    std r5, 16(r3)
-; CHECK-NEXT:    ld r6, 0(r4)
-; CHECK-NEXT:    std r6, 0(r3)
-; CHECK-NEXT:    rldicl r6, r6, 32, 32
-; CHECK-NEXT:    ld r7, 8(r4)
+; CHECK-NEXT:    addi r5, r4, g@toc@l
+; CHECK-NEXT:    ld r6, 16(r5)
+; CHECK-NEXT:    std r6, 16(r3)
+; CHECK-NEXT:    ld r4, g@toc@l(r4)
+; CHECK-NEXT:    std r4, 0(r3)
+; CHECK-NEXT:    rldicl r4, r4, 32, 32
+; CHECK-NEXT:    ld r7, 8(r5)
 ; CHECK-NEXT:    std r7, 8(r3)
-; CHECK-NEXT:    ld r7, 24(r4)
+; CHECK-NEXT:    ld r7, 24(r5)
 ; CHECK-NEXT:    std r7, 24(r3)
-; CHECK-NEXT:    ld r4, 32(r4)
-; CHECK-NEXT:    std r4, 32(r3)
+; CHECK-NEXT:    ld r5, 32(r5)
+; CHECK-NEXT:    std r5, 32(r3)
+; CHECK-NEXT:    stwbrx r4, 0, r3
 ; CHECK-NEXT:    li r4, 20
-; CHECK-NEXT:    stwbrx r6, 0, r3
-; CHECK-NEXT:    stwbrx r5, r3, r4
+; CHECK-NEXT:    stwbrx r6, r3, r4
 ; CHECK-NEXT:    addi r1, r1, 112
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
