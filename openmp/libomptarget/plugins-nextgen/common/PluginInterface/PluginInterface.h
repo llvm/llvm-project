@@ -654,8 +654,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   // Switch memory region to coarse grain mode
   Error setCoarseGrainMemory(void *ptr, int64_t size);
-  virtual Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) {}
-  
+  virtual Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) {
+    return Error::success();
+  }
+
   // Query if memory region is coarse grained
   uint32_t queryCoarseGrainMemory(const void *ptr, int64_t size);
   virtual uint32_t queryCoarseGrainMemoryImpl(const void *ptr, int64_t size) { return 0; }

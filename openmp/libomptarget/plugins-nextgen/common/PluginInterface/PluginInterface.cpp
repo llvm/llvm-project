@@ -1139,7 +1139,7 @@ uint32_t GenericDeviceTy::queryCoarseGrainMemory(const void *ptr,
   assert(ptr != nullptr);
   assert(size > 0);
 
-  return queryCoarseGrainMemory(ptr, size);
+  return queryCoarseGrainMemoryImpl(ptr, size);
 }
 
 Error GenericDeviceTy::printInfo() {

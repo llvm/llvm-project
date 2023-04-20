@@ -3124,7 +3124,7 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
   auto VGPRCount = (*KernelInfo).VGPRCount;
   auto SGPRSpillCount = (*KernelInfo).SGPRSpillCount;
   auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
-  auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
+  // auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
 
   // This line should print exactly as the one in the old plugin.
   fprintf(stderr,
