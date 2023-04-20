@@ -758,7 +758,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // Parse the ISA string containing non-standard user-level
   // extensions, standard supervisor-level extensions and
   // non-standard supervisor-level extensions.
-  // These extensions start with 'z', 'x', 's', 'sx' prefixes, follow a
+  // These extensions start with 'z', 's', 's', 'sx' prefixes, follow a
   // canonical order, might have a version number (major, minor)
   // and are separated by a single underscore '_'.
   // Set the hardware features for the extensions that are supported.
@@ -769,7 +769,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   OtherExts.split(Split, '_');
 
   SmallVector<StringRef, 8> AllExts;
-  std::array<StringRef, 4> Prefix{"z", "x", "s", "sx"};
+  std::array<StringRef, 4> Prefix{"z", "s", "x", "sx"};
   auto I = Prefix.begin();
   auto E = Prefix.end();
   if (Split.size() > 1 || Split[0] != "") {
