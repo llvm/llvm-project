@@ -2251,9 +2251,18 @@ gentbl(
     td_srcs = [ "//llvm:include/llvm/Option/OptParser.td" ],
 )
 
+expand_template(
+    name = "clang-scan-deps-main",
+    out = "clang-scan-deps-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "clang_scan_deps",
+    },
+    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "clang-scan-deps",
-    srcs = glob(["tools/clang-scan-deps/*.cpp"]),
+    srcs = glob(["tools/clang-scan-deps/*.cpp"]) + ["clang-scan-deps-driver.cpp"],
     stamp = 0,
     deps = [
         ":driver",
