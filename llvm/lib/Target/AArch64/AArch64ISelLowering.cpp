@@ -14884,7 +14884,7 @@ bool AArch64TargetLowering::isLegalICmpImmediate(int64_t Immed) const {
 /// isLegalAddressingMode - Return true if the addressing mode represented
 /// by AM is legal for this target, for a load/store of the specified type.
 bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
-                                                  const AddrMode &AMode, Type *Ty,
+                                                  const AddrMode &AM, Type *Ty,
                                                   unsigned AS, Instruction *I) const {
   // AArch64 has five basic addressing modes:
   //  reg
@@ -14894,30 +14894,11 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   //  reg + SIZE_IN_BYTES * reg
 
   // No global is ever allowed as a base.
-  if (AMode.BaseGV)
+  if (AM.BaseGV)
     return false;
 
   // No reg+reg+imm addressing.
-  if (AMode.HasBaseReg && AMode.BaseOffs && AMode.Scale)
-    return false;
-
-  // Canonicalise `1*ScaledReg + imm` into `BaseReg + imm` and
-  // `2*ScaledReg` into `BaseReg + ScaledReg`
-  AddrMode AM = AMode;
-  if (AM.Scale && !AM.HasBaseReg) {
-    if (AM.Scale == 1) {
-      AM.HasBaseReg = true;
-      AM.Scale = 0;
-    } else if (AM.Scale == 2) {
-      AM.HasBaseReg = true;
-      AM.Scale = 1;
-    } else {
-      return false;
-    }
-  }
-
-  // A base register is required in all addressing modes.
-  if (!AM.HasBaseReg)
+  if (AM.HasBaseReg && AM.BaseOffs && AM.Scale)
     return false;
 
   // FIXME: Update this method to support scalable addressing modes.
