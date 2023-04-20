@@ -52,6 +52,253 @@ static void pruneNonTransposedDims(ArrayRef<int64_t> transpose,
   result.append(transpose.begin(), transpose.begin() + numTransposedDims);
 }
 
+/// Returns true if the lowering option is a vector shuffle based approach.
+static bool isShuffleLike(VectorTransposeLowering lowering) {
+  return lowering == VectorTransposeLowering::Shuffle1D ||
+         lowering == VectorTransposeLowering::Shuffle16x16;
+}
+
+/// Returns a shuffle mask that builds on `vals`. `vals` is the offset base of
+/// shuffle ops, i.e., the unpack pattern. The method iterates with `vals` to
+/// create the mask for `numBits` bits vector. The `numBits` have to be a
+/// multiple of 128. For example, if `vals` is {0, 1, 16, 17} and `numBits` is
+/// 512, there should be 16 elements in the final result. It constructs the
+/// below mask to get the unpack elements.
+///   [0,    1,    16,    17,
+///    0+4,  1+4,  16+4,  17+4,
+///    0+8,  1+8,  16+8,  17+8,
+///    0+12, 1+12, 16+12, 17+12]
+static SmallVector<int64_t>
+getUnpackShufflePermFor128Lane(ArrayRef<int64_t> vals, int numBits) {
+  assert(numBits % 128 == 0 && "expected numBits is a multiple of 128");
+  int numElem = numBits / 32;
+  SmallVector<int64_t> res;
+  for (int i = 0; i < numElem; i += 4)
+    for (int64_t v : vals)
+      res.push_back(v + i);
+  return res;
+}
+
+/// Lower to vector.shuffle on v1 and v2 with UnpackLoPd shuffle mask. For
+/// example, if it is targeting 512 bit vector, returns
+///   vector.shuffle on v1, v2, [0,    1,    16,    17,
+///                              0+4,  1+4,  16+4,  17+4,
+///                              0+8,  1+8,  16+8,  17+8,
+///                              0+12, 1+12, 16+12, 17+12].
+static Value createUnpackLoPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
+                              int numBits) {
+  int numElem = numBits / 32;
+  return b.create<vector::ShuffleOp>(
+      v1, v2,
+      getUnpackShufflePermFor128Lane({0, 1, numElem, numElem + 1}, numBits));
+}
+
+/// Lower to vector.shuffle on v1 and v2 with UnpackHiPd shuffle mask. For
+/// example, if it is targeting 512 bit vector, returns
+///   vector.shuffle, v1, v2, [2,    3,    18,    19,
+///                            2+4,  3+4,  18+4,  19+4,
+///                            2+8,  3+8,  18+8,  19+8,
+///                            2+12, 3+12, 18+12, 19+12].
+static Value createUnpackHiPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
+                              int numBits) {
+  int numElem = numBits / 32;
+  return b.create<vector::ShuffleOp>(
+      v1, v2,
+      getUnpackShufflePermFor128Lane({2, 3, numElem + 2, numElem + 3},
+                                     numBits));
+}
+
+/// Lower to vector.shuffle on v1 and v2 with UnpackLoPs shuffle mask. For
+/// example, if it is targeting 512 bit vector, returns
+///   vector.shuffle, v1, v2, [0,    16,    1,    17,
+///                            0+4,  16+4,  1+4,  17+4,
+///                            0+8,  16+8,  1+8,  17+8,
+///                            0+12, 16+12, 1+12, 17+12].
+static Value createUnpackLoPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
+                              int numBits) {
+  int numElem = numBits / 32;
+  auto shuffle = b.create<vector::ShuffleOp>(
+      v1, v2,
+      getUnpackShufflePermFor128Lane({0, numElem, 1, numElem + 1}, numBits));
+  return shuffle;
+}
+
+/// Lower to vector.shuffle on v1 and v2 with UnpackHiPs shuffle mask. For
+/// example, if it is targeting 512 bit vector, returns
+///   vector.shuffle, v1, v2, [2,    18,    3,    19,
+///                            2+4,  18+4,  3+4,  19+4,
+///                            2+8,  18+8,  3+8,  19+8,
+///                            2+12, 18+12, 3+12, 19+12].
+static Value createUnpackHiPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
+                              int numBits) {
+  int numElem = numBits / 32;
+  return b.create<vector::ShuffleOp>(
+      v1, v2,
+      getUnpackShufflePermFor128Lane({2, numElem + 2, 3, numElem + 3},
+                                     numBits));
+}
+
+/// Returns a vector.shuffle that shuffles 128-bit lanes (composed of 4 32-bit
+/// elements) selected by `mask` from `v1` and `v2`. I.e.,
+///
+/// DEFINE SELECT4(src, control) {
+///	CASE(control[1:0]) OF
+///	0:	tmp[127:0] := src[127:0]
+///	1:	tmp[127:0] := src[255:128]
+///	2:	tmp[127:0] := src[383:256]
+///	3:	tmp[127:0] := src[511:384]
+///	ESAC
+///	RETURN tmp[127:0]
+/// }
+/// dst[127:0]   := SELECT4(v1[511:0], mask[1:0])
+/// dst[255:128] := SELECT4(v1[511:0], mask[3:2])
+/// dst[383:256] := SELECT4(v2[511:0], mask[5:4])
+/// dst[511:384] := SELECT4(v2[511:0], mask[7:6])
+static Value create4x128BitSuffle(ImplicitLocOpBuilder &b, Value v1, Value v2,
+                                  uint8_t mask) {
+  assert(v1.getType().cast<VectorType>().getShape()[0] == 16 &&
+         "expected a vector with length=16");
+  SmallVector<int64_t> shuffleMask;
+  auto appendToMask = [&](int64_t base, uint8_t control) {
+    switch (control) {
+    case 0:
+      llvm::append_range(shuffleMask, ArrayRef<int64_t>{base + 0, base + 1,
+                                                        base + 2, base + 3});
+      break;
+    case 1:
+      llvm::append_range(shuffleMask, ArrayRef<int64_t>{base + 4, base + 5,
+                                                        base + 6, base + 7});
+      break;
+    case 2:
+      llvm::append_range(shuffleMask, ArrayRef<int64_t>{base + 8, base + 9,
+                                                        base + 10, base + 11});
+      break;
+    case 3:
+      llvm::append_range(shuffleMask, ArrayRef<int64_t>{base + 12, base + 13,
+                                                        base + 14, base + 15});
+      break;
+    default:
+      llvm_unreachable("control > 3 : overflow");
+    }
+  };
+  uint8_t b01 = mask & 0x3;
+  uint8_t b23 = (mask >> 2) & 0x3;
+  uint8_t b45 = (mask >> 4) & 0x3;
+  uint8_t b67 = (mask >> 6) & 0x3;
+  appendToMask(0, b01);
+  appendToMask(0, b23);
+  appendToMask(16, b45);
+  appendToMask(16, b67);
+  return b.create<vector::ShuffleOp>(v1, v2, shuffleMask);
+}
+
+/// Lowers the value to a vector.shuffle op. The `source` is expected to be a
+/// 1-D vector and have `m`x`n` elements.
+static Value transposeToShuffle1D(OpBuilder &b, Value source, int m, int n) {
+  SmallVector<int64_t> mask;
+  mask.reserve(m * n);
+  for (int64_t j = 0; j < n; ++j)
+    for (int64_t i = 0; i < m; ++i)
+      mask.push_back(i * n + j);
+  return b.create<vector::ShuffleOp>(source.getLoc(), source, source, mask);
+}
+
+/// Lowers the value to a sequence of vector.shuffle ops. The `source` is
+/// expected to be a 16x16 vector.
+static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
+                                     int n) {
+  ImplicitLocOpBuilder b(source.getLoc(), builder);
+  SmallVector<Value> vs;
+  for (int64_t i = 0; i < m; ++i)
+    vs.push_back(b.create<vector::ExtractOp>(source, i));
+
+  // Interleave 32-bit lanes using
+  //   8x _mm512_unpacklo_epi32
+  //   8x _mm512_unpackhi_epi32
+  Value t0 = createUnpackLoPs(b, vs[0x0], vs[0x1], 512);
+  Value t1 = createUnpackHiPs(b, vs[0x0], vs[0x1], 512);
+  Value t2 = createUnpackLoPs(b, vs[0x2], vs[0x3], 512);
+  Value t3 = createUnpackHiPs(b, vs[0x2], vs[0x3], 512);
+  Value t4 = createUnpackLoPs(b, vs[0x4], vs[0x5], 512);
+  Value t5 = createUnpackHiPs(b, vs[0x4], vs[0x5], 512);
+  Value t6 = createUnpackLoPs(b, vs[0x6], vs[0x7], 512);
+  Value t7 = createUnpackHiPs(b, vs[0x6], vs[0x7], 512);
+  Value t8 = createUnpackLoPs(b, vs[0x8], vs[0x9], 512);
+  Value t9 = createUnpackHiPs(b, vs[0x8], vs[0x9], 512);
+  Value ta = createUnpackLoPs(b, vs[0xa], vs[0xb], 512);
+  Value tb = createUnpackHiPs(b, vs[0xa], vs[0xb], 512);
+  Value tc = createUnpackLoPs(b, vs[0xc], vs[0xd], 512);
+  Value td = createUnpackHiPs(b, vs[0xc], vs[0xd], 512);
+  Value te = createUnpackLoPs(b, vs[0xe], vs[0xf], 512);
+  Value tf = createUnpackHiPs(b, vs[0xe], vs[0xf], 512);
+
+  // Interleave 64-bit lanes using
+  //   8x _mm512_unpacklo_epi64
+  //   8x _mm512_unpackhi_epi64
+  Value r0 = createUnpackLoPd(b, t0, t2, 512);
+  Value r1 = createUnpackHiPd(b, t0, t2, 512);
+  Value r2 = createUnpackLoPd(b, t1, t3, 512);
+  Value r3 = createUnpackHiPd(b, t1, t3, 512);
+  Value r4 = createUnpackLoPd(b, t4, t6, 512);
+  Value r5 = createUnpackHiPd(b, t4, t6, 512);
+  Value r6 = createUnpackLoPd(b, t5, t7, 512);
+  Value r7 = createUnpackHiPd(b, t5, t7, 512);
+  Value r8 = createUnpackLoPd(b, t8, ta, 512);
+  Value r9 = createUnpackHiPd(b, t8, ta, 512);
+  Value ra = createUnpackLoPd(b, t9, tb, 512);
+  Value rb = createUnpackHiPd(b, t9, tb, 512);
+  Value rc = createUnpackLoPd(b, tc, te, 512);
+  Value rd = createUnpackHiPd(b, tc, te, 512);
+  Value re = createUnpackLoPd(b, td, tf, 512);
+  Value rf = createUnpackHiPd(b, td, tf, 512);
+
+  // Permute 128-bit lanes using
+  //   16x _mm512_shuffle_i32x4
+  t0 = create4x128BitSuffle(b, r0, r4, 0x88);
+  t1 = create4x128BitSuffle(b, r1, r5, 0x88);
+  t2 = create4x128BitSuffle(b, r2, r6, 0x88);
+  t3 = create4x128BitSuffle(b, r3, r7, 0x88);
+  t4 = create4x128BitSuffle(b, r0, r4, 0xdd);
+  t5 = create4x128BitSuffle(b, r1, r5, 0xdd);
+  t6 = create4x128BitSuffle(b, r2, r6, 0xdd);
+  t7 = create4x128BitSuffle(b, r3, r7, 0xdd);
+  t8 = create4x128BitSuffle(b, r8, rc, 0x88);
+  t9 = create4x128BitSuffle(b, r9, rd, 0x88);
+  ta = create4x128BitSuffle(b, ra, re, 0x88);
+  tb = create4x128BitSuffle(b, rb, rf, 0x88);
+  tc = create4x128BitSuffle(b, r8, rc, 0xdd);
+  td = create4x128BitSuffle(b, r9, rd, 0xdd);
+  te = create4x128BitSuffle(b, ra, re, 0xdd);
+  tf = create4x128BitSuffle(b, rb, rf, 0xdd);
+
+  // Permute 256-bit lanes using again
+  //   16x _mm512_shuffle_i32x4
+  vs[0x0] = create4x128BitSuffle(b, t0, t8, 0x88);
+  vs[0x1] = create4x128BitSuffle(b, t1, t9, 0x88);
+  vs[0x2] = create4x128BitSuffle(b, t2, ta, 0x88);
+  vs[0x3] = create4x128BitSuffle(b, t3, tb, 0x88);
+  vs[0x4] = create4x128BitSuffle(b, t4, tc, 0x88);
+  vs[0x5] = create4x128BitSuffle(b, t5, td, 0x88);
+  vs[0x6] = create4x128BitSuffle(b, t6, te, 0x88);
+  vs[0x7] = create4x128BitSuffle(b, t7, tf, 0x88);
+  vs[0x8] = create4x128BitSuffle(b, t0, t8, 0xdd);
+  vs[0x9] = create4x128BitSuffle(b, t1, t9, 0xdd);
+  vs[0xa] = create4x128BitSuffle(b, t2, ta, 0xdd);
+  vs[0xb] = create4x128BitSuffle(b, t3, tb, 0xdd);
+  vs[0xc] = create4x128BitSuffle(b, t4, tc, 0xdd);
+  vs[0xd] = create4x128BitSuffle(b, t5, td, 0xdd);
+  vs[0xe] = create4x128BitSuffle(b, t6, te, 0xdd);
+  vs[0xf] = create4x128BitSuffle(b, t7, tf, 0xdd);
+
+  auto reshInputType = VectorType::get(
+      {m, n}, source.getType().cast<VectorType>().getElementType());
+  Value res =
+      b.create<arith::ConstantOp>(reshInputType, b.getZeroAttr(reshInputType));
+  for (int64_t i = 0; i < m; ++i)
+    res = b.create<vector::InsertOp>(vs[i], res, i);
+  return res;
+}
+
 namespace {
 /// Progressive lowering of TransposeOp.
 /// One:
@@ -84,8 +331,7 @@ public:
     for (auto attr : op.getTransp())
       transp.push_back(attr.cast<IntegerAttr>().getInt());
 
-    if (vectorTransformOptions.vectorTransposeLowering ==
-            vector::VectorTransposeLowering::Shuffle &&
+    if (isShuffleLike(vectorTransformOptions.vectorTransposeLowering) &&
         resType.getRank() == 2 && transp[0] == 1 && transp[1] == 0)
       return rewriter.notifyMatchFailure(
           op, "Options specifies lowering to shuffle");
@@ -145,10 +391,13 @@ private:
   vector::VectorTransformsOptions vectorTransformOptions;
 };
 
-/// Rewrite a 2-D vector.transpose as a sequence of:
+/// Rewrite a 2-D vector.transpose as a sequence of shuffle ops.
+/// If the strategy is Shuffle1D, it will be lowered to:
 ///   vector.shape_cast 2D -> 1D
 ///   vector.shuffle
 ///   vector.shape_cast 1D -> 2D
+/// If the strategy is Shuffle16x16, it will be lowered to a sequence of shuffle
+/// ops on 16xf32 vectors.
 class TransposeOp2DToShuffleLowering
     : public OpRewritePattern<vector::TransposeOp> {
 public:
@@ -174,24 +423,28 @@ public:
     if (transp[0] != 1 && transp[1] != 0)
       return rewriter.notifyMatchFailure(op, "Not a 2D transpose permutation");
 
-    if (vectorTransformOptions.vectorTransposeLowering !=
-        VectorTransposeLowering::Shuffle)
-      return rewriter.notifyMatchFailure(op, "Options do not ask for Shuffle");
-
+    Value res;
     int64_t m = srcType.getShape().front(), n = srcType.getShape().back();
-    Value casted = rewriter.create<vector::ShapeCastOp>(
-        loc, VectorType::get({m * n}, srcType.getElementType()),
-        op.getVector());
-    SmallVector<int64_t> mask;
-    mask.reserve(m * n);
-    for (int64_t j = 0; j < n; ++j)
-      for (int64_t i = 0; i < m; ++i)
-        mask.push_back(i * n + j);
+    switch (vectorTransformOptions.vectorTransposeLowering) {
+    case VectorTransposeLowering::Shuffle1D: {
+      Value casted = rewriter.create<vector::ShapeCastOp>(
+          loc, VectorType::get({m * n}, srcType.getElementType()),
+          op.getVector());
+      res = transposeToShuffle1D(rewriter, casted, m, n);
+      break;
+    }
+    case VectorTransposeLowering::Shuffle16x16:
+      if (m != 16 || n != 16)
+        return failure();
+      res = transposeToShuffle16x16(rewriter, op.getVector(), m, n);
+      break;
+    case VectorTransposeLowering::EltWise:
+    case VectorTransposeLowering::Flat:
+      return failure();
+    }
 
-    Value shuffled =
-        rewriter.create<vector::ShuffleOp>(loc, casted, casted, mask);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        op, op.getResultVectorType(), shuffled);
+        op, op.getResultVectorType(), res);
 
     return success();
   }
