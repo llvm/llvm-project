@@ -3,7 +3,7 @@
 // RUN: llvm-profdata show --all-functions --counts %t.profraw  | FileCheck %s
 
 // FIXME: llvm-profdata exits with "Malformed instrumentation profile data"
-// XFAIL: target={{.*msvc.*}}
+// XFAIL: target={{.*windows.*}}
 
 #include "profile_test.h"
 #include <stdint.h>
