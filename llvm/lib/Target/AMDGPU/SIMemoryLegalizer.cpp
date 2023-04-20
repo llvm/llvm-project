@@ -2193,10 +2193,6 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
-  // TODO-GFX12: The kinds of waits that are inserted should not depend on MI's
-  // opcode.
-  unsigned Opcode = MI->getOpcode();
-
   bool LOADCnt = false;
   bool DSCnt = false;
   bool STORECnt = false;
@@ -2285,17 +2281,12 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if (LOADCnt) {
-    unsigned WaitFor = AMDGPU::S_WAIT_LOADCNT; // Default wait instruction.
-    const AMDGPU::MIMGBaseOpcodeInfo *Info = AMDGPU::getMIMGBaseOpcode(Opcode);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT)).addImm(0);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT)).addImm(0);
 
-    if (Info) {
-      if (Info->BVH)
-        WaitFor = AMDGPU::S_WAIT_BVHCNT;
-      else if (Info->Gather4 || Info->Sampler) // Does Gather4 imply Sampler?
-        WaitFor = AMDGPU::S_WAIT_SAMPLECNT;
-    }
+    unsigned WaitFor = AMDGPU::S_WAIT_LOADCNT;
 
-    if (WaitFor == AMDGPU::S_WAIT_LOADCNT && DSCnt) {
+    if (DSCnt) {
       WaitFor = AMDGPU::S_WAIT_LOADCNT_DSCNT;
       DSCnt = false;
     }

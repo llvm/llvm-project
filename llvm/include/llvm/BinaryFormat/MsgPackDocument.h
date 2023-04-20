@@ -377,11 +377,11 @@ public:
   /// Create a Binary node associated with this Document. If !Copy, the passed
   /// buffer must remain valid for the lifetime of the Document.
   DocNode getNode(MemoryBufferRef V, bool Copy = false) {
-    auto raw = V.getBuffer();
+    auto Raw = V.getBuffer();
     if (Copy)
-      raw = addString(raw);
+      Raw = addString(Raw);
     auto N = DocNode(&KindAndDocs[size_t(Type::Binary)]);
-    N.Raw = raw;
+    N.Raw = Raw;
     return N;
   }
 

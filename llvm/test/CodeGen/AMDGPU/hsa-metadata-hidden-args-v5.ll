@@ -78,6 +78,9 @@
 ; CHECK-NEXT:      - .offset:         128
 ; CHECK-NEXT:        .size:           8
 ; CHECK-NEXT:        .value_kind:     hidden_default_queue
+; CHECK-NEXT:      - .offset:         136
+; CHECK-NEXT:        .size:           8
+; CHECK-NEXT:        .value_kind:     hidden_completion_action
 ; GFX8-NEXT:      - .offset:         216
 ; GFX8-NEXT:        .size:           4
 ; GFX8-NEXT:        .value_kind:     hidden_private_base
