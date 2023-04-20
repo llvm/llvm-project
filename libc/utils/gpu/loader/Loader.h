@@ -13,10 +13,21 @@
 #include <cstring>
 #include <stddef.h>
 
+/// Generic launch parameters for configuration the number of blocks / threads.
+struct LaunchParameters {
+  uint32_t num_threads_x;
+  uint32_t num_threads_y;
+  uint32_t num_threads_z;
+  uint32_t num_blocks_x;
+  uint32_t num_blocks_y;
+  uint32_t num_blocks_z;
+};
+
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
-int load(int argc, char **argv, char **evnp, void *image, size_t size);
+int load(int argc, char **argv, char **evnp, void *image, size_t size,
+         const LaunchParameters &params);
 
 /// Copy the system's argument vector to GPU memory allocated using \p alloc.
 template <typename Allocator>

@@ -1074,7 +1074,7 @@ void MatcherGen::EmitResultCode() {
   SmallVector<unsigned, 8> Results(Ops);
 
   // Apply result permutation.
-  for (unsigned ResNo = 0; ResNo < Pattern.getDstPattern()->getNumResults();
+  for (unsigned ResNo = 0; ResNo < Pattern.getDstPattern()->getNumTypes();
        ++ResNo) {
     Results[ResNo] = Ops[Pattern.getDstPattern()->getResultIndex(ResNo)];
   }

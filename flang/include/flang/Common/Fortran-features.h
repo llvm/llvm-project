@@ -12,6 +12,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include <vector>
 
 namespace Fortran::common {
 

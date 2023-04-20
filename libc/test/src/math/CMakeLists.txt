@@ -1268,18 +1268,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  mod_k_pi_test
-  NEED_MPFR
-  SUITE
-    libc-long-running-tests
-  SRCS
-    mod_k_pi_test.cpp
-  DEPENDS
-    libc.src.math.generic.dp_trig
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   logf_test
   NEED_MPFR
   SUITE

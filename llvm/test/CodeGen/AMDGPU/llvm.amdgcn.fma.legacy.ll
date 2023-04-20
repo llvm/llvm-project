@@ -23,13 +23,6 @@ define float @v_fma(float %a, float %b, float %c)  {
 }
 
 define float @v_fma_imm(float %a, float %c)  {
-; GCN-LABEL: v_fma_imm:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-NEXT:    v_fmac_legacy_f32_e32 v1, 0x41200000, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
-; GCN-NEXT:    s_setpc_b64 s[30:31]
 ; GFX10-LABEL: v_fma_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

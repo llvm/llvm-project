@@ -9939,9 +9939,18 @@ static SDValue combineShiftToMULH(SDNode *N, SelectionDAG &DAG,
   // we use mulhs. Othewise, zero extends (zext) use mulhu.
   unsigned MulhOpcode = IsSignExt ? ISD::MULHS : ISD::MULHU;
 
-  // Combine to mulh if mulh is legal/custom for the narrow type on the target.
-  if (!TLI.isOperationLegalOrCustom(MulhOpcode, NarrowVT))
-    return SDValue();
+  // Combine to mulh if mulh is legal/custom for the narrow type on the target
+  // or if it is a vector type then we could transform to an acceptable type and
+  // rely on legalization to split/combine the result.
+  if (NarrowVT.isVector()) {
+    EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), NarrowVT);
+    if (TransformVT.getVectorElementType() != NarrowVT.getVectorElementType() ||
+        !TLI.isOperationLegalOrCustom(MulhOpcode, TransformVT))
+      return SDValue();
+  } else {
+    if (!TLI.isOperationLegalOrCustom(MulhOpcode, NarrowVT))
+      return SDValue();
+  }
 
   SDValue Result =
       DAG.getNode(MulhOpcode, DL, NarrowVT, LeftOp.getOperand(0), MulhRightOp);

@@ -730,31 +730,38 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   if (D) {
     const bool SanitizeBounds = SanOpts.hasOneOf(SanitizerKind::Bounds);
+    SanitizerMask no_sanitize_mask;
     bool NoSanitizeCoverage = false;
 
     for (auto *Attr : D->specific_attrs<NoSanitizeAttr>()) {
-      // Apply the no_sanitize* attributes to SanOpts.
-      SanitizerMask mask = Attr->getMask();
-      SanOpts.Mask &= ~mask;
-      if (mask & SanitizerKind::Address)
-        SanOpts.set(SanitizerKind::KernelAddress, false);
-      if (mask & SanitizerKind::KernelAddress)
-        SanOpts.set(SanitizerKind::Address, false);
-      if (mask & SanitizerKind::HWAddress)
-        SanOpts.set(SanitizerKind::KernelHWAddress, false);
-      if (mask & SanitizerKind::KernelHWAddress)
-        SanOpts.set(SanitizerKind::HWAddress, false);
-
+      no_sanitize_mask |= Attr->getMask();
       // SanitizeCoverage is not handled by SanOpts.
       if (Attr->hasCoverage())
         NoSanitizeCoverage = true;
     }
+
+    // Apply the no_sanitize* attributes to SanOpts.
+    SanOpts.Mask &= ~no_sanitize_mask;
+    if (no_sanitize_mask & SanitizerKind::Address)
+      SanOpts.set(SanitizerKind::KernelAddress, false);
+    if (no_sanitize_mask & SanitizerKind::KernelAddress)
+      SanOpts.set(SanitizerKind::Address, false);
+    if (no_sanitize_mask & SanitizerKind::HWAddress)
+      SanOpts.set(SanitizerKind::KernelHWAddress, false);
+    if (no_sanitize_mask & SanitizerKind::KernelHWAddress)
+      SanOpts.set(SanitizerKind::HWAddress, false);
 
     if (SanitizeBounds && !SanOpts.hasOneOf(SanitizerKind::Bounds))
       Fn->addFnAttr(llvm::Attribute::NoSanitizeBounds);
 
     if (NoSanitizeCoverage && CGM.getCodeGenOpts().hasSanitizeCoverage())
       Fn->addFnAttr(llvm::Attribute::NoSanitizeCoverage);
+
+    // Some passes need the non-negated no_sanitize attribute. Pass them on.
+    if (CGM.getCodeGenOpts().hasSanitizeBinaryMetadata()) {
+      if (no_sanitize_mask & SanitizerKind::Thread)
+        Fn->addFnAttr("no_sanitize_thread");
+    }
   }
 
   if (ShouldSkipSanitizerInstrumentation()) {

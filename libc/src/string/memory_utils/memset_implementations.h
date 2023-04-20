@@ -57,7 +57,7 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   if (count == 2)
     return generic::Memset<uint16_t>::block(dst, value);
   if (count == 3)
-    return generic::Memset<uint16_t, uint8_t>::block(dst, value);
+    return generic::MemsetSequence<uint16_t, uint8_t>::block(dst, value);
   if (count <= 8)
     return generic::Memset<uint32_t>::head_tail(dst, value, count);
   if (count <= 16)

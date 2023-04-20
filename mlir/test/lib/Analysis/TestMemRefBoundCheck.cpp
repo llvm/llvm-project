@@ -23,6 +23,7 @@
 #define DEBUG_TYPE "memref-bound-check"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 

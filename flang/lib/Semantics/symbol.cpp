@@ -125,6 +125,9 @@ llvm::raw_ostream &operator<<(
   if (x.moduleInterface_) {
     os << " moduleInterface: " << *x.moduleInterface_;
   }
+  if (x.defaultIgnoreTKR_) {
+    os << " defaultIgnoreTKR";
+  }
   return os;
 }
 
@@ -406,6 +409,10 @@ llvm::raw_ostream &operator<<(
   DumpExpr(os, "init", x.init_);
   if (x.unanalyzedPDTComponentInit()) {
     os << " (has unanalyzedPDTComponentInit)";
+  }
+  if (!x.ignoreTKR_.empty()) {
+    os << ' ';
+    x.ignoreTKR_.Dump(os, common::EnumToString);
   }
   return os;
 }

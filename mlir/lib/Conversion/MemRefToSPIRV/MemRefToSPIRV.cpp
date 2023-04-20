@@ -14,6 +14,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
@@ -410,9 +411,12 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   bool isBool = srcBits == 1;
   if (isBool)
     srcBits = typeConverter.getOptions().boolNumBits;
-  Type pointeeType = typeConverter.convertType(memrefType)
-                         .cast<spirv::PointerType>()
-                         .getPointeeType();
+
+  auto pointerType = typeConverter.convertType<spirv::PointerType>(memrefType);
+  if (!pointerType)
+    return rewriter.notifyMatchFailure(loadOp, "failed to convert memref type");
+
+  Type pointeeType = pointerType.getPointeeType();
   Type dstType;
   if (typeConverter.allows(spirv::Capability::Kernel)) {
     if (auto arrayType = pointeeType.dyn_cast<spirv::ArrayType>())
@@ -541,9 +545,12 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (isBool)
     srcBits = typeConverter.getOptions().boolNumBits;
 
-  Type pointeeType = typeConverter.convertType(memrefType)
-                         .cast<spirv::PointerType>()
-                         .getPointeeType();
+  auto pointerType = typeConverter.convertType<spirv::PointerType>(memrefType);
+  if (!pointerType)
+    return rewriter.notifyMatchFailure(storeOp,
+                                       "failed to convert memref type");
+
+  Type pointeeType = pointerType.getPointeeType();
   Type dstType;
   if (typeConverter.allows(spirv::Capability::Kernel)) {
     if (auto arrayType = pointeeType.dyn_cast<spirv::ArrayType>())

@@ -503,13 +503,13 @@ declare void @free(ptr)
 ; CHECK-AIX: declare void @vec_free(ptr allocptr nocapture noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC:#[0-9]+]]
 declare void @vec_free(ptr)
 
-; CHECK: declare double @frexp(double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare double @frexp(double, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY:#[0-9]+]]
 declare double @frexp(double, ptr)
 
-; CHECK: declare float @frexpf(float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @frexpf(float, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare float @frexpf(float, ptr)
 
-; CHECK: declare x86_fp80 @frexpl(x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @frexpl(x86_fp80, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @frexpl(x86_fp80, ptr)
 
 ; CHECK: declare noundef i32 @fscanf(ptr nocapture noundef, ptr nocapture noundef readonly, ...) [[NOFREE_NOUNWIND]]
@@ -705,16 +705,16 @@ declare ptr @__memset_chk(ptr, i32, i64, i64)
 ; CHECK: declare noundef i32 @mkdir(ptr nocapture noundef readonly, i16 noundef zeroext) [[NOFREE_NOUNWIND]]
 declare i32 @mkdir(ptr, i16 zeroext)
 
-; CHECK: declare noundef i64 @mktime(ptr nocapture noundef) [[NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare noundef i64 @mktime(ptr nocapture noundef) [[NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i64 @mktime(ptr)
 
-; CHECK: declare double @modf(double, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare double @modf(double, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare double @modf(double, ptr)
 
-; CHECK: declare float @modff(float, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare float @modff(float, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare float @modff(float, ptr)
 
-; CHECK: declare x86_fp80 @modfl(x86_fp80, ptr nocapture) [[NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare x86_fp80 @modfl(x86_fp80, ptr nocapture) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @modfl(x86_fp80, ptr)
 
 ; CHECK: declare double @nearbyint(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
@@ -1081,6 +1081,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nofree nounwind willreturn memory(write) }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nofree nounwind willreturn memory(argmem: write) }
 ; CHECK-DAG: attributes [[NOFREE_NOUNWIND]] = { nofree nounwind }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized,aligned") allocsize(1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }

@@ -12,6 +12,7 @@
 
 #include <cassert>
 #include <vector>
+#include <utility>
 
 #include "test_macros.h"
 

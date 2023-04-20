@@ -190,8 +190,7 @@ void ObjectFilePECOFF::DebuggerInitialize(Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForObjectFilePlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the PE/COFF object-file plug-in."),
-        is_global_setting);
+        "Properties for the PE/COFF object-file plug-in.", is_global_setting);
   }
 }
 

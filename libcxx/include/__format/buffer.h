@@ -29,6 +29,7 @@
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__type_traits/add_pointer.h>
+#include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <cstddef>
 #include <string_view>

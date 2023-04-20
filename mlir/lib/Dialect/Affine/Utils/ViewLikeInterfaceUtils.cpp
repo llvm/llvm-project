@@ -12,8 +12,9 @@
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
+using namespace affine;
 
-LogicalResult mlir::mergeOffsetsSizesAndStrides(
+LogicalResult mlir::affine::mergeOffsetsSizesAndStrides(
     OpBuilder &builder, Location loc, ArrayRef<OpFoldResult> producerOffsets,
     ArrayRef<OpFoldResult> producerSizes,
     ArrayRef<OpFoldResult> producerStrides,
@@ -58,7 +59,7 @@ LogicalResult mlir::mergeOffsetsSizesAndStrides(
   return success();
 }
 
-LogicalResult mlir::mergeOffsetsSizesAndStrides(
+LogicalResult mlir::affine::mergeOffsetsSizesAndStrides(
     OpBuilder &builder, Location loc, OffsetSizeAndStrideOpInterface producer,
     OffsetSizeAndStrideOpInterface consumer,
     const llvm::SmallBitVector &droppedProducerDims,
@@ -77,7 +78,7 @@ LogicalResult mlir::mergeOffsetsSizesAndStrides(
       combinedOffsets, combinedSizes, combinedStrides);
 }
 
-void mlir::resolveIndicesIntoOpWithOffsetsAndStrides(
+void mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
     RewriterBase &rewriter, Location loc,
     ArrayRef<OpFoldResult> mixedSourceOffsets,
     ArrayRef<OpFoldResult> mixedSourceStrides,
@@ -109,7 +110,7 @@ void mlir::resolveIndicesIntoOpWithOffsetsAndStrides(
   }
 }
 
-void mlir::resolveSizesIntoOpWithSizes(
+void mlir::affine::resolveSizesIntoOpWithSizes(
     ArrayRef<OpFoldResult> sourceSizes, ArrayRef<OpFoldResult> destSizes,
     const llvm::SmallBitVector &rankReducedSourceDims,
     SmallVectorImpl<OpFoldResult> &resolvedSizes) {

@@ -204,7 +204,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (allowActualArgumentConversions) {
     ConvertIntegerActual(actual, dummy.type, actualType, messages);
   }
-  bool typesCompatible{dummy.type.type().IsTkCompatibleWith(actualType.type())};
+  bool typesCompatible{
+      (dummy.ignoreTKR.test(common::IgnoreTKR::Type) &&
+          (dummy.type.type().category() == TypeCategory::Derived ||
+              actualType.type().category() == TypeCategory::Derived ||
+              dummy.type.type().category() != actualType.type().category())) ||
+      (dummy.ignoreTKR.test(common::IgnoreTKR::Kind) &&
+          dummy.type.type().category() == actualType.type().category()) ||
+      dummy.type.type().IsTkCompatibleWith(actualType.type())};
   if (!typesCompatible && dummy.type.Rank() == 0 &&
       allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
@@ -221,6 +228,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (isElemental) {
     } else if (dummy.type.attrs().test(
                    characteristics::TypeAndShape::Attr::AssumedRank)) {
+    } else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
     } else if (dummy.type.Rank() > 0 && !dummyIsAllocatableOrPointer &&
         !dummy.type.attrs().test(
             characteristics::TypeAndShape::Attr::AssumedShape) &&
@@ -378,7 +386,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (!actualIsCKindCharacter) {
       if (!actualIsArrayElement &&
           !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-          !dummyIsAssumedRank) {
+          !dummyIsAssumedRank &&
+          !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
         messages.Say(
             "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
             dummyName);

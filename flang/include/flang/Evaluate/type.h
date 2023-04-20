@@ -37,7 +37,12 @@ class DeclTypeSpec;
 class DerivedTypeSpec;
 class ParamValue;
 class Symbol;
+// IsDescriptor() is true when an object requires the use of a descriptor
+// in memory when "at rest".  IsPassedViaDescriptor() is sometimes false
+// when IsDescriptor() is true, including the cases of CHARACTER dummy
+// arguments and explicit & assumed-size dummy arrays.
 bool IsDescriptor(const Symbol &);
+bool IsPassedViaDescriptor(const Symbol &);
 } // namespace Fortran::semantics
 
 namespace Fortran::evaluate {
@@ -190,6 +195,7 @@ public:
   // relation.  Kind type parameters must match, but CHARACTER lengths
   // need not do so.
   bool IsTkCompatibleWith(const DynamicType &) const;
+  bool IsTkCompatibleWith(const DynamicType &, common::IgnoreTKRSet) const;
 
   // A stronger compatibility check that does not allow distinct known
   // values for CHARACTER lengths for e.g. MOVE_ALLOC().

@@ -30,6 +30,7 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::vector;
 
 /// Given a range of values, emit the code that reduces them with "min" or "max"

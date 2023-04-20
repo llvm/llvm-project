@@ -100,6 +100,80 @@ genObjectList(const Fortran::parser::AccObjectList &objectList,
   }
 }
 
+template <typename Op>
+static void
+genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
+                         Fortran::lower::AbstractConverter &converter,
+                         Fortran::semantics::SemanticsContext &semanticsContext,
+                         Fortran::lower::StatementContext &stmtCtx,
+                         llvm::SmallVectorImpl<mlir::Value> &dataOperands,
+                         mlir::acc::DataClause dataClause, bool structured) {
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  auto createOpAndAddOperand = [&](Fortran::lower::SymbolRef sym,
+                                   llvm::StringRef name, mlir::Location loc) {
+    mlir::Value symAddr = converter.getSymbolAddress(sym);
+    // TODO: Might need revisiting to handle for non-shared clauses
+    if (!symAddr) {
+      if (const auto *details =
+              sym->detailsIf<Fortran::semantics::HostAssocDetails>())
+        symAddr = converter.getSymbolAddress(details->symbol());
+    }
+
+    if (!symAddr)
+      llvm::report_fatal_error("could not retrieve symbol address");
+
+    Op op = builder.create<Op>(loc, symAddr.getType(), symAddr);
+    op.setNameAttr(builder.getStringAttr(name));
+    op.setStructured(structured);
+    op.setDataClause(dataClause);
+    op->setAttr(Op::getOperandSegmentSizeAttr(),
+                builder.getDenseI32ArrayAttr({1, 0, 0}));
+    dataOperands.push_back(op.getAccPtr());
+  };
+
+  for (const auto &accObject : objectList.v) {
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Designator &designator) {
+              mlir::Location operandLocation =
+                  converter.genLocation(designator.source);
+              if (auto expr{Fortran::semantics::AnalyzeExpr(semanticsContext,
+                                                            designator)}) {
+                if ((*expr).Rank() > 0 &&
+                    Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(
+                        designator)) {
+                  TODO(operandLocation, "OpenACC array section data operand");
+                } else if (Fortran::parser::Unwrap<
+                               Fortran::parser::StructureComponent>(
+                               designator)) {
+                  TODO(operandLocation, "OpenACC derived-type data operand");
+                } else {
+                  // Scalar or full array.
+                  if (const auto *dataRef{std::get_if<Fortran::parser::DataRef>(
+                          &designator.u)}) {
+                    const Fortran::parser::Name &name =
+                        Fortran::parser::GetLastName(*dataRef);
+                    createOpAndAddOperand(*name.symbol, name.ToString(),
+                                          operandLocation);
+                  } else { // Unsupported
+                    llvm::report_fatal_error(
+                        "Unsupported type of OpenACC operand");
+                  }
+                }
+              }
+            },
+            [&](const Fortran::parser::Name &name) {
+              mlir::Location operandLocation =
+                  converter.genLocation(name.source);
+              createOpAndAddOperand(*name.symbol, name.ToString(),
+                                    operandLocation);
+            }},
+        accObject.u);
+  }
+}
+
 template <typename Clause>
 static void genObjectListWithModifier(
     const Clause *x, Fortran::lower::AbstractConverter &converter,
@@ -794,18 +868,33 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
           copyinClause->v;
       const auto &accObjectList =
           std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
-      genObjectList(accObjectList, converter, semanticsContext, stmtCtx,
-                    copyinOperands);
+      genDataOperandOperations<mlir::acc::CopyinOp>(
+          accObjectList, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_copyin, false);
     } else if (const auto *createClause =
                    std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
-      genObjectListWithModifier<Fortran::parser::AccClause::Create>(
-          createClause, converter, semanticsContext, stmtCtx,
-          Fortran::parser::AccDataModifier::Modifier::Zero, createZeroOperands,
-          createOperands);
+      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+          createClause->v;
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      const auto &modifier =
+          std::get<std::optional<Fortran::parser::AccDataModifier>>(
+              listWithModifier.t);
+      if (modifier &&
+          (*modifier).v == Fortran::parser::AccDataModifier::Modifier::Zero) {
+        genDataOperandOperations<mlir::acc::CreateOp>(
+            accObjectList, converter, semanticsContext, stmtCtx,
+            dataClauseOperands, mlir::acc::DataClause::acc_create_zero, false);
+      } else {
+        genDataOperandOperations<mlir::acc::CreateOp>(
+            accObjectList, converter, semanticsContext, stmtCtx,
+            dataClauseOperands, mlir::acc::DataClause::acc_create, false);
+      }
     } else if (const auto *attachClause =
                    std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
-      genObjectList(attachClause->v, converter, semanticsContext, stmtCtx,
-                    attachOperands);
+      genDataOperandOperations<mlir::acc::AttachOp>(
+          attachClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_attach, false);
     } else {
       llvm::report_fatal_error(
           "Unknown clause in ENTER DATA directive lowering");

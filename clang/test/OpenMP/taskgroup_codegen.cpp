@@ -89,11 +89,11 @@ void parallel_taskgroup() {
 // CHECK1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv
 // CHECK1-SAME: () #[[ATTR6:[0-9]+]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @.omp_outlined.)
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z18parallel_taskgroupv.omp_outlined)
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv.omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -159,11 +159,11 @@ void parallel_taskgroup() {
 // DEBUG1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv
 // DEBUG1-SAME: () #[[ATTR6:[0-9]+]] !dbg [[DBG20:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
-// DEBUG1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB7:[0-9]+]], i32 0, ptr @.omp_outlined.), !dbg [[DBG21:![0-9]+]]
+// DEBUG1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB7:[0-9]+]], i32 0, ptr @_Z18parallel_taskgroupv.omp_outlined), !dbg [[DBG21:![0-9]+]]
 // DEBUG1-NEXT:    ret void, !dbg [[DBG22:![0-9]+]]
 //
 //
-// DEBUG1-LABEL: define {{[^@]+}}@.omp_outlined.
+// DEBUG1-LABEL: define {{[^@]+}}@_Z18parallel_taskgroupv.omp_outlined
 // DEBUG1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR7:[0-9]+]] personality ptr @__gxx_personality_v0 !dbg [[DBG23:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
 // DEBUG1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8

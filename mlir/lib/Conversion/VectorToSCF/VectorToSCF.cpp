@@ -102,7 +102,8 @@ static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value offset = adaptor.getIndices()[*dim];
-    indices[*dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    indices[*dim] =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
 }
 
@@ -178,7 +179,8 @@ static Value generateInBoundsCheck(
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value base = xferOp.getIndices()[*dim];
-    Value memrefIdx = makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
+    Value memrefIdx =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
     cond = lb.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, memrefDim,
                                     memrefIdx);
   }
@@ -1111,7 +1113,8 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value offset = memrefIndices[dim];
-    memrefIndices[dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    memrefIndices[dim] =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
     return dim;
   }
 

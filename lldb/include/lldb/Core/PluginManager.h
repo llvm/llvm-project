@@ -481,46 +481,46 @@ public:
 
   static bool CreateSettingForDynamicLoaderPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForPlatformPlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForPlatformPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForProcessPlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForProcessPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static bool CreateSettingForTracePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForObjectFilePlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForObjectFilePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForSymbolFilePlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForSymbolFilePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForJITLoaderPlugin(Debugger &debugger, ConstString setting_name);
 
   static bool CreateSettingForJITLoaderPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForOperatingSystemPlugin(Debugger &debugger,
@@ -528,7 +528,7 @@ public:
 
   static bool CreateSettingForOperatingSystemPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 
   static lldb::OptionValuePropertiesSP
   GetSettingForStructuredDataPlugin(Debugger &debugger,
@@ -536,7 +536,7 @@ public:
 
   static bool CreateSettingForStructuredDataPlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
-      ConstString description, bool is_global_property);
+      llvm::StringRef description, bool is_global_property);
 };
 
 } // namespace lldb_private

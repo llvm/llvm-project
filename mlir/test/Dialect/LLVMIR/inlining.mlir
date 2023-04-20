@@ -452,16 +452,19 @@ llvm.func @test_byval_input_aligned(%unaligned : !llvm.ptr, %aligned : !llvm.ptr
 
 // -----
 
+llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
+
 llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
 
-// CHECK-LABEL: llvm.func @test_byval_unaligned_alloca
-llvm.func @test_byval_unaligned_alloca() {
+// CHECK-LABEL: llvm.func @test_byval_realign_alloca
+llvm.func @test_byval_realign_alloca() {
   %size = llvm.mlir.constant(4 : i64) : i64
-  // CHECK-DAG: %[[SRC:.+]] = llvm.alloca {{.+}}alignment = 1 : i64
-  // CHECK-DAG: %[[DST:.+]] = llvm.alloca {{.+}}alignment = 16 : i64
-  // CHECK: "llvm.intr.memcpy"(%[[DST]], %[[SRC]]
+  // CHECK-NOT: llvm.alloca{{.+}}alignment = 1
+  // CHECK: llvm.alloca {{.+}}alignment = 16 : i64
+  // CHECK-NOT: llvm.intr.memcpy
   %unaligned = llvm.alloca %size x i16 { alignment = 1 } : (i64) -> !llvm.ptr
   llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
   llvm.return
@@ -469,17 +472,59 @@ llvm.func @test_byval_unaligned_alloca() {
 
 // -----
 
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.stack_alignment", 32 : i32>>
+} {
+
+llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
+
 llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
 }
 
-// CHECK-LABEL: llvm.func @test_byval_aligned_alloca
-llvm.func @test_byval_aligned_alloca() {
-  // CHECK-NOT: memcpy
-  %size = llvm.mlir.constant(1 : i64) : i64
-  %aligned = llvm.alloca %size x i16 { alignment = 16 } : (i64) -> !llvm.ptr
-  llvm.call @aligned_byval_arg(%aligned) : (!llvm.ptr) -> ()
+// CHECK-LABEL: llvm.func @test_exceeds_natural_stack_alignment
+llvm.func @test_exceeds_natural_stack_alignment() {
+  %size = llvm.mlir.constant(4 : i64) : i64
+  // Natural stack alignment is exceeded, so prefer a copy instead of
+  // triggering a dynamic stack realignment.
+  // CHECK-DAG: %[[SRC:[a-zA-Z0-9_]+]] = llvm.alloca{{.+}}alignment = 2
+  // CHECK-DAG: %[[DST:[a-zA-Z0-9_]+]] = llvm.alloca{{.+}}alignment = 16
+  // CHECK: "llvm.intr.memcpy"(%[[DST]], %[[SRC]]
+  %unaligned = llvm.alloca %size x i16 { alignment = 2 } : (i64) -> !llvm.ptr
+  llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
   llvm.return
+}
+
+}
+
+// -----
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.stack_alignment", 32 : i32>>
+} {
+
+llvm.func @func_that_uses_ptr(%ptr : !llvm.ptr)
+
+llvm.func @aligned_byval_arg(%ptr : !llvm.ptr { llvm.byval = i16, llvm.align = 16 }) attributes {memory = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read>} {
+  llvm.call @func_that_uses_ptr(%ptr) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @test_alignment_exceeded_anyway
+llvm.func @test_alignment_exceeded_anyway() {
+  %size = llvm.mlir.constant(4 : i64) : i64
+  // Natural stack alignment is lower than the target alignment, but the
+  // alloca's existing alignment already exceeds it, so we might as well avoid
+  // the copy.
+  // CHECK-NOT: llvm.alloca{{.+}}alignment = 1
+  // CHECK: llvm.alloca {{.+}}alignment = 16 : i64
+  // CHECK-NOT: llvm.intr.memcpy
+  %unaligned = llvm.alloca %size x i16 { alignment = 8 } : (i64) -> !llvm.ptr
+  llvm.call @aligned_byval_arg(%unaligned) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
 }
 
 // -----

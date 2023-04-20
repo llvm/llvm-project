@@ -401,8 +401,9 @@ struct TestTilingInterfacePass
   TestTilingInterfacePass(const TestTilingInterfacePass &pass)
       : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    scf::SCFDialect, tensor::TensorDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
+                    memref::MemRefDialect, scf::SCFDialect,
+                    tensor::TensorDialect>();
     linalg::registerTilingInterfaceExternalModels(registry);
     tensor::registerTilingInterfaceExternalModels(registry);
   }

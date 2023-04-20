@@ -19,6 +19,7 @@
 #define PASS_NAME "test-affine-reify-value-bounds"
 
 using namespace mlir;
+using namespace mlir::affine;
 using mlir::presburger::BoundType;
 
 namespace {
@@ -36,8 +37,8 @@ struct TestReifyValueBounds
   TestReifyValueBounds(const TestReifyValueBounds &pass) : PassWrapper(pass){};
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<AffineDialect, tensor::TensorDialect, memref::MemRefDialect>();
+    registry.insert<affine::AffineDialect, tensor::TensorDialect,
+                    memref::MemRefDialect>();
   }
 
   void runOnOperation() override;

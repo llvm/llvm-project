@@ -102,12 +102,12 @@ namespace {
     const MachineRegisterInfo *MRI = nullptr;
     const RegisterBankInfo *RBI = nullptr;
 
-    unsigned foundErrors;
+    unsigned foundErrors = 0;
 
     // Avoid querying the MachineFunctionProperties for each operand.
-    bool isFunctionRegBankSelected;
-    bool isFunctionSelected;
-    bool isFunctionTracksDebugUserValues;
+    bool isFunctionRegBankSelected = false;
+    bool isFunctionSelected = false;
+    bool isFunctionTracksDebugUserValues = false;
 
     using RegVector = SmallVector<Register, 16>;
     using RegMaskVector = SmallVector<const uint32_t *, 4>;

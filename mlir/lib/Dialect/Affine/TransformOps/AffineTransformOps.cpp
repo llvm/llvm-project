@@ -19,6 +19,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::transform;
 
 //===----------------------------------------------------------------------===//

@@ -8,7 +8,7 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi'
+    '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T --env PATH=%{lib} -- '
