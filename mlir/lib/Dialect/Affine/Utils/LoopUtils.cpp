@@ -34,6 +34,7 @@
 #define DEBUG_TYPE "loop-utils"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
 using llvm::SmallMapVector;
 
@@ -128,7 +129,7 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 // TODO: extend this for arbitrary affine bounds.
-LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
+LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
@@ -232,9 +233,9 @@ static AffineForOp generateShiftedLoop(
 // asserts preservation of SSA dominance. A check for that as well as that for
 // memory-based dependence preservation check rests with the users of this
 // method.
-LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
-                                        ArrayRef<uint64_t> shifts,
-                                        bool unrollPrologueEpilogue) {
+LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
+                                                ArrayRef<uint64_t> shifts,
+                                                bool unrollPrologueEpilogue) {
   assert(forOp.getBody()->getOperations().size() == shifts.size() &&
          "too few/many shifts");
   if (forOp.getBody()->begin() == std::prev(forOp.getBody()->end()))
@@ -363,7 +364,8 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
 }
 
 /// Checks whether a loop nest is hyper-rectangular or not.
-LogicalResult checkIfHyperRectangular(MutableArrayRef<AffineForOp> input) {
+static LogicalResult
+checkIfHyperRectangular(MutableArrayRef<AffineForOp> input) {
   FlatAffineValueConstraints cst;
   SmallVector<Operation *, 8> ops(input.begin(), input.end());
   // 0-d or 1-d is trivially hyper-rectangular.
@@ -384,8 +386,8 @@ LogicalResult checkIfHyperRectangular(MutableArrayRef<AffineForOp> input) {
 /// Check if the input nest is supported for tiling and whether tiling would be
 /// legal or not.
 template <typename t>
-LogicalResult performPreTilingChecks(MutableArrayRef<AffineForOp> input,
-                                     ArrayRef<t> tileSizes) {
+static LogicalResult performPreTilingChecks(MutableArrayRef<AffineForOp> input,
+                                            ArrayRef<t> tileSizes) {
   assert(input.size() == tileSizes.size() && "Too few/many tile sizes");
 
   if (llvm::any_of(input,
@@ -418,15 +420,15 @@ static void moveLoopBodyImpl(AffineForOp src, AffineForOp dest,
 
 /// Move the loop body of AffineForOp 'src' from 'src' to the start of dest
 /// body.
-void moveLoopBody(AffineForOp src, AffineForOp dest) {
+static void moveLoopBody(AffineForOp src, AffineForOp dest) {
   moveLoopBodyImpl(src, dest, dest.getBody()->begin());
 }
 
 /// Constructs tiled loop nest, without setting the loop bounds and move the
 /// body of the original loop nest to the tiled loop nest.
-void constructTiledLoopNest(MutableArrayRef<AffineForOp> origLoops,
-                            AffineForOp rootAffineForOp, unsigned width,
-                            MutableArrayRef<AffineForOp> tiledLoops) {
+static void constructTiledLoopNest(MutableArrayRef<AffineForOp> origLoops,
+                                   AffineForOp rootAffineForOp, unsigned width,
+                                   MutableArrayRef<AffineForOp> tiledLoops) {
   Location loc = rootAffineForOp.getLoc();
 
   // The outermost among the loops as we add more..
@@ -773,9 +775,9 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
 }
 
 LogicalResult
-mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
-                          ArrayRef<unsigned> tileSizes,
-                          SmallVectorImpl<AffineForOp> *tiledNest) {
+mlir::affine::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
+                                  ArrayRef<unsigned> tileSizes,
+                                  SmallVectorImpl<AffineForOp> *tiledNest) {
   if (input.empty())
     return success();
 
@@ -816,10 +818,9 @@ mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
 /// loops and intra-tile loops, using SSA values as tiling parameters. A band
 /// is a contiguous set of loops.
 //  TODO: handle non hyper-rectangular spaces.
-LogicalResult
-mlir::tilePerfectlyNestedParametric(MutableArrayRef<AffineForOp> input,
-                                    ArrayRef<Value> tileSizes,
-                                    SmallVectorImpl<AffineForOp> *tiledNest) {
+LogicalResult mlir::affine::tilePerfectlyNestedParametric(
+    MutableArrayRef<AffineForOp> input, ArrayRef<Value> tileSizes,
+    SmallVectorImpl<AffineForOp> *tiledNest) {
   if (input.empty())
     return success();
 
@@ -859,8 +860,8 @@ mlir::tilePerfectlyNestedParametric(MutableArrayRef<AffineForOp> input,
 /// (the first op being another AffineFor, and the second op - a terminator).
 /// A loop is perfectly nested iff: the first op in the loop's body is another
 /// AffineForOp, and the second op is a terminator).
-void mlir::getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
-                                   AffineForOp root) {
+void mlir::affine::getPerfectlyNestedLoops(
+    SmallVectorImpl<AffineForOp> &nestedLoops, AffineForOp root) {
   for (unsigned i = 0; i < std::numeric_limits<unsigned>::max(); ++i) {
     nestedLoops.push_back(root);
     Block &body = root.getRegion().front();
@@ -876,8 +877,8 @@ void mlir::getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
 /// Identify valid and profitable bands of loops to tile. This is currently just
 /// a temporary placeholder to test the mechanics of tiled code generation.
 /// Returns all maximal outermost perfect loop nests to tile.
-void mlir::getTileableBands(func::FuncOp f,
-                            std::vector<SmallVector<AffineForOp, 6>> *bands) {
+void mlir::affine::getTileableBands(
+    func::FuncOp f, std::vector<SmallVector<AffineForOp, 6>> *bands) {
   // Get maximal perfect nest of 'affine.for' insts starting from root
   // (inclusive).
   for (AffineForOp forOp : f.getOps<AffineForOp>()) {
@@ -888,7 +889,7 @@ void mlir::getTileableBands(func::FuncOp f,
 }
 
 /// Unrolls this loop completely.
-LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
+LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value()) {
     uint64_t tripCount = *mayBeConstantTripCount;
@@ -903,8 +904,8 @@ LogicalResult mlir::loopUnrollFull(AffineForOp forOp) {
 
 /// Unrolls this loop by the specified factor or by the trip count (if constant)
 /// whichever is lower.
-LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
-                                         uint64_t unrollFactor) {
+LogicalResult mlir::affine::loopUnrollUpToFactor(AffineForOp forOp,
+                                                 uint64_t unrollFactor) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value() &&
       *mayBeConstantTripCount < unrollFactor)
@@ -1011,7 +1012,7 @@ static LogicalResult generateCleanupLoopForUnroll(AffineForOp forOp,
 
 /// Unrolls this loop by the specified factor. Returns success if the loop
 /// is successfully unrolled.
-LogicalResult mlir::loopUnrollByFactor(
+LogicalResult mlir::affine::loopUnrollByFactor(
     AffineForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
     bool cleanUpUnroll) {
@@ -1078,8 +1079,8 @@ LogicalResult mlir::loopUnrollByFactor(
   return success();
 }
 
-LogicalResult mlir::loopUnrollJamUpToFactor(AffineForOp forOp,
-                                            uint64_t unrollJamFactor) {
+LogicalResult mlir::affine::loopUnrollJamUpToFactor(AffineForOp forOp,
+                                                    uint64_t unrollJamFactor) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.has_value() &&
       *mayBeConstantTripCount < unrollJamFactor)
@@ -1129,8 +1130,8 @@ struct JamBlockGatherer {
 };
 
 /// Unrolls and jams this loop by the specified factor.
-LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
-                                          uint64_t unrollJamFactor) {
+LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
+                                                  uint64_t unrollJamFactor) {
   assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
 
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
@@ -1212,7 +1213,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
     }
     // Create a new loop with additional iterOperands, iter_args and yield
     // operands. This new loop will take the loop body of the original loop.
-    AffineForOp newForOp = mlir::replaceForOpWithNewYields(
+    AffineForOp newForOp = affine::replaceForOpWithNewYields(
         builder, oldForOp, dupIterOperands, dupYieldOperands, dupIterArgs);
     newLoopsWithIterArgs.push_back(newForOp);
     // `forOp` has been replaced with a new loop.
@@ -1323,7 +1324,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 
 /// Performs loop interchange on 'forOpA' and 'forOpB', where 'forOpB' is
 /// nested within 'forOpA' as the only non-terminator operation in its block.
-void mlir::interchangeLoops(AffineForOp forOpA, AffineForOp forOpB) {
+void mlir::affine::interchangeLoops(AffineForOp forOpA, AffineForOp forOpB) {
   assert(&*forOpA.getBody()->begin() == forOpB.getOperation());
   auto &forOpABody = forOpA.getBody()->getOperations();
   auto &forOpBBody = forOpB.getBody()->getOperations();
@@ -1380,8 +1381,8 @@ static bool checkLoopInterchangeDependences(
 
 /// Checks if the loop interchange permutation 'loopPermMap' of the perfectly
 /// nested sequence of loops in 'loops' would violate dependences.
-bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
-                                             ArrayRef<unsigned> loopPermMap) {
+bool mlir::affine::isValidLoopInterchangePermutation(
+    ArrayRef<AffineForOp> loops, ArrayRef<unsigned> loopPermMap) {
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   assert(loopPermMap.size() == loops.size());
@@ -1394,7 +1395,7 @@ bool mlir::isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 /// Returns true if `loops` is a perfectly nested loop nest, where loops appear
 /// in it from outermost to innermost.
 bool LLVM_ATTRIBUTE_UNUSED
-mlir::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
+mlir::affine::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
   assert(!loops.empty() && "no loops provided");
 
   // We already know that the block can't be empty.
@@ -1416,8 +1417,8 @@ mlir::isPerfectlyNested(ArrayRef<AffineForOp> loops) {
 
 // input[i] should move from position i -> permMap[i]. Returns the position in
 // `input` that becomes the new outermost loop.
-unsigned mlir::permuteLoops(MutableArrayRef<AffineForOp> input,
-                            ArrayRef<unsigned> permMap) {
+unsigned mlir::affine::permuteLoops(MutableArrayRef<AffineForOp> input,
+                                    ArrayRef<unsigned> permMap) {
   assert(input.size() == permMap.size() && "invalid permutation map size");
   // Check whether the permutation spec is valid. This is a small vector - we'll
   // just sort and check if it's iota.
@@ -1486,7 +1487,7 @@ unsigned mlir::permuteLoops(MutableArrayRef<AffineForOp> input,
 // Sinks all sequential loops to the innermost levels (while preserving
 // relative order among them) and moves all parallel loops to the
 // outermost (while again preserving relative order among them).
-AffineForOp mlir::sinkSequentialLoops(AffineForOp forOp) {
+AffineForOp mlir::affine::sinkSequentialLoops(AffineForOp forOp) {
   SmallVector<AffineForOp, 4> loops;
   getPerfectlyNestedLoops(loops, forOp);
   if (loops.size() < 2)
@@ -1621,8 +1622,8 @@ static AffineForOp stripmineSink(AffineForOp forOp, SizeType factor,
 }
 
 SmallVector<SmallVector<AffineForOp, 8>, 8>
-mlir::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
-           ArrayRef<AffineForOp> targets) {
+mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
+                   ArrayRef<AffineForOp> targets) {
   SmallVector<SmallVector<AffineForOp, 8>, 8> res;
   SmallVector<AffineForOp, 8> currentTargets(targets.begin(), targets.end());
   for (auto it : llvm::zip(forOps, sizes)) {
@@ -1633,9 +1634,9 @@ mlir::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
   return res;
 }
 
-SmallVector<AffineForOp, 8> mlir::tile(ArrayRef<AffineForOp> forOps,
-                                       ArrayRef<uint64_t> sizes,
-                                       AffineForOp target) {
+SmallVector<AffineForOp, 8> mlir::affine::tile(ArrayRef<AffineForOp> forOps,
+                                               ArrayRef<uint64_t> sizes,
+                                               AffineForOp target) {
   SmallVector<AffineForOp, 8> res;
   for (auto loops : tile(forOps, sizes, ArrayRef<AffineForOp>(target))) {
     assert(loops.size() == 1);
@@ -1644,7 +1645,7 @@ SmallVector<AffineForOp, 8> mlir::tile(ArrayRef<AffineForOp> forOps,
   return res;
 }
 
-LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
+LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   if (loops.size() < 2)
     return success();
 
@@ -1758,8 +1759,9 @@ LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   return success();
 }
 
-void mlir::mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,
-                                 ArrayRef<Value> numProcessors) {
+void mlir::affine::mapLoopToProcessorIds(scf::ForOp forOp,
+                                         ArrayRef<Value> processorId,
+                                         ArrayRef<Value> numProcessors) {
   assert(processorId.size() == numProcessors.size());
   if (processorId.empty())
     return;
@@ -2300,11 +2302,11 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   return true;
 }
 
-LogicalResult mlir::affineDataCopyGenerate(Block::iterator begin,
-                                           Block::iterator end,
-                                           const AffineCopyOptions &copyOptions,
-                                           std::optional<Value> filterMemRef,
-                                           DenseSet<Operation *> &copyNests) {
+LogicalResult
+mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
+                                     const AffineCopyOptions &copyOptions,
+                                     std::optional<Value> filterMemRef,
+                                     DenseSet<Operation *> &copyNests) {
   if (begin == end)
     return success();
 
@@ -2490,16 +2492,15 @@ LogicalResult mlir::affineDataCopyGenerate(Block::iterator begin,
 
 // A convenience version of affineDataCopyGenerate for all ops in the body of
 // an AffineForOp.
-LogicalResult mlir::affineDataCopyGenerate(AffineForOp forOp,
-                                           const AffineCopyOptions &copyOptions,
-                                           std::optional<Value> filterMemRef,
-                                           DenseSet<Operation *> &copyNests) {
+LogicalResult mlir::affine::affineDataCopyGenerate(
+    AffineForOp forOp, const AffineCopyOptions &copyOptions,
+    std::optional<Value> filterMemRef, DenseSet<Operation *> &copyNests) {
   return affineDataCopyGenerate(forOp.getBody()->begin(),
                                 std::prev(forOp.getBody()->end()), copyOptions,
                                 filterMemRef, copyNests);
 }
 
-LogicalResult mlir::generateCopyForMemRegion(
+LogicalResult mlir::affine::generateCopyForMemRegion(
     const MemRefRegion &memrefRegion, Operation *analyzedOp,
     const AffineCopyOptions &copyOptions, CopyGenerateResult &result) {
   Block *block = analyzedOp->getBlock();
@@ -2543,8 +2544,8 @@ gatherLoopsInBlock(Block *block, unsigned currLoopDepth,
 }
 
 /// Gathers all AffineForOps in 'func.func' grouped by loop depth.
-void mlir::gatherLoops(func::FuncOp func,
-                       std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
+void mlir::affine::gatherLoops(
+    func::FuncOp func, std::vector<SmallVector<AffineForOp, 2>> &depthToLoops) {
   for (auto &block : func)
     gatherLoopsInBlock(&block, /*currLoopDepth=*/0, depthToLoops);
 
@@ -2559,7 +2560,7 @@ void mlir::gatherLoops(func::FuncOp func,
 // affine.applys, fold to constant if all result dimensions of the map are
 // constant (canonicalizeMapAndOperands below already does this for single
 // result bound maps), and use simplifyMap to perform algebraic simplification.
-AffineForOp mlir::createCanonicalizedAffineForOp(
+AffineForOp mlir::affine::createCanonicalizedAffineForOp(
     OpBuilder b, Location loc, ValueRange lbOperands, AffineMap lbMap,
     ValueRange ubOperands, AffineMap ubMap, int64_t step) {
   SmallVector<Value, 4> lowerOperands(lbOperands);
@@ -2716,8 +2717,8 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
 }
 
 LogicalResult
-mlir::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
-                        SmallVectorImpl<AffineForOp> *fullTileNest) {
+mlir::affine::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
+                                SmallVectorImpl<AffineForOp> *fullTileNest) {
   if (inputNest.empty())
     return success();
 

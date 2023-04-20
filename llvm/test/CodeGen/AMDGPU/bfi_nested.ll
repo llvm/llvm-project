@@ -280,7 +280,7 @@ define float @v_bfi_single_constant_as_partition(float %x, float %y, float %z) {
   ret float %result
 }
 
-define amdgpu_kernel void @v_bfi_dont_applied_for_scalar_ops(ptr addrspace(1) %out, i16 %a, i32 %b) {; GFX10-LABEL: v_bfi_not_applied_in_scalar_case:
+define amdgpu_kernel void @v_bfi_dont_applied_for_scalar_ops(ptr addrspace(1) %out, i16 %a, i32 %b) {
 ; GCN-LABEL: v_bfi_dont_applied_for_scalar_ops:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9

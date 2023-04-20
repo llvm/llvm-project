@@ -145,7 +145,7 @@ private:
   /// that bit's value is legal. E.g. if bit 64 is set, then 64 bit scalar
   /// stores are legal.
   DenseMap<unsigned, BitVector> LegalStoreSizes;
-  bool IsPreLegalizer;
+  bool IsPreLegalizer = false;
   /// Contains instructions to be erased at the end of a block scan.
   SmallSet<MachineInstr *, 16> InstsToErase;
 

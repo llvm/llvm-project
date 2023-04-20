@@ -305,6 +305,8 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 } // namespace bolt
 } // namespace llvm
 
+using ELF64LEPhdrTy = ELF64LEFile::Elf_Phdr;
+
 namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
@@ -4765,9 +4767,10 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
       dbgs() << "  " << I << " -> " << NewSectionIndex[I] << '\n';
   );
 
-  // Align starting address for section header table.
+  // Align starting address for section header table. There's no architecutal
+  // need to align this, it is just for pleasant human readability.
   uint64_t SHTOffset = OS.tell();
-  SHTOffset = appendPadding(OS, SHTOffset, sizeof(ELFShdrTy));
+  SHTOffset = appendPadding(OS, SHTOffset, 16);
 
   // Write all section header entries while patching section references.
   for (ELFShdrTy &Section : OutputSections) {

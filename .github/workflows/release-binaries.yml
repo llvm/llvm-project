@@ -30,6 +30,7 @@ jobs:
       build-dir: ${{ steps.validate-tag.outputs.build-dir }}
       rc-flags: ${{ steps.validate-tag.outputs.rc-flags }}
       ref: ${{ steps.validate-tag.outputs.ref }}
+      upload: ${{ steps.validate-tag.outputs.upload }}
 
     steps:
     - name: Checkout LLVM

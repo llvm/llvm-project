@@ -3230,14 +3230,14 @@ struct StmtFunctionStmt {
 };
 
 // Compiler directives
-// !DIR$ IGNORE_TKR [ [(tkr...)] name ]...
+// !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
 // !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name...
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
   struct IgnoreTKR {
     TUPLE_CLASS_BOILERPLATE(IgnoreTKR);
-    std::tuple<std::list<const char *>, Name> t;
+    std::tuple<std::optional<std::list<const char *>>, Name> t;
   };
   struct LoopCount {
     WRAPPER_CLASS_BOILERPLATE(LoopCount, std::list<std::uint64_t>);

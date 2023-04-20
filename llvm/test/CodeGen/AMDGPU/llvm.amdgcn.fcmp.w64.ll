@@ -129,10 +129,6 @@ define amdgpu_kernel void @v_fcmp_f32_oeq_both_operands_with_fabs(ptr addrspace(
 }
 
 define amdgpu_kernel void @v_fcmp_f32(ptr addrspace(1) %out, float %src) {
-; SDAG-GFX-LABEL: v_fcmp_f32:
-; SDAG-GFX:       ; %bb.0:
-; SDAG-GFX-NEXT:    s_endpgm
-;
 ; GFX11-SDAG-LABEL: v_fcmp_f32:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -1970,10 +1966,6 @@ define amdgpu_kernel void @v_fcmp_f16_oeq_both_operands_with_fabs(ptr addrspace(
 }
 
 define amdgpu_kernel void @v_fcmp_f16(ptr addrspace(1) %out, half %src) {
-; SDAG-GFX-LABEL: v_fcmp_f16:
-; SDAG-GFX:       ; %bb.0:
-; SDAG-GFX-NEXT:    s_endpgm
-;
 ; GFX11-SDAG-LABEL: v_fcmp_f16:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_endpgm

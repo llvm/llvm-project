@@ -179,8 +179,8 @@ void mlir::scf::populateSCFForLoopCanonicalizationPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
   patterns
-      .add<AffineOpSCFCanonicalizationPattern<AffineMinOp>,
-           AffineOpSCFCanonicalizationPattern<AffineMaxOp>,
+      .add<AffineOpSCFCanonicalizationPattern<affine::AffineMinOp>,
+           AffineOpSCFCanonicalizationPattern<affine::AffineMaxOp>,
            DimOfIterArgFolder<tensor::DimOp>, DimOfIterArgFolder<memref::DimOp>,
            DimOfLoopResultFolder<tensor::DimOp>,
            DimOfLoopResultFolder<memref::DimOp>>(ctx);

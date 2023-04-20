@@ -24,7 +24,7 @@ def SCFForLoopCanonicalization
     : Pass<"scf-for-loop-canonicalization"> {
   let summary = "Canonicalize operations within scf.for loop bodies";
   let constructor = "mlir::createSCFForLoopCanonicalizationPass()";
-  let dependentDialects = ["AffineDialect", "tensor::TensorDialect",
+  let dependentDialects = ["affine::AffineDialect", "tensor::TensorDialect",
                            "memref::MemRefDialect"];
 }
 
@@ -37,7 +37,7 @@ def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
            "Do not peel loops inside of the last, partial iteration of another "
            "already peeled loop.">
   ];
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SCFForLoopSpecialization : Pass<"scf-for-loop-specialization"> {
@@ -109,7 +109,7 @@ def SCFParallelLoopTiling : Pass<"scf-parallel-loop-tiling"> {
            "Perform tiling with fixed upper bound with inbound check "
            "inside the internal loops">
   ];
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["affine::AffineDialect"];
 }
 
 def SCFForLoopRangeFolding : Pass<"scf-for-loop-range-folding"> {

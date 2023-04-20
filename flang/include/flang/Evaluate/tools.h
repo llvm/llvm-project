@@ -1235,6 +1235,8 @@ const Symbol *FindFunctionResult(const Symbol &);
 // but identical derived types.
 bool AreTkCompatibleTypes(const DeclTypeSpec *x, const DeclTypeSpec *y);
 
+common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
+
 } // namespace Fortran::semantics
 
 #endif // FORTRAN_EVALUATE_TOOLS_H_

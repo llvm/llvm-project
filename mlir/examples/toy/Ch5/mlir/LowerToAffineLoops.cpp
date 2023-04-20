@@ -75,14 +75,15 @@ static void lowerOpToLoops(Operation *op, ValueRange operands,
   // loop induction variables.
   SmallVector<int64_t, 4> lowerBounds(tensorType.getRank(), /*Value=*/0);
   SmallVector<int64_t, 4> steps(tensorType.getRank(), /*Value=*/1);
-  buildAffineLoopNest(
+  affine::buildAffineLoopNest(
       rewriter, loc, lowerBounds, tensorType.getShape(), steps,
       [&](OpBuilder &nestedBuilder, Location loc, ValueRange ivs) {
         // Call the processing function with the rewriter, the memref operands,
         // and the loop induction variables. This function will return the value
         // to store at the current index.
         Value valueToStore = processIteration(nestedBuilder, operands, ivs);
-        nestedBuilder.create<AffineStoreOp>(loc, valueToStore, alloc, ivs);
+        nestedBuilder.create<affine::AffineStoreOp>(loc, valueToStore, alloc,
+                                                    ivs);
       });
 
   // Replace this operation with the generated alloc.
@@ -113,9 +114,9 @@ struct BinaryOpLowering : public ConversionPattern {
 
                      // Generate loads for the element of 'lhs' and 'rhs' at the
                      // inner loop.
-                     auto loadedLhs = builder.create<AffineLoadOp>(
+                     auto loadedLhs = builder.create<affine::AffineLoadOp>(
                          loc, binaryAdaptor.getLhs(), loopIvs);
-                     auto loadedRhs = builder.create<AffineLoadOp>(
+                     auto loadedRhs = builder.create<affine::AffineLoadOp>(
                          loc, binaryAdaptor.getRhs(), loopIvs);
 
                      // Create the binary operation performed on the loaded
@@ -174,7 +175,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
       // The last dimension is the base case of the recursion, at this point
       // we store the element at the given index.
       if (dimension == valueShape.size()) {
-        rewriter.create<AffineStoreOp>(
+        rewriter.create<affine::AffineStoreOp>(
             loc, rewriter.create<arith::ConstantOp>(loc, *valueIt++), alloc,
             llvm::ArrayRef(indices));
         return;
@@ -291,8 +292,8 @@ struct TransposeOpLowering : public ConversionPattern {
                      // Transpose the elements by generating a load from the
                      // reverse indices.
                      SmallVector<Value, 2> reverseIvs(llvm::reverse(loopIvs));
-                     return builder.create<AffineLoadOp>(loc, input,
-                                                         reverseIvs);
+                     return builder.create<affine::AffineLoadOp>(loc, input,
+                                                                 reverseIvs);
                    });
     return success();
   }
@@ -313,7 +314,8 @@ struct ToyToAffineLoweringPass
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ToyToAffineLoweringPass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, func::FuncDialect, memref::MemRefDialect>();
+    registry.insert<affine::AffineDialect, func::FuncDialect,
+                    memref::MemRefDialect>();
   }
   void runOnOperation() final;
 };
@@ -327,8 +329,9 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
-  target.addLegalDialect<AffineDialect, BuiltinDialect, arith::ArithDialect,
-                         func::FuncDialect, memref::MemRefDialect>();
+  target.addLegalDialect<affine::AffineDialect, BuiltinDialect,
+                         arith::ArithDialect, func::FuncDialect,
+                         memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail
   // if any of these operations are *not* converted. Given that we actually want

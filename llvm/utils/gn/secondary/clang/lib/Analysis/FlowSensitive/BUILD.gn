@@ -1,15 +1,34 @@
+action("HTMLLogger") {
+  script = "//clang/utils/bundle_resources.py"
+  outputs = [ "$target_gen_dir/HTMLLogger.inc" ]
+  inputs = [
+    "HTMLLogger.html",
+    "HTMLLogger.css",
+    "HTMLLogger.js",
+  ]
+  args =
+      rebase_path(outputs, root_build_dir) + rebase_path(inputs, root_build_dir)
+}
+
 static_library("FlowSensitive") {
   output_name = "clangAnalysisFlowSensitive"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":HTMLLogger",
     "//clang/lib/AST",
     "//clang/lib/Analysis",
   ]
+  include_dirs = [
+    # To pick up HTMLLogger.inc:
+    target_gen_dir,
+  ]
   sources = [
+    "Arena.cpp",
     "ControlFlowContext.cpp",
     "DataflowAnalysisContext.cpp",
     "DataflowEnvironment.cpp",
     "DebugSupport.cpp",
+    "HTMLLogger.cpp",
     "Logger.cpp",
     "Transfer.cpp",
     "TypeErasedDataflowAnalysis.cpp",

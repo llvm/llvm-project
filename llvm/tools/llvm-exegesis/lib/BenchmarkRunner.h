@@ -63,8 +63,9 @@ public:
                            unsigned NumRepetitions, unsigned LoopUnrollFactor,
                            const SnippetRepetitor &Repetitor) const;
 
-  Expected<Benchmark> runConfiguration(RunnableConfiguration &&RC,
-                                                  bool DumpObjectToDisk) const;
+  Expected<Benchmark>
+  runConfiguration(RunnableConfiguration &&RC,
+                   const std::optional<StringRef> &DumpFile) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -114,7 +115,8 @@ private:
                                            unsigned MinInstructions,
                                            unsigned LoopBodySize) const;
 
-  Expected<std::string> writeObjectFile(StringRef Buffer) const;
+  Expected<std::string> writeObjectFile(StringRef Buffer,
+                                        StringRef FileName) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };

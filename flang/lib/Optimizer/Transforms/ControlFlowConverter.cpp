@@ -316,8 +316,9 @@ public:
     patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
         context, forceLoopToExecuteOnce);
     mlir::ConversionTarget target(*context);
-    target.addLegalDialect<mlir::AffineDialect, mlir::cf::ControlFlowDialect,
-                           FIROpsDialect, mlir::func::FuncDialect>();
+    target.addLegalDialect<mlir::affine::AffineDialect,
+                           mlir::cf::ControlFlowDialect, FIROpsDialect,
+                           mlir::func::FuncDialect>();
 
     // apply the patterns
     target.addIllegalOp<ResultOp, DoLoopOp, IfOp, IterWhileOp>();

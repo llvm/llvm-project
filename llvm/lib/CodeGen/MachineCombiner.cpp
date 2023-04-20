@@ -78,7 +78,7 @@ class MachineCombiner : public MachineFunctionPass {
   TargetSchedModel TSchedModel;
 
   /// True if optimizing for code size.
-  bool OptSize;
+  bool OptSize = false;
 
 public:
   static char ID;

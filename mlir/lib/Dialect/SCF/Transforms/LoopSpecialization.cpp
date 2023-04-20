@@ -34,6 +34,7 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::affine;
 using scf::ForOp;
 using scf::ParallelOp;
 

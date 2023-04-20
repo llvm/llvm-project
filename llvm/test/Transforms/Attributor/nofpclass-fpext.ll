@@ -151,6 +151,66 @@ define double @ret_fpext_f32_to_f64_nonorm(float nofpclass(norm) %arg0) {
   ret double %ext
 }
 
+define double @ret_fpext_f32_to_f64_negonly_zero(float nofpclass(pinf pnorm psub pzero) %arg0) {
+; CHECK-LABEL: define double @ret_fpext_f32_to_f64_negonly_zero
+; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_to_f64_negonly(float nofpclass(pinf pnorm psub) %arg0) {
+; CHECK-LABEL: define double @ret_fpext_f32_to_f64_negonly
+; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_to_f64_negonly_ord(float nofpclass(pinf pnorm psub pzero nan) %arg0) {
+; CHECK-LABEL: define double @ret_fpext_f32_to_f64_negonly_ord
+; CHECK-SAME: (float nofpclass(nan pinf pzero psub pnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_to_f64_posonly_zero(float nofpclass(ninf nnorm nsub nzero) %arg0) {
+; CHECK-LABEL: define double @ret_fpext_f32_to_f64_posonly_zero
+; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_to_f64_posonly(float nofpclass(ninf nnorm nsub) %arg0) {
+; CHECK-LABEL: define double @ret_fpext_f32_to_f64_posonly
+; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
+define double @ret_fpext_f32_to_f64_posonly_nan(float nofpclass(ninf nnorm nsub nzero nan) %arg0) {
+; CHECK-LABEL: define double @ret_fpext_f32_to_f64_posonly_nan
+; CHECK-SAME: (float nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[ARG0]] to double
+; CHECK-NEXT:    ret double [[EXT]]
+;
+  %ext = fpext float %arg0 to double
+  ret double %ext
+}
+
 define float @ret_fpext_bf16_f32(bfloat %arg0) {
 ; CHECK-LABEL: define float @ret_fpext_bf16_f32
 ; CHECK-SAME: (bfloat [[ARG0:%.*]]) #[[ATTR0]] {

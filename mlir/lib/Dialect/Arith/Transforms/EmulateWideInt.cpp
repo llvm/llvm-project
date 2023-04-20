@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -206,7 +207,11 @@ struct ConvertConstant final : OpConversionPattern<arith::ConstantOp> {
   matchAndRewrite(arith::ConstantOp op, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type oldType = op.getType();
-    auto newType = getTypeConverter()->convertType(oldType).cast<VectorType>();
+    auto newType = getTypeConverter()->convertType<VectorType>(oldType);
+    if (!newType)
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv("unsupported type: {0}", op.getType()));
+
     unsigned newBitWidth = newType.getElementTypeBitWidth();
     Attribute oldValue = op.getValueAttr();
 
@@ -264,9 +269,7 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
   matchAndRewrite(arith::AddIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto newTy = getTypeConverter()
-                     ->convertType(op.getType())
-                     .dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -307,9 +310,8 @@ struct ConvertBitwiseBinary final : OpConversionPattern<BinaryOp> {
   matchAndRewrite(BinaryOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto newTy = this->getTypeConverter()
-                     ->convertType(op.getType())
-                     .template dyn_cast_or_null<VectorType>();
+    auto newTy = this->getTypeConverter()->template convertType<VectorType>(
+        op.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -357,9 +359,8 @@ struct ConvertCmpI final : OpConversionPattern<arith::CmpIOp> {
   matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto inputTy = getTypeConverter()
-                       ->convertType(op.getLhs().getType())
-                       .dyn_cast_or_null<VectorType>();
+    auto inputTy =
+        getTypeConverter()->convertType<VectorType>(op.getLhs().getType());
     if (!inputTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -414,9 +415,7 @@ struct ConvertMulI final : OpConversionPattern<arith::MulIOp> {
   matchAndRewrite(arith::MulIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto newTy = getTypeConverter()
-                     ->convertType(op.getType())
-                     .dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -457,9 +456,7 @@ struct ConvertExtSI final : OpConversionPattern<arith::ExtSIOp> {
   matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto newTy = getTypeConverter()
-                     ->convertType(op.getType())
-                     .dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -497,9 +494,7 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
   matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto newTy = getTypeConverter()
-                     ->convertType(op.getType())
-                     .dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -577,9 +572,8 @@ struct ConvertIndexCastIntToIndex final : OpConversionPattern<CastOp> {
 
     Location loc = op.getLoc();
     Type inType = op.getIn().getType();
-    auto newInTy = this->getTypeConverter()
-                       ->convertType(inType)
-                       .template dyn_cast_or_null<VectorType>();
+    auto newInTy =
+        this->getTypeConverter()->template convertType<VectorType>(inType);
     if (!newInTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", inType));
@@ -608,8 +602,7 @@ struct ConvertIndexCastIndexToInt final : OpConversionPattern<CastOp> {
         this->template getTypeConverter<arith::WideIntEmulationConverter>();
 
     Type resultType = op.getType();
-    auto newTy = typeConverter->convertType(resultType)
-                     .template dyn_cast_or_null<VectorType>();
+    auto newTy = typeConverter->template convertType<VectorType>(resultType);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", resultType));
@@ -640,9 +633,7 @@ struct ConvertSelect final : OpConversionPattern<arith::SelectOp> {
   matchAndRewrite(arith::SelectOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    auto newTy = getTypeConverter()
-                     ->convertType(op.getType())
-                     .dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(op.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -677,8 +668,7 @@ struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
     Location loc = op->getLoc();
 
     Type oldTy = op.getType();
-    auto newTy =
-        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -767,8 +757,7 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
     Location loc = op->getLoc();
 
     Type oldTy = op.getType();
-    auto newTy =
-        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -857,8 +846,7 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
     Location loc = op->getLoc();
 
     Type oldTy = op.getType();
-    auto newTy =
-        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", op.getType()));
@@ -922,8 +910,7 @@ struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
 
     Value in = op.getIn();
     Type oldTy = in.getType();
-    auto newTy =
-        dyn_cast_or_null<VectorType>(getTypeConverter()->convertType(oldTy));
+    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", oldTy));
@@ -967,8 +954,7 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
     Location loc = op.getLoc();
 
     Type oldTy = op.getIn().getType();
-    auto newTy =
-        dyn_cast_or_null<VectorType>(getTypeConverter()->convertType(oldTy));
+    auto newTy = getTypeConverter()->convertType<VectorType>(oldTy);
     if (!newTy)
       return rewriter.notifyMatchFailure(
           loc, llvm::formatv("unsupported type: {0}", oldTy));

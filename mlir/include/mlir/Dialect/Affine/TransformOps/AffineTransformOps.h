@@ -15,12 +15,11 @@
 #include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
-class AffineForOp;
 namespace func {
 class FuncOp;
 } // namespace func
 namespace affine {
-class ForOp;
+class AffineForOp;
 } // namespace affine
 } // namespace mlir
 

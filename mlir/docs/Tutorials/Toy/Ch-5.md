@@ -64,7 +64,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // We define the specific operations, or dialects, that are legal targets for
   // this lowering. In our case, we are lowering to a combination of the
   // `Affine`, `Arith`, `Func`, and `MemRef` dialects.
-  target.addLegalDialect<AffineDialect, arith::ArithDialect,
+  target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect>();
 
   // We also define the Toy dialect as Illegal so that the conversion will fail

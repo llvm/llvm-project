@@ -243,16 +243,6 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
   CB->removeRetAttrs(UBImplyingAttributes);
 }
 
-void Instruction::dropUBImplyingAttrsAndMetadata() {
-  // !annotation metadata does not impact semantics.
-  // !range, !nonnull and !align produce poison, so they are safe to speculate.
-  // !noundef and various AA metadata must be dropped, as it generally produces
-  // immediate undefined behavior.
-  unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
-                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
-  dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
-}
-
 bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
 }

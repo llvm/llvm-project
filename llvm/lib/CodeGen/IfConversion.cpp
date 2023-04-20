@@ -197,8 +197,8 @@ namespace {
 
     LivePhysRegs Redefs;
 
-    bool PreRegAlloc;
-    bool MadeChange;
+    bool PreRegAlloc = true;
+    bool MadeChange = false;
     int FnNum = -1;
     std::function<bool(const MachineFunction &)> PredicateFtor;
 

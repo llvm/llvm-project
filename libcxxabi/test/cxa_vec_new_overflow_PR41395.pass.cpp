@@ -18,7 +18,7 @@
 void dummy_ctor(void*) { assert(false && "should not be called"); }
 void dummy_dtor(void*) { assert(false && "should not be called"); }
 
-void *dummy_alloc(size_t) { assert(false && "should not be called"); }
+void *dummy_alloc(size_t) { assert(false && "should not be called"); return nullptr; }
 void dummy_dealloc(void*) { assert(false && "should not be called"); }
 void dummy_dealloc_sized(void*, size_t) { assert(false && "should not be called"); }
 

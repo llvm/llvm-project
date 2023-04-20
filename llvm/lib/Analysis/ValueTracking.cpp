@@ -4343,7 +4343,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
 
 static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
                                                   const Query &Q) {
-  FPClassTest KnownFromAssume = fcNone;
+  FPClassTest KnownFromAssume = fcAllFlags;
 
   // Try to restrict the floating-point classes based on information from
   // assumptions.
@@ -4369,23 +4369,37 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
           fcmpToClassTest(Pred, *F, LHS, RHS, true);
       // First see if we can fold in fabs/fneg into the test.
       if (TestedValue == V)
-        KnownFromAssume |= TestedMask;
+        KnownFromAssume &= TestedMask;
       else {
         // Try again without the lookthrough if we found a different source
         // value.
         auto [TestedValue, TestedMask] =
             fcmpToClassTest(Pred, *F, LHS, RHS, false);
         if (TestedValue == V)
-          KnownFromAssume |= TestedMask;
+          KnownFromAssume &= TestedMask;
       }
     } else if (match(I->getArgOperand(0),
                      m_Intrinsic<Intrinsic::is_fpclass>(
                          m_Value(LHS), m_ConstantInt(ClassVal)))) {
-      KnownFromAssume |= static_cast<FPClassTest>(ClassVal);
+      KnownFromAssume &= static_cast<FPClassTest>(ClassVal);
     }
   }
 
   return KnownFromAssume;
+}
+
+void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
+                         FPClassTest InterestedClasses, KnownFPClass &Known,
+                         unsigned Depth, const Query &Q,
+                         const TargetLibraryInfo *TLI);
+
+static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
+                                FPClassTest InterestedClasses, unsigned Depth,
+                                const Query &Q, const TargetLibraryInfo *TLI) {
+  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+  APInt DemandedElts =
+      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
+  computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Depth, Q, TLI);
 }
 
 // TODO: Merge implementations of isKnownNeverNaN, isKnownNeverInfinity,
@@ -4394,6 +4408,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          unsigned Depth, const Query &Q,
                          const TargetLibraryInfo *TLI) {
+  assert(Known.isUnknown() && "should not be called with known information");
+
   if (!DemandedElts) {
     // No demanded elts, better to assume we don't know anything.
     Known.resetAll();
@@ -4451,8 +4467,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownNotFromFlags |= fcInf;
   }
 
-  if (Q.AC)
-    KnownNotFromFlags |= computeKnownFPClassFromAssumes(V, Q);
+  if (Q.AC) {
+    FPClassTest AssumedClasses = computeKnownFPClassFromAssumes(V, Q);
+    KnownNotFromFlags |= ~AssumedClasses;
+  }
 
   // We no longer need to find out about these bits from inputs if we can
   // assume this from flags/attributes.
@@ -4487,7 +4505,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op)) {
-      switch (II->getIntrinsicID()) {
+      const Intrinsic::ID IID = II->getIntrinsicID();
+      switch (IID) {
       case Intrinsic::fabs:
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
@@ -4558,6 +4577,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
         break;
       }
+      case Intrinsic::experimental_constrained_sitofp:
+      case Intrinsic::experimental_constrained_uitofp:
+        // Cannot produce nan
+        Known.knownNot(fcNan);
+
+        // sitofp and uitofp turn into +0.0 for zero.
+        Known.knownNot(fcNegZero);
+
+        // Integers cannot be subnormal
+        Known.knownNot(fcSubnormal);
+
+        if (IID == Intrinsic::experimental_constrained_uitofp)
+          Known.signBitIsZero();
+
+        // TODO: Copy inf handling from instructions
+        break;
       default:
         break;
       }
@@ -4610,6 +4645,40 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::FDiv: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+    if (!WantNan)
+      break;
+
+    // TODO: FRem
+    KnownFPClass KnownLHS, KnownRHS;
+
+    computeKnownFPClass(Op->getOperand(1), DemandedElts,
+                        fcNan | fcInf | fcZero | fcSubnormal, KnownRHS,
+                        Depth + 1, Q, TLI);
+
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
+                               KnownRHS.isKnownNeverInfinity() ||
+                               KnownRHS.isKnownNeverZero();
+
+    if (KnowSomethingUseful) {
+      computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                          fcNan | fcInf | fcZero, KnownLHS, Depth + 1, Q, TLI);
+    }
+
+    const Function *F = cast<Instruction>(Op)->getFunction();
+
+    // Only 0/0, Inf/Inf, Inf REM x and x REM 0 produce NaN.
+    // TODO: Track sign bit.
+    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+        (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
+        (KnownLHS.isKnownNeverLogicalZero(*F, Op->getType()) ||
+         KnownRHS.isKnownNeverLogicalZero(*F, Op->getType()))) {
+      Known.knownNot(fcNan);
+    }
+
+    break;
+  }
   case Instruction::FPTrunc: {
     if ((InterestedClasses & fcNan) == fcNone)
       break;
@@ -4627,6 +4696,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   case Instruction::UIToFP: {
     // Cannot produce nan
     Known.knownNot(fcNan);
+
+    // Integers cannot be subnormal
+    Known.knownNot(fcSubnormal);
+
+    // sitofp and uitofp turn into +0.0 for zero.
+    Known.knownNot(fcNegZero);
     if (Op->getOpcode() == Instruction::UIToFP)
       Known.signBitIsZero();
 
@@ -4665,6 +4740,71 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::InsertElement: {
+    if (isa<ScalableVectorType>(Op->getType()))
+      return;
+
+    const Value *Vec = Op->getOperand(0);
+    const Value *Elt = Op->getOperand(1);
+    auto *CIdx = dyn_cast<ConstantInt>(Op->getOperand(2));
+    // Early out if the index is non-constant or out-of-range.
+    unsigned NumElts = DemandedElts.getBitWidth();
+    if (!CIdx || CIdx->getValue().uge(NumElts))
+      return;
+
+    unsigned EltIdx = CIdx->getZExtValue();
+    // Do we demand the inserted element?
+    if (DemandedElts[EltIdx]) {
+      computeKnownFPClass(Elt, Known, InterestedClasses, Depth + 1, Q, TLI);
+      // If we don't know any bits, early out.
+      if (Known.isUnknown())
+        break;
+    } else {
+      Known.KnownFPClasses = fcNone;
+    }
+
+    // We don't need the base vector element that has been inserted.
+    APInt DemandedVecElts = DemandedElts;
+    DemandedVecElts.clearBit(EltIdx);
+    if (!!DemandedVecElts) {
+      KnownFPClass Known2;
+      computeKnownFPClass(Vec, DemandedVecElts, InterestedClasses, Known2,
+                          Depth + 1, Q, TLI);
+      Known |= Known2;
+    }
+
+    break;
+  }
+  case Instruction::ShuffleVector: {
+    // For undef elements, we don't know anything about the common state of
+    // the shuffle result.
+    APInt DemandedLHS, DemandedRHS;
+    auto *Shuf = dyn_cast<ShuffleVectorInst>(Op);
+    if (!Shuf || !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+      return;
+
+    if (!!DemandedLHS) {
+      const Value *LHS = Shuf->getOperand(0);
+      computeKnownFPClass(LHS, DemandedLHS, InterestedClasses, Known,
+                          Depth + 1, Q, TLI);
+
+      // If we don't know any bits, early out.
+      if (Known.isUnknown())
+        break;
+    } else {
+      Known.KnownFPClasses = fcNone;
+    }
+
+    if (!!DemandedRHS) {
+      KnownFPClass Known2;
+      const Value *RHS = Shuf->getOperand(1);
+      computeKnownFPClass(RHS, DemandedRHS, InterestedClasses, Known2,
+                          Depth + 1, Q, TLI);
+      Known |= Known2;
+    }
+
+    break;
+  }
   case Instruction::ExtractValue: {
     computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
                         Known, Depth + 1, Q, TLI);
@@ -4694,10 +4834,7 @@ llvm::computeKnownFPClass(const Value *V, const DataLayout &DL,
                           const Instruction *CxtI, const DominatorTree *DT,
                           OptimizationRemarkEmitter *ORE, bool UseInstrInfo) {
   KnownFPClass Known;
-  auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
-  APInt DemandedElts =
-      FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  ::computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Depth,
+  ::computeKnownFPClass(V, Known, InterestedClasses, Depth,
                         Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo, ORE),
                         TLI);
   return Known;
@@ -8223,75 +8360,4 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   }
 
   return CR;
-}
-
-static std::optional<int64_t>
-getOffsetFromIndex(const GEPOperator *GEP, unsigned Idx, const DataLayout &DL) {
-  // Skip over the first indices.
-  gep_type_iterator GTI = gep_type_begin(GEP);
-  for (unsigned i = 1; i != Idx; ++i, ++GTI)
-    /*skip along*/;
-
-  // Compute the offset implied by the rest of the indices.
-  int64_t Offset = 0;
-  for (unsigned i = Idx, e = GEP->getNumOperands(); i != e; ++i, ++GTI) {
-    ConstantInt *OpC = dyn_cast<ConstantInt>(GEP->getOperand(i));
-    if (!OpC)
-      return std::nullopt;
-    if (OpC->isZero())
-      continue; // No offset.
-
-    // Handle struct indices, which add their field offset to the pointer.
-    if (StructType *STy = GTI.getStructTypeOrNull()) {
-      Offset += DL.getStructLayout(STy)->getElementOffset(OpC->getZExtValue());
-      continue;
-    }
-
-    // Otherwise, we have a sequential type like an array or fixed-length
-    // vector. Multiply the index by the ElementSize.
-    TypeSize Size = DL.getTypeAllocSize(GTI.getIndexedType());
-    if (Size.isScalable())
-      return std::nullopt;
-    Offset += Size.getFixedValue() * OpC->getSExtValue();
-  }
-
-  return Offset;
-}
-
-std::optional<int64_t> llvm::isPointerOffset(const Value *Ptr1,
-                                             const Value *Ptr2,
-                                             const DataLayout &DL) {
-  APInt Offset1(DL.getIndexTypeSizeInBits(Ptr1->getType()), 0);
-  APInt Offset2(DL.getIndexTypeSizeInBits(Ptr2->getType()), 0);
-  Ptr1 = Ptr1->stripAndAccumulateConstantOffsets(DL, Offset1, true);
-  Ptr2 = Ptr2->stripAndAccumulateConstantOffsets(DL, Offset2, true);
-
-  // Handle the trivial case first.
-  if (Ptr1 == Ptr2)
-    return Offset2.getSExtValue() - Offset1.getSExtValue();
-
-  const GEPOperator *GEP1 = dyn_cast<GEPOperator>(Ptr1);
-  const GEPOperator *GEP2 = dyn_cast<GEPOperator>(Ptr2);
-
-  // Right now we handle the case when Ptr1/Ptr2 are both GEPs with an identical
-  // base.  After that base, they may have some number of common (and
-  // potentially variable) indices.  After that they handle some constant
-  // offset, which determines their offset from each other.  At this point, we
-  // handle no other case.
-  if (!GEP1 || !GEP2 || GEP1->getOperand(0) != GEP2->getOperand(0) ||
-      GEP1->getSourceElementType() != GEP2->getSourceElementType())
-    return std::nullopt;
-
-  // Skip any common indices and track the GEP types.
-  unsigned Idx = 1;
-  for (; Idx != GEP1->getNumOperands() && Idx != GEP2->getNumOperands(); ++Idx)
-    if (GEP1->getOperand(Idx) != GEP2->getOperand(Idx))
-      break;
-
-  auto IOffset1 = getOffsetFromIndex(GEP1, Idx, DL);
-  auto IOffset2 = getOffsetFromIndex(GEP2, Idx, DL);
-  if (!IOffset1 || !IOffset2)
-    return std::nullopt;
-  return *IOffset2 - *IOffset1 + Offset2.getSExtValue() -
-         Offset1.getSExtValue();
 }

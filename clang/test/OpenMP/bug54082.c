@@ -73,13 +73,13 @@ void foo() {
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[X_ALLOC]]) #[[ATTR5]]
 // CHECK-NEXT:    [[CALL:%.*]] = call i64 @omp_init_allocator(i64 noundef 0, i32 noundef 1, ptr noundef nonnull [[X_TRAITS]]) #[[ATTR5]]
 // CHECK-NEXT:    store i64 [[CALL]], ptr [[X_ALLOC]], align 8, !tbaa [[TBAA3:![0-9]+]]
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @[[GLOB2:[0-9]+]], i32 1, ptr nonnull @.omp_outlined., ptr nonnull [[X_ALLOC]])
+// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull @[[GLOB2:[0-9]+]], i32 1, ptr nonnull @foo.omp_outlined, ptr nonnull [[X_ALLOC]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[X_ALLOC]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[X_TRAITS]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK-LABEL: define {{[^@]+}}@foo.omp_outlined
 // CHECK-SAME: (ptr noalias nocapture noundef readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture readnone [[DOTBOUND_TID_:%.*]], ptr nocapture noundef nonnull readonly align 8 dereferenceable(8) [[X_ALLOC:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4

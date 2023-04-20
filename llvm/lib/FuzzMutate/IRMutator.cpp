@@ -31,26 +31,17 @@
 
 using namespace llvm;
 
-static void createEmptyFunction(Module &M) {
-  // TODO: Some arguments and a return value would probably be more interesting.
-  LLVMContext &Context = M.getContext();
-  Function *F = Function::Create(FunctionType::get(Type::getVoidTy(Context), {},
-                                                   /*isVarArg=*/false),
-                                 GlobalValue::ExternalLinkage, "f", &M);
-  BasicBlock *BB = BasicBlock::Create(Context, "BB", F);
-  ReturnInst::Create(Context, BB);
-}
-
 void IRMutationStrategy::mutate(Module &M, RandomIRBuilder &IB) {
   auto RS = makeSampler<Function *>(IB.Rand);
   for (Function &F : M)
     if (!F.isDeclaration())
       RS.sample(&F, /*Weight=*/1);
 
-  if (RS.isEmpty())
-    createEmptyFunction(M);
-  else
-    mutate(*RS.getSelection(), IB);
+  while (RS.totalWeight() < IB.MinFunctionNum) {
+    Function *F = IB.createFunctionDefinition(M);
+    RS.sample(F, /*Weight=*/1);
+  }
+  mutate(*RS.getSelection(), IB);
 }
 
 void IRMutationStrategy::mutate(Function &F, RandomIRBuilder &IB) {
@@ -349,10 +340,65 @@ static uint64_t getUniqueCaseValue(SmallSet<uint64_t, 4> &CasesTaken,
   return tmp;
 }
 
+void InsertFunctionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
+  Module *M = BB.getParent()->getParent();
+  // If nullptr is selected, we will create a new function declaration.
+  SmallVector<Function *, 32> Functions({nullptr});
+  for (Function &F : M->functions()) {
+    Functions.push_back(&F);
+  }
+
+  auto RS = makeSampler(IB.Rand, Functions);
+  Function *F = RS.getSelection();
+  if (!F) {
+    F = IB.createFunctionDeclaration(*M);
+  }
+
+  FunctionType *FTy = F->getFunctionType();
+  SmallVector<fuzzerop::SourcePred, 2> SourcePreds;
+  if (!F->arg_empty()) {
+    for (Type *ArgTy : FTy->params()) {
+      SourcePreds.push_back(fuzzerop::onlyType(ArgTy));
+    }
+  }
+  bool isRetVoid = (F->getReturnType() == Type::getVoidTy(M->getContext()));
+  auto BuilderFunc = [FTy, F, isRetVoid](ArrayRef<Value *> Srcs,
+                                         Instruction *Inst) {
+    StringRef Name = isRetVoid ? nullptr : "C";
+    CallInst *Call = CallInst::Create(FTy, F, Srcs, Name, Inst);
+    // Don't return this call inst if it return void as it can't be sinked.
+    return isRetVoid ? nullptr : Call;
+  };
+
+  SmallVector<Instruction *, 32> Insts;
+  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+    Insts.push_back(&I);
+  if (Insts.size() < 1)
+    return;
+
+  // Choose an insertion point for our new call instruction.
+  uint64_t IP = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
+
+  auto InstsBefore = ArrayRef(Insts).slice(0, IP);
+  auto InstsAfter = ArrayRef(Insts).slice(IP);
+
+  // Choose a source, which will be used to constrain the operation selection.
+  SmallVector<Value *, 2> Srcs;
+
+  for (const auto &Pred : ArrayRef(SourcePreds)) {
+    Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore, Srcs, Pred));
+  }
+
+  if (Value *Op = BuilderFunc(Srcs, Insts[IP])) {
+    // Find a sink and wire up the results of the operation.
+    IB.connectToSink(BB, InstsAfter, Op);
+  }
+}
+
 void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    Insts.push_back(&*I);
+  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+    Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
 
@@ -491,8 +537,8 @@ void InsertPHIStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     PHI->addIncoming(Src, Pred);
   }
   SmallVector<Instruction *, 32> InstsAfter;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    InstsAfter.push_back(&*I);
+  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+    InstsAfter.push_back(&I);
   IB.connectToSink(BB, InstsAfter, PHI);
 }
 
@@ -503,8 +549,8 @@ void SinkInstructionStrategy::mutate(Function &F, RandomIRBuilder &IB) {
 }
 void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   SmallVector<Instruction *, 32> Insts;
-  for (auto I = BB.getFirstInsertionPt(), E = BB.end(); I != E; ++I)
-    Insts.push_back(&*I);
+  for (Instruction &I : make_range(BB.getFirstInsertionPt(), BB.end()))
+    Insts.push_back(&I);
   if (Insts.size() < 1)
     return;
   // Choose an Instruction to mutate.

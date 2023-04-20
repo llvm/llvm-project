@@ -894,7 +894,7 @@ class MixedContainerType<Type etype, Pred containerPred, code elementTypesCall,
         And<[
             containerPred,
             Concat<
-                "::llvm::all_of(" # elementTypesCall # ", [](Type t) { "
+                "::llvm::all_of(" # elementTypesCall # ", [](::mlir::Type t) { "
                 "return t && (",
                 SubstLeaves<"$_self", "t", etype.predicate>,
                 "); })"

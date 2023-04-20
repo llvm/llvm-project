@@ -91,8 +91,8 @@ static Value genVectorMask(PatternRewriter &rewriter, Location loc, VL vl,
       {rewriter.getAffineSymbolExpr(0),
        rewriter.getAffineDimExpr(0) - rewriter.getAffineDimExpr(1)},
       rewriter.getContext());
-  Value end =
-      rewriter.createOrFold<AffineMinOp>(loc, min, ValueRange{hi, iv, step});
+  Value end = rewriter.createOrFold<affine::AffineMinOp>(
+      loc, min, ValueRange{hi, iv, step});
   return rewriter.create<vector::CreateMaskOp>(loc, mtp, end);
 }
 

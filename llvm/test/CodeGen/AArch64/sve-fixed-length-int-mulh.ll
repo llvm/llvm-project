@@ -13,29 +13,14 @@ target triple = "aarch64-unknown-linux-gnu"
 ;
 
 ; Don't use SVE for 64-bit vectors.
-; FIXME: The codegen for the >=256 bits case can be improved.
 define <8 x i8> @smulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ushr v1.8h, v0.8h, #8
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    umov w8, v1.h[2]
-; CHECK-NEXT:    mov v0.b[1], w9
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    umov w8, v1.h[4]
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    umov w8, v1.h[5]
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    umov w8, v1.h[6]
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    umov w8, v1.h[7]
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i16> undef, i16 8, i64 0
   %splat = shufflevector <8 x i16> %insert, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -51,9 +36,11 @@ define <8 x i8> @smulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <16 x i8> %op1 to <16 x i16>
   %2 = sext <16 x i8> %op2 to <16 x i16>
@@ -86,43 +73,16 @@ define void @smulh_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smulh_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z3.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    sunpklo z4.h, z0.b
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    sunpklo z5.h, z1.b
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    sunpklo z6.h, z2.b
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    sunpklo z7.h, z3.b
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z3.b, #16
-; VBITS_GE_256-NEXT:    sunpklo z0.h, z0.b
-; VBITS_GE_256-NEXT:    sunpklo z1.h, z1.b
-; VBITS_GE_256-NEXT:    sunpklo z2.h, z2.b
-; VBITS_GE_256-NEXT:    sunpklo z3.h, z3.b
-; VBITS_GE_256-NEXT:    mul z4.h, p1/m, z4.h, z6.h
-; VBITS_GE_256-NEXT:    mul z0.h, p1/m, z0.h, z2.h
-; VBITS_GE_256-NEXT:    movprfx z2, z5
-; VBITS_GE_256-NEXT:    mul z2.h, p1/m, z2.h, z7.h
-; VBITS_GE_256-NEXT:    mul z1.h, p1/m, z1.h, z3.h
-; VBITS_GE_256-NEXT:    lsr z0.h, z0.h, #8
-; VBITS_GE_256-NEXT:    lsr z3.h, z4.h, #8
-; VBITS_GE_256-NEXT:    lsr z1.h, z1.h, #8
-; VBITS_GE_256-NEXT:    lsr z2.h, z2.h, #8
-; VBITS_GE_256-NEXT:    uzp1 z3.b, z3.b, z3.b
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    ptrue p1.b, vl16
-; VBITS_GE_256-NEXT:    uzp1 z2.b, z2.b, z2.b
-; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_256-NEXT:    splice z3.b, p1, z3.b, z0.b
-; VBITS_GE_256-NEXT:    splice z2.b, p1, z2.b, z1.b
-; VBITS_GE_256-NEXT:    st1b { z3.b }, p0, [x0, x8]
-; VBITS_GE_256-NEXT:    st1b { z2.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    smulh z0.b, p0/m, z0.b, z2.b
+; VBITS_GE_256-NEXT:    smulh z1.b, p0/m, z1.b, z3.b
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: smulh_v64i8:
@@ -187,20 +147,14 @@ define void @smulh_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 }
 
 ; Don't use SVE for 64-bit vectors.
-; FIXME: The codegen for the >=256 bits case can be improved.
 define <4 x i16> @smulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ushr v1.4s, v0.4s, #16
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i16> %op1 to <4 x i32>
   %2 = sext <4 x i16> %op2 to <4 x i32>
@@ -214,9 +168,11 @@ define <4 x i16> @smulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) 
 define <8 x i16> @smulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.4s, v0.8h, v1.8h
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <8 x i16> %op1 to <8 x i32>
   %2 = sext <8 x i16> %op2 to <8 x i32>
@@ -249,34 +205,15 @@ define void @smulh_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smulh_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    ptrue p1.h, vl8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z7.d, z1.d
-; VBITS_GE_256-NEXT:    mov z16.d, z3.d
-; VBITS_GE_256-NEXT:    ext z7.b, z7.b, z7.b, #16
-; VBITS_GE_256-NEXT:    smull2 v4.4s, v0.8h, v2.8h
-; VBITS_GE_256-NEXT:    ext z16.b, z16.b, z3.b, #16
-; VBITS_GE_256-NEXT:    smull v5.4s, v0.4h, v2.4h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    smull2 v6.4s, v1.8h, v3.8h
-; VBITS_GE_256-NEXT:    smull v1.4s, v1.4h, v3.4h
-; VBITS_GE_256-NEXT:    smull2 v3.4s, v0.8h, v2.8h
-; VBITS_GE_256-NEXT:    smull v0.4s, v0.4h, v2.4h
-; VBITS_GE_256-NEXT:    smull2 v2.4s, v7.8h, v16.8h
-; VBITS_GE_256-NEXT:    smull v7.4s, v7.4h, v16.4h
-; VBITS_GE_256-NEXT:    uzp2 v4.8h, v5.8h, v4.8h
-; VBITS_GE_256-NEXT:    uzp2 v1.8h, v1.8h, v6.8h
-; VBITS_GE_256-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
-; VBITS_GE_256-NEXT:    uzp2 v2.8h, v7.8h, v2.8h
-; VBITS_GE_256-NEXT:    splice z4.h, p1, z4.h, z0.h
-; VBITS_GE_256-NEXT:    splice z1.h, p1, z1.h, z2.h
-; VBITS_GE_256-NEXT:    st1h { z4.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    smulh z0.h, p0/m, z0.h, z2.h
+; VBITS_GE_256-NEXT:    smulh z1.h, p0/m, z1.h, z3.h
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -343,11 +280,11 @@ define void @smulh_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <2 x i32> @smulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <2 x i32> %op1 to <2 x i64>
   %2 = sext <2 x i32> %op2 to <2 x i64>
@@ -361,9 +298,11 @@ define <2 x i32> @smulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) 
 define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i32> %op1 to <4 x i64>
   %2 = sext <4 x i32> %op2 to <4 x i64>
@@ -396,34 +335,15 @@ define void @smulh_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smulh_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z7.d, z1.d
-; VBITS_GE_256-NEXT:    mov z16.d, z3.d
-; VBITS_GE_256-NEXT:    ext z7.b, z7.b, z7.b, #16
-; VBITS_GE_256-NEXT:    smull2 v4.2d, v0.4s, v2.4s
-; VBITS_GE_256-NEXT:    ext z16.b, z16.b, z3.b, #16
-; VBITS_GE_256-NEXT:    smull v5.2d, v0.2s, v2.2s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    smull2 v6.2d, v1.4s, v3.4s
-; VBITS_GE_256-NEXT:    smull v1.2d, v1.2s, v3.2s
-; VBITS_GE_256-NEXT:    smull2 v3.2d, v0.4s, v2.4s
-; VBITS_GE_256-NEXT:    smull v0.2d, v0.2s, v2.2s
-; VBITS_GE_256-NEXT:    smull2 v2.2d, v7.4s, v16.4s
-; VBITS_GE_256-NEXT:    smull v7.2d, v7.2s, v16.2s
-; VBITS_GE_256-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
-; VBITS_GE_256-NEXT:    uzp2 v1.4s, v1.4s, v6.4s
-; VBITS_GE_256-NEXT:    uzp2 v0.4s, v0.4s, v3.4s
-; VBITS_GE_256-NEXT:    uzp2 v2.4s, v7.4s, v2.4s
-; VBITS_GE_256-NEXT:    splice z4.s, p1, z4.s, z0.s
-; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z2.s
-; VBITS_GE_256-NEXT:    st1w { z4.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    smulh z0.s, p0/m, z0.s, z2.s
+; VBITS_GE_256-NEXT:    smulh z1.s, p0/m, z1.s, z3.s
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -547,57 +467,16 @@ define void @smulh_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smulh_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    ptrue p1.d, vl2
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov x9, v0.d[1]
-; VBITS_GE_256-NEXT:    fmov x10, d0
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    fmov x17, d2
-; VBITS_GE_256-NEXT:    mov x13, v2.d[1]
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    mov x14, v0.d[1]
-; VBITS_GE_256-NEXT:    mov x18, v2.d[1]
-; VBITS_GE_256-NEXT:    smulh x10, x10, x17
-; VBITS_GE_256-NEXT:    mov x11, v1.d[1]
-; VBITS_GE_256-NEXT:    fmov x12, d1
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    mov x2, v3.d[1]
-; VBITS_GE_256-NEXT:    fmov x3, d3
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z3.b, #16
-; VBITS_GE_256-NEXT:    smulh x9, x9, x13
-; VBITS_GE_256-NEXT:    mov x13, v1.d[1]
-; VBITS_GE_256-NEXT:    smulh x14, x14, x18
-; VBITS_GE_256-NEXT:    mov x18, v3.d[1]
-; VBITS_GE_256-NEXT:    smulh x12, x12, x3
-; VBITS_GE_256-NEXT:    fmov x15, d0
-; VBITS_GE_256-NEXT:    fmov x16, d1
-; VBITS_GE_256-NEXT:    fmov x1, d2
-; VBITS_GE_256-NEXT:    fmov x17, d3
-; VBITS_GE_256-NEXT:    fmov d0, x9
-; VBITS_GE_256-NEXT:    fmov d1, x10
-; VBITS_GE_256-NEXT:    smulh x9, x11, x2
-; VBITS_GE_256-NEXT:    smulh x15, x15, x1
-; VBITS_GE_256-NEXT:    fmov d4, x12
-; VBITS_GE_256-NEXT:    smulh x16, x16, x17
-; VBITS_GE_256-NEXT:    smulh x10, x13, x18
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    fmov d0, x14
-; VBITS_GE_256-NEXT:    fmov d2, x15
-; VBITS_GE_256-NEXT:    fmov d3, x9
-; VBITS_GE_256-NEXT:    fmov d6, x16
-; VBITS_GE_256-NEXT:    fmov d5, x10
-; VBITS_GE_256-NEXT:    mov v2.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    mov v4.d[1], v3.d[0]
-; VBITS_GE_256-NEXT:    mov v6.d[1], v5.d[0]
-; VBITS_GE_256-NEXT:    splice z1.d, p1, z1.d, z2.d
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    splice z4.d, p1, z4.d, z6.d
-; VBITS_GE_256-NEXT:    st1d { z4.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    smulh z0.d, p0/m, z0.d, z2.d
+; VBITS_GE_256-NEXT:    smulh z1.d, p0/m, z1.d, z3.d
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: smulh_v8i64:
@@ -668,25 +547,11 @@ define void @smulh_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <8 x i8> @umulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ushr v1.8h, v0.8h, #8
-; CHECK-NEXT:    umov w8, v1.h[0]
-; CHECK-NEXT:    umov w9, v1.h[1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    umov w8, v1.h[2]
-; CHECK-NEXT:    mov v0.b[1], w9
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    umov w8, v1.h[3]
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    umov w8, v1.h[4]
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    umov w8, v1.h[5]
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    umov w8, v1.h[6]
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    umov w8, v1.h[7]
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <8 x i8> %op1 to <8 x i16>
   %2 = zext <8 x i8> %op2 to <8 x i16>
@@ -700,9 +565,11 @@ define <8 x i8> @umulh_v8i8(<8 x i8> %op1, <8 x i8> %op2) vscale_range(2,0) #0 {
 define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v2.8h, v0.16b, v1.16b
-; CHECK-NEXT:    umull v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    uzp2 v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <16 x i8> %op1 to <16 x i16>
   %2 = zext <16 x i8> %op2 to <16 x i16>
@@ -735,43 +602,16 @@ define void @umulh_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umulh_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z3.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    uunpklo z4.h, z0.b
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    uunpklo z5.h, z1.b
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    uunpklo z6.h, z2.b
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    uunpklo z7.h, z3.b
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z3.b, #16
-; VBITS_GE_256-NEXT:    uunpklo z0.h, z0.b
-; VBITS_GE_256-NEXT:    uunpklo z1.h, z1.b
-; VBITS_GE_256-NEXT:    uunpklo z2.h, z2.b
-; VBITS_GE_256-NEXT:    uunpklo z3.h, z3.b
-; VBITS_GE_256-NEXT:    mul z4.h, p1/m, z4.h, z6.h
-; VBITS_GE_256-NEXT:    mul z0.h, p1/m, z0.h, z2.h
-; VBITS_GE_256-NEXT:    movprfx z2, z5
-; VBITS_GE_256-NEXT:    mul z2.h, p1/m, z2.h, z7.h
-; VBITS_GE_256-NEXT:    mul z1.h, p1/m, z1.h, z3.h
-; VBITS_GE_256-NEXT:    lsr z0.h, z0.h, #8
-; VBITS_GE_256-NEXT:    lsr z3.h, z4.h, #8
-; VBITS_GE_256-NEXT:    lsr z1.h, z1.h, #8
-; VBITS_GE_256-NEXT:    lsr z2.h, z2.h, #8
-; VBITS_GE_256-NEXT:    uzp1 z3.b, z3.b, z3.b
-; VBITS_GE_256-NEXT:    uzp1 z0.b, z0.b, z0.b
-; VBITS_GE_256-NEXT:    ptrue p1.b, vl16
-; VBITS_GE_256-NEXT:    uzp1 z2.b, z2.b, z2.b
-; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
-; VBITS_GE_256-NEXT:    splice z3.b, p1, z3.b, z0.b
-; VBITS_GE_256-NEXT:    splice z2.b, p1, z2.b, z1.b
-; VBITS_GE_256-NEXT:    st1b { z3.b }, p0, [x0, x8]
-; VBITS_GE_256-NEXT:    st1b { z2.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    umulh z0.b, p0/m, z0.b, z2.b
+; VBITS_GE_256-NEXT:    umulh z1.b, p0/m, z1.b, z3.b
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: umulh_v64i8:
@@ -840,16 +680,11 @@ define void @umulh_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <4 x i16> @umulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ushr v1.4s, v0.4s, #16
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov w8, v1.s[3]
-; CHECK-NEXT:    mov v0.h[2], w9
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <4 x i16> %op1 to <4 x i32>
   %2 = zext <4 x i16> %op2 to <4 x i32>
@@ -863,9 +698,11 @@ define <4 x i16> @umulh_v4i16(<4 x i16> %op1, <4 x i16> %op2) vscale_range(2,0) 
 define <8 x i16> @umulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v2.4s, v0.8h, v1.8h
-; CHECK-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <8 x i16> %op1 to <8 x i32>
   %2 = zext <8 x i16> %op2 to <8 x i32>
@@ -898,34 +735,15 @@ define void @umulh_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umulh_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    ptrue p1.h, vl8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z7.d, z1.d
-; VBITS_GE_256-NEXT:    mov z16.d, z3.d
-; VBITS_GE_256-NEXT:    ext z7.b, z7.b, z7.b, #16
-; VBITS_GE_256-NEXT:    umull2 v4.4s, v0.8h, v2.8h
-; VBITS_GE_256-NEXT:    ext z16.b, z16.b, z3.b, #16
-; VBITS_GE_256-NEXT:    umull v5.4s, v0.4h, v2.4h
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    umull2 v6.4s, v1.8h, v3.8h
-; VBITS_GE_256-NEXT:    umull v1.4s, v1.4h, v3.4h
-; VBITS_GE_256-NEXT:    umull2 v3.4s, v0.8h, v2.8h
-; VBITS_GE_256-NEXT:    umull v0.4s, v0.4h, v2.4h
-; VBITS_GE_256-NEXT:    umull2 v2.4s, v7.8h, v16.8h
-; VBITS_GE_256-NEXT:    umull v7.4s, v7.4h, v16.4h
-; VBITS_GE_256-NEXT:    uzp2 v4.8h, v5.8h, v4.8h
-; VBITS_GE_256-NEXT:    uzp2 v1.8h, v1.8h, v6.8h
-; VBITS_GE_256-NEXT:    uzp2 v0.8h, v0.8h, v3.8h
-; VBITS_GE_256-NEXT:    uzp2 v2.8h, v7.8h, v2.8h
-; VBITS_GE_256-NEXT:    splice z4.h, p1, z4.h, z0.h
-; VBITS_GE_256-NEXT:    splice z1.h, p1, z1.h, z2.h
-; VBITS_GE_256-NEXT:    st1h { z4.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    umulh z0.h, p0/m, z0.h, z2.h
+; VBITS_GE_256-NEXT:    umulh z1.h, p0/m, z1.h, z3.h
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -992,11 +810,11 @@ define void @umulh_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z1.d
-; CHECK-NEXT:    shrn v0.2s, v0.2d, #32
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
+; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <2 x i32> %op1 to <2 x i64>
   %2 = zext <2 x i32> %op2 to <2 x i64>
@@ -1010,9 +828,11 @@ define <2 x i32> @umulh_v2i32(<2 x i32> %op1, <2 x i32> %op2) vscale_range(2,0) 
 define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %1 = zext <4 x i32> %op1 to <4 x i64>
   %2 = zext <4 x i32> %op2 to <4 x i64>
@@ -1047,34 +867,15 @@ define void @umulh_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umulh_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z7.d, z1.d
-; VBITS_GE_256-NEXT:    mov z16.d, z3.d
-; VBITS_GE_256-NEXT:    ext z7.b, z7.b, z7.b, #16
-; VBITS_GE_256-NEXT:    umull2 v4.2d, v0.4s, v2.4s
-; VBITS_GE_256-NEXT:    ext z16.b, z16.b, z3.b, #16
-; VBITS_GE_256-NEXT:    umull v5.2d, v0.2s, v2.2s
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    umull2 v6.2d, v1.4s, v3.4s
-; VBITS_GE_256-NEXT:    umull v1.2d, v1.2s, v3.2s
-; VBITS_GE_256-NEXT:    umull2 v3.2d, v0.4s, v2.4s
-; VBITS_GE_256-NEXT:    umull v0.2d, v0.2s, v2.2s
-; VBITS_GE_256-NEXT:    umull2 v2.2d, v7.4s, v16.4s
-; VBITS_GE_256-NEXT:    umull v7.2d, v7.2s, v16.2s
-; VBITS_GE_256-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
-; VBITS_GE_256-NEXT:    uzp2 v1.4s, v1.4s, v6.4s
-; VBITS_GE_256-NEXT:    uzp2 v0.4s, v0.4s, v3.4s
-; VBITS_GE_256-NEXT:    uzp2 v2.4s, v7.4s, v2.4s
-; VBITS_GE_256-NEXT:    splice z4.s, p1, z4.s, z0.s
-; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z2.s
-; VBITS_GE_256-NEXT:    st1w { z4.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    umulh z0.s, p0/m, z0.s, z2.s
+; VBITS_GE_256-NEXT:    umulh z1.s, p0/m, z1.s, z3.s
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -1196,57 +997,16 @@ define void @umulh_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umulh_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    ptrue p1.d, vl2
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov x9, v0.d[1]
-; VBITS_GE_256-NEXT:    fmov x10, d0
-; VBITS_GE_256-NEXT:    ext z0.b, z0.b, z0.b, #16
-; VBITS_GE_256-NEXT:    fmov x17, d2
-; VBITS_GE_256-NEXT:    mov x13, v2.d[1]
-; VBITS_GE_256-NEXT:    ext z2.b, z2.b, z2.b, #16
-; VBITS_GE_256-NEXT:    mov x14, v0.d[1]
-; VBITS_GE_256-NEXT:    mov x18, v2.d[1]
-; VBITS_GE_256-NEXT:    umulh x10, x10, x17
-; VBITS_GE_256-NEXT:    mov x11, v1.d[1]
-; VBITS_GE_256-NEXT:    fmov x12, d1
-; VBITS_GE_256-NEXT:    ext z1.b, z1.b, z1.b, #16
-; VBITS_GE_256-NEXT:    mov x2, v3.d[1]
-; VBITS_GE_256-NEXT:    fmov x3, d3
-; VBITS_GE_256-NEXT:    ext z3.b, z3.b, z3.b, #16
-; VBITS_GE_256-NEXT:    umulh x9, x9, x13
-; VBITS_GE_256-NEXT:    mov x13, v1.d[1]
-; VBITS_GE_256-NEXT:    umulh x14, x14, x18
-; VBITS_GE_256-NEXT:    mov x18, v3.d[1]
-; VBITS_GE_256-NEXT:    umulh x12, x12, x3
-; VBITS_GE_256-NEXT:    fmov x15, d0
-; VBITS_GE_256-NEXT:    fmov x16, d1
-; VBITS_GE_256-NEXT:    fmov x1, d2
-; VBITS_GE_256-NEXT:    fmov x17, d3
-; VBITS_GE_256-NEXT:    fmov d0, x9
-; VBITS_GE_256-NEXT:    fmov d1, x10
-; VBITS_GE_256-NEXT:    umulh x9, x11, x2
-; VBITS_GE_256-NEXT:    umulh x15, x15, x1
-; VBITS_GE_256-NEXT:    fmov d4, x12
-; VBITS_GE_256-NEXT:    umulh x16, x16, x17
-; VBITS_GE_256-NEXT:    umulh x10, x13, x18
-; VBITS_GE_256-NEXT:    mov v1.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    fmov d0, x14
-; VBITS_GE_256-NEXT:    fmov d2, x15
-; VBITS_GE_256-NEXT:    fmov d3, x9
-; VBITS_GE_256-NEXT:    fmov d6, x16
-; VBITS_GE_256-NEXT:    fmov d5, x10
-; VBITS_GE_256-NEXT:    mov v2.d[1], v0.d[0]
-; VBITS_GE_256-NEXT:    mov v4.d[1], v3.d[0]
-; VBITS_GE_256-NEXT:    mov v6.d[1], v5.d[0]
-; VBITS_GE_256-NEXT:    splice z1.d, p1, z1.d, z2.d
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    splice z4.d, p1, z4.d, z6.d
-; VBITS_GE_256-NEXT:    st1d { z4.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    umulh z0.d, p0/m, z0.d, z2.d
+; VBITS_GE_256-NEXT:    umulh z1.d, p0/m, z1.d, z3.d
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: umulh_v8i64:

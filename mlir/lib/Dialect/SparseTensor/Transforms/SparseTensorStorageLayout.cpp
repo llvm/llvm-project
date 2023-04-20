@@ -145,7 +145,7 @@ void sparse_tensor::foreachFieldInSparseTensor(
     // As a result, the compound type can be constructed directly in the given
     // order.
     const auto dlt = lvlTypes[l];
-    if (isCompressedDLT(dlt)) {
+    if (isCompressedDLT(dlt) || isCompressedWithHiDLT(dlt)) {
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::PosMemRef, l, dlt);
       RETURN_ON_FALSE(fieldIdx++, SparseTensorFieldKind::CrdMemRef, l, dlt);
     } else if (isSingletonDLT(dlt)) {

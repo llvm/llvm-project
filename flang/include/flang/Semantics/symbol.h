@@ -112,6 +112,8 @@ public:
     CHECK(result_ != nullptr);
     result_ = &result;
   }
+  bool defaultIgnoreTKR() const { return defaultIgnoreTKR_; }
+  void set_defaultIgnoreTKR(bool yes) { defaultIgnoreTKR_ = yes; }
 
 private:
   bool isInterface_{false}; // true if this represents an interface-body
@@ -124,6 +126,7 @@ private:
   // interface.  For MODULE PROCEDURE, this is the declared interface if it
   // appeared in an ancestor (sub)module.
   Symbol *moduleInterface_{nullptr};
+  bool defaultIgnoreTKR_{false};
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const SubprogramDetails &);
@@ -216,6 +219,8 @@ public:
   void set_commonBlock(const Symbol &commonBlock) {
     commonBlock_ = &commonBlock;
   }
+  common::IgnoreTKRSet ignoreTKR() const { return ignoreTKR_; }
+  void set_ignoreTKR(common::IgnoreTKRSet set) { ignoreTKR_ = set; }
   bool IsArray() const { return !shape_.empty(); }
   bool IsCoarray() const { return !coshape_.empty(); }
   bool CanBeAssumedShape() const {
@@ -230,6 +235,7 @@ private:
   const parser::Expr *unanalyzedPDTComponentInit_{nullptr};
   ArraySpec shape_;
   ArraySpec coshape_;
+  common::IgnoreTKRSet ignoreTKR_;
   const Symbol *commonBlock_{nullptr}; // common block this object is in
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ObjectEntityDetails &);

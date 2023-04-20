@@ -1794,10 +1794,10 @@ public:
     Put('\n');
   }
   void Unparse(const CompilerDirective::IgnoreTKR &x) {
-    const auto &list{std::get<std::list<const char *>>(x.t)};
-    if (!list.empty()) {
+    if (const auto &maybeList{
+            std::get<std::optional<std::list<const char *>>>(x.t)}) {
       Put("(");
-      for (const char *tkr : list) {
+      for (const char *tkr : *maybeList) {
         Put(*tkr);
       }
       Put(") ");

@@ -501,7 +501,8 @@ void PrintAddressDescription(
   }
 
   // Print the remaining threads, as an extra information, 1 line per thread.
-  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
+  if (flags()->print_live_threads_info)
+    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
 
   if (!num_descriptions_printed)
     // We exhausted our possibilities. Bail out.
