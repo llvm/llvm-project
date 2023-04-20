@@ -261,8 +261,8 @@ class ASTDecl<string name, string prefix, list<Trait> traits = []>
   let genVerifyDecl = 1;
 }
 
-def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl", "function.decl">;
-def ASTVarDeclAttr : ASTDecl<"VarDecl", "var.decl">;
-def ASTRecordDeclAttr : ASTDecl<"RecordDecl", "record.decl">;
+def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl", "fndecl">;
+def ASTVarDeclAttr : ASTDecl<"VarDecl", "vardecl">;
+def ASTRecordDeclAttr : ASTDecl<"RecordDecl", "recdecl">;
 
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS

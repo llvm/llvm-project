@@ -80,15 +80,39 @@ Type StructType::parse(mlir::AsmParser &parser) {
   llvm::SmallVector<Type> members;
   bool parsedBody = false;
 
+  auto parseASTAttribute = [&](Attribute &attr) {
+    auto optAttr = parser.parseOptionalAttribute(attr);
+    if (optAttr.has_value()) {
+      if (failed(*optAttr))
+        return false;
+      if (attr.isa<ASTFunctionDeclAttr>() || attr.isa<ASTRecordDeclAttr>() ||
+          attr.isa<ASTVarDeclAttr>())
+        return true;
+      parser.emitError(parser.getCurrentLocation(),
+                       "Unknown cir.struct attribute");
+      return false;
+    }
+    return false;
+  };
+
   while (mlir::succeeded(parser.parseOptionalComma())) {
     if (mlir::succeeded(parser.parseOptionalKeyword("incomplete")))
-      break;
-    // FIXME: add parsing for ast node.
+      continue;
+
     parsedBody = true;
     Type nextMember;
-    if (parser.parseType(nextMember))
-      return Type();
-    members.push_back(nextMember);
+    auto optTy = parser.parseOptionalType(nextMember);
+    if (optTy.has_value()) {
+      if (failed(*optTy))
+        return Type();
+      members.push_back(nextMember);
+      continue;
+    }
+
+    // Maybe it's an AST attribute: always last member, break.
+    Attribute astAttr;
+    if (parseASTAttribute(astAttr))
+      break;
   }
 
   if (parser.parseGreater())
