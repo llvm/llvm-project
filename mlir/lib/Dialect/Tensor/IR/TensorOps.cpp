@@ -1617,27 +1617,26 @@ void ExtractSliceOp::getAsmResultNames(
 /// rank-reduced, from the source type and the static representation of
 /// offsets, sizes and strides. Special sentinels encode the dynamic case.
 RankedTensorType ExtractSliceOp::inferResultType(
-    ShapedType sourceShapedTensorType, ArrayRef<int64_t> staticOffsets,
+    RankedTensorType sourceTensorType, ArrayRef<int64_t> staticOffsets,
     ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides) {
   // An extract_slice op may specify only a leading subset of offset/sizes/
   // strides in which case we complete with offset=0, sizes from memref type
   // and strides=1.
   assert(static_cast<int64_t>(staticSizes.size()) ==
-             sourceShapedTensorType.getRank() &&
+             sourceTensorType.getRank() &&
          "unexpected staticSizes not equal to rank of source");
-  return RankedTensorType::get(staticSizes,
-                               sourceShapedTensorType.getElementType());
+  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType());
 }
 
 RankedTensorType ExtractSliceOp::inferResultType(
-    ShapedType sourceShapedTensorType, ArrayRef<OpFoldResult> offsets,
+    RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
   SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
   SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  return ExtractSliceOp::inferResultType(sourceShapedTensorType, staticOffsets,
+  return ExtractSliceOp::inferResultType(sourceTensorType, staticOffsets,
                                          staticSizes, staticStrides);
 }
 
@@ -1756,22 +1755,21 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result, Value source,
   build(b, result, RankedTensorType(), source, offsets, sizes, strides, attrs);
 }
 
-template <typename OpTy>
 static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
-                                          OpTy op, Type expectedType) {
-  auto memrefType = expectedType.cast<ShapedType>();
+                                          Operation *op,
+                                          RankedTensorType expectedType) {
   switch (result) {
   case SliceVerificationResult::Success:
     return success();
   case SliceVerificationResult::RankTooLarge:
-    return op.emitError("expected rank to be smaller or equal to ")
+    return op->emitError("expected rank to be smaller or equal to ")
            << "the other rank. ";
   case SliceVerificationResult::SizeMismatch:
-    return op.emitError("expected type to be ")
+    return op->emitError("expected type to be ")
            << expectedType << " or a rank-reduced version. (size mismatch) ";
   case SliceVerificationResult::ElemTypeMismatch:
-    return op.emitError("expected element type to be ")
-           << memrefType.getElementType();
+    return op->emitError("expected element type to be ")
+           << expectedType.getElementType();
   default:
     llvm_unreachable("unexpected extract_slice op verification result");
   }
@@ -2147,9 +2145,9 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 /// Rank-reducing type verification for both InsertSliceOp and
 /// ParallelInsertSliceOp.
 static SliceVerificationResult verifyInsertSliceOp(
-    ShapedType srcType, ShapedType dstType, ArrayRef<int64_t> staticOffsets,
-    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides,
-    ShapedType *expectedType = nullptr) {
+    RankedTensorType srcType, RankedTensorType dstType,
+    ArrayRef<int64_t> staticOffsets, ArrayRef<int64_t> staticSizes,
+    ArrayRef<int64_t> staticStrides, RankedTensorType *expectedType = nullptr) {
   // insert_slice is the inverse of extract_slice, use the same type
   // inference.
   RankedTensorType expected = ExtractSliceOp::inferResultType(
@@ -2161,7 +2159,7 @@ static SliceVerificationResult verifyInsertSliceOp(
 
 /// Verifier for InsertSliceOp.
 LogicalResult InsertSliceOp::verify() {
-  ShapedType expectedType;
+  RankedTensorType expectedType;
   SliceVerificationResult result =
       verifyInsertSliceOp(getSourceType(), getType(), getStaticOffsets(),
                           getStaticSizes(), getStaticStrides(), &expectedType);
@@ -2334,8 +2332,10 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     auto src =
         (sourceCastSource ? *sourceCastSource : insertSliceOp.getSource());
     auto dst = (destCastSource ? *destCastSource : insertSliceOp.getDest());
-    auto srcType = src.getType().template cast<ShapedType>();
-    auto dstType = dst.getType().template cast<ShapedType>();
+    auto srcType = src.getType().template dyn_cast<RankedTensorType>();
+    auto dstType = dst.getType().template dyn_cast<RankedTensorType>();
+    if (!srcType || !dstType)
+      return failure();
     if (verifyInsertSliceOp(srcType, dstType, insertSliceOp.getStaticOffsets(),
                             insertSliceOp.getStaticSizes(),
                             insertSliceOp.getStaticStrides()) !=
@@ -3072,7 +3072,7 @@ LogicalResult ParallelInsertSliceOp::verify() {
     return this->emitError("expected ParallelCombiningOpInterface parent, got:")
            << *(getOperation()->getParentOp());
 
-  ShapedType expectedType;
+  RankedTensorType expectedType;
   SliceVerificationResult result =
       verifyInsertSliceOp(getSourceType(), getDestType(), getStaticOffsets(),
                           getStaticSizes(), getStaticStrides(), &expectedType);
@@ -3307,9 +3307,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
     return op->emitError("invalid zero tile factor");
 
   // Verify inner_dims_pos and outer_dims_perm.
-  ShapedType unpackedType = (std::is_same<OpTy, PackOp>::value)
-                                ? packOrUnPack.getSourceType()
-                                : packOrUnPack.getDestType();
+  RankedTensorType unpackedType = (std::is_same<OpTy, PackOp>::value)
+                                      ? packOrUnPack.getSourceType()
+                                      : packOrUnPack.getDestType();
   size_t unpackedRank = unpackedType.getRank();
   ArrayRef<int64_t> innerDimsPos = packOrUnPack.getInnerDimsPos();
   ArrayRef<int64_t> outerDimPerm = packOrUnPack.getOuterDimsPerm();
@@ -3344,7 +3344,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // Verify result shape is greater than the minimum expected
   // by the pack operation, and that the output shape
   // represents full tiles.
-  ShapedType expectedPackedType = PackOp::inferPackedType(
+  RankedTensorType expectedPackedType = PackOp::inferPackedType(
       unpackedType, packOrUnPack.getStaticTiles(), innerDimsPos, outerDimPerm);
   if (!areAllInBound(expectedPackedType.getShape(), packedType.getShape())) {
     return op->emitError("the shape of output is not large enough to hold the "
@@ -3594,10 +3594,10 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
 
 /// Get the expected packed type based on source type, tile factors, position of
 /// the inner tiles and permutation of the outer tiled loop.
-ShapedType PackOp::inferPackedType(ShapedType sourceType,
-                                   ArrayRef<int64_t> innerTileSizes,
-                                   ArrayRef<int64_t> innerDimsPos,
-                                   ArrayRef<int64_t> outerDimsPerm) {
+RankedTensorType PackOp::inferPackedType(RankedTensorType sourceType,
+                                         ArrayRef<int64_t> innerTileSizes,
+                                         ArrayRef<int64_t> innerDimsPos,
+                                         ArrayRef<int64_t> outerDimsPerm) {
   SmallVector<int64_t> resultShape = getPackOpResultTypeShape(
       sourceType.getShape(), innerTileSizes, innerDimsPos, outerDimsPerm);
   return RankedTensorType::get(resultShape, sourceType.getElementType());
