@@ -76,6 +76,9 @@ def WriteFCvtF16ToF32  : SchedWrite;
 def WriteFCvtF32ToF16  : SchedWrite;
 def WriteFCvtF16ToF64  : SchedWrite;
 def WriteFCvtF64ToF16  : SchedWrite;
+def WriteFCvtF32ToF32  : SchedWrite;
+def WriteFCvtF64ToF64  : SchedWrite;
+def WriteFCvtF16ToF16  : SchedWrite;
 
 def WriteFClass16   : SchedWrite;    // 16-bit floating point classify
 def WriteFClass32   : SchedWrite;    // 32-bit floating point classify
@@ -96,6 +99,10 @@ def WriteFMovF32ToI32     : SchedWrite;
 def WriteFMovI32ToF32     : SchedWrite;
 def WriteFMovF64ToI64     : SchedWrite;    // RV64I only
 def WriteFMovI64ToF64     : SchedWrite;    // RV64I only
+
+def WriteFLI16        : SchedWrite;    // Floating point constant load
+def WriteFLI32        : SchedWrite;    // Floating point constant load
+def WriteFLI64        : SchedWrite;    // Floating point constant load
 
 def WriteFLD16        : SchedWrite;    // Floating point sp load
 def WriteFLD32        : SchedWrite;    // Floating point sp load
@@ -182,6 +189,9 @@ def ReadFCvtF16ToF32     : SchedRead;
 def ReadFCvtF32ToF16     : SchedRead;
 def ReadFCvtF16ToF64     : SchedRead;
 def ReadFCvtF64ToF16     : SchedRead;
+def ReadFCvtF32ToF32     : SchedRead;
+def ReadFCvtF64ToF64     : SchedRead;
+def ReadFCvtF16ToF16     : SchedRead;
 def ReadFClass16         : SchedRead;
 def ReadFClass32         : SchedRead;
 def ReadFClass64         : SchedRead;
@@ -237,6 +247,21 @@ let Unsupported = true in {
 def : WriteRes<WriteSFB, []>;
 
 def : ReadAdvance<ReadSFB, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedZfa {
+let Unsupported = true in {
+def : WriteRes<WriteFCvtF32ToF32, []>;
+def : WriteRes<WriteFCvtF64ToF64, []>;
+def : WriteRes<WriteFCvtF16ToF16, []>;
+def : WriteRes<WriteFLI16, []>;
+def : WriteRes<WriteFLI32, []>;
+def : WriteRes<WriteFLI64, []>;
+
+def : ReadAdvance<ReadFCvtF32ToF32, 0>;
+def : ReadAdvance<ReadFCvtF64ToF64, 0>;
+def : ReadAdvance<ReadFCvtF16ToF16, 0>;
 } // Unsupported = true
 }
 
