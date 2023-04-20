@@ -683,7 +683,7 @@ invocation:
 
    .. code-block:: console
 
-     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=<type> -DCMAKE_BUILD_TYPE=type SRC_ROOT
+     % cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=<type> SRC_ROOT
 
 Between runs, CMake preserves the values set for all options. CMake has the
 following build types defined:
