@@ -5,6 +5,7 @@ add_startup_object(
     start.cpp
   DEPENDS
     libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.utils
   COMPILE_OPTIONS
     -ffreestanding # To avoid compiler warnings about calling the main function.
     -fno-builtin
