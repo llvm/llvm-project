@@ -65,9 +65,13 @@ namespace {
       //   If a pr-value initially has the type cv-T, where T is a
       //   cv-unqualified non-class, non-array type, the type of the
       //   expression is adjusted to T prior to any further analysis.
+      // C2x 6.5.4p6:
+      //   Preceding an expression by a parenthesized type name converts the
+      //   value of the expression to the unqualified, non-atomic version of
+      //   the named type.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
           !DestType->isArrayType()) {
-        DestType = DestType.getUnqualifiedType();
+        DestType = DestType.getAtomicUnqualifiedType();
       }
 
       if (const BuiltinType *placeholder =

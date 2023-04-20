@@ -12,11 +12,11 @@
 #include <__config>
 #include <__fwd/array.h>
 #include <__fwd/tuple.h>
-#include <__tuple/apply_cv.h>
 #include <__tuple/tuple_element.h>
 #include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_size.h>
 #include <__tuple/tuple_types.h>
+#include <__type_traits/apply_cv.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_reference.h>
 #include <cstddef>
@@ -40,20 +40,16 @@ struct __make_tuple_types_flat;
 template <template <class...> class _Tuple, class ..._Types, size_t ..._Idx>
 struct __make_tuple_types_flat<_Tuple<_Types...>, __tuple_indices<_Idx...>> {
   // Specialization for pair, tuple, and __tuple_types
-  template <class _Tp, class _ApplyFn = __apply_cv_t<_Tp>>
-  using __apply_quals _LIBCPP_NODEBUG = __tuple_types<
-      typename _ApplyFn::template __apply<__type_pack_element<_Idx, _Types...>>...
-    >;
+  template <class _Tp>
+  using __apply_quals _LIBCPP_NODEBUG = __tuple_types<__apply_cv_t<_Tp, __type_pack_element<_Idx, _Types...>>...>;
 };
 
 template <class _Vt, size_t _Np, size_t ..._Idx>
 struct __make_tuple_types_flat<array<_Vt, _Np>, __tuple_indices<_Idx...>> {
   template <size_t>
   using __value_type = _Vt;
-  template <class _Tp, class _ApplyFn = __apply_cv_t<_Tp>>
-  using __apply_quals = __tuple_types<
-      typename _ApplyFn::template __apply<__value_type<_Idx>>...
-    >;
+  template <class _Tp>
+  using __apply_quals = __tuple_types<__apply_cv_t<_Tp, __value_type<_Idx>>...>;
 };
 
 template <class _Tp, size_t _Ep = tuple_size<__libcpp_remove_reference_t<_Tp> >::value,
