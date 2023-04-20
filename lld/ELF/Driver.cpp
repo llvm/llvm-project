@@ -1421,7 +1421,9 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   // --threads= takes a positive integer and provides the default value for
-  // --thinlto-jobs=.
+  // --thinlto-jobs=. If unspecified, cap the number of threads since
+  // overhead outweighs optimization for used parallel algorithms for the
+  // non-LTO parts.
   if (auto *arg = args.getLastArg(OPT_threads)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
@@ -1430,6 +1432,9 @@ static void readConfigs(opt::InputArgList &args) {
             arg->getValue() + "'");
     parallel::strategy = hardware_concurrency(threads);
     config->thinLTOJobs = v;
+  } else if (parallel::strategy.compute_thread_count() > 16) {
+    log("set maximum concurrency to 16, specify --threads= to change");
+    parallel::strategy = hardware_concurrency(16);
   }
   if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
     config->thinLTOJobs = arg->getValue();
