@@ -226,7 +226,7 @@ let Predicates = [HasAMXCOMPLEX, In64BitMode] in {
       def TCMMRLFP16PS : I<0x6c, MRMSrcReg4VOp3, (outs TILE:$dst),
                             (ins TILE:$src1, TILE:$src2, TILE:$src3),
                             "tcmmrlfp16ps\t{$src3, $src2, $src1|$src1, $src2, $src3}",
-                            []>, VEX_4V, VEX_WIG, T8PS;
+                            []>, VEX_4V, WIG, T8PS;
 
     } // Constraints = "$src1 = $dst"
 

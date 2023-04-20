@@ -14,6 +14,7 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 static FailureOr<OpFoldResult>
 reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
@@ -54,7 +55,7 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
   }
 
   // Simplify and return bound.
-  mlir::canonicalizeMapAndOperands(&boundMap, &operands);
+  affine::canonicalizeMapAndOperands(&boundMap, &operands);
   // Check for special cases where no affine.apply op is needed.
   if (boundMap.isSingleConstant()) {
     // Bound is a constant: return an IntegerAttr.
@@ -69,10 +70,10 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
         operands[expr.getPosition() + boundMap.getNumDims()]);
   // General case: build affine.apply op.
   return static_cast<OpFoldResult>(
-      b.create<AffineApplyOp>(loc, boundMap, operands).getResult());
+      b.create<affine::AffineApplyOp>(loc, boundMap, operands).getResult());
 }
 
-FailureOr<OpFoldResult> mlir::reifyShapedValueDimBound(
+FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim, ValueBoundsConstraintSet::StopConditionFn stopCondition,
     bool closedUB) {
@@ -89,7 +90,7 @@ FailureOr<OpFoldResult> mlir::reifyShapedValueDimBound(
                          closedUB);
 }
 
-FailureOr<OpFoldResult> mlir::reifyIndexValueBound(
+FailureOr<OpFoldResult> mlir::affine::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d) {

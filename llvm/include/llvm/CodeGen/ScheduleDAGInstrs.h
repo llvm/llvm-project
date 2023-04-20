@@ -152,7 +152,7 @@ namespace llvm {
     MachineBasicBlock::iterator RegionEnd;
 
     /// Instructions in this region (distance(RegionBegin, RegionEnd)).
-    unsigned NumRegionInstrs;
+    unsigned NumRegionInstrs = 0;
 
     /// After calling BuildSchedGraph, each machine instruction in the current
     /// scheduling region is mapped to an SUnit.

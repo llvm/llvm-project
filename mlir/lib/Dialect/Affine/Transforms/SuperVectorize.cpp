@@ -31,11 +31,14 @@
 #include <optional>
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINEVECTORIZE
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 using namespace mlir;
+using namespace affine;
 using namespace vector;
 
 ///
@@ -585,7 +588,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 static std::optional<NestedPattern>
 makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
             ArrayRef<int64_t> fastestVaryingPattern) {
-  using matcher::For;
+  using affine::matcher::For;
   int64_t d0 = fastestVaryingPattern.empty() ? -1 : fastestVaryingPattern[0];
   int64_t d1 = fastestVaryingPattern.size() < 2 ? -1 : fastestVaryingPattern[1];
   int64_t d2 = fastestVaryingPattern.size() < 3 ? -1 : fastestVaryingPattern[2];
@@ -606,7 +609,7 @@ makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
 }
 
 static NestedPattern &vectorTransferPattern() {
-  static auto pattern = matcher::Op([](Operation &op) {
+  static auto pattern = affine::matcher::Op([](Operation &op) {
     return isa<vector::TransferReadOp, vector::TransferWriteOp>(op);
   });
   return pattern;
@@ -616,7 +619,7 @@ namespace {
 
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
-struct Vectorize : public impl::AffineVectorizeBase<Vectorize> {
+struct Vectorize : public affine::impl::AffineVectorizeBase<Vectorize> {
   using Base::Base;
 
   void runOnOperation() override;
@@ -1796,7 +1799,6 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
   return success();
 }
 
-namespace mlir {
 
 /// External utility to vectorize affine loops in 'loops' using the n-D
 /// vectorization factors in 'vectorSizes'. By default, each vectorization
@@ -1806,10 +1808,10 @@ namespace mlir {
 /// If `reductionLoops` is not empty, the given reduction loops may be
 /// vectorized along the reduction dimension.
 /// TODO: Vectorizing reductions is supported only for 1-D vectorization.
-void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
-                          ArrayRef<int64_t> vectorSizes,
-                          ArrayRef<int64_t> fastestVaryingPattern,
-                          const ReductionLoopMap &reductionLoops) {
+void mlir::affine::vectorizeAffineLoops(
+    Operation *parentOp, DenseSet<Operation *> &loops,
+    ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern,
+    const ReductionLoopMap &reductionLoops) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
   vectorizeLoops(parentOp, loops, vectorSizes, fastestVaryingPattern,
@@ -1851,14 +1853,12 @@ void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
 /// loops = {{%i2}}, to vectorize only the first innermost loop;
 /// loops = {{%i3}}, to vectorize only the second innermost loop;
 /// loops = {{%i1}}, to vectorize only the middle loop.
-LogicalResult
-vectorizeAffineLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
-                        const VectorizationStrategy &strategy) {
+LogicalResult mlir::affine::vectorizeAffineLoopNest(
+    std::vector<SmallVector<AffineForOp, 2>> &loops,
+    const VectorizationStrategy &strategy) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
   if (failed(verifyLoopNesting(loops)))
     return failure();
   return vectorizeLoopNest(loops, strategy);
 }
-
-} // namespace mlir

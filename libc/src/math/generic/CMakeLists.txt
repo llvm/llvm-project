@@ -1205,21 +1205,6 @@ add_entrypoint_object(
     -O2
 )
 
-add_object_library(
-  dp_trig
-  SRCS
-    dp_trig.cpp
-  HDRS
-    dp_trig.h
-  DEPENDS
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.FPUtil.xfloat
-    libc.src.__support.uint
-  COMPILE_OPTIONS
-   -O3
-)
-
 add_entrypoint_object(
   fmod
   SRCS
@@ -1399,18 +1384,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  asin
-  SRCS
-    asin.cpp
-  HDRS
-    ../asin.h
-  DEPENDS
-    .asinf
-  COMPILE_OPTIONS
-    -O3
-)
-
-add_entrypoint_object(
   acosf
   SRCS
     acosf.cpp
@@ -1439,19 +1412,6 @@ add_entrypoint_object(
     .math_utils
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.optimization
-  COMPILE_OPTIONS
-    -O3
-)
-
-add_entrypoint_object(
-  pow
-  SRCS
-    pow.cpp
-  HDRS
-    ../pow.h
-  DEPENDS
-    .expf
-    .logf
   COMPILE_OPTIONS
     -O3
 )

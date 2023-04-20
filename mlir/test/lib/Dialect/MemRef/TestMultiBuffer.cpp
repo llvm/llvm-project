@@ -24,7 +24,7 @@ struct TestMultiBufferingPass
   TestMultiBufferingPass(const TestMultiBufferingPass &pass)
       : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect>();
+    registry.insert<affine::AffineDialect>();
   }
   StringRef getArgument() const final { return "test-multi-buffering"; }
   StringRef getDescription() const final {

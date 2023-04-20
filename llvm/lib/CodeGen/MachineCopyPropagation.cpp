@@ -393,7 +393,7 @@ private:
 
   CopyTracker Tracker;
 
-  bool Changed;
+  bool Changed = false;
 };
 
 } // end anonymous namespace

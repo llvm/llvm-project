@@ -167,6 +167,8 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
       Allocator->deallocate(P, Origin, Size);
     }
   }
+
+  Allocator->printStats();
 }
 
 #define SCUDO_MAKE_BASIC_TEST(SizeLog)                                         \

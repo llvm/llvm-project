@@ -14,34 +14,10 @@
 
 namespace __llvm_libc {
 
-namespace internal {
-
-static constexpr size_t BUFFER_SIZE = sizeof(rpc::Buffer) - sizeof(uint64_t);
-static constexpr size_t MAX_STRING_SIZE = BUFFER_SIZE;
-
-LIBC_INLINE void send_null_terminated(cpp::string_view src) {
-  rpc::client.run(
-      [&](rpc::Buffer *buffer) {
-        buffer->data[0] = rpc::Opcode::PRINT_TO_STDERR;
-        char *data = reinterpret_cast<char *>(&buffer->data[1]);
-        inline_memcpy(data, src.data(), src.size());
-        data[src.size()] = '\0';
-      },
-      [](rpc::Buffer *) { /* void */ });
-}
-
-} // namespace internal
-
 void write_to_stderr(cpp::string_view msg) {
-  bool send_empty_string = true;
-  for (; !msg.empty();) {
-    const auto chunk = msg.substr(0, internal::MAX_STRING_SIZE);
-    internal::send_null_terminated(chunk);
-    msg.remove_prefix(chunk.size());
-    send_empty_string = false;
-  }
-  if (send_empty_string)
-    internal::send_null_terminated("");
+  rpc::Port port = rpc::client.open(rpc::PRINT_TO_STDERR);
+  port.send_n(msg.data(), msg.size() + 1);
+  port.close();
 }
 
 } // namespace __llvm_libc

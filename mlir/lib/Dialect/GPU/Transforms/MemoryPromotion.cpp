@@ -81,8 +81,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
            GPUDialect::getNumWorkgroupDimensions())))) {
     Value v = en.value();
     auto loop = cast<scf::ForOp>(v.getParentRegion()->getParentOp());
-    mapLoopToProcessorIds(loop, {threadIds[en.index()]},
-                          {blockDims[en.index()]});
+    affine::mapLoopToProcessorIds(loop, {threadIds[en.index()]},
+                                  {blockDims[en.index()]});
   }
 }
 
