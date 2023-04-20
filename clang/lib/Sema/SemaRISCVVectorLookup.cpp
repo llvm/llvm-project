@@ -253,7 +253,7 @@ void RISCVIntrinsicManagerImpl::InitIntrinsicList() {
 
         // Create non-masked policy intrinsic.
         if (Record.UnMaskedPolicyScheme != PolicyScheme::SchemeNone) {
-          for (auto P : SupportedUnMaskedPolicies) {
+          for (const auto &P : SupportedUnMaskedPolicies) {
             llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicProtoSeq, /*IsMasked=*/false,
