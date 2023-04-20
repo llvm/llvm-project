@@ -1,4 +1,5 @@
 add_clang_library(clangAnalysisFlowSensitive
+  Arena.cpp
   ControlFlowContext.cpp
   DataflowAnalysisContext.cpp
   DataflowEnvironment.cpp

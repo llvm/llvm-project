@@ -262,7 +262,8 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
 }
 
 Environment::Environment(DataflowAnalysisContext &DACtx)
-    : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
+    : DACtx(&DACtx),
+      FlowConditionToken(&DACtx.arena().makeFlowConditionToken()) {}
 
 Environment::Environment(const Environment &Other)
     : DACtx(Other.DACtx), CallStack(Other.CallStack),
@@ -380,7 +381,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
     QualType ParamType = Param->getType();
     if (ParamType->isReferenceType()) {
-      auto &Val = create<ReferenceValue>(*ArgLoc);
+      auto &Val = arena().create<ReferenceValue>(*ArgLoc);
       setValue(Loc, Val);
     } else if (auto *ArgVal = getValue(*ArgLoc)) {
       setValue(Loc, *ArgVal);
@@ -706,7 +707,7 @@ Value *Environment::createValueUnlessSelfReferential(
     // with integers, and so distinguishing them serves no purpose, but could
     // prevent convergence.
     CreatedValuesCount++;
-    return &create<IntegerValue>();
+    return &arena().create<IntegerValue>();
   }
 
   if (Type->isReferenceType() || Type->isPointerType()) {
@@ -724,9 +725,9 @@ Value *Environment::createValueUnlessSelfReferential(
     }
 
     if (Type->isReferenceType())
-      return &create<ReferenceValue>(PointeeLoc);
+      return &arena().create<ReferenceValue>(PointeeLoc);
     else
-      return &create<PointerValue>(PointeeLoc);
+      return &arena().create<PointerValue>(PointeeLoc);
   }
 
   if (Type->isRecordType()) {
@@ -746,7 +747,7 @@ Value *Environment::createValueUnlessSelfReferential(
       Visited.erase(FieldType.getCanonicalType());
     }
 
-    return &create<StructValue>(std::move(FieldValues));
+    return &arena().create<StructValue>(std::move(FieldValues));
   }
 
   return nullptr;
