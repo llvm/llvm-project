@@ -940,7 +940,8 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
   bool version_OK = SymbolFileDWARF::SupportedVersion(header.m_version);
-  bool addr_size_OK = (header.m_addr_size == 4) || (header.m_addr_size == 8);
+  bool addr_size_OK = (header.m_addr_size == 2) || (header.m_addr_size == 4) ||
+                      (header.m_addr_size == 8);
   bool type_offset_OK =
       !header.IsTypeUnit() || (header.m_type_offset <= header.GetLength());
 
