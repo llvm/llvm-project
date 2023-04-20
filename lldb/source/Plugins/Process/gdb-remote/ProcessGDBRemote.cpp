@@ -3781,8 +3781,7 @@ ProcessGDBRemote::GetExtendedInfoForThread(lldb::tid_t tid) {
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -3853,8 +3852,7 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender(
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -3876,8 +3874,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -3909,8 +3906,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
           response.GetResponseType();
       if (response_type == StringExtractorGDBRemote::eResponse) {
         if (!response.Empty()) {
-          object_sp =
-              StructuredData::ParseJSON(std::string(response.GetStringRef()));
+          object_sp = StructuredData::ParseJSON(response.GetStringRef());
         }
       }
     }
@@ -5087,8 +5083,7 @@ ParseStructuredDataPacket(llvm::StringRef packet) {
   }
 
   // This is an asynchronous JSON packet, destined for a StructuredDataPlugin.
-  StructuredData::ObjectSP json_sp =
-      StructuredData::ParseJSON(std::string(packet));
+  StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(packet);
   if (log) {
     if (json_sp) {
       StreamString json_str;
