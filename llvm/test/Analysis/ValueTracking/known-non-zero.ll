@@ -261,10 +261,7 @@ define i1 @lshr_nz_bounded_cnt(i32 %cnt, i32 %y) {
 ; CHECK-LABEL: @lshr_nz_bounded_cnt(
 ; CHECK-NEXT:    [[CNT_ULT4:%.*]] = icmp ult i32 [[CNT:%.*]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CNT_ULT4]])
-; CHECK-NEXT:    [[VAL:%.*]] = or i32 [[Y:%.*]], 90
-; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[VAL]], [[CNT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cnt_ult4 = icmp ult i32 %cnt, 4
   call void @llvm.assume(i1 %cnt_ult4)
@@ -276,11 +273,7 @@ define i1 @lshr_nz_bounded_cnt(i32 %cnt, i32 %y) {
 
 define <2 x i1> @ashr_nz_bounded_cnt_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @ashr_nz_bounded_cnt_vec(
-; CHECK-NEXT:    [[CNT:%.*]] = and <2 x i32> [[X:%.*]], <i32 16, i32 24>
-; CHECK-NEXT:    [[VAL:%.*]] = or <2 x i32> [[Y:%.*]], <i32 402784272, i32 268697601>
-; CHECK-NEXT:    [[SHL:%.*]] = ashr <2 x i32> [[VAL]], [[CNT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[SHL]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cnt = and <2 x i32> %x, <i32 16, i32 24>
   %val = or <2 x i32> %y, <i32 402784272, i32 268697601>
@@ -332,9 +325,7 @@ define i1 @lshr_nonzero_and_shift_out_zeros(i32 %cnt, i32 %y) {
 ; CHECK-NEXT:    [[VAL:%.*]] = and i32 [[Y:%.*]], -131072
 ; CHECK-NEXT:    [[VAL_NZ:%.*]] = icmp ne i32 [[VAL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[VAL_NZ]])
-; CHECK-NEXT:    [[SHL:%.*]] = lshr i32 [[VAL]], [[CNT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cnt_ult = icmp ult i32 %cnt, 4
   call void @llvm.assume(i1 %cnt_ult)
@@ -352,13 +343,10 @@ define i1 @lshr_nonzero_and_shift_out_zeros(i32 %cnt, i32 %y) {
 
 define i1 @ashr_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 ; CHECK-LABEL: @ashr_nonzero_and_shift_out_zeros(
-; CHECK-NEXT:    [[CNT:%.*]] = and i32 [[CCNT:%.*]], 7
 ; CHECK-NEXT:    [[VAL:%.*]] = and i32 [[Y:%.*]], -131072
 ; CHECK-NEXT:    [[VAL_NZ:%.*]] = icmp ne i32 [[VAL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[VAL_NZ]])
-; CHECK-NEXT:    [[SHL:%.*]] = ashr i32 [[VAL]], [[CNT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cnt = and i32 %ccnt, 7
   %val = and i32 %y, -131072
@@ -372,13 +360,10 @@ define i1 @ashr_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 
 define i1 @shl_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 ; CHECK-LABEL: @shl_nonzero_and_shift_out_zeros(
-; CHECK-NEXT:    [[CNT:%.*]] = and i32 [[CCNT:%.*]], 6
 ; CHECK-NEXT:    [[VAL:%.*]] = and i32 [[Y:%.*]], 131071
 ; CHECK-NEXT:    [[VAL_NZ:%.*]] = icmp ne i32 [[VAL]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[VAL_NZ]])
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL]], [[CNT]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[SHL]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cnt = and i32 %ccnt, 6
   %val = and i32 %y, 131071
