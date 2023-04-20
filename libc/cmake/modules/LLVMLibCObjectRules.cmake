@@ -68,27 +68,28 @@ endfunction()
 # The PTX feature is primarily based on the CUDA toolchain version. We want to
 # be able to target NVPTX without an existing CUDA installation, so we need to
 # set this manually. This simply sets the PTX feature to the minimum required
-# for the features we wish to use on that target.
+# for the features we wish to use on that target. The minimum PTX features used
+# here roughly corresponds to the CUDA 9.0 release.
 # Adjust as needed for desired PTX features.
 function(get_nvptx_compile_options output_var gpu_arch)
   set(nvptx_options "")
   list(APPEND nvptx_options "-march=${gpu_arch}")
   if(${gpu_arch} STREQUAL "sm_35")
-    list(APPEND nvptx_options "--cuda-feature=+ptx42")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_37")
-    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_50")
-    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_52")
-    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_53")
-    list(APPEND nvptx_options "--cuda-feature=+ptx43")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_60")
-    list(APPEND nvptx_options "--cuda-feature=+ptx50")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_61")
-    list(APPEND nvptx_options "--cuda-feature=+ptx50")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_62")
-    list(APPEND nvptx_options "--cuda-feature=+ptx50")
+    list(APPEND nvptx_options "--cuda-feature=+ptx60")
   elseif(${gpu_arch} STREQUAL "sm_70")
     list(APPEND nvptx_options "--cuda-feature=+ptx63")
   elseif(${gpu_arch} STREQUAL "sm_72")
