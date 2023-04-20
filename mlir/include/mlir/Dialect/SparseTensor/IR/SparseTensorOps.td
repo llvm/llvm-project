@@ -123,7 +123,7 @@ def SparseTensor_PackOp : SparseTensor_Op<"pack", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure]>,
+def SparseTensor_UnpackOp : SparseTensor_Op<"unpack">,
     Arguments<(ins AnySparseTensor:$tensor)>,
     Results<(outs 1DTensorOf<[AnyType]>:$values,
                   2DTensorOf<[AnySignlessIntegerOrIndex]>:$coordinates,
