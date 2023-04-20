@@ -362,7 +362,6 @@ define amdgpu_kernel void @raw_buffer_atomic_min_rtn_f32_off4_slc(<4 x i32> inre
 ; G_GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; G_GFX1100-NEXT:    ds_store_b32 v1, v0
 ; G_GFX1100-NEXT:    s_endpgm
-; GFX1010-LABEL: raw_buffer_atomic_min_rtn_f32_off4_slc:
 main_body:
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fmin.f32(float %data, <4 x i32> %rsrc, i32 %vindex, i32 4, i32 2)
   store float %ret, ptr addrspace(3) %out, align 8
