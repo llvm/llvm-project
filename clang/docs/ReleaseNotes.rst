@@ -228,6 +228,9 @@ Improvements to Clang's diagnostics
 - Clang's "static assertion failed" diagnostic now points to the static assertion
   expression instead of pointing to the ``static_assert`` token.
   (`#61951 <https://github.com/llvm/llvm-project/issues/61951>`_)
+- ``-Wformat`` now recognizes ``%lb`` for the ``printf``/``scanf`` family of
+  functions.
+  (`#62247: <https://github.com/llvm/llvm-project/issues/62247>`_).
 
 Bug Fixes in This Version
 -------------------------

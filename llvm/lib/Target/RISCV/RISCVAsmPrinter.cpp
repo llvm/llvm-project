@@ -229,7 +229,7 @@ void RISCVAsmPrinter::emitAttributes() {
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
-  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo());
+  RTS.emitTargetAttributes(*TM.getMCSubtargetInfo(), /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {

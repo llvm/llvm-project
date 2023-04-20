@@ -39,11 +39,15 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+If you used **ninja** as your build system then running ``ninja check-cxx`` will run
+all the tests in the libc++ testsuite.
+
 .. note::
   If you used the Bootstrapping build instead of the default runtimes build, the
   ``cxx-test-depends`` target is instead named ``runtimes-test-depends``, and
   you will need to prefix ``<build>/runtimes/runtimes-<target>-bins/`` to the
-  paths of all tests.
+  paths of all tests. For example, to run all the libcxx tests you can do
+  ``<build>/bin/llvm-lit -sv <build>/runtimes/runtimes-bins/libcxx/test``.
 
 In the default configuration, the tests are built against headers that form a
 fake installation root of libc++. This installation root has to be updated when

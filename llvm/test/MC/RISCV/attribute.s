@@ -2,6 +2,10 @@
 
 # RUN: llvm-mc %s -triple=riscv32 -filetype=asm | FileCheck %s
 # RUN: llvm-mc %s -triple=riscv64 -filetype=asm | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv32 -filetype=asm -riscv-add-build-attributes \
+# RUN:   | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv64 -filetype=asm -riscv-add-build-attributes \
+# RUN:   | FileCheck %s
 
 .attribute stack_align, 16
 # CHECK: attribute      4, 16

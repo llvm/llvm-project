@@ -7133,6 +7133,16 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     if (GatherShuffle) {
       assert((Entries.size() == 1 || Entries.size() == 2) &&
              "Expected shuffle of 1 or 2 entries.");
+      if (*GatherShuffle == TTI::SK_PermuteSingleSrc &&
+          Entries.front()->isSame(E->Scalars)) {
+        // Perfect match in the graph, will reuse the previously vectorized
+        // node. Cost is 0.
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: perfect diamond match for gather bundle that starts with "
+            << *VL.front() << ".\n");
+        return 0;
+      }
       if (!Resized) {
         unsigned VF1 = Entries.front()->getVectorFactor();
         unsigned VF2 = Entries.back()->getVectorFactor();
@@ -7145,21 +7155,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         if (Mask[I] != UndefMaskElem)
           GatheredScalars[I] = PoisonValue::get(ScalarTy);
       }
-      LLVM_DEBUG(
-          int Limit = Mask.size() * 2;
-          if (*GatherShuffle == TTI::SK_PermuteSingleSrc &&
-              all_of(Mask, [=](int Idx) { return Idx < Limit; }) &&
-              ShuffleVectorInst::isIdentityMask(Mask)) {
-            // Perfect match in the graph, will reuse the previously
-            // vectorized node. Cost is 0.
-            dbgs() << "SLP: perfect diamond match for gather bundle "
-                      "that starts with "
-                   << *VL.front() << ".\n";
-          } else {
-            dbgs() << "SLP: shuffled " << Entries.size()
-                   << " entries for bundle that starts with " << *VL.front()
-                   << ".\n";
-          });
+      LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
+                        << " entries for bundle that starts with "
+                        << *VL.front() << ".\n";);
       if (Entries.size() == 1)
         Estimator.add(Entries.front(), Mask);
       else
@@ -9585,6 +9583,27 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       }
       assert((Entries.size() == 1 || Entries.size() == 2) &&
              "Expected shuffle of 1 or 2 entries.");
+      if (*GatherShuffle == TTI::SK_PermuteSingleSrc &&
+          Entries.front()->isSame(E->Scalars)) {
+        // Perfect match in the graph, will reuse the previously vectorized
+        // node. Cost is 0.
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: perfect diamond match for gather bundle that starts with "
+            << *E->Scalars.front() << ".\n");
+        // Restore the mask for previous partially matched values.
+        for (auto [I, V] : enumerate(E->Scalars)) {
+          if (isa<PoisonValue>(V)) {
+            Mask[I] = UndefMaskElem;
+            continue;
+          }
+          if (Mask[I] == UndefMaskElem)
+            Mask[I] = Entries.front()->findLaneForValue(V);
+        }
+        ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
+        Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+        return Vec;
+      }
       if (!Resized) {
         unsigned VF1 = Entries.front()->getVectorFactor();
         unsigned VF2 = Entries.back()->getVectorFactor();
