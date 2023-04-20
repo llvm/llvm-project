@@ -4584,6 +4584,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
         // sitofp and uitofp turn into +0.0 for zero.
         Known.knownNot(fcNegZero);
+
+        // Integers cannot be subnormal
+        Known.knownNot(fcSubnormal);
+
         if (IID == Intrinsic::experimental_constrained_uitofp)
           Known.signBitIsZero();
 
@@ -4692,6 +4696,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   case Instruction::UIToFP: {
     // Cannot produce nan
     Known.knownNot(fcNan);
+
+    // Integers cannot be subnormal
+    Known.knownNot(fcSubnormal);
 
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
