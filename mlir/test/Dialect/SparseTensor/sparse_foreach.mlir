@@ -139,3 +139,33 @@ func.func @foreach_print_slice(%A: tensor<4x4xf64, #CSR_SLICE>) {
   }
   return
 }
+
+#BCOO = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed-hi-nu", "singleton" ],
+}>
+
+// CHECK-LABEL:   func.func @foreach_bcoo(
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x4x4xf64, #sparse_tensor.encoding<{{.*}}>>) {
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 4 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<4x4x4xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<4x4x4xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xf64>
+// CHECK:           scf.for %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_1]] step %[[VAL_3]] {
+// CHECK:             %[[VAL_8:.*]] = arith.muli %[[VAL_7]], %[[VAL_4]] : index
+// CHECK:             %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_9]]] : memref<?xindex>
+// CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_2]] to %[[VAL_10]] step %[[VAL_3]] {
+// CHECK:               %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xf64>
+// CHECK:               "test.use"(%[[VAL_12]]) : (f64) -> ()
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return
+func.func @foreach_bcoo(%A: tensor<4x4x4xf64, #BCOO>) {
+  sparse_tensor.foreach in %A : tensor<4x4x4xf64, #BCOO> do {
+  ^bb0(%1: index, %2: index, %3: index,  %v: f64) :
+    "test.use" (%v) : (f64) -> ()
+  }
+  return
+}

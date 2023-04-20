@@ -18,15 +18,16 @@
 #include <optional>
 
 namespace mlir {
-
 class AffineExpr;
-class AffineForOp;
 class AffineMap;
 class BlockArgument;
 class MemRefType;
-class NestedPattern;
 class Operation;
 class Value;
+
+namespace affine {
+class AffineForOp;
+class NestedPattern;
 
 /// Returns the trip count of the loop as an affine map with its corresponding
 /// operands if the latter is expressible as an affine expression, and nullptr
@@ -83,6 +84,7 @@ bool isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
 // the support.
 bool isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_ANALYSIS_LOOPANALYSIS_H

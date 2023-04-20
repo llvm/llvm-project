@@ -18,8 +18,6 @@
 namespace mlir {
 
 // Forward declarations.
-class AffineApplyOp;
-class AffineForOp;
 class AffineMap;
 class Block;
 class Location;
@@ -29,6 +27,11 @@ class ShapedType;
 class Value;
 class VectorType;
 class VectorTransferOpInterface;
+
+namespace affine {
+class AffineApplyOp;
+class AffineForOp;
+} // namespace affine
 
 namespace vector {
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on

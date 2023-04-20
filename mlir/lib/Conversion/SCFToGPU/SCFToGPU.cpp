@@ -36,6 +36,7 @@
 #define DEBUG_TYPE "loops-to-gpu"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::scf;
 
 // Name of internal attribute to mark visited operations during conversion.

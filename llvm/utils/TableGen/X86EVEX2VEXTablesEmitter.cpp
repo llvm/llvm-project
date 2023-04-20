@@ -116,8 +116,8 @@ public:
     RecognizableInstrBase EVEXRI(*EVEXInst);
     bool VEX_W = VEXRI.HasREX_W;
     bool EVEX_W = EVEXRI.HasREX_W;
-    bool VEX_WIG  = VEXRI.IgnoresVEX_W;
-    bool EVEX_WIG  = EVEXRI.IgnoresVEX_W;
+    bool VEX_WIG  = VEXRI.IgnoresW;
+    bool EVEX_WIG  = EVEXRI.IgnoresW;
     bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||

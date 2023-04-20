@@ -220,6 +220,9 @@ TEST_F(LlvmLibcStrToDTest, FuzzFailures) {
       "200000000000000000E608",
       1462, uint64_t(0x7ff0000000000000), ERANGE);
 
+  // Same as above but for hex.
+  run_test("0x0164810157p2047", 17, uint64_t(0x7ff0000000000000), ERANGE);
+
   // This bug was in the handling of very large exponents in the exponent
   // marker. Previously anything greater than 10,000 would be set to 10,000.
   // This caused incorrect behavior if there were more than 10,000 '0's in the

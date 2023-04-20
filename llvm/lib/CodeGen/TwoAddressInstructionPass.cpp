@@ -95,7 +95,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   LiveVariables *LV = nullptr;
   LiveIntervals *LIS = nullptr;
   AliasAnalysis *AA = nullptr;
-  CodeGenOpt::Level OptLevel;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::None;
 
   // The current basic block being processed.
   MachineBasicBlock *MBB = nullptr;

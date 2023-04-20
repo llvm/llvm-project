@@ -1169,8 +1169,8 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
   AffineExpr s0 = builder.getAffineSymbolExpr(0);
   AffineExpr s1 = builder.getAffineSymbolExpr(1);
   Operation *splitPoint =
-      makeComposedAffineApply(builder, target.getLoc(), s0 * s1,
-                              {spec->lowTileSize, spec->lowTripCount});
+      affine::makeComposedAffineApply(builder, target.getLoc(), s0 * s1,
+                                      {spec->lowTileSize, spec->lowTripCount});
   Operation *lowTileSize = spec->lowTileSize.getDefiningOp();
   Operation *highTileSize = spec->highTileSize.getDefiningOp();
   assert(lowTileSize && highTileSize && splitPoint &&
@@ -1420,7 +1420,7 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
     AffineExpr d0, s0;
     bindDims(rewriter.getContext(), d0);
     bindSymbols(rewriter.getContext(), s0);
-    adjustedPackedSizes.push_back(makeComposedFoldedAffineApply(
+    adjustedPackedSizes.push_back(affine::makeComposedFoldedAffineApply(
         rewriter, genericOp->getLoc(), d0.ceilDiv(s0) * s0,
         {loopRanges[adjustedPackedSizes.size()].size,
          rewriter.getIndexAttr(paddedSizesNextMultipleOf[i])}));
@@ -1439,7 +1439,11 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
 DiagnosedSilenceableFailure
 PackGreedilyOp::apply(transform::TransformResults &transformResults,
                       transform::TransformState &state) {
-  ArrayRef<Operation *> targetOps = state.getPayloadOps(getTarget());
+  ArrayRef<Operation *> targetOpsView = state.getPayloadOps(getTarget());
+  // Store payload ops into a separate SmallVector because the TrackingListener
+  // removes erased ops from the transform state.
+  SmallVector<Operation *> targetOps(targetOpsView.begin(),
+                                     targetOpsView.end());
 
   SmallVector<Operation *> results;
   TrackingListener listener(state, *this);
@@ -1983,8 +1987,8 @@ transform::ScalarizeOp::applyToOne(LinalgOp target,
     TrackingListener listener(state, *this);
     IRRewriter rewriter(getContext(), &listener);
     SmallVector<OpFoldResult> shapeSizes =
-        makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
-                                                 allShapeSizes);
+        affine::makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
+                                                         allShapeSizes);
     // If the shape size is dynamic, tile by 1.
     // Otherwise, do not tile (i.e. tile size 0).
     for (OpFoldResult shapeSize : shapeSizes) {
@@ -2773,7 +2777,10 @@ transform::TileToForallOp::apply(transform::TransformResults &transformResults,
   TrackingListener listener(state, *this);
   IRRewriter rewriter(getContext(), &listener);
   auto transformOp = cast<TransformOpInterface>(getOperation());
-  ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
+  ArrayRef<Operation *> targetsView = state.getPayloadOps(getTarget());
+  // Store payload ops into a separate SmallVector because the TrackingListener
+  // removes erased ops from the transform state.
+  SmallVector<Operation *> targets(targetsView.begin(), targetsView.end());
 
   // Result payload ops.
   SmallVector<Operation *> tileOps;
@@ -3351,7 +3358,7 @@ public:
   void init() {
     declareDependentDialect<pdl::PDLDialect>();
     declareDependentDialect<LinalgDialect>();
-    declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<affine::AffineDialect>();
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<vector::VectorDialect>();

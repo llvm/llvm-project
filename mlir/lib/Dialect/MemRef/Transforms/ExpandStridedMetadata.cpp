@@ -32,7 +32,9 @@ namespace memref {
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
+
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 

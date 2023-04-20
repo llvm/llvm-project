@@ -61,7 +61,7 @@ static Value buildLinearThreadId(RewriterBase &rewriter, Location loc,
       rewriter.create<ThreadIdOp>(loc, indexType, Dimension::z).getResult()};
   threadsAndWorkGroups.push_back(blockDimsOfr[0]);
   threadsAndWorkGroups.push_back(blockDimsOfr[1]);
-  OpFoldResult ofr = makeComposedFoldedAffineApply(
+  OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
       rewriter, loc, tx + ty * BDX + tz * BDX * BDY, threadsAndWorkGroups);
   return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
 }
@@ -137,7 +137,7 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
       // `forallMappingSizes`.
       Value linearId = buildLinearThreadId(rewriter, loc, this->blockDimsOfr);
       AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
-      OpFoldResult warpIdOfr = makeComposedFoldedAffineApply(
+      OpFoldResult warpIdOfr = affine::makeComposedFoldedAffineApply(
           rewriter, loc, d0.floorDiv(kWarpSize), {linearId});
       Value warpId = getValueOrCreateConstantIndexOp(rewriter, loc, warpIdOfr);
       // Sizes in [x, y, z] -> [z, y x] order to properly compute strides in
@@ -149,7 +149,8 @@ struct GpuWarpIdBuilder : public GpuIdBuilder {
       SmallVector<Value> ids;
       // Reverse back to be in [x, y, z] order.
       for (AffineExpr e : llvm::reverse(delinearizingExprs))
-        ids.push_back(makeComposedAffineApply(rewriter, loc, e, warpId));
+        ids.push_back(
+            affine::makeComposedAffineApply(rewriter, loc, e, warpId));
 
       // clang-format off
       LDBG("----linearId: " << linearId);
@@ -204,7 +205,8 @@ struct GpuLinearIdBuilder : public GpuIdBuilder {
       SmallVector<Value> ids;
       // Reverse back to be in [x, y, z] order.
       for (AffineExpr e : llvm::reverse(delinearizingExprs))
-        ids.push_back(makeComposedAffineApply(rewriter, loc, e, linearId));
+        ids.push_back(
+            affine::makeComposedAffineApply(rewriter, loc, e, linearId));
 
       // clang-format off
       LLVM_DEBUG(llvm::interleaveComma(reverseBasisSizes,

@@ -64,7 +64,8 @@ def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createPromoteToAffinePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect",
+    "mlir::affine::AffineDialect"
   ];
 }
 
@@ -78,7 +79,8 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createAffineDemotionPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect",
+    "mlir::affine::AffineDialect"
   ];
 }
 
