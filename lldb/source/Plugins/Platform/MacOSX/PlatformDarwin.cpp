@@ -164,8 +164,7 @@ void PlatformDarwin::DebuggerInitialize(
     const bool is_global_setting = false;
     PluginManager::CreateSettingForPlatformPlugin(
         debugger, GetGlobalProperties().GetValueProperties(),
-        ConstString("Properties for the Darwin platform plug-in."),
-        is_global_setting);
+        "Properties for the Darwin platform plug-in.", is_global_setting);
     OptionValueString *value = GetGlobalProperties().GetIgnoredExceptionValue();
     value->SetValidator(ExceptionMaskValidator);
   }
