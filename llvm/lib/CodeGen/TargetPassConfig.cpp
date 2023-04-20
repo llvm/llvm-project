@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Yk/BlockDisambiguate.h"
 #include "llvm/Transforms/Yk/ControlPoint.h"
+#include "llvm/Transforms/Yk/Linkage.h"
 #include "llvm/Transforms/Yk/ShadowStack.h"
 #include "llvm/Transforms/Yk/Stackmaps.h"
 #include <cassert>
@@ -262,6 +263,10 @@ static cl::opt<bool>
 static cl::opt<bool> YkPatchCtrlPoint("yk-patch-control-point", cl::init(false),
                                       cl::NotHidden,
                                       cl::desc("Patch yk_mt_control_point()"));
+
+static cl::opt<bool> YkLinkage("yk-linkage", cl::init(false),
+                                      cl::NotHidden,
+                                      cl::desc("Change functions with internal linkage to have external linkage"));
 
 static cl::opt<bool>
     YkShadowStack("yk-shadow-stack", cl::init(false), cl::NotHidden,
@@ -1128,6 +1133,10 @@ bool TargetPassConfig::addISelPasses() {
   // *not* being changed.
   if (YkPatchCtrlPoint) {
     addPass(createYkControlPointPass());
+  }
+
+  if (YkLinkage) {
+    addPass(createYkLinkagePass());
   }
 
   if (YkInsertStackMaps) {
