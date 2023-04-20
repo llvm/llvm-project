@@ -35,6 +35,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/RISCVISAInfo.h"
@@ -47,6 +48,9 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
+
+static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
+                                        cl::init(false));
 
 namespace llvm {
 extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
@@ -240,6 +244,8 @@ public:
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII) {
+    MCAsmParserExtension::Initialize(Parser);
+
     Parser.addAliasForDirective(".half", ".2byte");
     Parser.addAliasForDirective(".hword", ".2byte");
     Parser.addAliasForDirective(".word", ".4byte");
@@ -265,6 +271,9 @@ public:
 
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
+
+    if (AddBuildAttributes)
+      getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 };
 
