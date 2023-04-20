@@ -2272,7 +2272,9 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
                                                    unsigned Index, Value *Op0,
                                                    Value *Op1) {
-  return getVectorInstrCostHelper(nullptr, Val, Index, false /* HasRealUse */);
+  bool HasRealUse =
+      Opcode == Instruction::InsertElement && Op0 && !isa<UndefValue>(Op0);
+  return getVectorInstrCostHelper(nullptr, Val, Index, HasRealUse);
 }
 
 InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
