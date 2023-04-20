@@ -287,7 +287,7 @@ define void @load_i64_range_to_i32_range(ptr %p) {
 define i64 @load_is_stored(ptr %p, ptr %p2) {
 ; CHECK-LABEL: define i64 @load_is_stored
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG8:![0-9]+]]
 ; CHECK-NEXT:    store i64 [[V1]], ptr [[P2]], align 4
 ; CHECK-NEXT:    ret i64 [[V1]]
 ;
@@ -300,7 +300,7 @@ define i64 @load_is_stored(ptr %p, ptr %p2) {
 define void @non_local_dominating(i1 %c, ptr %p) {
 ; CHECK-LABEL: define void @non_local_dominating
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG8:![0-9]+]]
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG9:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
@@ -327,11 +327,11 @@ define void @non_local_non_dominating(i1 %c, ptr %p) {
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG8]]
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG9]]
 ; CHECK-NEXT:    call void @use.i64(i64 [[V1]])
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG9:![0-9]+]]
+; CHECK-NEXT:    [[V2:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG10:![0-9]+]]
 ; CHECK-NEXT:    call void @use.i64(i64 [[V2]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
@@ -389,10 +389,10 @@ define void @non_local_pre(i1 %c, ptr %p) {
 ; CHECK-SAME: (i1 [[C:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[DOTJOIN_CRIT_EDGE:%.*]]
 ; CHECK:       .join_crit_edge:
-; CHECK-NEXT:    [[V2_PRE:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG10:![0-9]+]]
+; CHECK-NEXT:    [[V2_PRE:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG11:![0-9]+]]
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG8]]
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[P]], align 4, !range [[RNG9]]
 ; CHECK-NEXT:    call void @use.i64(i64 [[V1]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
@@ -437,6 +437,7 @@ join:
 ; CHECK: [[META6:![0-9]+]] = !{}
 ; CHECK: [[META7:![0-9]+]] = !{i64 10}
 ; CHECK: [[RNG8]] = !{i64 0, i64 10}
-; CHECK: [[RNG9]] = !{i64 10, i64 20}
-; CHECK: [[RNG10]] = !{i64 20, i64 30}
+; CHECK: [[RNG9]] = !{i64 0, i64 10, i64 20, i64 30}
+; CHECK: [[RNG10]] = !{i64 10, i64 30}
+; CHECK: [[RNG11]] = !{i64 20, i64 30}
 ;.
