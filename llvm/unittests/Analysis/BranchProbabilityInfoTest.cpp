@@ -116,9 +116,10 @@ TEST_F(BranchProbabilityInfoTest, SwapProbabilities) {
   EXPECT_LT(ProbEdge0, ProbEdge1);
 
   Branch->swapSuccessors();
+  BPI->swapSuccEdgesProbabilities(LoopHeaderBB);
   // TODO: Check the probabilities are swapped as well as the edges
-  EXPECT_EQ(ProbEdge0, BPI->getEdgeProbability(LoopHeaderBB, 0U));
-  EXPECT_EQ(ProbEdge1, BPI->getEdgeProbability(LoopHeaderBB, 1U));
+  EXPECT_EQ(ProbEdge0, BPI->getEdgeProbability(LoopHeaderBB, 1U));
+  EXPECT_EQ(ProbEdge1, BPI->getEdgeProbability(LoopHeaderBB, 0U));
 }
 
 } // end anonymous namespace
