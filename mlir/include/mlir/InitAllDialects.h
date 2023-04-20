@@ -86,7 +86,7 @@ namespace mlir {
 inline void registerAllDialects(DialectRegistry &registry) {
   // clang-format off
   registry.insert<acc::OpenACCDialect,
-                  AffineDialect,
+                  affine::AffineDialect,
                   arith::ArithDialect,
                   amdgpu::AMDGPUDialect,
                   amx::AMXDialect,

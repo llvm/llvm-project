@@ -118,7 +118,8 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
     auto expr = getAffineDimExpr(0, builder.getContext()) +
                 getAffineConstantExpr(elementOffsets[dim.index()], ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
-    slicedIndices[pos] = builder.create<AffineApplyOp>(loc, map, indices[pos]);
+    slicedIndices[pos] =
+        builder.create<affine::AffineApplyOp>(loc, map, indices[pos]);
   }
   return slicedIndices;
 }

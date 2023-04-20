@@ -110,7 +110,7 @@ public:
 
   void init() {
     declareDependentDialect<pdl::PDLDialect>();
-    declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<affine::AffineDialect>();
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<memref::MemRefDialect>();
     declareGeneratedDialect<nvgpu::NVGPUDialect>();

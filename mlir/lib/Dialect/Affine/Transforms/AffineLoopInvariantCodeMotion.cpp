@@ -34,13 +34,16 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINELOOPINVARIANTCODEMOTION
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 #define DEBUG_TYPE "licm"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
@@ -50,7 +53,8 @@ namespace {
 /// TODO: This code should be removed once the new LICM pass can handle its
 ///       uses.
 struct LoopInvariantCodeMotion
-    : public impl::AffineLoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+    : public affine::impl::AffineLoopInvariantCodeMotionBase<
+          LoopInvariantCodeMotion> {
   void runOnOperation() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
@@ -71,9 +75,9 @@ areAllOpsInTheBlockListInvariant(Region &blockList, Value indVar,
                                  SmallPtrSetImpl<Operation *> &opsToHoist);
 
 // Returns true if the individual op is loop invariant.
-bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
-                       SmallPtrSetImpl<Operation *> &opsWithUsers,
-                       SmallPtrSetImpl<Operation *> &opsToHoist) {
+static bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
+                              SmallPtrSetImpl<Operation *> &opsWithUsers,
+                              SmallPtrSetImpl<Operation *> &opsToHoist) {
   LLVM_DEBUG(llvm::dbgs() << "iterating on op: " << op;);
 
   if (auto ifOp = dyn_cast<AffineIfOp>(op)) {
@@ -167,10 +171,11 @@ bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
 }
 
 // Checks if all ops in a region (i.e. list of blocks) are loop invariant.
-bool areAllOpsInTheBlockListInvariant(
-    Region &blockList, Value indVar, ValueRange iterArgs,
-    SmallPtrSetImpl<Operation *> &opsWithUsers,
-    SmallPtrSetImpl<Operation *> &opsToHoist) {
+static bool
+areAllOpsInTheBlockListInvariant(Region &blockList, Value indVar,
+                                 ValueRange iterArgs,
+                                 SmallPtrSetImpl<Operation *> &opsWithUsers,
+                                 SmallPtrSetImpl<Operation *> &opsToHoist) {
 
   for (auto &b : blockList) {
     for (auto &op : b) {
@@ -183,10 +188,10 @@ bool areAllOpsInTheBlockListInvariant(
 }
 
 // Returns true if the affine.if op can be hoisted.
-bool checkInvarianceOfNestedIfOps(AffineIfOp ifOp, Value indVar,
-                                  ValueRange iterArgs,
-                                  SmallPtrSetImpl<Operation *> &opsWithUsers,
-                                  SmallPtrSetImpl<Operation *> &opsToHoist) {
+static bool
+checkInvarianceOfNestedIfOps(AffineIfOp ifOp, Value indVar, ValueRange iterArgs,
+                             SmallPtrSetImpl<Operation *> &opsWithUsers,
+                             SmallPtrSetImpl<Operation *> &opsToHoist) {
   if (!areAllOpsInTheBlockListInvariant(ifOp.getThenRegion(), indVar, iterArgs,
                                         opsWithUsers, opsToHoist))
     return false;
@@ -243,6 +248,6 @@ void LoopInvariantCodeMotion::runOnOperation() {
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createAffineLoopInvariantCodeMotionPass() {
+mlir::affine::createAffineLoopInvariantCodeMotionPass() {
   return std::make_unique<LoopInvariantCodeMotion>();
 }
