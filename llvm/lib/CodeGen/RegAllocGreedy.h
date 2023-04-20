@@ -204,7 +204,7 @@ private:
     CO_Interf = 2
   };
 
-  uint8_t CutOffInfo;
+  uint8_t CutOffInfo = CutOffStage::CO_None;
 
 #ifndef NDEBUG
   static const char *const StageName[];
@@ -278,9 +278,9 @@ private:
 
   /// Flags for the live range priority calculation, determined once per
   /// machine function.
-  bool RegClassPriorityTrumpsGlobalness;
+  bool RegClassPriorityTrumpsGlobalness = false;
 
-  bool ReverseLocalAssignment;
+  bool ReverseLocalAssignment = false;
 
 public:
   RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);

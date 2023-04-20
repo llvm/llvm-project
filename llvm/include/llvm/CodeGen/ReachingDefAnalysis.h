@@ -71,7 +71,7 @@ private:
   MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
-  unsigned NumRegUnits;
+  unsigned NumRegUnits = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -87,7 +87,7 @@ private:
 
   /// Current instruction number.
   /// The first instruction in each basic block is 0.
-  int CurInstr;
+  int CurInstr = -1;
 
   /// Maps instructions to their instruction Ids, relative to the beginning of
   /// their basic blocks.
