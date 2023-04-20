@@ -9,7 +9,6 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   TargetParser
-  TextAPI
   )
 
 add_llvm_tool(llvm-ar

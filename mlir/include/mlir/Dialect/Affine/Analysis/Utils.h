@@ -22,14 +22,15 @@
 #include <optional>
 
 namespace mlir {
-
-class AffineForOp;
-class AffineValueMap;
 class Block;
 class Location;
-struct MemRefAccess;
 class Operation;
 class Value;
+
+namespace affine {
+class AffineForOp;
+class AffineValueMap;
+struct MemRefAccess;
 
 // LoopNestStateCollector walks loop nests and collects load and store
 // operations, and whether or not a region holding op other than ForOp and IfOp
@@ -576,6 +577,7 @@ FailureOr<AffineValueMap>
 simplifyConstrainedMinMaxOp(Operation *op,
                             FlatAffineValueConstraints constraints);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_ANALYSIS_UTILS_H

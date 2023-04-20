@@ -190,7 +190,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   Value stepVal = getValueOrCreateConstantIndexOp(rewriter, loc, *singleStep);
   AffineExpr iv, lb, step;
   bindDims(rewriter.getContext(), iv, lb, step);
-  Value bufferIndex = makeComposedAffineApply(
+  Value bufferIndex = affine::makeComposedAffineApply(
       rewriter, loc, ((iv - lb).floorDiv(step)) % multiBufferingFactor,
       {ivVal, lbVal, stepVal});
   LLVM_DEBUG(DBGS() << "--multi-buffered indexing: " << bufferIndex << "\n");

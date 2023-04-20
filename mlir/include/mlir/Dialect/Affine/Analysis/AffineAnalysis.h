@@ -21,13 +21,14 @@
 #include <optional>
 
 namespace mlir {
+class Operation;
 
+namespace affine {
 class AffineApplyOp;
 class AffineForOp;
 class AffineValueMap;
 class FlatAffineRelation;
 class FlatAffineValueConstraints;
-class Operation;
 
 /// A description of a (parallelizable) reduction in an affine loop.
 struct LoopReduction {
@@ -191,6 +192,7 @@ void getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H

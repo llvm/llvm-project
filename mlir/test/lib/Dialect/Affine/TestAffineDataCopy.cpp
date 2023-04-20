@@ -23,6 +23,7 @@
 #define PASS_NAME "test-affine-data-copy"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 

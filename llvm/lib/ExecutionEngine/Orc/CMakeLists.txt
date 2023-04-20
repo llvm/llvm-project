@@ -68,7 +68,6 @@ add_llvm_component_library(LLVMOrcJIT
   OrcTargetProcess
   WindowsDriver
   MC
-  MCDisassembler
   Passes
   RuntimeDyld
   Support

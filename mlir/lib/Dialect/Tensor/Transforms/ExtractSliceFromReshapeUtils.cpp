@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::tensor;
 
 /// Get the dimension size of a value of RankedTensor type at the
@@ -61,7 +62,7 @@ static DimAndIndex invertSliceIndexing(OpBuilder &b, Location loc,
   assert(dim < sliceParams.size() && "slice should be non rank-reducing");
   return std::make_pair(
       dim,
-      makeComposedAffineApply(
+      affine::makeComposedAffineApply(
           b, loc, s0 + d0 * s1,
           {indexValue,
            getValueOrCreateConstantIndexOp(b, loc, sliceParams[dim].offset),

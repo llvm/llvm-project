@@ -11,7 +11,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux" OR CMAKE_SYSTEM_NAME STREQUAL Wind
   target_link_libraries(DirectoryWatcherTests
     PRIVATE
     LLVMTestingSupport
-    clangBasic
     clangDirectoryWatcher
     )
 

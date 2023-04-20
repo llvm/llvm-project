@@ -23,7 +23,6 @@ add_clang_library(clangDependencyScanning
   clangDriver
   clangFrontend
   clangLex
-  clangParse
   clangSerialization
   clangTooling
   )

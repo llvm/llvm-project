@@ -22,10 +22,8 @@
 #include <optional>
 
 namespace mlir {
-class AffineForOp;
 class AffineMap;
 class LoopLikeOpInterface;
-struct MemRefRegion;
 class OpBuilder;
 class Value;
 class ValueRange;
@@ -38,6 +36,10 @@ namespace scf {
 class ForOp;
 class ParallelOp;
 } // namespace scf
+
+namespace affine {
+class AffineForOp;
+struct MemRefRegion;
 
 /// Unrolls this for operation completely if the trip count is known to be
 /// constant. Returns failure otherwise.
@@ -345,6 +347,7 @@ LogicalResult coalescePerfectlyNestedLoops(LoopOpTy op) {
   return result;
 }
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_LOOPUTILS_H

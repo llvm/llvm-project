@@ -22,22 +22,23 @@
 #include <optional>
 
 namespace mlir {
-
-class AffineCondition;
-class AffineForOp;
-class AffineIfOp;
-class AffineParallelOp;
 class AffineMap;
-class AffineValueMap;
 class IntegerSet;
-class MLIRContext;
-class Value;
 class MemRefType;
+class MLIRContext;
 struct MutableAffineMap;
+class Value;
 
 namespace presburger {
 class MultiAffineFunction;
 } // namespace presburger
+
+namespace affine {
+class AffineCondition;
+class AffineForOp;
+class AffineIfOp;
+class AffineParallelOp;
+class AffineValueMap;
 
 /// FlatAffineValueConstraints is an extension of FlatLinearValueConstraints
 /// with helper functions for Affine dialect ops.
@@ -254,6 +255,7 @@ LogicalResult getRelationFromMap(AffineMap &map, FlatAffineRelation &rel);
 LogicalResult getRelationFromMap(const AffineValueMap &map,
                                  FlatAffineRelation &rel);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_ANALYSIS_AFFINESTRUCTURES_H
