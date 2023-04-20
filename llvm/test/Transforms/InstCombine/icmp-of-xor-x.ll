@@ -9,7 +9,7 @@ define i1 @xor_uge(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[YNZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[XOR]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[XOR]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ynz = icmp ne i8 %y, 0
@@ -34,7 +34,7 @@ define <2 x i1> @xor_ule_2(<2 x i8> %x, <2 x i8> %yy) {
 ; CHECK-LABEL: @xor_ule_2(
 ; CHECK-NEXT:    [[Y:%.*]] = or <2 x i8> [[YY:%.*]], <i8 9, i8 8>
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[XOR]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[XOR]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %y = or <2 x i8> %yy, <i8 9, i8 8>
@@ -49,7 +49,7 @@ define i1 @xor_sle_2(i8 %xx, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[YNZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YNZ]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[XOR]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X]], [[XOR]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = add i8 %xx, %z
@@ -65,7 +65,7 @@ define i1 @xor_sge(i8 %xx, i8 %yy) {
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], [[XX]]
 ; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], -128
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[XOR]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[X]], [[XOR]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = mul i8 %xx, %xx
