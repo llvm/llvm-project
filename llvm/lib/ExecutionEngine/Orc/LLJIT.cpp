@@ -750,7 +750,7 @@ Error LLJITBuilderState::prepareForConstruction() {
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
     case Triple::x86_64:
-      UseJITLink = !TT.isOSBinFormatCOFF();
+      UseJITLink = TT.isOSBinFormatMachO();
       break;
     default:
       break;
