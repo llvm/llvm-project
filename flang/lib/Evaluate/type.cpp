@@ -47,23 +47,13 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   return false;
 }
 
-static bool IsDescriptor(const ProcEntityDetails &details) {
-  // TODO: refine this placeholder; procedure pointers and dummy
-  // procedures should now be simple addresses (possibly of thunks)
-  return details.HasExplicitInterface();
-}
-
 bool IsDescriptor(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [&](const ObjectEntityDetails &d) {
             return IsAllocatableOrPointer(symbol) || IsDescriptor(d);
           },
-          [&](const ProcEntityDetails &d) {
-            return (symbol.attrs().test(Attr::POINTER) ||
-                       symbol.attrs().test(Attr::EXTERNAL)) &&
-                IsDescriptor(d);
-          },
+          [&](const ProcEntityDetails &d) { return false; },
           [&](const EntityDetails &d) { return IsDescriptor(d.type()); },
           [](const AssocEntityDetails &d) {
             if (const auto &expr{d.expr()}) {
