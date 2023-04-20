@@ -422,7 +422,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
       copyOperands, copyinOperands, copyinReadonlyOperands, copyoutOperands,
       copyoutZeroOperands, createOperands, createZeroOperands, noCreateOperands,
       presentOperands, devicePtrOperands, attachOperands, firstprivateOperands,
-      privateOperands;
+      privateOperands, dataClauseOperands;
 
   // Async, wait and self clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -580,6 +580,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     addOperands(operands, operandSegments, privateOperands);
     addOperands(operands, operandSegments, firstprivateOperands);
   }
+  addOperands(operands, operandSegments, dataClauseOperands);
 
   Op computeOp;
   if constexpr (std::is_same_v<Op, mlir::acc::KernelsOp>)
@@ -608,7 +609,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Value> copyOperands, copyinOperands,
       copyinReadonlyOperands, copyoutOperands, copyoutZeroOperands,
       createOperands, createZeroOperands, noCreateOperands, presentOperands,
-      deviceptrOperands, attachOperands;
+      deviceptrOperands, attachOperands, dataClauseOperands;
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -680,6 +681,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, presentOperands);
   addOperands(operands, operandSegments, deviceptrOperands);
   addOperands(operands, operandSegments, attachOperands);
+  addOperands(operands, operandSegments, dataClauseOperands);
 
   createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
       firOpBuilder, currentLocation, operands, operandSegments);
@@ -761,7 +763,7 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
                   const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond, async, waitDevnum;
   llvm::SmallVector<mlir::Value> copyinOperands, createOperands,
-      createZeroOperands, attachOperands, waitOperands;
+      createZeroOperands, attachOperands, waitOperands, dataClauseOperands;
 
   // Async, wait and self clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -821,6 +823,7 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, createOperands);
   addOperands(operands, operandSegments, createZeroOperands);
   addOperands(operands, operandSegments, attachOperands);
+  addOperands(operands, operandSegments, dataClauseOperands);
 
   mlir::acc::EnterDataOp enterDataOp = createSimpleOp<mlir::acc::EnterDataOp>(
       firOpBuilder, currentLocation, operands, operandSegments);
@@ -839,7 +842,7 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
                  const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond, async, waitDevnum;
   llvm::SmallVector<mlir::Value> copyoutOperands, deleteOperands,
-      detachOperands, waitOperands;
+      detachOperands, waitOperands, dataClauseOperands;
 
   // Async and wait clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -897,6 +900,7 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, copyoutOperands);
   addOperands(operands, operandSegments, deleteOperands);
   addOperands(operands, operandSegments, detachOperands);
+  addOperands(operands, operandSegments, dataClauseOperands);
 
   mlir::acc::ExitDataOp exitDataOp = createSimpleOp<mlir::acc::ExitDataOp>(
       firOpBuilder, currentLocation, operands, operandSegments);
