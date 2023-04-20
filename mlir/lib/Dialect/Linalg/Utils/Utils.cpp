@@ -42,6 +42,7 @@
 
 using namespace mlir;
 using namespace presburger;
+using namespace mlir::affine;
 using namespace mlir::linalg;
 using namespace mlir::scf;
 
@@ -456,11 +457,11 @@ void GenerateLoopNest<AffineForOp>::doit(
     constantSteps.push_back(op.value());
   }
 
-  mlir::buildAffineLoopNest(b, loc, lbs, ubs, constantSteps,
-                            [&](OpBuilder &b, Location loc, ValueRange ivs) {
-                              bodyBuilderFn(b, loc, ivs,
-                                            linalgOp->getOperands());
-                            });
+  affine::buildAffineLoopNest(b, loc, lbs, ubs, constantSteps,
+                              [&](OpBuilder &b, Location loc, ValueRange ivs) {
+                                bodyBuilderFn(b, loc, ivs,
+                                              linalgOp->getOperands());
+                              });
 }
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
@@ -470,8 +471,9 @@ void updateBoundsForCyclicDistribution(OpBuilder &b, Location loc, Value procId,
   AffineExpr d0, d1;
   bindDims(b.getContext(), d0, d1);
   AffineExpr s0 = getAffineSymbolExpr(0, b.getContext());
-  lb = makeComposedAffineApply(b, loc, d0 + d1 * s0, {lb, procId, step});
-  step = makeComposedAffineApply(b, loc, d0 * s0, {nprocs, step});
+  lb =
+      affine::makeComposedAffineApply(b, loc, d0 + d1 * s0, {lb, procId, step});
+  step = affine::makeComposedAffineApply(b, loc, d0 * s0, {nprocs, step});
 }
 
 /// Generates a loop nest consisting of scf.parallel and scf.for, depending

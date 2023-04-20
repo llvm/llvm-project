@@ -1528,8 +1528,8 @@ struct FoldDimOfExpandShape : public OpRewritePattern<DimOp> {
         rewriter.create<DimOp>(dimOp.getLoc(), expandShapeOp.getSrc(), srcDim);
     AffineExpr expr;
     bindSymbols(dimOp.getContext(), expr);
-    rewriter.replaceOpWithNewOp<AffineApplyOp>(dimOp, expr.floorDiv(product),
-                                               srcDimSz);
+    rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(
+        dimOp, expr.floorDiv(product), srcDimSz);
     return success();
   }
 };
@@ -1567,7 +1567,8 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
       syms.push_back(rewriter.getAffineSymbolExpr(it.index()));
       product = product ? product * syms.back() : syms.back();
     }
-    rewriter.replaceOpWithNewOp<AffineApplyOp>(dimOp, product, srcDimSizes);
+    rewriter.replaceOpWithNewOp<affine::AffineApplyOp>(dimOp, product,
+                                                       srcDimSizes);
     return success();
   }
 };
@@ -3565,7 +3566,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   bindSymbols(builder.getContext(), s0, s1);
   AffineExpr ceilDivExpr = s0.ceilDiv(s1);
   for (auto tiledDim : llvm::enumerate(innerDimsPos)) {
-    resultDims[tiledDim.value()] = makeComposedFoldedAffineApply(
+    resultDims[tiledDim.value()] = affine::makeComposedFoldedAffineApply(
         builder, loc, ceilDivExpr,
         {resultDims[tiledDim.value()], innerTileSizes[tiledDim.index()]});
   }
@@ -3610,7 +3611,8 @@ Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
   AffineExpr dim0, dim1;
   bindDims(b.getContext(), dim0, dim1);
   auto ceilDiv = [&](OpFoldResult v1, OpFoldResult v2) -> OpFoldResult {
-    return makeComposedFoldedAffineApply(b, loc, dim0.ceilDiv(dim1), {v1, v2});
+    return affine::makeComposedFoldedAffineApply(b, loc, dim0.ceilDiv(dim1),
+                                                 {v1, v2});
   };
 
   SmallVector<OpFoldResult> mixedSizes;
@@ -3816,7 +3818,7 @@ Value UnPackOp::createDestinationTensor(OpBuilder &b, Location loc,
   AffineExpr sym0, sym1;
   bindSymbols(b.getContext(), sym0, sym1);
   auto dimMul = [&](OpFoldResult v1, OpFoldResult v2) -> OpFoldResult {
-    return makeComposedFoldedAffineApply(b, loc, sym0 * sym1, {v1, v2});
+    return affine::makeComposedFoldedAffineApply(b, loc, sym0 * sym1, {v1, v2});
   };
 
   SmallVector<OpFoldResult> mixedSizes;

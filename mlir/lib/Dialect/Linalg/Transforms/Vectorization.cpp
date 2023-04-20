@@ -1374,11 +1374,11 @@ mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
 /// Converts affine.apply Ops to arithmetic operations.
 static void convertAffineApply(RewriterBase &rewriter, LinalgOp linalgOp) {
   OpBuilder::InsertionGuard g(rewriter);
-  auto toReplace = linalgOp.getBlock()->getOps<AffineApplyOp>();
+  auto toReplace = linalgOp.getBlock()->getOps<affine::AffineApplyOp>();
 
   for (auto op : make_early_inc_range(toReplace)) {
     rewriter.setInsertionPoint(op);
-    auto expanded = expandAffineExpr(
+    auto expanded = affine::expandAffineExpr(
         rewriter, op->getLoc(), op.getAffineMap().getResult(0),
         op.getOperands().take_front(op.getAffineMap().getNumDims()),
         op.getOperands().take_back(op.getAffineMap().getNumSymbols()));
@@ -1868,8 +1868,8 @@ struct PadOpVectorizationWithTransferWritePattern
 
       // Case 2: Both values are identical AffineMinOps. (Should not happen if
       // CSE is run.)
-      auto minOp1 = v1.getDefiningOp<AffineMinOp>();
-      auto minOp2 = v2.getDefiningOp<AffineMinOp>();
+      auto minOp1 = v1.getDefiningOp<affine::AffineMinOp>();
+      auto minOp2 = v2.getDefiningOp<affine::AffineMinOp>();
       if (minOp1 && minOp2 && minOp1.getAffineMap() == minOp2.getAffineMap() &&
           minOp1.getOperands() == minOp2.getOperands())
         continue;

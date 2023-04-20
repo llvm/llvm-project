@@ -30,6 +30,7 @@
 #define DEBUG_TYPE "affine-utils"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
 
 namespace {
@@ -209,17 +210,18 @@ private:
 
 /// Create a sequence of operations that implement the `expr` applied to the
 /// given dimension and symbol values.
-mlir::Value mlir::expandAffineExpr(OpBuilder &builder, Location loc,
-                                   AffineExpr expr, ValueRange dimValues,
-                                   ValueRange symbolValues) {
+mlir::Value mlir::affine::expandAffineExpr(OpBuilder &builder, Location loc,
+                                           AffineExpr expr,
+                                           ValueRange dimValues,
+                                           ValueRange symbolValues) {
   return AffineApplyExpander(builder, dimValues, symbolValues, loc).visit(expr);
 }
 
 /// Create a sequence of operations that implement the `affineMap` applied to
 /// the given `operands` (as it it were an AffineApplyOp).
 std::optional<SmallVector<Value, 8>>
-mlir::expandAffineMap(OpBuilder &builder, Location loc, AffineMap affineMap,
-                      ValueRange operands) {
+mlir::affine::expandAffineMap(OpBuilder &builder, Location loc,
+                              AffineMap affineMap, ValueRange operands) {
   auto numDims = affineMap.getNumDims();
   auto expanded = llvm::to_vector<8>(
       llvm::map_range(affineMap.getResults(),
@@ -341,8 +343,8 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
 }
 
 LogicalResult
-mlir::affineParallelize(AffineForOp forOp,
-                        ArrayRef<LoopReduction> parallelReductions) {
+mlir::affine::affineParallelize(AffineForOp forOp,
+                                ArrayRef<LoopReduction> parallelReductions) {
   // Fail early if there are iter arguments that are not reductions.
   unsigned numReductions = parallelReductions.size();
   if (numReductions != forOp.getNumIterOperands())
@@ -400,7 +402,7 @@ mlir::affineParallelize(AffineForOp forOp,
 }
 
 // Returns success if any hoisting happened.
-LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
+LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // Bail out early if the ifOp returns a result.  TODO: Consider how to
   // properly support this case.
   if (ifOp.getNumResults() != 0)
@@ -454,8 +456,9 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
 }
 
 // Return the min expr after replacing the given dim.
-AffineExpr mlir::substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
-                              AffineExpr max, bool positivePath) {
+AffineExpr mlir::affine::substWithMin(AffineExpr e, AffineExpr dim,
+                                      AffineExpr min, AffineExpr max,
+                                      bool positivePath) {
   if (e == dim)
     return positivePath ? min : max;
   if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
@@ -480,7 +483,7 @@ AffineExpr mlir::substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
   return e;
 }
 
-void mlir::normalizeAffineParallel(AffineParallelOp op) {
+void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
   // Loops with min/max in bounds are not normalized at the moment.
   if (op.hasMinMaxBounds())
     return;
@@ -544,7 +547,8 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
                                     ubExprs, op.getContext());
   op.setUpperBounds(ranges.getOperands(), newUpperMap);
 }
-LogicalResult mlir::normalizeAffineFor(AffineForOp op, bool promoteSingleIter) {
+LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
+                                               bool promoteSingleIter) {
   if (promoteSingleIter && succeeded(promoteIfSingleIteration(op)))
     return success();
 
@@ -701,7 +705,7 @@ static bool mayHaveEffect(Operation *srcMemOp, Operation *destMemOp,
 }
 
 template <typename EffectType, typename T>
-bool mlir::hasNoInterveningEffect(Operation *start, T memOp) {
+bool mlir::affine::hasNoInterveningEffect(Operation *start, T memOp) {
   auto isLocallyAllocated = [](Value memref) {
     auto *defOp = memref.getDefiningOp();
     return defOp && hasSingleEffect<MemoryEffects::Allocate>(defOp, memref);
@@ -894,7 +898,7 @@ static LogicalResult forwardStoreToLoad(
 
     // 4. Ensure there is no intermediate operation which could replace the
     // value in memory.
-    if (!mlir::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
+    if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(storeOp, loadOp))
       continue;
 
     // We now have a candidate for forwarding.
@@ -921,9 +925,10 @@ static LogicalResult forwardStoreToLoad(
   return success();
 }
 
-template bool mlir::hasNoInterveningEffect<mlir::MemoryEffects::Read,
-                                           mlir::AffineReadOpInterface>(
-    mlir::Operation *, mlir::AffineReadOpInterface);
+template bool
+mlir::affine::hasNoInterveningEffect<mlir::MemoryEffects::Read,
+                                     affine::AffineReadOpInterface>(
+    mlir::Operation *, affine::AffineReadOpInterface);
 
 // This attempts to find stores which have no impact on the final result.
 // A writing op writeA will be eliminated if there exists an op writeB if
@@ -961,7 +966,7 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
 
     // There cannot be an operation which reads from memory between
     // the two writes.
-    if (!mlir::hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB))
+    if (!affine::hasNoInterveningEffect<MemoryEffects::Read>(writeA, writeB))
       continue;
 
     opsToErase.push_back(writeA);
@@ -997,7 +1002,7 @@ static void loadCSE(AffineReadOpInterface loadA,
       continue;
 
     // 3. There is no write between loadA and loadB.
-    if (!mlir::hasNoInterveningEffect<MemoryEffects::Write>(
+    if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(
             loadB.getOperation(), loadA))
       continue;
 
@@ -1055,8 +1060,8 @@ static void loadCSE(AffineReadOpInterface loadA,
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-void mlir::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
-                               PostDominanceInfo &postDomInfo) {
+void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
+                                       PostDominanceInfo &postDomInfo) {
   // Load op's whose results were replaced by those forwarded from stores.
   SmallVector<Operation *, 8> opsToErase;
 
@@ -1109,13 +1114,11 @@ void mlir::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
 }
 
 // Perform the replacement in `op`.
-LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
-                                             Operation *op,
-                                             ArrayRef<Value> extraIndices,
-                                             AffineMap indexRemap,
-                                             ArrayRef<Value> extraOperands,
-                                             ArrayRef<Value> symbolOperands,
-                                             bool allowNonDereferencingOps) {
+LogicalResult mlir::affine::replaceAllMemRefUsesWith(
+    Value oldMemRef, Value newMemRef, Operation *op,
+    ArrayRef<Value> extraIndices, AffineMap indexRemap,
+    ArrayRef<Value> extraOperands, ArrayRef<Value> symbolOperands,
+    bool allowNonDereferencingOps) {
   unsigned newMemRefRank = newMemRef.getType().cast<MemRefType>().getRank();
   (void)newMemRefRank; // unused in opt mode
   unsigned oldMemRefRank = oldMemRef.getType().cast<MemRefType>().getRank();
@@ -1285,7 +1288,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
   return success();
 }
 
-LogicalResult mlir::replaceAllMemRefUsesWith(
+LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     Value oldMemRef, Value newMemRef, ArrayRef<Value> extraIndices,
     AffineMap indexRemap, ArrayRef<Value> extraOperands,
     ArrayRef<Value> symbolOperands, Operation *domOpFilter,
@@ -1401,7 +1404,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
 /// all the affine.apply op's supplying operands to this opInst did not have any
 /// uses besides this opInst; otherwise returns the list of affine.apply
 /// operations created in output argument `sliceOps`.
-void mlir::createAffineComputationSlice(
+void mlir::affine::createAffineComputationSlice(
     Operation *opInst, SmallVectorImpl<AffineApplyOp> *sliceOps) {
   // Collect all operands that are results of affine apply ops.
   SmallVector<Value, 4> subOperands;
@@ -1709,7 +1712,7 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
 }
 
 // TODO: Currently works for static memrefs with a single layout map.
-LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
+LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
   MemRefType memrefType = allocOp->getType();
   OpBuilder b(*allocOp);
 
@@ -1767,8 +1770,8 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   return success();
 }
 
-MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
-                                     unsigned numSymbolicOperands) {
+MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType,
+                                             unsigned numSymbolicOperands) {
   unsigned rank = memrefType.getRank();
   if (rank == 0)
     return memrefType;
@@ -1848,13 +1851,15 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
   return newMemRefType;
 }
 
-DivModValue mlir::getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs) {
+DivModValue mlir::affine::getDivMod(OpBuilder &b, Location loc, Value lhs,
+                                    Value rhs) {
   DivModValue result;
   AffineExpr d0, d1;
   bindDims(b.getContext(), d0, d1);
   result.quotient =
-      makeComposedAffineApply(b, loc, d0.floorDiv(d1), {lhs, rhs});
-  result.remainder = makeComposedAffineApply(b, loc, d0 % d1, {lhs, rhs});
+      affine::makeComposedAffineApply(b, loc, d0.floorDiv(d1), {lhs, rhs});
+  result.remainder =
+      affine::makeComposedAffineApply(b, loc, d0 % d1, {lhs, rhs});
   return result;
 }
 
@@ -1871,9 +1876,9 @@ static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
   return result;
 }
 
-FailureOr<SmallVector<Value>> mlir::delinearizeIndex(OpBuilder &b, Location loc,
-                                                     Value linearIndex,
-                                                     ArrayRef<Value> basis) {
+FailureOr<SmallVector<Value>>
+mlir::affine::delinearizeIndex(OpBuilder &b, Location loc, Value linearIndex,
+                               ArrayRef<Value> basis) {
   unsigned numDims = basis.size();
 
   SmallVector<Value> divisors;

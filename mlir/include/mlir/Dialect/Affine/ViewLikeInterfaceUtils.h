@@ -16,6 +16,8 @@
 namespace mlir {
 class RewriterBase;
 
+namespace affine {
+
 /// Fills the `combinedOffsets`, `combinedSizes` and `combinedStrides` to use
 /// when combining a producer slice **into** a consumer slice.
 ///
@@ -99,6 +101,7 @@ void resolveSizesIntoOpWithSizes(
     const llvm::SmallBitVector &rankReducedSourceDims,
     SmallVectorImpl<OpFoldResult> &resolvedSizes);
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_VIEWLIKEINTERFACEUTILS_H

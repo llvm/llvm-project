@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 //===----------------------------------------------------------------------===//
 // GetParentForOp
@@ -298,7 +299,7 @@ public:
   using Base::Base;
 
   void init() {
-    declareGeneratedDialect<AffineDialect>();
+    declareGeneratedDialect<affine::AffineDialect>();
     declareGeneratedDialect<func::FuncDialect>();
 
     registerTransformOps<

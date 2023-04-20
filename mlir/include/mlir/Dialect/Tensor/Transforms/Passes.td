@@ -23,7 +23,7 @@ def FoldTensorSubsetOps : Pass<"fold-tensor-subset-ops"> {
   }];
   let constructor = "mlir::tensor::createFoldTensorSubsetOpsPass()";
   let dependentDialects = [
-      "AffineDialect", "tensor::TensorDialect", "vector::VectorDialect"
+      "affine::AffineDialect", "tensor::TensorDialect", "vector::VectorDialect"
   ];
 }
 
