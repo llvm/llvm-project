@@ -454,6 +454,9 @@ static bool printCompactDWARFExpr(
       Stack.back().Kind = PrintedExpr::Value;
       break;
     }
+    case dwarf::DW_OP_nop: {
+      break;
+    }
     default:
       if (Opcode >= dwarf::DW_OP_reg0 && Opcode <= dwarf::DW_OP_reg31) {
         // DW_OP_reg<N>: A register, with the register num implied by the
@@ -487,7 +490,10 @@ static bool printCompactDWARFExpr(
     ++I;
   }
 
-  assert(Stack.size() == 1 && "expected one value on stack");
+  if (Stack.size() != 1) {
+    OS << "<stack of size " << Stack.size() << ", expected 1>";
+    return false;
+  }
 
   if (Stack.front().Kind == PrintedExpr::Address)
     OS << "[" << Stack.front().String << "]";
