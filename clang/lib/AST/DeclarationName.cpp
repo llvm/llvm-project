@@ -365,7 +365,7 @@ DeclarationNameTable::getCXXSpecialName(DeclarationName::NameKind Kind,
 }
 
 DeclarationName
-DeclarationNameTable::getCXXLiteralOperatorName(IdentifierInfo *II) {
+DeclarationNameTable::getCXXLiteralOperatorName(const IdentifierInfo *II) {
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(II);
 
