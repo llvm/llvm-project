@@ -48,9 +48,14 @@ static Value createIntConst(Location loc, Type type, int64_t value,
 
 static Value createTruncatedFPValue(Value operand, ImplicitLocOpBuilder &b) {
   Type opType = operand.getType();
-  Value fixedConvert = b.create<arith::FPToSIOp>(b.getI64Type(), operand);
+  Type i64Ty = b.getI64Type();
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    i64Ty = shapedTy.clone(i64Ty);
+  Value fixedConvert = b.create<arith::FPToSIOp>(i64Ty, operand);
   Value fpFixedConvert = b.create<arith::SIToFPOp>(opType, fixedConvert);
-  return fpFixedConvert;
+  // The truncation does not preserve the sign when the truncated
+  // value is -0. So here the sign is copied again.
+  return b.create<math::CopySignOp>(fpFixedConvert, operand);
 }
 
 /// Expands tanh op into
@@ -189,23 +194,59 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
 
 static LogicalResult convertRoundOp(math::RoundOp op,
                                     PatternRewriter &rewriter) {
-  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Location loc = op.getLoc();
+  ImplicitLocOpBuilder b(loc, rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+  Type opEType = getElementTypeOrSelf(opType);
 
-  // Creating constants for later use.
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
-  Value negHalf = createFloatConst(op->getLoc(), opType, -0.5, rewriter);
+  if (!opEType.isF32()) {
+    return rewriter.notifyMatchFailure(op, "not a round of f32.");
+  }
 
-  Value posCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, operand, zero);
-  Value incrValue =
-      b.create<arith::SelectOp>(op->getLoc(), posCheck, half, negHalf);
+  Type i32Ty = b.getI32Type();
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    i32Ty = shapedTy.clone(i32Ty);
+
+  Value half = createFloatConst(loc, opType, 0.5, b);
+  Value c23 = createIntConst(loc, i32Ty, 23, b);
+  Value c127 = createIntConst(loc, i32Ty, 127, b);
+  Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
+
+  Value incrValue = b.create<math::CopySignOp>(half, operand);
   Value add = b.create<arith::AddFOp>(opType, operand, incrValue);
-
   Value fpFixedConvert = createTruncatedFPValue(add, b);
-  rewriter.replaceOp(op, fpFixedConvert);
+
+  // There are three cases where adding 0.5 to the value and truncating by
+  // converting to an i64 does not result in the correct behavior:
+  //
+  // 1. Special values: +-inf and +-nan
+  //     Casting these special values to i64 has undefined behavior. To identify
+  //     these values, we use the fact that these values are the only float
+  //     values with the maximum possible biased exponent.
+  //
+  // 2. Large values: 2^23 <= |x| <= INT_64_MAX
+  //     Adding 0.5 to a float larger than or equal to 2^23 results in precision
+  //     errors that sometimes round the value up and sometimes round the value
+  //     down. For example:
+  //         8388608.0 + 0.5 = 8388608.0
+  //         8388609.0 + 0.5 = 8388610.0
+  //
+  // 3. Very large values: |x| > INT_64_MAX
+  //     Casting to i64 a value greater than the max i64 value will overflow the
+  //     i64 leading to wrong outputs.
+  //
+  // All three cases satisfy the property `biasedExp >= 23`.
+  Value operandBitcast = b.create<arith::BitcastOp>(i32Ty, operand);
+  Value operandExp = b.create<arith::AndIOp>(
+      b.create<arith::ShRUIOp>(operandBitcast, c23), expMask);
+  Value operandBiasedExp = b.create<arith::SubIOp>(operandExp, c127);
+  Value isSpecialValOrLargeVal =
+      b.create<arith::CmpIOp>(arith::CmpIPredicate::sge, operandBiasedExp, c23);
+
+  Value result = b.create<arith::SelectOp>(isSpecialValOrLargeVal, operand,
+                                           fpFixedConvert);
+  rewriter.replaceOp(op, result);
   return success();
 }
 
