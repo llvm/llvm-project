@@ -201,6 +201,7 @@ function(create_libc_unittest fq_target_name)
       ${fq_target_name}
     )
   endif()
+  add_dependencies(libc-unit-tests ${fq_target_name})
 endfunction(create_libc_unittest)
 
 # Internal function, used by `add_libc_unittest`.
@@ -297,11 +298,6 @@ function(add_libc_unittest target_name)
     ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
   )
 endfunction(add_libc_unittest)
-
-function(add_libc_testsuite suite_name)
-  add_custom_target(${suite_name})
-  add_dependencies(libc-unit-tests ${suite_name})
-endfunction(add_libc_testsuite)
 
 function(add_libc_exhaustive_testsuite suite_name)
   add_custom_target(${suite_name})

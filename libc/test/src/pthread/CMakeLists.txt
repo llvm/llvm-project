@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_pthread_unittests)
+add_custom_target(libc_pthread_unittests)
 
 add_libc_unittest(
   pthread_attr_test

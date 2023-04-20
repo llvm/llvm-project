@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_math_unittests)
+add_custom_target(libc_math_unittests)
 
 add_library(
   libc_math_test_utils
@@ -1571,5 +1571,8 @@ add_fp_unittest(
 )
 
 add_subdirectory(generic)
-add_subdirectory(exhaustive)
-add_subdirectory(differential_testing)
+
+if(NOT LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(exhaustive)
+  add_subdirectory(differential_testing)
+endif()

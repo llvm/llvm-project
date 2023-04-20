@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_sched_unittests)
+add_custom_target(libc_sched_unittests)
 
 add_libc_unittest(
   affinity_test
