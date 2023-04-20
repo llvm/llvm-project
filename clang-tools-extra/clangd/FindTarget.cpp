@@ -288,7 +288,7 @@ public:
         for (const DesignatedInitExpr::Designator &D :
              llvm::reverse(DIE->designators()))
           if (D.isFieldDesignator()) {
-            Outer.add(D.getField(), Flags);
+            Outer.add(D.getFieldDecl(), Flags);
             // We don't know which designator was intended, we assume the outer.
             break;
           }
@@ -808,7 +808,7 @@ llvm::SmallVector<ReferenceLoc> refInStmt(const Stmt *S,
         Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
                                     D.getFieldLoc(),
                                     /*IsDecl=*/false,
-                                    {D.getField()}});
+                                    {D.getFieldDecl()}});
       }
     }
 

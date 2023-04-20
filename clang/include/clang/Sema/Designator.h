@@ -21,7 +21,6 @@ namespace clang {
 
 class Expr;
 class IdentifierInfo;
-class Sema;
 
 /// Designator - A designator in a C99 designated initializer.
 ///
@@ -40,17 +39,17 @@ class Designator {
   /// A field designator, e.g., ".x = 42".
   struct FieldDesignatorInfo {
     /// Refers to the field being initialized.
-    const IdentifierInfo *II;
+    const IdentifierInfo *FieldName;
 
     /// The location of the '.' in the designated initializer.
     SourceLocation DotLoc;
 
     /// The location of the field name in the designated initializer.
-    SourceLocation NameLoc;
+    SourceLocation FieldLoc;
 
-    FieldDesignatorInfo(const IdentifierInfo *II, SourceLocation DotLoc,
-                        SourceLocation NameLoc)
-        : II(II), DotLoc(DotLoc), NameLoc(NameLoc) {}
+    FieldDesignatorInfo(const IdentifierInfo *FieldName, SourceLocation DotLoc,
+                        SourceLocation FieldLoc)
+        : FieldName(FieldName), DotLoc(DotLoc), FieldLoc(FieldLoc) {}
   };
 
   /// An array designator, e.g., "[42] = 0".
@@ -112,17 +111,18 @@ public:
   //===--------------------------------------------------------------------===//
   // FieldDesignatorInfo
 
-  static Designator CreateFieldDesignator(const IdentifierInfo *II,
+  /// Creates a field designator.
+  static Designator CreateFieldDesignator(const IdentifierInfo *FieldName,
                                           SourceLocation DotLoc,
-                                          SourceLocation NameLoc) {
+                                          SourceLocation FieldLoc) {
     Designator D(FieldDesignator);
-    new (&D.FieldInfo) FieldDesignatorInfo(II, DotLoc, NameLoc);
+    new (&D.FieldInfo) FieldDesignatorInfo(FieldName, DotLoc, FieldLoc);
     return D;
   }
 
-  const IdentifierInfo *getField() const {
+  const IdentifierInfo *getFieldDecl() const {
     assert(isFieldDesignator() && "Invalid accessor");
-    return FieldInfo.II;
+    return FieldInfo.FieldName;
   }
 
   SourceLocation getDotLoc() const {
@@ -132,12 +132,13 @@ public:
 
   SourceLocation getFieldLoc() const {
     assert(isFieldDesignator() && "Invalid accessor");
-    return FieldInfo.NameLoc;
+    return FieldInfo.FieldLoc;
   }
 
   //===--------------------------------------------------------------------===//
   // ArrayDesignatorInfo:
 
+  /// Creates an array designator.
   static Designator CreateArrayDesignator(Expr *Index,
                                           SourceLocation LBracketLoc) {
     Designator D(ArrayDesignator);
@@ -167,6 +168,7 @@ public:
   //===--------------------------------------------------------------------===//
   // ArrayRangeDesignatorInfo:
 
+  /// Creates a GNU array-range designator.
   static Designator CreateArrayRangeDesignator(Expr *Start, Expr *End,
                                                SourceLocation LBracketLoc,
                                                SourceLocation EllipsisLoc) {

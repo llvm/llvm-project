@@ -4407,7 +4407,7 @@ const IdentifierInfo *DesignatedInitExpr::Designator::getFieldName() const {
   assert(isFieldDesignator() && "Only valid on a field designator");
   if (FieldInfo.NameOrField & 0x01)
     return reinterpret_cast<IdentifierInfo *>(FieldInfo.NameOrField & ~0x01);
-  return getField()->getIdentifier();
+  return getFieldDecl()->getIdentifier();
 }
 
 DesignatedInitExpr::DesignatedInitExpr(const ASTContext &C, QualType Ty,
