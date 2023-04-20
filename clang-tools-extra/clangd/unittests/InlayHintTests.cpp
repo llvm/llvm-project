@@ -1324,6 +1324,21 @@ TEST(TypeHints, LongTypeName) {
     // Omit type hint past a certain length (currently 32)
     auto var = foo();
   )cpp");
+
+  Config Cfg;
+  Cfg.InlayHints.TypeNameLimit = 0;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  assertTypeHints(
+      R"cpp(
+    template <typename, typename, typename>
+    struct A {};
+    struct MultipleWords {};
+    A<MultipleWords, MultipleWords, MultipleWords> foo();
+    // Should have type hint with TypeNameLimit = 0
+    auto $var[[var]] = foo();
+  )cpp",
+      ExpectedHint{": A<MultipleWords, MultipleWords, MultipleWords>", "var"});
 }
 
 TEST(TypeHints, DefaultTemplateArgs) {
