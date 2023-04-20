@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "affine-structures"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
 
 
@@ -489,8 +490,8 @@ void FlatAffineRelation::removeVarRange(VarKind kind, unsigned varStart,
     numRangeDims -= intersectRangeLHS - intersectRangeRHS;
 }
 
-LogicalResult mlir::getRelationFromMap(AffineMap &map,
-                                       FlatAffineRelation &rel) {
+LogicalResult mlir::affine::getRelationFromMap(AffineMap &map,
+                                               FlatAffineRelation &rel) {
   // Get flattened affine expressions.
   std::vector<SmallVector<int64_t, 8>> flatExprs;
   FlatAffineValueConstraints localVarCst;
@@ -525,8 +526,8 @@ LogicalResult mlir::getRelationFromMap(AffineMap &map,
   return success();
 }
 
-LogicalResult mlir::getRelationFromMap(const AffineValueMap &map,
-                                       FlatAffineRelation &rel) {
+LogicalResult mlir::affine::getRelationFromMap(const AffineValueMap &map,
+                                               FlatAffineRelation &rel) {
 
   AffineMap affineMap = map.getAffineMap();
   if (failed(getRelationFromMap(affineMap, rel)))

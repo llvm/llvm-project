@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 #define DEBUG_TYPE "test-affine-parametric-tile"
 

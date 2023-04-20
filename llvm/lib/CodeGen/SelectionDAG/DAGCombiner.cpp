@@ -25660,8 +25660,6 @@ SDValue DAGCombiner::SimplifyVCastOp(SDNode *N, const SDLoc &DL) {
   unsigned Opcode = N->getOpcode();
 
   SDValue N0 = N->getOperand(0);
-  EVT SrcVT = N0->getValueType(0);
-  EVT SrcEltVT = SrcVT.getVectorElementType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // TODO: promote operation might be also good here?
@@ -25672,6 +25670,8 @@ SDValue DAGCombiner::SimplifyVCastOp(SDNode *N, const SDLoc &DL) {
        TLI.isExtractVecEltCheap(VT, Index0)) &&
       TLI.isOperationLegalOrCustom(Opcode, EltVT) &&
       TLI.preferScalarizeSplat(N)) {
+    EVT SrcVT = N0.getValueType();
+    EVT SrcEltVT = SrcVT.getVectorElementType();
     SDValue IndexC = DAG.getVectorIdxConstant(Index0, DL);
     SDValue Elt =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcEltVT, Src0, IndexC);

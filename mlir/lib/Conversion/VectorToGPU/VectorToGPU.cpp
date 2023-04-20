@@ -66,7 +66,7 @@ static void getXferIndices(RewriterBase &rewriter, TransferOpType xferOp,
       SmallVector<Value, 3> dims(dimValues.begin(), dimValues.end());
       dims.push_back(prevIdx);
       AffineExpr d0 = rewriter.getAffineDimExpr(offsetMap.getNumDims());
-      indices[dim.getPosition()] = makeComposedAffineApply(
+      indices[dim.getPosition()] = affine::makeComposedAffineApply(
           rewriter, loc, d0 + offsetMap.getResult(offsetsIdx++), dims);
       continue;
     }

@@ -238,8 +238,9 @@ public:
     patterns.insert<SelectTypeConv>(context, moduleMutex);
     patterns.insert<DispatchOpConv>(context, bindingTables);
     mlir::ConversionTarget target(*context);
-    target.addLegalDialect<mlir::AffineDialect, mlir::cf::ControlFlowDialect,
-                           FIROpsDialect, mlir::func::FuncDialect>();
+    target.addLegalDialect<mlir::affine::AffineDialect,
+                           mlir::cf::ControlFlowDialect, FIROpsDialect,
+                           mlir::func::FuncDialect>();
 
     // apply the patterns
     target.addIllegalOp<SelectTypeOp>();

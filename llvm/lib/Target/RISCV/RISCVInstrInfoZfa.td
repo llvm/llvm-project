@@ -85,65 +85,86 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
 let Predicates = [HasStdExtZfa] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, OPC_OP_FP, (outs FPR32:$rd),
-            (ins loadfpimm:$imm), "fli.s", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.s", "$rd, $imm">,
+            Sched<[WriteFLI32]>;
 
+let SchedRW = [WriteFMinMax32, ReadFMinMax32, ReadFMinMax32] in {
 def FMINM_S: FPALU_rr<0b0010100, 0b010, "fminm.s", FPR32, /*Commutable*/ 1>;
 def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, /*Commutable*/ 1>;
+}
 
-def FROUND_S : FPUnaryOp_r_frm<0b0100000, 0b00100, FPR32, FPR32, "fround.s">;
-def FROUNDNX_S : FPUnaryOp_r_frm<0b0100000, 0b00101, FPR32, FPR32, "froundnx.s">;
+def FROUND_S : FPUnaryOp_r_frm<0b0100000, 0b00100, FPR32, FPR32, "fround.s">,
+               Sched<[WriteFCvtF32ToF32, ReadFCvtF32ToF32]>;
+def FROUNDNX_S : FPUnaryOp_r_frm<0b0100000, 0b00101, FPR32, FPR32, "froundnx.s">,
+                 Sched<[WriteFCvtF32ToF32, ReadFCvtF32ToF32]>;
 
+let SchedRW = [WriteFCmp32, ReadFCmp32, ReadFCmp32] in {
 def FLTQ_S : FPCmp_rr<0b1010000, 0b101, "fltq.s", FPR32>;
 def FLEQ_S : FPCmp_rr<0b1010000, 0b100, "fleq.s", FPR32>;
+}
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, OPC_OP_FP, (outs FPR64:$rd),
-            (ins loadfpimm:$imm), "fli.d", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.d", "$rd, $imm">,
+            Sched<[WriteFLI64]>;
 
+let SchedRW = [WriteFMinMax64, ReadFMinMax64, ReadFMinMax64] in {
 def FMINM_D: FPALU_rr<0b0010101, 0b010, "fminm.d", FPR64, /*Commutable*/ 1>;
 def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, /*Commutable*/ 1>;
+}
 
-def FROUND_D : FPUnaryOp_r_frm<0b0100001, 0b00100, FPR64, FPR64, "fround.d">;
-def FROUNDNX_D : FPUnaryOp_r_frm<0b0100001, 0b00101, FPR64, FPR64, "froundnx.d">;
+def FROUND_D : FPUnaryOp_r_frm<0b0100001, 0b00100, FPR64, FPR64, "fround.d">,
+               Sched<[WriteFCvtF64ToF64, ReadFCvtF64ToF64]>;
+def FROUNDNX_D : FPUnaryOp_r_frm<0b0100001, 0b00101, FPR64, FPR64, "froundnx.d">,
+                 Sched<[WriteFCvtF64ToF64, ReadFCvtF64ToF64]>;
 
 def FCVTMOD_W_D
     : FPUnaryOp_r_rtz<0b1100001, 0b01000, GPR, FPR64, "fcvtmod.w.d">,
       Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 
+let SchedRW = [WriteFCmp64, ReadFCmp64, ReadFCmp64] in {
 def FLTQ_D : FPCmp_rr<0b1010001, 0b101, "fltq.d", FPR64>;
 def FLEQ_D : FPCmp_rr<0b1010001, 0b100, "fleq.d", FPR64>;
+}
 } // Predicates = [HasStdExtZfa, HasStdExtD]
 
 let Predicates = [HasStdExtZfa, HasStdExtD, IsRV32] in {
 let mayRaiseFPException = 0 in {
 def FMVH_X_D : FPUnaryOp_r<0b1110001, 0b00001, 0b000, GPR, FPR64, "fmvh.x.d">,
-               Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
+               Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 def FMVP_D_X : FPBinaryOp_rr<0b1011001, 0b000, FPR64, GPR, "fmvp.d.x">,
-               Sched<[WriteFMovI32ToF32, ReadFMovI32ToF32]>;
+               Sched<[WriteFMovI64ToF64, ReadFMovI64ToF64]>;
 }
 
 let isCodeGenOnly = 1, mayRaiseFPException = 0 in
 def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
                                 "fmv.x.w">,
-                    Sched<[WriteFMovF32ToI32, ReadFMovF32ToI32]>;
+                    Sched<[WriteFMovF64ToI64, ReadFMovF64ToI64]>;
 } // Predicates = [HasStdExtZfa, HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd),
-            (ins loadfpimm:$imm), "fli.h", "$rd, $imm">;
+            (ins loadfpimm:$imm), "fli.h", "$rd, $imm">,
+            Sched<[WriteFLI16]>;
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
+let SchedRW = [WriteFMinMax16, ReadFMinMax16, ReadFMinMax16] in {
 def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
 def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, /*Commutable*/ 1>;
+}
 
-def FROUND_H : FPUnaryOp_r_frm<0b0100010, 0b00100, FPR16, FPR16, "fround.h">;
-def FROUNDNX_H : FPUnaryOp_r_frm<0b0100010, 0b00101, FPR16, FPR16, "froundnx.h">;
+def FROUND_H : FPUnaryOp_r_frm<0b0100010, 0b00100, FPR16, FPR16, "fround.h">,
+               Sched<[WriteFCvtF16ToF16, ReadFCvtF16ToF16]>;
+def FROUNDNX_H : FPUnaryOp_r_frm<0b0100010, 0b00101, FPR16, FPR16, "froundnx.h">,
+                 Sched<[WriteFCvtF16ToF16, ReadFCvtF16ToF16]>;
 
+let SchedRW = [WriteFCmp16, ReadFCmp16, ReadFCmp16] in {
 def FLTQ_H : FPCmp_rr<0b1010010, 0b101, "fltq.h", FPR16>;
 def FLEQ_H : FPCmp_rr<0b1010010, 0b100, "fleq.h", FPR16>;
+}
 } // Predicates = [HasStdExtZfa, HasStdExtZfh]
 
 //===----------------------------------------------------------------------===//

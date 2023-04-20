@@ -35,7 +35,8 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
     bindDims(b.getContext(), d0);
     auto dimOp = b.createOrFold<tensor::DimOp>(loc, source, en.index());
     high[en.index()] =
-        makeComposedAffineApply(b, loc, en.value() - d0, {dimOp}).getResult();
+        affine::makeComposedAffineApply(b, loc, en.value() - d0, {dimOp})
+            .getResult();
   }
   return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
 }

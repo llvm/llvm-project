@@ -444,5 +444,15 @@ std::vector<Diag> issueIncludeCleanerDiagnostics(ParsedAST &AST,
   return Result;
 }
 
+std::optional<include_cleaner::Header>
+firstMatchedProvider(const include_cleaner::Includes &Includes,
+                     llvm::ArrayRef<include_cleaner::Header> Providers) {
+  for (const auto &H : Providers) {
+    if (!Includes.match(H).empty())
+      return H;
+  }
+  // No match for this provider in the includes list.
+  return std::nullopt;
+}
 } // namespace clangd
 } // namespace clang

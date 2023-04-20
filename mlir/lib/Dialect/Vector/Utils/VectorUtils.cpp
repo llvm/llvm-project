@@ -77,8 +77,8 @@ static AffineMap makePermutationMap(
 
   for (auto kvp : enclosingLoopToVectorDim) {
     assert(kvp.second < perm.size());
-    auto invariants = getInvariantAccesses(
-        cast<AffineForOp>(kvp.first).getInductionVar(), indices);
+    auto invariants = affine::getInvariantAccesses(
+        cast<affine::AffineForOp>(kvp.first).getInductionVar(), indices);
     unsigned numIndices = indices.size();
     unsigned countInvariantIndices = 0;
     for (unsigned dim = 0; dim < numIndices; ++dim) {
@@ -119,7 +119,7 @@ static SetVector<Operation *> getParentsOfType(Block *block) {
 
 /// Returns the enclosing AffineForOp, from closest to farthest.
 static SetVector<Operation *> getEnclosingforOps(Block *block) {
-  return getParentsOfType<AffineForOp>(block);
+  return getParentsOfType<affine::AffineForOp>(block);
 }
 
 AffineMap mlir::makePermutationMap(

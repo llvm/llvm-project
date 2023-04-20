@@ -49,8 +49,8 @@ static SmallVector<Value> makeCanonicalAffineApplies(OpBuilder &b, Location loc,
   for (auto e : map.getResults()) {
     auto exprMap = AffineMap::get(dims, map.getNumSymbols(), e);
     SmallVector<Value> operands(vals.begin(), vals.end());
-    canonicalizeMapAndOperands(&exprMap, &operands);
-    res.push_back(b.create<AffineApplyOp>(loc, exprMap, operands));
+    affine::canonicalizeMapAndOperands(&exprMap, &operands);
+    res.push_back(b.create<affine::AffineApplyOp>(loc, exprMap, operands));
   }
   return res;
 }
@@ -189,7 +189,7 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
         .Case([&](scf::ForOp forOp) {
           allIvs.push_back(forOp.getInductionVar());
         })
-        .Case([&](AffineForOp affineForOp) {
+        .Case([&](affine::AffineForOp affineForOp) {
           allIvs.push_back(affineForOp.getInductionVar());
         })
         .Default([&](Operation *op) { assert(false && "unexpected op"); });
@@ -208,10 +208,12 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
 template <typename LoopTy>
 static FailureOr<LinalgLoops> linalgOpToLoopsImpl(RewriterBase &rewriter,
                                                   LinalgOp linalgOp) {
-  using LoadOpTy = std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
-                                      AffineLoadOp, memref::LoadOp>;
-  using StoreOpTy = std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
-                                       AffineStoreOp, memref::StoreOp>;
+  using LoadOpTy =
+      std::conditional_t<std::is_same<LoopTy, affine::AffineForOp>::value,
+                         affine::AffineLoadOp, memref::LoadOp>;
+  using StoreOpTy =
+      std::conditional_t<std::is_same<LoopTy, affine::AffineForOp>::value,
+                         affine::AffineStoreOp, memref::StoreOp>;
 
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).
@@ -284,11 +286,11 @@ public:
 /// other cases, it is replaced by its unique operand.
 struct FoldAffineOp : public RewritePattern {
   FoldAffineOp(MLIRContext *context)
-      : RewritePattern(AffineApplyOp::getOperationName(), 0, context) {}
+      : RewritePattern(affine::AffineApplyOp::getOperationName(), 0, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    AffineApplyOp affineApplyOp = cast<AffineApplyOp>(op);
+    auto affineApplyOp = cast<affine::AffineApplyOp>(op);
     auto map = affineApplyOp.getAffineMap();
     if (map.getNumResults() != 1 || map.getNumInputs() > 1)
       return failure();
@@ -316,7 +318,7 @@ static void lowerLinalgToLoopsImpl(func::FuncOp funcOp) {
   patterns.add<LinalgRewritePattern<LoopType>>(context);
   memref::DimOp::getCanonicalizationPatterns(patterns, context);
   tensor::DimOp::getCanonicalizationPatterns(patterns, context);
-  AffineApplyOp::getCanonicalizationPatterns(patterns, context);
+  affine::AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
@@ -328,7 +330,7 @@ struct LowerToAffineLoops
     registry.insert<memref::MemRefDialect>();
   }
   void runOnOperation() override {
-    lowerLinalgToLoopsImpl<AffineForOp>(getOperation());
+    lowerLinalgToLoopsImpl<affine::AffineForOp>(getOperation());
   }
 };
 
@@ -368,7 +370,7 @@ mlir::createConvertLinalgToAffineLoopsPass() {
 /// Emits a loop nest of `affine.for` with the proper body for `linalgOp`.
 FailureOr<LinalgLoops>
 mlir::linalg::linalgOpToAffineLoops(RewriterBase &rewriter, LinalgOp linalgOp) {
-  return linalgOpToLoopsImpl<AffineForOp>(rewriter, linalgOp);
+  return linalgOpToLoopsImpl<affine::AffineForOp>(rewriter, linalgOp);
 }
 
 /// Emits a loop nest of `scf.for` with the proper body for `linalgOp`.

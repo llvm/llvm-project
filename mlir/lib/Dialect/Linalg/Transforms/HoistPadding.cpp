@@ -462,7 +462,7 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
   // of the enclosing loops.
   for (auto forOp : packingLoops) {
     // Compute an upper bound `ubVal` for the upper bound of `forOp`.
-    FailureOr<OpFoldResult> loopUb = reifyIndexValueBound(
+    FailureOr<OpFoldResult> loopUb = affine::reifyIndexValueBound(
         rewriter, loc, presburger::BoundType::UB, forOp.getUpperBound(),
         /*stopCondition=*/
         [&](Value v, std::optional<int64_t> d) {
@@ -472,7 +472,8 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
           Operation *op = v.getDefiningOp();
           if (!op)
             return true;
-          return !isa<AffineMinOp, AffineMaxOp, AffineApplyOp>(op);
+          return !isa<affine::AffineMinOp, affine::AffineMaxOp,
+                      affine::AffineApplyOp>(op);
         },
         /*closedUB=*/true);
     assert(succeeded(loopUb) && "could not get upper bound");
@@ -485,7 +486,7 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
     AffineExpr lb, ub, step;
     bindDims(rewriter.getContext(), lb, ub);
     bindSymbols(rewriter.getContext(), step);
-    Value res = rewriter.createOrFold<AffineApplyOp>(
+    Value res = rewriter.createOrFold<affine::AffineApplyOp>(
         loc, (ub - lb).ceilDiv(step),
         ValueRange{forOp.getLowerBound(), ubVal,
                    cast<scf::ForOp>(forOp).getStep()});
@@ -519,7 +520,7 @@ static Value buildLoopIterationCount(RewriterBase &rewriter, scf::ForOp outer,
   Value ivVal = forOp.getInductionVar(), lbVal = forOp.getLowerBound(),
         stepVal = forOp.getStep();
   auto loc = forOp->getLoc();
-  return rewriter.createOrFold<AffineApplyOp>(
+  return rewriter.createOrFold<affine::AffineApplyOp>(
       loc, (iv - lb).ceilDiv(step), ValueRange{ivVal, lbVal, stepVal});
 }
 

@@ -599,7 +599,7 @@ class RewriteScalarExtractElementOfTransferRead
     if (extractOp.getPosition()) {
       AffineExpr sym0, sym1;
       bindSymbols(extractOp.getContext(), sym0, sym1);
-      OpFoldResult ofr = makeComposedFoldedAffineApply(
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, extractOp.getLoc(), sym0 + sym1,
           {newIndices[newIndices.size() - 1], extractOp.getPosition()});
       if (ofr.is<Value>()) {
@@ -663,7 +663,7 @@ class RewriteScalarExtractOfTransferRead
       int64_t offset = it.value().cast<IntegerAttr>().getInt();
       int64_t idx =
           newIndices.size() - extractOp.getPosition().size() + it.index();
-      OpFoldResult ofr = makeComposedFoldedAffineApply(
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, extractOp.getLoc(),
           rewriter.getAffineSymbolExpr(0) + offset, {newIndices[idx]});
       if (ofr.is<Value>()) {

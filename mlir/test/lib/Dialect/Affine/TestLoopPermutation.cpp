@@ -18,6 +18,7 @@
 #define PASS_NAME "test-loop-permutation"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 

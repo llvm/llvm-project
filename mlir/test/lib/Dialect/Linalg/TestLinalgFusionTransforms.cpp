@@ -73,8 +73,8 @@ struct TestLinalgGreedyFusion
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLinalgGreedyFusion)
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
-                    scf::SCFDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect,
+                    memref::MemRefDialect, scf::SCFDialect>();
   }
   StringRef getArgument() const final { return "test-linalg-greedy-fusion"; }
   StringRef getDescription() const final {

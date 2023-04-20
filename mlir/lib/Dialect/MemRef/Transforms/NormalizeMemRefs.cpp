@@ -29,6 +29,7 @@ namespace memref {
 #define DEBUG_TYPE "normalize-memrefs"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
