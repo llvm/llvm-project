@@ -18,9 +18,12 @@
 
 namespace mlir {
 class AffineExpr;
-class AffineForOp;
 class AffineMap;
 class PatternRewriter;
+
+namespace affine {
+class AffineForOp;
+} // namespace affine
 
 namespace tensor {
 class ExtractSliceOp;

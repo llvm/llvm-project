@@ -26,7 +26,7 @@ def Bufferization_Dialect : Dialect {
     deallocation](/docs/BufferDeallocationInternals/).
   }];
   let dependentDialects = [
-    "AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];
 
   let extraClassDeclaration = [{

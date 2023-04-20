@@ -100,7 +100,7 @@ LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
   SmallVector<Value> indices(readOp.getIndices().begin(),
                              readOp.getIndices().end());
   SmallVector<Value> sourceIndices;
-  resolveIndicesIntoOpWithOffsetsAndStrides(
+  affine::resolveIndicesIntoOpWithOffsetsAndStrides(
       rewriter, readOp.getLoc(), extractSliceOp.getMixedOffsets(),
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
@@ -132,7 +132,7 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
   SmallVector<Value> indices(writeOp.getIndices().begin(),
                              writeOp.getIndices().end());
   SmallVector<Value> sourceIndices;
-  resolveIndicesIntoOpWithOffsetsAndStrides(
+  affine::resolveIndicesIntoOpWithOffsetsAndStrides(
       rewriter, writeOp.getLoc(), insertSliceOp.getMixedOffsets(),
       insertSliceOp.getMixedStrides(), insertSliceOp.getDroppedDims(), indices,
       sourceIndices);
@@ -187,9 +187,9 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
     // Note: the "insertSlice" case is symmetrical to the extract/subview case:
     // `insertSliceOp` is passed as the "source" and `sourceInsertSliceOp` is
     // passed as the destination to the helper function.
-    resolveSizesIntoOpWithSizes(insertSliceOp.getMixedSizes(),
-                                sourceInsertSliceOp.getMixedSizes(),
-                                droppedDims, resolvedSizes);
+    affine::resolveSizesIntoOpWithSizes(insertSliceOp.getMixedSizes(),
+                                        sourceInsertSliceOp.getMixedSizes(),
+                                        droppedDims, resolvedSizes);
 
     // If we are inside an InParallel region, temporarily set the insertion
     // point outside: only tensor.parallel_insert_slice ops are allowed in
@@ -204,7 +204,7 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
     // Note: the "insertSlice" case is symmetrical to the extract/subview case:
     // `insertSliceOp` is passed as the "source" and `sourceInsertSliceOp` is
     // passed as the destination to the helper function.
-    resolveIndicesIntoOpWithOffsetsAndStrides(
+    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
         rewriter, insertSliceOp.getLoc(), insertSliceOp.getMixedOffsets(),
         insertSliceOp.getMixedStrides(), droppedDims,
         sourceInsertSliceOp.getMixedOffsets(), resolvedOffsets);

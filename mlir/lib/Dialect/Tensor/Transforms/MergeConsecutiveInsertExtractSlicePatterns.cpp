@@ -29,9 +29,9 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
       return failure();
 
     SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
-    if (failed(mergeOffsetsSizesAndStrides(rewriter, nextOp.getLoc(), prevOp,
-                                           nextOp, prevOp.getDroppedDims(),
-                                           newOffsets, newSizes, newStrides)))
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, nextOp.getLoc(), prevOp, nextOp, prevOp.getDroppedDims(),
+            newOffsets, newSizes, newStrides)))
       return failure();
 
     rewriter.replaceOpWithNewOp<ExtractSliceOp>(nextOp, nextOp.getType(),

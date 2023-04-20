@@ -139,8 +139,8 @@ struct PackOpTiling
         tensor::createDimValues(b, loc, packOp.getSource());
     SmallVector<OpFoldResult> inputIndices, inputSizes;
     for (auto dim : llvm::seq<int64_t>(0, inputRank)) {
-      using AV = AffineValueExpr;
-      AffineBuilder ab(b, loc);
+      using AV = affine::AffineValueExpr;
+      affine::AffineBuilder ab(b, loc);
       AffineExpr dim0, dim1, sym;
       bindDims(b.getContext(), dim0, dim1);
       bindSymbols(b.getContext(), sym);
@@ -255,8 +255,8 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
   }
 
   Location loc = unpackOp.getLoc();
-  using AV = AffineValueExpr;
-  AffineBuilder ab(b, loc);
+  using AV = affine::AffineValueExpr;
+  affine::AffineBuilder ab(b, loc);
   AffineExpr dim0, dim1, sym0;
   bindDims(b.getContext(), dim0, dim1);
   bindSymbols(b.getContext(), sym0);
@@ -303,12 +303,12 @@ static UnpackTileDimInfo getUnpackTileDimInfo(OpBuilder &b, UnPackOp unpackOp,
     return info;
   }
 
-  DivModValue firstCoord =
-      getDivMod(b, loc, getValueOrCreateConstantIndexOp(b, loc, tileOffset),
-                getValueOrCreateConstantIndexOp(b, loc, innerTileSize));
+  affine::DivModValue firstCoord = affine::getDivMod(
+      b, loc, getValueOrCreateConstantIndexOp(b, loc, tileOffset),
+      getValueOrCreateConstantIndexOp(b, loc, innerTileSize));
   OpFoldResult tileExclusiveBound =
       ab.add(AV(dim0).bind(tileOffset), AV(dim1).bind(tileSize));
-  DivModValue lastCoord = getDivMod(
+  affine::DivModValue lastCoord = affine::getDivMod(
       b, loc,
       getValueOrCreateConstantIndexOp(
           b, loc,
@@ -468,21 +468,21 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // Add two integers.
   auto addMap = AffineMap::get(2, 0, {dim0 + dim1});
   auto add = [&](OpFoldResult v1, OpFoldResult v2) {
-    return makeComposedFoldedAffineApply(b, loc, addMap, {v1, v2});
+    return affine::makeComposedFoldedAffineApply(b, loc, addMap, {v1, v2});
   };
   // Subtract two integers.
   auto subMap = AffineMap::get(2, 0, {dim0 - dim1});
   auto sub = [&](OpFoldResult v1, OpFoldResult v2) {
-    return makeComposedFoldedAffineApply(b, loc, subMap, {v1, v2});
+    return affine::makeComposedFoldedAffineApply(b, loc, subMap, {v1, v2});
   };
   // Take the minimum of two integers.
   auto idMap = AffineMap::getMultiDimIdentityMap(2, b.getContext());
   auto min = [&](OpFoldResult v1, OpFoldResult v2) {
-    return makeComposedFoldedAffineMin(b, loc, idMap, {v1, v2});
+    return affine::makeComposedFoldedAffineMin(b, loc, idMap, {v1, v2});
   };
   // Take the maximum of two integers.
   auto max = [&](OpFoldResult v1, OpFoldResult v2) {
-    return makeComposedFoldedAffineMax(b, loc, idMap, {v1, v2});
+    return affine::makeComposedFoldedAffineMax(b, loc, idMap, {v1, v2});
   };
   // Zero index-typed integer.
   OpFoldResult zero = b.getIndexAttr(0);

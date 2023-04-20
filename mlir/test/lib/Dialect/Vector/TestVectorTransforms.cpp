@@ -53,7 +53,7 @@ struct TestVectorToVectorLowering
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect>();
+    registry.insert<affine::AffineDialect>();
   }
 
   Option<bool> unroll{*this, "unroll", llvm::cl::desc("Include unrolling"),
@@ -128,8 +128,8 @@ struct TestVectorContractionPrepareForMMTLowering
   TestVectorContractionPrepareForMMTLowering() = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<AffineDialect, arith::ArithDialect, vector::VectorDialect>();
+    registry.insert<affine::AffineDialect, arith::ArithDialect,
+                    vector::VectorDialect>();
   }
 
   void runOnOperation() override {
@@ -246,7 +246,7 @@ struct TestVectorTransferUnrollingPatterns
       : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect>();
+    registry.insert<affine::AffineDialect>();
   }
   StringRef getArgument() const final {
     return "test-vector-transfer-unrolling-patterns";
@@ -305,8 +305,8 @@ struct TestScalarVectorTransferLoweringPatterns
   TestScalarVectorTransferLoweringPatterns() = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect,
-                    vector::VectorDialect>();
+    registry.insert<affine::AffineDialect, memref::MemRefDialect,
+                    tensor::TensorDialect, vector::VectorDialect>();
   }
 
   void runOnOperation() override {
@@ -342,7 +342,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
       const TestVectorTransferCollapseInnerMostContiguousDims &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, AffineDialect>();
+    registry.insert<memref::MemRefDialect, affine::AffineDialect>();
   }
 
   StringRef getArgument() const final {
@@ -488,7 +488,7 @@ struct TestVectorDistribution
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<scf::SCFDialect, memref::MemRefDialect, gpu::GPUDialect,
-                    AffineDialect>();
+                    affine::AffineDialect>();
   }
 
   StringRef getArgument() const final { return "test-vector-warp-distribute"; }
