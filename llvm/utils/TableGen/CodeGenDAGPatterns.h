@@ -193,7 +193,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
-  SmallVector<unsigned, 16> AddrSpaces;
+  unsigned AddrSpace = std::numeric_limits<unsigned>::max();
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
