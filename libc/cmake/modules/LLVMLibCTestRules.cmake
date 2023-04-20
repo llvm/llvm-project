@@ -529,12 +529,21 @@ function(add_integration_test test_name)
     get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
   endif()
 
+  # We have to use a separate var to store the command as a list because
+  # the COMMAND option of `add_custom_target` cannot handle empty vars in the
+  # command. For example, if INTEGRATION_TEST_ENV is empty, the actual
+  # command also will not run. So, we use this list and tell `add_custom_target`
+  # to expand the list (by including the option COMMAND_EXPAND_LISTS). This
+  # makes `add_custom_target` construct the correct command and execute it.
+  set(test_cmd
+      ${INTEGRATION_TEST_ENV}
+      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}>
+      ${INTEGRATION_TEST_LOADER_ARGS}
+      $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
-    COMMAND ${INTEGRATION_TEST_ENV}
-            $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}>
-            ${INTEGRATION_TEST_LOADER_ARGS}
-            $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS}
+    COMMAND ${test_cmd}
+    COMMAND_EXPAND_LISTS
     COMMENT "Running integration test ${fq_target_name}"
   )
   add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
