@@ -275,7 +275,7 @@ _mm_monitor(void const *__p, unsigned __extensions, unsigned __hints)
 
 /// Used with the \c MONITOR instruction to wait while the processor is in
 ///    the monitor event pending state. Data stored in the monitored address
-///    range causes the processor to exit the pending state.
+///    range, or an interrupt, causes the processor to exit the pending state.
 ///
 /// The \c MWAIT instruction can be used in kernel mode, and in other modes if
 /// MSR <c> C001_0015h[MonMwaitUserEn] </c> is set.

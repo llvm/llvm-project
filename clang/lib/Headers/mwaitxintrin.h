@@ -40,7 +40,7 @@ _mm_monitorx(void * __p, unsigned __extensions, unsigned __hints)
 
 /// Used with the \c MONITORX instruction to wait while the processor is in
 ///    the monitor event pending state. Data stored in the monitored address
-///    range causes the processor to exit the pending state.
+///    range, or an interrupt, causes the processor to exit the pending state.
 ///
 /// \headerfile <x86intrin.h>
 ///
