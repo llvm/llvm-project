@@ -29,6 +29,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -433,6 +434,48 @@ TEST(IncludeCleaner, NoCrash) {
   EXPECT_EQ(
       halfOpenToRange(SM, MissingIncludes.front().SymRefRange.toCharRange(SM)),
       MainCode.range());
+}
+
+TEST(IncludeCleaner, FirstMatchedProvider) {
+  struct {
+    const char *Code;
+    const std::vector<include_cleaner::Header> Providers;
+    const std::optional<include_cleaner::Header> ExpectedProvider;
+  } Cases[] = {
+      {R"cpp(
+        #include "bar.h"
+        #include "foo.h"
+      )cpp",
+       {include_cleaner::Header{"bar.h"}, include_cleaner::Header{"foo.h"}},
+       include_cleaner::Header{"bar.h"}},
+      {R"cpp(
+        #include "bar.h"
+        #include "foo.h"
+      )cpp",
+       {include_cleaner::Header{"foo.h"}, include_cleaner::Header{"bar.h"}},
+       include_cleaner::Header{"foo.h"}},
+      {"#include \"bar.h\"",
+       {include_cleaner::Header{"bar.h"}},
+       include_cleaner::Header{"bar.h"}},
+      {"#include \"bar.h\"", {include_cleaner::Header{"foo.h"}}, std::nullopt},
+      {"#include \"bar.h\"", {}, std::nullopt}};
+  for (const auto &Case : Cases) {
+    Annotations Code{Case.Code};
+    SCOPED_TRACE(Code.code());
+
+    TestTU TU;
+    TU.Code = Code.code();
+    TU.AdditionalFiles["bar.h"] = "";
+    TU.AdditionalFiles["foo.h"] = "";
+
+    auto AST = TU.build();
+    std::optional<include_cleaner::Header> MatchedProvider =
+        firstMatchedProvider(
+            convertIncludes(AST.getSourceManager(),
+                            AST.getIncludeStructure().MainFileIncludes),
+            Case.Providers);
+    EXPECT_EQ(MatchedProvider, Case.ExpectedProvider);
+  }
 }
 
 } // namespace

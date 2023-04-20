@@ -616,7 +616,6 @@ libcxx/include/__thread/poll_with_backoff.h
 libcxx/include/__thread/timed_backoff_policy.h
 libcxx/include/__tree
 libcxx/include/tuple
-libcxx/include/__tuple/apply_cv.h
 libcxx/include/__tuple/make_tuple_types.h
 libcxx/include/__tuple/sfinae_helpers.h
 libcxx/include/__tuple/tuple_element.h
@@ -634,7 +633,6 @@ libcxx/include/__type_traits/add_volatile.h
 libcxx/include/__type_traits/aligned_storage.h
 libcxx/include/__type_traits/aligned_union.h
 libcxx/include/__type_traits/alignment_of.h
-libcxx/include/__type_traits/apply_cv.h
 libcxx/include/__type_traits/can_extract_key.h
 libcxx/include/__type_traits/common_reference.h
 libcxx/include/__type_traits/common_type.h

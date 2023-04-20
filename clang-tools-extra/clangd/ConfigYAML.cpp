@@ -254,6 +254,10 @@ private:
       if (auto Value = boolValue(N, "Designators"))
         F.Designators = *Value;
     });
+    Dict.handle("TypeNameLimit", [&](Node &N) {
+      if (auto Value = uint32Value(N, "TypeNameLimit"))
+        F.TypeNameLimit = *Value;
+    });
     Dict.parse(N);
   }
 
@@ -372,6 +376,17 @@ private:
         return Located<bool>(*Bool, Scalar->Range);
       warning(Desc + " should be a boolean", N);
     }
+    return std::nullopt;
+  }
+
+  std::optional<Located<uint32_t>> uint32Value(Node &N, llvm::StringRef Desc) {
+    if (auto Scalar = scalarValue(N, Desc)) {
+      unsigned long long Num;
+      if (!llvm::getAsUnsignedInteger(**Scalar, 0, Num)) {
+        return Located<uint32_t>(Num, Scalar->Range);
+      }
+    }
+    warning(Desc + " invalid number", N);
     return std::nullopt;
   }
 

@@ -421,12 +421,12 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX7-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    v_cndmask_b32_e64 v2, -v4, -v2, vcc
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v3, v7, vcc
 ; GFX7-NEXT:    flat_store_dwordx2 v[5:6], v[0:1]
-; GFX7-NEXT:    v_mov_b32_e32 v1, v2
+; GFX7-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -434,12 +434,12 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX9-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, -v4, -v2, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v7, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v[5:6], v[0:1], off
-; GFX9-NEXT:    v_mov_b32_e32 v1, v2
+; GFX9-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -447,12 +447,12 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_and_b32 v0, 1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, -v4, -v2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc_lo
-; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v2
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v4, v2 :: v_dual_cndmask_b32 v0, v3, v7
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
 ; GFX11-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -496,13 +496,14 @@ define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, d
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v2, -v3, -v5, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v3, v5, vcc
+; GCN-NEXT:    v_xor_b32_e32 v3, 0x80000000, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v2, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: select_fneg_select_fneg_f64:
@@ -511,13 +512,16 @@ define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, d
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v2, v4 :: v_dual_and_b32 v1, 1, v1
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, -v3, -v5, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v3, v5, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v2, v2, vcc_lo
+; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg0 = fneg double %arg0
   %select0 = select i1 %cond0, double %arg1, double %fneg0
@@ -889,9 +893,10 @@ define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) {
 ; GCN-NEXT:    v_and_b32_e32 v5, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, v1, v3, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v2, -v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc
+; GCN-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
 ; GCN-NEXT:    v_cmp_lt_i32_e32 vcc, 1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v1, -v1, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v0, v3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -903,11 +908,12 @@ define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
 ; GFX11-NEXT:    v_cndmask_b32_e32 v3, v1, v3, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v2, -v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v4, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, -v1, v1, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %i = and i32 %arg, 1
   %i3 = icmp eq i32 %i, 0
@@ -1513,3 +1519,133 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_fo
   %ret.1 = insertvalue { double, double } %ret.0, double %other.bitcast.user, 1
   ret { double, double } %ret.1
 }
+
+; Check for correct bitcasting back when there are multiple uses
+define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i1 %z, ptr addrspace(1) %dst) {
+; GFX7-LABEL: multiple_uses_fneg_select_f64:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_load_dword s6, s[4:5], 0x4
+; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x6
+; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX7-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GFX7-NEXT:    v_mov_b32_e32 v0, s3
+; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    s_cselect_b32 s1, s1, s3
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX7-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    v_mov_b32_e32 v2, s4
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
+; GFX7-NEXT:    v_mov_b32_e32 v0, s0
+; GFX7-NEXT:    v_mov_b32_e32 v3, s5
+; GFX7-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GFX7-NEXT:    s_endpgm
+;
+; GFX9-LABEL: multiple_uses_fneg_select_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dword s6, s[4:5], 0x10
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x18
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_bitcmp1_b32 s6, 0
+; GFX9-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX9-NEXT:    s_and_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    s_cselect_b32 s1, s1, s3
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX9-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: multiple_uses_fneg_select_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x2
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x10
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x18
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s5
+; GFX11-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s7, v0, vcc_lo
+; GFX11-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s2, s5, s7
+; GFX11-NEXT:    s_cselect_b32 s3, s4, s6
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, s2, -v0, vcc_lo
+; GFX11-NEXT:    v_mov_b32_e32 v0, s3
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %a = select i1 %z, double %x, double %y
+  %b = fneg double %a
+  %c = select i1 %z, double %a, double %b
+  %d = fneg double %c
+  store double %d, ptr addrspace(1) %dst
+  ret void
+}
+
+define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
+; GCN-LABEL: fnge_select_f32_multi_use_regression:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_cmp_nlt_f32_e64 s[0:1], s0, 0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GCN-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    s_and_b64 vcc, exec, vcc
+; GCN-NEXT:    s_endpgm
+;
+; GFX11-LABEL: fnge_select_f32_multi_use_regression:
+; GFX11:       ; %bb.0: ; %.entry
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_cmp_nlt_f32_e64 s0, s0, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, 0, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_mul_f32_e64 v0, -v0, v1
+; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v0
+; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
+; GFX11-NEXT:    s_endpgm
+.entry:
+  %i = fcmp uge float %.i2369, 0.000000e+00
+  %.i2379 = select i1 %i, i32 1, i32 0
+  %.i0436 = bitcast i32 %.i2379 to float
+  %.i0440 = fneg float %.i0436
+  %i1 = fcmp uge float %.i0436, 0.000000e+00
+  %.i2495 = select i1 %i1, i32 %.i2379, i32 0
+  %.i0552 = bitcast i32 %.i2495 to float
+  %.i0592 = fmul float %.i0440, %.i0552
+  %.i0721 = fcmp ogt float %.i0592, 0.000000e+00
+  br i1 %.i0721, label %bb5, label %bb
+
+bb:                                               ; preds = %.entry
+  %i2 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> zeroinitializer, i32 1, i32 0)
+  %i3 = shufflevector <2 x i32> %i2, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %i4 = bitcast <4 x i32> %i3 to <4 x float>
+  %.i0753 = extractelement <4 x float> %i4, i64 0
+  br label %bb5
+
+bb5:                                              ; preds = %bb, %.entry
+  ret void
+}
+
+
+declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg) #0
+
+attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }

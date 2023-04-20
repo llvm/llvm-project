@@ -81,6 +81,11 @@ std::string spellHeader(ParsedAST &AST, const FileEntry *MainFile,
 
 std::vector<include_cleaner::SymbolReference>
 collectMacroReferences(ParsedAST &AST);
+
+/// Find the first provider in the list that is matched by the includes.
+std::optional<include_cleaner::Header>
+firstMatchedProvider(const include_cleaner::Includes &Includes,
+                     llvm::ArrayRef<include_cleaner::Header> Providers);
 } // namespace clangd
 } // namespace clang
 

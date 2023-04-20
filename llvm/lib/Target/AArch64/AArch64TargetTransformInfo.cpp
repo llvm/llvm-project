@@ -2145,6 +2145,13 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
+  // but we also want to include the TTI::CastContextHint::Masked case too.
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      TLI->isTypeLegal(DstTy))
+    CCH = TTI::CastContextHint::Normal;
+
   return AdjustCost(
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }

@@ -9,13 +9,17 @@
 #include "AST.h"
 #include "FindSymbols.h"
 #include "FindTarget.h"
+#include "Headers.h"
 #include "HeuristicResolver.h"
+#include "IncludeCleaner.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/Types.h"
 #include "index/Index.h"
 #include "index/Merge.h"
 #include "index/Relation.h"
@@ -48,6 +52,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Index/USRGeneration.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -61,6 +66,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace clang {
@@ -1310,6 +1316,63 @@ stringifyContainerForMainFileRef(const Decl *Container) {
     return printQualifiedName(*ND);
   return {};
 }
+
+std::optional<ReferencesResult>
+maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
+                           URIForFile URIMainFile) {
+  const auto &Includes = AST.getIncludeStructure().MainFileIncludes;
+  auto IncludeOnLine = llvm::find_if(Includes, [&Pos](const Inclusion &Inc) {
+    return Inc.HashLine == Pos.line;
+  });
+  if (IncludeOnLine == Includes.end())
+    return std::nullopt;
+
+  const auto &Inc = *IncludeOnLine;
+  const SourceManager &SM = AST.getSourceManager();
+  ReferencesResult Results;
+  auto ConvertedMainFileIncludes = convertIncludes(SM, Includes);
+  auto ReferencedInclude = convertIncludes(SM, Inc);
+  include_cleaner::walkUsed(
+      AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
+      AST.getPragmaIncludes(), SM,
+      [&](const include_cleaner::SymbolReference &Ref,
+          llvm::ArrayRef<include_cleaner::Header> Providers) {
+        if (Ref.RT != include_cleaner::RefType::Explicit)
+          return;
+
+        auto Provider =
+            firstMatchedProvider(ConvertedMainFileIncludes, Providers);
+        if (!Provider || ReferencedInclude.match(*Provider).empty())
+          return;
+
+        auto Loc = SM.getFileLoc(Ref.RefLocation);
+        // File locations can be outside of the main file if macro is
+        // expanded through an #include.
+        while (SM.getFileID(Loc) != SM.getMainFileID())
+          Loc = SM.getIncludeLoc(SM.getFileID(Loc));
+
+        ReferencesResult::Reference Result;
+        const auto *Token = AST.getTokens().spelledTokenAt(Loc);
+        Result.Loc.range = Range{sourceLocToPosition(SM, Token->location()),
+                                 sourceLocToPosition(SM, Token->endLocation())};
+        Result.Loc.uri = URIMainFile;
+        Results.References.push_back(std::move(Result));
+      });
+  if (Results.References.empty())
+    return std::nullopt;
+
+  // Add the #include line to the references list.
+  auto IncludeLen = std::string{"#include"}.length() + Inc.Written.length() + 1;
+  ReferencesResult::Reference Result;
+  Result.Loc.range = clangd::Range{Position{Inc.HashLine, 0},
+                                   Position{Inc.HashLine, (int)IncludeLen}};
+  Result.Loc.uri = URIMainFile;
+  Results.References.push_back(std::move(Result));
+
+  if (Results.References.empty())
+    return std::nullopt;
+  return Results;
+}
 } // namespace
 
 ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
@@ -1323,6 +1386,11 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     llvm::consumeError(CurLoc.takeError());
     return {};
   }
+
+  const auto IncludeReferences =
+      maybeFindIncludeReferences(AST, Pos, URIMainFile);
+  if (IncludeReferences)
+    return *IncludeReferences;
 
   llvm::DenseSet<SymbolID> IDsToQuery, OverriddenMethods;
 

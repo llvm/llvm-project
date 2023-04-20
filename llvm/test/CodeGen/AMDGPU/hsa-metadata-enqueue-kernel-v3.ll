@@ -55,7 +55,7 @@ define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a) #0
 ; CHECK-NEXT:         .value_kind:     hidden_default_queue
 ; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_kind:     hidden_completion_action
 ; CHECK:          .language:       OpenCL C
 ; CHECK-NEXT:     .language_version:
 ; CHECK-NEXT:       - 2
@@ -148,7 +148,7 @@ define amdgpu_kernel void @test_no_default_queue(i8 %a) #3
 attributes #0 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-no-completion-action" "amdgpu-implicitarg-num-bytes"="48" }
 attributes #1 = { optnone noinline "amdgpu-implicitarg-num-bytes"="48" }
 attributes #2 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-implicitarg-num-bytes"="48" }
-attributes #3 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="48" "calls-enqueue-kernel" }
+attributes #3 = { optnone noinline "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="48" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdgpu_code_object_version", i32 300}
