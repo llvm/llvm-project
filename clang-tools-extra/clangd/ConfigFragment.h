@@ -322,6 +322,8 @@ struct Fragment {
     std::optional<Located<bool>> DeducedTypes;
     /// Show designators in aggregate initialization.
     std::optional<Located<bool>> Designators;
+    /// Limit the length of type name hints. (0 means no limit)
+    std::optional<Located<uint32_t>> TypeNameLimit;
   };
   InlayHintsBlock InlayHints;
 };
