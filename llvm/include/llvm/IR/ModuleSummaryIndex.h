@@ -1333,6 +1333,11 @@ private:
 
   // The total number of basic blocks in the module in the per-module summary or
   // the total number of basic blocks in the LTO unit in the combined index.
+  // FIXME: Putting this in the distributed ThinLTO index files breaks LTO
+  // backend caching on any BB change to any linked file. It is currently not
+  // used except in the case of a SamplePGO partial profile, and should be
+  // reevaluated/redesigned to allow more effective incremental builds in that
+  // case.
   uint64_t BlockCount;
 
   // List of unique stack ids (hashes). We use a 4B index of the id in the

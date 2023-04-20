@@ -7,28 +7,24 @@
 ; both into a single vector.
 ; So this code should not be vectorized.
 
-; YAML: --- !Passed
+; YAML: --- !Missed
 ; YAML: Pass:            slp-vectorizer
-; YAML: Name:            VectorizedList
+; YAML: Name:            NotBeneficial
 ; YAML: Function:        test
 ; YAML: Args:
-; YAML:   - String:          'SLP vectorized with cost '
-; YAML:   - Cost:            '-2'
-; YAML:   - String:          ' and with tree size '
-; YAML:   - TreeSize:        '3'
+; YAML:   - String:          'List vectorization was possible but not beneficial with cost '
+; YAML:   - Cost:            '0'
+; YAML:   - String:          ' >= '
+; YAML:   - Treshold:        '0'
 ; YAML: ...
 define void @test(<4 x float> %vec, float %a, float %b, ptr %ptr) {
 ; CHECK-LABEL: define void @test
 ; CHECK-SAME: (<4 x float> [[VEC:%.*]], float [[A:%.*]], float [[B:%.*]], ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd float [[A]], [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 undef, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[FADD]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> [[TMP3]], <2 x i32> <i32 4, i32 1>
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
-; CHECK-NEXT:    [[ROOT:%.*]] = fadd float [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[EXTR1:%.*]] = extractelement <4 x float> [[VEC]], i64 1
+; CHECK-NEXT:    [[FSUB0:%.*]] = fsub float [[FADD]], [[FADD]]
+; CHECK-NEXT:    [[FSUB1:%.*]] = fsub float [[EXTR1]], [[EXTR1]]
+; CHECK-NEXT:    [[ROOT:%.*]] = fadd float [[FSUB0]], [[FSUB1]]
 ; CHECK-NEXT:    store float [[ROOT]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;

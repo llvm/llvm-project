@@ -44,7 +44,7 @@ Attribute getScalarOrSplatAttr(Type type, int64_t value) {
   if (auto intTy = type.dyn_cast<IntegerType>())
     return IntegerAttr::get(intTy, sizedValue);
 
-  return SplatElementsAttr::get(type, sizedValue);
+  return SplatElementsAttr::get(cast<ShapedType>(type), sizedValue);
 }
 
 Value lowerExtendedMultiplication(Operation *mulOp, PatternRewriter &rewriter,

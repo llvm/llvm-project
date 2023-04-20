@@ -625,7 +625,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
 // Returns the constant initial value for a given reduction operation. The
 // attribute type varies depending on the element type required.
-static Attribute createInitialValueForReduceOp(Operation *op, Type elementTy,
+static TypedAttr createInitialValueForReduceOp(Operation *op, Type elementTy,
                                                PatternRewriter &rewriter) {
   if (isa<tosa::ReduceSumOp>(op) && elementTy.isa<FloatType>())
     return rewriter.getFloatAttr(elementTy, 0.0);

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define i8 @fshl_i8_3rd_arg_const(i8 %a, i8 %b) {
 ; CHECK-LABEL: 'fshl_i8_3rd_arg_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call i8 @llvm.fshl.i8(i8 %a, i8 %b, i8 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fshl = tail call i8 @llvm.fshl.i8(i8 %a, i8 %b, i8 9)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %fshl
 ;
 entry:
@@ -27,7 +27,7 @@ declare i8 @llvm.fshl.i8(i8, i8, i8)
 
 define i16 @fshl_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: 'fshl_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call i16 @llvm.fshl.i16(i16 %a, i16 %b, i16 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fshl = tail call i16 @llvm.fshl.i16(i16 %a, i16 %b, i16 9)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %fshl
 ;
 entry:
@@ -39,7 +39,7 @@ declare i16 @llvm.fshl.i16(i16, i16, i16)
 
 define i32 @fshl_i32_3rd_arg_const(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'fshl_i32_3rd_arg_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %fshl = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 9)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %fshl
 ;
 entry:
@@ -61,7 +61,7 @@ declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 define i64 @fshl_i64_3rd_arg_const(i64 %a, i64 %b) {
 ; CHECK-LABEL: 'fshl_i64_3rd_arg_const'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %fshl = tail call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 9)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %fshl
 ;
 entry:
@@ -83,7 +83,7 @@ declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define i19 @fshl_i19(i19 %a, i19 %b) {
 ; CHECK-LABEL: 'fshl_i19'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call i19 @llvm.fshl.i19(i19 %a, i19 %b, i19 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %fshl = tail call i19 @llvm.fshl.i19(i19 %a, i19 %b, i19 9)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i19 %fshl
 ;
 entry:
@@ -96,7 +96,7 @@ declare i19 @llvm.fshl.i19(i19, i19, i19)
 
 define <16 x i8> @fshl_v16i8_3rd_arg_vec_const_all_lanes_same(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: 'fshl_v16i8_3rd_arg_vec_const_all_lanes_same'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fshl = tail call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %fshl
 ;
 entry:
@@ -128,7 +128,7 @@ declare <16 x i8> @llvm.fshl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
 
 define <8 x i16> @fshl_v8i16_3rd_arg_vec_const_all_lanes_same(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: 'fshl_v8i16_3rd_arg_vec_const_all_lanes_same'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fshl = tail call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %fshl
 ;
 entry:
@@ -160,7 +160,7 @@ declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
 
 define <4 x i32> @fshl_v4i32_3rd_arg_vec_const_all_lanes_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: 'fshl_v4i32_3rd_arg_vec_const_all_lanes_same'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fshl = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %fshl
 ;
 entry:
@@ -192,7 +192,7 @@ declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 
 define <2 x i64> @fshl_v2i64_3rd_arg_vec_const_all_lanes_same(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: 'fshl_v2i64_3rd_arg_vec_const_all_lanes_same'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %fshl = tail call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> <i64 1, i64 1>)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fshl = tail call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> <i64 1, i64 1>)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %fshl
 ;
 entry:
@@ -234,3 +234,48 @@ entry:
 
 declare <4 x i30> @llvm.fshl.v4i30(<4 x i30>, <4 x i30>, <4 x i30>)
 
+define <2 x i66> @fshl_v2i66_3rd_arg_vec_const_lanes_different(<2 x i66> %a, <2 x i66> %b) {
+; CHECK-LABEL: 'fshl_v2i66_3rd_arg_vec_const_lanes_different'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %fshl = tail call <2 x i66> @llvm.fshl.v2i66(<2 x i66> %a, <2 x i66> %b, <2 x i66> <i66 1, i66 2>)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i66> %fshl
+;
+entry:
+  %fshl = tail call <2 x i66> @llvm.fshl.v4i66(<2 x i66> %a, <2 x i66> %b, <2 x i66> <i66 1, i66 2>)
+  ret <2 x i66> %fshl
+}
+declare <2 x i66> @llvm.fshl.v4i66(<2 x i66>, <2 x i66>, <2 x i66>)
+
+define i66 @fshl_i66(i66 %a, i66 %b) {
+; CHECK-LABEL: 'fshl_i66'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fshl = tail call i66 @llvm.fshl.i66(i66 %a, i66 %b, i66 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i66 %fshl
+;
+entry:
+  %fshl = tail call i66 @llvm.fshl.i66(i66 %a, i66 %b, i66 9)
+  ret i66 %fshl
+}
+
+declare i66 @llvm.fshl.i66(i66, i66, i66)
+
+define <2 x i128> @fshl_v2i128_3rd_arg_vec_const_lanes_different(<2 x i128> %a, <2 x i128> %b) {
+; CHECK-LABEL: 'fshl_v2i128_3rd_arg_vec_const_lanes_different'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %fshl = tail call <2 x i128> @llvm.fshl.v2i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> <i128 1, i128 2>)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %fshl
+;
+entry:
+  %fshl = tail call <2 x i128> @llvm.fshl.v4i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> <i128 1, i128 2>)
+  ret <2 x i128> %fshl
+}
+declare <2 x i128> @llvm.fshl.v4i128(<2 x i128>, <2 x i128>, <2 x i128>)
+
+define i128 @fshl_i128(i128 %a, i128 %b) {
+; CHECK-LABEL: 'fshl_i128'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %fshl = tail call i128 @llvm.fshl.i128(i128 %a, i128 %b, i128 9)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i128 %fshl
+;
+entry:
+  %fshl = tail call i128 @llvm.fshl.i128(i128 %a, i128 %b, i128 9)
+  ret i128 %fshl
+}
+
+declare i128 @llvm.fshl.i128(i128, i128, i128)

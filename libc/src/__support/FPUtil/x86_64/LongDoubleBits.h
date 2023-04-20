@@ -28,10 +28,14 @@ namespace fputil {
 template <unsigned Width> struct Padding;
 
 // i386 padding.
-template <> struct Padding<4> { static constexpr unsigned VALUE = 16; };
+template <> struct Padding<4> {
+  static constexpr unsigned VALUE = 16;
+};
 
 // x86_64 padding.
-template <> struct Padding<8> { static constexpr unsigned VALUE = 48; };
+template <> struct Padding<8> {
+  static constexpr unsigned VALUE = 48;
+};
 
 template <> struct FPBits<long double> {
   using UIntType = UInt128;
@@ -45,8 +49,7 @@ template <> struct FPBits<long double> {
   static constexpr UIntType MIN_NORMAL =
       (UIntType(3) << MantissaWidth<long double>::VALUE);
   static constexpr UIntType MAX_NORMAL =
-      ((UIntType(MAX_EXPONENT) - 1)
-       << (MantissaWidth<long double>::VALUE + 1)) |
+      (UIntType(MAX_EXPONENT - 1) << (MantissaWidth<long double>::VALUE + 1)) |
       (UIntType(1) << MantissaWidth<long double>::VALUE) | MAX_SUBNORMAL;
 
   using FloatProp = FloatProperties<long double>;
@@ -86,8 +89,8 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE bool get_implicit_bit() const {
-    return ((bits & (UIntType(1) << FloatProp::MANTISSA_WIDTH)) >>
-            FloatProp::MANTISSA_WIDTH);
+    return bool((bits & (UIntType(1) << FloatProp::MANTISSA_WIDTH)) >>
+                FloatProp::MANTISSA_WIDTH);
   }
 
   LIBC_INLINE void set_sign(bool signVal) {
@@ -97,7 +100,7 @@ template <> struct FPBits<long double> {
   }
 
   LIBC_INLINE bool get_sign() const {
-    return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
+    return bool((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
   }
 
   FPBits() : bits(0) {}

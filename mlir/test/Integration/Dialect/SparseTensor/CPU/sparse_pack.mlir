@@ -98,7 +98,6 @@ module {
         vector.print %v: f64
      }
 
-
     %d, %i, %n = sparse_tensor.unpack %s5 : tensor<10x10xf64, #SortedCOOI32>
                                          to tensor<3xf64>, tensor<3x2xi32>, i32
 
@@ -115,6 +114,8 @@ module {
     // CHECK-NEXT: 3
     vector.print %n : i32
 
+    %d1, %i1, %n1 = sparse_tensor.unpack %s4 : tensor<10x10xf64, #SortedCOO>
+                                         to tensor<3xf64>, tensor<3x2xindex>, index
     return
   }
 }

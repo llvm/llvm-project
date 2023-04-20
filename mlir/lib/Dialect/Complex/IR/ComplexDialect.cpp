@@ -36,9 +36,7 @@ Operation *complex::ComplexDialect::materializeConstant(OpBuilder &builder,
     return builder.create<complex::ConstantOp>(loc, type,
                                                value.cast<ArrayAttr>());
   }
-  if (arith::ConstantOp::isBuildableWith(value, type))
-    return builder.create<arith::ConstantOp>(loc, type, value);
-  return nullptr;
+  return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
 #define GET_ATTRDEF_CLASSES

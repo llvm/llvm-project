@@ -16,8 +16,6 @@
 #include "mlir/Debug/Counter.h"
 #include "mlir/Debug/ExecutionContext.h"
 #include "mlir/Debug/Observers/ActionLogging.h"
-#include "mlir/Dialect/IRDL/IR/IRDL.h"
-#include "mlir/Dialect/IRDL/IRDLLoading.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -70,11 +68,6 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
     static cl::opt<bool, /*ExternalStorage=*/true> emitBytecode(
         "emit-bytecode", cl::desc("Emit bytecode when generating output"),
         cl::location(emitBytecodeFlag), cl::init(false));
-
-    static cl::opt<std::string, /*ExternalStorage=*/true> irdlFile(
-        "irdl-file",
-        cl::desc("IRDL file to register before processing the input"),
-        cl::location(irdlFileFlag), cl::init(""), cl::value_desc("filename"));
 
     static cl::opt<bool, /*ExternalStorage=*/true> explicitModule(
         "no-implicit-module",
@@ -282,35 +275,6 @@ performActions(raw_ostream &os,
   return success();
 }
 
-LogicalResult loadIRDLDialects(StringRef irdlFile, MLIRContext &ctx) {
-  DialectRegistry registry;
-  registry.insert<irdl::IRDLDialect>();
-  ctx.appendDialectRegistry(registry);
-
-  // Set up the input file.
-  std::string errorMessage;
-  std::unique_ptr<MemoryBuffer> file = openInputFile(irdlFile, &errorMessage);
-  if (!file) {
-    emitError(UnknownLoc::get(&ctx)) << errorMessage;
-    return failure();
-  }
-
-  // Give the buffer to the source manager.
-  // This will be picked up by the parser.
-  SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
-
-  SourceMgrDiagnosticHandler sourceMgrHandler(sourceMgr, &ctx);
-
-  // Parse the input file.
-  OwningOpRef<ModuleOp> module(parseSourceFile<ModuleOp>(sourceMgr, &ctx));
-
-  // Load IRDL dialects.
-  if (irdl::loadDialects(module.get()).failed())
-    return failure();
-  return success();
-}
-
 /// Parses the memory buffer.  If successfully, run a series of passes against
 /// it and print the result.
 static LogicalResult processBuffer(raw_ostream &os,
@@ -327,12 +291,6 @@ static LogicalResult processBuffer(raw_ostream &os,
   MLIRContext context(registry, MLIRContext::Threading::DISABLED);
   if (threadPool)
     context.setThreadPool(*threadPool);
-
-  StringRef irdlFile = config.getIrdlFile();
-  if (!irdlFile.empty()) {
-    if (failed(loadIRDLDialects(irdlFile, context)))
-      return failure();
-  }
 
   // Parse the input file.
   if (config.shouldPreloadDialectsInContext())

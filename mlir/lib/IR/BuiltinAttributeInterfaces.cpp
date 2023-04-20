@@ -25,11 +25,11 @@ using namespace mlir::detail;
 //===----------------------------------------------------------------------===//
 
 Type ElementsAttr::getElementType(ElementsAttr elementsAttr) {
-  return elementsAttr.getType().getElementType();
+  return elementsAttr.getShapedType().getElementType();
 }
 
 int64_t ElementsAttr::getNumElements(ElementsAttr elementsAttr) {
-  return elementsAttr.getType().getNumElements();
+  return elementsAttr.getShapedType().getNumElements();
 }
 
 bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
@@ -49,7 +49,7 @@ bool ElementsAttr::isValidIndex(ShapedType type, ArrayRef<uint64_t> index) {
 }
 bool ElementsAttr::isValidIndex(ElementsAttr elementsAttr,
                                 ArrayRef<uint64_t> index) {
-  return isValidIndex(elementsAttr.getType(), index);
+  return isValidIndex(elementsAttr.getShapedType(), index);
 }
 
 uint64_t ElementsAttr::getFlattenedIndex(Type type, ArrayRef<uint64_t> index) {

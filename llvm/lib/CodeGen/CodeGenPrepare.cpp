@@ -4629,8 +4629,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     return false;
   }
   case Instruction::Add: {
-    // Check to see if we can merge in one operand, then the other.  If so, we
-    // win.
+    // Check to see if we can merge in the RHS then the LHS.  If so, we win.
     ExtAddrMode BackupAddrMode = AddrMode;
     unsigned OldSize = AddrModeInsts.size();
     // Start a transaction at this point.
@@ -4640,15 +4639,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
 
-    // Try to match an integer constant second to increase its chance of ending
-    // up in `BaseOffs`, resp. decrease its chance of ending up in `BaseReg`.
-    int First = 0, Second = 1;
-    if (isa<ConstantInt>(AddrInst->getOperand(First))
-      && !isa<ConstantInt>(AddrInst->getOperand(Second)))
-        std::swap(First, Second);
     AddrMode.InBounds = false;
-    if (matchAddr(AddrInst->getOperand(First), Depth + 1) &&
-        matchAddr(AddrInst->getOperand(Second), Depth + 1))
+    if (matchAddr(AddrInst->getOperand(1), Depth + 1) &&
+        matchAddr(AddrInst->getOperand(0), Depth + 1))
       return true;
 
     // Restore the old addr mode info.
@@ -4656,10 +4649,9 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     AddrModeInsts.resize(OldSize);
     TPT.rollback(LastKnownGood);
 
-    // Otherwise this was over-aggressive.  Try merging operands in the opposite
-    // order.
-    if (matchAddr(AddrInst->getOperand(Second), Depth + 1) &&
-        matchAddr(AddrInst->getOperand(First), Depth + 1))
+    // Otherwise this was over-aggressive.  Try merging in the LHS then the RHS.
+    if (matchAddr(AddrInst->getOperand(0), Depth + 1) &&
+        matchAddr(AddrInst->getOperand(1), Depth + 1))
       return true;
 
     // Otherwise we definitely can't merge the ADD in.
@@ -4728,35 +4720,36 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     // just add it to the disp field and check validity.
     if (VariableOperand == -1) {
       AddrMode.BaseOffs += ConstantOffset;
-      if (matchAddr(AddrInst->getOperand(0), Depth + 1)) {
+      if (ConstantOffset == 0 ||
+          TLI.isLegalAddressingMode(DL, AddrMode, AccessTy, AddrSpace)) {
+        // Check to see if we can fold the base pointer in too.
+        if (matchAddr(AddrInst->getOperand(0), Depth + 1)) {
           if (!cast<GEPOperator>(AddrInst)->isInBounds())
             AddrMode.InBounds = false;
           return true;
+        }
+      } else if (EnableGEPOffsetSplit && isa<GetElementPtrInst>(AddrInst) &&
+                 TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
+                 ConstantOffset > 0) {
+        // Record GEPs with non-zero offsets as candidates for splitting in the
+        // event that the offset cannot fit into the r+i addressing mode.
+        // Simple and common case that only one GEP is used in calculating the
+        // address for the memory access.
+        Value *Base = AddrInst->getOperand(0);
+        auto *BaseI = dyn_cast<Instruction>(Base);
+        auto *GEP = cast<GetElementPtrInst>(AddrInst);
+        if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
+            (BaseI && !isa<CastInst>(BaseI) &&
+             !isa<GetElementPtrInst>(BaseI))) {
+          // Make sure the parent block allows inserting non-PHI instructions
+          // before the terminator.
+          BasicBlock *Parent =
+              BaseI ? BaseI->getParent() : &GEP->getFunction()->getEntryBlock();
+          if (!Parent->getTerminator()->isEHPad())
+            LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
+        }
       }
       AddrMode.BaseOffs -= ConstantOffset;
-
-      if (EnableGEPOffsetSplit && isa<GetElementPtrInst>(AddrInst) &&
-          TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
-          ConstantOffset > 0) {
-          // Record GEPs with non-zero offsets as candidates for splitting in
-          // the event that the offset cannot fit into the r+i addressing mode.
-          // Simple and common case that only one GEP is used in calculating the
-          // address for the memory access.
-          Value *Base = AddrInst->getOperand(0);
-          auto *BaseI = dyn_cast<Instruction>(Base);
-          auto *GEP = cast<GetElementPtrInst>(AddrInst);
-          if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
-              (BaseI && !isa<CastInst>(BaseI) &&
-               !isa<GetElementPtrInst>(BaseI))) {
-            // Make sure the parent block allows inserting non-PHI instructions
-            // before the terminator.
-            BasicBlock *Parent = BaseI ? BaseI->getParent()
-                                       : &GEP->getFunction()->getEntryBlock();
-            if (!Parent->getTerminator()->isEHPad())
-            LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
-          }
-      }
-
       return false;
     }
 
@@ -6041,7 +6034,6 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       int64_t Offset = LargeOffsetGEP->second;
       if (Offset != BaseOffset) {
         TargetLowering::AddrMode AddrMode;
-        AddrMode.HasBaseReg = true;
         AddrMode.BaseOffs = Offset - BaseOffset;
         // The result type of the GEP might not be the type of the memory
         // access.
