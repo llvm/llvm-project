@@ -62,7 +62,6 @@
 #include <map>
 
 #define DEBUG_TYPE "yk-control-point"
-#define JIT_STATE_PREFIX "jit-state: "
 
 #define YK_OLD_CONTROL_POINT_NUM_ARGS 2
 
