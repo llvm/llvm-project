@@ -103,12 +103,12 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     [AttrSizedOperandSegments, NoMemoryEffect]> {
   let summary = "Represents bounds information for acc data clause.";
 
-  let arguments = (ins Optional<AnyType>:$lowerbound,
-                       Optional<AnyType>:$upperbound,
-                       Optional<AnyType>:$extent,
-                       Optional<AnyType>:$stride,
+  let arguments = (ins Optional<IntOrIndex>:$lowerbound,
+                       Optional<IntOrIndex>:$upperbound,
+                       Optional<IntOrIndex>:$extent,
+                       Optional<IntOrIndex>:$stride,
                        DefaultValuedAttr<BoolAttr, "false">:$strideInBytes,
-                       Optional<AnyType>:$startIdx);
+                       Optional<IntOrIndex>:$startIdx);
   let results = (outs OpenACC_DataBoundsType:$result);
 
   let assemblyFormat = [{
