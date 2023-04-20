@@ -191,7 +191,7 @@ struct MaskOpRewritePattern : OpRewritePattern<MaskOp> {
 private:
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const final {
-    MaskableOpInterface maskableOp = maskOp.getMaskableOp();
+    auto maskableOp = cast<MaskableOpInterface>(maskOp.getMaskableOp());
     SourceOp sourceOp = dyn_cast<SourceOp>(maskableOp.getOperation());
     if (!sourceOp)
       return failure();
