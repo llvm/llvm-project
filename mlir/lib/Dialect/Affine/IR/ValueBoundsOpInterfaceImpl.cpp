@@ -12,6 +12,7 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace mlir {
 namespace {

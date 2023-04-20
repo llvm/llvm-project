@@ -388,7 +388,7 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
              !highs[t][l]);
       const auto lvlTp = lvlTypes[t][l];
       // Handle sparse storage schemes.
-      if (isCompressedDLT(lvlTp)) {
+      if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
         // Generate sparse primitives to obtain positions and coordinates.
         positionsBuffers[t][l] = genToPositions(builder, loc, tensor, l);
         coordinatesBuffers[t][l] =
@@ -557,6 +557,7 @@ Operation *LoopEmitter::emitForLoopOverTensorAtLvl(
     OpBuilder &builder, Location loc, TensorId tid, Level dstLvl, Value lo,
     Value hi, MutableArrayRef<Value> reduc, bool isParallel) {
   bool isSparseCond = isCompressedDLT(lvlTypes[tid][dstLvl]) ||
+                      isCompressedWithHiDLT(lvlTypes[tid][dstLvl]) ||
                       isSingletonDLT(lvlTypes[tid][dstLvl]);
 
   const auto reassoc = getCollapseReassociation(tid, dstLvl);
@@ -695,7 +696,7 @@ Operation *LoopEmitter::enterLoopOverTensorAtLvl(
     auto lvlType = lvlTypes[t][l];
     // Must be a recognizable DLT.
     assert(isDenseDLT(lvlType) || isCompressedDLT(lvlType) ||
-           isSingletonDLT(lvlType));
+           isCompressedWithHiDLT(lvlType) || isSingletonDLT(lvlType));
 
     // This is a slice-driven loop on sparse level.
     if (!dependentLvlMap[t][l].empty() && !isDenseDLT(lvlType)) {
@@ -901,7 +902,8 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     // TODO: support coiteration with slice driven tensors.
     const auto lvlTp = lvlTypes[tid][lvl];
     assert(dependentLvlMap[tid][lvl].empty() && "TODO: not yet implemented");
-    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
+        isCompressedWithHiDLT(lvlTp)) {
       const auto reassoc = getCollapseReassociation(tid, lvl);
       for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
         if (!isUniqueDLT(lvlTypes[tid][reassoc[i]])) {
@@ -941,7 +943,8 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
   for (auto [t, lvl] : llvm::zip(tids, lvls)) {
     const TensorId tid = t; // Why `t` can not be captured by lambda?
     const auto lvlTp = lvlTypes[tid][lvl];
-    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
+        isCompressedWithHiDLT(lvlTp)) {
       const auto reassoc = getCollapseReassociation(tid, lvl);
       assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
       for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {
@@ -974,7 +977,8 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
   for (auto [tid, lvl] : llvm::zip(tids, lvls)) {
     // Prepares for next level.
     const auto lvlTp = lvlTypes[tid][lvl];
-    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
+        isCompressedWithHiDLT(lvlTp)) {
       coords[tid][lvl] = genSparseCrd(builder, loc, tid, lvl);
       if (isSparseSlices[tid]) {
         auto [trans, pred] =
@@ -1023,7 +1027,8 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
   if (!needsUniv) {
     for (auto [tid, lvl] : llvm::zip(tids, lvls)) {
       const auto lvlTp = lvlTypes[tid][lvl];
-      if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+      if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
+          isCompressedWithHiDLT(lvlTp)) {
         const auto crd = coords[tid][lvl];
         if (min) {
           Value cmp = CMPI(ult, coords[tid][lvl], min);
@@ -1117,12 +1122,14 @@ void LoopEmitter::prepareLoopOverTensorAtLvl(OpBuilder &builder, Location loc,
     // Either the first level, or the previous level has been set.
     /// FIXME: See the [CLARIFY_POSITS_LVL] note in the header.
     assert(srcLvl == 0 || posits[tid][srcLvl - 1]);
-    if (!isCompressedDLT(lvlTp) && !isSingletonDLT(lvlTp))
+    if (isDenseDLT(lvlTp))
       continue;
-    if (isCompressedDLT(lvlTp)) {
+    if (isCompressedDLT(lvlTp) || isCompressedWithHiDLT(lvlTp)) {
       const Value mem = positionsBuffers[tid][srcLvl];
 
-      const Value pLo = srcLvl == 0 ? c0 : posits[tid][srcLvl - 1];
+      Value pLo = srcLvl == 0 ? c0 : posits[tid][srcLvl - 1];
+      if (isCompressedWithHiDLT(lvlTp))
+        pLo = builder.create<arith::MulIOp>(loc, pLo, C_IDX(2));
       posits[tid][srcLvl] = genIndexLoad(builder, loc, mem, pLo);
 
       const Value pHi = ADDI(pLo, c1);
@@ -1321,7 +1328,8 @@ void LoopEmitter::exitWhileLoop(OpBuilder &builder, Location loc,
   Value one = C_IDX(1);
   for (auto [tid, dstLvl] : llvm::zip(loopInfo.tids, loopInfo.lvls)) {
     const auto lvlTp = lvlTypes[tid][dstLvl];
-    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp)) {
+    if (isCompressedDLT(lvlTp) || isSingletonDLT(lvlTp) ||
+        isCompressedWithHiDLT(lvlTp)) {
       const auto reassoc = getCollapseReassociation(tid, dstLvl);
       assert(reassoc.size() == 1 || isUniqueCOOType(tensors[tid].getType()));
       for (unsigned i = 0, e = reassoc.size() - 1; i < e; i++) {

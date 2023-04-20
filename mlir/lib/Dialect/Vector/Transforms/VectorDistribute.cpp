@@ -72,8 +72,8 @@ struct DistributedLoadStoreHelper {
   Value buildDistributedOffset(RewriterBase &b, Location loc, int64_t index) {
     int64_t distributedSize = distributedVectorType.getDimSize(index);
     AffineExpr tid = getAffineSymbolExpr(0, b.getContext());
-    return b.createOrFold<AffineApplyOp>(loc, tid * distributedSize,
-                                         ArrayRef<Value>{laneId});
+    return b.createOrFold<affine::AffineApplyOp>(loc, tid * distributedSize,
+                                                 ArrayRef<Value>{laneId});
   }
 
   /// Create a store during the process of distributing the
@@ -513,9 +513,9 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
       unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
       auto scale =
           rewriter.getAffineConstantExpr(targetType.getDimSize(vectorPos));
-      indices[indexPos] =
-          makeComposedAffineApply(rewriter, loc, d0 + scale * d1,
-                                  {indices[indexPos], newWarpOp.getLaneid()});
+      indices[indexPos] = affine::makeComposedAffineApply(
+          rewriter, loc, d0 + scale * d1,
+          {indices[indexPos], newWarpOp.getLaneid()});
     }
     newWriteOp.getIndicesMutable().assign(indices);
 
@@ -753,9 +753,9 @@ struct WarpOpTransferRead : public OpRewritePattern<WarpExecuteOnLane0Op> {
       unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
       int64_t scale =
           distributedVal.getType().cast<VectorType>().getDimSize(vectorPos);
-      indices[indexPos] =
-          makeComposedAffineApply(rewriter, read.getLoc(), d0 + scale * d1,
-                                  {indices[indexPos], warpOp.getLaneid()});
+      indices[indexPos] = affine::makeComposedAffineApply(
+          rewriter, read.getLoc(), d0 + scale * d1,
+          {indices[indexPos], warpOp.getLaneid()});
     }
     Value newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), distributedVal.getType(), read.getSource(), indices,
@@ -1046,15 +1046,15 @@ struct WarpOpExtractElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
     int64_t elementsPerLane = distributedVecType.getShape()[0];
     AffineExpr sym0 = getAffineSymbolExpr(0, rewriter.getContext());
     // tid of extracting thread: pos / elementsPerLane
-    Value broadcastFromTid = rewriter.create<AffineApplyOp>(
+    Value broadcastFromTid = rewriter.create<affine::AffineApplyOp>(
         loc, sym0.ceilDiv(elementsPerLane), extractOp.getPosition());
     // Extract at position: pos % elementsPerLane
     Value pos =
         elementsPerLane == 1
             ? rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult()
             : rewriter
-                  .create<AffineApplyOp>(loc, sym0 % elementsPerLane,
-                                         extractOp.getPosition())
+                  .create<affine::AffineApplyOp>(loc, sym0 % elementsPerLane,
+                                                 extractOp.getPosition())
                   .getResult();
     Value extracted =
         rewriter.create<vector::ExtractElementOp>(loc, distributedVec, pos);
@@ -1119,14 +1119,15 @@ struct WarpOpInsertElement : public OpRewritePattern<WarpExecuteOnLane0Op> {
     int64_t elementsPerLane = distrType.getShape()[0];
     AffineExpr sym0 = getAffineSymbolExpr(0, rewriter.getContext());
     // tid of extracting thread: pos / elementsPerLane
-    Value insertingLane = rewriter.create<AffineApplyOp>(
+    Value insertingLane = rewriter.create<affine::AffineApplyOp>(
         loc, sym0.ceilDiv(elementsPerLane), newPos);
     // Insert position: pos % elementsPerLane
     Value pos =
         elementsPerLane == 1
             ? rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult()
             : rewriter
-                  .create<AffineApplyOp>(loc, sym0 % elementsPerLane, newPos)
+                  .create<affine::AffineApplyOp>(loc, sym0 % elementsPerLane,
+                                                 newPos)
                   .getResult();
     Value isInsertingLane = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::eq, newWarpOp.getLaneid(), insertingLane);

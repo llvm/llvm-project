@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H
+#define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H
 
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -118,3 +120,5 @@ private:
 };
 
 } // namespace clang::dataflow
+
+#endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H

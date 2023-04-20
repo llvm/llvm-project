@@ -18,10 +18,6 @@
 #include <optional>
 
 namespace mlir {
-
-class AffineForOp;
-class AffineIfOp;
-class AffineParallelOp;
 class DominanceInfo;
 class Operation;
 class PostDominanceInfo;
@@ -35,6 +31,11 @@ class AllocOp;
 } // namespace memref
 
 struct LogicalResult;
+
+namespace affine {
+class AffineForOp;
+class AffineIfOp;
+class AffineParallelOp;
 
 using ReductionLoopMap = DenseMap<Operation *, SmallVector<LoopReduction, 2>>;
 
@@ -384,6 +385,7 @@ private:
   Location loc;
 };
 
+} // namespace affine
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_UTILS_H

@@ -4343,7 +4343,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
 
 static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
                                                   const Query &Q) {
-  FPClassTest KnownFromAssume = fcNone;
+  FPClassTest KnownFromAssume = fcAllFlags;
 
   // Try to restrict the floating-point classes based on information from
   // assumptions.
@@ -4369,19 +4369,19 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
           fcmpToClassTest(Pred, *F, LHS, RHS, true);
       // First see if we can fold in fabs/fneg into the test.
       if (TestedValue == V)
-        KnownFromAssume |= TestedMask;
+        KnownFromAssume &= TestedMask;
       else {
         // Try again without the lookthrough if we found a different source
         // value.
         auto [TestedValue, TestedMask] =
             fcmpToClassTest(Pred, *F, LHS, RHS, false);
         if (TestedValue == V)
-          KnownFromAssume |= TestedMask;
+          KnownFromAssume &= TestedMask;
       }
     } else if (match(I->getArgOperand(0),
                      m_Intrinsic<Intrinsic::is_fpclass>(
                          m_Value(LHS), m_ConstantInt(ClassVal)))) {
-      KnownFromAssume |= static_cast<FPClassTest>(ClassVal);
+      KnownFromAssume &= static_cast<FPClassTest>(ClassVal);
     }
   }
 
@@ -4467,8 +4467,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownNotFromFlags |= fcInf;
   }
 
-  if (Q.AC)
-    KnownNotFromFlags |= computeKnownFPClassFromAssumes(V, Q);
+  if (Q.AC) {
+    FPClassTest AssumedClasses = computeKnownFPClassFromAssumes(V, Q);
+    KnownNotFromFlags |= ~AssumedClasses;
+  }
 
   // We no longer need to find out about these bits from inputs if we can
   // assume this from flags/attributes.
@@ -4503,7 +4505,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op)) {
-      switch (II->getIntrinsicID()) {
+      const Intrinsic::ID IID = II->getIntrinsicID();
+      switch (IID) {
       case Intrinsic::fabs:
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
@@ -4574,6 +4577,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                             InterestedClasses, Known, Depth + 1, Q, TLI);
         break;
       }
+      case Intrinsic::experimental_constrained_sitofp:
+      case Intrinsic::experimental_constrained_uitofp:
+        // Cannot produce nan
+        Known.knownNot(fcNan);
+
+        // sitofp and uitofp turn into +0.0 for zero.
+        Known.knownNot(fcNegZero);
+
+        // Integers cannot be subnormal
+        Known.knownNot(fcSubnormal);
+
+        if (IID == Intrinsic::experimental_constrained_uitofp)
+          Known.signBitIsZero();
+
+        // TODO: Copy inf handling from instructions
+        break;
       default:
         break;
       }
@@ -4626,6 +4645,40 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::FDiv: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+    if (!WantNan)
+      break;
+
+    // TODO: FRem
+    KnownFPClass KnownLHS, KnownRHS;
+
+    computeKnownFPClass(Op->getOperand(1), DemandedElts,
+                        fcNan | fcInf | fcZero | fcSubnormal, KnownRHS,
+                        Depth + 1, Q, TLI);
+
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
+                               KnownRHS.isKnownNeverInfinity() ||
+                               KnownRHS.isKnownNeverZero();
+
+    if (KnowSomethingUseful) {
+      computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                          fcNan | fcInf | fcZero, KnownLHS, Depth + 1, Q, TLI);
+    }
+
+    const Function *F = cast<Instruction>(Op)->getFunction();
+
+    // Only 0/0, Inf/Inf, Inf REM x and x REM 0 produce NaN.
+    // TODO: Track sign bit.
+    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+        (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
+        (KnownLHS.isKnownNeverLogicalZero(*F, Op->getType()) ||
+         KnownRHS.isKnownNeverLogicalZero(*F, Op->getType()))) {
+      Known.knownNot(fcNan);
+    }
+
+    break;
+  }
   case Instruction::FPTrunc: {
     if ((InterestedClasses & fcNan) == fcNone)
       break;
@@ -4643,6 +4696,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   case Instruction::UIToFP: {
     // Cannot produce nan
     Known.knownNot(fcNan);
+
+    // Integers cannot be subnormal
+    Known.knownNot(fcSubnormal);
 
     // sitofp and uitofp turn into +0.0 for zero.
     Known.knownNot(fcNegZero);
