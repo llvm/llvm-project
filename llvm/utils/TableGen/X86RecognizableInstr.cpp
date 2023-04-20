@@ -118,7 +118,7 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   AdSize = byteFromRec(Rec, "AdSizeBits");
   HasREX_W = Rec->getValueAsBit("hasREX_W");
   HasVEX_4V = Rec->getValueAsBit("hasVEX_4V");
-  IgnoresVEX_W = Rec->getValueAsBit("IgnoresVEX_W");
+  IgnoresW = Rec->getValueAsBit("IgnoresW");
   IgnoresVEX_L = Rec->getValueAsBit("ignoresVEX_L");
   HasEVEX_L2 = Rec->getValueAsBit("hasEVEX_L2");
   HasEVEX_K = Rec->getValueAsBit("hasEVEX_K");
@@ -882,11 +882,11 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
       tables.setTableFields(*opcodeType, insnContext(), currentOpcode, *filter,
                             UID, Is32Bit, OpPrefix == 0,
                             IgnoresVEX_L || EncodeRC,
-                            IgnoresVEX_W, AddressSize);
+                            IgnoresW, AddressSize);
   } else {
     tables.setTableFields(*opcodeType, insnContext(), opcodeToSet, *filter, UID,
                           Is32Bit, OpPrefix == 0, IgnoresVEX_L || EncodeRC,
-                          IgnoresVEX_W, AddressSize);
+                          IgnoresW, AddressSize);
   }
 
 #undef MAP
