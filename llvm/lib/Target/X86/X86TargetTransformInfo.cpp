@@ -224,8 +224,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     const Instruction *CxtI) {
 
   // vXi8 multiplications are always promoted to vXi16.
+  // Sub-128-bit types can be extended/packed more efficiently.
   if (Opcode == Instruction::Mul && Ty->isVectorTy() &&
-      Ty->getScalarSizeInBits() == 8) {
+      Ty->getPrimitiveSizeInBits() <= 64 && Ty->getScalarSizeInBits() == 8) {
     Type *WideVecTy =
         VectorType::getExtendedElementVectorType(cast<VectorType>(Ty));
     return getCastInstrCost(Instruction::ZExt, WideVecTy, Ty,
@@ -821,6 +822,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,   MVT::v64i8,   {  1,  1, 1, 1 } }, // psubb
     { ISD::SUB,   MVT::v32i16,  {  1,  1, 1, 1 } }, // psubw
 
+    { ISD::MUL,   MVT::v64i8,   {  5, 10,10,11 } },
     { ISD::MUL,   MVT::v32i16,  {  1,  5, 1, 1 } }, // pmullw
 
     { ISD::SUB,   MVT::v32i8,   {  1,  1, 1, 1 } }, // psubb
@@ -1083,6 +1085,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,  MVT::v4i64,   {  1,  1, 1, 2 } }, // psubq
     { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
 
+    { ISD::MUL,  MVT::v16i8,   {  5, 18, 6,12 } }, // extend/pmullw/pack
+    { ISD::MUL,  MVT::v32i8,   {  6, 11,10,19 } }, // unpack/pmullw
     { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 1 } }, // pmullw
     { ISD::MUL,  MVT::v8i32,   {  4, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
@@ -1131,6 +1135,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // We don't have to scalarize unsupported ops. We can issue two half-sized
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
+    { ISD::MUL,     MVT::v32i8,   { 12, 13, 22, 23 } }, // unpack/pmullw + split
     { ISD::MUL,     MVT::v16i16,  {  4,  8,  5,  6 } }, // pmullw + split
     { ISD::MUL,     MVT::v8i32,   {  5,  8,  5, 10 } }, // pmulld + split
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
@@ -1270,6 +1275,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i32,  { 16, 17,15,19 } }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,  {  8, 17, 5, 7 } }, // splat+shuffle sequence.
 
+    { ISD::MUL,  MVT::v16i8,  {  5, 18,10,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v4i32,  {  2, 11, 1, 1 } }  // pmulld (Nehalem from agner.org)
   };
 
@@ -1314,6 +1320,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,  MVT::v2i64,  {  1,  2, 1, 2 } }, // paddq
     { ISD::SUB,  MVT::v2i64,  {  1,  2, 1, 2 } }, // psubq
 
+    { ISD::MUL,  MVT::v16i8,  {  5, 18,12,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v8i16,  {  1,  5, 1, 1 } }, // pmullw
     { ISD::MUL,  MVT::v4i32,  {  6,  8, 7, 7 } }, // 3*pmuludq/4*shuffle
     { ISD::MUL,  MVT::v2i64,  {  8, 10, 8, 8 } }, // 3*pmuludq/3*shift/2*add
@@ -1386,6 +1393,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,  MVT::i8,  {  1 } }, // Pentium III from http://www.agner.org/
     { ISD::SUB,  MVT::i16, {  1 } }, // Pentium III from http://www.agner.org/
     { ISD::SUB,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
+
+    { ISD::MUL,  MVT::i8,  {  3,  4, 1, 1 } },
 
     { ISD::FNEG, MVT::f64, {  2,  2, 1, 3 } }, // (x87)
     { ISD::FADD, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
