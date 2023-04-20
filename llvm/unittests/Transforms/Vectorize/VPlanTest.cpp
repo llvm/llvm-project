@@ -1203,8 +1203,8 @@ TEST(VPRecipeTest, dump) {
       BinaryOperator::CreateAdd(UndefValue::get(Int32), UndefValue::get(Int32));
   AI->setName("a");
   SmallVector<VPValue *, 2> Args;
-  VPValue *ExtVPV1 = Plan.getVPValueOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *ExtVPV2 = Plan.getVPValueOrAddLiveIn(ConstantInt::get(Int32, 2));
+  VPValue *ExtVPV1 = Plan.getOrAddExternalDef(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = Plan.getOrAddExternalDef(ConstantInt::get(Int32, 2));
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
   VPWidenRecipe *WidenR =
