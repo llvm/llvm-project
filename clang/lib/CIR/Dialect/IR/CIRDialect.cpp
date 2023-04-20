@@ -1107,6 +1107,8 @@ LogicalResult GlobalOp::verify() {
     break;
   case GlobalLinkageKind::ExternalLinkage:
   case GlobalLinkageKind::ExternalWeakLinkage:
+  case GlobalLinkageKind::LinkOnceODRLinkage:
+  case GlobalLinkageKind::LinkOnceAnyLinkage:
     // FIXME: mlir's concept of visibility gets tricky with LLVM ones,
     // for instance, symbol declarations cannot be "public", so we
     // have to mark them "private" to workaround the symbol verifier.
@@ -1116,7 +1118,9 @@ LogicalResult GlobalOp::verify() {
                          << "' linkage";
     break;
   default:
-    assert(0 && "not implemented");
+    emitError() << stringifyGlobalLinkageKind(getLinkage())
+                << ": verifier not implemented\n";
+    return failure();
   }
 
   // TODO: verify visibility for declarations?

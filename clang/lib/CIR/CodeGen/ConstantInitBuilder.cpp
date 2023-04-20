@@ -43,7 +43,7 @@ void ConstantInitFuture::abandon() {
 void ConstantInitFuture::installInGlobal(mlir::cir::GlobalOp GV) {
   assert(Data && "installing null future");
   if (Data.is<mlir::Attribute>()) {
-    GV.setInitialValueAttr(Data.get<mlir::Attribute>());
+    CIRGenModule::setInitializer(GV, Data.get<mlir::Attribute>());
   } else {
     llvm_unreachable("NYI");
     // auto &builder = *Data.get<ConstantInitBuilderBase *>();
@@ -87,7 +87,7 @@ mlir::cir::GlobalOp ConstantInitBuilderBase::createGlobal(
 
 void ConstantInitBuilderBase::setGlobalInitializer(
     mlir::cir::GlobalOp GV, mlir::Attribute initializer) {
-  GV.setInitialValueAttr(initializer);
+  CIRGenModule::setInitializer(GV, initializer);
 
   if (!SelfReferences.empty())
     resolveSelfReferences(GV);
