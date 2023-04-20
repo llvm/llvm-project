@@ -68,6 +68,16 @@ public:
         IsZeroInitializable(IsZeroInitializable),
         IsZeroInitializableAsBase(IsZeroInitializableAsBase) {}
 
+  /// Return the "complete object" LLVM type associated with
+  /// this record.
+  mlir::cir::StructType getCIRType() const { return CompleteObjectType; }
+
+  /// Return the "base subobject" LLVM type associated with
+  /// this record.
+  mlir::cir::StructType getBaseSubobjectCIRType() const {
+    return BaseSubobjectType;
+  }
+
   /// Return cir::StructType element number that corresponds to the field FD.
   unsigned getCIRFieldNo(const clang::FieldDecl *FD) const {
     FD = FD->getCanonicalDecl();
@@ -78,12 +88,6 @@ public:
   /// Check whether this struct can be C++ zero-initialized with a
   /// zeroinitializer.
   bool isZeroInitializable() const { return IsZeroInitializable; }
-
-  /// Return the "base subobject" LLVM type associated with
-  /// this record.
-  mlir::cir::StructType getBaseSubobjectCIRType() const {
-    return BaseSubobjectType;
-  }
 };
 
 } // namespace cir

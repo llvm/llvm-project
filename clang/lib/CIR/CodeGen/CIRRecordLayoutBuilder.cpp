@@ -322,7 +322,7 @@ void CIRRecordLowering::accumulateFields() {
 
 std::unique_ptr<CIRGenRecordLayout>
 CIRGenTypes::computeRecordLayout(const RecordDecl *D,
-                                 mlir::cir::StructType &Ty) {
+                                 mlir::cir::StructType *Ty) {
   CIRRecordLowering builder(*this, D, /*packed=*/false);
 
   builder.lower(/*nonVirtualBaseType=*/false);
@@ -331,7 +331,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
 
   // If we're in C++, compute the base subobject type.
-  mlir::cir::StructType BaseTy = nullptr;
+  mlir::cir::StructType *BaseTy = nullptr;
   if (llvm::isa<CXXRecordDecl>(D) && !D->isUnion() &&
       !D->hasAttr<FinalAttr>()) {
     BaseTy = Ty;
@@ -340,10 +340,12 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
       CIRRecordLowering baseBuilder(*this, D, /*Packed=*/builder.isPacked);
       auto baseIdentifier =
           mlir::StringAttr::get(&getMLIRContext(), name + ".base");
-      BaseTy = mlir::cir::StructType::get(
+      *BaseTy = mlir::cir::StructType::get(
           &getMLIRContext(), baseBuilder.fieldTypes, baseIdentifier,
           /*body=*/true,
           mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
+      // TODO(cir): add something like addRecordTypeName
+
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
       // on both of them with the same index.
       assert(builder.isPacked == baseBuilder.isPacked &&
@@ -351,13 +353,17 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
     }
   }
 
-  // TODO(cir): add base class info
-  Ty = mlir::cir::StructType::get(
+  // Fill in the struct *after* computing the base type.  Filling in the body
+  // signifies that the type is no longer opaque and record layout is complete,
+  // but we may need to recursively layout D while laying D out as a base type.
+  *Ty = mlir::cir::StructType::get(
       &getMLIRContext(), builder.fieldTypes, identifier,
       /*body=*/true, mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
-      Ty, BaseTy, (bool)builder.IsZeroInitializable,
+      Ty ? *Ty : mlir::cir::StructType{},
+      BaseTy ? *BaseTy : mlir::cir::StructType{},
+      (bool)builder.IsZeroInitializable,
       (bool)builder.IsZeroInitializableAsBase);
 
   RL->NonVirtualBases.swap(builder.nonVirtualBases);

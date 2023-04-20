@@ -171,7 +171,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
   }
 
   // Layout fields.
-  std::unique_ptr<CIRGenRecordLayout> Layout = computeRecordLayout(RD, entry);
+  std::unique_ptr<CIRGenRecordLayout> Layout = computeRecordLayout(RD, &entry);
   CIRGenRecordLayouts[key] = std::move(Layout);
 
   // We're done laying out this struct.
