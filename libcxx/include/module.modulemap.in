@@ -977,6 +977,8 @@ module std [system] {
   }
   module functional {
     header "functional"
+    // the contents of __type_traits/unwrap_ref.h should be available from functional too.
+    export type_traits.unwrap_ref
     export *
 
     module __functional {
@@ -1010,7 +1012,6 @@ module std [system] {
       module reference_wrapper          { private header "__functional/reference_wrapper.h" }
       module unary_function             { private header "__functional/unary_function.h" }
       module unary_negate               { private header "__functional/unary_negate.h" }
-      module unwrap_ref                 { private header "__functional/unwrap_ref.h" }
       module weak_result_type           { private header "__functional/weak_result_type.h" }
     }
   }
@@ -1521,7 +1522,6 @@ module std [system] {
   }
   module type_traits {
     header "type_traits"
-    export functional.__functional.unwrap_ref
     export *
 
     module add_const                                 { private header "__type_traits/add_const.h" }
@@ -1682,6 +1682,7 @@ module std [system] {
 
       export type_traits
     }
+    module unwrap_ref                                { private header "__type_traits/unwrap_ref.h" }
     module void_t                                    { private header "__type_traits/void_t.h" }
   }
   module typeindex {
