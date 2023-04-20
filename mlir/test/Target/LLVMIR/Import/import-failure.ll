@@ -310,6 +310,23 @@ end:
 ; // -----
 
 ; CHECK:      import-failure.ll
+; CHECK-SAME: warning: could not lookup access group
+define void @unused_access_group(ptr %arg) {
+entry:
+  %0 = load i32, ptr %arg, !llvm.access.group !0
+  br label %end, !llvm.loop !1
+end:
+  ret void
+}
+
+!0 = distinct !{}
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.parallel_accesses", !0, !3}
+!3 = distinct !{}
+
+; // -----
+
+; CHECK:      import-failure.ll
 ; CHECK-SAME: warning: expected function_entry_count to be attached to a function
 ; CHECK:      warning: unhandled metadata: !0 = !{!"function_entry_count", i64 42}
 define void @cond_br(i1 %arg) {
