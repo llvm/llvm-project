@@ -839,6 +839,25 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 }
 #elif defined(__aarch64__)
 
+// LSE support detection for out-of-line atomics
+// using HWCAP and Auxiliary vector
+_Bool __aarch64_have_lse_atomics
+    __attribute__((visibility("hidden"), nocommon));
+
+#if defined(__has_include)
+#if __has_include(<sys/auxv.h>)
+#include <sys/auxv.h>
+#if __has_include(<asm/hwcap.h>)
+#include <asm/hwcap.h>
+
+#if defined(__ANDROID__)
+#include <string.h>
+#include <sys/system_properties.h>
+#elif defined(__Fuchsia__)
+#include <zircon/features.h>
+#include <zircon/syscalls.h>
+#endif
+
 #ifndef AT_HWCAP
 #define AT_HWCAP 16
 #endif
@@ -1007,25 +1026,6 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 #endif
 #ifndef HWCAP2_SVE_EBF16
 #define HWCAP2_SVE_EBF16 (1UL << 33)
-#endif
-
-// LSE support detection for out-of-line atomics
-// using HWCAP and Auxiliary vector
-_Bool __aarch64_have_lse_atomics
-    __attribute__((visibility("hidden"), nocommon));
-
-#if defined(__has_include)
-#if __has_include(<sys/auxv.h>)
-#include <sys/auxv.h>
-#if __has_include(<asm/hwcap.h>)
-#include <asm/hwcap.h>
-
-#if defined(__ANDROID__)
-#include <string.h>
-#include <sys/system_properties.h>
-#elif defined(__Fuchsia__)
-#include <zircon/features.h>
-#include <zircon/syscalls.h>
 #endif
 
 // Detect Exynos 9810 CPU
