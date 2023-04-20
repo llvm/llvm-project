@@ -4628,6 +4628,40 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     break;
   }
+  case Instruction::FDiv: {
+    const bool WantNan = (InterestedClasses & fcNan) != fcNone;
+    if (!WantNan)
+      break;
+
+    // TODO: FRem
+    KnownFPClass KnownLHS, KnownRHS;
+
+    computeKnownFPClass(Op->getOperand(1), DemandedElts,
+                        fcNan | fcInf | fcZero | fcSubnormal, KnownRHS,
+                        Depth + 1, Q, TLI);
+
+    bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
+                               KnownRHS.isKnownNeverInfinity() ||
+                               KnownRHS.isKnownNeverZero();
+
+    if (KnowSomethingUseful) {
+      computeKnownFPClass(Op->getOperand(0), DemandedElts,
+                          fcNan | fcInf | fcZero, KnownLHS, Depth + 1, Q, TLI);
+    }
+
+    const Function *F = cast<Instruction>(Op)->getFunction();
+
+    // Only 0/0, Inf/Inf, Inf REM x and x REM 0 produce NaN.
+    // TODO: Track sign bit.
+    if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
+        (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
+        (KnownLHS.isKnownNeverLogicalZero(*F, Op->getType()) ||
+         KnownRHS.isKnownNeverLogicalZero(*F, Op->getType()))) {
+      Known.knownNot(fcNan);
+    }
+
+    break;
+  }
   case Instruction::FPTrunc: {
     if ((InterestedClasses & fcNan) == fcNone)
       break;
