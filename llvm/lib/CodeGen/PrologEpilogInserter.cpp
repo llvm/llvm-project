@@ -111,11 +111,11 @@ private:
   // Flag to control whether to use the register scavenger to resolve
   // frame index materialization registers. Set according to
   // TRI->requiresFrameIndexScavenging() for the current function.
-  bool FrameIndexVirtualScavenging;
+  bool FrameIndexVirtualScavenging = false;
 
   // Flag to control whether the scavenger should be passed even though
   // FrameIndexVirtualScavenging is used.
-  bool FrameIndexEliminationScavenging;
+  bool FrameIndexEliminationScavenging = false;
 
   // Emit remarks.
   MachineOptimizationRemarkEmitter *ORE = nullptr;
