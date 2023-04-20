@@ -38,7 +38,7 @@ using namespace linalg;
 static SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
                                               ArrayRef<int64_t> tiledLoopDims) {
   // Get the consumer operand indexing map.
-  LinalgOp consumerOp = consumerOperand->getOwner();
+  auto consumerOp = cast<LinalgOp>(consumerOperand->getOwner());
   AffineMap indexingMap = consumerOp.getMatchingIndexingMap(consumerOperand);
 
   // Search the slice dimensions tiled by a tile loop dimension.
@@ -65,7 +65,7 @@ static SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
 static SmallVector<int64_t>
 getTiledProducerLoops(OpResult producerResult,
                       ArrayRef<int64_t> tiledSliceDimIndices) {
-  LinalgOp producerOp = producerResult.getOwner();
+  auto producerOp = cast<LinalgOp>(producerResult.getOwner());
 
   // Get the indexing map of the `producerOp` output operand that matches
   // ´producerResult´.
@@ -137,7 +137,7 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   b.setInsertionPointAfter(sliceOp);
 
   // Get the producer.
-  LinalgOp producerOp = producerResult.getOwner();
+  auto producerOp = cast<LinalgOp>(producerResult.getOwner());
   Location loc = producerOp.getLoc();
 
   // Obtain the `producerOp` loop bounds and the `sliceOp` ranges.
@@ -345,7 +345,7 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
     return failure();
 
   // Check `sliceOp` and `consumerOp` are in the same block.
-  LinalgOp consumerOp = consumerOpOperand->getOwner();
+  auto consumerOp = cast<LinalgOp>(consumerOpOperand->getOwner());
   if (sliceOp->getBlock() != rootOp->getBlock() ||
       consumerOp->getBlock() != rootOp->getBlock())
     return failure();

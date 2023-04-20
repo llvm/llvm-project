@@ -142,8 +142,6 @@ public:
   std::string getAsString() const override;
 
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
-
-  bool typeIsA(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size

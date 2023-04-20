@@ -3353,7 +3353,7 @@ Address CGOpenMPRuntimeGPU::getAddressOfLocalVariable(CodeGenFunction &CGF,
     llvm::Type *VarTy = CGF.ConvertTypeForMem(VD->getType());
     auto *GV = new llvm::GlobalVariable(
         CGM.getModule(), VarTy, /*isConstant=*/false,
-        llvm::GlobalValue::InternalLinkage, llvm::Constant::getNullValue(VarTy),
+        llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(VarTy),
         VD->getName(),
         /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
         CGM.getContext().getTargetAddressSpace(AS));

@@ -848,6 +848,8 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
       }
 
       switch (CS.getKind()) {
+        case ConversionSpecifier::bArg:
+        case ConversionSpecifier::BArg:
         case ConversionSpecifier::dArg:
         case ConversionSpecifier::DArg:
         case ConversionSpecifier::iArg:

@@ -50,7 +50,7 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
         auto *originalOp = info->originalProducer.getOperation();
         auto *originalOpInLinalgOpsVector =
             std::find(linalgOps.begin(), linalgOps.end(), originalOp);
-        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
+        *originalOpInLinalgOpsVector = info->fusedProducer;
         // Don't mark for erasure in the tensor case, let DCE handle this.
         changed = true;
       }

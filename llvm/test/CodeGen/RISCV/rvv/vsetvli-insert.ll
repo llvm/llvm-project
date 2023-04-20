@@ -18,7 +18,6 @@ declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
 define <vscale x 1 x double> @test1(i64 %avl, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -51,7 +50,6 @@ entry:
 define <vscale x 1 x i64> @test3(i64 %avl, <vscale x 1 x i64> %a, <vscale x 1 x i64>* %b, <vscale x 1 x i1> %c) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t
 ; CHECK-NEXT:    ret
@@ -553,6 +551,31 @@ define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
   %gvl = tail call i64 @llvm.riscv.vsetvli.i64(i64 32, i64 0, i64 2)
   %ret = tail call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %addr, i64 %gvl)
   ret <vscale x 2 x i32> %ret
+}
+
+declare <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(<vscale x 1 x double>, <vscale x 1 x float>, <vscale x 1 x float>, i64)
+
+define <vscale x 1 x double> @test20(i64 %avl, <vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x double> %c) nounwind {
+; CHECK-LABEL: test20:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfwadd.vv v11, v8, v9
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v11, v10
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)
+  %1 = tail call <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(
+    <vscale x 1 x double> undef,
+    <vscale x 1 x float> %a,
+    <vscale x 1 x float> %b,
+    i64 %0)
+  %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
+    <vscale x 1 x double> undef,
+    <vscale x 1 x double> %1,
+    <vscale x 1 x double> %c,
+    i64 %0)
+  ret <vscale x 1 x double> %2
 }
 
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(

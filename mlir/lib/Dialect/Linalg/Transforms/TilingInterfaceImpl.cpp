@@ -271,7 +271,7 @@ struct LinalgOpPartialReductionInterface
       return op->emitOpError("Failed to anaysis the reduction operation.");
 
     Operation *reductionOp = combinerOps[0];
-    std::optional<Attribute> identity = getNeutralElement(reductionOp);
+    std::optional<TypedAttr> identity = getNeutralElement(reductionOp);
     if (!identity.has_value())
       return op->emitOpError(
           "Failed to get an identity value for the reduction operation.");
@@ -328,8 +328,8 @@ struct LinalgOpPartialReductionInterface
 
     // Step 1: Extract a slice of the input operands.
     SmallVector<Value> valuesToTile = linalgOp.getDpsInputOperands();
-    SmallVector<Value, 4> tiledOperands =
-        makeTiledShapes(b, loc, op, valuesToTile, offsets, sizes, {}, true);
+    SmallVector<Value, 4> tiledOperands = makeTiledShapes(
+        b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
 
     // Step 2: Extract the accumulator operands
     SmallVector<OpFoldResult> strides(offsets.size(), b.getIndexAttr(1));

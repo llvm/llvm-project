@@ -43,3 +43,87 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  sched_setparam
+  SRCS
+    sched_setparam.cpp
+  HDRS
+    ../sched_setparam.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_getparam
+  SRCS
+    sched_getparam.cpp
+  HDRS
+    ../sched_getparam.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_setscheduler
+  SRCS
+    sched_setscheduler.cpp
+  HDRS
+    ../sched_setscheduler.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_getscheduler
+  SRCS
+    sched_getscheduler.cpp
+  HDRS
+    ../sched_getscheduler.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_get_priority_min
+  SRCS
+    sched_get_priority_min.cpp
+  HDRS
+    ../sched_get_priority_min.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_get_priority_max
+  SRCS
+    sched_get_priority_max.cpp
+  HDRS
+    ../sched_get_priority_max.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sched_rr_get_interval
+  SRCS
+    sched_rr_get_interval.cpp
+  HDRS
+    ../sched_rr_get_interval.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)

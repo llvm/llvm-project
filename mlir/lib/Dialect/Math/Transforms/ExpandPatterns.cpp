@@ -48,9 +48,14 @@ static Value createIntConst(Location loc, Type type, int64_t value,
 
 static Value createTruncatedFPValue(Value operand, ImplicitLocOpBuilder &b) {
   Type opType = operand.getType();
-  Value fixedConvert = b.create<arith::FPToSIOp>(b.getI64Type(), operand);
+  Type i64Ty = b.getI64Type();
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    i64Ty = shapedTy.clone(i64Ty);
+  Value fixedConvert = b.create<arith::FPToSIOp>(i64Ty, operand);
   Value fpFixedConvert = b.create<arith::SIToFPOp>(opType, fixedConvert);
-  return fpFixedConvert;
+  // The truncation does not preserve the sign when the truncated
+  // value is -0. So here the sign is copied again.
+  return b.create<math::CopySignOp>(fpFixedConvert, operand);
 }
 
 /// Expands tanh op into
@@ -189,23 +194,59 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
 
 static LogicalResult convertRoundOp(math::RoundOp op,
                                     PatternRewriter &rewriter) {
-  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  Location loc = op.getLoc();
+  ImplicitLocOpBuilder b(loc, rewriter);
   Value operand = op.getOperand();
   Type opType = operand.getType();
+  Type opEType = getElementTypeOrSelf(opType);
 
-  // Creating constants for later use.
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
-  Value negHalf = createFloatConst(op->getLoc(), opType, -0.5, rewriter);
+  if (!opEType.isF32()) {
+    return rewriter.notifyMatchFailure(op, "not a round of f32.");
+  }
 
-  Value posCheck =
-      b.create<arith::CmpFOp>(arith::CmpFPredicate::OGE, operand, zero);
-  Value incrValue =
-      b.create<arith::SelectOp>(op->getLoc(), posCheck, half, negHalf);
+  Type i32Ty = b.getI32Type();
+  if (auto shapedTy = dyn_cast<ShapedType>(opType))
+    i32Ty = shapedTy.clone(i32Ty);
+
+  Value half = createFloatConst(loc, opType, 0.5, b);
+  Value c23 = createIntConst(loc, i32Ty, 23, b);
+  Value c127 = createIntConst(loc, i32Ty, 127, b);
+  Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
+
+  Value incrValue = b.create<math::CopySignOp>(half, operand);
   Value add = b.create<arith::AddFOp>(opType, operand, incrValue);
-
   Value fpFixedConvert = createTruncatedFPValue(add, b);
-  rewriter.replaceOp(op, fpFixedConvert);
+
+  // There are three cases where adding 0.5 to the value and truncating by
+  // converting to an i64 does not result in the correct behavior:
+  //
+  // 1. Special values: +-inf and +-nan
+  //     Casting these special values to i64 has undefined behavior. To identify
+  //     these values, we use the fact that these values are the only float
+  //     values with the maximum possible biased exponent.
+  //
+  // 2. Large values: 2^23 <= |x| <= INT_64_MAX
+  //     Adding 0.5 to a float larger than or equal to 2^23 results in precision
+  //     errors that sometimes round the value up and sometimes round the value
+  //     down. For example:
+  //         8388608.0 + 0.5 = 8388608.0
+  //         8388609.0 + 0.5 = 8388610.0
+  //
+  // 3. Very large values: |x| > INT_64_MAX
+  //     Casting to i64 a value greater than the max i64 value will overflow the
+  //     i64 leading to wrong outputs.
+  //
+  // All three cases satisfy the property `biasedExp >= 23`.
+  Value operandBitcast = b.create<arith::BitcastOp>(i32Ty, operand);
+  Value operandExp = b.create<arith::AndIOp>(
+      b.create<arith::ShRUIOp>(operandBitcast, c23), expMask);
+  Value operandBiasedExp = b.create<arith::SubIOp>(operandExp, c127);
+  Value isSpecialValOrLargeVal =
+      b.create<arith::CmpIOp>(arith::CmpIPredicate::sge, operandBiasedExp, c23);
+
+  Value result = b.create<arith::SelectOp>(isSpecialValOrLargeVal, operand,
+                                           fpFixedConvert);
+  rewriter.replaceOp(op, result);
   return success();
 }
 
@@ -253,6 +294,129 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   return success();
 }
 
+// Convert `math.roundeven` into `math.round` + arith ops
+static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
+                                        PatternRewriter &rewriter) {
+  Location loc = op.getLoc();
+  ImplicitLocOpBuilder b(loc, rewriter);
+  auto operand = op.getOperand();
+  Type operandTy = operand.getType();
+  Type resultTy = op.getType();
+  Type operandETy = getElementTypeOrSelf(operandTy);
+  Type resultETy = getElementTypeOrSelf(resultTy);
+
+  if (!operandETy.isF32() || !resultETy.isF32()) {
+    return rewriter.notifyMatchFailure(op, "not a roundeven of f32.");
+  }
+
+  Type i32Ty = b.getI32Type();
+  Type f32Ty = b.getF32Type();
+  if (auto shapedTy = dyn_cast<ShapedType>(operandTy)) {
+    i32Ty = shapedTy.clone(i32Ty);
+    f32Ty = shapedTy.clone(f32Ty);
+  }
+
+  Value c1Float = createFloatConst(loc, f32Ty, 1.0, b);
+  Value c0 = createIntConst(loc, i32Ty, 0, b);
+  Value c1 = createIntConst(loc, i32Ty, 1, b);
+  Value cNeg1 = createIntConst(loc, i32Ty, -1, b);
+  Value c23 = createIntConst(loc, i32Ty, 23, b);
+  Value c31 = createIntConst(loc, i32Ty, 31, b);
+  Value c127 = createIntConst(loc, i32Ty, 127, b);
+  Value c2To22 = createIntConst(loc, i32Ty, 1 << 22, b);
+  Value c23Mask = createIntConst(loc, i32Ty, (1 << 23) - 1, b);
+  Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
+
+  Value operandBitcast = b.create<arith::BitcastOp>(i32Ty, operand);
+  Value round = b.create<math::RoundOp>(operand);
+  Value roundBitcast = b.create<arith::BitcastOp>(i32Ty, round);
+
+  // Get biased exponents for operand and round(operand)
+  Value operandExp = b.create<arith::AndIOp>(
+      b.create<arith::ShRUIOp>(operandBitcast, c23), expMask);
+  Value operandBiasedExp = b.create<arith::SubIOp>(operandExp, c127);
+  Value roundExp = b.create<arith::AndIOp>(
+      b.create<arith::ShRUIOp>(roundBitcast, c23), expMask);
+  Value roundBiasedExp = b.create<arith::SubIOp>(roundExp, c127);
+
+  auto safeShiftRight = [&](Value x, Value shift) -> Value {
+    // Clamp shift to valid range [0, 31] to avoid undefined behavior
+    Value clampedShift = b.create<arith::MaxSIOp>(shift, c0);
+    clampedShift = b.create<arith::MinSIOp>(clampedShift, c31);
+    return b.create<arith::ShRUIOp>(x, clampedShift);
+  };
+
+  auto maskMantissa = [&](Value mantissa,
+                          Value mantissaMaskRightShift) -> Value {
+    Value shiftedMantissaMask = safeShiftRight(c23Mask, mantissaMaskRightShift);
+    return b.create<arith::AndIOp>(mantissa, shiftedMantissaMask);
+  };
+
+  // A whole number `x`, such that `|x| != 1`, is even if the mantissa, ignoring
+  // the leftmost `clamp(biasedExp - 1, 0, 23)` bits, is zero. Large numbers
+  // with `biasedExp > 23` (numbers where there is not enough precision to store
+  // decimals) are always even, and they satisfy the even condition trivially
+  // since the mantissa without all its bits is zero. The even condition
+  // is also true for +-0, since they have `biasedExp = -127` and the entire
+  // mantissa is zero. The case of +-1 has to be handled separately. Here
+  // we identify these values by noting that +-1 are the only whole numbers with
+  // `biasedExp == 0`.
+  //
+  // The special values +-inf and +-nan also satisfy the same property that
+  // whole non-unit even numbers satisfy. In particular, the special values have
+  // `biasedExp > 23`, so they get treated as large numbers with no room for
+  // decimals, which are always even.
+  Value roundBiasedExpEq0 =
+      b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, roundBiasedExp, c0);
+  Value roundBiasedExpMinus1 = b.create<arith::SubIOp>(roundBiasedExp, c1);
+  Value roundMaskedMantissa = maskMantissa(roundBitcast, roundBiasedExpMinus1);
+  Value roundIsNotEvenOrSpecialVal = b.create<arith::CmpIOp>(
+      arith::CmpIPredicate::ne, roundMaskedMantissa, c0);
+  roundIsNotEvenOrSpecialVal =
+      b.create<arith::OrIOp>(roundIsNotEvenOrSpecialVal, roundBiasedExpEq0);
+
+  // A value `x` with `0 <= biasedExp < 23`, is halfway between two consecutive
+  // integers if the bit at index `biasedExp` starting from the left in the
+  // mantissa is 1 and all the bits to the right are zero. Values with
+  // `biasedExp >= 23` don't have decimals, so they are never halfway. The
+  // values +-0.5 are the only halfway values that have `biasedExp == -1 < 0`,
+  // so these are handled separately. In particular, if `biasedExp == -1`, the
+  // value is halfway if the entire mantissa is zero.
+  Value operandBiasedExpEqNeg1 = b.create<arith::CmpIOp>(
+      arith::CmpIPredicate::eq, operandBiasedExp, cNeg1);
+  Value expectedOperandMaskedMantissa = b.create<arith::SelectOp>(
+      operandBiasedExpEqNeg1, c0, safeShiftRight(c2To22, operandBiasedExp));
+  Value operandMaskedMantissa = maskMantissa(operandBitcast, operandBiasedExp);
+  Value operandIsHalfway =
+      b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, operandMaskedMantissa,
+                              expectedOperandMaskedMantissa);
+  // Ensure `biasedExp` is in the valid range for half values.
+  Value operandBiasedExpGeNeg1 = b.create<arith::CmpIOp>(
+      arith::CmpIPredicate::sge, operandBiasedExp, cNeg1);
+  Value operandBiasedExpLt23 =
+      b.create<arith::CmpIOp>(arith::CmpIPredicate::slt, operandBiasedExp, c23);
+  operandIsHalfway =
+      b.create<arith::AndIOp>(operandIsHalfway, operandBiasedExpLt23);
+  operandIsHalfway =
+      b.create<arith::AndIOp>(operandIsHalfway, operandBiasedExpGeNeg1);
+
+  // Adjust rounded operand with `round(operand) - sign(operand)` to correct the
+  // case where `round` rounded in the opposite direction of `roundeven`.
+  Value sign = b.create<math::CopySignOp>(c1Float, operand);
+  Value roundShifted = b.create<arith::SubFOp>(round, sign);
+  // If the rounded value is even or a special value, we default to the behavior
+  // of `math.round`.
+  Value needsShift =
+      b.create<arith::AndIOp>(roundIsNotEvenOrSpecialVal, operandIsHalfway);
+  Value result = b.create<arith::SelectOp>(needsShift, roundShifted, round);
+  // The `x - sign` adjustment does not preserve the sign when we are adjusting
+  // the value -1 to -0. So here the sign is copied again to ensure that -0.5 is
+  // rounded to -0.0.
+  result = b.create<math::CopySignOp>(result, operand);
+  rewriter.replaceOp(op, result);
+  return success();
+}
+
 void mlir::populateExpandCtlzPattern(RewritePatternSet &patterns) {
   patterns.add(convertCtlzOp);
 }
@@ -287,4 +451,8 @@ void mlir::populateExpandRoundFPattern(RewritePatternSet &patterns) {
 
 void mlir::populateExpandFloorFPattern(RewritePatternSet &patterns) {
   patterns.add(convertFloorOp);
+}
+
+void mlir::populateExpandRoundEvenPattern(RewritePatternSet &patterns) {
+  patterns.add(convertRoundEvenOp);
 }

@@ -111,9 +111,9 @@ public:
               loc, rewriter.getIndexType(), size);
         sizes[i] = size;
       } else {
-        sizes[i] = rewriter.getIndexAttr(op.getType().getDimSize(i));
-        size =
-            rewriter.create<arith::ConstantOp>(loc, sizes[i].get<Attribute>());
+        auto sizeAttr = rewriter.getIndexAttr(op.getType().getDimSize(i));
+        size = rewriter.create<arith::ConstantOp>(loc, sizeAttr);
+        sizes[i] = sizeAttr;
       }
       strides[i] = stride;
       if (i > 0)

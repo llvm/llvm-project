@@ -185,6 +185,13 @@ bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
   return value.isa<IntegerAttr, FloatAttr, ElementsAttr>();
 }
 
+ConstantOp arith::ConstantOp::materialize(OpBuilder &builder, Attribute value,
+                                          Type type, Location loc) {
+  if (isBuildableWith(value, type))
+    return builder.create<arith::ConstantOp>(loc, cast<TypedAttr>(value));
+  return nullptr;
+}
+
 OpFoldResult arith::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
@@ -2306,7 +2313,7 @@ OpFoldResult arith::ShRSIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 /// Returns the identity value attribute associated with an AtomicRMWKind op.
-Attribute mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
+TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                                             OpBuilder &builder, Location loc) {
   switch (kind) {
   case AtomicRMWKind::maxf:
@@ -2355,7 +2362,7 @@ Attribute mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
 /// Returns the identity value associated with an AtomicRMWKind op.
 Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     OpBuilder &builder, Location loc) {
-  Attribute attr = getIdentityValueAttr(op, resultType, builder, loc);
+  auto attr = getIdentityValueAttr(op, resultType, builder, loc);
   return builder.create<arith::ConstantOp>(loc, attr);
 }
 

@@ -296,22 +296,22 @@ LogicalResult MulIExtendedOpLowering<ArithMulOp, IsSigned>::matchAndRewrite(
   // on operands zero-extended to i(2*N) bits, and truncate the results back to
   // iN types.
   if (!resultType.isa<LLVM::LLVMArrayType>()) {
-    Type wideType;
     // Shift amount necessary to extract the high bits from widened result.
-    Attribute shiftValAttr;
+    TypedAttr shiftValAttr;
 
     if (auto intTy = resultType.dyn_cast<IntegerType>()) {
       unsigned resultBitwidth = intTy.getWidth();
-      wideType = rewriter.getIntegerType(resultBitwidth * 2);
-      shiftValAttr = rewriter.getIntegerAttr(wideType, resultBitwidth);
+      auto attrTy = rewriter.getIntegerType(resultBitwidth * 2);
+      shiftValAttr = rewriter.getIntegerAttr(attrTy, resultBitwidth);
     } else {
       auto vecTy = resultType.cast<VectorType>();
       unsigned resultBitwidth = vecTy.getElementTypeBitWidth();
-      wideType = VectorType::get(vecTy.getShape(),
-                                 rewriter.getIntegerType(resultBitwidth * 2));
+      auto attrTy = VectorType::get(
+          vecTy.getShape(), rewriter.getIntegerType(resultBitwidth * 2));
       shiftValAttr = SplatElementsAttr::get(
-          wideType, APInt(resultBitwidth * 2, resultBitwidth));
+          attrTy, APInt(resultBitwidth * 2, resultBitwidth));
     }
+    Type wideType = shiftValAttr.getType();
     assert(LLVM::isCompatibleType(wideType) &&
            "LLVM dialect should support all signless integer types");
 

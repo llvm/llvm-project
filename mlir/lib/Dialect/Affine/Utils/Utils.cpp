@@ -1677,8 +1677,7 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
       dynIdx++;
     } else {
       // Create ConstantOp for static dimension.
-      Attribute constantAttr =
-          b.getIntegerAttr(b.getIndexType(), oldMemRefShape[d]);
+      auto constantAttr = b.getIntegerAttr(b.getIndexType(), oldMemRefShape[d]);
       inAffineApply.emplace_back(
           b.create<arith::ConstantOp>(allocOp->getLoc(), constantAttr));
     }

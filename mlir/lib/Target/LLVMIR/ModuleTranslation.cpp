@@ -407,8 +407,8 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
 
   // Fall back to element-by-element construction otherwise.
   if (auto elementsAttr = attr.dyn_cast<ElementsAttr>()) {
-    assert(elementsAttr.getType().hasStaticShape());
-    assert(!elementsAttr.getType().getShape().empty() &&
+    assert(elementsAttr.getShapedType().hasStaticShape());
+    assert(!elementsAttr.getShapedType().getShape().empty() &&
            "unexpected empty elements attribute shape");
 
     SmallVector<llvm::Constant *, 8> constants;
@@ -422,7 +422,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     }
     ArrayRef<llvm::Constant *> constantsRef = constants;
     llvm::Constant *result = buildSequentialConstant(
-        constantsRef, elementsAttr.getType().getShape(), llvmType, loc);
+        constantsRef, elementsAttr.getShapedType().getShape(), llvmType, loc);
     assert(constantsRef.empty() && "did not consume all elemental constants");
     return result;
   }
