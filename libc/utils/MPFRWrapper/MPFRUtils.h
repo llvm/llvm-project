@@ -10,8 +10,8 @@
 #define LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
-#include "utils/testutils/RoundingModeUtils.h"
 
 #include <stdint.h>
 
@@ -86,8 +86,8 @@ enum class Operation : int {
   EndTernaryOperationsSingleOutput,
 };
 
-using __llvm_libc::testutils::ForceRoundingMode;
-using __llvm_libc::testutils::RoundingMode;
+using __llvm_libc::fputil::testing::ForceRoundingMode;
+using __llvm_libc::fputil::testing::RoundingMode;
 
 template <typename T> struct BinaryInput {
   static_assert(
