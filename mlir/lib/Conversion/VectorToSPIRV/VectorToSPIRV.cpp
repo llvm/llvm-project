@@ -40,8 +40,11 @@ static uint64_t getFirstIntValue(ArrayAttr attr) {
 
 /// Returns the number of bits for the given scalar/vector type.
 static int getNumBits(Type type) {
+  // TODO: This does not take into account any memory layout or widening
+  // constraints. E.g., a vector<3xi57> may report to occupy 3x57=171 bit, even
+  // though in practice it will likely be stored as in a 4xi64 vector register.
   if (auto vectorType = type.dyn_cast<VectorType>())
-    return vectorType.cast<ShapedType>().getSizeInBits();
+    return vectorType.getNumElements() * vectorType.getElementTypeBitWidth();
   return type.getIntOrFloatBitWidth();
 }
 
