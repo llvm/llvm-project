@@ -1411,7 +1411,8 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
           DimLevelType dlt, bool /*unused*/) {
         assert(ldx == env.merger().loop(b));
         Value clause;
-        if (isCompressedDLT(dlt) || isSingletonDLT(dlt) || isCompressedWithHiDLT(dlt)) {
+        if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
+            isCompressedWithHiDLT(dlt)) {
           assert(lvl.has_value());
           const Value crd = env.emitter().getCoords()[tid][*lvl];
           const Value lvar = env.getLoopVar(ldx);
@@ -1487,7 +1488,8 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
     assert(env.merger().loop(b) == idx);
     if (isDenseDLT(dlt) || isUndefDLT(dlt))
       needsUniv = true;
-    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) || isIdxReduc) {
+    if (isCompressedDLT(dlt) || isSingletonDLT(dlt) ||
+        isCompressedWithHiDLT(dlt) || isIdxReduc) {
       // Only when this is a index reduction loop, can the dlt be undefined.
       assert(!isUndefDLT(dlt) || isIdxReduc);
       // sparse/singleton levels, or a dense/sparse index reduction loop.
