@@ -187,19 +187,6 @@ public:
 
   /// Set the string value in this object.
   ///
-  /// If \a is_mangled is \b true, then the mangled named is set to \a name,
-  /// else the demangled name is set to \a name.
-  ///
-  /// \param[in] name
-  ///     The already const version of the name for this object.
-  ///
-  /// \param[in] is_mangled
-  ///     If \b true then \a name is a mangled name, if \b false then
-  ///     \a name is demangled.
-  void SetValue(ConstString name, bool is_mangled);
-
-  /// Set the string value in this object.
-  ///
   /// This version auto detects if the string is mangled by inspecting the
   /// string value and looking for common mangling prefixes.
   ///
