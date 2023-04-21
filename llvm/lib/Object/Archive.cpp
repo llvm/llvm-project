@@ -933,6 +933,34 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     StringTable = BufOrErr.get();
     if (Increment())
       return;
+
+    if (I == E) {
+      setFirstRegular(*C);
+      Err = Error::success();
+      return;
+    }
+
+    NameOrErr = C->getRawName();
+    if (!NameOrErr) {
+      Err = NameOrErr.takeError();
+      return;
+    }
+    Name = NameOrErr.get();
+  }
+
+  if (Name == "/<ECSYMBOLS>/") {
+    // ARM64EC-aware libraries contain an additional special member with
+    // an EC symbol map after the string table. Its format is similar to a
+    // regular symbol map, except it doesn't contain member offsets. Its indexes
+    // refer to member offsets from the regular symbol table instead.
+    Expected<StringRef> BufOrErr = C->getBuffer();
+    if (!BufOrErr) {
+      Err = BufOrErr.takeError();
+      return;
+    }
+    ECSymbolTable = BufOrErr.get();
+    if (Increment())
+      return;
   }
 
   setFirstRegular(*C);
@@ -967,7 +995,17 @@ Archive::child_iterator Archive::child_end() const {
   return child_iterator::end(Child(nullptr, nullptr, nullptr));
 }
 
+bool Archive::Symbol::isECSymbol() const {
+  // Symbols use SymbolCount..SymbolCount+getNumberOfECSymbols() for EC symbol
+  // indexes.
+  uint32_t SymbolCount = Parent->getNumberOfSymbols();
+  return SymbolCount <= SymbolIndex &&
+         SymbolIndex < SymbolCount + Parent->getNumberOfECSymbols();
+}
+
 StringRef Archive::Symbol::getName() const {
+  if (isECSymbol())
+    return Parent->ECSymbolTable.begin() + StringIndex;
   return Parent->getSymbolTable().begin() + StringIndex;
 }
 
@@ -1006,15 +1044,24 @@ Expected<Archive::Child> Archive::Symbol::getMember() const {
     Buf += MemberCount * 4 + 4;
 
     uint32_t SymbolCount = read32le(Buf);
-    if (SymbolIndex >= SymbolCount)
+    uint16_t OffsetIndex;
+    if (SymbolIndex < SymbolCount) {
+      // Skip SymbolCount to get to the indices table.
+      const char *Indices = Buf + 4;
+
+      // Get the index of the offset in the file member offset table for this
+      // symbol.
+      OffsetIndex = read16le(Indices + SymbolIndex * 2);
+    } else if (isECSymbol()) {
+      // Skip SymbolCount to get to the indices table.
+      const char *Indices = Parent->ECSymbolTable.begin() + 4;
+
+      // Get the index of the offset in the file member offset table for this
+      // symbol.
+      OffsetIndex = read16le(Indices + (SymbolIndex - SymbolCount) * 2);
+    } else {
       return errorCodeToError(object_error::parse_failed);
-
-    // Skip SymbolCount to get to the indices table.
-    const char *Indices = Buf + 4;
-
-    // Get the index of the offset in the file member offset table for this
-    // symbol.
-    uint16_t OffsetIndex = read16le(Indices + SymbolIndex * 2);
+    }
     // Subtract 1 since OffsetIndex is 1 based.
     --OffsetIndex;
 
@@ -1063,6 +1110,9 @@ Archive::Symbol Archive::Symbol::getNext() const {
       t.StringIndex -= CurRanStrx;
       t.StringIndex += NextRanStrx;
     }
+  } else if (t.isECSymbol()) {
+    // Go to one past next null.
+    t.StringIndex = Parent->ECSymbolTable.find('\0', t.StringIndex) + 1;
   } else {
     // Go to one past next null.
     t.StringIndex = Parent->getSymbolTable().find('\0', t.StringIndex) + 1;
@@ -1133,6 +1183,51 @@ Archive::symbol_iterator Archive::symbol_end() const {
   return symbol_iterator(Symbol(this, getNumberOfSymbols(), 0));
 }
 
+Expected<iterator_range<Archive::symbol_iterator>> Archive::ec_symbols() const {
+  uint32_t Count = 0;
+
+  // Validate EC symbol table.
+  if (!ECSymbolTable.empty()) {
+    if (ECSymbolTable.size() < sizeof(uint32_t))
+      return malformedError("invalid EC symbols size (" +
+                            Twine(ECSymbolTable.size()) + ")");
+    if (SymbolTable.size() < sizeof(uint32_t))
+      return malformedError("invalid symbols size (" +
+                            Twine(ECSymbolTable.size()) + ")");
+
+    Count = read32le(ECSymbolTable.begin());
+    size_t StringIndex = sizeof(uint32_t) + Count * sizeof(uint16_t);
+    if (ECSymbolTable.size() < StringIndex)
+      return malformedError("invalid EC symbols size. Size was " +
+                            Twine(ECSymbolTable.size()) + ", but expected " +
+                            Twine(StringIndex));
+
+    uint32_t MemberCount = read32le(SymbolTable.begin());
+    const char *Indexes = ECSymbolTable.begin() + sizeof(uint32_t);
+
+    for (uint32_t i = 0; i < Count; ++i) {
+      uint16_t Index = read16le(Indexes + i * sizeof(uint16_t));
+      if (!Index)
+        return malformedError("invalid EC symbol index 0");
+      if (Index > MemberCount)
+        return malformedError("invalid EC symbol index " + Twine(Index) +
+                              " is larger than member count " +
+                              Twine(MemberCount));
+
+      StringIndex = ECSymbolTable.find('\0', StringIndex);
+      if (StringIndex == StringRef::npos)
+        return malformedError("malformed EC symbol names: not null-terminated");
+      ++StringIndex;
+    }
+  }
+
+  uint32_t SymbolCount = getNumberOfSymbols();
+  return make_range(
+      symbol_iterator(Symbol(this, SymbolCount,
+                             sizeof(uint32_t) + Count * sizeof(uint16_t))),
+      symbol_iterator(Symbol(this, SymbolCount + Count, 0)));
+}
+
 uint32_t Archive::getNumberOfSymbols() const {
   if (!hasSymbolTable())
     return 0;
@@ -1149,6 +1244,12 @@ uint32_t Archive::getNumberOfSymbols() const {
   member_count = read32le(buf);
   buf += 4 + (member_count * 4); // Skip offsets.
   return read32le(buf);
+}
+
+uint32_t Archive::getNumberOfECSymbols() const {
+  if (ECSymbolTable.size() < sizeof(uint32_t))
+    return 0;
+  return read32le(ECSymbolTable.begin());
 }
 
 Expected<std::optional<Archive::Child>> Archive::findSym(StringRef name) const {
