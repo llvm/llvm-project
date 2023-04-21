@@ -267,3 +267,41 @@ bb_4:                                             ; preds = %bb_4, %bb_2
   %val_i1_46 = call i1 @llvm.smax.i1(i1 %val_i1_5, i1 %val_i1_5)
   br i1 %val_i1_46, label %bb_4, label %bb_2
 }
+
+; cmp.y has 2 users, but should be inverted. So that a new one cmp is created instead.
+; FIXME: Branch condition must be replaced with a new created combined condition
+; Proof of bug: https://alive2.llvm.org/ce/z/L4ps9v
+define i1 @test_cond_multi_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: define i1 @test_cond_multi_use
+; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
+; CHECK-NEXT:  entry.x:
+; CHECK-NEXT:    [[CMP_X:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    [[CMP_Y:%.*]] = icmp eq i32 [[Y]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CMP_Y]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP_X]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP_Y]], label [[IF_THEN_Y:%.*]], label [[EXIT:%.*]]
+; CHECK:       if.then.y:
+; CHECK-NEXT:    store i32 [[Z]], ptr @g, align 4
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP_Y]]
+;
+entry.x:
+  %cmp.x = icmp ne i32 %x, 0
+  br i1 %cmp.x, label %if.then.x, label %entry.y
+
+if.then.x:
+  store i32 %z, ptr @g, align 4
+  br label %entry.y
+
+entry.y:
+  %cmp.y = icmp eq i32 %y, 0
+  br i1 %cmp.y, label %exit, label %if.then.y
+
+if.then.y:
+  store i32 %z, ptr @g, align 4
+  br label %exit
+
+exit:
+  ret i1 %cmp.y
+}
