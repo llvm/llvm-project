@@ -46,15 +46,9 @@ enum MSDemangleFlags {
 /// success, or nullptr on error.
 /// If n_read is non-null and demangling was successful, it receives how many
 /// bytes of the input string were consumed.
-/// buf can point to a *n_buf bytes large buffer where the demangled name is
-/// stored. If the buffer is too small, it is grown with realloc(). If buf is
-/// nullptr, then this malloc()s memory for the result.
-/// *n_buf stores the size of buf on input if buf is non-nullptr, and it
-/// receives the size of the demangled string on output if n_buf is not nullptr.
 /// status receives one of the demangle_ enum entries above if it's not nullptr.
 /// Flags controls various details of the demangled representation.
-char *microsoftDemangle(const char *mangled_name, size_t *n_read, char *buf,
-                        size_t *n_buf, int *status,
+char *microsoftDemangle(const char *mangled_name, size_t *n_read, int *status,
                         MSDemangleFlags Flags = MSDF_None);
 
 // Demangles a Rust v0 mangled symbol.
