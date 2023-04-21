@@ -103,7 +103,7 @@ private:
   const TargetLowering *TLI = nullptr;
 
   /// The maximum supported interleave factor.
-  unsigned MaxFactor;
+  unsigned MaxFactor = 0u;
 
   /// Transform an interleaved load into target specific intrinsics.
   bool lowerInterleavedLoad(LoadInst *LI,
