@@ -1435,8 +1435,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
   assert(!UnimplementedFeature::setDLLStorageClass());
   assert(!UnimplementedFeature::setPartition());
   assert(!UnimplementedFeature::setDSOLocal());
-  mlir::SymbolTable::setSymbolVisibility(GV,
-                                         CIRGenModule::getMLIRVisibility(GV));
+  CIRGenModule::setInitializer(GV, init);
 
   return mlir::cir::GlobalViewAttr::get(
       builder.getInt8PtrTy(),
