@@ -15,7 +15,7 @@ define void @spam(i32 *%a) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[FOO:%.*]] = bitcast i32* [[A:%.*]] to %struct.eggs**
-; CHECK-NEXT:    store %struct.eggs* null, %struct.eggs** [[FOO]]
+; CHECK-NEXT:    store %struct.eggs* null, %struct.eggs** [[FOO]], align 8
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br i1 undef, label [[BB3:%.*]], label [[BB2:%.*]]
@@ -23,8 +23,8 @@ define void @spam(i32 *%a) {
 ; CHECK-NEXT:    call void @baz()
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* undef
-; CHECK-NEXT:    store %struct.eggs* null, %struct.eggs** [[FOO]]
+; CHECK-NEXT:    store i32 0, i32* undef, align 4
+; CHECK-NEXT:    store %struct.eggs* null, %struct.eggs** [[FOO]], align 8
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -58,11 +58,11 @@ define void @a() {
 ; CHECK-NEXT:  b:
 ; CHECK-NEXT:    br label [[C:%.*]]
 ; CHECK:       c:
-; CHECK-NEXT:    store i64 undef, i64* null
+; CHECK-NEXT:    store i64 undef, i64* null, align 4
 ; CHECK-NEXT:    br label [[E:%.*]]
 ; CHECK:       e:
-; CHECK-NEXT:    [[G:%.*]] = load i64*, i64** null
-; CHECK-NEXT:    store i64* undef, i64** null
+; CHECK-NEXT:    [[G:%.*]] = load i64*, i64** null, align 8
+; CHECK-NEXT:    store i64* undef, i64** null, align 8
 ; CHECK-NEXT:    br i1 undef, label [[C]], label [[E]]
 ;
 b:
@@ -90,16 +90,16 @@ define void @widget(%struct.hoge* %arg) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi %struct.hoge* [ [[ARG:%.*]], [[BB:%.*]] ], [ null, [[BB1]] ]
-; CHECK-NEXT:    store %struct.hoge* [[TMP]], %struct.hoge** undef
+; CHECK-NEXT:    store %struct.hoge* [[TMP]], %struct.hoge** undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ [[TMP8:%.*]], [[BB7:%.*]] ], [ 0, [[BB1]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[BB7]], label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, i64* null
+; CHECK-NEXT:    [[TMP6:%.*]] = load i64, i64* null, align 4
 ; CHECK-NEXT:    call void @quux()
-; CHECK-NEXT:    store i64 [[TMP6]], i64* undef
+; CHECK-NEXT:    store i64 [[TMP6]], i64* undef, align 4
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[TMP8]] = add i64 [[TMP3]], 1
@@ -137,14 +137,14 @@ declare void @quux()
 
 define void @b() {
 ; CHECK-LABEL: @b(
-; CHECK-NEXT:    [[C:%.*]] = alloca [[STRUCT_A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = alloca [[STRUCT_A:%.*]], align 8
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       m:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       d:
 ; CHECK-NEXT:    [[G:%.*]] = bitcast %struct.a* [[C]] to i8*
 ; CHECK-NEXT:    [[F:%.*]] = bitcast i8* [[G]] to i32*
-; CHECK-NEXT:    [[E:%.*]] = load i32, i32* [[F]]
+; CHECK-NEXT:    [[E:%.*]] = load i32, i32* [[F]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[I:%.*]], label [[J:%.*]]
 ; CHECK:       i:
 ; CHECK-NEXT:    br i1 undef, label [[K:%.*]], label [[M:%.*]]
