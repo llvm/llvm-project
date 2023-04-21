@@ -45,6 +45,10 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 
+def StructSchedParam : NamedType<"struct sched_param">;
+def StructSchedParamPtr : PtrType<StructSchedParam>;
+def ConstStructSchedParamPtr : ConstType<StructSchedParamPtr>;
+
 def ExecArgvT : NamedType<"__exec_argv_t">;
 def ExecEnvpT : NamedType<"__exec_envp_t">;
 
@@ -633,13 +637,54 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Sched = HeaderSpec<
       "sched.h",
       [], // Macros
-      [PidT, SizeTType, CpuSetT], // Types
+      [PidT, TimeTType, StructTimeSpec, StructSchedParam], // Types
       [], // Enumerations
       [
         FunctionSpec<
             "sched_yield",
             RetValSpec<IntType>,
-            []
+            [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
+            "sched_setparam",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<ConstStructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_getparam",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<StructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_setscheduler",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>]
+        >,
+
+        FunctionSpec<
+            "sched_getscheduler",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<IntType>, ArgSpec<ConstStructSchedParamPtr>]
+        >,
+
+        FunctionSpec<
+            "sched_get_priority_min",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+
+        FunctionSpec<
+            "sched_get_priority_max",
+            RetValSpec<IntType>,
+            [ArgSpec<IntType>]
+        >,
+
+        FunctionSpec<
+            "sched_rr_get_interval",
+            RetValSpec<IntType>,
+            [ArgSpec<PidT>, ArgSpec<StructTimeSpecPtr>]
         >,
       ]
   >;

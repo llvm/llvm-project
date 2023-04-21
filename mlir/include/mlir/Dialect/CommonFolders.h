@@ -64,7 +64,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     if (!elementResult)
       return {};
 
-    return DenseElementsAttr::get(resultType, *elementResult);
+    return DenseElementsAttr::get(cast<ShapedType>(resultType), *elementResult);
   }
 
   if (operands[0].isa<ElementsAttr>() && operands[1].isa<ElementsAttr>()) {
@@ -86,7 +86,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
       elementResults.push_back(*elementResult);
     }
 
-    return DenseElementsAttr::get(resultType, elementResults);
+    return DenseElementsAttr::get(cast<ShapedType>(resultType), elementResults);
   }
   return {};
 }
@@ -189,7 +189,7 @@ Attribute constFoldUnaryOpConditional(ArrayRef<Attribute> operands,
         return {};
       elementResults.push_back(*elementResult);
     }
-    return DenseElementsAttr::get(op.getType(), elementResults);
+    return DenseElementsAttr::get(op.getShapedType(), elementResults);
   }
   return {};
 }
@@ -233,7 +233,7 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
         calculate(op.getSplatValue<ElementValueT>(), castStatus);
     if (!castStatus)
       return {};
-    return DenseElementsAttr::get(resType, elementResult);
+    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResult);
   }
   if (operands[0].isa<ElementsAttr>()) {
     // Operand is ElementsAttr-derived; perform an element-wise fold by
@@ -250,7 +250,7 @@ Attribute constFoldCastOp(ArrayRef<Attribute> operands, Type resType,
       elementResults.push_back(elt);
     }
 
-    return DenseElementsAttr::get(resType, elementResults);
+    return DenseElementsAttr::get(cast<ShapedType>(resType), elementResults);
   }
   return {};
 }

@@ -107,6 +107,7 @@ jobs:
     - name: Upload binaries
       if: ${{ always() && needs.prepare.outputs.upload == 'true' }}
       run: |
+        sudo apt install python3-github
         ${{ needs.prepare.outputs.build-dir }}/llvm-project/llvm/utils/release/github-upload-release.py \
         --token ${{ github.token }} \
         --release ${{ needs.prepare.outputs.release-version }} \

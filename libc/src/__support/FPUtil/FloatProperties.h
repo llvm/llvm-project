@@ -129,7 +129,7 @@ template <> struct FloatProperties<long double> {
   static constexpr uint32_t EXPONENT_BIAS = 16383;
 
   static constexpr BitsType EXP_MANT_MASK =
-      MANTISSA_MASK + EXPLICIT_BIT_MASK + EXPONENT_MASK;
+      MANTISSA_MASK | EXPLICIT_BIT_MASK | EXPONENT_MASK;
   static_assert(EXP_MANT_MASK == (~SIGN_MASK & FULL_WIDTH_MASK),
                 "Exponent and mantissa masks are not as expected.");
 
@@ -157,7 +157,7 @@ template <> struct FloatProperties<long double> {
   static constexpr BitsType EXPONENT_MASK = ~(SIGN_MASK | MANTISSA_MASK);
   static constexpr uint32_t EXPONENT_BIAS = 16383;
 
-  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK + EXPONENT_MASK;
+  static constexpr BitsType EXP_MANT_MASK = MANTISSA_MASK | EXPONENT_MASK;
   static_assert(EXP_MANT_MASK == ~SIGN_MASK,
                 "Exponent and mantissa masks are not as expected.");
 

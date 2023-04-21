@@ -62,7 +62,7 @@ static Type reduceInnermostDim(VectorType type) {
 static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
                                          Location loc, Type type,
                                          const APInt &value) {
-  Attribute attr;
+  TypedAttr attr;
   if (auto intTy = type.dyn_cast<IntegerType>()) {
     attr = rewriter.getIntegerAttr(type, value);
   } else {
@@ -989,7 +989,7 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
     Value hiFp = rewriter.create<arith::UIToFPOp>(loc, resultTy, hiInt);
 
     int64_t pow2Int = int64_t(1) << newBitWidth;
-    Attribute pow2Attr =
+    TypedAttr pow2Attr =
         rewriter.getFloatAttr(resultElemTy, static_cast<double>(pow2Int));
     if (auto vecTy = dyn_cast<VectorType>(resultTy))
       pow2Attr = SplatElementsAttr::get(vecTy, pow2Attr);

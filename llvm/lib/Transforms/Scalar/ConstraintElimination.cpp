@@ -487,7 +487,9 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   for (const auto &KV : VariablesB) {
-    R[GetOrAddIndex(KV.Variable)] -= KV.Coefficient;
+    if (SubOverflow(R[GetOrAddIndex(KV.Variable)], KV.Coefficient,
+                    R[GetOrAddIndex(KV.Variable)]))
+      return {};
     auto I =
         KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
     I.first->second &= KV.IsKnownNonNegative;

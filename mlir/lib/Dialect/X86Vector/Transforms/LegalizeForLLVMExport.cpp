@@ -79,7 +79,7 @@ struct MaskCompressOpConversion
       src = rewriter.create<arith::ConstantOp>(op.getLoc(), opType,
                                                op.getConstantSrcAttr());
     } else {
-      Attribute zeroAttr = rewriter.getZeroAttr(opType);
+      auto zeroAttr = rewriter.getZeroAttr(opType);
       src = rewriter.create<arith::ConstantOp>(op->getLoc(), opType, zeroAttr);
     }
 

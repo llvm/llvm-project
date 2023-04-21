@@ -248,9 +248,13 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sched_macros
+    .llvm-libc-types.cpu_set_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.size_t
-    .llvm-libc-types.cpu_set_t
+    .llvm-libc-types.struct_sched_param
+    # Needed according to posix standard
+    .llvm-libc-types.time_t
+    .llvm-libc-types.struct_timespec
 )
 
 add_gen_header(

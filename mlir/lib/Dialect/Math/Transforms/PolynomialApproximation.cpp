@@ -1245,7 +1245,7 @@ CbrtApproximation::matchAndRewrite(math::CbrtOp op,
   floatTy = broadcast(floatTy, shape);
   intTy = broadcast(intTy, shape);
 
-  auto bconst = [&](Attribute attr) -> Value {
+  auto bconst = [&](TypedAttr attr) -> Value {
     Value value = b.create<arith::ConstantOp>(attr);
     return broadcast(b, value, shape);
   };

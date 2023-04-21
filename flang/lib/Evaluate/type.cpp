@@ -48,9 +48,8 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
 }
 
 static bool IsDescriptor(const ProcEntityDetails &details) {
-  // A procedure pointer or dummy procedure must be & is a descriptor if
-  // and only if it requires a static link.
-  // TODO: refine this placeholder
+  // TODO: refine this placeholder; procedure pointers and dummy
+  // procedures should now be simple addresses (possibly of thunks)
   return details.HasExplicitInterface();
 }
 
@@ -92,6 +91,9 @@ bool IsDescriptor(const Symbol &symbol) {
 bool IsPassedViaDescriptor(const Symbol &symbol) {
   if (!IsDescriptor(symbol)) {
     return false;
+  }
+  if (IsAllocatableOrPointer(symbol)) {
+    return true;
   }
   if (const auto *object{
           symbol.GetUltimate().detailsIf<ObjectEntityDetails>()}) {

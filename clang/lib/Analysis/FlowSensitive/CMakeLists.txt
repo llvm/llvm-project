@@ -11,6 +11,8 @@ add_clang_library(clangAnalysisFlowSensitive
   WatchedLiteralsSolver.cpp
   DebugSupport.cpp
 
+  DEPENDS
+  clangAnalysisFlowSensitiveResources
   LINK_LIBS
   clangAnalysis
   clangAST
@@ -29,4 +31,3 @@ add_custom_command(OUTPUT HTMLLogger.inc
   DEPENDS ${CLANG_SOURCE_DIR}/utils/bundle_resources.py HTMLLogger.html HTMLLogger.css HTMLLogger.js
   VERBATIM)
 add_custom_target(clangAnalysisFlowSensitiveResources DEPENDS HTMLLogger.inc)
-add_dependencies(clangAnalysisFlowSensitive clangAnalysisFlowSensitiveResources)

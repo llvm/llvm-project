@@ -517,3 +517,9 @@ The exposition only type ``basic-format-string`` and its typedefs
 ``format-string`` and ``wformat-string`` became ``basic_format_string``,
 ``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
 available in C++20 as an extension.
+
+For padding Unicode strings the ``format`` library relies on the Unicode
+Standard. Libc++ retroactively updates the Unicode Standard in older C++
+versions. This allows the library to have better estimates for newly introduced
+Unicode code points, without requiring the user to use the latest C++ version
+in their code base.
