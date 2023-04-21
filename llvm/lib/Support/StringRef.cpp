@@ -42,12 +42,12 @@ int StringRef::compare_insensitive(StringRef RHS) const {
   return Length < RHS.Length ? -1 : 1;
 }
 
-bool StringRef::startswith_insensitive(StringRef Prefix) const {
+bool StringRef::starts_with_insensitive(StringRef Prefix) const {
   return Length >= Prefix.Length &&
       ascii_strncasecmp(Data, Prefix.Data, Prefix.Length) == 0;
 }
 
-bool StringRef::endswith_insensitive(StringRef Suffix) const {
+bool StringRef::ends_with_insensitive(StringRef Suffix) const {
   return Length >= Suffix.Length &&
       ascii_strncasecmp(end() - Suffix.Length, Suffix.Data, Suffix.Length) == 0;
 }
