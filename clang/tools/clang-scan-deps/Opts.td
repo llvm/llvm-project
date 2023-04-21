@@ -43,6 +43,8 @@ defm prefix_map_sdk : Eq<"prefix-map-sdk", "Path to remap SDK path to.">;
 
 defm prefix_map : Eq<"prefix-map", "Path to remap, as \"<old>=<new>\".">;
 
+def print_timing : F<"print-timing", "Print timing information">;
+
 def verbose : F<"v", "Use verbose output">;
 
 def round_trip_args : F<"round-trip-args", "verify that command-line arguments are canonical by parsing and re-serializing">;
