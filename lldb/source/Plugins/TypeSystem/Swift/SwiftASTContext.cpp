@@ -16,6 +16,7 @@
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
+#include "swift/AST/ASTWalker.h"
 #include "swift/AST/DebuggerClient.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/ExistentialLayout.h"
@@ -26,11 +27,11 @@
 #include "swift/AST/ModuleLoader.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/AST/OperatorNameLookup.h"
+#include "swift/AST/PluginLoader.h"
 #include "swift/AST/SearchPathOptions.h"
 #include "swift/AST/SubstitutionMap.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
-#include "swift/AST/ASTWalker.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
 #include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LLVM.h"
@@ -2977,6 +2978,10 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
         "ClangImporter-owned clang::ASTContext for '" + m_description,
         m_clangimporter->getClangASTContext());
   }
+
+  // Set up the plugin loader.
+  m_ast_context_ap->setPluginLoader(std::make_unique<swift::PluginLoader>(
+      *m_ast_context_ap, m_dependency_tracker.get()));
 
   // Set up the required state for the evaluator in the TypeChecker.
   registerIDERequestFunctions(m_ast_context_ap->evaluator);
