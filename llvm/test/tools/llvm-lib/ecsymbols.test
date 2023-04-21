@@ -1,5 +1,6 @@
 # Check that llvm-lib doesn't list the members of an archive which contains the
 # special member /<ECSYMBOLS>/.
+# REQUIRES: aarch64-registered-target
 
 # RUN: yaml2obj %s -o %t.lib
 # RUN: llvm-lib /list %t.lib | FileCheck --check-prefix=NOEC --allow-empty %s
