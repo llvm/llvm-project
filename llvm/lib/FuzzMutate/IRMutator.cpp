@@ -243,7 +243,7 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     break;
 
   case Instruction::FCmp:
-    CI = cast<ICmpInst>(&Inst);
+    CI = cast<FCmpInst>(&Inst);
     for (unsigned p = CmpInst::FIRST_FCMP_PREDICATE;
          p <= CmpInst::LAST_FCMP_PREDICATE; p++) {
       Modifications.push_back(
