@@ -203,7 +203,7 @@ entry:
 ; 16bit mul
 define i16 @slm-costs_16_scalar_mul(i16 %a, i16 %b)  {
 ; CHECK-LABEL: 'slm-costs_16_scalar_mul'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res = mul nsw i16 %a, %b
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = mul nsw i16 %a, %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %res
 ;
 entry:
