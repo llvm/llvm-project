@@ -613,6 +613,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
       # variable, and have LLVM's CMake append the envar to the archiver calls.
       set(LTO_LIBRARY -DDARWIN_LTO_LIBRARY=${LLVM_SHLIB_OUTPUT_INTDIR}/libLTO.dylib
         -DDYLD_LIBRARY_PATH=${LLVM_LIBRARY_OUTPUT_INTDIR})
+    elseif(MSVC)
+      add_dependencies(clang-bootstrap-deps llvm-lib)
+      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
     elseif(NOT WIN32)
       add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
       if(NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
