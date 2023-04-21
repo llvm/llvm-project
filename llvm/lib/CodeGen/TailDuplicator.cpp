@@ -427,7 +427,13 @@ void TailDuplicator::duplicateInstruction(
           } else {
             // For mapped registers that do not have sub-registers, simply
             // restrict their class to match the original one.
-            ConstrRC = MRI->constrainRegClass(VI->second.Reg, OrigRC);
+
+            // We don't want debug instructions affecting the resulting code so
+            // if we're cloning a debug instruction then just use MappedRC
+            // rather than constraining the register class further.
+            ConstrRC = NewMI.isDebugInstr()
+                           ? MappedRC
+                           : MRI->constrainRegClass(VI->second.Reg, OrigRC);
           }
 
           if (ConstrRC) {
