@@ -53,6 +53,11 @@ int main(int Argc, const char **Argv) {
 
   cl::opt<std::string> CASPath("cas", cl::desc("On-disk CAS path"),
                                cl::value_desc("path"));
+  cl::opt<std::string> CASPluginPath("fcas-plugin-path",
+                                     cl::desc("Path to plugin CAS library"),
+                                     cl::value_desc("path"));
+  cl::list<std::string> CASPluginOpts("fcas-plugin-option",
+                                      cl::desc("Plugin CAS Options"));
   cl::list<std::string> Inputs(cl::Positional, cl::desc("<input>..."));
 
   cl::ParseCommandLineOptions(Argc, Argv, "clang-cas-test");
@@ -69,6 +74,13 @@ int main(int Argc, const char **Argv) {
   // Printing a cache key only makes sense in an existing CAS, so default to
   // on-disk instead of in-memory if no --cas path is specified.
   Opts.CASPath = CASPath.empty() ? std::string("auto") : CASPath;
+  if (!CASPluginPath.empty()) {
+    Opts.PluginPath = CASPluginPath;
+    for (const auto &PluginOpt : CASPluginOpts) {
+      auto [Name, Val] = StringRef(PluginOpt).split('=');
+      Opts.PluginOptions.push_back({std::string(Name), std::string(Val)});
+    }
+  }
 
   auto CAS =
       Opts.getOrCreateDatabases(*Diags, /*CreateEmptyCASOnFailure=*/false)
