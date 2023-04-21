@@ -40,11 +40,14 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -715,55 +718,9 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
-namespace {
-class LintLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  LintLegacyPass() : FunctionPass(ID) {
-    initializeLintLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-  void print(raw_ostream &O, const Module *M) const override {}
-};
-} // namespace
-
-char LintLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",
-                      false, true)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",
-                    false, true)
-
-bool LintLegacyPass::runOnFunction(Function &F) {
-  auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
-  auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  Lint L(Mod, DL, AA, AC, DT, TLI);
-  L.visit(F);
-  dbgs() << L.MessagesStr.str();
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 //  Implement the public interfaces to this file...
 //===----------------------------------------------------------------------===//
-
-FunctionPass *llvm::createLintLegacyPassPass() { return new LintLegacyPass(); }
 
 /// lintFunction - Check a function for errors, printing messages on stderr.
 ///
@@ -771,17 +728,25 @@ void llvm::lintFunction(const Function &f) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot lint external functions");
 
-  legacy::FunctionPassManager FPM(F.getParent());
-  auto *V = new LintLegacyPass();
-  FPM.add(V);
-  FPM.run(F);
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  FAM.registerPass([&] {
+    AAManager AA;
+    AA.registerFunctionAnalysis<BasicAA>();
+    AA.registerFunctionAnalysis<ScopedNoAliasAA>();
+    AA.registerFunctionAnalysis<TypeBasedAA>();
+    return AA;
+  });
+  LintPass().run(F, FAM);
 }
 
 /// lintModule - Check a module for errors, printing messages on stderr.
 ///
 void llvm::lintModule(const Module &M) {
-  legacy::PassManager PM;
-  auto *V = new LintLegacyPass();
-  PM.add(V);
-  PM.run(const_cast<Module &>(M));
+  for (const Function &F : M) {
+    if (!F.isDeclaration())
+      lintFunction(F);
+  }
 }

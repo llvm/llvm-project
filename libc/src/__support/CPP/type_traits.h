@@ -12,9 +12,7 @@
 namespace __llvm_libc {
 namespace cpp {
 
-template <typename T> struct type_identity {
-  using type = T;
-};
+template <typename T> struct type_identity { using type = T; };
 
 template <bool B, typename T> struct enable_if;
 template <typename T> struct enable_if<true, T> : type_identity<T> {};
@@ -27,6 +25,14 @@ template <typename T, T v> struct integral_constant {
 };
 using true_type = cpp::integral_constant<bool, true>;
 using false_type = cpp::integral_constant<bool, false>;
+
+template <class T>
+struct is_trivially_copyable
+    : public integral_constant<bool, __is_trivially_copyable(T)> {};
+
+template <class T, class... Args>
+struct is_trivially_constructible
+    : integral_constant<bool, __is_trivially_constructible(T, Args...)> {};
 
 template <typename T, typename U> struct is_same : cpp::false_type {};
 template <typename T> struct is_same<T, T> : cpp::true_type {};

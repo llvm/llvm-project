@@ -402,7 +402,7 @@ protected:
   // This flag is used for classof, to distinguish ELFObjectFile from
   // its subclass. If more subclasses will be created, this flag will
   // have to become an enum.
-  bool isDyldELFObject;
+  bool isDyldELFObject = false;
 
 public:
   ELFObjectFile(ELFObjectFile<ELFT> &&Other);

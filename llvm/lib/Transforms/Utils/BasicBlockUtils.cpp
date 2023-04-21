@@ -2049,3 +2049,17 @@ BasicBlock *llvm::CreateControlFlowHub(
 
   return FirstGuardBlock;
 }
+
+void llvm::InvertBranch(BranchInst *PBI, IRBuilderBase &Builder) {
+  Value *NewCond = PBI->getCondition();
+  // If this is a "cmp" instruction, only used for branching (and nowhere
+  // else), then we can simply invert the predicate.
+  if (NewCond->hasOneUse() && isa<CmpInst>(NewCond)) {
+    CmpInst *CI = cast<CmpInst>(NewCond);
+    CI->setPredicate(CI->getInversePredicate());
+  } else
+    NewCond = Builder.CreateNot(NewCond, NewCond->getName() + ".not");
+
+  PBI->setCondition(NewCond);
+  PBI->swapSuccessors();
+}

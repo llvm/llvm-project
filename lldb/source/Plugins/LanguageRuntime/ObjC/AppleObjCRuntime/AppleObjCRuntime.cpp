@@ -156,7 +156,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
       thread = exe_ctx.GetThreadPtr();
     }
     if (thread) {
-      exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+      exe_ctx.SetFrameSP(thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
     }
   }
 

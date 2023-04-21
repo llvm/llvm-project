@@ -677,5 +677,7 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
   return PA;
 }

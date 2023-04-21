@@ -7903,6 +7903,12 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
 
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName.data());
+
+  if (Args.hasFlag(options::OPT_mdefault_build_attributes,
+                   options::OPT_mno_default_build_attributes, true)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-riscv-add-build-attributes");
+  }
 }
 
 void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,

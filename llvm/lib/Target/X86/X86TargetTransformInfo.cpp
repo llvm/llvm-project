@@ -1087,7 +1087,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::MUL,  MVT::v16i8,   {  5, 18, 6,12 } }, // extend/pmullw/pack
     { ISD::MUL,  MVT::v32i8,   {  6, 11,10,19 } }, // unpack/pmullw
-    { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 1 } }, // pmullw
+    { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 2 } }, // pmullw
     { ISD::MUL,  MVT::v8i32,   {  4, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i64,   {  6, 10, 8,13 } }, // 3*pmuludq/3*shift/2*add
@@ -1377,7 +1377,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ADD,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
     { ISD::SUB,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
-    { ISD::MUL,  MVT::i64,  {  2 } }, // Nehalem from http://www.agner.org/
+    { ISD::MUL,  MVT::i64,  {  2,  6,  1,  2 } },
   };
 
   if (ST->is64Bit())
@@ -1395,6 +1395,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
 
     { ISD::MUL,  MVT::i8,  {  3,  4, 1, 1 } },
+    { ISD::MUL,  MVT::i16, {  2,  4, 1, 1 } },
+    { ISD::MUL,  MVT::i32, {  1,  4, 1, 1 } },
 
     { ISD::FNEG, MVT::f64, {  2,  2, 1, 3 } }, // (x87)
     { ISD::FADD, MVT::f64, {  2,  3, 1, 1 } }, // (x87)

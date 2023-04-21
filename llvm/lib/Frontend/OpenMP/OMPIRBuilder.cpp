@@ -4892,6 +4892,8 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
 
   // Add a function attribute for the kernel.
   Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
+  if (Triple(M.getTargetTriple()).isAMDGCN())
+    Fn->addFnAttr("uniform-work-group-size", "true");
 }
 
 // We only generate metadata for function that contain target regions.

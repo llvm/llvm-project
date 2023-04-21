@@ -157,37 +157,27 @@ static std::unique_ptr<Module> loadFile(const std::string &FileName,
   return Result;
 }
 
-/// Given a list of possible callee implementation for a call site, select one
-/// that fits the \p Threshold.
-///
-/// FIXME: select "best" instead of first that fits. But what is "best"?
-/// - The smallest: more likely to be inlined.
-/// - The one with the least outgoing edges (already well optimized).
-/// - One from a module already being imported from in order to reduce the
-///   number of source modules parsed/linked.
-/// - One that has PGO data attached.
-/// - [insert you fancy metric here]
-static const GlobalValueSummary *
-selectCallee(const ModuleSummaryIndex &Index,
-             ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
-             unsigned Threshold, StringRef CallerModulePath,
-             FunctionImporter::ImportFailureReason &Reason,
-             GlobalValue::GUID GUID) {
-  Reason = FunctionImporter::ImportFailureReason::None;
-  auto It = llvm::find_if(
+/// Given a list of possible callee implementation for a call site, qualify the
+/// legality of importing each. The return is a range of pairs. Each pair
+/// corresponds to a candidate. The first value is the ImportFailureReason for
+/// that candidate, the second is the candidate.
+static auto qualifyCalleeCandidates(
+    const ModuleSummaryIndex &Index,
+    ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
+    StringRef CallerModulePath) {
+  return llvm::map_range(
       CalleeSummaryList,
-      [&](const std::unique_ptr<GlobalValueSummary> &SummaryPtr) {
+      [&Index, CalleeSummaryList,
+       CallerModulePath](const std::unique_ptr<GlobalValueSummary> &SummaryPtr)
+          -> std::pair<FunctionImporter::ImportFailureReason,
+                       const GlobalValueSummary *> {
         auto *GVSummary = SummaryPtr.get();
-        if (!Index.isGlobalValueLive(GVSummary)) {
-          Reason = FunctionImporter::ImportFailureReason::NotLive;
-          return false;
-        }
+        if (!Index.isGlobalValueLive(GVSummary))
+          return {FunctionImporter::ImportFailureReason::NotLive, GVSummary};
 
-        if (GlobalValue::isInterposableLinkage(GVSummary->linkage())) {
-          Reason = FunctionImporter::ImportFailureReason::InterposableLinkage;
-          // There is no point in importing these, we can't inline them
-          return false;
-        }
+        if (GlobalValue::isInterposableLinkage(GVSummary->linkage()))
+          return {FunctionImporter::ImportFailureReason::InterposableLinkage,
+                  GVSummary};
 
         auto *Summary = cast<FunctionSummary>(GVSummary->getBaseObject());
 
@@ -203,37 +193,61 @@ selectCallee(const ModuleSummaryIndex &Index,
         // a local in another module.
         if (GlobalValue::isLocalLinkage(Summary->linkage()) &&
             CalleeSummaryList.size() > 1 &&
-            Summary->modulePath() != CallerModulePath) {
-          Reason =
-              FunctionImporter::ImportFailureReason::LocalLinkageNotInModule;
-          return false;
-        }
-
-        if ((Summary->instCount() > Threshold) &&
-            !Summary->fflags().AlwaysInline && !ForceImportAll) {
-          Reason = FunctionImporter::ImportFailureReason::TooLarge;
-          return false;
-        }
+            Summary->modulePath() != CallerModulePath)
+          return {
+              FunctionImporter::ImportFailureReason::LocalLinkageNotInModule,
+              GVSummary};
 
         // Skip if it isn't legal to import (e.g. may reference unpromotable
         // locals).
-        if (Summary->notEligibleToImport()) {
-          Reason = FunctionImporter::ImportFailureReason::NotEligible;
-          return false;
-        }
+        if (Summary->notEligibleToImport())
+          return {FunctionImporter::ImportFailureReason::NotEligible,
+                  GVSummary};
 
-        // Don't bother importing if we can't inline it anyway.
-        if (Summary->fflags().NoInline && !ForceImportAll) {
-          Reason = FunctionImporter::ImportFailureReason::NoInline;
-          return false;
-        }
-
-        return true;
+        return {FunctionImporter::ImportFailureReason::None, GVSummary};
       });
-  if (It == CalleeSummaryList.end())
-    return nullptr;
+}
 
-  return cast<GlobalValueSummary>(It->get());
+/// Given a list of possible callee implementation for a call site, select one
+/// that fits the \p Threshold. If none are found, the Reason will give the last
+/// reason for the failure (last, in the order of CalleeSummaryList entries).
+///
+/// FIXME: select "best" instead of first that fits. But what is "best"?
+/// - The smallest: more likely to be inlined.
+/// - The one with the least outgoing edges (already well optimized).
+/// - One from a module already being imported from in order to reduce the
+///   number of source modules parsed/linked.
+/// - One that has PGO data attached.
+/// - [insert you fancy metric here]
+static const GlobalValueSummary *
+selectCallee(const ModuleSummaryIndex &Index,
+             ArrayRef<std::unique_ptr<GlobalValueSummary>> CalleeSummaryList,
+             unsigned Threshold, StringRef CallerModulePath,
+             FunctionImporter::ImportFailureReason &Reason) {
+  auto QualifiedCandidates =
+      qualifyCalleeCandidates(Index, CalleeSummaryList, CallerModulePath);
+  for (auto QualifiedValue : QualifiedCandidates) {
+    Reason = QualifiedValue.first;
+    if (Reason != FunctionImporter::ImportFailureReason::None)
+      continue;
+    auto *Summary =
+        cast<FunctionSummary>(QualifiedValue.second->getBaseObject());
+
+    if ((Summary->instCount() > Threshold) && !Summary->fflags().AlwaysInline &&
+        !ForceImportAll) {
+      Reason = FunctionImporter::ImportFailureReason::TooLarge;
+      continue;
+    }
+
+    // Don't bother importing if we can't inline it anyway.
+    if (Summary->fflags().NoInline && !ForceImportAll) {
+      Reason = FunctionImporter::ImportFailureReason::NoInline;
+      continue;
+    }
+
+    return Summary;
+  }
+  return nullptr;
 }
 
 namespace {
@@ -436,7 +450,7 @@ static void computeImportForFunction(
 
       FunctionImporter::ImportFailureReason Reason;
       CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
-                                   Summary.modulePath(), Reason, VI.getGUID());
+                                   Summary.modulePath(), Reason);
       if (!CalleeSummary) {
         // Update with new larger threshold if this was a retry (otherwise
         // we would have already inserted with NewThreshold above). Also

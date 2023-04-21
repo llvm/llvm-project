@@ -269,4 +269,9 @@ template <> struct format_provider<lldb_private::Vote> {
 };
 }
 
+enum SelectMostRelevant : bool {
+  SelectMostRelevantFrame = true,
+  DoNoSelectMostRelevantFrame = false,
+};
+
 #endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H

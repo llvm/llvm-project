@@ -17,6 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
@@ -290,10 +291,16 @@ bool BreakFalseDeps::runOnMachineFunction(MachineFunction &mf) {
 
   LLVM_DEBUG(dbgs() << "********** BREAK FALSE DEPENDENCIES **********\n");
 
+  // Skip Dead blocks due to ReachingDefAnalysis has no idea about instructions
+  // in them.
+  df_iterator_default_set<MachineBasicBlock *> Reachable;
+  for (MachineBasicBlock *MBB : depth_first_ext(&mf, Reachable))
+    (void)MBB /* Mark all reachable blocks */;
+
   // Traverse the basic blocks.
-  for (MachineBasicBlock &MBB : mf) {
-    processBasicBlock(&MBB);
-  }
+  for (MachineBasicBlock &MBB : mf)
+    if (Reachable.count(&MBB))
+      processBasicBlock(&MBB);
 
   return false;
 }

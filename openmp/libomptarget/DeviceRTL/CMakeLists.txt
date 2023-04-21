@@ -268,6 +268,24 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${output_name})
   set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${output_name})
+
+  if (CMAKE_EXPORT_COMPILE_COMMANDS)
+    set(ide_target_name omptarget-ide-${target_name}-${target_cpu})
+    add_library(${ide_target_name} STATIC EXCLUDE_FROM_ALL ${src_files})
+    target_compile_options(${ide_target_name} PRIVATE
+      -fopenmp --offload-arch=${target_cpu} -fopenmp-cuda-mode
+      -mllvm -openmp-opt-disable
+      -foffload-lto -fvisibility=hidden --offload-device-only
+      -nocudalib -nogpulib -nostdinc -Wno-unknown-cuda-version
+    )
+    target_compile_definitions(${ide_target_name} PRIVATE SHARED_SCRATCHPAD_SIZE=512)
+    target_include_directories(${ide_target_name} PRIVATE
+      ${include_directory}
+      ${devicertl_base_directory}/../include
+      ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+    )
+    install(TARGETS ${ide_target_name} EXCLUDE_FROM_ALL)
+  endif()
 endfunction()
 
 # Generate a Bitcode library for all the gpu architectures the user requested.

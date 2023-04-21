@@ -48,7 +48,7 @@ PathMappingList::PathMappingList(const PathMappingList &rhs)
 
 const PathMappingList &PathMappingList::operator=(const PathMappingList &rhs) {
   if (this != &rhs) {
-    std::scoped_lock locks(m_mutex, rhs.m_mutex);
+    std::scoped_lock<std::recursive_mutex, std::recursive_mutex> locks(m_mutex, rhs.m_mutex);
     m_pairs = rhs.m_pairs;
     m_callback = nullptr;
     m_callback_baton = nullptr;
@@ -69,7 +69,7 @@ void PathMappingList::Append(llvm::StringRef path, llvm::StringRef replacement,
 }
 
 void PathMappingList::Append(const PathMappingList &rhs, bool notify) {
-  std::scoped_lock locks(m_mutex, rhs.m_mutex);
+  std::scoped_lock<std::recursive_mutex, std::recursive_mutex> locks(m_mutex, rhs.m_mutex);
   ++m_mod_id;
   if (!rhs.m_pairs.empty()) {
     const_iterator pos, end = rhs.m_pairs.end();

@@ -146,28 +146,38 @@ if config.asan_dynamic:
   config.substitutions.append( ("%clang_asan_static ", build_invocation(clang_asan_static_cflags)) )
   config.substitutions.append( ("%clangxx_asan_static ", build_invocation(clang_asan_static_cxxflags)) )
 
-# MSVC-specific tests might also use the clang-cl.exe driver.
-if platform.system() == 'Windows' and target_is_msvc:
-  clang_cl_cxxflags = ["-Wno-deprecated-declarations",
-                       "-WX",
-                       "-D_HAS_EXCEPTIONS=0",
-                       "-Zi"] + target_cflags
-  clang_cl_asan_cxxflags = ["-fsanitize=address"] + clang_cl_cxxflags
-  if config.asan_dynamic:
-    clang_cl_asan_cxxflags.append("-MD")
+if platform.system() == 'Windows':
+  # MSVC-specific tests might also use the clang-cl.exe driver.
+  if target_is_msvc:
+    clang_cl_cxxflags = ["-Wno-deprecated-declarations",
+                        "-WX",
+                        "-D_HAS_EXCEPTIONS=0",
+                        "-Zi"] + target_cflags
+    clang_cl_asan_cxxflags = ["-fsanitize=address"] + clang_cl_cxxflags
+    if config.asan_dynamic:
+      clang_cl_asan_cxxflags.append("-MD")
 
-  clang_cl_invocation = build_invocation(clang_cl_cxxflags)
-  clang_cl_invocation = clang_cl_invocation.replace("clang.exe","clang-cl.exe")
-  config.substitutions.append( ("%clang_cl ", clang_cl_invocation) )
+    clang_cl_invocation = build_invocation(clang_cl_cxxflags)
+    clang_cl_invocation = clang_cl_invocation.replace("clang.exe","clang-cl.exe")
+    config.substitutions.append( ("%clang_cl ", clang_cl_invocation) )
 
-  clang_cl_asan_invocation = build_invocation(clang_cl_asan_cxxflags)
-  clang_cl_asan_invocation = clang_cl_asan_invocation.replace("clang.exe","clang-cl.exe")
-  config.substitutions.append( ("%clang_cl_asan ", clang_cl_asan_invocation) )
+    clang_cl_asan_invocation = build_invocation(clang_cl_asan_cxxflags)
+    clang_cl_asan_invocation = clang_cl_asan_invocation.replace("clang.exe","clang-cl.exe")
+    config.substitutions.append( ("%clang_cl_asan ", clang_cl_asan_invocation) )
+    config.substitutions.append( ("%Od", "-Od") )
+    config.substitutions.append( ("%Fe", "-Fe") )
 
-  base_lib = os.path.join(config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix)
-  config.substitutions.append( ("%asan_lib", base_lib % "") )
-  config.substitutions.append( ("%asan_cxx_lib", base_lib % "_cxx") )
-  config.substitutions.append( ("%asan_dll_thunk", base_lib % "_dll_thunk") )
+    base_lib = os.path.join(config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix)
+    config.substitutions.append( ("%asan_lib", base_lib % "") )
+    config.substitutions.append( ("%asan_cxx_lib", base_lib % "_cxx") )
+    config.substitutions.append( ("%asan_dll_thunk", base_lib % "_dll_thunk") )
+  else:
+    # To make some of these tests work on MinGW target without changing their
+    # behaviour for MSVC target, substitute clang-cl flags with gcc-like ones.
+    config.substitutions.append( ("%clang_cl ", build_invocation(target_cxxflags)) )
+    config.substitutions.append( ("%clang_cl_asan ", build_invocation(clang_asan_cxxflags)) )
+    config.substitutions.append( ("%Od", "-O0") )
+    config.substitutions.append( ("%Fe", "-o") )
 
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(

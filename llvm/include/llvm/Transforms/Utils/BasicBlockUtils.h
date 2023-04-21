@@ -605,6 +605,10 @@ BasicBlock *CreateControlFlowHub(
     const SetVector<BasicBlock *> &Successors, const StringRef Prefix,
     std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
 
+// Utility function for inverting branch condition and for swapping its
+// successors
+void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_BASICBLOCKUTILS_H
