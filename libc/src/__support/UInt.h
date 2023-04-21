@@ -35,12 +35,9 @@ template <size_t Bits> struct UInt {
   static constexpr uint64_t low(uint64_t v) { return v & MASK32; }
   static constexpr uint64_t high(uint64_t v) { return (v >> 32) & MASK32; }
 
-  constexpr UInt() {}
+  constexpr UInt() = default;
 
-  constexpr UInt(const UInt<Bits> &other) {
-    for (size_t i = 0; i < WORDCOUNT; ++i)
-      val[i] = other.val[i];
-  }
+  constexpr UInt(const UInt<Bits> &other) = default;
 
   template <size_t OtherBits> constexpr UInt(const UInt<OtherBits> &other) {
     if (OtherBits >= Bits) {
@@ -90,11 +87,7 @@ template <size_t Bits> struct UInt {
     return uint8_t(uint64_t(*this));
   }
 
-  UInt<Bits> &operator=(const UInt<Bits> &other) {
-    for (size_t i = 0; i < WORDCOUNT; ++i)
-      val[i] = other.val[i];
-    return *this;
-  }
+  UInt<Bits> &operator=(const UInt<Bits> &other) = default;
 
   constexpr bool is_zero() const {
     for (size_t i = 0; i < WORDCOUNT; ++i) {
