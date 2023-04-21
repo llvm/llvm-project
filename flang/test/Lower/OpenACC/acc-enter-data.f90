@@ -8,6 +8,7 @@ subroutine acc_enter_data
   real, pointer :: d
   logical :: ifCondition = .TRUE.
 
+!CHECK: %[[EXTENT_C10:.*]] = arith.constant 10 : index
 !CHECK: %[[A:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
 !CHECK: %[[B:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
 !CHECK: %[[C:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Ec"}
@@ -86,4 +87,48 @@ subroutine acc_enter_data
 !CHECK: %[[WAIT6:.*]] = arith.constant 1 : i32
 !CHECK: acc.enter_data wait_devnum(%[[WAIT6]] : i32) wait(%[[WAIT4]], %[[WAIT5]] : i32, i32) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
+  !$acc enter data copyin(a(1:10,1:5))
+!CHECK: %[[LB1:.*]] = arith.constant 1 : i64
+!CHECK: %[[UB1:.*]] = arith.constant 10 : i64
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB1]] : i64) upperbound(%[[UB1]] : i64)
+!CHECK: %[[LB2:.*]] = arith.constant 1 : i64
+!CHECK: %[[UB2:.*]] = arith.constant 5 : i64
+!CHECK: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB2]] : i64) upperbound(%[[UB2]] : i64)
+!CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(1:10,1:5)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
+
+  !$acc enter data copyin(a(1:,1:5))
+!CHECK: %[[LB1:.*]] = arith.constant 1 : i64
+!CHECK: %[[BOUND1:.*]] = acc.bounds   lowerbound(%[[LB1]] : i64) extent(%[[EXTENT_C10]] : index)
+!CHECK: %[[LB2:.*]] = arith.constant 1 : i64
+!CHECK: %[[UB2:.*]] = arith.constant 5 : i64
+!CHECK: %[[BOUND2:.*]] = acc.bounds   lowerbound(%[[LB2]] : i64) upperbound(%[[UB2]] : i64)
+!CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(1:,1:5)", structured = false}
+!CHECK: acc.enter_data   dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
+
+  !$acc enter data copyin(a(:10,1:5))
+!CHECK: %[[UB1:.*]] = arith.constant 10 : i64
+!CHECK: %[[BOUND1:.*]] = acc.bounds   upperbound(%[[UB1]] : i64)
+!CHECK: %[[LB2:.*]] = arith.constant 1 : i64
+!CHECK: %[[UB2:.*]] = arith.constant 5 : i64
+!CHECK: %[[BOUND2:.*]] = acc.bounds   lowerbound(%[[LB2]] : i64) upperbound(%[[UB2]] : i64)
+!CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   bounds(%[[BOUND1]], %[[BOUND2]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a(:10,1:5)", structured = false}
+!CHECK: acc.enter_data   dataOperands(%[[COPYIN_A]] : !fir.ref<!fir.array<10x10xf32>>)
+
 end subroutine acc_enter_data
+
+
+subroutine acc_enter_data_dummy(a)
+  real :: a(1:10)
+
+!CHECK-LABEL: func.func @_QPacc_enter_data_dummy
+!CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "a"}
+
+  !$acc enter data create(a(5:10))
+!CHECK: %[[LB1:.*]] = arith.constant 5 : i64
+!CHECK: %[[UB1:.*]] = arith.constant 10 : i64
+!CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB1]] : i64) upperbound(%[[UB1]] : i64)
+!CHECK: %[[CREATE1:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10xf32>>)   bounds(%[[BOUND1]]) -> !fir.ref<!fir.array<10xf32>> {name = "a(5:10)", structured = false}
+!CHECK: acc.enter_data   dataOperands(%[[CREATE1]] : !fir.ref<!fir.array<10xf32>>)
+
+end subroutine
