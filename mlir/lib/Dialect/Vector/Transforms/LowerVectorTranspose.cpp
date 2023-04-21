@@ -33,7 +33,7 @@
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
-#define DEBUG_TYPE "vector-shape-cast-lowering"
+#define DEBUG_TYPE "lower-vector-transpose"
 
 using namespace mlir;
 using namespace mlir::vector;
