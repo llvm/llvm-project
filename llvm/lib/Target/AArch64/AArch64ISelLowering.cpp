@@ -16731,7 +16731,8 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // extract(dup x) -> x
   if (N0.getOpcode() == AArch64ISD::DUP)
-    return DAG.getZExtOrTrunc(N0.getOperand(0), SDLoc(N), VT);
+    return VT.isInteger() ? DAG.getZExtOrTrunc(N0.getOperand(0), SDLoc(N), VT)
+                          : N0.getOperand(0);
 
   // Rewrite for pairwise fadd pattern
   //   (f32 (extract_vector_elt
