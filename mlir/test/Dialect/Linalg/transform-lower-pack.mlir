@@ -183,3 +183,104 @@ transform.sequence failures(propagate) {
         !transform.op<"tensor.collapse_shape">,
         !transform.op<"tensor.extract_slice">)
 }
+
+// -----
+
+// CHECK-LABEL: func.func @pack_with_outer_dims_perm(
+func.func @pack_with_outer_dims_perm(%src: tensor<100x200x128x256xi32>,
+                                     %dest: tensor<200x4x16x100x16x32xi32>)
+    -> tensor<200x4x16x100x16x32xi32> {
+  //      CHECK: %[[C0:.*]] = arith.constant 0 : index
+  //      CHECK: tensor.pad {{.*}} low[%[[C0]], %[[C0]], %[[C0]], %[[C0]]]
+  //      CHECK:   : tensor<100x200x128x256xi32> to tensor<100x200x128x256xi32>
+  //      CHECK: tensor.expand_shape %{{.*}} [{{.*}}[0], [1], [2, 3], [4, 5]]
+  // CHECK-SAME:   : tensor<100x200x128x256xi32> into tensor<100x200x4x32x16x16xi32>
+  //      CHECK: linalg.transpose
+  // CHECK-SAME:   ins(%{{.*}} : tensor<100x200x4x32x16x16xi32>)
+  // CHECK-SAME:   outs(%{{.*}} : tensor<200x4x16x100x16x32xi32>)
+  // CHECK-SAME:   permutation = [1, 2, 4, 0, 5, 3]
+  %0 = tensor.pack %src
+    outer_dims_perm = [1, 2, 3, 0]
+    inner_dims_pos = [3, 2]
+    inner_tiles = [16, 32]
+    into %dest : tensor<100x200x128x256xi32> -> tensor<200x4x16x100x16x32xi32>
+  return %0 : tensor<200x4x16x100x16x32xi32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !pdl.operation):
+  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+    : (!pdl.operation) -> !transform.op<"tensor.pack">
+  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+}
+
+// -----
+
+// CHECK-LABEL: func.func @pack_with_pad_and_outer_dims_perm(
+func.func @pack_with_pad_and_outer_dims_perm(%src: tensor<100x200x127x255xi32>,
+                                             %dest: tensor<200x4x16x100x16x32xi32>)
+    -> tensor<200x4x16x100x16x32xi32> {
+  //      CHECK: %[[C0:.*]] = arith.constant 0 : index
+  //      CHECK: tensor.pad {{.*}} low[%[[C0]], %[[C0]], %[[C0]], %[[C0]]]
+  //      CHECK:   : tensor<100x200x127x255xi32> to tensor<100x200x128x256xi32>
+  //      CHECK: tensor.expand_shape %{{.*}} [{{.*}}[0], [1], [2, 3], [4, 5]]
+  // CHECK-SAME:   : tensor<100x200x128x256xi32> into tensor<100x200x4x32x16x16xi32>
+  //      CHECK: linalg.transpose
+  // CHECK-SAME:   ins(%{{.*}} : tensor<100x200x4x32x16x16xi32>)
+  // CHECK-SAME:   outs(%{{.*}} : tensor<200x4x16x100x16x32xi32>)
+  // CHECK-SAME:   permutation = [1, 2, 4, 0, 5, 3]
+  %cst_0 = arith.constant 0 : i32
+  %0 = tensor.pack %src
+    padding_value(%cst_0 : i32)
+    outer_dims_perm = [1, 2, 3, 0]
+    inner_dims_pos = [3, 2]
+    inner_tiles = [16, 32]
+    into %dest : tensor<100x200x127x255xi32> -> tensor<200x4x16x100x16x32xi32>
+  return %0 : tensor<200x4x16x100x16x32xi32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !pdl.operation):
+  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+    : (!pdl.operation) -> !transform.op<"tensor.pack">
+  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+}
+
+// -----
+
+// CHECK-LABEL: func.func @pack_as_pad_with_outer_dims_perm(
+func.func @pack_as_pad_with_outer_dims_perm(%arg0: tensor<129x47x16x16xf32>, %arg1: tensor<1x1x1x1x136x64x16x16xf32>) -> tensor<1x1x1x1x136x64x16x16xf32> {
+  %cst_0 = arith.constant 0.0 : f32
+
+  // tensor.pack is lowered to tensor.pad + tensor.insert_slice
+  //      CHECK: %[[C0:.*]] = arith.constant 0 : index
+  //      CHECK: %[[PAD:.*]] = tensor.pad {{.*}} low[%[[C0]], %[[C0]], %[[C0]], %[[C0]]]
+  //      CHECK:   : tensor<129x47x16x16xf32> to tensor<136x64x16x16xf32>
+  //      CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<1x1x1x1x136x64x16x16xf32>
+  //      CHECK: %[[RES:.*]] = tensor.insert_slice %[[PAD]] into %[[EMPTY]]
+  // offsets.
+  // CHECK-SAME:   [0, 0, 0, 0, 0, 0, 0, 0]
+  // sizes.
+  // CHECK-SAME:   [1, 1, 1, 1, 136, 64, 16, 16]
+  // strides multipliers.
+  // CHECK-SAME:   [1, 1, 1, 1, 1, 1, 1, 1]
+  // CHECK-SAME:   : tensor<136x64x16x16xf32> into tensor<1x1x1x1x136x64x16x16xf32>
+  //      CHECK: return %[[RES]]
+  %pack = tensor.pack %arg0
+    padding_value(%cst_0 : f32)
+    outer_dims_perm = [1, 2, 3, 0]
+    inner_dims_pos = [0, 1, 2, 3]
+    inner_tiles = [136, 64, 16, 16]
+    into %arg1 : tensor<129x47x16x16xf32> -> tensor<1x1x1x1x136x64x16x16xf32>
+  return %pack :  tensor<1x1x1x1x136x64x16x16xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !pdl.operation):
+  %pack = transform.structured.match ops{["tensor.pack"]} in %module_op
+    : (!pdl.operation) -> !transform.op<"tensor.pack">
+  transform.structured.lower_pack %pack : (!transform.op<"tensor.pack">)
+    -> (!transform.op<"tensor.pad">, !transform.op<"tensor.expand_shape">, !transform.op<"linalg.transpose">)
+}
