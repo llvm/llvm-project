@@ -438,6 +438,19 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   }];
 }
 
+def OneRegionWithOperandsOp : TEST_Op<"one_region_with_operands_op", []> {
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let regions = (region AnyRegion);
+}
+
+def IsolatedOneRegionOp : TEST_Op<"isolated_one_region_op", [IsolatedFromAbove]> {
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let regions = (region AnyRegion:$my_region);
+  let assemblyFormat = [{
+    attr-dict-with-keyword $operands $my_region `:` type($operands)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
