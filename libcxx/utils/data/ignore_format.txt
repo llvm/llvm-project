@@ -236,8 +236,6 @@ libcxx/include/__bit/popcount.h
 libcxx/include/__bit_reference
 libcxx/include/__bit/rotate.h
 libcxx/include/bitset
-libcxx/include/__bsd_locale_defaults.h
-libcxx/include/__bsd_locale_fallbacks.h
 libcxx/include/cctype
 libcxx/include/chrono
 libcxx/include/__chrono/calendar.h
@@ -455,6 +453,9 @@ libcxx/include/limits.h
 libcxx/include/list
 libcxx/include/__locale
 libcxx/include/locale
+libcxx/include/__locale_dir/locale_base_api/bsd_locale_defaults.h
+libcxx/include/__locale_dir/locale_base_api/bsd_locale_fallbacks.h
+libcxx/include/__locale_dir/locale_base_api/locale_guard.h
 libcxx/include/locale.h
 libcxx/include/map
 libcxx/include/math.h
