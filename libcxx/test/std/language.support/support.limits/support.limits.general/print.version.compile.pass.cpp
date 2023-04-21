@@ -11,25 +11,18 @@
 //
 // clang-format off
 
-// UNSUPPORTED: no-localization
+// <print>
 
-// <ostream>
+// Test the feature test macros defined by <print>
 
-// Test the feature test macros defined by <ostream>
-
-/*  Constant             Value
-    __cpp_lib_char8_t    201907L [C++20]
-    __cpp_lib_print      202207L [C++23]
+/*  Constant           Value
+    __cpp_lib_print    202207L [C++23]
 */
 
-#include <ostream>
+#include <print>
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
-
-# ifdef __cpp_lib_char8_t
-#   error "__cpp_lib_char8_t should not be defined before c++20"
-# endif
 
 # ifdef __cpp_lib_print
 #   error "__cpp_lib_print should not be defined before c++23"
@@ -37,19 +30,11 @@
 
 #elif TEST_STD_VER == 14
 
-# ifdef __cpp_lib_char8_t
-#   error "__cpp_lib_char8_t should not be defined before c++20"
-# endif
-
 # ifdef __cpp_lib_print
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 17
-
-# ifdef __cpp_lib_char8_t
-#   error "__cpp_lib_char8_t should not be defined before c++20"
-# endif
 
 # ifdef __cpp_lib_print
 #   error "__cpp_lib_print should not be defined before c++23"
@@ -57,37 +42,11 @@
 
 #elif TEST_STD_VER == 20
 
-# if defined(__cpp_char8_t)
-#   ifndef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should be defined in c++20"
-#   endif
-#   if __cpp_lib_char8_t != 201907L
-#     error "__cpp_lib_char8_t should have the value 201907L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
-#   endif
-# endif
-
 # ifdef __cpp_lib_print
 #   error "__cpp_lib_print should not be defined before c++23"
 # endif
 
 #elif TEST_STD_VER == 23
-
-# if defined(__cpp_char8_t)
-#   ifndef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should be defined in c++23"
-#   endif
-#   if __cpp_lib_char8_t != 201907L
-#     error "__cpp_lib_char8_t should have the value 201907L in c++23"
-#   endif
-# else
-#   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
-#   endif
-# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_print
@@ -103,19 +62,6 @@
 # endif
 
 #elif TEST_STD_VER > 23
-
-# if defined(__cpp_char8_t)
-#   ifndef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should be defined in c++26"
-#   endif
-#   if __cpp_lib_char8_t != 201907L
-#     error "__cpp_lib_char8_t should have the value 201907L in c++26"
-#   endif
-# else
-#   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
-#   endif
-# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_print

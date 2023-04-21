@@ -41,10 +41,11 @@ lit_header_restrictions = {
     "iostream": "// UNSUPPORTED: no-localization",
     "istream": "// UNSUPPORTED: no-localization",
     "latch": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
-    "locale.h": "// UNSUPPORTED: no-localization",
     "locale": "// UNSUPPORTED: no-localization",
+    "locale.h": "// UNSUPPORTED: no-localization",
     "mutex": "// UNSUPPORTED: no-threads, c++03",
     "ostream": "// UNSUPPORTED: no-localization",
+    "print": "// UNSUPPORTED: availability-fp_to_chars-missing", # TODO PRINT investigate
     "regex": "// UNSUPPORTED: no-localization",
     "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
