@@ -6934,8 +6934,10 @@ public:
     auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
     // If the resulting type is scalarized, do not adjust the cost.
     unsigned VecNumParts = TTI.getNumberOfParts(VecTy);
-    if (VecNumParts == VecTy->getNumElements())
+    if (VecNumParts == VecTy->getNumElements()) {
+      InVectors.assign(1, Constant::getNullValue(VecTy));
       return nullptr;
+    }
     DenseMap<Value *, int> ExtractVectorsTys;
     SmallPtrSet<Value *, 4> CheckedExtracts;
     for (auto [I, V] : enumerate(VL)) {
