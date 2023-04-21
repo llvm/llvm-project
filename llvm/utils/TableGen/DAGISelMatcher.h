@@ -47,7 +47,7 @@ class Matcher {
   // The next matcher node that is executed after this one.  Null if this is the
   // last stage of a match.
   std::unique_ptr<Matcher> Next;
-  size_t Size; // Size in bytes of matcher and all its children (if any).
+  size_t Size = 0; // Size in bytes of matcher and all its children (if any).
   virtual void anchor();
 public:
   enum KindTy {
