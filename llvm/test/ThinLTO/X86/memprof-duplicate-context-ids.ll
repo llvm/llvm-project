@@ -64,6 +64,8 @@
 
 ; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
+;; We should clone D once for the cold allocations via C.
+; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
 
 source_filename = "duplicate-context-ids.ll"
@@ -205,6 +207,67 @@ declare i32 @sleep()
 ; DUMP: 	CallerEdges:
 
 
+; DUMP: CCG after cloning:
+; DUMP: Callsite Context Graph:
+; DUMP: Node [[D]]
+; DUMP:         Versions: 1 MIB:
+; DUMP:                 AllocType 2 StackIds: 0
+; DUMP:                 AllocType 1 StackIds: 1
+; DUMP:         (clone 0)
+; DUMP: 	AllocTypes: NotCold
+; DUMP: 	ContextIds: 2
+; DUMP: 	CalleeEdges:
+; DUMP: 	CallerEdges:
+; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
+; DUMP:         Clones: [[D2:0x[a-z0-9]+]]
+
+; DUMP: Node [[F]]
+; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 1       (clone 0)
+; DUMP: 	AllocTypes: NotCold
+; DUMP: 	ContextIds: 2
+; DUMP: 	CalleeEdges:
+; DUMP: 		Edge from Callee [[D]] to Caller: [[F]] AllocTypes: NotCold ContextIds: 2
+; DUMP: 	CallerEdges:
+
+; DUMP: Node [[C2]]
+; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0       (clone 0)
+; DUMP: 	AllocTypes: Cold
+; DUMP: 	ContextIds: 3
+; DUMP: 	CalleeEdges:
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2]] AllocTypes: Cold ContextIds: 3
+; DUMP: 	CallerEdges:
+
+; DUMP: Node [[B]]
+; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0, 2    (clone 0)
+; DUMP: 	AllocTypes: Cold
+; DUMP: 	ContextIds: 4
+; DUMP: 	CalleeEdges:
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[B]] AllocTypes: Cold ContextIds: 4
+; DUMP: 	CallerEdges:
+
+; DUMP: Node [[E]]
+; DUMP:         Callee: 4881081444663423788 (_Z1Dv) Clones: 0 StackIds: 0, 3    (clone 0)
+; DUMP: 	AllocTypes: Cold
+; DUMP: 	ContextIds: 1
+; DUMP: 	CalleeEdges:
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[E]] AllocTypes: Cold ContextIds: 1
+; DUMP: 	CallerEdges:
+
+; DUMP: Node [[D2]]
+; DUMP:         Versions: 1 MIB:
+; DUMP:                 AllocType 2 StackIds: 0
+; DUMP:                 AllocType 1 StackIds: 1
+; DUMP:         (clone 0)
+; DUMP: 	AllocTypes: Cold
+; DUMP: 	ContextIds: 1 3 4
+; DUMP: 	CalleeEdges:
+; DUMP: 	CallerEdges:
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[E:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
+; DUMP:         Clone of [[D]]
+
+
 ; DOTPRE: digraph "prestackupdate" {
 ; DOTPRE: 	label="prestackupdate";
 ; DOTPRE: 	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
@@ -227,3 +290,18 @@ declare i32 @sleep()
 ; DOTPOST:	Node[[E:0x[a-z0-9]+]] [shape=record,tooltip="N[[E]] ContextIds: 1",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Ev -\> _Z1Dv}"];
 ; DOTPOST:	Node[[E]] -> Node[[D]][tooltip="ContextIds: 1",fillcolor="cyan"];
 ; DOTPOST:}
+
+
+; DOTCLONED: digraph "cloned" {
+; DOTCLONED: 	label="cloned";
+; DOTCLONED: 	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 2",fillcolor="brown1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
+; DOTCLONED: 	Node[[F:0x[a-z0-9]+]] [shape=record,tooltip="N[[F]] ContextIds: 2",fillcolor="brown1",style="filled",style="filled",label="{OrigId: 13543580133643026784\n_Z1Fv -\> _Z1Dv}"];
+; DOTCLONED: 	Node[[F]] -> Node[[D]][tooltip="ContextIds: 2",fillcolor="brown1"];
+; DOTCLONED: 	Node[[C:0x[a-z0-9]+]] [shape=record,tooltip="N[[C]] ContextIds: 3",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Cv -\> _Z1Dv}"];
+; DOTCLONED: 	Node[[C]] -> Node[[D2:0x[a-z0-9]+]][tooltip="ContextIds: 3",fillcolor="cyan"];
+; DOTCLONED: 	Node[[B:0x[a-z0-9]+]] [shape=record,tooltip="N[[B]] ContextIds: 4",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Bv -\> _Z1Dv}"];
+; DOTCLONED: 	Node[[B]] -> Node[[D2]][tooltip="ContextIds: 4",fillcolor="cyan"];
+; DOTCLONED: 	Node[[E:0x[a-z0-9]+]] [shape=record,tooltip="N[[E]] ContextIds: 1",fillcolor="cyan",style="filled",style="filled",label="{OrigId: 0\n_Z1Ev -\> _Z1Dv}"];
+; DOTCLONED: 	Node[[E]] -> Node[[D2]][tooltip="ContextIds: 1",fillcolor="cyan"];
+; DOTCLONED: 	Node[[D2]] [shape=record,tooltip="N[[D2]] ContextIds: 1 3 4",fillcolor="cyan",style="filled",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
+; DOTCLONED: }
