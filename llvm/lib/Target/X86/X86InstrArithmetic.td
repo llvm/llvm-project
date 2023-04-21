@@ -314,7 +314,7 @@ class BinOpMI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   let ImmT = typeinfo.ImmEncoding;
 }
 
-// BinOpMI_RMW - Binary instructions with inputs "add [mem], imm", where the
+// BinOpMI_RMW - Binary instructions with inputs "[mem], imm", where the
 // pattern implicitly use EFLAGS.
 class BinOpMI_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                   SDNode opnode, Format f>
