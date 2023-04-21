@@ -89,7 +89,7 @@ public:
 // CHECK:   cir.global "private" constant external @_ZTI1A : !cir.ptr<i8>
 
 // typeinfo for B
-// CHECK:   cir.global "private" constant external @_ZTI1B : ![[AnonTypeInfo]] {alignment = 8 : i64}
+// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<[#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>, #cir.global_view<@_ZTS1B> : !cir.ptr<i8>, #cir.global_view<@_ZTI1A> : !cir.ptr<i8>] : ![[AnonTypeInfo]]> : ![[AnonTypeInfo]] {alignment = 8 : i64}
 
 // Checks for dtors in dtors.cpp
 
