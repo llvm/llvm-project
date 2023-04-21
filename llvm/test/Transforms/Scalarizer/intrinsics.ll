@@ -28,6 +28,9 @@ declare <2 x i32> @llvm.umul.fix.sat.v2i32(<2 x i32>, <2 x i32>, i32)
 declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float>)
 declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float>)
 
+; Bool return type, overloaded on fp operand type
+declare <2 x i1> @llvm.is.fpclass(<2 x float>, i32)
+
 
 define <2 x float> @scalarize_sqrt_v2f32(<2 x float> %x) #0 {
 ; CHECK-LABEL: @scalarize_sqrt_v2f32(
@@ -205,4 +208,13 @@ define <2 x i32> @scalarize_fptoui_sat(<2 x float> %x) #0 {
 ;
   %sat = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %x)
   ret <2 x i32> %sat
+}
+
+define <2 x i1> @scalarize_is_fpclass(<2 x float> %x) #0 {
+; CHECK-LABEL: @scalarize_is_fpclass(
+; CHECK-NEXT:    [[ISFPCLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 123)
+; CHECK-NEXT:    ret <2 x i1> [[ISFPCLASS]]
+;
+  %isfpclass = call <2 x i1> @llvm.is.fpclass(<2 x float> %x, i32 123)
+  ret <2 x i1> %isfpclass
 }
