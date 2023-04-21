@@ -1,10 +1,9 @@
-# Check that llvm-lib can list the members of an archive which contains the
+# Check that llvm-lib doesn't list the members of an archive which contains the
 # special member /<ECSYMBOLS>/.
 
 # RUN: yaml2obj %s -o %t.lib
-# RUN: llvm-lib /list %t.lib | FileCheck %s
-
-# CHECK: /<ECSYMBOLS>/
+# RUN: llvm-lib /list %t.lib | FileCheck --check-prefix=NOEC --allow-empty %s
+# NOEC-NOT: ECSYMBOLS
 
 --- !Arch
 Members:
@@ -23,3 +22,12 @@ Members:
 # RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o x64-foo.o %S/Inputs/b.s
 # RUN: llvm-lib -machine:arm64ec -out:foo.lib arm64-foo.o arm64ec-foo.o x64-foo.o
 # RUN: grep -q '/<ECSYMBOLS>/' foo.lib
+
+# RUN: llvm-nm --print-armap foo.lib | FileCheck %s
+# CHECK: Archive map
+# CHECK-NEXT: a in arm64-foo.o
+# CHECK-EMPTY:
+# CHECK-NEXT: Archive EC map
+# CHECK-NEXT: a in arm64ec-foo.o
+# CHECK-NEXT: b in x64-foo.o
+# CHECK-EMPTY:
