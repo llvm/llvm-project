@@ -1,5 +1,9 @@
 // UNSUPPORTED: system-windows
 
+// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
+// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
+
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
 // RUN:     -T semihosted.lds \
 // RUN:     -L some/directory/user/asked/for \
