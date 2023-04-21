@@ -315,7 +315,7 @@ ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
   return getArrayAttr(attrs);
 }
 
-Attribute Builder::getZeroAttr(Type type) {
+TypedAttr Builder::getZeroAttr(Type type) {
   if (type.isa<FloatType>())
     return getFloatAttr(type, 0.0);
   if (type.isa<IndexType>())
