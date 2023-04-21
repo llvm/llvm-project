@@ -25,6 +25,7 @@ for header in private_headers:
 
   # Skip the locale API headers, since they are platform-specific and thus inherently non-modular
   if 'locale_base_api' in header:
+    continue
 
   # TODO: Stop skipping PSTL headers once their integration is finished.
   if header.startswith('__pstl'):
