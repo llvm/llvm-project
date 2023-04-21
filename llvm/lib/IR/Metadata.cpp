@@ -1072,6 +1072,70 @@ MDNode *MDNode::getMostGenericFPMath(MDNode *A, MDNode *B) {
   return B;
 }
 
+// Call instructions with branch weights are only used in SamplePGO as
+// documented in
+/// https://llvm.org/docs/BranchWeightMetadata.html#callinst).
+MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
+                                            const Instruction *AInstr,
+                                            const Instruction *BInstr) {
+  assert(A && B && AInstr && BInstr && "Caller should guarantee");
+  auto &Ctx = AInstr->getContext();
+  MDBuilder MDHelper(Ctx);
+
+  // LLVM IR verifier verifies !prof metadata has at least 2 operands.
+  assert(A->getNumOperands() >= 2 && B->getNumOperands() >= 2 &&
+         "!prof annotations should have no less than 2 operands");
+  MDString *AMDS = dyn_cast<MDString>(A->getOperand(0));
+  MDString *BMDS = dyn_cast<MDString>(B->getOperand(0));
+  // LLVM IR verfier verifies first operand is MDString.
+  assert(AMDS != nullptr && BMDS != nullptr &&
+         "first operand should be a non-null MDString");
+  StringRef AProfName = AMDS->getString();
+  StringRef BProfName = BMDS->getString();
+  if (AProfName.equals("branch_weights") &&
+      BProfName.equals("branch_weights")) {
+    ConstantInt *AInstrWeight =
+        mdconst::dyn_extract<ConstantInt>(A->getOperand(1));
+    ConstantInt *BInstrWeight =
+        mdconst::dyn_extract<ConstantInt>(B->getOperand(1));
+    assert(AInstrWeight && BInstrWeight && "verified by LLVM verifier");
+    return MDNode::get(Ctx,
+                       {MDHelper.createString("branch_weights"),
+                        MDHelper.createConstant(ConstantInt::get(
+                            Type::getInt64Ty(Ctx),
+                            SaturatingAdd(AInstrWeight->getZExtValue(),
+                                          BInstrWeight->getZExtValue())))});
+  }
+  return nullptr;
+}
+
+// Pass in both instructions and nodes. Instruction information (e.g.,
+// instruction type) helps interpret profiles and make implementation clearer.
+MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
+                                      const Instruction *AInstr,
+                                      const Instruction *BInstr) {
+  if (!(A && B)) {
+    return A ? A : B;
+  }
+
+  assert(AInstr->getMetadata(LLVMContext::MD_prof) == A &&
+         "Caller should guarantee");
+  assert(BInstr->getMetadata(LLVMContext::MD_prof) == B &&
+         "Caller should guarantee");
+
+  const CallInst *ACall = dyn_cast<CallInst>(AInstr);
+  const CallInst *BCall = dyn_cast<CallInst>(BInstr);
+
+  // Both ACall and BCall are direct callsites.
+  if (ACall && BCall && ACall->getCalledFunction() &&
+      BCall->getCalledFunction())
+    return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
+
+  // The rest of the cases are not implemented but could be added
+  // when there are use cases.
+  return nullptr;
+}
+
 static bool isContiguous(const ConstantRange &A, const ConstantRange &B) {
   return A.getUpper() == B.getLower() || A.getLower() == B.getUpper();
 }
