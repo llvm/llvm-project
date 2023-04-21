@@ -81,3 +81,9 @@ Diagnostic flags
 }];
 }
 
+defvar GCCWriteStringsDocs = [{
+**Note:** enabling this warning in C will change the semantic behavior of the
+program by treating all string literals as having type ``const char *``
+instead of ``char *``. This can cause unexpected behaviors with type-sensitive
+constructs like ``_Generic``.
+}];
