@@ -264,46 +264,37 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
 
+  // Canonicalize to the `Index Pred Invariant` comparison
+  if (IsLoopInvariant(LHS)) {
+    std::swap(LHS, RHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  } else if (!IsLoopInvariant(RHS))
+    // Both LHS and RHS are loop variant
+    return false;
+
   switch (Pred) {
   default:
     return false;
 
-  case ICmpInst::ICMP_SLE:
-    std::swap(LHS, RHS);
-    [[fallthrough]];
   case ICmpInst::ICMP_SGE:
     if (match(RHS, m_ConstantInt<0>())) {
       Index = SE.getSCEV(LHS);
-      return true; // Lower.
+      return true;
+    }
+    return false;
+
+  case ICmpInst::ICMP_SGT:
+    if (match(RHS, m_ConstantInt<-1>())) {
+      Index = SE.getSCEV(LHS);
+      return true;
     }
     return false;
 
   case ICmpInst::ICMP_SLT:
-    std::swap(LHS, RHS);
-    [[fallthrough]];
-  case ICmpInst::ICMP_SGT:
-    if (match(RHS, m_ConstantInt<-1>())) {
-      Index = SE.getSCEV(LHS);
-      return true; // Lower.
-    }
-
-    if (IsLoopInvariant(LHS)) {
-      Index = SE.getSCEV(RHS);
-      End = SE.getSCEV(LHS);
-      return true; // Upper.
-    }
-    return false;
-
   case ICmpInst::ICMP_ULT:
-    std::swap(LHS, RHS);
-    [[fallthrough]];
-  case ICmpInst::ICMP_UGT:
-    if (IsLoopInvariant(LHS)) {
-      Index = SE.getSCEV(RHS);
-      End = SE.getSCEV(LHS);
-      return true; // Both lower and upper.
-    }
-    return false;
+    Index = SE.getSCEV(LHS);
+    End = SE.getSCEV(RHS);
+    return true;
   }
 
   llvm_unreachable("default clause returns!");
