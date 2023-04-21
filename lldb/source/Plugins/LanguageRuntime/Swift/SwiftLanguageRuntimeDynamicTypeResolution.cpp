@@ -788,6 +788,8 @@ SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemoteAST(
   // Check whether we've already cached this offset.
   swift::TypeBase *swift_type =
       GetCanonicalSwiftType(instance_type).getPointer();
+  if (swift_type == nullptr)
+    return {};
 
   // Perform the cache lookup.
   MemberID key{swift_type, ConstString(member_name).GetCString()};
