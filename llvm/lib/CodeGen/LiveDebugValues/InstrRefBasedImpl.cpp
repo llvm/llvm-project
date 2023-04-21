@@ -626,6 +626,11 @@ public:
   void redefVar(const MachineInstr &MI) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
+    // BEGIN SWIFT
+    if (IsSwiftAsyncFunction && MI.getDebugExpression() &&
+        MI.getDebugExpression()->isEntryValue())
+      return;
+    // END SWIFT
     DbgValueProperties Properties(MI);
 
     // Ignore non-register locations, we don't transfer those.
@@ -763,6 +768,10 @@ public:
     if (!NewLoc && !MakeUndef) {
       // Try and recover a few more locations with entry values.
       for (const auto &Var : ActiveMLocIt->second) {
+        // BEGIN SWIFT
+        if (ActiveVLocs.find(Var) == ActiveVLocs.end())
+          continue;
+        // END SWIFT
         auto &Prop = ActiveVLocs.find(Var)->second.Properties;
         recoverAsEntryValue(Var, Prop, OldValue);
       }
@@ -777,6 +786,11 @@ public:
     SmallVector<std::pair<LocIdx, DebugVariable>> LostMLocs;
     for (const auto &Var : ActiveMLocIt->second) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
+      // BEGIN SWIFT
+      if (ActiveVLocs.find(Var) == ActiveVLocs.end())
+        continue;
+      // END SWIFT
+
       // Re-state the variable location: if there's no replacement then NewLoc
       // is None and a $noreg DBG_VALUE will be created. Otherwise, a DBG_VALUE
       // identifying the alternative location will be emitted.
@@ -788,8 +802,8 @@ public:
       SmallVector<ResolvedDbgOp> DbgOps;
       // BEGIN SWIFT
       // Async support: Don't track spills for entry values.
-      if (IsSwiftAsyncFunction && ActiveVLocIt->second.Properties.DIExpr &&
-          ActiveVLocIt->second.Properties.DIExpr->isEntryValue())
+      if (IsSwiftAsyncFunction && Properties.DIExpr &&
+          Properties.DIExpr->isEntryValue())
         DbgOps.push_back(MLoc);
       else
       // END SWIFT
@@ -864,18 +878,19 @@ public:
     ResolvedDbgOp DstOp(Dst);
     for (const auto &Var : MovingVars) {
       auto ActiveVLocIt = ActiveVLocs.find(Var);
-      assert(ActiveVLocIt != ActiveVLocs.end());
-
       // BEGIN SWIFT
       // Async support: Don't track transfers for entry values.
-      if (IsSwiftAsyncFunction && ActiveVLocIt->second.Properties.DIExpr &&
-          ActiveVLocIt->second.Properties.DIExpr->isEntryValue()) {
+      if (ActiveVLocIt == ActiveVLocs.end()) {
         // Leave SrcOp in-situ.
-      } else
+        continue;
+      }
       // END SWIFT
-        // Update all instances of Src in the variable's tracked values to Dst.
-        std::replace(ActiveVLocIt->second.Ops.begin(),
-                     ActiveVLocIt->second.Ops.end(), SrcOp, DstOp);
+
+      assert(ActiveVLocIt != ActiveVLocs.end());
+
+      // Update all instances of Src in the variable's tracked values to Dst.
+      std::replace(ActiveVLocIt->second.Ops.begin(),
+                   ActiveVLocIt->second.Ops.end(), SrcOp, DstOp);
 
       MachineInstr *MI = MTracker->emitLoc(ActiveVLocIt->second.Ops, Var,
                                              ActiveVLocIt->second.Properties);
