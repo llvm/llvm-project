@@ -30,7 +30,7 @@ def generate_map(include):
             c_headers.append(i.name)
 
     result = []
-    temporary_mappings = {}
+    temporary_mappings = {'__locale_dir' : 'locale'}
     for i in detail_directories:
         public_header = temporary_mappings.get(i, i.lstrip('_'))
         result.append(f'{generate(f"@<{i}/.*>", public_header)},')
@@ -41,8 +41,6 @@ def generate_map(include):
         elif i == '__availability': continue
         elif i == '__bit_reference': continue
         elif i == '__bits': public = ['bits']
-        elif i == '__bsd_locale_defaults.h': continue
-        elif i == '__bsd_locale_fallbacks.h': continue
         elif i == '__config_site.in': continue
         elif i == '__config': continue
         elif i == '__debug': continue
