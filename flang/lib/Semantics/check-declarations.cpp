@@ -703,27 +703,47 @@ void CheckHelper::CheckObjectEntity(
       }
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
-      if (IsAllocatableOrPointer(symbol)) {
+      const Symbol *ownerSymbol{symbol.owner().symbol()};
+      const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()};
+      bool inInterface{ownerSubp && ownerSubp->isInterface()};
+      bool inExplicitInterface{
+          inInterface && !IsSeparateModuleProcedureInterface(ownerSymbol)};
+      bool inModuleProc{
+          !inInterface && ownerSymbol && IsModuleProcedure(*ownerSymbol)};
+      if (!inExplicitInterface && !inModuleProc) {
         messages_.Say(
-            "!DIR$ IGNORE_TKR may not apply to an allocatable or pointer"_err_en_US);
-      } else if (ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
+            "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
+      }
+      if (ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
           !IsAssumedShape(symbol)) {
         messages_.Say(
             "!DIR$ IGNORE_TKR(C) may apply only to an assumed-shape array"_err_en_US);
-      } else if (ignoreTKR.test(common::IgnoreTKR::Rank) &&
-          IsPassedViaDescriptor(symbol)) {
+      }
+      if (ownerSymbol && ownerSymbol->attrs().test(Attr::ELEMENTAL) &&
+          details.ignoreTKR().test(common::IgnoreTKR::Rank)) {
         messages_.Say(
-            "!DIR$ IGNORE_TKR(R) may not apply to a dummy argument passed via descriptor"_err_en_US);
-      } else if (const Symbol * ownerSymbol{symbol.owner().symbol()}) {
-        if (const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()};
-            ownerSubp && !ownerSubp->isInterface() &&
-            !FindModuleContaining(symbol.owner())) {
-          messages_.Say(
-              "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
-        } else if (ownerSymbol->attrs().test(Attr::ELEMENTAL) &&
-            details.ignoreTKR().test(common::IgnoreTKR::Rank)) {
-          messages_.Say(
-              "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
+            "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
+      }
+      if (IsPassedViaDescriptor(symbol)) {
+        if (IsAllocatableOrPointer(symbol)) {
+          if (inExplicitInterface) {
+            messages_.Say(
+                "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);
+          } else {
+            messages_.Say(
+                "!DIR$ IGNORE_TKR may not apply to an allocatable or pointer"_err_en_US);
+          }
+        } else if (ignoreTKR.test(common::IgnoreTKR::Rank)) {
+          if (ignoreTKR.count() == 1 && evaluate::IsAssumedRank(symbol)) {
+            messages_.Say(
+                "!DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array"_warn_en_US);
+          } else if (inExplicitInterface) {
+            messages_.Say(
+                "!DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor"_warn_en_US);
+          } else {
+            messages_.Say(
+                "!DIR$ IGNORE_TKR(R) may not apply to a dummy argument passed via descriptor"_err_en_US);
+          }
         }
       }
     }
