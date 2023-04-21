@@ -231,8 +231,6 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` now recognizes ``%lb`` for the ``printf``/``scanf`` family of
   functions.
   (`#62247: <https://github.com/llvm/llvm-project/issues/62247>`_).
-- ``-Wcast-qual`` now triggers on function-style casts.
-  (`#62083 <https://github.com/llvm/llvm-project/issues/62083>`_)
 
 Bug Fixes in This Version
 -------------------------
