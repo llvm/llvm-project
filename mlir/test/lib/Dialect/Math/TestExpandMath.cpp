@@ -45,7 +45,6 @@ void TestExpandMathPass::runOnOperation() {
   populateExpandCeilFPattern(patterns);
   populateExpandPowFPattern(patterns);
   populateExpandRoundFPattern(patterns);
-  populateExpandRoundEvenPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
