@@ -62,7 +62,13 @@ struct ModuleID {
   std::string ContextHash;
 
   bool operator==(const ModuleID &Other) const {
-    return ModuleName == Other.ModuleName && ContextHash == Other.ContextHash;
+    return std::tie(ModuleName, ContextHash) ==
+           std::tie(Other.ModuleName, Other.ContextHash);
+  }
+
+  bool operator<(const ModuleID& Other) const {
+    return std::tie(ModuleName, ContextHash) <
+           std::tie(Other.ModuleName, Other.ContextHash);
   }
 };
 
