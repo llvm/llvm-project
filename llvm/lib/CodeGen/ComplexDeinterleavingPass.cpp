@@ -137,7 +137,8 @@ public:
   Instruction *Real;
   Instruction *Imag;
 
-  ComplexDeinterleavingRotation Rotation;
+  ComplexDeinterleavingRotation Rotation =
+      ComplexDeinterleavingRotation::Rotation_0;
   SmallVector<RawNodePtr> Operands;
   Value *ReplacementNode = nullptr;
 
