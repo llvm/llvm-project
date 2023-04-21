@@ -548,7 +548,7 @@ namespace {
                                                     SDValue N0,
                                                     SDValue N1);
     SDValue reassociateOpsCommutative(unsigned Opc, const SDLoc &DL, SDValue N0,
-                                      SDValue N1);
+                                      SDValue N1, SDNodeFlags Flags);
     SDValue reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
                            SDValue N1, SDNodeFlags Flags);
     SDValue reassociateReduction(unsigned ResOpc, unsigned Opc, const SDLoc &DL,
@@ -1251,7 +1251,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
 // Helper for DAGCombiner::reassociateOps. Try to reassociate an expression
 // such as (Opc N0, N1), if \p N0 is the same kind of operation as \p Opc.
 SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
-                                               SDValue N0, SDValue N1) {
+                                               SDValue N0, SDValue N1,
+                                               SDNodeFlags Flags) {
   EVT VT = N0.getValueType();
 
   if (N0.getOpcode() != Opc)
@@ -1270,8 +1271,12 @@ SDValue DAGCombiner::reassociateOpsCommutative(unsigned Opc, const SDLoc &DL,
     if (TLI.isReassocProfitable(DAG, N0, N1)) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
-      SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1);
-      return DAG.getNode(Opc, DL, VT, OpNode, N01);
+      SDNodeFlags NewFlags;
+      if (N0.getOpcode() == ISD::ADD && N0->getFlags().hasNoUnsignedWrap() &&
+          Flags.hasNoUnsignedWrap())
+        NewFlags.setNoUnsignedWrap(true);
+      SDValue OpNode = DAG.getNode(Opc, SDLoc(N0), VT, N00, N1, NewFlags);
+      return DAG.getNode(Opc, DL, VT, OpNode, N01, NewFlags);
     }
   }
 
@@ -1329,9 +1334,9 @@ SDValue DAGCombiner::reassociateOps(unsigned Opc, const SDLoc &DL, SDValue N0,
     if (!Flags.hasAllowReassociation() || !Flags.hasNoSignedZeros())
       return SDValue();
 
-  if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N0, N1))
+  if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N0, N1, Flags))
     return Combined;
-  if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N1, N0))
+  if (SDValue Combined = reassociateOpsCommutative(Opc, DL, N1, N0, Flags))
     return Combined;
   return SDValue();
 }
