@@ -86,7 +86,6 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::pow:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
-  case Intrinsic::is_fpclass:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
   case Intrinsic::fptosi_sat:
@@ -104,7 +103,6 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::abs:
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
-  case Intrinsic::is_fpclass:
   case Intrinsic::powi:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
