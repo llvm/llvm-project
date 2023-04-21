@@ -7180,7 +7180,8 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     }
 
     std::optional<APInt> Size = getSize(A, *this, AI);
-    if (MaxHeapToStackSize != -1) {
+    if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
+        MaxHeapToStackSize != -1) {
       if (!Size || Size->ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size)

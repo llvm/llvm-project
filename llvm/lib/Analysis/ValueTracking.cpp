@@ -4186,9 +4186,11 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
     return {nullptr, fcNone};
 
   if (ConstRHS->isZero()) {
-    // Compares with fcNone are only exactly equal to fcZero if input denormals are
-    // not flushed.
-    if (FCmpInst::isEquality(Pred) && !inputDenormalIsIEEE(F, LHS->getType()))
+    // Compares with fcNone are only exactly equal to fcZero if input denormals
+    // are not flushed.
+    // TODO: Handle DAZ by expanding masks to cover subnormal cases.
+    if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
+        !inputDenormalIsIEEE(F, LHS->getType()))
       return {nullptr, fcNone};
 
     switch (Pred) {
@@ -4206,6 +4208,22 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
       return {LHS, ~fcNan};
     case FCmpInst::FCMP_UNO:
       return {LHS, fcNan};
+    case FCmpInst::FCMP_OGT: // x > 0
+      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf};
+    case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
+      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan};
+    case FCmpInst::FCMP_OGE: // x >= 0
+      return {LHS, fcPositive | fcNegZero};
+    case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
+      return {LHS, fcPositive | fcNegZero | fcNan};
+    case FCmpInst::FCMP_OLT: // x < 0
+      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf};
+    case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
+      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan};
+    case FCmpInst::FCMP_OLE: // x <= 0
+      return {LHS, fcNegative | fcPosZero};
+    case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
+      return {LHS, fcNegative | fcPosZero | fcNan};
     default:
       break;
     }
