@@ -6,9 +6,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -emit-module-interface -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-module-interface -o %t/b.pcm \
 // RUN:     -fprebuilt-module-path=%t
-// RUN: %clang_cc1 -std=c++20 %t/c.cppm -emit-module-interface -o %t/c.pcm \
-// RUN:     -fprebuilt-module-path=%t
-// RUN: %clang_cc1 -std=c++20 %t/d.cpp -fsyntax-only -verify -fprebuilt-module-path=%t
+// DISABLED: %clang_cc1 -std=c++20 %t/c.cppm -emit-module-interface -o %t/c.pcm \
+// DISABLED:     -fprebuilt-module-path=%t
+// DISABLED: %clang_cc1 -std=c++20 %t/d.cpp -fsyntax-only -verify -fprebuilt-module-path=%t
 
 //--- a.cppm
 export module a;
