@@ -9462,6 +9462,10 @@ def note_defaulted_comparison_not_constexpr_here : Note<
 def note_in_declaration_of_implicit_equality_comparison : Note<
   "while declaring the corresponding implicit 'operator==' "
   "for this defaulted 'operator<=>'">;
+def err_volatile_comparison_operator : Error<
+  "defaulted comparison function must not be volatile">;
+def err_ref_qualifier_comparison_operator : Error<
+  "ref-qualifier '&&' is not allowed on a defaulted comparison operator">;
 
 def ext_implicit_exception_spec_mismatch : ExtWarn<
   "function previously declared with an %select{explicit|implicit}0 exception "
