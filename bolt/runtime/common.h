@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(__APPLE__)
+#if !defined(__x86_64__)
+#error "For x86_64 only"
+#endif
+
+#if defined(__linux__)
 
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +21,7 @@
 #include <elf.h>
 #endif
 
-#else
+#elif defined(__APPLE__)
 
 typedef __SIZE_TYPE__ size_t;
 #define __SSIZE_TYPE__                                                         \
@@ -36,6 +40,8 @@ typedef unsigned char uint8_t;
 typedef long long int64_t;
 typedef int int32_t;
 
+#else
+#error "For Linux or MacOS only"
 #endif
 
 // Save all registers while keeping 16B stack alignment
