@@ -470,7 +470,7 @@ public:
   /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
   /// intentionally because it adds unneeded complexity without noticeable
   /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId;
+  uint16_t PersistentId = 0xffff;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our

@@ -156,7 +156,7 @@ namespace {
     /// Whether we should merge global variables that have external linkage.
     bool MergeExternalGlobals = false;
 
-    bool IsMachO;
+    bool IsMachO = false;
 
     bool doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
                  Module &M, bool isConst, unsigned AddrSpace) const;
