@@ -36,6 +36,7 @@ def NVGPU_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
 
   let extraClassDeclaration = [{
     /// Return true if the given MemRefType has an integer address
