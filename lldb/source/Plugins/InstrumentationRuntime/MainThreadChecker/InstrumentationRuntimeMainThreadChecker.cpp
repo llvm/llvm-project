@@ -81,7 +81,8 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
     return StructuredData::ObjectSP();
 
   ThreadSP thread_sp = exe_ctx_ref.GetThreadSP();
-  StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+  StackFrameSP frame_sp =
+      thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
   ModuleSP runtime_module_sp = GetRuntimeModuleSP();
   Target &target = process_sp->GetTarget();
 

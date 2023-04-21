@@ -789,7 +789,11 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     }
 
     if (!frame_sp) {
-      frame_sp = thread->GetSelectedFrame();
+      // We don't want to run SelectMostRelevantFrame here, for instance if
+      // you called a sequence of StepOverUntil's you wouldn't want the
+      // frame changed out from under you because you stepped into a
+      // recognized frame.
+      frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
       if (!frame_sp)
         frame_sp = thread->GetStackFrameAtIndex(0);
     }
@@ -1133,7 +1137,8 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
   if (exe_ctx.HasThreadScope()) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      frame_sp = exe_ctx.GetThreadPtr()->GetSelectedFrame();
+      frame_sp =
+          exe_ctx.GetThreadPtr()->GetSelectedFrame(SelectMostRelevantFrame);
       sb_frame.SetFrameSP(frame_sp);
     }
   }
