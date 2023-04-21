@@ -8,10 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 module;
-#if __has_include(<print>)
-#  error "include this header unconditionally and uncomment the exported symbols"
-#  include <print>
-#endif
+#include <print>
 
 export module std:print;
 export namespace std {
