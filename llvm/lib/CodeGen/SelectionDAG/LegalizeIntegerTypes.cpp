@@ -20,6 +20,7 @@
 #include "LegalizeTypes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -2296,16 +2297,44 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
   // An i1 vecreduce_or is equivalent to vecreduce_umax, use that instead if
   // vecreduce_or is not legal
   else if (Opcode == ISD::VECREDUCE_OR && OrigEltVT == MVT::i1 &&
-      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_OR, InVT) &&
-      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMAX, InVT))
+           !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_OR, InVT) &&
+           TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMAX, InVT)) {
     Opcode = ISD::VECREDUCE_UMAX;
+    // Can't use promoteTargetBoolean here because we still need
+    // to either sign_ext or zero_ext in the undefined case.
+    switch (TLI.getBooleanContents(InVT)) {
+    case TargetLoweringBase::UndefinedBooleanContent:
+      Op = SExtOrZExtPromotedInteger(N->getOperand(0));
+      break;
+    case TargetLoweringBase::ZeroOrOneBooleanContent:
+      Op = ZExtPromotedInteger(N->getOperand(0));
+      break;
+    case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+      Op = SExtPromotedInteger(N->getOperand(0));
+      break;
+    }
+  }
 
   // An i1 vecreduce_and is equivalent to vecreduce_umin, use that instead if
   // vecreduce_and is not legal
   else if (Opcode == ISD::VECREDUCE_AND && OrigEltVT == MVT::i1 &&
-      !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_AND, InVT) &&
-      TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMIN, InVT))
+           !TLI.isOperationLegalOrCustom(ISD::VECREDUCE_AND, InVT) &&
+           TLI.isOperationLegalOrCustom(ISD::VECREDUCE_UMIN, InVT)) {
     Opcode = ISD::VECREDUCE_UMIN;
+    // Can't use promoteTargetBoolean here because we still need
+    // to either sign_ext or zero_ext in the undefined case.
+    switch (TLI.getBooleanContents(InVT)) {
+    case TargetLoweringBase::UndefinedBooleanContent:
+      Op = SExtOrZExtPromotedInteger(N->getOperand(0));
+      break;
+    case TargetLoweringBase::ZeroOrOneBooleanContent:
+      Op = ZExtPromotedInteger(N->getOperand(0));
+      break;
+    case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+      Op = SExtPromotedInteger(N->getOperand(0));
+      break;
+    }
+  }
 
   if (ResVT.bitsGE(EltVT))
     return DAG.getNode(Opcode, SDLoc(N), ResVT, Op);
