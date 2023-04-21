@@ -15,3 +15,11 @@ Members:
   - Name:            '/<ECSYMBOLS>/'
     Size:            '0'
 ...
+
+# Check that llvm-lib produces /<ECSYMBOLS>/ members for ARM64EC libraries.
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: llvm-mc -triple=arm64ec-pc-windows-msvc -filetype=obj -o arm64ec-foo.o %S/Inputs/a.s
+# RUN: llvm-mc -triple=aarch64-pc-windows-msvc -filetype=obj -o arm64-foo.o %S/Inputs/a.s
+# RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o x64-foo.o %S/Inputs/b.s
+# RUN: llvm-lib -machine:arm64ec -out:foo.lib arm64-foo.o arm64ec-foo.o x64-foo.o
+# RUN: grep -q '/<ECSYMBOLS>/' foo.lib

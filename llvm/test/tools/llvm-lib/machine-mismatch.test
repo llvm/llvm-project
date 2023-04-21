@@ -3,6 +3,8 @@ Prepare inputs:
 RUN: rm -rf %t && mkdir -p %t
 RUN: llvm-mc -triple=i386-pc-windows-msvc -filetype=obj -o %t/i386.obj %S/Inputs/a.s
 RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/x86_64.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=aarch64-pc-windows-msvc -filetype=obj -o %t/arm64.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=arm64ec-pc-windows-msvc -filetype=obj -o %t/arm64ec.obj %S/Inputs/a.s
 RUN: llvm-as -o %t/i386.bc %S/Inputs/i386.ll
 RUN: llvm-as -o %t/x86_64.bc %S/Inputs/x86_64.ll
 RUN: llvm-as -o %t/arm64.bc %S/Inputs/arm64.ll
@@ -43,3 +45,19 @@ If /machine: is passed, its value is authoritative.
 RUN: not llvm-lib /machine:X86 %t/x86_64.obj %t/i386.obj 2>&1 | \
 RUN:     FileCheck --check-prefix=OBJ64 %s
 OBJ64: x86_64.obj: file machine type x64 conflicts with library machine type x86 (from '/machine:X86' flag)
+
+
+Mixing arm64 and x86_64 is possible using arm64ec:
+
+RUN: llvm-lib -machine:arm64ec %t/arm64.bc %t/x86_64.bc %t/arm64.obj %t/x86_64.obj %t/arm64ec.obj
+
+RUN: not llvm-lib %t/arm64ec.obj 2>&1 | FileCheck --check-prefix=NOEC %s
+NOEC: arm64ec.obj: file machine type arm64ec conflicts with inferred library machine type, use /machine:arm64ec or /machine:arm64x
+
+RUN: not llvm-lib -machine:arm64ec %t/arm64ec.obj %t/i386.obj 2>&1 | \
+RUN:     FileCheck --check-prefix=OBJEC %s
+OBJEC: i386.obj: file machine type x86 conflicts with library machine type arm64ec (from '/machine:arm64ec' flag)
+
+RUN: not llvm-lib -machine:arm64ec %t/arm64.bc %t/x86_64.bc %t/i386.bc 2>&1 | \
+RUN:     FileCheck --check-prefix=BCEC %s
+BCEC: i386.bc: file machine type x86 conflicts with library machine type arm64ec (from '/machine:arm64ec' flag)
