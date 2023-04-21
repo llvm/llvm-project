@@ -5251,6 +5251,7 @@ llvm/include/llvm/Debuginfod/DIFetcher.h
 llvm/include/llvm/Debuginfod/HTTPClient.h
 llvm/include/llvm/Demangle/Demangle.h
 llvm/include/llvm/Demangle/StringView.h
+llvm/include/llvm/Demangle/StringViewExtras.h
 llvm/include/llvm/Demangle/Utility.h
 llvm/include/llvm/DWARFLinker/DWARFLinker.h
 llvm/include/llvm/DWARFLinker/DWARFLinkerCompileUnit.h

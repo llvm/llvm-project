@@ -205,3 +205,14 @@ _Atomic(int *) aip3 = &ai; /* expected-warning {{incompatible pointer types init
 // Test the behavior when converting the null pointer constant to an atomic
 // function pointer.
 _Atomic(int (*)(char)) afp = (void *)0;
+
+void func_18(void) {
+  // Ensure we can cast to atomic scalar types.
+  data2 = (_Atomic int)0;
+  (void)(_Atomic(int *))0;
+
+  // But that we correctly reject casts to atomic aggregate types.
+  struct S { int a; } s;
+  struct T { int a; };
+  (void)(_Atomic struct T)s; // expected-error {{used type 'struct T' where arithmetic or pointer type is required}}
+}

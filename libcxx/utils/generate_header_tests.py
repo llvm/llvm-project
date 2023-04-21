@@ -64,7 +64,7 @@ header_restrictions = {
 }
 
 private_headers_still_public_in_modules = [
-    '__assert', '__bsd_locale_defaults.h', '__bsd_locale_fallbacks.h', '__config',
+    '__assert', '__config',
     '__config_site.in', '__debug', '__hash_table',
     '__threading_support', '__tree', '__undef_macros', '__verbose_abort'
 ]

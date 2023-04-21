@@ -526,3 +526,10 @@ TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
   TEST_QUICK_MUL_HI(256, 3);
   TEST_QUICK_MUL_HI(512, 7);
 }
+
+TEST(LlvmLibcUIntClassTest, ConstexprInitTests) {
+  constexpr LL_UInt128 add = LL_UInt128(1) + LL_UInt128(2);
+  ASSERT_EQ(add, LL_UInt128(3));
+  constexpr LL_UInt128 sub = LL_UInt128(5) - LL_UInt128(4);
+  ASSERT_EQ(sub, LL_UInt128(1));
+}

@@ -3030,6 +3030,58 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
+  case Intrinsic::x86_sse42_crc32_32_8:
+  case Intrinsic::x86_sse42_crc32_32_16:
+  case Intrinsic::x86_sse42_crc32_32_32:
+  case Intrinsic::x86_sse42_crc32_64_64: {
+    if (!Subtarget->hasCRC32())
+      return false;
+
+    Type *RetTy = II->getCalledFunction()->getReturnType();
+
+    MVT VT;
+    if (!isTypeLegal(RetTy, VT))
+      return false;
+
+    unsigned Opc;
+    const TargetRegisterClass *RC = nullptr;
+
+    switch (II->getIntrinsicID()) {
+    default:
+      llvm_unreachable("Unexpected intrinsic.");
+    case Intrinsic::x86_sse42_crc32_32_8:
+      Opc = X86::CRC32r32r8;
+      RC = &X86::GR32RegClass;
+      break;
+    case Intrinsic::x86_sse42_crc32_32_16:
+      Opc = X86::CRC32r32r16;
+      RC = &X86::GR32RegClass;
+      break;
+    case Intrinsic::x86_sse42_crc32_32_32:
+      Opc = X86::CRC32r32r32;
+      RC = &X86::GR32RegClass;
+      break;
+    case Intrinsic::x86_sse42_crc32_64_64:
+      Opc = X86::CRC32r64r64;
+      RC = &X86::GR64RegClass;
+      break;
+    }
+
+    const Value *LHS = II->getArgOperand(0);
+    const Value *RHS = II->getArgOperand(1);
+
+    Register LHSReg = getRegForValue(LHS);
+    Register RHSReg = getRegForValue(RHS);
+    if (!LHSReg || !RHSReg)
+      return false;
+
+    Register ResultReg = fastEmitInst_rr(Opc, RC, LHSReg, RHSReg);
+    if (!ResultReg)
+      return false;
+
+    updateValueMap(II, ResultReg);
+    return true;
+  }
   }
 }
 

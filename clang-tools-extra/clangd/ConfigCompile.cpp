@@ -611,6 +611,11 @@ struct FragmentCompiler {
       Out.Apply.push_back([Value(**F.Designators)](const Params &, Config &C) {
         C.InlayHints.Designators = Value;
       });
+    if (F.TypeNameLimit)
+      Out.Apply.push_back(
+          [Value(**F.TypeNameLimit)](const Params &, Config &C) {
+            C.InlayHints.TypeNameLimit = Value;
+          });
   }
 
   constexpr static llvm::SourceMgr::DiagKind Error = llvm::SourceMgr::DK_Error;

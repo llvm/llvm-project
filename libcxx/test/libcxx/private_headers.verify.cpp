@@ -23,6 +23,14 @@ for header in private_headers:
   if header.startswith('__support'):
     continue
 
+  # Skip the locale API headers, since they are platform-specific and thus inherently non-modular
+  if 'locale_base_api' in header:
+    continue
+
+  # TODO: Stop skipping PSTL headers once their integration is finished.
+  if header.startswith('__pstl'):
+    continue
+
   print("{ifdef}#{indent}include <{header}> // {expected_error}@*:* {{{{use of private header from outside its module: '{header}'}}}}{endif}".format(
     ifdef='#if ' + header_restrictions[header] + '\n' if header in header_restrictions else '',
     indent='   ' if header in header_restrictions else '',
@@ -389,6 +397,7 @@ END-SCRIPT
 #include <__format/range_default_formatter.h> // expected-error@*:* {{use of private header from outside its module: '__format/range_default_formatter.h'}}
 #include <__format/range_formatter.h> // expected-error@*:* {{use of private header from outside its module: '__format/range_formatter.h'}}
 #include <__format/unicode.h> // expected-error@*:* {{use of private header from outside its module: '__format/unicode.h'}}
+#include <__format/width_estimation_table.h> // expected-error@*:* {{use of private header from outside its module: '__format/width_estimation_table.h'}}
 #include <__functional/binary_function.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binary_function.h'}}
 #include <__functional/binary_negate.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binary_negate.h'}}
 #include <__functional/bind.h> // expected-error@*:* {{use of private header from outside its module: '__functional/bind.h'}}
@@ -609,7 +618,6 @@ END-SCRIPT
 #include <__system_error/system_error.h> // expected-error@*:* {{use of private header from outside its module: '__system_error/system_error.h'}}
 #include <__thread/poll_with_backoff.h> // expected-error@*:* {{use of private header from outside its module: '__thread/poll_with_backoff.h'}}
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
-#include <__tuple/apply_cv.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/apply_cv.h'}}
 #include <__tuple/make_tuple_types.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/make_tuple_types.h'}}
 #include <__tuple/pair_like.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/pair_like.h'}}
 #include <__tuple/sfinae_helpers.h> // expected-error@*:* {{use of private header from outside its module: '__tuple/sfinae_helpers.h'}}

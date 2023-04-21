@@ -707,6 +707,13 @@ Header Units
 How to build projects using header unit
 ---------------------------------------
 
+.. warning::
+
+   The user interfaces of header units is highly experimental. There are still
+   many unanswered question about how tools should interact with header units.
+   The user interfaces described here may change after we have progress on how
+   tools should support for header units.
+
 Quick Start
 ~~~~~~~~~~~
 

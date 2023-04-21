@@ -953,6 +953,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   }
 
   // 2. Handle contiguous access.
+  LDBG("Vectorised as contiguous load: " << extractOp);
   SmallVector<Value> transferReadIdxs;
   auto resTrailingDim = resultType.getShape().back();
   auto zero = rewriter.create<arith::ConstantOp>(
@@ -986,12 +987,31 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   }
 
   // `tensor.extract_element` is always in-bounds, hence the following holds.
-  SmallVector<bool> inBounds(resultType.getRank(), true);
+  auto dstRank = resultType.getRank();
+  SmallVector<bool> inBounds(dstRank, true);
+
+  // Create a permutation map for transfer_read Op.
+  auto srcRank = extractOp.getTensor().getType().getRank();
+  auto permutationMap = AffineMap::getMinorIdentityMap(
+      srcRank, std::min(dstRank, srcRank), rewriter.getContext());
+
+  int32_t rankDiff = dstRank - srcRank;
+  // When dstRank > srcRank, broadcast the source tensor to the unitary leading
+  // dims so that the ranks match. This is done by extending the map with 0s.
+  // For example, for dstRank = 3, srcRank = 2, the following map created
+  // above:
+  //    (d0, d1) --> (d0, d1)
+  // is extended as:
+  //    (d0, d1) --> (0, d0, d1)
+  while (rankDiff > 0) {
+    permutationMap = permutationMap.insertResult(
+        mlir::getAffineConstantExpr(0, rewriter.getContext()), 0);
+    rankDiff--;
+  }
 
   auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc, resultType, extractOp.getTensor(), transferReadIdxs, inBounds);
-
-  LDBG("Vectorised as contiguous load: " << extractOp);
+      loc, resultType, extractOp.getTensor(), transferReadIdxs, permutationMap,
+      inBounds);
   return VectorizationResult{VectorizationStatus::NewOp, transferReadOp};
 }
 

@@ -167,6 +167,8 @@ Changes to the RISC-V Backend
   RISC-V psABI (for more details see the 
   `psABI discussion <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/issues/370>`_).
 * Added support for Zfa extension version 0.2.
+* Updated support experimental vector crypto extensions to version 0.5.1 of
+  the specification.
 
 Changes to the WebAssembly Backend
 ----------------------------------

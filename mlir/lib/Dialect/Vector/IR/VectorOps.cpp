@@ -280,7 +280,7 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  return builder.create<arith::ConstantOp>(loc, type, value);
+  return arith::ConstantOp::materialize(builder, value, type, loc);
 }
 
 IntegerType vector::getVectorSubscriptType(Builder &builder) {
@@ -1729,7 +1729,7 @@ public:
     auto splat = vectorCst.dyn_cast<SplatElementsAttr>();
     if (!splat)
       return failure();
-    Attribute newAttr = splat.getSplatValue<Attribute>();
+    TypedAttr newAttr = splat.getSplatValue<TypedAttr>();
     if (auto vecDstType = extractOp.getType().dyn_cast<VectorType>())
       newAttr = DenseElementsAttr::get(vecDstType, newAttr);
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(extractOp, newAttr);
@@ -1767,9 +1767,9 @@ public:
     copy(getI64SubArray(extractOp.getPosition()), completePositions.begin());
     int64_t elemBeginPosition =
         linearize(completePositions, computeStrides(vecTy.getShape()));
-    auto denseValuesBegin = dense.value_begin<Attribute>() + elemBeginPosition;
+    auto denseValuesBegin = dense.value_begin<TypedAttr>() + elemBeginPosition;
 
-    Attribute newAttr;
+    TypedAttr newAttr;
     if (auto resVecTy = extractOp.getType().dyn_cast<VectorType>()) {
       SmallVector<Attribute> elementValues(
           denseValuesBegin, denseValuesBegin + resVecTy.getNumElements());

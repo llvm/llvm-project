@@ -81,8 +81,8 @@ static void test_single_code_point_fill() {
   check(SV("*\u2e80*"), SV("{:*^4}"), SV("\u2e80")); // CJK RADICAL REPEAT
   check(SV("*\u303e*"), SV("{:*^4}"), SV("\u303e")); // IDEOGRAPHIC VARIATION INDICATOR
 
-  check(SV("*\u3040*"), SV("{:*^4}"), SV("\u3040")); // U+3041 HIRAGANA LETTER SMALL A
-  check(SV("*\ua4cf*"), SV("{:*^4}"), SV("\ua4cf")); // U+A4D0 LISU LETTER BA
+  check(SV("*\u3041*"), SV("{:*^4}"), SV("\u3041")); // U+3041 HIRAGANA LETTER SMALL A
+  check(SV("*\ua4d0*"), SV("{:*^3}"), SV("\ua4d0")); // U+A4D0 LISU LETTER BA
 
   check(SV("*\uac00*"), SV("{:*^4}"), SV("\uac00")); // <Hangul Syllable, First>
   check(SV("*\ud7a3*"), SV("{:*^4}"), SV("\ud7a3")); // Hangul Syllable Hih
@@ -94,9 +94,9 @@ static void test_single_code_point_fill() {
   check(SV("*\ufe19*"), SV("{:*^4}"), SV("\ufe19")); // PRESENTATION FORM FOR VERTICAL HORIZONTAL ELLIPSIS
 
   check(SV("*\ufe30*"), SV("{:*^4}"), SV("\ufe30")); // PRESENTATION FORM FOR VERTICAL TWO DOT LEADER
-  check(SV("*\ufe6f*"), SV("{:*^4}"), SV("\ufe6f")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
+  check(SV("*\ufe70*"), SV("{:*^3}"), SV("\ufe70")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
 
-  check(SV("*\uff00*"), SV("{:*^4}"), SV("\uff00")); // U+FF01 FULLWIDTH EXCLAMATION MARK
+  check(SV("*\uff01*"), SV("{:*^4}"), SV("\uff01")); // U+FF01 FULLWIDTH EXCLAMATION MARK
   check(SV("*\uff60*"), SV("{:*^4}"), SV("\uff60")); // FULLWIDTH RIGHT WHITE PARENTHESIS
 
   check(SV("*\uffe0*"), SV("{:*^4}"), SV("\uffe0")); // FULLWIDTH CENT SIGN
@@ -143,8 +143,8 @@ static void test_single_code_point_truncate() {
   check(SV("***"), SV("{:*^3.1}"), SV("\u2e80")); // CJK RADICAL REPEAT
   check(SV("***"), SV("{:*^3.1}"), SV("\u303e")); // IDEOGRAPHIC VARIATION INDICATOR
 
-  check(SV("***"), SV("{:*^3.1}"), SV("\u3040")); // U+3041 HIRAGANA LETTER SMALL A
-  check(SV("***"), SV("{:*^3.1}"), SV("\ua4cf")); // U+A4D0 LISU LETTER BA
+  check(SV("***"), SV("{:*^3.1}"), SV("\u3041")); // U+3041 HIRAGANA LETTER SMALL A
+  check(SV("*\ua4d0*"), SV("{:*^3.1}"), SV("\ua4d0")); // U+A4D0 LISU LETTER BA
 
   check(SV("***"), SV("{:*^3.1}"), SV("\uac00")); // <Hangul Syllable, First>
   check(SV("***"), SV("{:*^3.1}"), SV("\ud7a3")); // Hangul Syllable Hih
@@ -156,9 +156,9 @@ static void test_single_code_point_truncate() {
   check(SV("***"), SV("{:*^3.1}"), SV("\ufe19")); // PRESENTATION FORM FOR VERTICAL HORIZONTAL ELLIPSIS
 
   check(SV("***"), SV("{:*^3.1}"), SV("\ufe30")); // PRESENTATION FORM FOR VERTICAL TWO DOT LEADER
-  check(SV("***"), SV("{:*^3.1}"), SV("\ufe6f")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
+  check(SV("*\ufe70*"), SV("{:*^3.1}"), SV("\ufe70")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
 
-  check(SV("***"), SV("{:*^3.1}"), SV("\uff00")); // U+FF01 FULLWIDTH EXCLAMATION MARK
+  check(SV("***"), SV("{:*^3.1}"), SV("\uff01"));      // U+FF01 FULLWIDTH EXCLAMATION MARK
   check(SV("***"), SV("{:*^3.1}"), SV("\uff60")); // FULLWIDTH RIGHT WHITE PARENTHESIS
 
   check(SV("***"), SV("{:*^3.1}"), SV("\uffe0")); // FULLWIDTH CENT SIGN

@@ -83,11 +83,8 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     return rewriter.notifyMatchFailure(opToPad, "--no padding value specified");
   }
   Attribute paddingAttr = paddingValues[opOperand->getOperandNumber()];
-  Type paddingType = rewriter.getType<NoneType>();
-  if (auto typedAttr = paddingAttr.dyn_cast<TypedAttr>())
-    paddingType = typedAttr.getType();
   Value paddingValue = rewriter.create<arith::ConstantOp>(
-      opToPad.getLoc(), paddingType, paddingAttr);
+      opToPad.getLoc(), cast<TypedAttr>(paddingAttr));
 
   // Follow the use-def chain if `currOpOperand` is defined by a LinalgOp.
   OpOperand *currOpOperand = opOperand;
@@ -576,7 +573,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
           rewriter, loc, operand, innerPackSizes, innerPos,
           /*outerDimsPerm=*/{});
       // TODO: value of the padding attribute should be determined by consumers.
-      Attribute zeroAttr =
+      auto zeroAttr =
           rewriter.getZeroAttr(getElementTypeOrSelf(dest.getType()));
       Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
       packOps.push_back(rewriter.create<tensor::PackOp>(
