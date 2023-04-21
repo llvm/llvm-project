@@ -2403,8 +2403,8 @@ public:
   bool hasReachableDeclarationSlow(
       const NamedDecl *D, llvm::SmallVectorImpl<Module *> *Modules = nullptr);
 
-  bool hasVisibleMergedDefinition(NamedDecl *Def);
-  bool hasMergedDefinitionInCurrentModule(NamedDecl *Def);
+  bool hasVisibleMergedDefinition(const NamedDecl *Def);
+  bool hasMergedDefinitionInCurrentModule(const NamedDecl *Def);
 
   /// Determine if \p D and \p Suggested have a structurally compatible
   /// layout as described in C11 6.2.7/1.
