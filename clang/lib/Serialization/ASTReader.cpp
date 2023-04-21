@@ -3759,7 +3759,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           unsigned GlobalID = getGlobalSubmoduleID(F, Record[I++]);
           SourceLocation Loc = ReadSourceLocation(F, Record, I);
           if (GlobalID) {
-            ImportedModules.push_back(ImportedSubmodule(GlobalID, Loc));
+            PendingImportedModules.push_back(ImportedSubmodule(GlobalID, Loc));
             if (DeserializationListener)
               DeserializationListener->ModuleImportRead(GlobalID, Loc);
           }
@@ -4476,8 +4476,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
   UnresolvedModuleRefs.clear();
 
   if (Imported)
-    Imported->append(ImportedModules.begin(),
-                     ImportedModules.end());
+    Imported->append(PendingImportedModules.begin(),
+                     PendingImportedModules.end());
 
   // FIXME: How do we load the 'use'd modules? They may not be submodules.
   // Might be unnecessary as use declarations are only used to build the
@@ -5094,7 +5094,7 @@ void ASTReader::InitializeContext() {
 
   // Re-export any modules that were imported by a non-module AST file.
   // FIXME: This does not make macro-only imports visible again.
-  for (auto &Import : ImportedModules) {
+  for (auto &Import : PendingImportedModules) {
     if (Module *Imported = getSubmodule(Import.ID)) {
       makeModuleVisible(Imported, Module::AllVisible,
                         /*ImportLoc=*/Import.ImportLoc);
@@ -5104,6 +5104,10 @@ void ASTReader::InitializeContext() {
       // nullptr here, we do the same later, in UpdateSema().
     }
   }
+
+  // Hand off these modules to Sema.
+  PendingImportedModulesSema.append(PendingImportedModules);
+  PendingImportedModules.clear();
 }
 
 void ASTReader::finalizeForWriting() {
@@ -8153,13 +8157,14 @@ void ASTReader::UpdateSema() {
   }
 
   // For non-modular AST files, restore visiblity of modules.
-  for (auto &Import : ImportedModules) {
+  for (auto &Import : PendingImportedModulesSema) {
     if (Import.ImportLoc.isInvalid())
       continue;
     if (Module *Imported = getSubmodule(Import.ID)) {
       SemaObj->makeModuleVisible(Imported, Import.ImportLoc);
     }
   }
+  PendingImportedModulesSema.clear();
 }
 
 IdentifierInfo *ASTReader::get(StringRef Name) {
