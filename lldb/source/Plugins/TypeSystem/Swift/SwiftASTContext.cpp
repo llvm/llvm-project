@@ -2855,7 +2855,8 @@ public:
   }
 
   void AddDiagnostic(std::unique_ptr<Diagnostic> diagnostic) {
-    m_diagnostics.push_back(std::move(diagnostic));
+    if (diagnostic)
+      m_diagnostics.push_back(std::move(diagnostic));
   }
 
 private:
