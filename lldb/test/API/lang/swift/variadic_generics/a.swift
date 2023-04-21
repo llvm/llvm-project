@@ -26,7 +26,7 @@ public func f3<each T>(ts: repeat each T, more_ts: repeat each T) {
  
 f3(ts: a, b, more_ts: a, b)
 
-// FIXME: Crashes the compiler.
+// FIXME: Crashes the demangler.
 //public func f4<each U, each V>(uvs: repeat (each U, each V)) {
 //  print("break here")
 //}
@@ -39,12 +39,11 @@ public func f5<each T, U>(ts: repeat (each T, U)) {
  
 f5(ts: (a, b), (42, b))
 
-// FIXME: Crashes the compiler. 
-//public func f6<each U, each V>(us: repeat each U, more_us: repeat each U, vs: repeat each V) {
-//  print("break here")
-//}
-// 
-//f6(us: a, more_us: a, vs: b, b)
+public func f6<each U, each V>(us: repeat each U, more_us: repeat each U, vs: repeat each V) {
+  print("break here")
+}
+ 
+f6(us: a, more_us: a, vs: b, b)
  
 public func f7<each U, each V>(us: repeat each U, vs: repeat each V, more_us: repeat each U, more_vs: repeat each V) {
   print("break here")
@@ -52,10 +51,20 @@ public func f7<each U, each V>(us: repeat each U, vs: repeat each V, more_us: re
  
 f7(us: a, vs: 1, b, more_us: a, more_vs: 2, b)
 
-//FIXME: Crashes the compiler.
-//struct S<each T> {
-//    let vals : repeat each T
-//}
-//
-//let variadic_struct = S<Int, String, Float>(vals: (23, "hello", 3.14))
-//print("break here")
+struct S<each T> {
+    let vals: (repeat each T)
+
+    func f8() {
+        //print("break here")
+    }
+}
+
+let s = S<Int, Double>(vals: (23, 2.71))
+print("break here")
+s.f8()
+
+func f9<each T>(s: S<repeat each T>) {
+    //print("break here")
+}
+
+f9(s: s)
