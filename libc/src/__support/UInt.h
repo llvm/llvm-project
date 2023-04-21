@@ -28,7 +28,7 @@ template <size_t Bits> struct UInt {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in UInt should be a multiple of 64.");
   static constexpr size_t WORDCOUNT = Bits / 64;
-  uint64_t val[WORDCOUNT];
+  uint64_t val[WORDCOUNT]{};
 
   static constexpr uint64_t MASK32 = 0xFFFFFFFFu;
 
