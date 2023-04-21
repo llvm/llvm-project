@@ -141,9 +141,10 @@ func.func @floorf_func(%a: f64) -> f64 {
   // CHECK-DAG:   [[CST_0:%.+]] = arith.constant -1.000
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf olt, [[ARG0]], [[CST]]
   // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
-  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
   // CHECK-NEXT:   return [[ADDF]]
   %ret = math.floor %a : f64
   return %ret : f64
@@ -158,9 +159,10 @@ func.func @ceilf_func(%a: f64) -> f64 {
   // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 1.000
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
-  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[CVTF]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
   // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
-  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[CVTF]], [[INCR]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
   // CHECK-NEXT:   return [[ADDF]]
   %ret = math.ceil %a : f64
   return %ret : f64
@@ -193,19 +195,26 @@ func.func @exp2f_func_tensor(%a: tensor<1xf32>) -> tensor<1xf32> {
 // -----
 
 // CHECK-LABEL:      func @roundf_func
-// CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
-func.func @roundf_func(%a: f64) -> f64 {
-  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
-  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 5.000000e-01
-  // CHECK-DAG:   [[CST_1:%.+]] = arith.constant -5.000000e-01
-  // CHECK-DAG:  [[COMP:%.+]] = arith.cmpf oge, [[ARG0]], [[CST]]
-  // CHECK-DAG:  [[SEL:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST_1]]
-  // CHECK-DAG:  [[ADDF:%.+]] = arith.addf [[ARG0]], [[SEL]]
-  // CHECK-DAG:   [[CVTI:%.+]] = arith.fptosi [[ADDF]]
-  // CHECK-DAG:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
-  // CHECK:   return [[CVTF]]
-  %ret = math.round %a : f64
-  return %ret : f64
+// CHECK-SAME:      (%[[ARG0:.*]]: f32) -> f32
+func.func @roundf_func(%a: f32) -> f32 {
+  // CHECK-DAG:       %[[HALF:.*]] = arith.constant 5.000000e-01
+  // CHECK-DAG:       %[[C23:.*]] = arith.constant 23
+  // CHECK-DAG:       %[[C127:.*]] = arith.constant 127
+  // CHECK-DAG:       %[[EXP_MASK:.*]] = arith.constant 255
+  // CHECK-DAG:       %[[SHIFT:.*]] = math.copysign %[[HALF]], %[[ARG0]]
+  // CHECK-DAG:       %[[ARG_SHIFTED:.*]] = arith.addf %[[ARG0]], %[[SHIFT]]
+  // CHECK-DAG:       %[[FIXED_CONVERT:.*]] = arith.fptosi %[[ARG_SHIFTED]]
+  // CHECK-DAG:       %[[FP_FIXED_CONVERT_0:.*]] = arith.sitofp %[[FIXED_CONVERT]]
+  // CHECK-DAG:       %[[FP_FIXED_CONVERT_1:.*]] = math.copysign %[[FP_FIXED_CONVERT_0]], %[[ARG_SHIFTED]]
+  // CHECK-DAG:       %[[ARG_BITCAST:.*]] = arith.bitcast %[[ARG0]] : f32 to i32
+  // CHECK-DAG:       %[[ARG_BITCAST_SHIFTED:.*]] = arith.shrui %[[ARG_BITCAST]], %[[C23]]
+  // CHECK-DAG:       %[[ARG_EXP:.*]] = arith.andi %[[ARG_BITCAST_SHIFTED]], %[[EXP_MASK]]
+  // CHECK-DAG:       %[[ARG_BIASED_EXP:.*]] = arith.subi %[[ARG_EXP]], %[[C127]]
+  // CHECK-DAG:       %[[IS_SPECIAL_VAL:.*]] = arith.cmpi sge, %[[ARG_BIASED_EXP]], %[[C23]]
+  // CHECK-DAG:       %[[RESULT:.*]] = arith.select %[[IS_SPECIAL_VAL]], %[[ARG0]], %[[FP_FIXED_CONVERT_1]]
+  // CHECK:           return %[[RESULT]]
+  %ret = math.round %a : f32
+  return %ret : f32
 }
 
 // -----
