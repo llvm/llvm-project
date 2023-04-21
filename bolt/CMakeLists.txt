@@ -4,11 +4,35 @@ set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(BOLT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(CMAKE_CXX_STANDARD 17)
 
+# Determine default set of targets to build -- the intersection of
+# those BOLT supports and those LLVM is targeting.
+set(BOLT_TARGETS_TO_BUILD_all "AArch64;X86")
+set(BOLT_TARGETS_TO_BUILD_default)
+foreach (tgt ${BOLT_TARGETS_TO_BUILD_all})
+  if (tgt IN_LIST LLVM_TARGETS_TO_BUILD)
+    list(APPEND BOLT_TARGETS_TO_BUILD_default ${tgt})
+  endif()
+endforeach()
+
+# Allow the user to specify the BOLT targets, and then check that LLVM
+# is indeed targeting those.
+set(BOLT_TARGETS_TO_BUILD "${BOLT_TARGETS_TO_BUILD_default}"
+  CACHE STRING "Targets for BOLT to support.")
+if (NOT BOLT_TARGETS_TO_BUILD)
+  message(FATAL_ERROR "BOLT enabled but BOLT_TARGETS_TO_BUILD is empty")
+endif()
+foreach (tgt ${BOLT_TARGETS_TO_BUILD})
+  if (NOT tgt IN_LIST LLVM_TARGETS_TO_BUILD)
+    message(FATAL_ERROR "BOLT target '${tgt}' is not in LLVM_TARGETS_TO_BUILD")
+  endif()
+  message(STATUS "Targeting ${tgt} in llvm-bolt")
+endforeach()
+
 set(BOLT_ENABLE_RUNTIME_default OFF)
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
     AND (CMAKE_SYSTEM_NAME STREQUAL "Linux"
       OR CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    AND "X86" IN_LIST LLVM_TARGETS_TO_BUILD)
+    AND "X86" IN_LIST BOLT_TARGETS_TO_BUILD)
   set(BOLT_ENABLE_RUNTIME_default ON)
 endif()
 option(BOLT_ENABLE_RUNTIME "Enable BOLT runtime" ${BOLT_ENABLE_RUNTIME_default})

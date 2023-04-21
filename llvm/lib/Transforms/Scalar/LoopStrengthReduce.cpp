@@ -2509,13 +2509,13 @@ LSRInstance::OptimizeLoopTermCond() {
               int64_t Scale = C->getSExtValue();
               if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
                                             /*BaseOffset=*/0,
-                                            /*HasBaseReg=*/false, Scale,
+                                            /*HasBaseReg=*/true, Scale,
                                             AccessTy.AddrSpace))
                 goto decline_post_inc;
               Scale = -Scale;
               if (TTI.isLegalAddressingMode(AccessTy.MemTy, /*BaseGV=*/nullptr,
                                             /*BaseOffset=*/0,
-                                            /*HasBaseReg=*/false, Scale,
+                                            /*HasBaseReg=*/true, Scale,
                                             AccessTy.AddrSpace))
                 goto decline_post_inc;
             }
@@ -5002,11 +5002,11 @@ static bool IsSimplerBaseSCEVForTarget(const TargetTransformInfo &TTI,
   return TTI.isLegalAddressingMode(
              AccessType.MemTy, /*BaseGV=*/nullptr,
              /*BaseOffset=*/Diff->getAPInt().getSExtValue(),
-             /*HasBaseReg=*/false, /*Scale=*/0, AccessType.AddrSpace) &&
+             /*HasBaseReg=*/true, /*Scale=*/0, AccessType.AddrSpace) &&
          !TTI.isLegalAddressingMode(
              AccessType.MemTy, /*BaseGV=*/nullptr,
              /*BaseOffset=*/-Diff->getAPInt().getSExtValue(),
-             /*HasBaseReg=*/false, /*Scale=*/0, AccessType.AddrSpace);
+             /*HasBaseReg=*/true, /*Scale=*/0, AccessType.AddrSpace);
 }
 
 /// Pick a register which seems likely to be profitable, and then in any use
