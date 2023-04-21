@@ -106,7 +106,7 @@ public:
     return TargetInfo::convertConstraint(Constraint);
   }
 
-  const char *getClobbers() const override {
+  std::string_view getClobbers() const override {
     // FIXME: Is this really right?
     return "";
   }
