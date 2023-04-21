@@ -1368,6 +1368,10 @@ module std [system] {
     // FIXME: should re-export ios, streambuf?
     export *
   }
+  module print {
+    header "print"
+    export *
+  }
   module queue {
     header "queue"
     export *
