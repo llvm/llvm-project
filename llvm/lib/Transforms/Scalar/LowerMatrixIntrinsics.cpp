@@ -838,10 +838,13 @@ public:
       auto NewInst = distributeTransposes(
           TAMA, {R, C}, TAMB, {R, C}, Builder,
           [&](Value *T0, ShapeInfo Shape0, Value *T1, ShapeInfo Shape1) {
-            auto *FAdd =
-                cast<Instruction>(LocalBuilder.CreateFAdd(T0, T1, "mfadd"));
-            setShapeInfo(FAdd, Shape0);
-            return FAdd;
+            bool IsFP = I.getType()->isFPOrFPVectorTy();
+            auto *Add = IsFP ? LocalBuilder.CreateFAdd(T0, T1, "madd")
+                             : LocalBuilder.CreateAdd(T0, T1, "madd");
+
+            auto *Result = cast<Instruction>(Add);
+            setShapeInfo(Result, Shape0);
+            return Result;
           });
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);

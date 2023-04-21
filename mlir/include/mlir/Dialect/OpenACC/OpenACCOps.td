@@ -101,7 +101,43 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     [AttrSizedOperandSegments, NoMemoryEffect]> {
-  let summary = "Represents bounds information for acc data clause.";
+  let summary = "Represents normalized bounds information for acc data clause.";
+
+  let description = [{
+    This operation is used to record bounds used in acc data clause in a
+    normalized fashion (zero-based). This works well with the `PointerLikeType`
+    requirement in data clauses - since a `lowerbound` of 0 means looking
+    at data at the zero offset from pointer.
+
+    The operation must have an `upperbound` or `extent` (or both are allowed
+    - but not checked for consistency). When the source language's arrays are
+    not zero-based, the `startIdx` must specify the zero-position index.
+
+    Examples below show copying a slice of 10-element array except first element.
+    Note that the examples use extent in data clause for C++ and upperbound
+    for Fortran (as per 2.7.1). To simplify examples, the constants are used
+    directly in the acc.bounds operands - this is not the syntax of operation.
+
+    C++:
+    ```
+    int array[10];
+    #pragma acc copy(array[1:9])
+    ```
+    =>
+    ```mlir
+    acc.bounds lb(1) ub(9) extent(9) startIdx(0)
+    ```
+
+    Fortran:
+    ```
+    integer :: array(1:10)
+    !$acc copy(array(2:10))
+    ```
+    =>
+    ```mlir
+    acc.bounds lb(1) ub(9) extent(9) startIdx(1)
+    ```
+  }];
 
   let arguments = (ins Optional<IntOrIndex>:$lowerbound,
                        Optional<IntOrIndex>:$upperbound,
@@ -143,6 +179,26 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
   let results = (outs OpenACC_PointerLikeTypeInterface:$accPtr);
+
+  let description = [{
+    - `varPtr`: The address of variable to copy.
+    - `varPtrPtr`: Specifies the address of varPtr - only used when the variable
+    copied is a field in a struct. This is important for OpenACC due to implicit
+    attach semantics on data clauses (2.6.4).
+    - `bounds`: Used when copying just slice of array or array's bounds are not
+    encoded in type. They are in rank order where rank 0 is inner-most dimension.
+    - `dataClause`: Keeps track of the data clause the user used. This is because
+    the acc operations are decomposed. So a 'copy' clause is decomposed to both 
+    `acc.copyin` and `acc.copyout` operations, but both have dataClause that
+    specifies `acc_copy` in this field.
+    - `structured`: Flag to note whether this is associated with structured region
+    (parallel, kernels, data) or unstructured (enter data, exit data). This is
+    important due to spec specifically calling out structured and dynamic reference
+    counters (2.6.7).
+    - `implicit`: Whether this is an implicitly generated operation, such as copies
+    done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `name`: Holds the name of variable as specified in user clause (including bounds).
+  }];
 
   let assemblyFormat = [{
     `varPtr` `(` $varPtr `:` type($varPtr) `)`
@@ -244,6 +300,26 @@ class OpenACC_DataExitOp<string mnemonic, string clause, list<Trait> traits = []
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
+
+  let description = [{
+    - `varPtr`: The address of variable to copy back to. This only applies to
+    `acc.copyout`
+    - `accPtr`: The acc address of variable. This is the link from the data-entry
+    operation used.
+    - `bounds`: Used when copying just slice of array or array's bounds are not
+    encoded in type. They are in rank order where rank 0 is inner-most dimension.
+    - `dataClause`: Keeps track of the data clause the user used. This is because
+    the acc operations are decomposed. So a 'copy' clause is decomposed to both 
+    `acc.copyin` and `acc.copyout` operations, but both have dataClause that
+    specifies `acc_copy` in this field.
+    - `structured`: Flag to note whether this is associated with structured region
+    (parallel, kernels, data) or unstructured (enter data, exit data). This is
+    important due to spec specifically calling out structured and dynamic reference
+    counters (2.6.7).
+    - `implicit`: Whether this is an implicitly generated operation, such as copies
+    done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `name`: Holds the name of variable as specified in user clause (including bounds).
+  }];
 
   let assemblyFormat = [{
     `accPtr` `(` $accPtr `:` type($accPtr) `)`

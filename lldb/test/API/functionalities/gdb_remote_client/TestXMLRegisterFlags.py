@@ -412,6 +412,15 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    def test_format_disables_flags(self):
+        # If asked for a specific format, don't print flags after it.
+        self.setup_flags_test('<field name="field_0" start="0" end="0"/>')
+
+        self.expect("register read cpsr --format X", substrs=["cpsr = 0xEEEE7777"])
+        self.expect("register read cpsr --format X", substrs=["field_0"], matching=False)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
     def test_xml_includes(self):
         # Certain targets e.g. s390x QEMU split their defintions over multiple
         # files that are included into target.xml.

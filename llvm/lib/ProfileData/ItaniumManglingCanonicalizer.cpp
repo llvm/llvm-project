@@ -23,7 +23,10 @@ struct FoldingSetNodeIDBuilder {
   llvm::FoldingSetNodeID &ID;
   void operator()(const Node *P) { ID.AddPointer(P); }
   void operator()(std::string_view Str) {
-    ID.AddString(llvm::StringRef(&*Str.begin(), Str.size()));
+    if (Str.empty())
+      ID.AddString({});
+    else
+      ID.AddString(llvm::StringRef(&*Str.begin(), Str.size()));
   }
   template <typename T>
   std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>> operator()(T V) {

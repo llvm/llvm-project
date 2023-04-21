@@ -222,8 +222,6 @@ set(files
   __bit/popcount.h
   __bit/rotate.h
   __bit_reference
-  __bsd_locale_defaults.h
-  __bsd_locale_fallbacks.h
   __charconv/chars_format.h
   __charconv/from_chars_integral.h
   __charconv/from_chars_result.h
@@ -439,6 +437,9 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/locale_base_api/bsd_locale_defaults.h
+  __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/locale_guard.h
   __mbstate_t.h
   __memory/addressof.h
   __memory/align.h

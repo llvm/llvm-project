@@ -534,7 +534,7 @@ struct MatchableInfo {
   std::string ConversionFnKind;
 
   /// If this instruction is deprecated in some form.
-  bool HasDeprecation;
+  bool HasDeprecation = false;
 
   /// If this is an alias, this is use to determine whether or not to using
   /// the conversion function defined by the instruction's AsmMatchConverter

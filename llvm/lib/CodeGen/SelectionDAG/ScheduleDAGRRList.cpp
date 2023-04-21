@@ -156,16 +156,16 @@ private:
   unsigned CurCycle = 0;
 
   /// MinAvailableCycle - Cycle of the soonest available instruction.
-  unsigned MinAvailableCycle;
+  unsigned MinAvailableCycle = ~0u;
 
   /// IssueCount - Count instructions issued in this cycle
   /// Currently valid only for bottom-up scheduling.
-  unsigned IssueCount;
+  unsigned IssueCount = 0u;
 
   /// LiveRegDefs - A set of physical registers and their definition
   /// that are "live". These nodes must be scheduled before any other nodes that
   /// modifies the registers can be scheduled.
-  unsigned NumLiveRegs;
+  unsigned NumLiveRegs = 0u;
   std::unique_ptr<SUnit*[]> LiveRegDefs;
   std::unique_ptr<SUnit*[]> LiveRegGens;
 

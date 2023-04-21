@@ -46,7 +46,15 @@ public:
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
 
   /// Get the currently selected frame index.
-  uint32_t GetSelectedFrameIndex();
+  /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
+  /// selected a frame, and (b) if this really is a user facing
+  /// "GetSelectedFrame".  SMRF runs the frame recognizers which can do
+  /// arbitrary work that ends up being dangerous to do internally.  Also,
+  /// for most internal uses we don't actually want the frame changed by the
+  /// SMRF logic.  So unless this is in a command or SB API, you should
+  /// pass false here.
+  uint32_t
+  GetSelectedFrameIndex(SelectMostRelevant select_most_relevant_frame);
 
   /// Mark a stack frame as the currently selected frame using the frame index
   /// \p idx. Like \ref GetFrameAtIndex, invisible frames cannot be selected.

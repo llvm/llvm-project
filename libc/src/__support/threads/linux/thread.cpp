@@ -358,7 +358,7 @@ int Thread::get_name(cpp::StringStream &name) const {
     int retval = __llvm_libc::syscall_impl(SYS_prctl, PR_GET_NAME, name_buffer);
     if (retval < 0)
       return -retval;
-    name << name_buffer;
+    name << name_buffer << cpp::StringStream::ENDS;
     return 0;
   }
 

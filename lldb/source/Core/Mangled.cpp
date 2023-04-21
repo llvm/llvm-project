@@ -90,23 +90,6 @@ int Mangled::Compare(const Mangled &a, const Mangled &b) {
                               b.GetName(ePreferMangled));
 }
 
-// Set the string value in this objects. If "mangled" is true, then the mangled
-// named is set with the new value in "s", else the demangled name is set.
-void Mangled::SetValue(ConstString s, bool mangled) {
-  if (s) {
-    if (mangled) {
-      m_demangled.Clear();
-      m_mangled = s;
-    } else {
-      m_demangled = s;
-      m_mangled.Clear();
-    }
-  } else {
-    m_demangled.Clear();
-    m_mangled.Clear();
-  }
-}
-
 void Mangled::SetValue(ConstString name) {
   if (name) {
     if (cstring_is_mangled(name.GetStringRef())) {

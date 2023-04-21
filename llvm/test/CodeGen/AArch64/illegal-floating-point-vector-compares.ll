@@ -8,7 +8,7 @@ define i1 @unordered_floating_point_compare_on_v8f32(<8 x float> %a_vec) {
 ; CHECK-LABEL: unordered_floating_point_compare_on_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
@@ -27,7 +27,7 @@ define i1 @unordered_floating_point_compare_on_v16f32(<16 x float> %a_vec) {
 ; CHECK-LABEL: unordered_floating_point_compare_on_v16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmgt v3.4s, v3.4s, #0.0
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    fcmgt v2.4s, v2.4s, #0.0
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
@@ -49,7 +49,7 @@ define i1 @unordered_floating_point_compare_on_v32f32(<32 x float> %a_vec) {
 ; CHECK-LABEL: unordered_floating_point_compare_on_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcmgt v3.4s, v3.4s, #0.0
-; CHECK-NEXT:    mov w9, #1
+; CHECK-NEXT:    mov w9, #1 // =0x1
 ; CHECK-NEXT:    fcmgt v2.4s, v2.4s, #0.0
 ; CHECK-NEXT:    fcmgt v1.4s, v1.4s, #0.0
 ; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0

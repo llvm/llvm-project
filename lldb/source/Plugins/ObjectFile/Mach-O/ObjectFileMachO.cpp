@@ -3030,7 +3030,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                               // the first contains a directory and the
                               // second contains a full path.
                               sym[sym_idx - 1].GetMangled().SetValue(
-                                  ConstString(symbol_name), false);
+                                  ConstString(symbol_name));
                               m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
                               add_nlist = false;
                             } else {
@@ -3076,7 +3076,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                                 full_so_path += '/';
                               full_so_path += symbol_name;
                               sym[sym_idx - 1].GetMangled().SetValue(
-                                  ConstString(full_so_path.c_str()), false);
+                                  ConstString(full_so_path.c_str()));
                               add_nlist = false;
                               m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
                             }
@@ -3468,17 +3468,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         sym[sym_idx].GetMangled().SetDemangledName(
                             ConstString(symbol_name));
                       } else {
-                        bool symbol_name_is_mangled = false;
-
                         if (symbol_name && symbol_name[0] == '_') {
-                          symbol_name_is_mangled = symbol_name[1] == '_';
                           symbol_name++; // Skip the leading underscore
                         }
 
                         if (symbol_name) {
                           ConstString const_symbol_name(symbol_name);
-                          sym[sym_idx].GetMangled().SetValue(
-                              const_symbol_name, symbol_name_is_mangled);
+                          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
                           if (is_gsym && is_debug) {
                             const char *gsym_name =
                                 sym[sym_idx]
@@ -3938,8 +3934,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               if ((N_SO_index == sym_idx - 1) && ((sym_idx - 1) < num_syms)) {
                 // We have two consecutive N_SO entries where the first
                 // contains a directory and the second contains a full path.
-                sym[sym_idx - 1].GetMangled().SetValue(ConstString(symbol_name),
-                                                       false);
+                sym[sym_idx - 1].GetMangled().SetValue(
+                    ConstString(symbol_name));
                 m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
                 add_nlist = false;
               } else {
@@ -3977,7 +3973,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   full_so_path += '/';
                 full_so_path += symbol_name;
                 sym[sym_idx - 1].GetMangled().SetValue(
-                    ConstString(full_so_path.c_str()), false);
+                    ConstString(full_so_path.c_str()));
                 add_nlist = false;
                 m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
               }
@@ -4330,17 +4326,14 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
             ConstString(symbol_name_non_abi_mangled));
         sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
       } else {
-        bool symbol_name_is_mangled = false;
 
         if (symbol_name && symbol_name[0] == '_') {
-          symbol_name_is_mangled = symbol_name[1] == '_';
           symbol_name++; // Skip the leading underscore
         }
 
         if (symbol_name) {
           ConstString const_symbol_name(symbol_name);
-          sym[sym_idx].GetMangled().SetValue(const_symbol_name,
-                                             symbol_name_is_mangled);
+          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
         }
       }
 

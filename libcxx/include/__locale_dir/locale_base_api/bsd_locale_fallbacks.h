@@ -10,11 +10,17 @@
 // of those functions for non-BSD platforms.
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BSD_LOCALE_FALLBACKS_H
-#define _LIBCPP___BSD_LOCALE_FALLBACKS_H
+#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
+#define _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
 
+#include <__locale_dir/locale_base_api/locale_guard.h>
+#include <cstdio>
 #include <stdarg.h>
 #include <stdlib.h>
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  include <cwchar>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -139,4 +145,4 @@ int __libcpp_sscanf_l(const char *__s, locale_t __l, const char *__format, ...) 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BSD_LOCALE_FALLBACKS_H
+#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_BSD_LOCALE_FALLBACKS_H
