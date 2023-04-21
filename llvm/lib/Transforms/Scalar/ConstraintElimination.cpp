@@ -961,7 +961,8 @@ static bool checkAndReplaceCondition(
     NumCondsRemoved++;
     Changed = true;
   }
-  if (CSToUse.isConditionImplied(ConstraintSystem::negate(R.Coefficients))) {
+  auto Negated = ConstraintSystem::negate(R.Coefficients);
+  if (!Negated.empty() && CSToUse.isConditionImplied(Negated)) {
     if (!DebugCounter::shouldExecute(EliminatedCounter))
       return false;
 

@@ -17,4 +17,11 @@ bb:
   ret i1 %icmp
 }
 
+define i1 @test_overflow_in_negate_constraint(i8 %x, i64 %y) {
+bb:
+  %zext = zext i8 %x to i64
+  %shl = shl nuw nsw i64 %zext, 63
+  %icmp = icmp uge i64 %y, %shl
+  ret i1 %icmp
+}
 
