@@ -212,7 +212,12 @@ define <2 x i32> @scalarize_fptoui_sat(<2 x float> %x) #0 {
 
 define <2 x i1> @scalarize_is_fpclass(<2 x float> %x) #0 {
 ; CHECK-LABEL: @scalarize_is_fpclass(
-; CHECK-NEXT:    [[ISFPCLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], i32 123)
+; CHECK-NEXT:    [[X_I0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[ISFPCLASS_I0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X_I0]], i32 123)
+; CHECK-NEXT:    [[X_I1:%.*]] = extractelement <2 x float> [[X]], i32 1
+; CHECK-NEXT:    [[ISFPCLASS_I1:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X_I1]], i32 123)
+; CHECK-NEXT:    [[ISFPCLASS_UPTO0:%.*]] = insertelement <2 x i1> poison, i1 [[ISFPCLASS_I0]], i32 0
+; CHECK-NEXT:    [[ISFPCLASS:%.*]] = insertelement <2 x i1> [[ISFPCLASS_UPTO0]], i1 [[ISFPCLASS_I1]], i32 1
 ; CHECK-NEXT:    ret <2 x i1> [[ISFPCLASS]]
 ;
   %isfpclass = call <2 x i1> @llvm.is.fpclass(<2 x float> %x, i32 123)
