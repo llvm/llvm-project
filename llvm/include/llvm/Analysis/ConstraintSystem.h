@@ -13,6 +13,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <string>
 
@@ -122,7 +123,8 @@ public:
     // the constant.
     R[0] += 1;
     for (auto &C : R)
-      C *= -1;
+      if (MulOverflow(C, int64_t(-1), C))
+        return {};
     return R;
   }
 

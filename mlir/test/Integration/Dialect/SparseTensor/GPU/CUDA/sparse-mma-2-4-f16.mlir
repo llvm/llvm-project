@@ -342,7 +342,7 @@ module attributes {gpu.container_module} {
       vector.print %pb0 : vector<32xf16>
     }
 
-    // Maps the provided host buffer into the device address space.
+    // Maps the provided host buffers into the device address space.
     // Writes from the host are guaranteed to be visible to device
     // kernels that are launched afterwards. Writes from the device
     // are guaranteed to be visible on the host after synchronizing
@@ -367,6 +367,12 @@ module attributes {gpu.container_module} {
                  %m : memref<16x2xi16>,
                  %b : memref<8x32xf16>,
                  %c : memref<16x8xf16>)
+
+    // Unmaps the host buffers.
+    gpu.host_unregister %cast_a : memref<*xf16>
+    gpu.host_unregister %cast_m : memref<*xi16>
+    gpu.host_unregister %cast_b : memref<*xf16>
+    gpu.host_unregister %cast_c : memref<*xf16>
 
     //
     // Verify computed matrix C.

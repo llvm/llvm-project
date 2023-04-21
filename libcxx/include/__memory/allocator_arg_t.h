@@ -25,9 +25,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct _LIBCPP_TEMPLATE_VIS allocator_arg_t { explicit allocator_arg_t() = default; };
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER >= 17
+inline constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+#elif !defined(_LIBCPP_CXX03_LANG)
+constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+#endif
 
-/* inline */ constexpr allocator_arg_t allocator_arg = allocator_arg_t();
+#ifndef _LIBCPP_CXX03_LANG
 
 // allocator construction
 

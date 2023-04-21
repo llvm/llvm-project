@@ -23,7 +23,7 @@ if __name__ == '__main__':
                 if re.match(r'^\s*module (\w+)\s+[{] private header "\1(.h)?"\s+export [*] [}]', line):
                     # It's a top-level private header, such as <__bit_reference>.
                     pass
-                elif re.match(r'^\s*module (\w+)\s+[{] private header "__\w+/\1[.]h" [}]', line):
+                elif re.match(r'^\s*module (\w+)\s+[{] private (textual )?header "__(\w+/)*\1[.]h" [}]', line):
                     # It's a private submodule, such as <__utility/swap.h>.
                     pass
                 elif re.match(r'^\s*module (\w+)_fwd\s+[{] private header "__fwd/\1[.]h" [}]', line):

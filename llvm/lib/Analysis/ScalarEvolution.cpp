@@ -7264,62 +7264,43 @@ bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
   if (isSCEVExprNeverPoison(I))
     return true;
 
-  // For an add recurrence specifically, we assume that infinite loops without
-  // side effects are undefined behavior, and then reason as follows:
+  // If the loop only has one exit, then we know that, if the loop is entered,
+  // any instruction dominating that exit will be executed. If any such
+  // instruction would result in UB, the addrec cannot be poison.
   //
-  // If the add recurrence is poison in any iteration, it is poison on all
-  // future iterations (since incrementing poison yields poison). If the result
-  // of the add recurrence is fed into the loop latch condition and the loop
-  // does not contain any throws or exiting blocks other than the latch, we now
-  // have the ability to "choose" whether the backedge is taken or not (by
-  // choosing a sufficiently evil value for the poison feeding into the branch)
-  // for every iteration including and after the one in which \p I first became
-  // poison.  There are two possibilities (let's call the iteration in which \p
-  // I first became poison as K):
-  //
-  //  1. In the set of iterations including and after K, the loop body executes
-  //     no side effects.  In this case executing the backege an infinte number
-  //     of times will yield undefined behavior.
-  //
-  //  2. In the set of iterations including and after K, the loop body executes
-  //     at least one side effect.  In this case, that specific instance of side
-  //     effect is control dependent on poison, which also yields undefined
-  //     behavior.
+  // This is basically the same reasoning as in isSCEVExprNeverPoison(), but
+  // also handles uses outside the loop header (they just need to dominate the
+  // single exit).
 
   auto *ExitingBB = L->getExitingBlock();
-  auto *LatchBB = L->getLoopLatch();
-  if (!ExitingBB || !LatchBB || ExitingBB != LatchBB)
+  if (!ExitingBB || !loopHasNoAbnormalExits(L))
     return false;
 
-  SmallPtrSet<const Instruction *, 16> Pushed;
-  SmallVector<const Instruction *, 8> PoisonStack;
+  SmallPtrSet<const Value *, 16> KnownPoison;
+  SmallVector<const Instruction *, 8> Worklist;
 
   // We start by assuming \c I, the post-inc add recurrence, is poison.  Only
   // things that are known to be poison under that assumption go on the
-  // PoisonStack.
-  Pushed.insert(I);
-  PoisonStack.push_back(I);
+  // Worklist.
+  KnownPoison.insert(I);
+  Worklist.push_back(I);
 
-  bool LatchControlDependentOnPoison = false;
-  while (!PoisonStack.empty() && !LatchControlDependentOnPoison) {
-    const Instruction *Poison = PoisonStack.pop_back_val();
+  while (!Worklist.empty()) {
+    const Instruction *Poison = Worklist.pop_back_val();
 
     for (const Use &U : Poison->uses()) {
-      const User *PoisonUser = U.getUser();
-      if (propagatesPoison(U)) {
-        if (Pushed.insert(cast<Instruction>(PoisonUser)).second)
-          PoisonStack.push_back(cast<Instruction>(PoisonUser));
-      } else if (auto *BI = dyn_cast<BranchInst>(PoisonUser)) {
-        assert(BI->isConditional() && "Only possibility!");
-        if (BI->getParent() == LatchBB) {
-          LatchControlDependentOnPoison = true;
-          break;
-        }
-      }
+      const Instruction *PoisonUser = cast<Instruction>(U.getUser());
+      if (mustTriggerUB(PoisonUser, KnownPoison) &&
+          DT.dominates(PoisonUser->getParent(), ExitingBB))
+        return true;
+
+      if (propagatesPoison(U) && L->contains(PoisonUser))
+        if (KnownPoison.insert(PoisonUser).second)
+          Worklist.push_back(PoisonUser);
     }
   }
 
-  return LatchControlDependentOnPoison && loopHasNoAbnormalExits(L);
+  return false;
 }
 
 ScalarEvolution::LoopProperties

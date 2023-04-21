@@ -5817,7 +5817,7 @@ def fexperimental_assignment_tracking_EQ : Joined<["-"], "fexperimental-assignme
   Group<f_Group>, CodeGenOpts<"EnableAssignmentTracking">,
   NormalizedValuesScope<"CodeGenOptions::AssignmentTrackingOpts">,
   Values<"disabled,enabled,forced">, NormalizedValues<["Disabled","Enabled","Forced"]>,
-  MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Enabled">;
+  MarshallingInfoEnum<CodeGenOpts<"AssignmentTrackingMode">, "Disabled">;
 
 } // let Flags = [CC1Option, NoDriverOption]
 

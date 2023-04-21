@@ -127,7 +127,7 @@ class X86AsmBackend : public MCAsmBackend {
   MCInst PrevInst;
   MCBoundaryAlignFragment *PendingBA = nullptr;
   std::pair<MCFragment *, size_t> PrevInstPosition;
-  bool CanPadInst;
+  bool CanPadInst = false;
 
   uint8_t determinePaddingPrefix(const MCInst &Inst) const;
   bool isMacroFused(const MCInst &Cmp, const MCInst &Jcc) const;

@@ -1,6 +1,4 @@
-// UNSUPPORTED: target={{.*-windows-gnu}}
-
-// RUN: %clang_cl_asan -Od %s -Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 // RUN: %run %t
 
 #include <windows.h>

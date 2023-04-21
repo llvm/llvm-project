@@ -1980,7 +1980,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
   } else if (!func_undecorated_name.empty()) {
     mangled.SetDemangledName(ConstString(func_undecorated_name));
   } else if (!func_name.empty())
-    mangled.SetValue(ConstString(func_name), false);
+    mangled.SetValue(ConstString(func_name));
 
   return mangled;
 }

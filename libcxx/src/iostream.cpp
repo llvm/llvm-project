@@ -11,6 +11,10 @@
 #include <new>
 #include <string>
 
+#ifdef _LIBCPP_MSVCRT_LIKE
+#  include <__locale_dir/locale_base_api/locale_guard.h>
+#endif
+
 #define _str(s) #s
 #define str(s) _str(s)
 #define _LIBCPP_ABI_NAMESPACE_STR str(_LIBCPP_ABI_NAMESPACE)
