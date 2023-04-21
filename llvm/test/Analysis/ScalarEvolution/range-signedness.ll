@@ -5,9 +5,9 @@ define void @x(ptr %cond) {
 ; CHECK-LABEL: 'x'
 ; CHECK-NEXT:  Classifying expressions for: @x
 ; CHECK-NEXT:    %idx = phi i8 [ 0, %entry ], [ %idx.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-128) S: [0,-128) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %idx.inc = add nsw i8 %idx, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = load volatile i1, ptr %cond, align 1
 ; CHECK-NEXT:    --> %c U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @x

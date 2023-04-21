@@ -469,8 +469,7 @@ define void @phiUsesTrunc(i1 %arg) nounwind {
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_INC:%.*]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN33:%.*]], label [[FOR_INC]]
@@ -479,12 +478,13 @@ define void @phiUsesTrunc(i1 %arg) nounwind {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN97:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then97:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = sext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ [[TMP0]], [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
 ; CHECK-NEXT:    call void @use32(i32 [[KMIN_1]])
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]

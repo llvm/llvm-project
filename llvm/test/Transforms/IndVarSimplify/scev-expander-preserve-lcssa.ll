@@ -437,7 +437,7 @@ define void @test6(i8 %x) {
 ; CHECK-NEXT:    br label [[WHILE_COND192]]
 ; CHECK:       while.cond215:
 ; CHECK-NEXT:    [[I_8_IN:%.*]] = phi i32 [ [[I_8:%.*]], [[WHILE_COND215]] ], [ [[I_7_LCSSA]], [[WHILE_COND215_PREHEADER]] ]
-; CHECK-NEXT:    [[I_8]] = add nuw nsw i32 [[I_8_IN]], 1
+; CHECK-NEXT:    [[I_8]] = add nsw i32 [[I_8_IN]], 1
 ; CHECK-NEXT:    [[IDXPROM216:%.*]] = sext i32 [[I_8]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX217:%.*]] = getelementptr inbounds [512 x i8], ptr null, i64 0, i64 [[IDXPROM216]]
 ; CHECK-NEXT:    br label [[WHILE_COND215]]
