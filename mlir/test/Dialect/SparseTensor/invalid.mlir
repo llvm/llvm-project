@@ -128,6 +128,18 @@ func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>)
 
 // -----
 
+#BCOO = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed-hi"], crdWidth=32}>
+
+func.func @invalid_unpack_type(%sp: tensor<2x100xf32, #BCOO>)
+                            -> (tensor<2x6xf32>, tensor<3x6x2xi32>, i32) {
+  // expected-error@+1 {{values/coordinates batched level sizes don't match statically}}
+  %values, %coordinates, %nse = sparse_tensor.unpack %sp batched_lvls=1
+     : tensor<2x100xf32, #BCOO> to tensor<2x6xf32>, tensor<3x6x2xi32>, i32
+  return %values, %coordinates, %nse : tensor<2x6xf32>, tensor<3x6x2xi32>, i32
+}
+
+// -----
+
 func.func @invalid_positions_dense(%arg0: tensor<128xf64>) -> memref<?xindex> {
   // expected-error@+1 {{'sparse_tensor.positions' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
   %0 = sparse_tensor.positions %arg0 { level = 0 : index } : tensor<128xf64> to memref<?xindex>

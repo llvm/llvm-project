@@ -41,25 +41,6 @@ using namespace mlir::sparse_tensor;
 // File local helper functions.
 //===----------------------------------------------------------------------===//
 
-/// Generates a pointer/index load from the sparse storage scheme. Narrower
-/// data types need to be zero extended before casting the value into the
-/// index type used for looping and indexing.
-static Value genIndexLoad(OpBuilder &builder, Location loc, Value mem,
-                          Value s) {
-  // For the scalar case, we simply zero extend narrower indices into 64-bit
-  // values before casting to index without a performance penalty. Here too,
-  // however, indices that already are 64-bit, in theory, cannot express the
-  // full range as explained above.
-  Value load = builder.create<memref::LoadOp>(loc, mem, s);
-  if (!load.getType().isa<IndexType>()) {
-    if (load.getType().getIntOrFloatBitWidth() < 64)
-      load = builder.create<arith::ExtUIOp>(loc, builder.getI64Type(), load);
-    load =
-        builder.create<arith::IndexCastOp>(loc, builder.getIndexType(), load);
-  }
-  return load;
-}
-
 static Value genSliceOffset(OpBuilder &builder, Location loc, Value tensor,
                             Level lvl) {
   auto enc = getSparseTensorEncoding(tensor.getType());
@@ -707,7 +688,8 @@ Operation *LoopEmitter::enterLoopOverTensorAtLvl(
       continue;
     }
 
-    bool isSparse = isCompressedDLT(lvlType) || isSingletonDLT(lvlType);
+    bool isSparse = isCompressedDLT(lvlType) || isSingletonDLT(lvlType) ||
+                    isCompressedWithHiDLT(lvlType);
     // We can at most have one sparse input, otherwise, a while loop is
     // required to co-iterate multiple sparse tensors.
     assert(!isSparseCond || !isSparse);
