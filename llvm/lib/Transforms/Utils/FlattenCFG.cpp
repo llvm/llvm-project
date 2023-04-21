@@ -497,7 +497,7 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
     PBI->swapSuccessors();
   }
   Value *NC = Builder.CreateBinOp(CombineOp, CInst1, CInst2);
-  PBI->replaceUsesOfWith(CInst2, NC);
+  PBI->replaceUsesOfWith(PBI->getCondition(), NC);
   Builder.SetInsertPoint(SaveInsertBB, SaveInsertPt);
 
   // Handle PHI node to replace its predecessors to FirstEntryBlock.
