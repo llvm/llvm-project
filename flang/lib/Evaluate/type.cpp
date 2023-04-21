@@ -734,7 +734,8 @@ std::optional<DynamicType> ComparisonType(
   }
 }
 
-bool IsInteroperableIntrinsicType(const DynamicType &type) {
+bool IsInteroperableIntrinsicType(
+    const DynamicType &type, bool checkCharLength) {
   switch (type.category()) {
   case TypeCategory::Integer:
     return true;
@@ -744,7 +745,10 @@ bool IsInteroperableIntrinsicType(const DynamicType &type) {
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:
-    return type.kind() == 1 /* C_CHAR */ && type.knownLength().value_or(0) == 1;
+    if (checkCharLength && type.knownLength().value_or(0) != 1) {
+      return false;
+    }
+    return type.kind() == 1 /* C_CHAR */;
   default:
     // Derived types are tested in Semantics/check-declarations.cpp
     return false;

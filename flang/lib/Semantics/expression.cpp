@@ -216,7 +216,7 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
       DIE("unexpected alternative in DataRef");
     } else if (!symbol.attrs().test(semantics::Attr::INTRINSIC)) {
       if (symbol.has<semantics::GenericDetails>()) {
-        Say("'%s' is not a specific procedure"_err_en_US, symbol.name());
+        Say("'%s' is not a specific procedure"_err_en_US, last.name());
       } else {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
@@ -229,7 +229,7 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
       return Expr<SomeType>{ProcedureDesignator{std::move(intrinsic)}};
     } else {
       Say("'%s' is not an unrestricted specific intrinsic procedure"_err_en_US,
-          symbol.name());
+          last.name());
     }
     return std::nullopt;
   } else if (MaybeExpr result{AsGenericExpr(std::move(ref))}) {
