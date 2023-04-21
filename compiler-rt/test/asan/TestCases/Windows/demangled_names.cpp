@@ -1,5 +1,5 @@
 // RUN: %clang_cl_asan %Od %s %Fe%t
-// RUN: not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,%if clang-cl %{MSVC%} %else %{MINGW%}
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK,%if target={{.*-windows-msvc.*}} %{MSVC%} %else %{MINGW%}
 //
 // This test makes sure ASan symbolizes stack traces the way they are typically
 // symbolized on Windows.
