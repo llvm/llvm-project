@@ -39,8 +39,9 @@ class TestSwiftVariadicGenerics(TestBase):
 
         # f4(uvs: (a, b), (a, b))
         #process.Continue()
+        # FIXME: Crashes the demangler.
         #self.expect("frame variable",
-        #            substrs=[])
+        #            substrs=[""])
 
         # f5(ts: (a, b), (42, b))
         process.Continue()
@@ -51,9 +52,12 @@ class TestSwiftVariadicGenerics(TestBase):
                     ])
 
         # f6(us: a, more_us: a, vs: b, b)
-        #process.Continue()
-        #self.expect("frame variable",
-        #            substrs=[])
+        process.Continue()
+        self.expect("frame variable",
+                    substrs=["Pack{(a.A)}", "us", "i = 23",
+                             "Pack{(a.A)}", "more_us", "i = 23",
+                             "Pack{(a.B, a.B)}", "vs", "d = 2.71", "d = 2.71"
+                             ])
 
         # f7(us: a, vs: 1, b, more_us: a, more_vs: 2, b)
         process.Continue()
@@ -63,5 +67,22 @@ class TestSwiftVariadicGenerics(TestBase):
                              "Pack{(a.A)}", "more_us", "i = 23",
                              "Pack{(Int, a.B)}", "more_vs", "= 2", "d = 2.71"
                     ])
-                        
+
+        process.Continue()
+        process.Continue()
+        self.expect("target variable s",
+                    substrs=["vals", "0 = 23", "1 = 2.71"])
+
+        # f8(<specialized self>)
+        #process.Continue()
+        #self.expect("frame variable",
+                    #substrs=["t", "0 = 23", "1 = 2.71"]
+        #            )
+
+        # f9(s: S<repeat each T>)
+        #process.Continue()
+        #self.expect("frame variable",
+        #            substrs=["t", "0 = 23", "1 = 2.71"]
+        #            )
+
         
