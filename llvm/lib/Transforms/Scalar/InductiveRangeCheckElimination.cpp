@@ -295,6 +295,18 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     Index = SE.getSCEV(LHS);
     End = SE.getSCEV(RHS);
     return true;
+
+  case ICmpInst::ICMP_SLE:
+  case ICmpInst::ICMP_ULE:
+    const SCEV *One = SE.getOne(RHS->getType());
+    const SCEV *RHSS = SE.getSCEV(RHS);
+    bool Signed = Pred == ICmpInst::ICMP_SLE;
+    if (SE.willNotOverflow(Instruction::BinaryOps::Add, Signed, RHSS, One)) {
+      Index = SE.getSCEV(LHS);
+      End = SE.getAddExpr(RHSS, One);
+      return true;
+    }
+    return false;
   }
 
   llvm_unreachable("default clause returns!");
