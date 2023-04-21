@@ -394,10 +394,16 @@ private:
 
 // Nothing interesting here, just subprocess/temp-file plumbing.
 llvm::Expected<std::string> renderSVG(llvm::StringRef DotGraph) {
-  auto Dot = llvm::sys::findProgramByName("dot");
-  if (!Dot)
-    return llvm::createStringError(Dot.getError(),
-                                   "Can't draw CFG: 'dot' not found on PATH");
+  std::string DotPath;
+  if (const auto *FromEnv = ::getenv("GRAPHVIZ_DOT"))
+    DotPath = FromEnv;
+  else {
+    auto FromPath = llvm::sys::findProgramByName("dot");
+    if (!FromPath)
+      return llvm::createStringError(FromPath.getError(),
+                                     "'dot' not found on PATH");
+    DotPath = FromPath.get();
+  }
 
   // Create input and output files for `dot` subprocess.
   // (We create the output file as empty, to reserve the temp filename).
@@ -419,7 +425,7 @@ llvm::Expected<std::string> renderSVG(llvm::StringRef DotGraph) {
       /*stderr=*/std::nullopt};
   std::string ErrMsg;
   int Code = llvm::sys::ExecuteAndWait(
-      *Dot, {"dot", "-Tsvg"}, /*Env=*/std::nullopt, Redirects,
+      DotPath, {"dot", "-Tsvg"}, /*Env=*/std::nullopt, Redirects,
       /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
   if (!ErrMsg.empty())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
