@@ -116,3 +116,27 @@ code.line:has(.bb-select):before {
   position: relative;
   margin-left: 0.5em;
 }
+
+.value {
+  border: 1px solid #888;
+  font-size: x-small;
+  flex-grow: 1;
+}
+.value summary {
+  background-color: #ace;
+  display: flex;
+  justify-content: space-between;
+}
+.value .address {
+  font-size: xx-small;
+  font-family: monospace;
+  color: #888;
+}
+.value .property {
+  display: flex;
+  margin-top: 0.5em;
+}
+.value .property .key {
+  font-weight: bold;
+  min-width: 5em;
+}
