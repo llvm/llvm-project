@@ -269,8 +269,9 @@ bb_4:                                             ; preds = %bb_4, %bb_2
 }
 
 ; cmp.y has 2 users, but should be inverted. So that a new one cmp is created instead.
-; FIXME: Branch condition must be replaced with a new created combined condition
+; Branch condition must be replaced with a new created combined condition
 ; Proof of bug: https://alive2.llvm.org/ce/z/L4ps9v
+; Proof of fix: https://alive2.llvm.org/ce/z/QdrG5U
 define i1 @test_cond_multi_use(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i1 @test_cond_multi_use
 ; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
@@ -279,7 +280,7 @@ define i1 @test_cond_multi_use(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[CMP_Y:%.*]] = icmp eq i32 [[Y]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[CMP_Y]], true
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[CMP_X]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[CMP_Y]], label [[IF_THEN_Y:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[IF_THEN_Y:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if.then.y:
 ; CHECK-NEXT:    store i32 [[Z]], ptr @g, align 4
 ; CHECK-NEXT:    br label [[EXIT]]
