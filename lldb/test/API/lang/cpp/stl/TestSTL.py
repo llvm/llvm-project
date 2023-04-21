@@ -12,7 +12,6 @@ from lldbsuite.test import lldbutil
 
 class STLTestCase(TestBase):
 
-    @skipIf
     @expectedFailureAll(bugnumber="llvm.org/PR36713")
     def test(self):
         """Test some expressions involving STL data types."""

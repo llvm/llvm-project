@@ -1679,6 +1679,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Display running state changes first before any STDIO
     if (got_state_changed && !state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
+                                              DoNoSelectMostRelevantFrame,
                                               pop_process_io_handler);
     }
 
@@ -1718,6 +1719,7 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     // Now display any stopped state changes after any STDIO
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
+                                              DoNoSelectMostRelevantFrame,
                                               pop_process_io_handler);
     }
 
