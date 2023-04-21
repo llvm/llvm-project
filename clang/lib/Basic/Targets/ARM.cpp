@@ -1244,7 +1244,7 @@ bool ARMTargetInfo::validateConstraintModifier(
 
   return true;
 }
-const char *ARMTargetInfo::getClobbers() const {
+std::string_view ARMTargetInfo::getClobbers() const {
   // FIXME: Is this really right?
   return "";
 }
