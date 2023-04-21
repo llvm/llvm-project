@@ -35,9 +35,15 @@
   </template>
 </div>
 <table id="bb-elements">
+<template>
+  <tr id="{{selection.bb}}.0">
+    <td class="{{selection.bb}}">{{selection.bb}}.0</td>
+    <td>(initial state)</td>
+  </tr>
+</template>
 <template data-for="elt in cfg[selection.bb].elements">
-  <tr id="{{selection.bb}}.{{elt_index}}">
-    <td class="{{selection.bb}}">{{selection.bb}}.{{elt_index}}</td>
+  <tr id="{{selection.bb}}.{{elt_index+1}}">
+    <td class="{{selection.bb}}">{{selection.bb}}.{{elt_index+1}}</td>
     <td>{{elt}}</td>
   </tr>
 </template>
