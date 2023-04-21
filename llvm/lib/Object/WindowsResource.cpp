@@ -990,6 +990,7 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
     case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    case COFF::IMAGE_FILE_MACHINE_ARM64X:
       Reloc->Type = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

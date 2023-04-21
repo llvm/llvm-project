@@ -167,9 +167,7 @@ static Expected<COFF::MachineTypes> getCOFFFileMachine(MemoryBufferRef MB) {
   uint16_t Machine = (*Obj)->getMachine();
   if (Machine != COFF::IMAGE_FILE_MACHINE_I386 &&
       Machine != COFF::IMAGE_FILE_MACHINE_AMD64 &&
-      Machine != COFF::IMAGE_FILE_MACHINE_ARMNT &&
-      Machine != COFF::IMAGE_FILE_MACHINE_ARM64 &&
-      Machine != COFF::IMAGE_FILE_MACHINE_ARM64EC) {
+      Machine != COFF::IMAGE_FILE_MACHINE_ARMNT && !COFF::isAnyArm64(Machine)) {
     return createStringError(inconvertibleErrorCode(),
                              "unknown machine: " + std::to_string(Machine));
   }
@@ -205,9 +203,16 @@ static bool machineMatches(COFF::MachineTypes LibMachine,
     return true;
   // ARM64EC mode allows both pure ARM64, ARM64EC and X64 objects to be mixed in
   // the archive.
-  return LibMachine == COFF::IMAGE_FILE_MACHINE_ARM64EC &&
-         (FileMachine == COFF::IMAGE_FILE_MACHINE_ARM64 ||
-          FileMachine == COFF::IMAGE_FILE_MACHINE_AMD64);
+  switch (LibMachine) {
+  case COFF::IMAGE_FILE_MACHINE_ARM64:
+    return FileMachine == COFF::IMAGE_FILE_MACHINE_ARM64X;
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return COFF::isAnyArm64(FileMachine) ||
+           FileMachine == COFF::IMAGE_FILE_MACHINE_AMD64;
+  default:
+    return false;
+  }
 }
 
 static void appendFile(std::vector<NewArchiveMember> &Members,
@@ -482,7 +487,7 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
                        /*WriteSymtab=*/true,
                        Thin ? object::Archive::K_GNU : object::Archive::K_COFF,
                        /*Deterministic*/ true, Thin, nullptr,
-                       LibMachine == COFF::IMAGE_FILE_MACHINE_ARM64EC)) {
+                       COFF::isArm64EC(LibMachine))) {
     handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
       llvm::errs() << OutputPath << ": " << EI.message() << "\n";
     });
