@@ -494,6 +494,10 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __pstl_algorithm
+  __pstl_execution
+  __pstl_memory
+  __pstl_numeric
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h
@@ -862,6 +866,39 @@ set(files
   numeric
   optional
   ostream
+  pstl/internal/algorithm_fwd.h
+  pstl/internal/algorithm_impl.h
+  pstl/internal/execution_defs.h
+  pstl/internal/execution_impl.h
+  pstl/internal/glue_algorithm_defs.h
+  pstl/internal/glue_algorithm_impl.h
+  pstl/internal/glue_execution_defs.h
+  pstl/internal/glue_memory_defs.h
+  pstl/internal/glue_memory_impl.h
+  pstl/internal/glue_numeric_defs.h
+  pstl/internal/glue_numeric_impl.h
+  pstl/internal/memory_impl.h
+  pstl/internal/numeric_fwd.h
+  pstl/internal/numeric_impl.h
+  pstl/internal/omp/parallel_for.h
+  pstl/internal/omp/parallel_for_each.h
+  pstl/internal/omp/parallel_invoke.h
+  pstl/internal/omp/parallel_merge.h
+  pstl/internal/omp/parallel_scan.h
+  pstl/internal/omp/parallel_stable_partial_sort.h
+  pstl/internal/omp/parallel_stable_sort.h
+  pstl/internal/omp/parallel_transform_reduce.h
+  pstl/internal/omp/parallel_transform_scan.h
+  pstl/internal/omp/util.h
+  pstl/internal/parallel_backend.h
+  pstl/internal/parallel_backend_omp.h
+  pstl/internal/parallel_backend_serial.h
+  pstl/internal/parallel_backend_tbb.h
+  pstl/internal/parallel_backend_utils.h
+  pstl/internal/parallel_impl.h
+  pstl/internal/pstl_config.h
+  pstl/internal/unseq_backend_simd.h
+  pstl/internal/utils.h
   queue
   random
   ranges
