@@ -221,7 +221,7 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   return InstanceInfoAA.isAssumedUniqueForAnalysis();
 }
 
-Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
+Constant *AA::getInitialValueForObj(Attributor &A, Value &Obj, Type &Ty,
                                     const TargetLibraryInfo *TLI,
                                     const DataLayout &DL,
                                     AA::RangeTy *RangePtr) {
@@ -232,17 +232,31 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV)
     return nullptr;
-  if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
-    return nullptr;
-  if (!GV->hasInitializer())
-    return UndefValue::get(&Ty);
+
+  bool UsedAssumedInformation = false;
+  Constant *Initializer = nullptr;
+  if (A.hasGlobalVariableSimplificationCallback(*GV)) {
+    auto AssumedGV = A.getAssumedInitializerFromCallBack(
+        *GV, /* const AbstractAttribute *AA */ nullptr, UsedAssumedInformation);
+    Initializer = *AssumedGV;
+    if (!Initializer)
+      return nullptr;
+  } else {
+    if (!GV->hasLocalLinkage() && !(GV->isConstant() && GV->hasInitializer()))
+      return nullptr;
+    if (!GV->hasInitializer())
+      return UndefValue::get(&Ty);
+
+    if (!Initializer)
+      Initializer = GV->getInitializer();
+  }
 
   if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
     APInt Offset = APInt(64, RangePtr->Offset);
-    return ConstantFoldLoadFromConst(GV->getInitializer(), &Ty, Offset, DL);
+    return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
 
-  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), &Ty);
+  return ConstantFoldLoadFromUniformValue(Initializer, &Ty);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {
@@ -481,7 +495,7 @@ static bool getPotentialCopiesOfMemoryValue(
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
       Value *InitialValue =
-          AA::getInitialValueForObj(Obj, *I.getType(), TLI, DL, &Range);
+          AA::getInitialValueForObj(A, Obj, *I.getType(), TLI, DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");
