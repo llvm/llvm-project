@@ -21,7 +21,6 @@
 
 ; CHECK-O: Running pass: WholeProgramDevirtPass
 ; CHECK-O: Running pass: LowerTypeTestsPass
-; CHECK-O: Running pass: ForceFunctionAttrsPass
 ; CHECK-O: Running pass: PGOIndirectCallPromotion
 ; CHECK-O: Running pass: InferFunctionAttrsPass
 ; CHECK-O: Running pass: LowerExpectIntrinsicPass on main
