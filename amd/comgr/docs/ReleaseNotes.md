@@ -47,6 +47,8 @@ significant performance implications
 - Fixed an issue where -nogpulib was always included in HIP compilations, which
 prevented correct execution of
 COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC action.
+- Fixed a multi-threading bug where programs would hang when calling Comgr APIs
+like amd\_comgr\_iterate\_symbols() from multiple threads
 
 
 New APIs
