@@ -1396,6 +1396,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
     { ISD::MUL,  MVT::i8,  {  3,  4, 1, 1 } },
     { ISD::MUL,  MVT::i16, {  2,  4, 1, 1 } },
+    { ISD::MUL,  MVT::i32, {  1,  4, 1, 1 } },
 
     { ISD::FNEG, MVT::f64, {  2,  2, 1, 3 } }, // (x87)
     { ISD::FADD, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
