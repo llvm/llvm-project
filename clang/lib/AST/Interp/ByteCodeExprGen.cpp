@@ -223,8 +223,12 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
   // Deal with operations which have composite or void types.
   if (BO->isCommaOp()) {
-    if (!discard(LHS))
+    if (!this->discard(LHS))
       return false;
+    if (RHS->getType()->isVoidType())
+      return this->discard(RHS);
+
+    // Otherwise, visit RHS and optionally discard its value.
     return Discard(this->visit(RHS));
   }
 
@@ -1642,10 +1646,12 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *Exp) {
   if (!visit(Exp))
     return false;
 
+  if (Exp->getType()->isVoidType())
+    return this->emitRetVoid(Exp);
+
   if (std::optional<PrimType> T = classify(Exp))
     return this->emitRet(*T, Exp);
-  else
-    return this->emitRetValue(Exp);
+  return this->emitRetValue(Exp);
 }
 
 /// Toplevel visitDecl().
