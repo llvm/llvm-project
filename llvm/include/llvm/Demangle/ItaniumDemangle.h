@@ -1842,7 +1842,7 @@ public:
       OB += "0";
     } else if (Offset[0] == 'n') {
       OB += "-";
-      OB += Offset.substr(1);
+      OB += std::string_view(Offset.data() + 1, Offset.size() - 1);
     } else {
       OB += Offset;
     }
@@ -2270,7 +2270,7 @@ public:
     OB.printClose();
 
     if (Integer[0] == 'n')
-      OB << '-' << Integer.substr(1);
+      OB << '-' << std::string_view(Integer.data() + 1, Integer.size() - 1);
     else
       OB << Integer;
   }
@@ -2294,7 +2294,7 @@ public:
     }
 
     if (Value[0] == 'n')
-      OB << '-' << Value.substr(1);
+      OB << '-' << std::string_view(Value.data() + 1, Value.size() - 1);
     else
       OB += Value;
 
@@ -3713,7 +3713,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
 
     // extension            ::= U <objc-name> <objc-type>  # objc-type<identifier>
     if (llvm::itanium_demangle::starts_with(Qual, "objcproto")) {
-      std::string_view ProtoSourceName = Qual.substr(std::strlen("objcproto"));
+      constexpr size_t Len = sizeof("objcproto") - 1;
+      std::string_view ProtoSourceName(Qual.data() + Len, Qual.size() - Len);
       std::string_view Proto;
       {
         ScopedOverride<const char *> SaveFirst(First, &*ProtoSourceName.begin()),

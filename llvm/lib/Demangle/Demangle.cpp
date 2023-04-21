@@ -36,8 +36,7 @@ std::string llvm::demangle(const std::string &MangledName) {
   if (S[0] == '_' && nonMicrosoftDemangle(S + 1, Result))
     return Result;
 
-  if (char *Demangled =
-          microsoftDemangle(S, nullptr, nullptr, nullptr, nullptr)) {
+  if (char *Demangled = microsoftDemangle(S, nullptr, nullptr)) {
     Result = Demangled;
     std::free(Demangled);
     return Result;

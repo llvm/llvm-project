@@ -245,6 +245,31 @@ TEST(InstModificationIRStrategyTest, ICmp) {
   EXPECT_TRUE(FoundNE);
 }
 
+TEST(InstModificationIRStrategyTest, FCmp) {
+  LLVMContext Ctx;
+  StringRef Source = "\n\
+      define i1 @test(float %x) {\n\
+        %a = fcmp oeq float %x, 10.0\n\
+        ret i1 %a\n\
+      }";
+
+  auto Mutator = createMutator<InstModificationIRStrategy>();
+  ASSERT_TRUE(Mutator);
+
+  auto M = parseAssembly(Source.data(), Ctx);
+  auto &F = *M->begin();
+  CmpInst *CI = cast<CmpInst>(&*F.begin()->begin());
+  ASSERT_TRUE(M && !verifyModule(*M, &errs()));
+  bool FoundONE = false;
+  for (int i = 0; i < 100; ++i) {
+    Mutator->mutateModule(*M, Seed + i, Source.size(), Source.size() + 100);
+    EXPECT_TRUE(!verifyModule(*M, &errs()));
+    FoundONE |= CI->getPredicate() == CmpInst::FCMP_ONE;
+  }
+
+  EXPECT_TRUE(FoundONE);
+}
+
 TEST(InstModificationIRStrategyTest, GEP) {
   LLVMContext Ctx;
   StringRef Source = "\n\
