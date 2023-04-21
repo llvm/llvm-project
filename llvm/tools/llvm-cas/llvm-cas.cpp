@@ -66,6 +66,11 @@ int main(int Argc, char **Argv) {
   cl::list<std::string> Objects(cl::Positional, cl::desc("<object>..."));
   cl::opt<std::string> CASPath("cas", cl::desc("Path to CAS on disk."),
                                cl::value_desc("path"));
+  cl::opt<std::string> CASPluginPath("fcas-plugin-path",
+                                     cl::desc("Path to plugin CAS library"),
+                                     cl::value_desc("path"));
+  cl::list<std::string> CASPluginOpts("fcas-plugin-option",
+                                      cl::desc("Plugin CAS Options"));
   cl::opt<std::string> UpstreamCASPath(
       "upstream-cas", cl::desc("Path to another CAS."), cl::value_desc("path"));
   cl::opt<std::string> DataPath("data",
@@ -129,11 +134,21 @@ int main(int Argc, char **Argv) {
         createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
 
   std::shared_ptr<ObjectStore> CAS;
-  std::unique_ptr<ActionCache> AC;
+  std::shared_ptr<ActionCache> AC;
   std::optional<StringRef> CASFilePath;
   if (sys::path::is_absolute(CASPath)) {
     CASFilePath = CASPath;
-    std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
+    if (!CASPluginPath.empty()) {
+      SmallVector<std::pair<std::string, std::string>> PluginOptions;
+      for (const auto &PluginOpt : CASPluginOpts) {
+        auto [Name, Val] = StringRef(PluginOpt).split('=');
+        PluginOptions.push_back({std::string(Name), std::string(Val)});
+      }
+      std::tie(CAS, AC) = ExitOnErr(
+          createPluginCASDatabases(CASPluginPath, CASPath, PluginOptions));
+    } else {
+      std::tie(CAS, AC) = ExitOnErr(createOnDiskUnifiedCASDatabases(CASPath));
+    }
   } else {
     CAS = ExitOnErr(createCASFromIdentifier(CASPath));
   }
