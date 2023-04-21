@@ -815,12 +815,18 @@ void StackFrameList::SelectMostRelevantFrame() {
   }
 }
 
-uint32_t StackFrameList::GetSelectedFrameIndex() {
+uint32_t StackFrameList::GetSelectedFrameIndex(
+    SelectMostRelevant select_most_relevant) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (!m_selected_frame_idx)
+  if (!m_selected_frame_idx && select_most_relevant)
     SelectMostRelevantFrame();
-  if (!m_selected_frame_idx)
+  if (!m_selected_frame_idx) {
+    // If we aren't selecting the most relevant frame, and the selected frame
+    // isn't set, then don't force a selection here, just return 0.
+    if (!select_most_relevant)
+      return 0;
     m_selected_frame_idx = 0;
+  }
   return *m_selected_frame_idx;
 }
 
@@ -858,7 +864,8 @@ bool StackFrameList::SetSelectedFrameByIndex(uint32_t idx) {
 void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
   if (m_thread.GetID() ==
       m_thread.GetProcess()->GetThreadList().GetSelectedThread()->GetID()) {
-    StackFrameSP frame_sp(GetFrameAtIndex(GetSelectedFrameIndex()));
+    StackFrameSP frame_sp(
+        GetFrameAtIndex(GetSelectedFrameIndex(DoNoSelectMostRelevantFrame)));
     if (frame_sp) {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
       if (sc.line_entry.file)
@@ -918,7 +925,8 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
   else
     last_frame = first_frame + num_frames;
 
-  StackFrameSP selected_frame_sp = m_thread.GetSelectedFrame();
+  StackFrameSP selected_frame_sp =
+      m_thread.GetSelectedFrame(DoNoSelectMostRelevantFrame);
   const char *unselected_marker = nullptr;
   std::string buffer;
   if (selected_frame_marker) {
