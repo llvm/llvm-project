@@ -790,7 +790,7 @@ void Environment::dump(raw_ostream &OS) const {
   // fields are printed.
   OS << "DeclToLoc:\n";
   for (auto [D, L] : DeclToLoc)
-    OS << "  [" << D->getName() << ", " << L << "]\n";
+    OS << "  [" << D->getNameAsString() << ", " << L << "]\n";
 
   OS << "ExprToLoc:\n";
   for (auto [E, L] : ExprToLoc)
