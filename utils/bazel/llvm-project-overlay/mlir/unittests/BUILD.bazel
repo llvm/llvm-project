@@ -23,6 +23,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//mlir:BreakpointManagers",
         "//mlir:Debug",
+        "//mlir:IR",
         "//mlir:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
