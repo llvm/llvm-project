@@ -380,6 +380,10 @@ public:
     return GetStaticBroadcasterClass();
   }
 
+  void SetShadowListener(lldb::ListenerSP listener_sp) override {
+    Broadcaster::SetShadowListener(listener_sp);
+  }
+
 /// A notification structure that can be used by clients to listen
 /// for changes in a process's lifetime.
 ///

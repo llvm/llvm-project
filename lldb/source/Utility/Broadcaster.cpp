@@ -228,6 +228,8 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
                       &m_broadcaster, event_type))
       return;
     hijacking_listener_sp->AddEvent(event_sp);
+    if (m_shadow_listener)
+      m_shadow_listener->AddEvent(event_sp);
   } else {
     for (auto &pair : GetListeners()) {
       if (!(pair.second & event_type))
@@ -237,6 +239,8 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
         continue;
 
       pair.first->AddEvent(event_sp);
+      if (m_shadow_listener)
+        m_shadow_listener->AddEvent(event_sp);
     }
   }
 }

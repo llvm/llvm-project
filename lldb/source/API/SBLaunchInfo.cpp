@@ -17,6 +17,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 
 using namespace lldb;
@@ -386,4 +387,25 @@ void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
   llvm::StringRef class_name = metadata_sp ? metadata_sp->GetClassName() : "";
   metadata_sp = std::make_shared<ScriptedMetadata>(class_name, dict_sp);
   m_opaque_sp->SetScriptedMetadata(metadata_sp);
+}
+
+SBListener SBLaunchInfo::GetShadowListener() {
+  LLDB_INSTRUMENT_VA(this);
+
+  lldb::ListenerSP shadow_sp = m_opaque_sp->GetShadowListener();
+  if (!shadow_sp)
+    return SBListener();
+  return SBListener(shadow_sp);
+}
+
+void SBLaunchInfo::SetShadowListener(SBListener &listener) {
+  LLDB_INSTRUMENT_VA(this, listener);
+
+  ListenerSP listener_sp = listener.GetSP();
+  if (listener_sp && listener.IsValid())
+    listener_sp->SetShadow(true);
+  else
+    listener_sp = nullptr;
+
+  m_opaque_sp->SetShadowListener(listener_sp);
 }
