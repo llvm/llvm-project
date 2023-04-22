@@ -674,19 +674,27 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   return success();
 }
 
+bool tosa::ReshapeOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  if (l.size() != r.size() || l.size() != 1)
+    return false;
+  return getElementTypeOrSelf(l[0]) == getElementTypeOrSelf(r[0]);
+}
+
 LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ReshapeOpAdaptor adaptor(operands, attributes);
   ShapeAdaptor inputShape = operands.getShape(0);
+  Type inputType = getElementTypeOrSelf(operands.getType()[0]);
   llvm::SmallVector<int64_t> newShapeValue =
       convertToMlirShape(adaptor.getNewShape());
 
   // We cannot infer from the total number of elements so we must take the
   // shape attribute as exact.
   if (!inputShape.hasRank() || !inputShape.hasStaticShape()) {
-    inferredReturnShapes.push_back(ShapedTypeComponents(newShapeValue));
+    inferredReturnShapes.push_back(
+        ShapedTypeComponents(newShapeValue, inputType));
     return success();
   }
 
@@ -707,7 +715,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
       val = numElements / staticMul;
   }
 
-  inferredReturnShapes.push_back(ShapedTypeComponents(newShapeValue));
+  inferredReturnShapes.push_back(
+      ShapedTypeComponents(newShapeValue, inputType));
   return success();
 }
 
