@@ -12,6 +12,7 @@ static_library("performance") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AvoidEndlCheck.cpp",
     "FasterStringFindCheck.cpp",
     "ForRangeCopyCheck.cpp",
     "ImplicitConversionInLoopCheck.cpp",

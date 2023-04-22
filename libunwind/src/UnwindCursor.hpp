@@ -575,6 +575,7 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
+  memset(&_dispContext, 0, sizeof(_dispContext));
   _dispContext.ContextRecord = &_msContext;
   _dispContext.HistoryTable = &_histTable;
   // Initialize MS context from ours.
@@ -677,6 +678,7 @@ UnwindCursor<A, R>::UnwindCursor(CONTEXT *context, A &as)
                 "UnwindCursor<> does not fit in unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
+  memset(&_dispContext, 0, sizeof(_dispContext));
   _dispContext.ContextRecord = &_msContext;
   _dispContext.HistoryTable = &_histTable;
   _msContext = *context;
