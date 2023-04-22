@@ -3792,8 +3792,10 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     if (async) {
       process_sp->RestoreProcessEvents();
     } else {
+      // We are stopping all the way out to the user, so update selected frames.
       state = process_sp->WaitForProcessToStop(
-          llvm::None, nullptr, false, attach_info.GetHijackListener(), stream);
+          llvm::None, nullptr, false, attach_info.GetHijackListener(), stream,
+          true, SelectMostRelevantFrame);
       process_sp->RestoreProcessEvents();
 
       if (state != eStateStopped) {

@@ -657,10 +657,10 @@ void Process::SyncIOHandler(uint32_t iohandler_id,
   }
 }
 
-StateType Process::WaitForProcessToStop(const Timeout<std::micro> &timeout,
-                                        EventSP *event_sp_ptr, bool wait_always,
-                                        ListenerSP hijack_listener_sp,
-                                        Stream *stream, bool use_run_lock) {
+StateType Process::WaitForProcessToStop(
+    const Timeout<std::micro> &timeout, EventSP *event_sp_ptr, bool wait_always,
+    ListenerSP hijack_listener_sp, Stream *stream, bool use_run_lock,
+    SelectMostRelevant select_most_relevant) {
   // We can't just wait for a "stopped" event, because the stopped event may
   // have restarted the target. We have to actually check each event, and in
   // the case of a stopped event check the restarted flag on the event.
@@ -697,7 +697,8 @@ StateType Process::WaitForProcessToStop(const Timeout<std::micro> &timeout,
     bool pop_process_io_handler = (hijack_listener_sp.get() != nullptr);
     bool pop_command_interpreter = false;
     Process::HandleProcessStateChangedEvent(
-        event_sp, stream, pop_process_io_handler, pop_command_interpreter);
+        event_sp, stream, select_most_relevant, pop_process_io_handler,
+        pop_command_interpreter);
 
     switch (state) {
     case eStateCrashed:
@@ -744,10 +745,11 @@ BreakpointSiteMatchesREPLBreakpoint(const BreakpointSiteSP &bp_site_sp) {
   return false;
 }
 
-bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
-                                             Stream *stream,
-                                             bool &pop_process_io_handler,
-                                             bool &pop_command_interpreter) {
+bool Process::HandleProcessStateChangedEvent(
+    const EventSP &event_sp, Stream *stream,
+    SelectMostRelevant select_most_relevant,
+    bool &pop_process_io_handler,
+    bool &pop_command_interpreter) {
   const bool handle_pop = pop_process_io_handler;
 
   pop_process_io_handler = false;
@@ -996,7 +998,8 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
             return false;
 
           const bool only_threads_with_stop_reason = true;
-          const uint32_t start_frame = thread_sp->GetSelectedFrameIndex();
+          const uint32_t start_frame =
+              thread_sp->GetSelectedFrameIndex(select_most_relevant);
           const uint32_t num_frames = 1;
           const uint32_t num_frames_with_source = 1;
           const bool stop_format = true;
@@ -1508,8 +1511,9 @@ Status Process::ResumeSynchronous(Stream *stream) {
 
   Status error = PrivateResume();
   if (error.Success()) {
-    StateType state = WaitForProcessToStop(llvm::None, nullptr, true,
-                                           listener_sp, stream);
+    StateType state =
+        WaitForProcessToStop(llvm::None, nullptr, true, listener_sp, stream,
+                             true /* use_run_lock */, SelectMostRelevantFrame);
     const bool must_be_alive =
         false; // eStateExited is ok, so this must be false
     if (!StateIsStoppedState(state, must_be_alive))
@@ -2791,7 +2795,8 @@ Status Process::LoadCore() {
     // Wait for a stopped event since we just posted one above...
     lldb::EventSP event_sp;
     StateType state =
-        WaitForProcessToStop(llvm::None, &event_sp, true, listener_sp);
+        WaitForProcessToStop(llvm::None, &event_sp, true, listener_sp,
+                             nullptr, true, SelectMostRelevantFrame);
 
     if (!StateIsStoppedState(state, false)) {
       Log *log = GetLog(LLDBLog::Process);
@@ -3296,9 +3301,13 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   }
 
   // Wait for the process halt timeout seconds for the process to stop.
-  StateType state =
-      WaitForProcessToStop(GetInterruptTimeout(), &event_sp, true,
-                           halt_listener_sp, nullptr, use_run_lock);
+  // If we are going to use the run lock, that means we're stopping out to the
+  // user, so we should also select the most relevant frame.
+  SelectMostRelevant select_most_relevant =
+      use_run_lock ? SelectMostRelevantFrame : DoNoSelectMostRelevantFrame;
+  StateType state = WaitForProcessToStop(GetInterruptTimeout(), &event_sp, true,
+                                         halt_listener_sp, nullptr,
+                                         use_run_lock, select_most_relevant);
   RestoreProcessEvents();
 
   if (state == eStateInvalid || !event_sp) {
@@ -4921,10 +4930,11 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
   // Save the thread & frame from the exe_ctx for restoration after we run
   const uint32_t thread_idx_id = thread->GetIndexID();
-  StackFrameSP selected_frame_sp = thread->GetSelectedFrame();
+  StackFrameSP selected_frame_sp =
+      thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
   if (!selected_frame_sp) {
     thread->SetSelectedFrame(nullptr);
-    selected_frame_sp = thread->GetSelectedFrame();
+    selected_frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (!selected_frame_sp) {
       diagnostic_manager.Printf(
           eDiagnosticSeverityError,
@@ -4956,7 +4966,9 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   StackID selected_stack_id;
   if (selected_thread_sp) {
     selected_tid = selected_thread_sp->GetIndexID();
-    selected_stack_id = selected_thread_sp->GetSelectedFrame()->GetStackID();
+    selected_stack_id =
+        selected_thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame)
+            ->GetStackID();
   } else {
     selected_tid = LLDB_INVALID_THREAD_ID;
   }
