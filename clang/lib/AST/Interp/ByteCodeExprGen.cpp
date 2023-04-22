@@ -150,6 +150,17 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitCast(*FromT, *ToT, CE);
   }
 
+  case CK_PointerToBoolean: {
+    // Just emit p != nullptr for this.
+    if (!this->visit(SubExpr))
+      return false;
+
+    if (!this->emitNullPtr(CE))
+      return false;
+
+    return this->emitNEPtr(CE);
+  }
+
   case CK_ToVoid:
     return discard(SubExpr);
 
