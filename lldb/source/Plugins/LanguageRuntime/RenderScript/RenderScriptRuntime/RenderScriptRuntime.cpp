@@ -3594,7 +3594,7 @@ bool RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord,
     if (!thread_ptr->SetSelectedFrameByIndex(i))
       continue;
 
-    StackFrameSP frame_sp = thread_ptr->GetSelectedFrame();
+    StackFrameSP frame_sp = thread_ptr->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (!frame_sp)
       continue;
 
