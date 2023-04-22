@@ -857,6 +857,9 @@ constexpr int ignoredExprs() {
 
   (void)5, (void)6;
 
+  1 ? 0 : 1; // expected-warning {{unused}} \
+             // ref-warning {{unused}}
+
   return 0;
 }
 

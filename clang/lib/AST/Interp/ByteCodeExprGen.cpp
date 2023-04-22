@@ -595,8 +595,9 @@ bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *E) {
-  return this->visitConditional(
-      E, [this](const Expr *E) { return this->visit(E); });
+  return this->visitConditional(E, [this](const Expr *E) {
+    return DiscardResult ? this->discard(E) : this->visit(E);
+  });
 }
 
 template <class Emitter>
