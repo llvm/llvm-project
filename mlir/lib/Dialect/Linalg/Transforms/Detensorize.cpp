@@ -60,7 +60,7 @@ bool shouldBeDetensored(Operation *op, TypeConverter typeConverter) {
          });
 }
 
-/// A conversion patttern for detensoring `linalg.generic` ops.
+/// A conversion pattern for detensoring `linalg.generic` ops.
 class DetensorizeGenericOp : public OpConversionPattern<GenericOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -69,7 +69,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Block *originalBlock = op->getBlock();
 
-    // Gather some information about the op before inling its region.
+    // Gather some information about the op before inlining its region.
     Block *opEntryBlock = &*op.getRegion().begin();
     YieldOp yieldOp = dyn_cast<YieldOp>(op.getRegion().back().getTerminator());
 
@@ -476,6 +476,18 @@ struct LinalgDetensorize
     DenseSet<BlockArgument> blockArgsToDetensor;
     FunctionOpInterface funcOp = getOperation();
 
+    // Make sure the entry block of the function doesn't contain any Linalg ops.
+    // Otherwise, it may lead to the signature of the block being changed by the
+    // dialect conversion below, which would make the function op invalid
+    // because its type shouldn't change.
+    IRRewriter rewriter(funcOp->getContext());
+    Block *entryBlock = &funcOp.getFunctionBody().front();
+    Block *postEntryBlock =
+        rewriter.splitBlock(entryBlock, entryBlock->begin());
+    rewriter.setInsertionPointToStart(entryBlock);
+    auto branch =
+        rewriter.create<cf::BranchOp>(rewriter.getUnknownLoc(), postEntryBlock);
+
     if (aggressiveMode.getValue()) {
       AggressiveDetensoringModel costModel;
       costModel.compute(funcOp, typeConverter, opsToDetensor,
@@ -553,6 +565,11 @@ struct LinalgDetensorize
     if (failed(applyPatternsAndFoldGreedily(getOperation(),
                                             std::move(canonPatterns))))
       signalPassFailure();
+
+    // Get rid of the dummy entry block we created in the beginning to work
+    // around dialect conversion signature rewriting.
+    rewriter.eraseOp(branch);
+    rewriter.mergeBlocks(postEntryBlock, entryBlock);
   }
 };
 } // namespace
