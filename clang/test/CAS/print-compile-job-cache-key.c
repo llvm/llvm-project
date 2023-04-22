@@ -58,3 +58,15 @@
 // RUN:   -e "s/\" .*$//" > %t/include-tree-id
 
 // RUN: clang-cas-test -print-include-tree -cas %t/cas @%t/include-tree-id | FileCheck %s -check-prefix=INCLUDE_TREE -DSRC_FILE=%s
+
+// Print key from plugin CAS.
+// RUN: llvm-cas --cas plugin://%llvmshlibdir/libCASPluginTest%pluginext?ondisk-path=%t/cas-plugin --ingest --data %s > %t/casid-plugin
+// RUN: %clang -cc1 -triple x86_64-apple-macos11 \
+// RUN:   -fcas-path %t/cas-plugin -fcas-fs @%t/casid-plugin -fcache-compile-job \
+// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -Rcompile-job-cache-miss -emit-obj -o %t/output.o %s 2> %t/output-plugin.txt
+// RUN: cat %t/output-plugin.txt | sed \
+// RUN:   -e "s/^.*miss for '//" \
+// RUN:   -e "s/' .*$//" > %t/cache-key-plugin
+// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas @%t/cache-key-plugin \
+// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext | FileCheck %s

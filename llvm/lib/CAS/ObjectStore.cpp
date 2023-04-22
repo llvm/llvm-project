@@ -198,9 +198,46 @@ ObjectProxy::getMemoryBuffer(StringRef Name,
   return CAS->getMemoryBuffer(H, Name, RequiresNullTerminator);
 }
 
-static Expected<std::unique_ptr<ObjectStore>>
+static Expected<std::shared_ptr<ObjectStore>>
+createOnDiskCASImpl(const Twine &Path) {
+  return createOnDiskCAS(Path);
+}
+
+static Expected<std::shared_ptr<ObjectStore>>
 createInMemoryCASImpl(const Twine &) {
   return createInMemoryCAS();
+}
+
+static Expected<std::shared_ptr<ObjectStore>>
+createPluginCASImpl(const Twine &URL) {
+  // Format used is
+  //   plugin://${PATH_TO_PLUGIN}?${OPT1}=${VAL1}&${OPT2}=${VAL2}..
+  // "ondisk-path" as option is treated specially, the rest of options are
+  // passed to the plugin verbatim.
+  SmallString<256> PathBuf;
+  auto [PluginPath, Options] = URL.toStringRef(PathBuf).split('?');
+  std::string OnDiskPath;
+  SmallVector<std::pair<std::string, std::string>> PluginArgs;
+  while (!Options.empty()) {
+    StringRef Opt;
+    std::tie(Opt, Options) = Options.split('&');
+    auto [Name, Value] = Opt.split('=');
+    if (Name == "ondisk-path") {
+      OnDiskPath = Value;
+    } else {
+      PluginArgs.push_back({std::string(Name), std::string(Value)});
+    }
+  }
+
+  if (OnDiskPath.empty())
+    OnDiskPath = getDefaultOnDiskCASPath();
+
+  std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>> CASDBs;
+  if (Error E = createPluginCASDatabases(PluginPath, OnDiskPath, PluginArgs)
+                    .moveInto(CASDBs))
+    return std::move(E);
+
+  return std::move(CASDBs.first);
 }
 
 static ManagedStatic<StringMap<ObjectStoreCreateFuncTy *>> RegisteredScheme;
@@ -208,12 +245,13 @@ static ManagedStatic<StringMap<ObjectStoreCreateFuncTy *>> RegisteredScheme;
 static StringMap<ObjectStoreCreateFuncTy *> &getRegisteredScheme() {
   if (!RegisteredScheme.isConstructed()) {
     RegisteredScheme->insert({"mem://", &createInMemoryCASImpl});
-    RegisteredScheme->insert({"file://", &createOnDiskCAS});
+    RegisteredScheme->insert({"file://", &createOnDiskCASImpl});
+    RegisteredScheme->insert({"plugin://", &createPluginCASImpl});
   }
   return *RegisteredScheme;
 }
 
-Expected<std::unique_ptr<ObjectStore>>
+Expected<std::shared_ptr<ObjectStore>>
 cas::createCASFromIdentifier(StringRef Path) {
   for (auto &Scheme : getRegisteredScheme()) {
     if (Path.consume_front(Scheme.getKey()))

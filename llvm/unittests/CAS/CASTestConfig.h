@@ -27,7 +27,7 @@ public:
 } // namespace llvm::unittest::cas
 
 struct TestingAndDir {
-  std::unique_ptr<llvm::cas::ObjectStore> CAS;
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::unique_ptr<llvm::cas::ActionCache> Cache;
   std::unique_ptr<llvm::unittest::cas::MockEnv> Env;
   llvm::Optional<llvm::unittest::TempDir> Temp;
@@ -42,7 +42,7 @@ protected:
 
   llvm::SmallVector<std::unique_ptr<llvm::unittest::cas::MockEnv>> Envs;
 
-  std::unique_ptr<llvm::cas::ObjectStore> createObjectStore() {
+  std::shared_ptr<llvm::cas::ObjectStore> createObjectStore() {
     auto TD = GetParam()(++(*NextCASIndex));
     if (TD.Temp)
       Dirs.push_back(std::move(*TD.Temp));

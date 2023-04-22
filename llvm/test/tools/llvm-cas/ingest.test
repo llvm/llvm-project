@@ -4,6 +4,11 @@ RUN: mkdir %t
 RUN: llvm-cas --cas %t/cas --ingest --data %S/Inputs > %t/cas.id
 RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/cas.id | FileCheck %s
 
+// Using the plugin.
+RUN: llvm-cas --cas plugin://%llvmshlibdir/libCASPluginTest%pluginext?ondisk-path=%t/cas-plugin --ingest --data %S/Inputs > %t/cas-plugin.id
+RUN: llvm-cas --cas plugin://%llvmshlibdir/libCASPluginTest%pluginext?ondisk-path=%t/cas-plugin --ls-tree-recursive @%t/cas-plugin.id | FileCheck %s
+RUN: llvm-cas --cas %t/cas-plugin -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext --ls-tree-recursive @%t/cas-plugin.id | FileCheck %s
+
 CHECK: syml
 CHECK-SAME: broken_symlink -> missing
 CHECK: file

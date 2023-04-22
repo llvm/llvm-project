@@ -426,10 +426,10 @@ Error GRPCActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
   return Error::success();
 }
 
-Expected<std::unique_ptr<ObjectStore>>
+Expected<std::shared_ptr<ObjectStore>>
 cas::createGRPCRelayCAS(const Twine &Path) {
   Error Err = Error::success();
-  auto CAS = std::make_unique<GRPCRelayCAS>(Path.str(), Err);
+  auto CAS = std::make_shared<GRPCRelayCAS>(Path.str(), Err);
   if (Err)
     return std::move(Err);
 

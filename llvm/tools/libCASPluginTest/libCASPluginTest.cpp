@@ -115,12 +115,6 @@ struct CASWrapper {
   /// Load the object, potentially "downloading" it from upstream.
   Expected<std::optional<ondisk::ObjectHandle>> loadObject(ObjectID ID);
 
-  /// "Uploads" the full object node graph.
-  Expected<ObjectID> upstreamNode(ObjectID Node);
-  /// "Downloads" only a single object node. The rest of the nodes in the graph
-  /// will be "downloaded" lazily as they are visited.
-  Expected<ObjectID> downstreamNode(ObjectID Node);
-
   /// "Uploads" a key the associated full node graph.
   Error upstreamKey(ArrayRef<uint8_t> Key, ObjectID Value);
   /// "Downloads" the single root node that is associated with the key. The rest
@@ -133,6 +127,13 @@ struct CASWrapper {
     Fn(errs());
     errs().flush();
   }
+
+private:
+  /// "Uploads" the full object node graph.
+  Expected<ObjectID> upstreamNode(ObjectID Node);
+  /// "Downloads" only a single object node. The rest of the nodes in the graph
+  /// will be "downloaded" lazily as they are visited.
+  Expected<ObjectID> downstreamNode(ObjectID Node);
 };
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CASWrapper, llcas_cas_t)
@@ -208,6 +209,8 @@ Expected<ObjectID> CASWrapper::downstreamNode(ObjectID Node) {
 }
 
 Error CASWrapper::upstreamKey(ArrayRef<uint8_t> Key, ObjectID Value) {
+  if (!UpstreamDB)
+    return Error::success();
   Expected<ObjectID> UpstreamVal = upstreamNode(Value);
   if (!UpstreamVal)
     return UpstreamVal.takeError();
@@ -220,6 +223,8 @@ Error CASWrapper::upstreamKey(ArrayRef<uint8_t> Key, ObjectID Value) {
 
 Expected<std::optional<ObjectID>>
 CASWrapper::downstreamKey(ArrayRef<uint8_t> Key) {
+  if (!UpstreamDB)
+    return std::nullopt;
   std::optional<ObjectID> UpstreamValue;
   if (Error E = UpstreamDB->KVGet(Key).moveInto(UpstreamValue))
     return std::move(E);

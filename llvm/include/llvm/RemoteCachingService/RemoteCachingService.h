@@ -14,7 +14,7 @@
 
 namespace llvm::cas {
 /// Create GRPC ObjectStore from a path.
-Expected<std::unique_ptr<ObjectStore>> createGRPCRelayCAS(const Twine &Path);
+Expected<std::shared_ptr<ObjectStore>> createGRPCRelayCAS(const Twine &Path);
 
 /// Create GRPC ActionCache from a path.
 Expected<std::unique_ptr<ActionCache>> createGRPCActionCache(StringRef Path);
