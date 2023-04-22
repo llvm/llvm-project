@@ -492,6 +492,7 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0xFF8B:  // 8B FF : mov edi, edi
     case 0xEC8B:  // 8B EC : mov ebp, esp
     case 0xc889:  // 89 C8 : mov eax, ecx
+    case 0xE589:  // 89 E5 : mov ebp, esp
     case 0xC18B:  // 8B C1 : mov eax, ecx
     case 0xC033:  // 33 C0 : xor eax, eax
     case 0xC933:  // 33 C9 : xor ecx, ecx
@@ -641,6 +642,8 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
     case 0x24448B:  // 8B 44 24 XX : mov eax, dword ptr [esp + XX]
     case 0x244C8B:  // 8B 4C 24 XX : mov ecx, dword ptr [esp + XX]
     case 0x24548B:  // 8B 54 24 XX : mov edx, dword ptr [esp + XX]
+    case 0x245C8B:  // 8B 5C 24 XX : mov ebx, dword ptr [esp + XX]
+    case 0x246C8B:  // 8B 6C 24 XX : mov ebp, dword ptr [esp + XX]
     case 0x24748B:  // 8B 74 24 XX : mov esi, dword ptr [esp + XX]
     case 0x247C8B:  // 8B 7C 24 XX : mov edi, dword ptr [esp + XX]
       return 4;
