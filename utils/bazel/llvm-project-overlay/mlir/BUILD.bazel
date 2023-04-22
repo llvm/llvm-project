@@ -3691,8 +3691,12 @@ cc_library(
     srcs = glob([
         "lib/Debug/*.cpp",
         "lib/Debug/*.h",
+        "lib/Debug/BreakpointManagers/*.cpp",
     ]),
-    hdrs = glob(["include/mlir/Debug/*.h"]),
+    hdrs = glob([
+        "include/mlir/Debug/*.h",
+        "include/mlir/Debug/BreakpointManagers/*.h"
+]),
     includes = ["include"],
     deps = [
         ":IR",

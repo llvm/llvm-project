@@ -1421,7 +1421,7 @@ static LogicalResult
 convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
   unsigned numMapOperands;
-  bool mapperFunc;
+  bool mapperFunc = false;
   llvm::Value *ifCond = nullptr;
   int64_t deviceID = llvm::omp::OMP_DEVICEID_UNDEF;
   SmallVector<Value> mapOperands;
@@ -1488,7 +1488,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             numMapOperands = exitDataOp.getMapOperands().size();
             mapOperands = exitDataOp.getMapOperands();
             mapTypes = exitDataOp.getMapTypes();
-            mapperFunc = false;
             return success();
           })
           .Default([&](Operation *op) {

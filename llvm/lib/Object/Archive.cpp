@@ -468,6 +468,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
     : Parent(Parent) {
   if (!Start) {
     Header = nullptr;
+    StartOfFile = -1;
     return;
   }
 

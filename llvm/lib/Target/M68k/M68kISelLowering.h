@@ -257,6 +257,11 @@ private:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool isVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context) const override;
+
   /// Lower the result values of a call into the
   /// appropriate copies out of appropriate physical registers.
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CCID, bool IsVarArg,

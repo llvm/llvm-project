@@ -109,8 +109,8 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
     requirement in data clauses - since a `lowerbound` of 0 means looking
     at data at the zero offset from pointer.
 
-    The operation must have an `upperbound` or `extent` (or both are allowed
-    - but not checked for consistency). When the source language's arrays are
+    The operation must have an `upperbound` or `extent` (or both are allowed -
+    but not checked for consistency). When the source language's arrays are
     not zero-based, the `startIdx` must specify the zero-position index.
 
     Examples below show copying a slice of 10-element array except first element.
