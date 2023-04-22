@@ -265,9 +265,9 @@ define i32 @ptestz_v2i64_signbits(<2 x i64> %c, i32 %a, i32 %b) {
 ; SSE41-LABEL: ptestz_v2i64_signbits:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movl %edi, %eax
-; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    movmskps %xmm0, %ecx
+; SSE41-NEXT:    testl %ecx, %ecx
 ; SSE41-NEXT:    cmovnel %esi, %eax
 ; SSE41-NEXT:    retq
 ;

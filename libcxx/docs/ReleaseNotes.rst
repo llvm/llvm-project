@@ -67,6 +67,8 @@ Deprecations and Removals
   - C++2b: ``atomic``, ``bit``, ``cstdint``, ``cstdlib``, ``cstring``, ``initializer_list``, ``limits``, ``new``,
            ``stdexcept``, ``system_error``, ``type_traits``, ``typeinfo``
 
+- ``<algorithm>`` no longer includes ``<chrono>`` in any C++ version (it was prevously included in C++17 and earlier).
+
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.
 

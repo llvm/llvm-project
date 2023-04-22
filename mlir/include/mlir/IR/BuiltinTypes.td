@@ -1042,7 +1042,7 @@ def Builtin_Vector : Builtin_Type<"Vector", [ShapedTypeInterface], "Type"> {
     // A 1D scalable-length vector that contains a multiple of 4 f32 elements.
     vector<[4]xf32>
 
-    // A 2D scalable-length vector that contains a multiple of 2x8 i8 elements.
+    // A 2D scalable-length vector that contains a multiple of 2x8 f32 elements.
     vector<[2x8]xf32>
 
     // A 2D mixed fixed/scalable vector that contains 4 scalable vectors of 4 f32 elements.

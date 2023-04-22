@@ -4381,6 +4381,9 @@ static void collectModes(std::set<unsigned> &Modes, const TreePatternNode *N) {
 
 void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
+  if (CGH.getNumModeIds() == 1)
+    return;
+
   std::vector<PatternToMatch> Copy;
   PatternsToMatch.swap(Copy);
 
@@ -4399,11 +4402,11 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   };
 
   for (PatternToMatch &P : Copy) {
-    TreePatternNodePtr SrcP = nullptr, DstP = nullptr;
+    const TreePatternNode *SrcP = nullptr, *DstP = nullptr;
     if (P.getSrcPattern()->hasProperTypeByHwMode())
-      SrcP = P.getSrcPatternShared();
+      SrcP = P.getSrcPattern();
     if (P.getDstPattern()->hasProperTypeByHwMode())
-      DstP = P.getDstPatternShared();
+      DstP = P.getDstPattern();
     if (!SrcP && !DstP) {
       PatternsToMatch.push_back(P);
       continue;
@@ -4411,9 +4414,9 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
     std::set<unsigned> Modes;
     if (SrcP)
-      collectModes(Modes, SrcP.get());
+      collectModes(Modes, SrcP);
     if (DstP)
-      collectModes(Modes, DstP.get());
+      collectModes(Modes, DstP);
 
     // The predicate for the default mode needs to be constructed for each
     // pattern separately.
