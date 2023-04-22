@@ -1603,14 +1603,14 @@ bool Sema::isUsableModule(const Module *M) {
   return false;
 }
 
-bool Sema::hasVisibleMergedDefinition(NamedDecl *Def) {
+bool Sema::hasVisibleMergedDefinition(const NamedDecl *Def) {
   for (const Module *Merged : Context.getModulesWithMergedDefinition(Def))
     if (isModuleVisible(Merged))
       return true;
   return false;
 }
 
-bool Sema::hasMergedDefinitionInCurrentModule(NamedDecl *Def) {
+bool Sema::hasMergedDefinitionInCurrentModule(const NamedDecl *Def) {
   for (const Module *Merged : Context.getModulesWithMergedDefinition(Def))
     if (isUsableModule(Merged))
       return true;

@@ -3065,7 +3065,9 @@ std::optional<Attribute> TypeConverter::convertTypeAttribute(Type type,
 static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
                                         TypeConverter &typeConverter,
                                         ConversionPatternRewriter &rewriter) {
-  FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
+  FunctionType type = dyn_cast<FunctionType>(funcOp.getFunctionType());
+  if (!type)
+    return failure();
 
   // Convert the original function types.
   TypeConverter::SignatureConversion result(type.getNumInputs());

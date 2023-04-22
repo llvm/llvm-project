@@ -1,3 +1,7 @@
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  return()
+endif()
+
 add_header_library(
   rpc
   HDRS

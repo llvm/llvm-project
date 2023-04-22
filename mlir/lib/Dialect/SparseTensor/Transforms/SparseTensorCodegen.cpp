@@ -1165,11 +1165,9 @@ public:
     MLIRContext *ctx = op.getContext();
     auto srcEnc = getSparseTensorEncoding(op.getSourceType());
     auto dstEnc = getSparseTensorEncoding(op.getResult().getType());
-    if (!srcEnc && !dstEnc)
-      return failure();
-
     // TODO: We should check these in ExtractSliceOp::verify.
-    assert(srcEnc && dstEnc && dstEnc.isSlice());
+    if (!srcEnc || !dstEnc || !dstEnc.isSlice())
+      return failure();
     assert(srcEnc.getDimLevelType() == dstEnc.getDimLevelType());
     assert(srcEnc.getDimOrdering() == dstEnc.getDimOrdering());
     assert(srcEnc.getHigherOrdering() == dstEnc.getHigherOrdering());
