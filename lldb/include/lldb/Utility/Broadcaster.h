@@ -406,6 +406,10 @@ public:
 
   lldb::BroadcasterManagerSP GetManager();
 
+  virtual void SetShadowListener(lldb::ListenerSP listener_sp) {
+    m_broadcaster_sp->m_shadow_listener = listener_sp;
+  }
+
 protected:
   /// BroadcasterImpl contains the actual Broadcaster implementation.  The
   /// Broadcaster makes a BroadcasterImpl which lives as long as it does.  The
@@ -512,6 +516,10 @@ protected:
     /// At some point we may want to have a stack or Listener collections, but
     /// for now this is just for private hijacking.
     std::vector<uint32_t> m_hijacking_masks;
+
+    /// A optional listener that all private events get also broadcasted to,
+    /// on top the hijacked / default listeners.
+    lldb::ListenerSP m_shadow_listener = nullptr;
 
   private:
     BroadcasterImpl(const BroadcasterImpl &) = delete;

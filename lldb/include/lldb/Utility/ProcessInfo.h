@@ -110,6 +110,12 @@ public:
     m_hijack_listener_sp = listener_sp;
   }
 
+  lldb::ListenerSP GetShadowListener() const { return m_shadow_listener_sp; }
+
+  void SetShadowListener(const lldb::ListenerSP &listener_sp) {
+    m_shadow_listener_sp = listener_sp;
+  }
+
 protected:
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
@@ -124,6 +130,7 @@ protected:
   lldb::ScriptedMetadataSP m_scripted_metadata_sp = nullptr;
   lldb::ListenerSP m_listener_sp = nullptr;
   lldb::ListenerSP m_hijack_listener_sp = nullptr;
+  lldb::ListenerSP m_shadow_listener_sp = nullptr;
 };
 
 // ProcessInstanceInfo
