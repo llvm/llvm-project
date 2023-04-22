@@ -20,6 +20,8 @@ define i1 @test_redor_v1i1(<1 x i1> %a) {
 define i1 @test_redor_v2i1(<2 x i1> %a) {
 ; CHECK-LABEL: test_redor_v2i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2s, v0.2s, #31
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    umaxp v0.2s, v0.2s, v0.2s
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
@@ -41,6 +43,8 @@ define i1 @test_redor_v2i1(<2 x i1> %a) {
 define i1 @test_redor_v4i1(<4 x i1> %a) {
 ; CHECK-LABEL: test_redor_v4i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    umaxv h0, v0.4h
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
@@ -68,6 +72,8 @@ define i1 @test_redor_v4i1(<4 x i1> %a) {
 define i1 @test_redor_v8i1(<8 x i1> %a) {
 ; CHECK-LABEL: test_redor_v8i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
 ; CHECK-NEXT:    umaxv b0, v0.8b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
@@ -107,6 +113,8 @@ define i1 @test_redor_v8i1(<8 x i1> %a) {
 define i1 @test_redor_v16i1(<16 x i1> %a) {
 ; CHECK-LABEL: test_redor_v16i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
@@ -169,6 +177,8 @@ define i1 @test_redor_v16i1(<16 x i1> %a) {
 define <16 x i1> @test_redor_ins_v16i1(<16 x i1> %a) {
 ; CHECK-LABEL: test_redor_ins_v16i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    ret
 ;

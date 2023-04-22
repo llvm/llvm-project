@@ -107,7 +107,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              const std::list<Fortran::parser::SectionSubscript> &subscripts,
              std::stringstream &asFortran, const Fortran::parser::Name &name) {
   int dimension = 0;
-  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<mlir::acc::DataBoundsType>();
   llvm::SmallVector<mlir::Value> bounds;
   for (const auto &subscript : subscripts) {
@@ -117,11 +117,23 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         asFortran << ',';
       mlir::Value lbound, ubound, extent;
       std::optional<std::int64_t> lval, uval;
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      fir::ExtendedValue dataExv =
+          converter.getSymbolExtendedValue(*name.symbol);
+      mlir::Value baseLb =
+          fir::factory::readLowerBound(builder, loc, dataExv, dimension, one);
+      bool defaultLb = baseLb == one;
+
       const auto &lower{std::get<0>(triplet->t)};
       if (lower) {
         lval = Fortran::semantics::GetIntValue(lower);
         if (lval) {
-          lbound = builder.createIntegerConstant(loc, i64Ty, *lval);
+          if (defaultLb) {
+            lbound = builder.createIntegerConstant(loc, idxTy, *lval - 1);
+          } else {
+            mlir::Value lb = builder.createIntegerConstant(loc, idxTy, *lval);
+            lbound = builder.create<mlir::arith::SubIOp>(loc, lb, baseLb);
+          }
           asFortran << *lval;
         } else {
           TODO(loc, "non constant lower bound in array section");
@@ -132,7 +144,12 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       if (upper) {
         uval = Fortran::semantics::GetIntValue(upper);
         if (uval) {
-          ubound = builder.createIntegerConstant(loc, i64Ty, *uval);
+          if (defaultLb) {
+            ubound = builder.createIntegerConstant(loc, idxTy, *uval - 1);
+          } else {
+            mlir::Value ub = builder.createIntegerConstant(loc, idxTy, *uval);
+            ubound = builder.create<mlir::arith::SubIOp>(loc, ub, baseLb);
+          }
           asFortran << *uval;
         } else {
           TODO(loc, "non constant upper bound in array section");
@@ -152,12 +169,13 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         }
       }
       if (!ubound) {
-        fir::ExtendedValue x = converter.getSymbolExtendedValue(*name.symbol);
-        extent = fir::factory::readExtent(builder, loc, x, dimension);
+        mlir::Value ext =
+            fir::factory::readExtent(builder, loc, dataExv, dimension);
+        extent = builder.create<mlir::arith::SubIOp>(loc, ext, baseLb);
       }
       mlir::Value empty;
       mlir::Value bound = builder.create<mlir::acc::DataBoundsOp>(
-          loc, boundTy, lbound, ubound, extent, empty, false, empty);
+          loc, boundTy, lbound, ubound, extent, empty, false, baseLb);
       bounds.push_back(bound);
       ++dimension;
     }

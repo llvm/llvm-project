@@ -225,9 +225,9 @@ template <class charT> class messages_byname;
 #endif
 
 #ifdef _LIBCPP_LOCALE__L_EXTENSIONS
-#include <__bsd_locale_defaults.h>
+#  include <__locale_dir/locale_base_api/bsd_locale_defaults.h>
 #else
-#include <__bsd_locale_fallbacks.h>
+#  include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

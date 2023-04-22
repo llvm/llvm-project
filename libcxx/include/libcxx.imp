@@ -32,6 +32,7 @@
   { include: [ "@<__fwd/.*>", "private", "<fwd>", "public" ] },
   { include: [ "@<__ios/.*>", "private", "<ios>", "public" ] },
   { include: [ "@<__iterator/.*>", "private", "<iterator>", "public" ] },
+  { include: [ "@<__locale_dir/.*>", "private", "<locale>", "public" ] },
   { include: [ "@<__memory/.*>", "private", "<memory>", "public" ] },
   { include: [ "@<__memory_resource/.*>", "private", "<memory_resource>", "public" ] },
   { include: [ "@<__mutex/.*>", "private", "<mutex>", "public" ] },

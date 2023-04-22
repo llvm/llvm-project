@@ -1456,7 +1456,8 @@ StopInfo::GetCrashingDereference(StopInfoSP &stop_info_sp,
     return ValueObjectSP();
   }
 
-  StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+  StackFrameSP frame_sp =
+      thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
 
   if (!frame_sp) {
     return ValueObjectSP();

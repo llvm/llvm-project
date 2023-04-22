@@ -96,7 +96,7 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    umov w14, v0.b[6]
 ; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    mov v1.b[9], w8
@@ -140,6 +140,8 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-LABEL: test_v4i1:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    uminv h0, v0.4h
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1

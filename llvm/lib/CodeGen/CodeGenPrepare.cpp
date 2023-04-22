@@ -4629,7 +4629,8 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     return false;
   }
   case Instruction::Add: {
-    // Check to see if we can merge in the RHS then the LHS.  If so, we win.
+    // Check to see if we can merge in one operand, then the other.  If so, we
+    // win.
     ExtAddrMode BackupAddrMode = AddrMode;
     unsigned OldSize = AddrModeInsts.size();
     // Start a transaction at this point.
@@ -4639,9 +4640,15 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
 
+    // Try to match an integer constant second to increase its chance of ending
+    // up in `BaseOffs`, resp. decrease its chance of ending up in `BaseReg`.
+    int First = 0, Second = 1;
+    if (isa<ConstantInt>(AddrInst->getOperand(First))
+      && !isa<ConstantInt>(AddrInst->getOperand(Second)))
+        std::swap(First, Second);
     AddrMode.InBounds = false;
-    if (matchAddr(AddrInst->getOperand(1), Depth + 1) &&
-        matchAddr(AddrInst->getOperand(0), Depth + 1))
+    if (matchAddr(AddrInst->getOperand(First), Depth + 1) &&
+        matchAddr(AddrInst->getOperand(Second), Depth + 1))
       return true;
 
     // Restore the old addr mode info.
@@ -4649,9 +4656,10 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     AddrModeInsts.resize(OldSize);
     TPT.rollback(LastKnownGood);
 
-    // Otherwise this was over-aggressive.  Try merging in the LHS then the RHS.
-    if (matchAddr(AddrInst->getOperand(0), Depth + 1) &&
-        matchAddr(AddrInst->getOperand(1), Depth + 1))
+    // Otherwise this was over-aggressive.  Try merging operands in the opposite
+    // order.
+    if (matchAddr(AddrInst->getOperand(Second), Depth + 1) &&
+        matchAddr(AddrInst->getOperand(First), Depth + 1))
       return true;
 
     // Otherwise we definitely can't merge the ADD in.
@@ -4720,36 +4728,35 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     // just add it to the disp field and check validity.
     if (VariableOperand == -1) {
       AddrMode.BaseOffs += ConstantOffset;
-      if (ConstantOffset == 0 ||
-          TLI.isLegalAddressingMode(DL, AddrMode, AccessTy, AddrSpace)) {
-        // Check to see if we can fold the base pointer in too.
-        if (matchAddr(AddrInst->getOperand(0), Depth + 1)) {
+      if (matchAddr(AddrInst->getOperand(0), Depth + 1)) {
           if (!cast<GEPOperator>(AddrInst)->isInBounds())
             AddrMode.InBounds = false;
           return true;
-        }
-      } else if (EnableGEPOffsetSplit && isa<GetElementPtrInst>(AddrInst) &&
-                 TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
-                 ConstantOffset > 0) {
-        // Record GEPs with non-zero offsets as candidates for splitting in the
-        // event that the offset cannot fit into the r+i addressing mode.
-        // Simple and common case that only one GEP is used in calculating the
-        // address for the memory access.
-        Value *Base = AddrInst->getOperand(0);
-        auto *BaseI = dyn_cast<Instruction>(Base);
-        auto *GEP = cast<GetElementPtrInst>(AddrInst);
-        if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
-            (BaseI && !isa<CastInst>(BaseI) &&
-             !isa<GetElementPtrInst>(BaseI))) {
-          // Make sure the parent block allows inserting non-PHI instructions
-          // before the terminator.
-          BasicBlock *Parent =
-              BaseI ? BaseI->getParent() : &GEP->getFunction()->getEntryBlock();
-          if (!Parent->getTerminator()->isEHPad())
-            LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
-        }
       }
       AddrMode.BaseOffs -= ConstantOffset;
+
+      if (EnableGEPOffsetSplit && isa<GetElementPtrInst>(AddrInst) &&
+          TLI.shouldConsiderGEPOffsetSplit() && Depth == 0 &&
+          ConstantOffset > 0) {
+          // Record GEPs with non-zero offsets as candidates for splitting in
+          // the event that the offset cannot fit into the r+i addressing mode.
+          // Simple and common case that only one GEP is used in calculating the
+          // address for the memory access.
+          Value *Base = AddrInst->getOperand(0);
+          auto *BaseI = dyn_cast<Instruction>(Base);
+          auto *GEP = cast<GetElementPtrInst>(AddrInst);
+          if (isa<Argument>(Base) || isa<GlobalValue>(Base) ||
+              (BaseI && !isa<CastInst>(BaseI) &&
+               !isa<GetElementPtrInst>(BaseI))) {
+            // Make sure the parent block allows inserting non-PHI instructions
+            // before the terminator.
+            BasicBlock *Parent = BaseI ? BaseI->getParent()
+                                       : &GEP->getFunction()->getEntryBlock();
+            if (!Parent->getTerminator()->isEHPad())
+            LargeOffsetGEP = std::make_pair(GEP, ConstantOffset);
+          }
+      }
+
       return false;
     }
 
@@ -4969,7 +4976,7 @@ static bool IsOperandAMemoryOperand(CallInst *CI, InlineAsm *IA, Value *OpVal,
 /// If we find an obviously non-foldable instruction, return true.
 /// Add accessed addresses and types to MemoryUses.
 static bool FindAllMemoryUses(
-    Instruction *I, SmallVectorImpl<std::pair<Value *, Type *>> &MemoryUses,
+    Instruction *I, SmallVectorImpl<std::pair<Use *, Type *>> &MemoryUses,
     SmallPtrSetImpl<Instruction *> &ConsideredInsts, const TargetLowering &TLI,
     const TargetRegisterInfo &TRI, bool OptSize, ProfileSummaryInfo *PSI,
     BlockFrequencyInfo *BFI, unsigned &SeenInsts) {
@@ -4990,28 +4997,28 @@ static bool FindAllMemoryUses(
 
     Instruction *UserI = cast<Instruction>(U.getUser());
     if (LoadInst *LI = dyn_cast<LoadInst>(UserI)) {
-      MemoryUses.push_back({U.get(), LI->getType()});
+      MemoryUses.push_back({&U, LI->getType()});
       continue;
     }
 
     if (StoreInst *SI = dyn_cast<StoreInst>(UserI)) {
       if (U.getOperandNo() != StoreInst::getPointerOperandIndex())
         return true; // Storing addr, not into addr.
-      MemoryUses.push_back({U.get(), SI->getValueOperand()->getType()});
+      MemoryUses.push_back({&U, SI->getValueOperand()->getType()});
       continue;
     }
 
     if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(UserI)) {
       if (U.getOperandNo() != AtomicRMWInst::getPointerOperandIndex())
         return true; // Storing addr, not into addr.
-      MemoryUses.push_back({U.get(), RMW->getValOperand()->getType()});
+      MemoryUses.push_back({&U, RMW->getValOperand()->getType()});
       continue;
     }
 
     if (AtomicCmpXchgInst *CmpX = dyn_cast<AtomicCmpXchgInst>(UserI)) {
       if (U.getOperandNo() != AtomicCmpXchgInst::getPointerOperandIndex())
         return true; // Storing addr, not into addr.
-      MemoryUses.push_back({U.get(), CmpX->getCompareOperand()->getType()});
+      MemoryUses.push_back({&U, CmpX->getCompareOperand()->getType()});
       continue;
     }
 
@@ -5044,7 +5051,7 @@ static bool FindAllMemoryUses(
 }
 
 static bool FindAllMemoryUses(
-    Instruction *I, SmallVectorImpl<std::pair<Value *, Type *>> &MemoryUses,
+    Instruction *I, SmallVectorImpl<std::pair<Use *, Type *>> &MemoryUses,
     const TargetLowering &TLI, const TargetRegisterInfo &TRI, bool OptSize,
     ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
   unsigned SeenInsts = 0;
@@ -5135,7 +5142,7 @@ bool AddressingModeMatcher::isProfitableToFoldIntoAddressingMode(
   // we can remove the addressing mode and effectively trade one live register
   // for another (at worst.)  In this context, folding an addressing mode into
   // the use is just a particularly nice way of sinking it.
-  SmallVector<std::pair<Value *, Type *>, 16> MemoryUses;
+  SmallVector<std::pair<Use *, Type *>, 16> MemoryUses;
   if (FindAllMemoryUses(I, MemoryUses, TLI, TRI, OptSize, PSI, BFI))
     return false; // Has a non-memory, non-foldable use!
 
@@ -5149,8 +5156,9 @@ bool AddressingModeMatcher::isProfitableToFoldIntoAddressingMode(
   // growth since most architectures have some reasonable small and fast way to
   // compute an effective address.  (i.e LEA on x86)
   SmallVector<Instruction *, 32> MatchedAddrModeInsts;
-  for (const std::pair<Value *, Type *> &Pair : MemoryUses) {
-    Value *Address = Pair.first;
+  for (const std::pair<Use *, Type *> &Pair : MemoryUses) {
+    Value *Address = Pair.first->get();
+    Instruction *UserI = cast<Instruction>(Pair.first->getUser());
     Type *AddressAccessTy = Pair.second;
     unsigned AS = Address->getType()->getPointerAddressSpace();
 
@@ -5163,7 +5171,7 @@ bool AddressingModeMatcher::isProfitableToFoldIntoAddressingMode(
     TypePromotionTransaction::ConstRestorationPt LastKnownGood =
         TPT.getRestorationPoint();
     AddressingModeMatcher Matcher(MatchedAddrModeInsts, TLI, TRI, LI, getDTFn,
-                                  AddressAccessTy, AS, MemoryInst, Result,
+                                  AddressAccessTy, AS, UserI, Result,
                                   InsertedInsts, PromotedInsts, TPT,
                                   LargeOffsetGEP, OptSize, PSI, BFI);
     Matcher.IgnoreProfitability = true;
@@ -6034,6 +6042,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       int64_t Offset = LargeOffsetGEP->second;
       if (Offset != BaseOffset) {
         TargetLowering::AddrMode AddrMode;
+        AddrMode.HasBaseReg = true;
         AddrMode.BaseOffs = Offset - BaseOffset;
         // The result type of the GEP might not be the type of the memory
         // access.

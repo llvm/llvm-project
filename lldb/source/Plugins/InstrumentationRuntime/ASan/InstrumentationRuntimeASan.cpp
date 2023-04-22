@@ -113,7 +113,8 @@ StructuredData::ObjectSP InstrumentationRuntimeASan::RetrieveReportData() {
 
   ThreadSP thread_sp =
       process_sp->GetThreadList().GetExpressionExecutionThread();
-  StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+  StackFrameSP frame_sp =
+      thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
 
   if (!frame_sp)
     return StructuredData::ObjectSP();

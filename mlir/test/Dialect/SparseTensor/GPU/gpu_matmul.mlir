@@ -47,12 +47,34 @@
 //
 //
 // CHECK-LABEL: func.func @matmul
-// CHECK:       gpu.host_register
-// CHECK:       gpu.host_register
-// CHECK:       gpu.host_register
-// CHECK:       gpu.host_register
-// CHECK:       gpu.host_register
-// CHECK:       gpu.launch_func @sparse_kernels::@kernel0 blocks
+// CHECK:       gpu.wait async
+// CHECK:       gpu.alloc async
+// CHECK:       %[[S0:.*]] = gpu.memcpy async
+// CHECK:       gpu.wait async
+// CHECK:       gpu.alloc async
+// CHECK:       %[[S1:.*]] = gpu.memcpy async
+// CHECK:       gpu.wait async
+// CHECK:       gpu.alloc async
+// CHECK:       %[[S2:.*]] = gpu.memcpy async
+// CHECK:       gpu.wait async
+// CHECK:       gpu.alloc async
+// CHECK:       %[[S3:.*]] = gpu.memcpy async
+// CHECK:       gpu.wait async
+// CHECK:       gpu.alloc async
+// CHECK:       %[[S4:.*]] = gpu.memcpy async
+// CHECK:       gpu.wait [%[[S0]], %[[S1]], %[[S2]], %[[S3]], %[[S4]]
+// CHECK:       %[[T0:.*]] = gpu.launch_func async @sparse_kernels::@kernel0 blocks
+// CHECK:       %[[M0:.*]] = gpu.memcpy async [%[[T0]]]
+// CHECK:       %[[M1:.*]] = gpu.dealloc async [%[[M0]]]
+// CHECK:       %[[M2:.*]] = gpu.wait async
+// CHECK:       %[[M3:.*]] = gpu.dealloc async [%[[M2]]]
+// CHECK:       %[[M4:.*]] = gpu.wait async
+// CHECK:       %[[M5:.*]] = gpu.dealloc async [%[[M4]]]
+// CHECK:       %[[M6:.*]] = gpu.wait async
+// CHECK:       %[[M7:.*]] = gpu.dealloc async [%[[M6]]]
+// CHECK:       %[[M8:.*]] = gpu.wait async
+// CHECK:       %[[M9:.*]] = gpu.dealloc async [%[[M8]]]
+// CHECK:       gpu.wait [%[[M1]], %[[M3]], %[[M5]], %[[M7]], %[[M9]]
 //
 func.func @matmul(%A: tensor<?x?xf64, #CSR>, %B: tensor<?x?xf64>, %C_in: tensor<?x?xf64>) -> tensor<?x?xf64> {
   %C_out = linalg.matmul

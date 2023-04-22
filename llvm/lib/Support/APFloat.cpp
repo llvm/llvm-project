@@ -308,6 +308,20 @@ unsigned int APFloatBase::semanticsIntSizeInBits(const fltSemantics &semantics,
   return MinBitWidth;
 }
 
+bool APFloatBase::isRepresentableAsNormalIn(const fltSemantics &Src,
+                                            const fltSemantics &Dst) {
+  // Exponent range must be larger.
+  if (Src.maxExponent >= Dst.maxExponent || Src.minExponent <= Dst.minExponent)
+    return false;
+
+  // If the mantissa is long enough, the result value could still be denormal
+  // with a larger exponent range.
+  //
+  // FIXME: This condition is probably not accurate but also shouldn't be a
+  // practical concern with existing types.
+  return Dst.precision >= Src.precision;
+}
+
 unsigned APFloatBase::getSizeInBits(const fltSemantics &Sem) {
   return Sem.sizeInBits;
 }
