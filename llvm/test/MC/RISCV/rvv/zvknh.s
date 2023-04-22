@@ -19,16 +19,16 @@ vsha2ms.vv v10, v9, v8
 # CHECK-INST: vsha2ms.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xb6]
 # CHECK-UNKNOWN: 77 25 94 b6   <unknown>
-# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2. (SHA-256 only)){{$}}
+# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only)){{$}}
 
 vsha2ch.vv v10, v9, v8
 # CHECK-INST: vsha2ch.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xba]
 # CHECK-UNKNOWN: 77 25 94 ba   <unknown>
-# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2. (SHA-256 only)){{$}}
+# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only)){{$}}
 
 vsha2cl.vv v10, v9, v8
 # CHECK-INST: vsha2cl.vv v10, v9, v8
 # CHECK-ENCODING: [0x77,0x25,0x94,0xbe]
 # CHECK-UNKNOWN: 77 25 94 be   <unknown>
-# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2. (SHA-256 only)){{$}}
+# CHECK-ERROR: instruction requires the following: 'Zvknha' (Vector SHA-2 (SHA-256 only)){{$}}

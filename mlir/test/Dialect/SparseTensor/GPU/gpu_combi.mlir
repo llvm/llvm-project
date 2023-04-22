@@ -7,12 +7,46 @@
 
 //
 // CHECK-LABEL: gpu.module @sparse_kernels
-// CHECK-DAG:   gpu.func @kernel0
-// CHECK-DAG:   gpu.func @kernel1
+// CHECK:       gpu.func @kernel1
+// CHECK:       gpu.func @kernel0
 //
 // CHECK-LABEL: func.func @matmuls
-// CHECK-DAG:   gpu.launch_func @sparse_kernels::@kernel0 blocks
-// CHECK-DAG:   gpu.launch_func @sparse_kernels::@kernel1 blocks
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       %[[T1:.*]] = gpu.launch_func async @sparse_kernels::@kernel1 blocks
+// CHECK:       gpu.memcpy async [%[[T1]]]
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.wait
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       gpu.alloc async
+// CHECK:       gpu.memcpy async
+// CHECK:       %[[T0:.*]] = gpu.launch_func async @sparse_kernels::@kernel0 blocks
+// CHECK:       gpu.memcpy async [%[[T0]]]
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.dealloc async
+// CHECK:       gpu.wait
 //
 func.func @matmuls(%A: tensor<1024x8xf64>,
                    %B: tensor<8x1024xf64, #CSR>,
