@@ -307,6 +307,13 @@ const u8 kPatchableCode14[] = {
     0x56,                           // push    esi
 };
 
+const u8 kUnsupportedCode1[] = {
+    0x0f, 0x0b,                     // ud2
+    0x0f, 0x0b,                     // ud2
+    0x0f, 0x0b,                     // ud2
+    0x0f, 0x0b,                     // ud2
+};
+
 // A buffer holding the dynamically generated code under test.
 u8* ActiveCode;
 const size_t ActiveCodeLength = 4096;
@@ -715,6 +722,13 @@ TEST(Interception, PatchableFunctionWithTrampoline) {
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode4, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode5, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode6, override, prefix));
+}
+
+TEST(Interception, UnsupportedInstructionWithTrampoline) {
+  TestOverrideFunction override = OverrideFunctionWithTrampoline;
+  FunctionPrefixKind prefix = FunctionPrefixPadding;
+
+  EXPECT_FALSE(TestFunctionPatching(kUnsupportedCode1, override, prefix));
 }
 
 TEST(Interception, PatchableFunctionPadding) {

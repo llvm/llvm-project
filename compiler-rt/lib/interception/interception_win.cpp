@@ -143,6 +143,8 @@ static const int kDirectBranchLength = kBranchLength + kAddressLength;
 
 static void InterceptionFailed() {
   // Do we have a good way to abort with an error message here?
+  // This acts like an abort when no debugger is attached. According to an old
+  // comment, calling abort() leads to an infinite recursion in CheckFailed.
   __debugbreak();
 }
 
@@ -658,9 +660,9 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   // Unknown instruction!
   // FIXME: Unknown instruction failures might happen when we add a new
   // interceptor or a new compiler version. In either case, they should result
-  // in visible and readable error messages. However, merely calling abort()
-  // leads to an infinite recursion in CheckFailed.
-  InterceptionFailed();
+  // in visible and readable error messages.
+  if (::IsDebuggerPresent())
+    __debugbreak();
   return 0;
 }
 
@@ -681,6 +683,8 @@ static bool CopyInstructions(uptr to, uptr from, size_t size) {
   while (cursor != size) {
     size_t rel_offset = 0;
     size_t instruction_size = GetInstructionSize(from + cursor, &rel_offset);
+    if (!instruction_size)
+      return false;
     _memcpy((void*)(to + cursor), (void*)(from + cursor),
             (size_t)instruction_size);
     if (rel_offset) {
