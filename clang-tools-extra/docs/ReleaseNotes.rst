@@ -150,6 +150,11 @@ New checks
   Converts standard library type traits of the form ``traits<...>::type`` and
   ``traits<...>::value`` into ``traits_t<...>`` and ``traits_v<...>`` respectively.
 
+- New :doc:`performance-avoid-endl
+  <clang-tidy/checks/performance/avoid-endl>` check.
+
+  Finds uses of ``std::endl`` on streams and replaces them with ``'\n'``.
+
 - New :doc:`readability-avoid-unconditional-preprocessor-if
   <clang-tidy/checks/readability/avoid-unconditional-preprocessor-if>` check.
 
