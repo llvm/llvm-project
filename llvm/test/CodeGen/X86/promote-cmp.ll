@@ -37,8 +37,8 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm9[2,1,3,3]
 ; SSE2-NEXT:    psllq $63, %xmm2
-; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm2
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    pandn %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm2, %xmm1
