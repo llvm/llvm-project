@@ -2845,7 +2845,8 @@ protected:
       return false;
     }
 
-    StackFrameSP frame_sp = thread->GetSelectedFrame();
+    StackFrameSP frame_sp =
+        thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
     ValueObjectSP result_valobj_sp;
     EvaluateExpressionOptions options;
     lldb::ExpressionResults expr_result = target_sp->EvaluateExpression(

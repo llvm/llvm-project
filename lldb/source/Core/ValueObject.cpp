@@ -2852,7 +2852,7 @@ ValueObject::EvaluationPoint::EvaluationPoint(ExecutionContextScope *exe_scope,
         StackFrameSP frame_sp(exe_ctx.GetFrameSP());
         if (!frame_sp) {
           if (use_selected)
-            frame_sp = thread_sp->GetSelectedFrame();
+            frame_sp = thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
         }
         if (frame_sp)
           m_exe_ctx_ref.SetFrameSP(frame_sp);

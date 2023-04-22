@@ -263,10 +263,11 @@ void Thread::BroadcastSelectedFrameChange(StackID &new_frame_id) {
                    new ThreadEventData(this->shared_from_this(), new_frame_id));
 }
 
-lldb::StackFrameSP Thread::GetSelectedFrame() {
+lldb::StackFrameSP
+Thread::GetSelectedFrame(SelectMostRelevant select_most_relevant) {
   StackFrameListSP stack_frame_list_sp(GetStackFrameList());
   StackFrameSP frame_sp = stack_frame_list_sp->GetFrameAtIndex(
-      stack_frame_list_sp->GetSelectedFrameIndex());
+      stack_frame_list_sp->GetSelectedFrameIndex(select_most_relevant));
   FrameSelectedCallback(frame_sp.get());
   return frame_sp;
 }
@@ -297,7 +298,7 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
   const bool broadcast = true;
   bool success = SetSelectedFrameByIndex(frame_idx, broadcast);
   if (success) {
-    StackFrameSP frame_sp = GetSelectedFrame();
+    StackFrameSP frame_sp = GetSelectedFrame(DoNoSelectMostRelevantFrame);
     if (frame_sp) {
       bool already_shown = false;
       SymbolContext frame_sc(

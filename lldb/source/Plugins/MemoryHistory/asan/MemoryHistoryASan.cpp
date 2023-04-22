@@ -154,7 +154,8 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   if (!thread_sp)
     return result;
 
-  StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+  StackFrameSP frame_sp =
+      thread_sp->GetSelectedFrame(DoNoSelectMostRelevantFrame);
   if (!frame_sp)
     return result;
 
