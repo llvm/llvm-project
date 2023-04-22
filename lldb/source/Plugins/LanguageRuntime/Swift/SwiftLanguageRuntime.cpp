@@ -980,7 +980,8 @@ SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
   StackFrameSP frame_sp = object.GetFrameSP();
   if (!frame_sp)
       frame_sp 
-          = m_process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
+          = m_process.GetThreadList().GetSelectedThread()
+              ->GetSelectedFrame(DoNoSelectMostRelevantFrame);
 
   auto swift_ast_ctx =
       static_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
@@ -1044,7 +1045,8 @@ SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object,
   StackFrameSP frame_sp = object.GetFrameSP();
   if (!frame_sp)
     frame_sp 
-        = m_process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
+        = m_process.GetThreadList().GetSelectedThread()
+            ->GetSelectedFrame(DoNoSelectMostRelevantFrame);
   auto eval_result = m_process.GetTarget().EvaluateExpression(
       expr_string,
       frame_sp.get(),
