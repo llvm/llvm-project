@@ -19,6 +19,7 @@ Example:
 Consider the following code:
 
 .. code-block:: c++
+
     #include <iostream>
 
     int main() {
@@ -28,6 +29,7 @@ Consider the following code:
 Which gets transformed into:
 
 .. code-block:: c++
+
     #include <iostream>
 
     int main() {
@@ -49,6 +51,7 @@ If you do need to flush the stream buffer, you can use ``std::flush``
 explicitly like this:
 
 .. code-block:: c++
+
     #include <iostream>
 
     int main() {
