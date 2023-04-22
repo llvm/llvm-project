@@ -13,8 +13,9 @@ target triple = "nvptx64-nvidia-cuda"
 %"class.sycl::_V1::detail::half_impl::half" = type { half }
 %complex_half = type { half, half }
 
-; CHECK: .param .align 4 .b8 param2[4];
-; CHECK: st.param.v2.b16         [param2+0], {%h2, %h1};
+; CHECK: .param .align 2 .b8 param2[4];
+; CHECK: st.param.b16   [param2+0], %h1;
+; CHECK: st.param.b16   [param2+2], %h2;
 ; CHECK: .param .align 2 .b8 retval0[4];
 ; CHECK: call.uni (retval0),
 ; CHECK-NEXT: _Z20__spirv_GroupCMulKHRjjN5__spv12complex_halfE,
@@ -29,15 +30,16 @@ entry:
 ;;
 declare ptr @usefp(ptr %fp)
 ; CHECK: .func callee(
-; CHECK-NEXT: .param .align 4 .b8 callee_param_0[4]
+; CHECK-NEXT: .param .align 2 .b8 callee_param_0[4]
 define internal void @callee(ptr byval(%"class.complex") %byval_arg) {
   ret void
 }
 define void @boom() {
   %fp = call ptr @usefp(ptr @callee)
-  ; CHECK: .param .align 4 .b8 param0[4];
-  ; CHECK: st.param.v2.b16 [param0+0]
-  ; CHECK: .callprototype ()_ (.param .align 4 .b8 _[4]);
+  ; CHECK: .param .align 2 .b8 param0[4];
+  ; CHECK: st.param.b16 [param0+0], %h1;
+  ; CHECK: st.param.b16 [param0+2], %h2;
+  ; CHECK: .callprototype ()_ (.param .align 2 .b8 _[4]);
   call void %fp(ptr byval(%"class.complex") null)
   ret void
 }
