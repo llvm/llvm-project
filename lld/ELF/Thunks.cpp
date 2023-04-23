@@ -1134,7 +1134,9 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
   return rel.type == R_PPC64_REL24 || rel.type == R_PPC64_REL14;
 }
 
-Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {}
+Thunk::Thunk(Symbol &d, int64_t a) : destination(d), addend(a), offset(0) {
+  destination.thunkAccessed = true;
+}
 
 Thunk::~Thunk() = default;
 

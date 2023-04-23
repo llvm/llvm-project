@@ -93,12 +93,11 @@ using MacroList = SmallVector<EnumMacro>;
 enum class IncludeGuard { None, FileChanged, IfGuard, DefineGuard };
 
 struct FileState {
-  FileState()
-      : ConditionScopes(0), LastLine(0), GuardScanner(IncludeGuard::None) {}
+  FileState() = default;
 
-  int ConditionScopes;
-  unsigned int LastLine;
-  IncludeGuard GuardScanner;
+  int ConditionScopes = 0;
+  unsigned int LastLine = 0;
+  IncludeGuard GuardScanner = IncludeGuard::None;
   SourceLocation LastMacroLocation;
 };
 
