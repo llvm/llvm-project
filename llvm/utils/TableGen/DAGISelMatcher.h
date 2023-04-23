@@ -215,10 +215,6 @@ public:
     return Res;
   }
 
-  void setChildren(SmallVectorImpl<Matcher *> &&children) {
-    Children = std::move(children);
-  }
-
   void setNumChildren(unsigned NC) {
     if (NC < Children.size()) {
       // delete any children we're about to lose pointers to.

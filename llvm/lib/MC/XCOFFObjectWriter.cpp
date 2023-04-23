@@ -206,7 +206,7 @@ struct DwarfSectionEntry : public SectionEntry {
 
 struct ExceptionTableEntry {
   const MCSymbol *Trap;
-  uint64_t TrapAddress;
+  uint64_t TrapAddress = ~0ul;
   unsigned Lang;
   unsigned Reason;
 

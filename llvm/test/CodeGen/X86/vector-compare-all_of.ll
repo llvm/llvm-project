@@ -957,7 +957,7 @@ define i1 @bool_reduction_v2f64(<2 x double> %x, <2 x double> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpltpd %xmm0, %xmm1
 ; SSE-NEXT:    movmskpd %xmm1, %eax
-; SSE-NEXT:    cmpb $3, %al
+; SSE-NEXT:    cmpl $3, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -988,7 +988,7 @@ define i1 @bool_reduction_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cmpeqps %xmm1, %xmm0
 ; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    cmpb $15, %al
+; SSE-NEXT:    cmpl $15, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -1023,7 +1023,7 @@ define i1 @bool_reduction_v4f64(<4 x double> %x, <4 x double> %y) {
 ; SSE-NEXT:    cmplepd %xmm0, %xmm2
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
 ; SSE-NEXT:    movmskps %xmm2, %eax
-; SSE-NEXT:    cmpb $15, %al
+; SSE-NEXT:    cmpl $15, %eax
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -1120,8 +1120,7 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    movmskpd %xmm1, %eax
-; SSE2-NEXT:    xorl $3, %eax
-; SSE2-NEXT:    cmpb $3, %al
+; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -1129,17 +1128,14 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pcmpeqq %xmm1, %xmm0
 ; SSE42-NEXT:    movmskpd %xmm0, %eax
-; SSE42-NEXT:    xorl $3, %eax
-; SSE42-NEXT:    cmpb $3, %al
+; SSE42-NEXT:    testl %eax, %eax
 ; SSE42-NEXT:    sete %al
 ; SSE42-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: bool_reduction_v2i64:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
-; AVX1OR2-NEXT:    xorl $3, %eax
-; AVX1OR2-NEXT:    cmpb $3, %al
+; AVX1OR2-NEXT:    vtestpd %xmm0, %xmm0
 ; AVX1OR2-NEXT:    sete %al
 ; AVX1OR2-NEXT:    retq
 ;
@@ -1165,7 +1161,7 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    cmpb $15, %al
+; SSE2-NEXT:    cmpl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -1174,8 +1170,7 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE42-NEXT:    pminud %xmm0, %xmm1
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE42-NEXT:    movmskps %xmm1, %eax
-; SSE42-NEXT:    xorl $15, %eax
-; SSE42-NEXT:    cmpb $15, %al
+; SSE42-NEXT:    testl %eax, %eax
 ; SSE42-NEXT:    sete %al
 ; SSE42-NEXT:    retq
 ;
@@ -1183,9 +1178,7 @@ define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovmskps %xmm0, %eax
-; AVX1OR2-NEXT:    xorl $15, %eax
-; AVX1OR2-NEXT:    cmpb $15, %al
+; AVX1OR2-NEXT:    vtestps %xmm0, %xmm0
 ; AVX1OR2-NEXT:    sete %al
 ; AVX1OR2-NEXT:    retq
 ;
@@ -1247,7 +1240,7 @@ define i1 @bool_reduction_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpgtb %xmm1, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    cmpw $-1, %ax
+; SSE-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
@@ -1255,7 +1248,7 @@ define i1 @bool_reduction_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1OR2-NEXT:    cmpw $-1, %ax
+; AVX1OR2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; AVX1OR2-NEXT:    sete %al
 ; AVX1OR2-NEXT:    retq
 ;
@@ -1300,7 +1293,7 @@ define i1 @bool_reduction_v4i64(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    cmpb $15, %al
+; SSE2-NEXT:    cmpl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -1310,7 +1303,7 @@ define i1 @bool_reduction_v4i64(<4 x i64> %x, <4 x i64> %y) {
 ; SSE42-NEXT:    pcmpgtq %xmm0, %xmm2
 ; SSE42-NEXT:    packssdw %xmm3, %xmm2
 ; SSE42-NEXT:    movmskps %xmm2, %eax
-; SSE42-NEXT:    cmpb $15, %al
+; SSE42-NEXT:    cmpl $15, %eax
 ; SSE42-NEXT:    sete %al
 ; SSE42-NEXT:    retq
 ;
