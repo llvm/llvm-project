@@ -305,7 +305,7 @@ public:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag,
+  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
@@ -1047,7 +1047,7 @@ Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
 
 Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   if (ClGenerateTagsWithCalls)
-    return getNextTagWithCall(IRB);
+    return nullptr;
   if (StackBaseTag)
     return StackBaseTag;
   // Extract some entropy from the stack pointer for the tags.
@@ -1276,7 +1276,7 @@ static bool isLifetimeIntrinsic(Value *V) {
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
-                                         Value *StackTag,
+                                         Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
                                          const PostDominatorTree &PDT,
                                          const LoopInfo &LI) {
@@ -1342,7 +1342,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
-      Value *UARTag = getUARTag(IRB);
       // When untagging, use the `AlignedSize` because we need to set the tags
       // for the entire alloca to zero. If we used `Size` here, we would
       // keep the last granule tagged, and store zero in the last byte of the
@@ -1446,9 +1445,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
     const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
-    Value *StackTag =
-        ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(SInfo, StackTag, DT, PDT, LI);
+    Value *StackTag = getStackBaseTag(EntryIRB);
+    Value *UARTag = getUARTag(EntryIRB);
+    instrumentStack(SInfo, StackTag, UARTag, DT, PDT, LI);
   }
 
   // If we split the entry block, move any allocas that were originally in the
