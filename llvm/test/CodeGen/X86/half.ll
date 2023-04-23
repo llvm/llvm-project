@@ -1708,12 +1708,12 @@ define <8 x half> @maxnum_v8f16(<8 x half> %0, <8 x half> %1) #0 {
 ; BWON-F16C-NEXT:  .LBB26_6:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm3, %xmm2
 ; BWON-F16C-NEXT:    vmovd %xmm2, %edx
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; BWON-F16C-NEXT:    vpextrw $0, %xmm2, %esi
 ; BWON-F16C-NEXT:    movzwl %si, %esi
 ; BWON-F16C-NEXT:    vmovd %esi, %xmm2
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm0[1,0]
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
 ; BWON-F16C-NEXT:    vpextrw $0, %xmm3, %esi
 ; BWON-F16C-NEXT:    movzwl %si, %esi
 ; BWON-F16C-NEXT:    vmovd %esi, %xmm3

@@ -1316,7 +1316,7 @@ define half @extract_f16_3(<8 x half> %x) {
 define half @extract_f16_4(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 4
    ret half %res
@@ -1570,14 +1570,14 @@ define void @extract_store_f16_3(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_4(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_4:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 4
