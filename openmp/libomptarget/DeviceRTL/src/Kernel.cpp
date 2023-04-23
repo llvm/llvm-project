@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Debug.h"
+#include "Environment.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
@@ -23,11 +24,12 @@ using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
-static void inititializeRuntime(bool IsSPMD) {
+static void inititializeRuntime(bool IsSPMD,
+                                KernelEnvironmentTy &KernelEnvironment) {
   // Order is important here.
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
-  state::init(IsSPMD);
+  state::init(IsSPMD, KernelEnvironment);
 }
 
 /// Simple generic state machine for worker threads.
@@ -67,16 +69,17 @@ extern "C" {
 ///
 /// \param Ident               Source location identification, can be NULL.
 ///
-int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine) {
+int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
   FunctionTracingRAII();
-  const bool IsSPMD =
-      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
+  bool IsSPMD = Configuration.ExecMode &
+                llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
-    inititializeRuntime(/* IsSPMD */ true);
+    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment);
     synchronize::threadsAligned(atomic::relaxed);
   } else {
-    inititializeRuntime(/* IsSPMD */ false);
+    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment);
     // No need to wait since only the main threads will execute user
     // code and workers will run into a barrier right away.
   }
@@ -108,7 +111,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   // thread's warp, so none of its threads can ever be active worker threads.
   if (UseGenericStateMachine &&
       mapping::getThreadIdInBlock() < mapping::getBlockSize(IsSPMD)) {
-    genericStateMachine(Ident);
+    genericStateMachine(KernelEnvironment.Ident);
   } else {
     // Retrieve the work function just to ensure we always call
     // __kmpc_kernel_parallel even if a custom state machine is used.
@@ -132,11 +135,10 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
+void __kmpc_target_deinit() {
   FunctionTracingRAII();
-  const bool IsSPMD =
-      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
-
+  bool IsSPMD = mapping::isSPMDMode();
+  state::assumeInitialState(IsSPMD);
   if (IsSPMD)
     return;
 
