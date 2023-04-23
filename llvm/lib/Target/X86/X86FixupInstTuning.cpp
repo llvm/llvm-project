@@ -129,7 +129,7 @@ bool X86FixupInstTuningPass::processInstruction(
   // `vpermilps r, i` -> `vshufps r, r, i`
   // `vpermilps r, i, k` -> `vshufps r, r, i, k`
   // `vshufps` is always as fast or faster than `vpermilps` and takes
-  // 1 less byte of code size for VEX and SSE encoding.
+  // 1 less byte of code size for VEX and EVEX encoding.
   auto ProcessVPERMILPSri = [&](unsigned NewOpc) -> bool {
     if (!NewOpcPreferable(NewOpc))
       return false;
