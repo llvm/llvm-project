@@ -25,15 +25,25 @@ define i1 @movmskps_noneof_bitcast_v4f64(<4 x double> %a0) {
 }
 
 define i1 @movmskps_allof_bitcast_v4f64(<4 x double> %a0) {
-; CHECK-LABEL: movmskps_allof_bitcast_v4f64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vmovmskpd %ymm0, %eax
-; CHECK-NEXT:    cmpl $15, %eax
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retq
+; AVX1-LABEL: movmskps_allof_bitcast_v4f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vtestpd %ymm1, %ymm0
+; AVX1-NEXT:    setb %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: movmskps_allof_bitcast_v4f64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vcmpeqpd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vtestpd %ymm1, %ymm0
+; AVX2-NEXT:    setb %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
   %1 = fcmp oeq <4 x double> %a0, zeroinitializer
   %2 = sext <4 x i1> %1 to <4 x i64>
   %3 = bitcast <4 x i64> %2 to <8 x float>

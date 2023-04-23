@@ -2398,7 +2398,6 @@ void Demangler::dumpBackReferences() {
 }
 
 char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
-                              char *Buf, size_t *N,
                               int *Status, MSDemangleFlags Flags) {
   Demangler D;
 
@@ -2423,14 +2422,13 @@ char *llvm::microsoftDemangle(const char *MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoVariableType);
 
   int InternalStatus = demangle_success;
+  char *Buf;
   if (D.Error)
     InternalStatus = demangle_invalid_mangled_name;
   else {
-    OutputBuffer OB(Buf, N);
+    OutputBuffer OB;
     AST->output(OB, OF);
     OB += '\0';
-    if (N != nullptr)
-      *N = OB.getCurrentPosition();
     Buf = OB.getBuffer();
   }
 
