@@ -143,13 +143,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   return false;
 }
 
-bool TargetMachine::useEmulatedTLS() const {
-  // Returns Options.EmulatedTLS if the -emulated-tls or -no-emulated-tls
-  // was specified explicitly; otherwise uses target triple to decide default.
-  if (Options.ExplicitEmulatedTLS)
-    return Options.EmulatedTLS;
-  return getTargetTriple().hasDefaultEmulatedTLS();
-}
+bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
