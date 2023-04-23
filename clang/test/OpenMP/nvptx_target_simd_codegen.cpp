@@ -72,7 +72,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // CHECK45-64-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK45-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l29_kernel_environment)
 // CHECK45-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-64:       user_code.entry:
@@ -124,7 +124,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    store i32 [[ADD10]], ptr [[I3]], align 4
 // CHECK45-64-NEXT:    br label [[SIMD_IF_END]]
 // CHECK45-64:       simd.if.end:
-// CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-64-NEXT:    ret void
 //
 //
@@ -142,7 +142,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // CHECK45-64-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 8
 // CHECK45-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 8
-// CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l34_kernel_environment)
 // CHECK45-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-64:       user_code.entry:
@@ -198,7 +198,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    store i32 [[ADD12]], ptr [[I3]], align 4
 // CHECK45-64-NEXT:    br label [[SIMD_IF_END]]
 // CHECK45-64:       simd.if.end:
-// CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-64-NEXT:    ret void
 //
 //
@@ -211,7 +211,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK45-64-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK45-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l39_kernel_environment)
 // CHECK45-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-64:       user_code.entry:
@@ -244,7 +244,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    ret void
 // CHECK45-64:       omp.inner.for.end:
 // CHECK45-64-NEXT:    store i32 10, ptr [[I]], align 4
-// CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-64-NEXT:    ret void
 //
 //
@@ -261,7 +261,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // CHECK45-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK45-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// CHECK45-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l44_kernel_environment)
 // CHECK45-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK45-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-64:       user_code.entry:
@@ -299,7 +299,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[N1]], align 4
 // CHECK45-64-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
 // CHECK45-64-NEXT:    store i32 [[ADD4]], ptr [[TMP1]], align 4
-// CHECK45-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-64-NEXT:    ret void
 //
 //
@@ -317,7 +317,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK45-32-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK45-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l29_kernel_environment)
 // CHECK45-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32:       user_code.entry:
@@ -368,7 +368,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    store i32 [[ADD10]], ptr [[I3]], align 4
 // CHECK45-32-NEXT:    br label [[SIMD_IF_END]]
 // CHECK45-32:       simd.if.end:
-// CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-NEXT:    ret void
 //
 //
@@ -386,7 +386,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK45-32-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK45-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4
-// CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l34_kernel_environment)
 // CHECK45-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32:       user_code.entry:
@@ -441,7 +441,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    store i32 [[ADD12]], ptr [[I3]], align 4
 // CHECK45-32-NEXT:    br label [[SIMD_IF_END]]
 // CHECK45-32:       simd.if.end:
-// CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-NEXT:    ret void
 //
 //
@@ -454,7 +454,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK45-32-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK45-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l39_kernel_environment)
 // CHECK45-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32:       user_code.entry:
@@ -486,7 +486,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    ret void
 // CHECK45-32:       omp.inner.for.end:
 // CHECK45-32-NEXT:    store i32 10, ptr [[I]], align 4
-// CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-NEXT:    ret void
 //
 //
@@ -503,7 +503,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 4
 // CHECK45-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
 // CHECK45-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[N_ADDR]], align 4
-// CHECK45-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l44_kernel_environment)
 // CHECK45-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK45-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32:       user_code.entry:
@@ -540,7 +540,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[N1]], align 4
 // CHECK45-32-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
 // CHECK45-32-NEXT:    store i32 [[ADD4]], ptr [[TMP1]], align 4
-// CHECK45-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-NEXT:    ret void
 //
 //
@@ -558,7 +558,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l29_kernel_environment)
 // CHECK45-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32-EX:       user_code.entry:
@@ -609,7 +609,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    store i32 [[ADD10]], ptr [[I3]], align 4
 // CHECK45-32-EX-NEXT:    br label [[SIMD_IF_END]]
 // CHECK45-32-EX:       simd.if.end:
-// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
@@ -627,7 +627,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4
-// CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l34_kernel_environment)
 // CHECK45-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32-EX:       user_code.entry:
@@ -682,7 +682,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    store i32 [[ADD12]], ptr [[I3]], align 4
 // CHECK45-32-EX-NEXT:    br label [[SIMD_IF_END]]
 // CHECK45-32-EX:       simd.if.end:
-// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
@@ -695,7 +695,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK45-32-EX-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l39_kernel_environment)
 // CHECK45-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK45-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32-EX:       user_code.entry:
@@ -727,7 +727,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    ret void
 // CHECK45-32-EX:       omp.inner.for.end:
 // CHECK45-32-EX-NEXT:    store i32 10, ptr [[I]], align 4
-// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
@@ -744,7 +744,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
 // CHECK45-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[N_ADDR]], align 4
-// CHECK45-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK45-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l44_kernel_environment)
 // CHECK45-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK45-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK45-32-EX:       user_code.entry:
@@ -781,7 +781,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    [[TMP9:%.*]] = load i32, ptr [[N1]], align 4
 // CHECK45-32-EX-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
 // CHECK45-32-EX-NEXT:    store i32 [[ADD4]], ptr [[TMP1]], align 4
-// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK45-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK45-32-EX-NEXT:    ret void
 //
 //
@@ -799,7 +799,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l29_kernel_environment)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -851,7 +851,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store i32 [[ADD10]], ptr [[I3]], align 4
 // CHECK-64-NEXT:    br label [[SIMD_IF_END]]
 // CHECK-64:       simd.if.end:
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 //
 //
@@ -869,7 +869,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store i64 [[N]], ptr [[N_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l34_kernel_environment)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -925,7 +925,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store i32 [[ADD12]], ptr [[I3]], align 4
 // CHECK-64-NEXT:    br label [[SIMD_IF_END]]
 // CHECK-64:       simd.if.end:
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 //
 //
@@ -938,7 +938,7 @@ int bar(int n){
 // CHECK-64-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-64-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l39_kernel_environment)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -971,7 +971,7 @@ int bar(int n){
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       omp.inner.for.end:
 // CHECK-64-NEXT:    store i32 10, ptr [[I]], align 4
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 //
 //
@@ -988,7 +988,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[N_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l44_kernel_environment)
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-64:       user_code.entry:
@@ -1026,7 +1026,7 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[N1]], align 4
 // CHECK-64-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
 // CHECK-64-NEXT:    store i32 [[ADD4]], ptr [[TMP1]], align 4
-// CHECK-64-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 //
 //
@@ -1044,7 +1044,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l29_kernel_environment)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -1095,7 +1095,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store i32 [[ADD10]], ptr [[I3]], align 4
 // CHECK-32-NEXT:    br label [[SIMD_IF_END]]
 // CHECK-32:       simd.if.end:
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 //
 //
@@ -1113,7 +1113,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l34_kernel_environment)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -1168,7 +1168,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store i32 [[ADD12]], ptr [[I3]], align 4
 // CHECK-32-NEXT:    br label [[SIMD_IF_END]]
 // CHECK-32:       simd.if.end:
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 //
 //
@@ -1181,7 +1181,7 @@ int bar(int n){
 // CHECK-32-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l39_kernel_environment)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -1213,7 +1213,7 @@ int bar(int n){
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       omp.inner.for.end:
 // CHECK-32-NEXT:    store i32 10, ptr [[I]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 //
 //
@@ -1230,7 +1230,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
 // CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[N_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l44_kernel_environment)
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32:       user_code.entry:
@@ -1267,7 +1267,7 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[N1]], align 4
 // CHECK-32-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
 // CHECK-32-NEXT:    store i32 [[ADD4]], ptr [[TMP1]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 //
 //
@@ -1285,7 +1285,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l29_kernel_environment)
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1336,7 +1336,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store i32 [[ADD10]], ptr [[I3]], align 4
 // CHECK-32-EX-NEXT:    br label [[SIMD_IF_END]]
 // CHECK-32-EX:       simd.if.end:
-// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 //
 //
@@ -1354,7 +1354,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[AA]], ptr [[AA_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AA_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l34_kernel_environment)
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1409,7 +1409,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store i32 [[ADD12]], ptr [[I3]], align 4
 // CHECK-32-EX-NEXT:    br label [[SIMD_IF_END]]
 // CHECK-32-EX:       simd.if.end:
-// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 //
 //
@@ -1422,7 +1422,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-32-EX-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l39_kernel_environment)
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1454,7 +1454,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       omp.inner.for.end:
 // CHECK-32-EX-NEXT:    store i32 10, ptr [[I]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 //
 //
@@ -1471,7 +1471,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[N]], ptr [[N_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 4
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[N_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIiET_i_l44_kernel_environment)
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK-32-EX:       user_code.entry:
@@ -1508,6 +1508,6 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP9:%.*]] = load i32, ptr [[N1]], align 4
 // CHECK-32-EX-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP8]], [[TMP9]]
 // CHECK-32-EX-NEXT:    store i32 [[ADD4]], ptr [[TMP1]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 //
