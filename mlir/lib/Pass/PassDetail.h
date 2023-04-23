@@ -21,7 +21,7 @@ struct PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
   using Base = tracing::ActionImpl<PassExecutionAction>;
   PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass)
       : Base(irUnits), pass(pass) {}
-  static constexpr StringLiteral tag = "pass-execution-action";
+  static constexpr StringLiteral tag = "pass-execution";
   void print(raw_ostream &os) const override;
   const Pass &getPass() const { return pass; }
   Operation *getOp() const {
