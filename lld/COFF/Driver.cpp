@@ -445,6 +445,8 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_editandcontinue:
     case OPT_guardsym:
     case OPT_throwingnew:
+    case OPT_inferasanlibs:
+    case OPT_inferasanlibs_no:
       break;
     default:
       error(arg->getSpelling() + " is not allowed in .drectve (" +
@@ -1932,6 +1934,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->stdcallFixup =
       args.hasFlag(OPT_stdcall_fixup, OPT_stdcall_fixup_no, config->mingw);
   config->warnStdcallFixup = !args.hasArg(OPT_stdcall_fixup);
+
+  if (args.hasFlag(OPT_inferasanlibs, OPT_inferasanlibs_no, false))
+    warn("ignoring '/inferasanlibs', this flag is not supported");
 
   // Don't warn about long section names, such as .debug_info, for mingw or
   // when -debug:dwarf is requested.
