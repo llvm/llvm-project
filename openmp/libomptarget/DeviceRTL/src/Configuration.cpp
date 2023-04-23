@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Configuration.h"
-#include "Environment.h"
+#include "DeviceEnvironment.h"
 #include "State.h"
 #include "Types.h"
 
@@ -53,9 +53,7 @@ bool config::isDebugMode(config::DebugKind Kind) {
 bool config::mayUseThreadStates() { return !__omp_rtl_assume_no_thread_state; }
 
 bool config::mayUseNestedParallelism() {
-  if (__omp_rtl_assume_no_nested_parallelism)
-    return false;
-  return state::getKernelEnvironment().Configuration.MayUseNestedParallelism;
+  return !__omp_rtl_assume_no_nested_parallelism;
 }
 
 #pragma omp end declare target
