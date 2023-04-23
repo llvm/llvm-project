@@ -25,7 +25,7 @@
 
 define void @shuffle_load() {
 ; SSE-LABEL: 'shuffle_load'
-; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
+; SSE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sf_2xi8 = shufflevector <2 x i8> %ld_2xi8, <2 x i8> undef, <2 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_4xi8 = load <4 x i8>, ptr undef, align 4
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sf_4xi8 = shufflevector <4 x i8> %ld_4xi8, <4 x i8> undef, <4 x i32> zeroinitializer
@@ -88,7 +88,7 @@ define void @shuffle_load() {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE2-LABEL: 'shuffle_load'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sf_2xi8 = shufflevector <2 x i8> %ld_2xi8, <2 x i8> undef, <2 x i32> zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_4xi8 = load <4 x i8>, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sf_4xi8 = shufflevector <4 x i8> %ld_4xi8, <4 x i8> undef, <4 x i32> zeroinitializer
@@ -151,7 +151,7 @@ define void @shuffle_load() {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE3-LABEL: 'shuffle_load'
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sf_2xi8 = shufflevector <2 x i8> %ld_2xi8, <2 x i8> undef, <2 x i32> zeroinitializer
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_4xi8 = load <4 x i8>, ptr undef, align 4
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sf_4xi8 = shufflevector <4 x i8> %ld_4xi8, <4 x i8> undef, <4 x i32> zeroinitializer
@@ -214,7 +214,7 @@ define void @shuffle_load() {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX-LABEL: 'shuffle_load'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sf_2xi8 = shufflevector <2 x i8> %ld_2xi8, <2 x i8> undef, <2 x i32> zeroinitializer
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_4xi8 = load <4 x i8>, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sf_4xi8 = shufflevector <4 x i8> %ld_4xi8, <4 x i8> undef, <4 x i32> zeroinitializer
@@ -277,7 +277,7 @@ define void @shuffle_load() {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX2-LABEL: 'shuffle_load'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sf_2xi8 = shufflevector <2 x i8> %ld_2xi8, <2 x i8> undef, <2 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_4xi8 = load <4 x i8>, ptr undef, align 4
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sf_4xi8 = shufflevector <4 x i8> %ld_4xi8, <4 x i8> undef, <4 x i32> zeroinitializer
@@ -340,7 +340,7 @@ define void @shuffle_load() {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'shuffle_load'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %ld_2xi8 = load <2 x i8>, ptr undef, align 2
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sf_2xi8 = shufflevector <2 x i8> %ld_2xi8, <2 x i8> undef, <2 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ld_4xi8 = load <4 x i8>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sf_4xi8 = shufflevector <4 x i8> %ld_4xi8, <4 x i8> undef, <4 x i32> zeroinitializer

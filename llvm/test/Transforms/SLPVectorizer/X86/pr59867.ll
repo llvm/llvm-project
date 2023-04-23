@@ -6,12 +6,15 @@
 
 define i1 @PR59867(ptr %s1, ptr %s2) {
 ; CHECK-LABEL: @PR59867(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i8>, ptr [[S1:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[S2:%.*]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TMP4]], i1 [[TMP5]], i1 false
+; CHECK-NEXT:    [[V1_1:%.*]] = load i8, ptr [[S1:%.*]], align 1
+; CHECK-NEXT:    [[V2_1:%.*]] = load i8, ptr [[S2:%.*]], align 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1_1]], [[V2_1]]
+; CHECK-NEXT:    [[S1_2:%.*]] = getelementptr inbounds i8, ptr [[S1]], i64 1
+; CHECK-NEXT:    [[V1_2:%.*]] = load i8, ptr [[S1_2]], align 1
+; CHECK-NEXT:    [[S2_2:%.*]] = getelementptr inbounds i8, ptr [[S2]], i64 1
+; CHECK-NEXT:    [[V2_2:%.*]] = load i8, ptr [[S2_2]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V1_2]], [[V2_2]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %v1.1 = load i8, ptr %s1, align 1
