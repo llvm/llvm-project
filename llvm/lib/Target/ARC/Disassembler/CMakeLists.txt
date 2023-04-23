@@ -2,9 +2,9 @@ add_llvm_component_library(LLVMARCDisassembler
   ARCDisassembler.cpp
 
   LINK_COMPONENTS
+  ARCInfo
   MCDisassembler
   Support
-  ARCInfo
 
   ADD_TO_COMPONENT
   ARC

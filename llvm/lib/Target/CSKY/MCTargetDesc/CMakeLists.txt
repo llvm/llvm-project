@@ -17,4 +17,4 @@ add_llvm_component_library(LLVMCSKYDesc
 
   ADD_TO_COMPONENT
   CSKY
-)
+  )
