@@ -30,10 +30,10 @@ define i32 @stores_align4(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <256 x i1> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 4
@@ -81,10 +81,10 @@ define i32 @stores_align4(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <256 x i1> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 4
@@ -132,10 +132,10 @@ define i32 @stores_align4(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <256 x i1> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i8> undef, ptr undef, align 4
@@ -183,11 +183,11 @@ define i32 @stores_align4(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <1 x i1> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <256 x i1> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i16> undef, ptr undef, align 4
@@ -324,151 +324,151 @@ define i32 @stores_partial_align4(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <9 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <10 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <23 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i16> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i16> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <3 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <5 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <7 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <11 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <12 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <13 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <13 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <14 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <15 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <19 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <23 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <29 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <31 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <35 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <37 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <39 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <43 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <43 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <45 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <45 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <46 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: store <47 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <51 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <55 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <55 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <59 x i8> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <12 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <14 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <19 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <21 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <22 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <23 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <43 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <45 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <46 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <47 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <49 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <50 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <51 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <52 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <53 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <54 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <55 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <56 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <59 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <61 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <62 x i1> undef, ptr undef, align 4
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <63 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <61 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: store <63 x i8> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <9 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <10 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <12 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <23 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <24 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <42 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <44 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <47 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <57 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <58 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <60 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i1> undef, ptr undef, align 4
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <63 x i1> undef, ptr undef, align 4
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'stores_partial_align4'
@@ -510,151 +510,151 @@ define i32 @stores_partial_align4(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <9 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <10 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <14 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i16> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i16> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <23 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <35 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <35 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <37 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <39 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <39 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <43 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <47 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <45 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <51 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <51 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <53 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <55 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <55 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i8> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i8> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <19 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <21 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <22 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <23 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <27 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <29 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <30 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <31 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <43 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <45 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <46 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <47 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <49 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <50 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <51 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <52 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <53 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <54 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <55 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <56 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <57 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <58 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <59 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <60 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <61 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <62 x i1> undef, ptr undef, align 4
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <63 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <23 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <24 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <25 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <26 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <28 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <31 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <47 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <58 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <60 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i1> undef, ptr undef, align 4
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <63 x i1> undef, ptr undef, align 4
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'stores_partial_align4'
@@ -696,151 +696,151 @@ define i32 @stores_partial_align4(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <23 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i16> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i16> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <19 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <21 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <22 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <23 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <35 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <31 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <37 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <38 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <39 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <37 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <43 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <47 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <47 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <51 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <55 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <54 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <55 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i8> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i8> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <19 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <21 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <22 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <23 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <43 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <45 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <46 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <47 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <51 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <53 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <54 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <55 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <59 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <61 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <62 x i1> undef, ptr undef, align 4
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <63 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <20 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <23 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <24 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <47 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <51 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <52 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <53 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <55 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <56 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <57 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <58 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <60 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i1> undef, ptr undef, align 4
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <63 x i1> undef, ptr undef, align 4
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'stores_partial_align4'
@@ -882,151 +882,151 @@ define i32 @stores_partial_align4(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x float> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <19 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <25 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i16> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i16> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <19 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <21 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <22 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <23 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <31 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <33 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <34 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <35 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <36 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <37 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <38 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <39 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <43 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <47 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <45 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <51 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <49 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <50 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <51 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <52 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <54 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <55 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <53 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <54 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <55 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <58 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <59 x i8> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <63 x i8> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <19 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <21 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <22 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <23 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <43 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <45 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <46 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <47 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <59 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <61 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <62 x i1> undef, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <63 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: store <63 x i8> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <20 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <23 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <24 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <35 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <36 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <37 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <38 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <39 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <40 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <42 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <44 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <47 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <48 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <49 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <50 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <52 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <55 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <56 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <57 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <58 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <60 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i1> undef, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i1> undef, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   store <1 x i64> undef, ptr undef, align 4
@@ -1276,10 +1276,10 @@ define i32 @stores_align1(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <256 x i1> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 1
@@ -1327,10 +1327,10 @@ define i32 @stores_align1(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <256 x i1> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 1
@@ -1378,10 +1378,10 @@ define i32 @stores_align1(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <256 x i1> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i8> undef, ptr undef, align 1
@@ -1429,11 +1429,11 @@ define i32 @stores_align1(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <1 x i1> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <256 x i1> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i16> undef, ptr undef, align 1
@@ -1570,151 +1570,151 @@ define i32 @stores_partial_align1(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <9 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <10 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <23 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i16> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i16> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <3 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <5 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <7 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <11 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <12 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <13 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <13 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <14 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <15 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <19 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <23 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <29 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <31 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <35 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <37 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <39 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <43 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <43 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <45 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <45 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <46 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: store <47 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <51 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <55 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <55 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <59 x i8> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <12 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <14 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <19 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <21 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <22 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <23 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <43 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <45 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <46 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <47 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <49 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <50 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <51 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <52 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <53 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <54 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <55 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <56 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <59 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <61 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <62 x i1> undef, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <63 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <61 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: store <63 x i8> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <9 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <10 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <12 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <23 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <24 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <42 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <44 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <47 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <57 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <58 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <60 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i1> undef, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <63 x i1> undef, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'stores_partial_align1'
@@ -1756,151 +1756,151 @@ define i32 @stores_partial_align1(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <9 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <10 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <14 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i16> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i16> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <23 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <35 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <35 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <37 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <39 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <39 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <43 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <47 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <45 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <51 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <51 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <53 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <55 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <55 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i8> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i8> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <19 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <21 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <22 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <23 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <27 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <29 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <30 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <31 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <43 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <45 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <46 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <47 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <49 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <50 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <51 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <52 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <53 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <54 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <55 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <56 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <57 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <58 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <59 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <60 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <61 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <62 x i1> undef, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <63 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <23 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <24 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <25 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <26 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <28 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <31 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <47 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <58 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <60 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i1> undef, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <63 x i1> undef, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'stores_partial_align1'
@@ -1942,151 +1942,151 @@ define i32 @stores_partial_align1(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <23 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i16> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i16> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <19 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <21 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <22 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <23 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <35 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <31 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <37 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <38 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <39 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <37 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <43 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <47 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <47 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <51 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <55 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <54 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <55 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i8> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i8> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <19 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <21 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <22 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <23 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <43 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <45 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <46 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <47 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <51 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <53 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <54 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <55 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <59 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <61 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <62 x i1> undef, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <63 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <20 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <23 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <24 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <47 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <51 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <52 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <53 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <55 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <56 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <57 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <58 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <60 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i1> undef, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <63 x i1> undef, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'stores_partial_align1'
@@ -2128,151 +2128,151 @@ define i32 @stores_partial_align1(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x float> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <19 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <25 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i16> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i16> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <19 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <21 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <22 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <23 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <31 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <33 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <34 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <35 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <36 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <37 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <38 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <39 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <43 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <47 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <45 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <51 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <49 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <50 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <51 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <52 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <54 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <55 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <53 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <54 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <55 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <58 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <59 x i8> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <63 x i8> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <19 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <21 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <22 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <23 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <43 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <45 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <46 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <47 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <59 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <61 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <62 x i1> undef, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <63 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: store <63 x i8> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <20 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <23 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <24 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <35 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <36 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <37 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <38 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <39 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <40 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <42 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <44 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <47 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <48 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <49 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <50 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <52 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <55 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <56 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <57 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <58 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <60 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i1> undef, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i1> undef, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   store <1 x i64> undef, ptr undef, align 1
@@ -2522,10 +2522,10 @@ define i32 @stores_align64(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <256 x i1> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 64
@@ -2573,10 +2573,10 @@ define i32 @stores_align64(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <256 x i1> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <32 x i8> undef, ptr undef, align 64
@@ -2624,10 +2624,10 @@ define i32 @stores_align64(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <256 x i1> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i8> undef, ptr undef, align 64
@@ -2675,11 +2675,11 @@ define i32 @stores_align64(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x double> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x ptr> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <1 x i1> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <256 x i1> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <32 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <16 x i16> undef, ptr undef, align 64
@@ -2816,151 +2816,151 @@ define i32 @stores_partial_align64(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <9 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <10 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <23 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i16> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i16> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <3 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <5 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <7 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <11 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <12 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <13 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <13 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <14 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <15 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <19 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <23 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <29 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <31 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <35 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <37 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <39 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <43 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <43 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <45 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <45 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <46 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: store <47 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <51 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <55 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <55 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <59 x i8> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <12 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <14 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <15 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <19 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <21 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <22 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <23 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <43 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <45 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <46 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <47 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <49 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <50 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <51 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <52 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <53 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <54 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <55 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <56 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <59 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <61 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <62 x i1> undef, ptr undef, align 64
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <63 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <61 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: store <63 x i8> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <9 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <10 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <12 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <23 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <24 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <42 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <44 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <47 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <57 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <58 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <60 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i1> undef, ptr undef, align 64
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <63 x i1> undef, ptr undef, align 64
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'stores_partial_align64'
@@ -3002,151 +3002,151 @@ define i32 @stores_partial_align64(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <9 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <10 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <11 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <12 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <13 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <14 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i16> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i16> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <23 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <27 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <35 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <35 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <37 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <39 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <39 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <43 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <47 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <45 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <51 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <51 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <53 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <55 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <55 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i8> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i8> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <19 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <21 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <22 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <23 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <25 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <26 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <27 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <29 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <30 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <31 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <43 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <45 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <46 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <47 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <49 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <50 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <51 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <52 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <53 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <54 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <55 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <56 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <57 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <58 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <59 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <60 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <61 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <62 x i1> undef, ptr undef, align 64
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <63 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <23 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <24 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <25 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <26 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <28 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <31 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <47 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <58 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <60 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i1> undef, ptr undef, align 64
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <63 x i1> undef, ptr undef, align 64
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'stores_partial_align64'
@@ -3188,151 +3188,151 @@ define i32 @stores_partial_align64(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <15 x float> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <17 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <18 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <19 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <20 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <21 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <22 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <23 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <24 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <28 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <29 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <30 x i16> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i16> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <19 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <21 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <22 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <23 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <35 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <31 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <37 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <38 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <39 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <37 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <38 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <43 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <47 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <47 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <51 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <55 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <54 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <55 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <59 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i8> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <61 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <62 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i8> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <19 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <21 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <22 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <23 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <33 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <34 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <35 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <36 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <37 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <38 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <39 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <40 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <41 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <42 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <43 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <44 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <45 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <46 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <47 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <48 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <49 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <50 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <51 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <52 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <53 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <54 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <55 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <56 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <57 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <58 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <59 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <60 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <61 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <62 x i1> undef, ptr undef, align 64
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <63 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <63 x i8> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <20 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <23 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <24 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <43 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <44 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <45 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <46 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <47 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <51 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <52 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <53 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <54 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <55 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <56 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <57 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <58 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <60 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i1> undef, ptr undef, align 64
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <63 x i1> undef, ptr undef, align 64
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'stores_partial_align64'
@@ -3374,151 +3374,151 @@ define i32 @stores_partial_align64(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x float> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <3 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <7 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <11 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <15 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <19 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <23 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <25 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i16> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i16> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <31 x i16> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <1 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <2 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <3 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <3 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <5 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <6 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <7 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <5 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <6 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <7 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <9 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <10 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <11 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <15 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <17 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <18 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <19 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <13 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <14 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <15 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <19 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <20 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <21 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <22 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <23 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <21 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <22 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <23 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <27 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <25 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <26 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <27 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <29 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <30 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <31 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <35 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <31 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <33 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <34 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <35 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <36 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <37 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <38 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <39 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <37 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <38 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <39 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <41 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <42 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <43 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <47 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <45 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <46 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <47 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <49 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <50 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <51 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <49 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <50 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <51 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <52 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <53 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <54 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <55 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <53 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <54 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: store <55 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <59 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <57 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <58 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <59 x i8> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <61 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: store <62 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: store <63 x i8> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <3 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <5 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <6 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <7 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <9 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <10 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <11 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <12 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <13 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <14 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <15 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <17 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <18 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <19 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <20 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <21 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <22 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <23 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <24 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <25 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <26 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <27 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <28 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <29 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <30 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <31 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <33 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <34 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <35 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <36 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <37 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <38 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <39 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <40 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <41 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <42 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <43 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <44 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <45 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <46 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <47 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: store <48 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <49 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <50 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <51 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <52 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <53 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <54 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <55 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <56 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <57 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <58 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <59 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <60 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <61 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <62 x i1> undef, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <63 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: store <63 x i8> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <3 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <5 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <6 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <7 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <9 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <10 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <11 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <12 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <13 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <14 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <15 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <17 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <18 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <19 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <20 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <21 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <22 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <23 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: store <24 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <25 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <26 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <27 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <28 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <29 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <30 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <31 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <33 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <34 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <35 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <36 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <37 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <38 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <39 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <40 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <41 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <42 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <43 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <44 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <45 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <46 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <47 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <48 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <49 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <50 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <51 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <52 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <53 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <54 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <55 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: store <56 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <57 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <58 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <59 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <60 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <61 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <62 x i1> undef, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <63 x i1> undef, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   store <1 x i64> undef, ptr undef, align 64
@@ -3921,11 +3921,11 @@ define i32 @loads_align4(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <4 x float>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <2 x double>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <2 x ptr>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <8 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = load <4 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = load <2 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <1 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <16 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <8 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <4 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %24 = load <2 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %25 = load <1 x i1>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %26 = load <256 x i1>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %27 = load <32 x i8>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %28 = load <16 x i16>, ptr undef, align 4
@@ -4708,17 +4708,17 @@ define i32 @loads_partial_align4(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %124 = load <61 x i8>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %125 = load <62 x i8>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %126 = load <63 x i8>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %127 = load <3 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %128 = load <5 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %129 = load <6 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %130 = load <7 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %131 = load <9 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %132 = load <10 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %133 = load <11 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %134 = load <12 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %135 = load <13 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %136 = load <14 x i1>, ptr undef, align 4
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %137 = load <15 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %127 = load <3 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %128 = load <5 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %129 = load <6 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %130 = load <7 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %131 = load <9 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %132 = load <10 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %133 = load <11 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %134 = load <12 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %135 = load <13 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %136 = load <14 x i1>, ptr undef, align 4
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %137 = load <15 x i1>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %138 = load <17 x i1>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %139 = load <18 x i1>, ptr undef, align 4
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %140 = load <19 x i1>, ptr undef, align 4
@@ -5014,10 +5014,10 @@ define i32 @loads_align1(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <4 x float>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <2 x double>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <2 x ptr>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <8 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = load <4 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = load <2 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <16 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <8 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <4 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %24 = load <2 x i1>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <1 x i1>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %26 = load <256 x i1>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %27 = load <32 x i8>, ptr undef, align 1
@@ -5065,10 +5065,10 @@ define i32 @loads_align1(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <4 x float>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <2 x double>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <2 x ptr>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <8 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = load <4 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = load <2 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <16 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <8 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <4 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %24 = load <2 x i1>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <1 x i1>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %26 = load <256 x i1>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %27 = load <32 x i8>, ptr undef, align 1
@@ -5116,10 +5116,10 @@ define i32 @loads_align1(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <4 x float>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <2 x double>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <2 x ptr>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <8 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = load <4 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = load <2 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <16 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <8 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <4 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %24 = load <2 x i1>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <1 x i1>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %26 = load <256 x i1>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %27 = load <32 x i8>, ptr undef, align 1
@@ -5167,11 +5167,11 @@ define i32 @loads_align1(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <4 x float>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <2 x double>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <2 x ptr>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <8 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = load <4 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = load <2 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <1 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <16 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <8 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <4 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %24 = load <2 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %25 = load <1 x i1>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %26 = load <256 x i1>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %27 = load <32 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %28 = load <16 x i16>, ptr undef, align 1
@@ -5308,151 +5308,151 @@ define i32 @loads_partial_align1(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %36 = load <15 x float>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %37 = load <1 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %38 = load <2 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %39 = load <3 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %39 = load <3 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %40 = load <4 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %41 = load <5 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %41 = load <5 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %42 = load <6 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %43 = load <7 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %44 = load <9 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %43 = load <7 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %44 = load <9 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %45 = load <10 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %46 = load <11 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %46 = load <11 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %47 = load <12 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %48 = load <13 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %48 = load <13 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %49 = load <14 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %50 = load <15 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %51 = load <17 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %50 = load <15 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %51 = load <17 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %52 = load <18 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %53 = load <19 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %53 = load <19 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %54 = load <20 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %55 = load <21 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %55 = load <21 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %56 = load <22 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %57 = load <23 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %57 = load <23 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %58 = load <24 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %59 = load <25 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %59 = load <25 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %60 = load <26 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %61 = load <27 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %61 = load <27 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %62 = load <28 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %63 = load <29 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %63 = load <29 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %64 = load <30 x i16>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %65 = load <31 x i16>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %65 = load <31 x i16>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %66 = load <1 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %67 = load <2 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %68 = load <3 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %67 = load <2 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %68 = load <3 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %69 = load <4 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %70 = load <5 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %71 = load <6 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %72 = load <7 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %70 = load <5 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %71 = load <6 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %72 = load <7 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %73 = load <8 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %74 = load <9 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %75 = load <10 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %76 = load <11 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %74 = load <9 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %75 = load <10 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %76 = load <11 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %77 = load <12 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %78 = load <13 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %79 = load <14 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %80 = load <15 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %81 = load <17 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %82 = load <18 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %83 = load <19 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %78 = load <13 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %79 = load <14 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %80 = load <15 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %81 = load <17 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %82 = load <18 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %83 = load <19 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %84 = load <20 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %85 = load <21 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %86 = load <22 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %87 = load <23 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %85 = load <21 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %86 = load <22 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %87 = load <23 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %88 = load <24 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %89 = load <25 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %90 = load <26 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %91 = load <27 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %89 = load <25 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %90 = load <26 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %91 = load <27 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %92 = load <28 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %93 = load <29 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %94 = load <30 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %95 = load <31 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %96 = load <33 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %97 = load <34 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %98 = load <35 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %93 = load <29 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %94 = load <30 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %95 = load <31 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %96 = load <33 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %97 = load <34 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %98 = load <35 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %99 = load <36 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %100 = load <37 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %101 = load <38 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %102 = load <39 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %100 = load <37 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %101 = load <38 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %102 = load <39 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %103 = load <40 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %104 = load <41 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %105 = load <42 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %106 = load <43 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %104 = load <41 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %105 = load <42 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %106 = load <43 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %107 = load <44 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %108 = load <45 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %109 = load <46 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %110 = load <47 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %108 = load <45 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %109 = load <46 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %110 = load <47 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %111 = load <48 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %112 = load <49 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %113 = load <50 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %114 = load <51 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %112 = load <49 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %113 = load <50 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %114 = load <51 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %115 = load <52 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %116 = load <53 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %117 = load <54 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %118 = load <55 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %116 = load <53 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %117 = load <54 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %118 = load <55 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %119 = load <56 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %120 = load <57 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %121 = load <58 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %122 = load <59 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %120 = load <57 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %121 = load <58 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %122 = load <59 x i8>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %123 = load <60 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %124 = load <61 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %125 = load <62 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %126 = load <63 x i8>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %127 = load <3 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %128 = load <5 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %129 = load <6 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %130 = load <7 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %131 = load <9 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %132 = load <10 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %133 = load <11 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %134 = load <12 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %135 = load <13 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %136 = load <14 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %137 = load <15 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %138 = load <17 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %139 = load <18 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %140 = load <19 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %141 = load <20 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %142 = load <21 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %143 = load <22 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %144 = load <23 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %145 = load <24 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %146 = load <25 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %147 = load <26 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %148 = load <27 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %149 = load <28 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %150 = load <29 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %151 = load <30 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %152 = load <31 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %153 = load <33 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %154 = load <34 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %155 = load <35 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %156 = load <36 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %157 = load <37 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %158 = load <38 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %159 = load <39 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %160 = load <40 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %161 = load <41 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %162 = load <42 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %163 = load <43 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %164 = load <44 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %165 = load <45 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %166 = load <46 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %167 = load <47 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %168 = load <48 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %169 = load <49 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %170 = load <50 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %171 = load <51 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %172 = load <52 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %173 = load <53 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %174 = load <54 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %175 = load <55 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %176 = load <56 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %177 = load <57 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %178 = load <58 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %179 = load <59 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %180 = load <60 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %181 = load <61 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %182 = load <62 x i1>, ptr undef, align 1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %183 = load <63 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %124 = load <61 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %125 = load <62 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %126 = load <63 x i8>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %127 = load <3 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %128 = load <5 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %129 = load <6 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %130 = load <7 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %131 = load <9 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %132 = load <10 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %133 = load <11 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %134 = load <12 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %135 = load <13 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %136 = load <14 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %137 = load <15 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %138 = load <17 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %139 = load <18 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %140 = load <19 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %141 = load <20 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %142 = load <21 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %143 = load <22 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %144 = load <23 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %145 = load <24 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %146 = load <25 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %147 = load <26 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %148 = load <27 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %149 = load <28 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %150 = load <29 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %151 = load <30 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %152 = load <31 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %153 = load <33 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %154 = load <34 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %155 = load <35 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %156 = load <36 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %157 = load <37 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %158 = load <38 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %159 = load <39 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %160 = load <40 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %161 = load <41 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %162 = load <42 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %163 = load <43 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %164 = load <44 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %165 = load <45 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %166 = load <46 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %167 = load <47 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %168 = load <48 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %169 = load <49 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %170 = load <50 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %171 = load <51 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %172 = load <52 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %173 = load <53 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %174 = load <54 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %175 = load <55 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %176 = load <56 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %177 = load <57 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %178 = load <58 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %179 = load <59 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %180 = load <60 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %181 = load <61 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %182 = load <62 x i1>, ptr undef, align 1
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: %183 = load <63 x i1>, ptr undef, align 1
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'loads_partial_align1'
@@ -5494,151 +5494,151 @@ define i32 @loads_partial_align1(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %36 = load <15 x float>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %37 = load <1 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %38 = load <2 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %39 = load <3 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %39 = load <3 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %40 = load <4 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %41 = load <5 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %41 = load <5 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %42 = load <6 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %43 = load <7 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %44 = load <9 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %43 = load <7 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %44 = load <9 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %45 = load <10 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %46 = load <11 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %46 = load <11 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %47 = load <12 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %48 = load <13 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %48 = load <13 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %49 = load <14 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %50 = load <15 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %51 = load <17 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %50 = load <15 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %51 = load <17 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %52 = load <18 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %53 = load <19 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %53 = load <19 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %54 = load <20 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %55 = load <21 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %55 = load <21 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %56 = load <22 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %57 = load <23 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %57 = load <23 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %58 = load <24 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %59 = load <25 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %59 = load <25 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %60 = load <26 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %61 = load <27 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %61 = load <27 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %62 = load <28 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %63 = load <29 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %63 = load <29 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %64 = load <30 x i16>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %65 = load <31 x i16>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %65 = load <31 x i16>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %66 = load <1 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %67 = load <2 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %68 = load <3 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %67 = load <2 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %68 = load <3 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %69 = load <4 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %70 = load <5 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %71 = load <6 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %72 = load <7 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %70 = load <5 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %71 = load <6 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %72 = load <7 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %73 = load <8 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %74 = load <9 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %75 = load <10 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %76 = load <11 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %74 = load <9 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %75 = load <10 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %76 = load <11 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %77 = load <12 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %78 = load <13 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %79 = load <14 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %80 = load <15 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %81 = load <17 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %82 = load <18 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %83 = load <19 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %78 = load <13 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %79 = load <14 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %80 = load <15 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %81 = load <17 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %82 = load <18 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %83 = load <19 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %84 = load <20 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %85 = load <21 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %86 = load <22 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %87 = load <23 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %85 = load <21 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %86 = load <22 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %87 = load <23 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %88 = load <24 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %89 = load <25 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %90 = load <26 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %91 = load <27 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %89 = load <25 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %90 = load <26 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %91 = load <27 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %92 = load <28 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %93 = load <29 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %94 = load <30 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %95 = load <31 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %96 = load <33 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %97 = load <34 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %98 = load <35 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %93 = load <29 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %94 = load <30 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %95 = load <31 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %96 = load <33 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %97 = load <34 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %98 = load <35 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %99 = load <36 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %100 = load <37 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %101 = load <38 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %102 = load <39 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %100 = load <37 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %101 = load <38 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %102 = load <39 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %103 = load <40 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %104 = load <41 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %105 = load <42 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %106 = load <43 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %104 = load <41 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %105 = load <42 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %106 = load <43 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %107 = load <44 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %108 = load <45 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %109 = load <46 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %110 = load <47 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %108 = load <45 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %109 = load <46 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %110 = load <47 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %111 = load <48 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %112 = load <49 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %113 = load <50 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %114 = load <51 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %112 = load <49 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %113 = load <50 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %114 = load <51 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %115 = load <52 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %116 = load <53 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %117 = load <54 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %118 = load <55 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %116 = load <53 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %117 = load <54 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %118 = load <55 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %119 = load <56 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %120 = load <57 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %121 = load <58 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %122 = load <59 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %120 = load <57 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %121 = load <58 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %122 = load <59 x i8>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %123 = load <60 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %124 = load <61 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %125 = load <62 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %126 = load <63 x i8>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %127 = load <3 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %128 = load <5 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %129 = load <6 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %130 = load <7 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %131 = load <9 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %132 = load <10 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %133 = load <11 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %134 = load <12 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %135 = load <13 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %136 = load <14 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %137 = load <15 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %138 = load <17 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %139 = load <18 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %140 = load <19 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %141 = load <20 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %142 = load <21 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %143 = load <22 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %144 = load <23 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %145 = load <24 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %146 = load <25 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %147 = load <26 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %148 = load <27 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %149 = load <28 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %150 = load <29 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %151 = load <30 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %152 = load <31 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %153 = load <33 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %154 = load <34 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %155 = load <35 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %156 = load <36 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %157 = load <37 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %158 = load <38 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %159 = load <39 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %160 = load <40 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %161 = load <41 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %162 = load <42 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %163 = load <43 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %164 = load <44 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %165 = load <45 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %166 = load <46 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %167 = load <47 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %168 = load <48 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %169 = load <49 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %170 = load <50 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %171 = load <51 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %172 = load <52 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %173 = load <53 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %174 = load <54 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %175 = load <55 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %176 = load <56 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %177 = load <57 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %178 = load <58 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %179 = load <59 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %180 = load <60 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %181 = load <61 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %182 = load <62 x i1>, ptr undef, align 1
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %183 = load <63 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %124 = load <61 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %125 = load <62 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %126 = load <63 x i8>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %127 = load <3 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %128 = load <5 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %129 = load <6 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %130 = load <7 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %131 = load <9 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %132 = load <10 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %133 = load <11 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %134 = load <12 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %135 = load <13 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %136 = load <14 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %137 = load <15 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %138 = load <17 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %139 = load <18 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %140 = load <19 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %141 = load <20 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %142 = load <21 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %143 = load <22 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %144 = load <23 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %145 = load <24 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %146 = load <25 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %147 = load <26 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %148 = load <27 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %149 = load <28 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %150 = load <29 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %151 = load <30 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %152 = load <31 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %153 = load <33 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %154 = load <34 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %155 = load <35 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %156 = load <36 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %157 = load <37 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %158 = load <38 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %159 = load <39 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %160 = load <40 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %161 = load <41 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %162 = load <42 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %163 = load <43 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %164 = load <44 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %165 = load <45 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %166 = load <46 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %167 = load <47 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %168 = load <48 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %169 = load <49 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %170 = load <50 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %171 = load <51 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %172 = load <52 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %173 = load <53 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %174 = load <54 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %175 = load <55 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %176 = load <56 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %177 = load <57 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %178 = load <58 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %179 = load <59 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %180 = load <60 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %181 = load <61 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %182 = load <62 x i1>, ptr undef, align 1
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %183 = load <63 x i1>, ptr undef, align 1
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'loads_partial_align1'
@@ -5680,151 +5680,151 @@ define i32 @loads_partial_align1(i32 %arg) {
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %36 = load <15 x float>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %37 = load <1 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %38 = load <2 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %39 = load <3 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %39 = load <3 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %40 = load <4 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %41 = load <5 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %41 = load <5 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %42 = load <6 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %43 = load <7 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %44 = load <9 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %43 = load <7 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %44 = load <9 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %45 = load <10 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %46 = load <11 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %46 = load <11 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %47 = load <12 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %48 = load <13 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %48 = load <13 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %49 = load <14 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %50 = load <15 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %51 = load <17 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %50 = load <15 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %51 = load <17 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %52 = load <18 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %53 = load <19 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %53 = load <19 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %54 = load <20 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %55 = load <21 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %55 = load <21 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %56 = load <22 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %57 = load <23 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %57 = load <23 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %58 = load <24 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %59 = load <25 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %59 = load <25 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %60 = load <26 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %61 = load <27 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %61 = load <27 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %62 = load <28 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %63 = load <29 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %63 = load <29 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %64 = load <30 x i16>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %65 = load <31 x i16>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %65 = load <31 x i16>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %66 = load <1 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %67 = load <2 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %68 = load <3 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %67 = load <2 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %68 = load <3 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %69 = load <4 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %70 = load <5 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %71 = load <6 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %72 = load <7 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %70 = load <5 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %71 = load <6 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %72 = load <7 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %73 = load <8 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %74 = load <9 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %75 = load <10 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %76 = load <11 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %74 = load <9 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %75 = load <10 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %76 = load <11 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %77 = load <12 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %78 = load <13 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %79 = load <14 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %80 = load <15 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %81 = load <17 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %82 = load <18 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %83 = load <19 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %78 = load <13 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %79 = load <14 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %80 = load <15 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %81 = load <17 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %82 = load <18 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %83 = load <19 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %84 = load <20 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %85 = load <21 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %86 = load <22 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %87 = load <23 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %85 = load <21 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %86 = load <22 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %87 = load <23 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %88 = load <24 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %89 = load <25 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %90 = load <26 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %91 = load <27 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %89 = load <25 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %90 = load <26 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %91 = load <27 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %92 = load <28 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %93 = load <29 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %94 = load <30 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %95 = load <31 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %96 = load <33 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %97 = load <34 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %98 = load <35 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %93 = load <29 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %94 = load <30 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %95 = load <31 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %96 = load <33 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %97 = load <34 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %98 = load <35 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %99 = load <36 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %100 = load <37 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %101 = load <38 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %102 = load <39 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %100 = load <37 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %101 = load <38 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %102 = load <39 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %103 = load <40 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %104 = load <41 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %105 = load <42 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %106 = load <43 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %104 = load <41 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %105 = load <42 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %106 = load <43 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %107 = load <44 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %108 = load <45 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %109 = load <46 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %110 = load <47 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %108 = load <45 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %109 = load <46 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %110 = load <47 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %111 = load <48 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %112 = load <49 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %113 = load <50 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %114 = load <51 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %112 = load <49 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %113 = load <50 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %114 = load <51 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %115 = load <52 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %116 = load <53 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %117 = load <54 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %118 = load <55 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %116 = load <53 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %117 = load <54 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %118 = load <55 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %119 = load <56 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %120 = load <57 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %121 = load <58 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %122 = load <59 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %120 = load <57 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %121 = load <58 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %122 = load <59 x i8>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %123 = load <60 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %124 = load <61 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %125 = load <62 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %126 = load <63 x i8>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %127 = load <3 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %128 = load <5 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %129 = load <6 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %130 = load <7 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %131 = load <9 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %132 = load <10 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %133 = load <11 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %134 = load <12 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %135 = load <13 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %136 = load <14 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %137 = load <15 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %138 = load <17 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %139 = load <18 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %140 = load <19 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %141 = load <20 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %142 = load <21 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %143 = load <22 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %144 = load <23 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %145 = load <24 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %146 = load <25 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %147 = load <26 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %148 = load <27 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %149 = load <28 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %150 = load <29 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %151 = load <30 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %152 = load <31 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %153 = load <33 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %154 = load <34 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %155 = load <35 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %156 = load <36 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %157 = load <37 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %158 = load <38 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %159 = load <39 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %160 = load <40 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %161 = load <41 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %162 = load <42 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %163 = load <43 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %164 = load <44 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %165 = load <45 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %166 = load <46 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %167 = load <47 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %168 = load <48 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %169 = load <49 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %170 = load <50 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %171 = load <51 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %172 = load <52 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %173 = load <53 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %174 = load <54 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %175 = load <55 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %176 = load <56 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %177 = load <57 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %178 = load <58 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %179 = load <59 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %180 = load <60 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %181 = load <61 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %182 = load <62 x i1>, ptr undef, align 1
-; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %183 = load <63 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %124 = load <61 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %125 = load <62 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %126 = load <63 x i8>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %127 = load <3 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %128 = load <5 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %129 = load <6 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %130 = load <7 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %131 = load <9 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %132 = load <10 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %133 = load <11 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %134 = load <12 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %135 = load <13 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %136 = load <14 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %137 = load <15 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %138 = load <17 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %139 = load <18 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %140 = load <19 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %141 = load <20 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %142 = load <21 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %143 = load <22 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %144 = load <23 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %145 = load <24 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %146 = load <25 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %147 = load <26 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %148 = load <27 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %149 = load <28 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %150 = load <29 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %151 = load <30 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %152 = load <31 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %153 = load <33 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %154 = load <34 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %155 = load <35 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %156 = load <36 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %157 = load <37 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %158 = load <38 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %159 = load <39 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %160 = load <40 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %161 = load <41 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %162 = load <42 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %163 = load <43 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %164 = load <44 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %165 = load <45 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %166 = load <46 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %167 = load <47 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %168 = load <48 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %169 = load <49 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %170 = load <50 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %171 = load <51 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %172 = load <52 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %173 = load <53 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %174 = load <54 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %175 = load <55 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %176 = load <56 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %177 = load <57 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %178 = load <58 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %179 = load <59 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %180 = load <60 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %181 = load <61 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %182 = load <62 x i1>, ptr undef, align 1
+; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %183 = load <63 x i1>, ptr undef, align 1
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'loads_partial_align1'
@@ -5866,151 +5866,151 @@ define i32 @loads_partial_align1(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %36 = load <15 x float>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %37 = load <1 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %38 = load <2 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %39 = load <3 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %39 = load <3 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %40 = load <4 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %41 = load <5 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %41 = load <5 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %42 = load <6 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %43 = load <7 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %44 = load <9 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %43 = load <7 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %44 = load <9 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %45 = load <10 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %46 = load <11 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %46 = load <11 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %47 = load <12 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %48 = load <13 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %48 = load <13 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %49 = load <14 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %50 = load <15 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %51 = load <17 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %50 = load <15 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %51 = load <17 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %52 = load <18 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %53 = load <19 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %53 = load <19 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %54 = load <20 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %55 = load <21 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %55 = load <21 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %56 = load <22 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %57 = load <23 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %57 = load <23 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %58 = load <24 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %59 = load <25 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %59 = load <25 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %60 = load <26 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %61 = load <27 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %61 = load <27 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %62 = load <28 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %63 = load <29 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %63 = load <29 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %64 = load <30 x i16>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %65 = load <31 x i16>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %65 = load <31 x i16>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %66 = load <1 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %67 = load <2 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %68 = load <3 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %67 = load <2 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %68 = load <3 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %69 = load <4 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %70 = load <5 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %71 = load <6 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %72 = load <7 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %70 = load <5 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %71 = load <6 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %72 = load <7 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %73 = load <8 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %74 = load <9 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %75 = load <10 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %76 = load <11 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %74 = load <9 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %75 = load <10 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %76 = load <11 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %77 = load <12 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %78 = load <13 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %79 = load <14 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %80 = load <15 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %81 = load <17 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %82 = load <18 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %83 = load <19 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %78 = load <13 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %79 = load <14 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %80 = load <15 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %81 = load <17 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %82 = load <18 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %83 = load <19 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %84 = load <20 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %85 = load <21 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %86 = load <22 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %87 = load <23 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %85 = load <21 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %86 = load <22 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %87 = load <23 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %88 = load <24 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %89 = load <25 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %90 = load <26 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %91 = load <27 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %89 = load <25 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %90 = load <26 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %91 = load <27 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %92 = load <28 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %93 = load <29 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %94 = load <30 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %95 = load <31 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %96 = load <33 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %97 = load <34 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %98 = load <35 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %93 = load <29 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %94 = load <30 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %95 = load <31 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %96 = load <33 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %97 = load <34 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %98 = load <35 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %99 = load <36 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %100 = load <37 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %101 = load <38 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %102 = load <39 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %100 = load <37 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %101 = load <38 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %102 = load <39 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %103 = load <40 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %104 = load <41 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %105 = load <42 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %106 = load <43 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %104 = load <41 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %105 = load <42 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %106 = load <43 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %107 = load <44 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %108 = load <45 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %109 = load <46 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %110 = load <47 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %108 = load <45 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %109 = load <46 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %110 = load <47 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %111 = load <48 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %112 = load <49 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %113 = load <50 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %114 = load <51 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %112 = load <49 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %113 = load <50 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %114 = load <51 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %115 = load <52 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %116 = load <53 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %117 = load <54 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %118 = load <55 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %116 = load <53 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %117 = load <54 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %118 = load <55 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %119 = load <56 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %120 = load <57 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %121 = load <58 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %122 = load <59 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %120 = load <57 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %121 = load <58 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %122 = load <59 x i8>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %123 = load <60 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %124 = load <61 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %125 = load <62 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %126 = load <63 x i8>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %127 = load <3 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %128 = load <5 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %129 = load <6 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %130 = load <7 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %131 = load <9 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %132 = load <10 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %133 = load <11 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %134 = load <12 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %135 = load <13 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %136 = load <14 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %137 = load <15 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %138 = load <17 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %139 = load <18 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %140 = load <19 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %141 = load <20 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %142 = load <21 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %143 = load <22 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %144 = load <23 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %145 = load <24 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %146 = load <25 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %147 = load <26 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %148 = load <27 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %149 = load <28 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %150 = load <29 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %151 = load <30 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %152 = load <31 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %153 = load <33 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %154 = load <34 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %155 = load <35 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %156 = load <36 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %157 = load <37 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %158 = load <38 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %159 = load <39 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %160 = load <40 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %161 = load <41 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %162 = load <42 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %163 = load <43 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %164 = load <44 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %165 = load <45 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %166 = load <46 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %167 = load <47 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %168 = load <48 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %169 = load <49 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %170 = load <50 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %171 = load <51 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %172 = load <52 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %173 = load <53 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %174 = load <54 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %175 = load <55 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %176 = load <56 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %177 = load <57 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %178 = load <58 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %179 = load <59 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %180 = load <60 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %181 = load <61 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %182 = load <62 x i1>, ptr undef, align 1
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %183 = load <63 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %124 = load <61 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %125 = load <62 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %126 = load <63 x i8>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %127 = load <3 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %128 = load <5 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %129 = load <6 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %130 = load <7 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %131 = load <9 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %132 = load <10 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %133 = load <11 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %134 = load <12 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %135 = load <13 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %136 = load <14 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %137 = load <15 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %138 = load <17 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %139 = load <18 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %140 = load <19 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %141 = load <20 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %142 = load <21 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %143 = load <22 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %144 = load <23 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %145 = load <24 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %146 = load <25 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %147 = load <26 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %148 = load <27 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %149 = load <28 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %150 = load <29 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %151 = load <30 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %152 = load <31 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %153 = load <33 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %154 = load <34 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %155 = load <35 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %156 = load <36 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %157 = load <37 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %158 = load <38 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %159 = load <39 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %160 = load <40 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %161 = load <41 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %162 = load <42 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %163 = load <43 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %164 = load <44 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %165 = load <45 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %166 = load <46 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %167 = load <47 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %168 = load <48 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %169 = load <49 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %170 = load <50 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %171 = load <51 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %172 = load <52 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %173 = load <53 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %174 = load <54 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %175 = load <55 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %176 = load <56 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %177 = load <57 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %178 = load <58 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %179 = load <59 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %180 = load <60 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %181 = load <61 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %182 = load <62 x i1>, ptr undef, align 1
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %183 = load <63 x i1>, ptr undef, align 1
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   load <1 x i64>, ptr undef, align 1
@@ -6413,11 +6413,11 @@ define i32 @loads_align64(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %18 = load <4 x float>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %19 = load <2 x double>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %20 = load <2 x ptr>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <16 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <8 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %23 = load <4 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %24 = load <2 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %25 = load <1 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <16 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <8 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <4 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %24 = load <2 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %25 = load <1 x i1>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %26 = load <256 x i1>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %27 = load <32 x i8>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %28 = load <16 x i16>, ptr undef, align 64
@@ -7200,17 +7200,17 @@ define i32 @loads_partial_align64(i32 %arg) {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %124 = load <61 x i8>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %125 = load <62 x i8>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %126 = load <63 x i8>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %127 = load <3 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %128 = load <5 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %129 = load <6 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %130 = load <7 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %131 = load <9 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %132 = load <10 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %133 = load <11 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %134 = load <12 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %135 = load <13 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %136 = load <14 x i1>, ptr undef, align 64
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %137 = load <15 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %127 = load <3 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %128 = load <5 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %129 = load <6 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %130 = load <7 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %131 = load <9 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %132 = load <10 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %133 = load <11 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %134 = load <12 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %135 = load <13 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %136 = load <14 x i1>, ptr undef, align 64
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %137 = load <15 x i1>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %138 = load <17 x i1>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %139 = load <18 x i1>, ptr undef, align 64
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %140 = load <19 x i1>, ptr undef, align 64
