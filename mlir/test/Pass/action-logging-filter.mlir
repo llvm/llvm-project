@@ -20,12 +20,12 @@ func.func @c() {
 // Specify the current file as filter, expect to see all actions.
 // RUN: mlir-opt %s --log-mlir-actions-filter=%s --log-actions-to=- -pass-pipeline="builtin.module(func.func(canonicalize))" -o %t --mlir-disable-threading | FileCheck %s
 
-// CHECK: [thread {{.*}}] begins (no breakpoint) Action `pass-execution-action`  running `Canonicalizer` on Operation `func.func` (func.func @a() {...}
-// CHECK-NEXT: [thread {{.*}}] completed `pass-execution-action`
-// CHECK-NEXT: [thread {{.*}}] begins (no breakpoint) Action `pass-execution-action`  running `Canonicalizer` on Operation `func.func` (func.func @b() {...}
-// CHECK-NEXT: [thread {{.*}}] completed `pass-execution-action`
-// CHECK-NEXT: [thread {{.*}}] begins (no breakpoint) Action `pass-execution-action`  running `Canonicalizer` on Operation `func.func` (func.func @c() {...}
-// CHECK-NEXT: [thread {{.*}}] completed `pass-execution-action`
+// CHECK: [thread {{.*}}] begins (no breakpoint) Action `pass-execution`  running `Canonicalizer` on Operation `func.func` (func.func @a() {...}
+// CHECK-NEXT: [thread {{.*}}] completed `pass-execution`
+// CHECK-NEXT: [thread {{.*}}] begins (no breakpoint) Action `pass-execution`  running `Canonicalizer` on Operation `func.func` (func.func @b() {...}
+// CHECK-NEXT: [thread {{.*}}] completed `pass-execution`
+// CHECK-NEXT: [thread {{.*}}] begins (no breakpoint) Action `pass-execution`  running `Canonicalizer` on Operation `func.func` (func.func @c() {...}
+// CHECK-NEXT: [thread {{.*}}] completed `pass-execution`
 
 ////////////////////////////////////
 /// 2. No match
@@ -46,15 +46,15 @@ func.func @c() {
 
 // CHECK-SECOND-NOT: @a
 // CHECK-SECOND-NOT: @c
-// CHECK-SECOND: [thread {{.*}}] begins (no breakpoint) Action `pass-execution-action`  running `Canonicalizer` on Operation `func.func` (func.func @b() {...}
-// CHECK-SECOND-NEXT: [thread {{.*}}] completed `pass-execution-action`
+// CHECK-SECOND: [thread {{.*}}] begins (no breakpoint) Action `pass-execution`  running `Canonicalizer` on Operation `func.func` (func.func @b() {...}
+// CHECK-SECOND-NEXT: [thread {{.*}}] completed `pass-execution`
 
 // Filter the first and third functions
 // RUN: mlir-opt %s --log-mlir-actions-filter=%s:4,%s:12 --log-actions-to=- -pass-pipeline="builtin.module(func.func(canonicalize))" -o %t --mlir-disable-threading | FileCheck %s  --check-prefix=CHECK-FIRST-THIRD
 
 // CHECK-FIRST-THIRD-NOT: Canonicalizer
-// CHECK-FIRST-THIRD: [thread {{.*}}] begins (no breakpoint) Action `pass-execution-action`  running `Canonicalizer` on Operation `func.func` (func.func @a() {...}
-// CHECK-FIRST-THIRD-NEXT: [thread {{.*}}] completed `pass-execution-action`
-// CHECK-FIRST-THIRD-NEXT: [thread {{.*}}] begins (no breakpoint) Action `pass-execution-action`  running `Canonicalizer` on Operation `func.func` (func.func @c() {...}
-// CHECK-FIRST-THIRD-NEXT: [thread {{.*}}] completed `pass-execution-action`
+// CHECK-FIRST-THIRD: [thread {{.*}}] begins (no breakpoint) Action `pass-execution`  running `Canonicalizer` on Operation `func.func` (func.func @a() {...}
+// CHECK-FIRST-THIRD-NEXT: [thread {{.*}}] completed `pass-execution`
+// CHECK-FIRST-THIRD-NEXT: [thread {{.*}}] begins (no breakpoint) Action `pass-execution`  running `Canonicalizer` on Operation `func.func` (func.func @c() {...}
+// CHECK-FIRST-THIRD-NEXT: [thread {{.*}}] completed `pass-execution`
 // CHECK-FIRST-THIRD-NOT: Canonicalizer
