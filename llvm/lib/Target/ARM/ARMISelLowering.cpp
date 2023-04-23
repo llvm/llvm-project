@@ -5048,7 +5048,7 @@ SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
 static SDValue LowerADDSUBSAT(SDValue Op, SelectionDAG &DAG,
                               const ARMSubtarget *Subtarget) {
   EVT VT = Op.getValueType();
-  if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP())
+  if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP() || Subtarget->isThumb1Only())
     return SDValue();
   if (!VT.isSimple())
     return SDValue();

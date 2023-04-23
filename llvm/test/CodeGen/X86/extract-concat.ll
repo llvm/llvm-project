@@ -74,7 +74,7 @@ define <16 x i64> @catcat(<4 x i64> %x) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    vmovddup {{.*#+}} ymm2 = ymm0[0,0,2,2]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm3 = ymm0[1,1,3,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm0[1,1,3,3]
 ; AVX1-NEXT:    vmovaps %ymm4, %ymm0
 ; AVX1-NEXT:    retq
 ;

@@ -4861,7 +4861,11 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // This isn't exactly right. We're using slow unaligned 32-byte accesses
       // as a proxy for a double-pumped AVX memory interface such as on
       // Sandybridge.
+      // Sub-32-bit loads/stores will be slower either with PINSR*/PEXTR* or
+      // will be scalarized.
       if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
+        Cost += 2;
+      else if (CurrOpSizeBytes < 4)
         Cost += 2;
       else
         Cost += 1;

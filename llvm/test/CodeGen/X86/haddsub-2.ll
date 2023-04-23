@@ -906,14 +906,14 @@ define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 ;
 ; AVX-LABEL: not_a_hsub_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
 ; AVX-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm1, %xmm1
@@ -954,9 +954,9 @@ define <2 x double> @not_a_hsub_3(<2 x double> %A, <2 x double> %B) {
 ;
 ; AVX-LABEL: not_a_hsub_3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vsubsd %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq

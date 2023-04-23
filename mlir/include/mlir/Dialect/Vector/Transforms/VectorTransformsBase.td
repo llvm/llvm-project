@@ -18,14 +18,17 @@ def VectorTransposeLowering_Elementwise:
 // intrinsics.
 def VectorTransposeLowering_FlatTranspose:
   I32EnumAttrCase<"Flat",  1, "flat_transpose">;
-// Lower 2-D transpose to `vector.shuffle`.
-def VectorTransposeLowering_Shuffle:
-  I32EnumAttrCase<"Shuffle",  2, "shuffle">;
+// Lower 2-D transpose to `vector.shuffle` on 1-D vector.
+def VectorTransposeLowering_Shuffle1D:
+  I32EnumAttrCase<"Shuffle1D",  2, "shuffle_1d">;
+// Lower 2-D transpose to `vector.shuffle` on 16x16 vector.
+def VectorTransposeLowering_Shuffle16x16:
+  I32EnumAttrCase<"Shuffle16x16",  3, "shuffle_16x16">;
 def VectorTransposeLoweringAttr : I32EnumAttr<
     "VectorTransposeLowering",
     "control the lowering of `vector.transpose` operations.",
     [VectorTransposeLowering_Elementwise, VectorTransposeLowering_FlatTranspose,
-     VectorTransposeLowering_Shuffle]> {
+     VectorTransposeLowering_Shuffle1D, VectorTransposeLowering_Shuffle16x16]> {
   let cppNamespace = "::mlir::vector";
 }
 

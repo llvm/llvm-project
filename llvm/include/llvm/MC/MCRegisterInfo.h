@@ -243,7 +243,7 @@ public:
                                     std::forward_iterator_tag, MCPhysReg> {
     MCRegisterInfo::DiffListIterator Iter;
     /// Current value as MCPhysReg, so we can return a reference to it.
-    MCPhysReg Val;
+    MCPhysReg Val = 0;
 
   protected:
     mc_difflist_iterator(MCRegisterInfo::DiffListIterator Iter) : Iter(Iter) {}
