@@ -5,12 +5,6 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
-@S = external local_unnamed_addr global ptr
-%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
-@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 0, i8 1 }, ptr null, ptr null }
-
-
 ; UTC_ARGS: --disable
 ; CHECK-REMARKS: remark: remove_globalization.c:4:2: Could not move globalized variable to the stack. Variable is potentially captured in call. Mark parameter as `__attribute__((noescape))` to override.
 ; CHECK-REMARKS: remark: remove_globalization.c:2:2: Moving globalized variable to the stack.
@@ -18,55 +12,59 @@ target triple = "nvptx64"
 ; CHECK-REMARKS: remark: remove_globalization.c:4:2: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 ; UTC_ARGS: --enable
 
+@S = external local_unnamed_addr global ptr
+
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
+
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 ;.
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+; CHECK: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 ; CHECK-DISABLED: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK-DISABLED: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+; CHECK-DISABLED: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
-define weak i32 @__kmpc_target_init(ptr %0) {
+define weak i32 @__kmpc_target_init(ptr, i8, i1) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-DISABLED-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-DISABLED-SAME: (ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
 ; CHECK-DISABLED-NEXT:    ret i32 0
 ;
   ret i32 0
 }
-declare void @__kmpc_target_deinit()
+declare void @__kmpc_target_deinit(ptr, i8)
 
 define void @kernel() {
 ; CHECK-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR0]]
 ; CHECK-NEXT:    call void @convert_and_move_alloca() #[[ATTR0]]
 ; CHECK-NEXT:    call void @unknown_no_openmp()
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@kernel() {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull null, i8 1, i1 false)
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR0:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR0]]
 ; CHECK-DISABLED-NEXT:    call void @convert_and_move_alloca() #[[ATTR0]]
 ; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
-; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
-  %0 = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr nonnull null, i8 1, i1 true)
   call void @foo()
   call void @bar()
   call void @convert_and_move_alloca()
   call void @unknown_no_openmp()
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
   ret void
 }
 

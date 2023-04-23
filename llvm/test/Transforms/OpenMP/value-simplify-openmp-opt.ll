@@ -4,29 +4,32 @@
 
 target triple = "amdgcn-amd-amdhsa"
 
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
-%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @G = internal addrspace(3) global i32 undef, align 4
 @H = internal addrspace(3) global i32 undef, align 4
 @X = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
-@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CHECK: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CHECK: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
-; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+; TUNIT: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
+; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+;.
+; CGSCC: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ;.
 define void @kernel() "kernel" {
 ;
 ; CHECK: Function Attrs: norecurse
 ; CHECK-LABEL: define {{[^@]+}}@kernel
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
@@ -44,10 +47,10 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
+  %call = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -72,7 +75,7 @@ if.then2:
   call void @barrier();
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr undef, i8 1)
   ret void
 }
 
@@ -144,8 +147,8 @@ define void @sync_def() {
 declare void @sync()
 declare void @barrier() norecurse nounwind nocallback "llvm.assume"="ompx_aligned_barrier"
 declare void @use1(i32) nosync norecurse nounwind nocallback
-declare i32 @__kmpc_target_init(ptr) nocallback
-declare void @__kmpc_target_deinit() nocallback
+declare i32 @__kmpc_target_init(ptr, i8, i1) nocallback
+declare void @__kmpc_target_deinit(ptr, i8) nocallback
 declare void @llvm.assume(i1)
 
 !llvm.module.flags = !{!0, !1}

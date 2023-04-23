@@ -21,7 +21,7 @@
 #include <unordered_map>
 
 #include "Debug.h"
-#include "Environment.h"
+#include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
 #include "PluginInterface.h"
 #include "Utilities.h"
