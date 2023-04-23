@@ -57,6 +57,16 @@ static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   return Config;
 }
 
+static llvm::symbolize::ErrorHandler symbolize_error_handler(
+    llvm::raw_string_ostream &OS) {
+  return
+      [&](const llvm::ErrorInfoBase &ErrorInfo, llvm::StringRef ErrorBanner) {
+        OS << ErrorBanner;
+        ErrorInfo.log(OS);
+        OS << '\n';
+      };
+}
+
 Symbolizer::Symbolizer(std::unique_ptr<ObjectFile> &&CodeObject,
                        PrintSymbolCallback PrintSymbol)
     : CodeObject(std::move(CodeObject)), PrintSymbol(PrintSymbol) {}
@@ -93,7 +103,7 @@ amd_comgr_status_t Symbolizer::symbolize(uint64_t Address, bool IsCode,
   llvm::raw_string_ostream OS(Result);
   llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
   llvm::symbolize::Request Request{"", Address};
-  auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(OS, OS, Config);
+  auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(OS, symbolize_error_handler(OS), Config);
 
   if (IsCode) {
     auto ResOrErr = SymbolizerImpl.symbolizeInlinedCode(
