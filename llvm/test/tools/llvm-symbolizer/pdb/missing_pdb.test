@@ -4,7 +4,7 @@ RUN: FileCheck -DMSG=%errc_ENOENT --check-prefix=ERROR %s < %t.err
 
 llvm-symbolizer should print one error and two unknown line info records.
 
-ERROR: LLVMSymbolizer: error reading file: {{.*}}: [[MSG]]
+ERROR: llvm-symbolizer{{.*}}: error: '{{.*}}missing_pdb.pdb': [[MSG]]
 ERROR-NOT: error reading file
 
 CHECK: ??

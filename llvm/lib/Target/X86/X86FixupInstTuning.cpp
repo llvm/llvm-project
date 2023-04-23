@@ -126,10 +126,25 @@ bool X86FixupInstTuningPass::processInstruction(
     return ReplaceInTie;
   };
 
+  // `vpermilpd r, i` -> `vshufpd r, r, i`
+  // `vpermilpd r, i, k` -> `vshufpd r, r, i, k`
+  // `vshufpd` is always as fast or faster than `vpermilpd` and takes
+  // 1 less byte of code size for VEX and EVEX encoding.
+  auto ProcessVPERMILPDri = [&](unsigned NewOpc) -> bool {
+    if (!NewOpcPreferable(NewOpc))
+      return false;
+    unsigned MaskImm = MI.getOperand(NumOperands - 1).getImm();
+    MI.removeOperand(NumOperands - 1);
+    MI.addOperand(MI.getOperand(NumOperands - 2));
+    MI.setDesc(TII->get(NewOpc));
+    MI.addOperand(MachineOperand::CreateImm(MaskImm));
+    return true;
+  };
+
   // `vpermilps r, i` -> `vshufps r, r, i`
   // `vpermilps r, i, k` -> `vshufps r, r, i, k`
   // `vshufps` is always as fast or faster than `vpermilps` and takes
-  // 1 less byte of code size for VEX and SSE encoding.
+  // 1 less byte of code size for VEX and EVEX encoding.
   auto ProcessVPERMILPSri = [&](unsigned NewOpc) -> bool {
     if (!NewOpcPreferable(NewOpc))
       return false;
@@ -210,6 +225,29 @@ bool X86FixupInstTuningPass::processInstruction(
   };
 
   switch (Opc) {
+  case X86::VPERMILPDri:
+    return ProcessVPERMILPDri(X86::VSHUFPDrri);
+  case X86::VPERMILPDYri:
+    return ProcessVPERMILPDri(X86::VSHUFPDYrri);
+  case X86::VPERMILPDZ128ri:
+    return ProcessVPERMILPDri(X86::VSHUFPDZ128rri);
+  case X86::VPERMILPDZ256ri:
+    return ProcessVPERMILPDri(X86::VSHUFPDZ256rri);
+  case X86::VPERMILPDZri:
+    return ProcessVPERMILPDri(X86::VSHUFPDZrri);
+  case X86::VPERMILPDZ128rikz:
+    return ProcessVPERMILPDri(X86::VSHUFPDZ128rrikz);
+  case X86::VPERMILPDZ256rikz:
+    return ProcessVPERMILPDri(X86::VSHUFPDZ256rrikz);
+  case X86::VPERMILPDZrikz:
+    return ProcessVPERMILPDri(X86::VSHUFPDZrrikz);
+  case X86::VPERMILPDZ128rik:
+    return ProcessVPERMILPDri(X86::VSHUFPDZ128rrik);
+  case X86::VPERMILPDZ256rik:
+    return ProcessVPERMILPDri(X86::VSHUFPDZ256rrik);
+  case X86::VPERMILPDZrik:
+    return ProcessVPERMILPDri(X86::VSHUFPDZrrik);
+
   case X86::VPERMILPSri:
     return ProcessVPERMILPSri(X86::VSHUFPSrri);
   case X86::VPERMILPSYri:

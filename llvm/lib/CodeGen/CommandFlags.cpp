@@ -88,7 +88,7 @@ CGOPT(bool, IgnoreXCOFFVisibility)
 CGOPT(bool, XCOFFTracebackTable)
 CGOPT(std::string, BBSections)
 CGOPT(unsigned, TLSSize)
-CGOPT(bool, EmulatedTLS)
+CGOPT_EXP(bool, EmulatedTLS)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(EABI, EABIVersion)
@@ -549,8 +549,8 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
   Options.TLSSize = getTLSSize();
-  Options.EmulatedTLS = getEmulatedTLS();
-  Options.ExplicitEmulatedTLS = EmulatedTLSView->getNumOccurrences() > 0;
+  Options.EmulatedTLS =
+      getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
   Options.ExceptionModel = getExceptionModel();
   Options.EmitStackSizeSection = getEnableStackSizeSection();
   Options.EnableMachineFunctionSplitter = getEnableMachineFunctionSplitter();
