@@ -3299,7 +3299,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    vmovups %ymm1, (%rsp) # 32-byte Spill
 ; AVX1-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movl %eax, %ebx
@@ -3313,7 +3313,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movl %eax, %ebx
@@ -3338,7 +3338,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movl %eax, %ebx
@@ -3366,7 +3366,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    vmovups %ymm1, (%rsp) # 32-byte Spill
 ; AVX2-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movl %eax, %ebx
@@ -3380,7 +3380,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movl %eax, %ebx
@@ -3405,7 +3405,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX2-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movl %eax, %ebx
@@ -3433,7 +3433,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; F16C-NEXT:    subq $64, %rsp
 ; F16C-NEXT:    vmovups %ymm1, (%rsp) # 32-byte Spill
 ; F16C-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %ebx
@@ -3447,7 +3447,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; F16C-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %ebx
@@ -3472,7 +3472,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; F16C-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; F16C-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %ebx
@@ -3499,7 +3499,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    pushq %rbx
 ; AVX512-NEXT:    subq $80, %rsp
 ; AVX512-NEXT:    vmovupd %zmm0, (%rsp) # 64-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %ebx
@@ -3513,7 +3513,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vmovupd (%rsp), %zmm0 # 64-byte Reload
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %ebx
@@ -3527,7 +3527,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vmovupd (%rsp), %zmm0 # 64-byte Reload
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; AVX512-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %ebx
@@ -3541,7 +3541,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) nounwind {
 ; AVX512-NEXT:    vmovupd (%rsp), %ymm0 # 32-byte Reload
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %ebx
@@ -3618,7 +3618,7 @@ define void @store_cvt_2f64_to_2i16(<2 x double> %a0, ptr %a1) nounwind {
 ; AVX-NEXT:    subq $24, %rsp
 ; AVX-NEXT:    movq %rdi, %rbx
 ; AVX-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-NEXT:    callq __truncdfhf2@PLT
 ; AVX-NEXT:    movl %eax, %ebp
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
@@ -3637,7 +3637,7 @@ define void @store_cvt_2f64_to_2i16(<2 x double> %a0, ptr %a1) nounwind {
 ; F16C-NEXT:    subq $24, %rsp
 ; F16C-NEXT:    movq %rdi, %rbx
 ; F16C-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %ebp
 ; F16C-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
@@ -3656,7 +3656,7 @@ define void @store_cvt_2f64_to_2i16(<2 x double> %a0, ptr %a1) nounwind {
 ; AVX512-NEXT:    subq $24, %rsp
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %ebp
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
@@ -3683,14 +3683,14 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX1-NEXT:    subq $56, %rsp
 ; AVX1-NEXT:    movq %rdi, %rbx
 ; AVX1-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movl %eax, %ebp
 ; AVX1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movl %eax, %r14d
@@ -3721,14 +3721,14 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX2-NEXT:    subq $56, %rsp
 ; AVX2-NEXT:    movq %rdi, %rbx
 ; AVX2-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movl %eax, %ebp
 ; AVX2-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movl %eax, %r14d
@@ -3759,14 +3759,14 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 ; F16C-NEXT:    subq $56, %rsp
 ; F16C-NEXT:    movq %rdi, %rbx
 ; F16C-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %ebp
 ; F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; F16C-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %r14d
@@ -3797,14 +3797,14 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX512-NEXT:    subq $56, %rsp
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %ebp
 ; AVX512-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %r14d
@@ -4038,14 +4038,14 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX1-NEXT:    movq %rdi, %rbx
 ; AVX1-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX1-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; AVX1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
@@ -4056,7 +4056,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX1-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX1-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2@PLT
 ; AVX1-NEXT:    movl %eax, %r12d
@@ -4106,14 +4106,14 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX2-NEXT:    movq %rdi, %rbx
 ; AVX2-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; AVX2-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
@@ -4124,7 +4124,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX2-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2@PLT
 ; AVX2-NEXT:    movl %eax, %r12d
@@ -4174,14 +4174,14 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; F16C-NEXT:    movq %rdi, %rbx
 ; F16C-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; F16C-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; F16C-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
@@ -4192,7 +4192,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; F16C-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; F16C-NEXT:    vzeroupper
 ; F16C-NEXT:    callq __truncdfhf2@PLT
 ; F16C-NEXT:    movl %eax, %r12d
@@ -4241,28 +4241,28 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, ptr %a1) nounwind {
 ; AVX512-NEXT:    subq $152, %rsp
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vmovupd %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; AVX512-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; AVX512-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; AVX512-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %r15d
 ; AVX512-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX512-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    movl %eax, %r12d

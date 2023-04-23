@@ -699,14 +699,14 @@ define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; BWON-F16C-NEXT:    subq $56, %rsp
 ; BWON-F16C-NEXT:    movq %rdi, %rbx
 ; BWON-F16C-NEXT:    vmovupd %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; BWON-F16C-NEXT:    vzeroupper
 ; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
 ; BWON-F16C-NEXT:    movl %eax, %ebp
 ; BWON-F16C-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; BWON-F16C-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; BWON-F16C-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; BWON-F16C-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; BWON-F16C-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; BWON-F16C-NEXT:    vzeroupper
 ; BWON-F16C-NEXT:    callq __truncdfhf2@PLT
 ; BWON-F16C-NEXT:    movl %eax, %r14d

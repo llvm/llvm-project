@@ -11,7 +11,7 @@
 define <4 x double> @transform_VPERMILPDYrr(<4 x double> %a) nounwind {
 ; CHECK-LABEL: transform_VPERMILPDYrr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3]
+; CHECK-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1,0,2,3]
 ; CHECK-NEXT:    retq
   %shufp = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 3>
   ret <4 x double> %shufp
@@ -20,7 +20,7 @@ define <4 x double> @transform_VPERMILPDYrr(<4 x double> %a) nounwind {
 define <2 x double> @transform_VPERMILPDrr(<2 x double> %a) nounwind {
 ; CHECK-LABEL: transform_VPERMILPDrr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    retq
   %shufp = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 1, i32 0>
   ret <2 x double> %shufp

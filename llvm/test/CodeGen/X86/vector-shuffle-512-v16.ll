@@ -132,7 +132,7 @@ define <16 x float> @shuffle_v16f32_01_01_03_03_05_05_07_07_09_09_11_11_13_13_15
 define <16 x float> @shuffle_v16f32_00_01_00_01_06_07_06_07_08_09_10_11_12_13_12_13(<16 x float> %a, <16 x float> %b) {
 ; ALL-LABEL: shuffle_v16f32_00_01_00_01_06_07_06_07_08_09_10_11_12_13_12_13:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,0,3,3,4,5,6,6]
+; ALL-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0,0,3,3,4,5,6,6]
 ; ALL-NEXT:    retq
   %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 6, i32 7, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 12, i32 13>
   ret <16 x float> %shuffle

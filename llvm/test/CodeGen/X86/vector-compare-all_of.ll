@@ -1534,3 +1534,53 @@ define i1 @bool_reduction_v32i8(<32 x i8> %x, <32 x i8> %y) {
   %g = extractelement <32 x i1> %f, i32 0
   ret i1 %g
 }
+
+; PR59867
+define i1 @select_v2i8(ptr %s0, ptr %s1) {
+; SSE2-LABEL: select_v2i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movzwl (%rdi), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzwl (%rsi), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,2,1,4,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE2-NEXT:    movmskpd %xmm0, %eax
+; SSE2-NEXT:    cmpl $3, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: select_v2i8:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; SSE42-NEXT:    pmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; SSE42-NEXT:    pxor %xmm0, %xmm1
+; SSE42-NEXT:    ptest %xmm1, %xmm1
+; SSE42-NEXT:    sete %al
+; SSE42-NEXT:    retq
+;
+; AVX1OR2-LABEL: select_v2i8:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; AVX1OR2-NEXT:    vpmovzxbq {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
+; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vptest %xmm0, %xmm0
+; AVX1OR2-NEXT:    sete %al
+; AVX1OR2-NEXT:    retq
+;
+; AVX512-LABEL: select_v2i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movzwl (%rdi), %eax
+; AVX512-NEXT:    cmpw (%rsi), %ax
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    retq
+  %v0 = load <2 x i8>, ptr %s0, align 1
+  %v1 = load <2 x i8>, ptr %s1, align 1
+  %cmp = icmp eq <2 x i8> %v0, %v1
+  %cmp0 = extractelement <2 x i1> %cmp, i32 0
+  %cmp1 = extractelement <2 x i1> %cmp, i32 1
+  %res = select i1 %cmp0, i1 %cmp1, i1 false
+  ret i1 %res
+}

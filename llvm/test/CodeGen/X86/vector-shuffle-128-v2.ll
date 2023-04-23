@@ -142,7 +142,7 @@ define <2 x double> @shuffle_v2f64_10(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: shuffle_v2f64_10:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-NEXT:    retq
 
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 1, i32 0>
@@ -156,7 +156,7 @@ define <2 x double> @shuffle_v2f64_11(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: shuffle_v2f64_11:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,1]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,1]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 1, i32 1>
   ret <2 x double> %shuffle
@@ -199,7 +199,7 @@ define <2 x double> @shuffle_v2f64_32(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: shuffle_v2f64_32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
 ; AVX-NEXT:    retq
 
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 3, i32 2>
@@ -214,7 +214,7 @@ define <2 x double> @shuffle_v2f64_33(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: shuffle_v2f64_33:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,1]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,1]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 3, i32 3>
   ret <2 x double> %shuffle
@@ -312,7 +312,7 @@ define <2 x double> @shuffle_v2f64_3u(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: shuffle_v2f64_3u:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
 ; AVX-NEXT:    retq
   %shuffle = shufflevector <2 x double> %a, <2 x double> %b, <2 x i32> <i32 3, i32 undef>
   ret <2 x double> %shuffle
