@@ -41851,10 +41851,37 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   }
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFLW:
-  case X86ISD::PSHUFHW:
+  case X86ISD::PSHUFHW: {
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
+    if (N0->hasOneUse()) {
+      SDValue V = peekThroughOneUseBitcasts(N0);
+      switch (V.getOpcode()) {
+      case X86ISD::VSHL:
+      case X86ISD::VSRL:
+      case X86ISD::VSRA:
+      case X86ISD::VSHLI:
+      case X86ISD::VSRLI:
+      case X86ISD::VSRAI:
+      case X86ISD::VROTLI:
+      case X86ISD::VROTRI: {
+        MVT InnerVT = V.getSimpleValueType();
+        if (InnerVT.getScalarSizeInBits() <= VT.getScalarSizeInBits()) {
+          SDValue Res = DAG.getNode(Opcode, DL, VT,
+                                    DAG.getBitcast(VT, V.getOperand(0)), N1);
+          Res = DAG.getBitcast(InnerVT, Res);
+          Res = DAG.getNode(V.getOpcode(), DL, InnerVT, Res, V.getOperand(1));
+          return DAG.getBitcast(VT, Res);
+        }
+        break;
+      }
+      }
+    }
+
     Mask = getPSHUFShuffleMask(N);
     assert(Mask.size() == 4);
     break;
+  }
   case X86ISD::MOVSD:
   case X86ISD::MOVSH:
   case X86ISD::MOVSS: {
@@ -47441,13 +47468,21 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
 
   // MOVMSKPS(V) !=/== 0 -> TESTPS(V,V)
   // MOVMSKPD(V) !=/== 0 -> TESTPD(V,V)
+  // MOVMSKPS(V) !=/== -1 -> TESTPS(V,V)
+  // MOVMSKPD(V) !=/== -1 -> TESTPD(V,V)
   // iff every element is referenced.
-  if (NumElts <= CmpBits && IsAnyOf && Subtarget.hasAVX() && IsOneUse &&
+  if (NumElts <= CmpBits && Subtarget.hasAVX() && IsOneUse &&
       (NumEltBits == 32 || NumEltBits == 64)) {
+    SDLoc DL(EFLAGS);
     MVT FloatSVT = MVT::getFloatingPointVT(NumEltBits);
     MVT FloatVT = MVT::getVectorVT(FloatSVT, NumElts);
-    SDValue V = DAG.getBitcast(FloatVT, Vec);
-    return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), MVT::i32, V, V);
+    MVT IntVT = FloatVT.changeVectorElementTypeToInteger();
+    SDValue LHS = Vec;
+    SDValue RHS = IsAnyOf ? Vec : DAG.getAllOnesConstant(DL, IntVT);
+    CC = IsAnyOf ? CC : (CC == X86::COND_E ? X86::COND_B : X86::COND_AE);
+    return DAG.getNode(X86ISD::TESTP, DL, MVT::i32,
+                       DAG.getBitcast(FloatVT, LHS),
+                       DAG.getBitcast(FloatVT, RHS));
   }
 
   return SDValue();
