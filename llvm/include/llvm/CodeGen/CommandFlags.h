@@ -111,6 +111,7 @@ std::string getBBSections();
 unsigned getTLSSize();
 
 bool getEmulatedTLS();
+std::optional<bool> getExplicitEmulatedTLS();
 
 bool getUniqueSectionNames();
 
