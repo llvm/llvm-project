@@ -84,9 +84,8 @@ class MatcherTableEmitter {
   }
 
 public:
-  MatcherTableEmitter(const CodeGenDAGPatterns &cgp) : CGP(cgp) {
-    OpcodeCounts.assign(Matcher::HighestKind+1, 0);
-  }
+  MatcherTableEmitter(const CodeGenDAGPatterns &cgp)
+      : CGP(cgp), OpcodeCounts(Matcher::HighestKind + 1, 0) {}
 
   unsigned EmitMatcherList(const Matcher *N, const unsigned Indent,
                            unsigned StartIdx, raw_ostream &OS);
