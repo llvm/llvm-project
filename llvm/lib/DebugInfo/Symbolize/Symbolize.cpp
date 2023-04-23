@@ -632,8 +632,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(ArrayRef<uint8_t> BuildID) {
   std::string Path;
   if (!getOrFindDebugBinary(BuildID, Path)) {
     return createStringError(errc::no_such_file_or_directory,
-                             Twine("could not find build ID '") +
-                                 toHex(BuildID) + "'");
+                             "could not find build ID");
   }
   return getOrCreateModuleInfo(Path);
 }

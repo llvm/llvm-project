@@ -3602,6 +3602,7 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
   bool HasAVX512 = STI.hasAVX512();
   bool HasVLX = STI.hasVLX();
 
+  assert(RC != nullptr && "Invalid target register class");
   switch (STI.getRegisterInfo()->getSpillSize(*RC)) {
   default:
     llvm_unreachable("Unknown spill size");
