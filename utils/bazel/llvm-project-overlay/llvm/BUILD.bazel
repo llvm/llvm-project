@@ -573,7 +573,7 @@ cc_library(
 )
 
 cc_library(
-    name = "LLVMTableGenGlobalISel",
+    name = "TableGenGlobalISel",
     srcs = glob([
         "utils/TableGen/GlobalISel/*.cpp",
     ]) + [
@@ -617,9 +617,9 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":LLVMTableGenGlobalISel",
         ":Support",
         ":TableGen",
+        ":TableGenGlobalISel",
         ":config",
         ":llvm-tblgen-headers",
     ],
