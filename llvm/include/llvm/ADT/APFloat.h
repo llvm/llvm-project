@@ -161,9 +161,9 @@ struct APFloatBase {
     // 8-bit floating point number mostly following IEEE-754 conventions
     // and bit layout S1E5M2 described in https://arxiv.org/abs/2206.02915,
     // with expanded range and with no infinity or signed zero.
-    // NaN is represnted as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // NaN is represented as negative zero. (FN -> Finite, UZ -> unsigned zero).
     // This format's exponent bias is 16, instead of the 15 (2 ** (5 - 1) - 1)
-    //  that IEEE precedent would imply.
+    // that IEEE precedent would imply.
     S_Float8E5M2FNUZ,
     // 8-bit floating point number mostly following IEEE-754 conventions with
     // bit layout S1E4M3 as described in https://arxiv.org/abs/2209.05433.
@@ -173,14 +173,14 @@ struct APFloatBase {
     // 8-bit floating point number mostly following IEEE-754 conventions
     // and bit layout S1E4M3 described in https://arxiv.org/abs/2206.02915,
     // with expanded range and with no infinity or signed zero.
-    // NaN is represnted as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // NaN is represented as negative zero. (FN -> Finite, UZ -> unsigned zero).
     // This format's exponent bias is 8, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3FNUZ,
     // 8-bit floating point number mostly following IEEE-754 conventions
     // and bit layout S1E4M3 with expanded range and with no infinity or signed
     // zero.
-    // NaN is represnted as negative zero. (FN -> Finite, UZ -> unsigned zero).
+    // NaN is represented as negative zero. (FN -> Finite, UZ -> unsigned zero).
     // This format's exponent bias is 11, instead of the 7 (2 ** (4 - 1) - 1)
     // that IEEE precedent would imply.
     S_Float8E4M3B11FNUZ,
