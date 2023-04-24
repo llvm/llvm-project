@@ -32,7 +32,6 @@
 #include "mlir/Tools/ParseUtilities.h"
 #include "mlir/Tools/Plugins/DialectPlugin.h"
 #include "mlir/Tools/Plugins/PassPlugin.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/InitLLVM.h"
@@ -81,33 +80,6 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Log action execution to a file, or stderr if "
                  " '-' is passed"),
         cl::location(logActionsToFlag)};
-
-    static cl::list<std::string> logActionLocationFilter(
-        "log-mlir-actions-filter",
-        cl::desc(
-            "Comma separated list of locations to filter actions from logging"),
-        cl::CommaSeparated,
-        cl::cb<void, std::string>([&](const std::string &location) {
-          static bool register_once = [&] {
-            addLogActionLocFilter(&locBreakpointManager);
-            return true;
-          }();
-          (void)register_once;
-          static std::vector<std::string> locations;
-          locations.push_back(location);
-          StringRef locStr = locations.back();
-
-          // Parse the individual location filters and set the breakpoints.
-          auto diag = [](Twine msg) { llvm::errs() << msg << "\n"; };
-          auto locBreakpoint =
-              tracing::FileLineColLocBreakpoint::parseFromString(locStr, diag);
-          if (failed(locBreakpoint)) {
-            llvm::errs() << "Invalid location filter: " << locStr << "\n";
-            exit(1);
-          }
-          auto [file, line, col] = *locBreakpoint;
-          locBreakpointManager.addBreakpoint(file, line, col);
-        }));
 
     static cl::opt<bool, /*ExternalStorage=*/true> showDialects(
         "show-dialects",
@@ -158,9 +130,6 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
   /// Pointer to static dialectPlugins variable in constructor, needed by
   /// setDialectPluginsCallback(DialectRegistry&).
   cl::list<std::string> *dialectPlugins = nullptr;
-
-  /// The breakpoint manager for the log action location filter.
-  tracing::FileLineColLocBreakpointManager locBreakpointManager;
 };
 } // namespace
 
@@ -230,8 +199,6 @@ public:
     logActionsFile->keep();
     raw_fd_ostream &logActionsStream = logActionsFile->os();
     actionLogger = std::make_unique<tracing::ActionLogger>(logActionsStream);
-    for (const auto *locationBreakpoint : config.getLogActionsLocFilters())
-      actionLogger->addBreakpointManager(locationBreakpoint);
 
     executionContext.registerObserver(actionLogger.get());
     context.registerActionHandler(executionContext);
@@ -240,8 +207,6 @@ public:
 private:
   std::unique_ptr<llvm::ToolOutputFile> logActionsFile;
   std::unique_ptr<tracing::ActionLogger> actionLogger;
-  std::vector<std::unique_ptr<tracing::FileLineColLocBreakpoint>>
-      locationBreakpoints;
   tracing::ExecutionContext executionContext;
 };
 
