@@ -9,7 +9,7 @@
 #include "mlir/Debug/CLOptionsSetup.h"
 
 #include "mlir/Debug/Counter.h"
-#include "mlir/Debug/DebuggerDebugExecutionContextHook.h"
+#include "mlir/Debug/DebuggerExecutionContextHook.h"
 #include "mlir/Debug/ExecutionContext.h"
 #include "mlir/Debug/Observers/ActionLogging.h"
 #include "mlir/IR/MLIRContext.h"
@@ -99,7 +99,7 @@ public:
     }
     if (config.isDebuggerActionHookEnabled()) {
       errs() << " (with Debugger hook)";
-      setupDebuggerDebugExecutionContextHook(executionContext);
+      setupDebuggerExecutionContextHook(executionContext);
     }
     errs() << "\n";
     context.registerActionHandler(executionContext);
