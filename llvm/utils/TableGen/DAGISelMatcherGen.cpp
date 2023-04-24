@@ -22,8 +22,8 @@ using namespace llvm;
 
 
 /// getRegisterValueType - Look up and return the ValueType of the specified
-/// register. If the register is a member of multiple register classes which
-/// have different associated types, return MVT::Other.
+/// register. If the register is a member of multiple register classes, they
+/// must all have the same type.
 static MVT::SimpleValueType getRegisterValueType(Record *R,
                                                  const CodeGenTarget &T) {
   bool FoundRC = false;
@@ -37,15 +37,15 @@ static MVT::SimpleValueType getRegisterValueType(Record *R,
     if (!FoundRC) {
       FoundRC = true;
       const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
-      if (VVT.isSimple())
-        VT = VVT.getSimple().SimpleTy;
+      assert(VVT.isSimple());
+      VT = VVT.getSimple().SimpleTy;
       continue;
     }
 
 #ifndef NDEBUG
     // If this occurs in multiple register classes, they all have to agree.
-    const ValueTypeByHwMode &T = RC.getValueTypeNum(0);
-    assert((!T.isSimple() || T.getSimple().SimpleTy == VT) &&
+    const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
+    assert(VVT.isSimple() && VVT.getSimple().SimpleTy == VT &&
            "ValueType mismatch between register classes for this register");
 #endif
   }
