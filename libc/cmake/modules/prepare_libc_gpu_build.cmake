@@ -44,7 +44,7 @@ foreach(arch_tool ${LIBC_NVPTX_ARCH} ${LIBC_AMDGPU_ARCH})
   if(arch_tool)
     execute_process(COMMAND ${arch_tool}
                     OUTPUT_VARIABLE arch_tool_output
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+                    ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
     string(REPLACE "\n" ";" arch_list "${arch_tool_output}")
     list(APPEND detected_gpu_architectures "${arch_list}")
   endif()

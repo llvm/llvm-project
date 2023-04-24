@@ -967,8 +967,10 @@ def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   MetaVarName<"<directory>">;
 def c : Flag<["-"], "c">, Flags<[NoXarchOption, FlangOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
-def fconvergent_functions : Flag<["-"], "fconvergent-functions">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Assume functions may be convergent">;
+defm convergent_functions : BoolFOption<"convergent-functions",
+  LangOpts<"ConvergentFunctions">, DefaultFalse,
+  NegFlag<SetFalse, [], "Assume all functions may be convergent.">,
+  PosFlag<SetTrue, [CC1Option]>>;
 
 def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
   InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
@@ -6552,12 +6554,14 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
 // OpenMP Options
 //===----------------------------------------------------------------------===//
 
+let Flags = [CC1Option, FC1Option, NoDriverOption] in {
+
 def fopenmp_is_device : Flag<["-"], "fopenmp-is-device">,
-  HelpText<"Generate code only for an OpenMP target device.">,
-  Flags<[CC1Option, FC1Option, NoDriverOption]>;
+  HelpText<"Generate code only for an OpenMP target device.">;
 def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
-  HelpText<"Path to the IR file produced by the frontend for the host.">,
-  Flags<[CC1Option, NoDriverOption]>;
+  HelpText<"Path to the IR file produced by the frontend for the host.">;
+
+} // let Flags = [CC1Option, FC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // SYCL Options

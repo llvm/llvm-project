@@ -194,6 +194,9 @@ defm highentropyva : B<"highentropyva",
 defm incremental : B<"incremental",
                      "Keep original import library if contents are unchanged",
                      "Overwrite import library even if contents are unchanged">;
+defm inferasanlibs : B<"inferasanlibs",
+                       "Unused, generates a warning",
+                       "No effect (default)">;
 defm integritycheck : B<"integritycheck",
                         "Set FORCE_INTEGRITY bit in PE header",
                         "No effect (default)">;
