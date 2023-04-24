@@ -60,6 +60,22 @@ public:
     void operator()(T *ptr) { delete ptr; }
 };
 
+// https://llvm.org/PR60258
+// Invalid constructor SFINAE for std::shared_ptr's array ctors
+static_assert( std::is_constructible<std::shared_ptr<int>,  int*, test_deleter<int> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int>,  int*, bad_deleter>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<Base>,  Derived*, test_deleter<Base> >::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<A>,  int*, test_deleter<A> >::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*, test_deleter<int>>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int*, bad_deleter>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[], test_deleter<int>>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*, test_deleter<int>>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int*, bad_deleter>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5], test_deleter<int>>::value, "");
+#endif
+
 int main(int, char**)
 {
     {

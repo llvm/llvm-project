@@ -25207,6 +25207,16 @@ TEST_F(FormatTest, RemoveSemicolon) {
                "}",
                Style);
 
+  verifyFormat("class [[deprecated(\"\")]] C {\n"
+               "  int i;\n"
+               "};",
+               Style);
+
+  verifyFormat("struct EXPORT_MACRO [[nodiscard]] C {\n"
+               "  int i;\n"
+               "};",
+               Style);
+
   verifyIncompleteFormat("class C final [[deprecated(l]] {});", Style);
 
   // These tests are here to show a problem that may not be easily
@@ -25280,6 +25290,11 @@ TEST_F(FormatTest, InsertNewlineAtEOF) {
 
   verifyFormat("int i;\n", Style);
   verifyFormat("int i;\n", "int i;", Style);
+}
+
+TEST_F(FormatTest, SpaceAfterUDL) {
+  verifyFormat("auto c = (4s).count();");
+  verifyFormat("auto x = 5s .count() == 5;");
 }
 
 } // namespace

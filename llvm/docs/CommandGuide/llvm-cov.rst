@@ -188,14 +188,14 @@ SHOW COMMAND
 SYNOPSIS
 ^^^^^^^^
 
-:program:`llvm-cov show` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]] [*SOURCES*]
+:program:`llvm-cov show` [*options*] -instr-profile *PROFILE* [*BIN*] [*-object BIN*]... [*-sources*] [*SOURCE*]...
 
 DESCRIPTION
 ^^^^^^^^^^^
 
 The :program:`llvm-cov show` command shows line by line coverage of the
-binaries *BIN*,...  using the profile data *PROFILE*. It can optionally be
-filtered to only show the coverage for the files listed in *SOURCES*.
+binaries *BIN*...  using the profile data *PROFILE*. It can optionally be
+filtered to only show the coverage for the files listed in *SOURCE*....
 
 *BIN* may be an executable, object file, dynamic library, or archive (thin or
 otherwise).
@@ -370,14 +370,14 @@ REPORT COMMAND
 SYNOPSIS
 ^^^^^^^^
 
-:program:`llvm-cov report` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]] [*SOURCES*]
+:program:`llvm-cov report` [*options*] -instr-profile *PROFILE* [*BIN*] [*-object BIN*]... [*-sources*] [*SOURCE*]...
 
 DESCRIPTION
 ^^^^^^^^^^^
 
 The :program:`llvm-cov report` command displays a summary of the coverage of
-the binaries *BIN*,... using the profile data *PROFILE*. It can optionally be
-filtered to only show the coverage for the files listed in *SOURCES*.
+the binaries *BIN*... using the profile data *PROFILE*. It can optionally be
+filtered to only show the coverage for the files listed in *SOURCE*....
 
 *BIN* may be an executable, object file, dynamic library, or archive (thin or
 otherwise).
@@ -451,13 +451,13 @@ EXPORT COMMAND
 SYNOPSIS
 ^^^^^^^^
 
-:program:`llvm-cov export` [*options*] -instr-profile *PROFILE* *BIN* [*-object BIN,...*] [[*-object BIN*]] [*SOURCES*]
+:program:`llvm-cov export` [*options*] -instr-profile *PROFILE* [*BIN*] [*-object BIN*]... [*-sources*] [*SOURCE*]...
 
 DESCRIPTION
 ^^^^^^^^^^^
 
 The :program:`llvm-cov export` command exports coverage data of the binaries
-*BIN*,... using the profile data *PROFILE* in either JSON or lcov trace file
+*BIN*... using the profile data *PROFILE* in either JSON or lcov trace file
 format.
 
 When exporting JSON, the regions, functions, branches, expansions, and
@@ -465,7 +465,7 @@ summaries of the coverage data will be exported. When exporting an lcov trace
 file, the line-based coverage, branch coverage, and summaries will be exported.
 
 The exported data can optionally be filtered to only export the coverage
-for the files listed in *SOURCES*.
+for the files listed in *SOURCE*....
 
 For information on compiling programs for coverage and generating profile data,
 see :ref:`llvm-cov-show`.

@@ -85,7 +85,6 @@ else()
     NO_INSTALL_RPATH
   )
 endif()
-add_dependencies(omptarget.rtl.cuda.nextgen omptarget.devicertl.nvptx)
 
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.cuda.nextgen LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")

@@ -94,37 +94,62 @@ void testTypeWithDefaultCtor() {
   testDefaultConstructor<bare_allocator<WithDefaultCtor>>();
 }
 
+struct CountDestructions {
+  int* destructions_;
+  constexpr CountDestructions() = default;
+  constexpr CountDestructions(int* d) : destructions_(d) { }
+  constexpr ~CountDestructions() { ++*destructions_; }
+};
+
 void testAllocatorOperationsCalled() {
   // single
   {
     test_allocator_statistics alloc_stats;
+    int destructions = 0;
     {
-      [[maybe_unused]] std::same_as<std::shared_ptr<int>> auto ptr =
-          std::allocate_shared_for_overwrite<int>(test_allocator<void>{&alloc_stats});
+      [[maybe_unused]] std::same_as<std::shared_ptr<CountDestructions>> auto ptr =
+          std::allocate_shared_for_overwrite<CountDestructions>(test_allocator<void>{&alloc_stats});
+      std::construct_at<CountDestructions>(ptr.get(), &destructions);
       assert(alloc_stats.alloc_count == 1);
+      assert(alloc_stats.construct_count == 0);
     }
+    assert(destructions == 1);
+    assert(alloc_stats.destroy_count == 0);
     assert(alloc_stats.alloc_count == 0);
   }
 
   // bounded array
   {
     test_allocator_statistics alloc_stats;
+    int destructions = 0;
     {
-      [[maybe_unused]] std::same_as<std::shared_ptr<int[2]>> auto ptr =
-          std::allocate_shared_for_overwrite<int[2]>(test_allocator<void>{&alloc_stats});
+      [[maybe_unused]] std::same_as<std::shared_ptr<CountDestructions[2]>> auto ptr =
+          std::allocate_shared_for_overwrite<CountDestructions[2]>(test_allocator<void>{&alloc_stats});
+      std::construct_at<CountDestructions>(ptr.get() + 0, &destructions);
+      std::construct_at<CountDestructions>(ptr.get() + 1, &destructions);
       assert(alloc_stats.alloc_count == 1);
+      assert(alloc_stats.construct_count == 0);
     }
+    assert(destructions == 2);
+    assert(alloc_stats.destroy_count == 0);
     assert(alloc_stats.alloc_count == 0);
   }
 
   // unbounded array
   {
     test_allocator_statistics alloc_stats;
+    int destructions = 0;
     {
-      [[maybe_unused]] std::same_as<std::shared_ptr<int[]>> auto ptr =
-          std::allocate_shared_for_overwrite<int[]>(test_allocator<void>{&alloc_stats}, 3);
+      [[maybe_unused]] std::same_as<std::shared_ptr<CountDestructions[]>> auto ptr =
+          std::allocate_shared_for_overwrite<CountDestructions[]>(test_allocator<void>{&alloc_stats}, 3);
+      std::construct_at<CountDestructions>(ptr.get() + 0, &destructions);
+      std::construct_at<CountDestructions>(ptr.get() + 1, &destructions);
+      std::construct_at<CountDestructions>(ptr.get() + 2, &destructions);
       assert(alloc_stats.alloc_count == 1);
+      assert(alloc_stats.construct_count == 0);
     }
+    assert(destructions == 3);
+    assert(alloc_stats.destroy_count == 0);
     assert(alloc_stats.alloc_count == 0);
   }
 }

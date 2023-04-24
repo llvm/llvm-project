@@ -473,51 +473,45 @@ int fn() {
 }
 }
 
-namespace pr56094 {
-template <typename... T> struct D {
-  template <typename... U> using B = int(int (*...p)(T, U));
-  // expected-error@-1 {{pack expansion contains parameter packs 'T' and 'U' that have different lengths (1 vs. 2)}}
-  template <typename U1, typename U2> D(B<U1, U2> *);
-  // expected-note@-1 {{in instantiation of template type alias 'B' requested here}}
-};
-using t1 = D<float>::B<int>;
-// expected-note@-1 {{in instantiation of template class 'pr56094::D<float>' requested here}}
-
-template <bool...> struct F {};
-template <class...> struct G {};
-template <bool... I> struct E {
-  template <bool... U> using B = G<F<I, U>...>;
-  // expected-error@-1 {{pack expansion contains parameter packs 'I' and 'U' that have different lengths (1 vs. 2)}}
-  template <bool U1, bool U2> E(B<U1, U2> *);
-  // expected-note@-1 {{in instantiation of template type alias 'B' requested here}}
-};
-using t2 = E<true>::B<false>;
-// expected-note@-1 {{in instantiation of template class 'pr56094::E<true>' requested here}}
-} // namespace pr56094
-
-namespace GH56094 {
-#if __cplusplus >= 201402L
-template <class> struct A; // expected-note {{template is declared here}}
-template <class> using B = char;
-template <class ...Cs> int C{ A<B<Cs>>{}... }; // expected-error {{implicit instantiation of undefined template}}
-#endif
-} // namespace GH56094
-
-namespace GH58679 {
-#if __cplusplus >= 201402L
-template <class> constexpr int A = 1;
-
-template <int> struct B;
-template <> struct B<1> { using b1 = void; };
-
-template <class> using C = char;
-
-template <class... Ds> int D{ B<A<C<Ds>>>{}... };
-
-struct E {
-  template <class E1, class = typename B<A<E1>>::b1> E(E1);
+namespace GH58452 {
+template <typename... As> struct A {
+  template <typename... Bs> using B = void(As...(Bs));
 };
 
-template <typename... Es> int F{ E(C<Es>{})... };
-#endif
-} // namespace GH58679
+template <typename... Cs> struct C {
+    template <typename... Ds> using D = typename A<Cs...>::template B<Ds...>;
+};
+
+using t1 = C<int, int>::template D<float, float>;
+
+template <typename A, typename B>
+using ConditionalRewrite = B;
+
+template <typename T>
+using SignatureType = int;
+
+template <typename... Args>
+struct Type1 {
+    template <typename... Params>
+        using Return = SignatureType<int(ConditionalRewrite<Args, Params>...)>;
+
+};
+
+template <typename... Args>
+struct Type2 {
+    using T1 = Type1<Args...>;
+
+      template <typename... Params>
+          using Return = typename T1::template Return<Params...>;
+
+};
+
+template <typename T>
+typename T::template Return<int, int> InvokeMethod() {
+    return 3;
+}
+
+int Function1() {
+    return InvokeMethod<Type2<int, int>>();
+}
+}

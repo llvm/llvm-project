@@ -235,11 +235,24 @@ public:
 
   void EmitCXXDestructors(const CXXDestructorDecl *D) override;
 
-  const CXXRecordDecl *
-  getThisArgumentTypeForMethod(const CXXMethodDecl *MD) override {
-    if (MD->isVirtual() && !isa<CXXDestructorDecl>(MD)) {
+  const CXXRecordDecl *getThisArgumentTypeForMethod(GlobalDecl GD) override {
+    auto *MD = cast<CXXMethodDecl>(GD.getDecl());
+
+    if (MD->isVirtual()) {
+      GlobalDecl LookupGD = GD;
+      if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD)) {
+        // Complete dtors take a pointer to the complete object,
+        // thus don't need adjustment.
+        if (GD.getDtorType() == Dtor_Complete)
+          return MD->getParent();
+
+        // There's only Dtor_Deleting in vftable but it shares the this
+        // adjustment with the base one, so look up the deleting one instead.
+        LookupGD = GlobalDecl(DD, Dtor_Deleting);
+      }
       MethodVFTableLocation ML =
-          CGM.getMicrosoftVTableContext().getMethodVFTableLocation(MD);
+          CGM.getMicrosoftVTableContext().getMethodVFTableLocation(LookupGD);
+
       // The vbases might be ordered differently in the final overrider object
       // and the complete object, so the "this" argument may sometimes point to
       // memory that has no particular type (e.g. past the complete object).

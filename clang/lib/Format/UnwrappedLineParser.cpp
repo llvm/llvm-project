@@ -2739,16 +2739,17 @@ void UnwrappedLineParser::handleAttributes() {
   // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
   if (FormatTok->is(TT_AttributeMacro))
     nextToken();
-  handleCppAttributes();
+  if (FormatTok->is(tok::l_square))
+    handleCppAttributes();
 }
 
 bool UnwrappedLineParser::handleCppAttributes() {
   // Handle [[likely]] / [[unlikely]] attributes.
-  if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute()) {
-    parseSquare();
-    return true;
-  }
-  return false;
+  assert(FormatTok->is(tok::l_square));
+  if (!tryToParseSimpleAttribute())
+    return false;
+  parseSquare();
+  return true;
 }
 
 /// Returns whether \c Tok begins a block.
@@ -3855,7 +3856,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   // An [[attribute]] can be before the identifier.
   while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::hashhash,
                             tok::kw___attribute, tok::kw___declspec,
-                            tok::kw_alignas, tok::l_square, tok::r_square) ||
+                            tok::kw_alignas, tok::l_square) ||
          ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
           FormatTok->isOneOf(tok::period, tok::comma))) {
     if (Style.isJavaScript() &&
@@ -3869,21 +3870,15 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         continue;
       }
     }
+    if (FormatTok->is(tok::l_square) && handleCppAttributes())
+      continue;
     bool IsNonMacroIdentifier =
         FormatTok->is(tok::identifier) &&
         FormatTok->TokenText != FormatTok->TokenText.upper();
     nextToken();
-    // We can have macros or attributes in between 'class' and the class name.
-    if (!IsNonMacroIdentifier) {
-      if (FormatTok->is(tok::l_paren)) {
-        parseParens();
-      } else if (FormatTok->is(TT_AttributeSquare)) {
-        parseSquare();
-        // Consume the closing TT_AttributeSquare.
-        if (FormatTok->Next && FormatTok->is(TT_AttributeSquare))
-          nextToken();
-      }
-    }
+    // We can have macros in between 'class' and the class name.
+    if (!IsNonMacroIdentifier && FormatTok->is(tok::l_paren))
+      parseParens();
   }
 
   // Note that parsing away template declarations here leads to incorrectly

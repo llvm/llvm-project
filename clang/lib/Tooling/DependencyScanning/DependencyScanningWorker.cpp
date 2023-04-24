@@ -247,10 +247,12 @@ public:
           std::make_shared<DependencyConsumerForwarder>(
               std::move(Opts), WorkingDirectory, Consumer));
       break;
+    case ScanningOutputFormat::P1689:
     case ScanningOutputFormat::Full:
       MDC = std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer, OriginalInvocation,
-          OptimizeArgs, EagerLoadModules);
+          OptimizeArgs, EagerLoadModules,
+          Format == ScanningOutputFormat::P1689);
       ScanInstance.addDependencyCollector(MDC);
       break;
     }

@@ -348,8 +348,11 @@ struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
 template <> struct MappingTraits<FormatStyle::IntegerLiteralSeparatorStyle> {
   static void mapping(IO &IO, FormatStyle::IntegerLiteralSeparatorStyle &Base) {
     IO.mapOptional("Binary", Base.Binary);
+    IO.mapOptional("BinaryMinDigits", Base.BinaryMinDigits);
     IO.mapOptional("Decimal", Base.Decimal);
+    IO.mapOptional("DecimalMinDigits", Base.DecimalMinDigits);
     IO.mapOptional("Hex", Base.Hex);
+    IO.mapOptional("HexMinDigits", Base.HexMinDigits);
   }
 };
 
@@ -718,23 +721,23 @@ template <> struct MappingTraits<FormatStyle::TrailingCommentsAlignmentStyle> {
                         FormatStyle::TrailingCommentsAlignmentStyle &Value) {
     IO.enumCase(Value, "Leave",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Leave, 1}));
+                    {FormatStyle::TCAS_Leave, 0}));
 
     IO.enumCase(Value, "Always",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 1}));
+                    {FormatStyle::TCAS_Always, 0}));
 
     IO.enumCase(Value, "Never",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 1}));
+                    {FormatStyle::TCAS_Never, 0}));
 
     // For backwards compatibility
     IO.enumCase(Value, "true",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Always, 1}));
+                    {FormatStyle::TCAS_Always, 0}));
     IO.enumCase(Value, "false",
                 FormatStyle::TrailingCommentsAlignmentStyle(
-                    {FormatStyle::TCAS_Never, 1}));
+                    {FormatStyle::TCAS_Never, 0}));
   }
 
   static void mapping(IO &IO,
@@ -1392,7 +1395,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
-  LLVMStyle.IntegerLiteralSeparator = {/*Binary=*/0, /*Decimal=*/0, /*Hex=*/0};
+  LLVMStyle.IntegerLiteralSeparator = {
+      /*Binary=*/0,  /*BinaryMinDigits=*/0,
+      /*Decimal=*/0, /*DecimalMinDigits=*/0,
+      /*Hex=*/0,     /*HexMinDigits=*/0};
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;

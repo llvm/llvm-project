@@ -22,7 +22,7 @@
 .byte 1  # Tag_File
 .long .Lend-.Lbegin
 .byte 5  # Tag_RISCV_arch
-.asciz "rv64i2"
+.asciz "rv64i2p0"
 .Lend:
 
 .section .riscv.b,""

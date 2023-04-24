@@ -446,13 +446,8 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   std::string OutputFileName = TC.getInputFilename(Output);
 
   // If we are invoking `nvlink` internally we need to output a `.cubin` file.
-  // Checking if the output is a temporary is the cleanest way to determine
-  // this. Putting this logic in `getInputFilename` isn't an option because it
-  // relies on the compilation.
   // FIXME: This should hopefully be removed if NVIDIA updates their tooling.
-  if (Output.isFilename() &&
-      llvm::find(C.getTempFiles(), Output.getFilename()) !=
-          C.getTempFiles().end()) {
+  if (!C.getInputArgs().getLastArg(options::OPT_c)) {
     SmallString<256> Filename(Output.getFilename());
     llvm::sys::path::replace_extension(Filename, "cubin");
     OutputFileName = Filename.str();

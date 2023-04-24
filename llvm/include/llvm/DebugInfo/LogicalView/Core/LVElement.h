@@ -15,7 +15,6 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
 #include "llvm/Support/Casting.h"
 #include <map>
 #include <set>

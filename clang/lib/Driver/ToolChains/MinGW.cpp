@@ -200,6 +200,16 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_u_Group);
   Args.AddLastArg(CmdArgs, options::OPT_Z_Flag);
 
+  // Add asan_dynamic as the first import lib before other libs. This allows
+  // asan to be initialized as early as possible to increase its instrumentation
+  // coverage to include other user DLLs which has not been built with asan.
+  if (Sanitize.needsAsanRt() && !Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    // MinGW always links against a shared MSVCRT.
+    CmdArgs.push_back(
+        TC.getCompilerRTArgString(Args, "asan_dynamic", ToolChain::FT_Shared));
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_mdll)) {
       CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("dllcrt2.o")));

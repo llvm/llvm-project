@@ -323,8 +323,9 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  return ra.areRelocsRel() ? constantEq(a, ra.rels, b, rb.rels)
-                           : constantEq(a, ra.relas, b, rb.relas);
+  return ra.areRelocsRel() || rb.areRelocsRel()
+             ? constantEq(a, ra.rels, b, rb.rels)
+             : constantEq(a, ra.relas, b, rb.relas);
 }
 
 // Compare two lists of relocations. Returns true if all pairs of
@@ -371,8 +372,9 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  return ra.areRelocsRel() ? variableEq(a, ra.rels, b, rb.rels)
-                           : variableEq(a, ra.relas, b, rb.relas);
+  return ra.areRelocsRel() || rb.areRelocsRel()
+             ? variableEq(a, ra.rels, b, rb.rels)
+             : variableEq(a, ra.relas, b, rb.relas);
 }
 
 template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t begin, size_t end) {

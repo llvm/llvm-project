@@ -20,6 +20,12 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "Support"
 
+namespace {
+// Unique string pool instance used by all logical readers.
+LVStringPool StringPool;
+} // namespace
+LVStringPool &llvm::logicalview::getStringPool() { return StringPool; }
+
 // Perform the following transformations to the given 'Path':
 // - all characters to lowercase.
 // - '\\' into '/' (Platform independent).

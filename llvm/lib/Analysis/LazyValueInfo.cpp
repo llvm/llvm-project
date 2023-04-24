@@ -1673,11 +1673,6 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
       // TODO: Use non-local query?
       CondVal =
           getEdgeValueLocal(V, PHI->getIncomingBlock(*CurrU), PHI->getParent());
-    } else if (!isSafeToSpeculativelyExecute(CurrI)) {
-      // Stop walking if we hit a non-speculatable instruction. Even if the
-      // result is only used under a specific condition, executing the
-      // instruction itself may cause side effects or UB already.
-      break;
     }
     if (CondVal && CondVal->isConstantRange())
       CR = CR.intersectWith(CondVal->getConstantRange());
@@ -1685,7 +1680,13 @@ ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
     // Only follow one-use chain, to allow direct intersection of conditions.
     // If there are multiple uses, we would have to intersect with the union of
     // all conditions at different uses.
-    if (!CurrI->hasOneUse())
+    // Stop walking if we hit a non-speculatable instruction. Even if the
+    // result is only used under a specific condition, executing the
+    // instruction itself may cause side effects or UB already.
+    // This also disallows looking through phi nodes: If the phi node is part
+    // of a cycle, we might end up reasoning about values from different cycle
+    // iterations (PR60629).
+    if (!CurrI->hasOneUse() || !isSafeToSpeculativelyExecute(CurrI))
       break;
     CurrU = &*CurrI->use_begin();
   }

@@ -216,7 +216,6 @@ C::C() { foo(); }
 // WIN32-NOT:  load
 // WIN32:      getelementptr i8, i8* %{{.*}}, i32 4
 // WIN32-NOT:  load
-// WIN32:      bitcast i8* %{{.*}} to %"struct.crash_on_partial_destroy::B"*
 // WIN32:      call x86_thiscallcc void @"??1B@crash_on_partial_destroy@@UAE@XZ"
 //
 // WIN32-NOT:  load

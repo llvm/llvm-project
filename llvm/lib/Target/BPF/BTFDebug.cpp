@@ -782,6 +782,17 @@ void BTFDebug::visitCompositeType(const DICompositeType *CTy,
     visitEnumType(CTy, TypeId);
 }
 
+bool BTFDebug::IsForwardDeclCandidate(const DIType *Base) {
+  if (const auto *CTy = dyn_cast<DICompositeType>(Base)) {
+    auto CTag = CTy->getTag();
+    if ((CTag == dwarf::DW_TAG_structure_type ||
+         CTag == dwarf::DW_TAG_union_type) &&
+        !CTy->getName().empty() && !CTy->isForwardDecl())
+      return true;
+  }
+  return false;
+}
+
 /// Handle pointer, typedef, const, volatile, restrict and member types.
 void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                                 bool CheckPointer, bool SeenPointer) {
@@ -796,20 +807,15 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
   if (CheckPointer && SeenPointer) {
     const DIType *Base = DTy->getBaseType();
     if (Base) {
-      if (const auto *CTy = dyn_cast<DICompositeType>(Base)) {
-        auto CTag = CTy->getTag();
-        if ((CTag == dwarf::DW_TAG_structure_type ||
-             CTag == dwarf::DW_TAG_union_type) &&
-            !CTy->getName().empty() && !CTy->isForwardDecl()) {
-          /// Find a candidate, generate a fixup. Later on the struct/union
-          /// pointee type will be replaced with either a real type or
-          /// a forward declaration.
-          auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, true);
-          auto &Fixup = FixupDerivedTypes[CTy];
-          Fixup.push_back(std::make_pair(DTy, TypeEntry.get()));
-          TypeId = addType(std::move(TypeEntry), DTy);
-          return;
-        }
+      if (IsForwardDeclCandidate(Base)) {
+        /// Find a candidate, generate a fixup. Later on the struct/union
+        /// pointee type will be replaced with either a real type or
+        /// a forward declaration.
+        auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, true);
+        auto &Fixup = FixupDerivedTypes[cast<DICompositeType>(Base)];
+        Fixup.push_back(std::make_pair(DTy, TypeEntry.get()));
+        TypeId = addType(std::move(TypeEntry), DTy);
+        return;
       }
     }
   }
@@ -844,6 +850,13 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     visitTypeEntry(DTy->getBaseType(), TempTypeId, CheckPointer, SeenPointer);
 }
 
+/// Visit a type entry. CheckPointer is true if the type has
+/// one of its predecessors as one struct/union member. SeenPointer
+/// is true if CheckPointer is true and one of its predecessors
+/// is a pointer. The goal of CheckPointer and SeenPointer is to
+/// do pruning for struct/union types so some of these types
+/// will not be emitted in BTF and rather forward declarations
+/// will be generated.
 void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
                               bool CheckPointer, bool SeenPointer) {
   if (!Ty || DIToIdMap.find(Ty) != DIToIdMap.end()) {
@@ -888,6 +901,11 @@ void BTFDebug::visitTypeEntry(const DIType *Ty, uint32_t &TypeId,
           if (DIToIdMap.find(BaseTy) != DIToIdMap.end()) {
             DTy = dyn_cast<DIDerivedType>(BaseTy);
           } else {
+            if (CheckPointer && DTy->getTag() == dwarf::DW_TAG_pointer_type) {
+              SeenPointer = true;
+              if (IsForwardDeclCandidate(BaseTy))
+                break;
+            }
             uint32_t TmpTypeId;
             visitTypeEntry(BaseTy, TmpTypeId, CheckPointer, SeenPointer);
             break;

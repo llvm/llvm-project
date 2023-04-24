@@ -61,7 +61,7 @@ class TestCoroutineHandle(TestBase):
                 result_children=[
                     ValueCheck(name="resume", summary = test_generator_func_ptr_re),
                     ValueCheck(name="destroy", summary = test_generator_func_ptr_re),
-                    ValueCheck(name="promise", value="-1")
+                    ValueCheck(name="promise", dereference=ValueCheck(value="-1"))
                 ])
 
         # Run until after the `co_yield`

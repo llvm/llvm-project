@@ -329,6 +329,12 @@ https://gcc.gnu.org/onlinedocs/gcc-3.0.2/cpp_9.html.
 How to specify the dependent BMIs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+There are 3 methods to specify the dependent BMIs:
+
+* (1) ``-fprebuilt-module-path=<path/to/direcotry>``.
+* (2) ``-fmodule-file=<path/to/BMI>``.
+* (3) ``-fmodule-file=<module-name>=<path/to/BMI>``.
+
 The option ``-fprebuilt-module-path`` tells the compiler the path where to search for dependent BMIs.
 It may be used multiple times just like ``-I`` for specifying paths for header files. The look up rule here is:
 
@@ -337,16 +343,21 @@ It may be used multiple times just like ``-I`` for specifying paths for header f
 * (2) When we import partition module unit M:P. The compiler would look up M-P.pcm in the
   directories specified by ``-fprebuilt-module-path``.
 
-Another way to specify the dependent BMIs is to use ``-fmodule-file``. The main difference
-is that ``-fprebuilt-module-path`` takes a directory, whereas ``-fmodule-file`` requires a
-specific file. In case both the ``-fprebuilt-module-path`` and ``-fmodule-file`` exist, the 
-``-fmodule-file`` option takes higher precedence. In another word, if the compiler finds the wanted
-BMI specified by ``-fmodule-file``, the compiler wouldn't look up again in the directories specified
-by ``-fprebuilt-module-path``.
+The option ``-fmodule-file=<path/to/BMI>`` tells the compiler to load the specified BMI directly.
+The option ``-fmodule-file=<module-name>=<path/to/BMI>`` tells the compiler to load the specified BMI
+for the module specified by ``<module-name>`` when necessary. The main difference is that
+``-fmodule-file=<path/to/BMI>`` will load the BMI eagerly, whereas
+``-fmodule-file=<module-name>=<path/to/BMI>`` will only load the BMI lazily, which is similar
+with ``-fprebuilt-module-path``.
 
-When we compile a ``module implementation unit``, we must pass the BMI of the corresponding
-``primary module interface unit`` by ``-fmodule-file``
-since the language specification says a module implementation unit implicitly imports
+In case all ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>`` and
+``-fmodule-file=<module-name>=<path/to/BMI>`` exist, the ``-fmodule-file=<path/to/BMI>`` option
+takes highest precedence and ``-fmodule-file=<module-name>=<path/to/BMI>`` will take the second
+highest precedence.
+
+When we compile a ``module implementation unit``, we must specify the BMI of the corresponding
+``primary module interface unit``.
+Since the language specification says a module implementation unit implicitly imports
 the primary module interface unit.
 
   [module.unit]p8
@@ -354,13 +365,15 @@ the primary module interface unit.
   A module-declaration that contains neither an export-keyword nor a module-partition implicitly
   imports the primary module interface unit of the module as if by a module-import-declaration.
 
-Again, the option ``-fmodule-file`` may occur multiple times.
+All of the 3 options ``-fprebuilt-module-path=<path/to/direcotry>``, ``-fmodule-file=<path/to/BMI>``
+and ``-fmodule-file=<module-name>=<path/to/BMI>`` may occur multiple times.
 For example, the command line to compile ``M.cppm`` in
 the above example could be rewritten into:
 
 .. code-block:: console
 
   $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M-interface_part.pcm -fmodule-file=M-impl_part.pcm -o M.pcm
+  $ clang++ -std=c++20 M.cppm --precompile -fmodule-file=M:interface_part=M-interface_part.pcm -fmodule-file=M:impl_part=M-impl_part.pcm -o M.pcm
 
 ``-fprebuilt-module-path`` is more convenient and ``-fmodule-file`` is faster since
 it saves time for file lookup.

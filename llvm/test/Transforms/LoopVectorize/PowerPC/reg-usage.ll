@@ -175,7 +175,7 @@ define void @double_(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
 ;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
 ;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 5 registers
 ;CHECK-PWR8: LV(REG): Found invariant usage: 1 item
-;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 1 registers
+;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
 
 ;CHECK-PWR9: LV(REG): VF = 1
 ;CHECK-PWR9: LV(REG): Found max usage: 2 item

@@ -544,7 +544,7 @@ END-SCRIPT
 #include <experimental/algorithm>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_123
-#if defined(TEST_123) && __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
+#if defined(TEST_123) && __cplusplus >= 202002L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
 #include <experimental/coroutine>
 #endif
 // RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_124
