@@ -426,11 +426,16 @@ public:
     return lldb::StackFrameSP();
   }
 
-  uint32_t GetSelectedFrameIndex() {
-    return GetStackFrameList()->GetSelectedFrameIndex();
+  // Only pass true to select_most_relevant if you are fulfilling an explicit
+  // user request for GetSelectedFrameIndex.  The most relevant frame is only
+  // for showing to the user, and can do arbitrary work, so we don't want to
+  // call it internally.
+  uint32_t GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
+    return GetStackFrameList()->GetSelectedFrameIndex(select_most_relevant);
   }
 
-  lldb::StackFrameSP GetSelectedFrame();
+  lldb::StackFrameSP
+  GetSelectedFrame(SelectMostRelevant select_most_relevant);
 
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame,
                             bool broadcast = false);

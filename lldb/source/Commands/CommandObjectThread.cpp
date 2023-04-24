@@ -556,8 +556,9 @@ protected:
     } else if (m_step_type == eStepTypeOut) {
       new_plan_sp = thread->QueueThreadPlanForStepOut(
           abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
-          eVoteNoOpinion, thread->GetSelectedFrameIndex(), new_plan_status,
-          m_options.m_step_out_avoid_no_debug);
+          eVoteNoOpinion,
+          thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
+          new_plan_status, m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {
       new_plan_sp = thread->QueueThreadPlanForStepScripted(
           abort_other_plans, m_class_options.GetName().c_str(),
@@ -1527,7 +1528,8 @@ protected:
         bool success =
             thread->SetSelectedFrameByIndexNoisily(0, result.GetOutputStream());
         if (success) {
-          m_exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+          m_exe_ctx.SetFrameSP(
+              thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat(

@@ -233,7 +233,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
     ExecutionContext exe_ctx(m_target.GetProcessSP()
                                  ->GetThreadList()
                                  .GetSelectedThread()
-                                 ->GetSelectedFrame()
+                                 ->GetSelectedFrame(DoNoSelectMostRelevantFrame)
                                  .get());
 
     lldb::ProcessSP process_sp(exe_ctx.GetProcessSP());
@@ -308,7 +308,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
         Thread *thread = exe_ctx.GetThreadPtr();
         if (thread && thread->UnwindInnermostExpression().Success()) {
           thread->SetSelectedFrameByIndex(0, false);
-          exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+          exe_ctx.SetFrameSP(
+              thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
         }
       }
 
