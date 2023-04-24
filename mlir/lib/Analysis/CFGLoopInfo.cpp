@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/CFGLoopInfo.h"
-#include "llvm/Analysis/LoopInfoImpl.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 
 // Explicitly instantiate the LoopBase and LoopInfoBase classes defined in
 // LoopInfoImpl.h for CFGLoops

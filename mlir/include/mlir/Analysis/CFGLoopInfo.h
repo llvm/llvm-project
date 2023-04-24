@@ -17,7 +17,7 @@
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/RegionGraphTraits.h"
-#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Support/GenericLoopInfo.h"
 
 namespace mlir {
 class CFGLoop;
