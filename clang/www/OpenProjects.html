@@ -88,14 +88,12 @@ better the overall user experience. It would be good to improve Clang's
 performance as well as to find ways to proactively alert us when we've
 introduced a change that has significant negative impact on build times.</li>
 
-<li><b>Implement an tool to generate code documentation</b>: Clang's
-library-based design allows it to be used by a variety of tools that reason
-about source code. One great application of Clang would be to build an
-auto-documentation system like doxygen that generates code documentation from
-source code. The advantage of using Clang for such a tool is that the tool would
-use the same preprocessor/parser/ASTs as the compiler itself, giving it a very
-rich understanding of the code. Clang is already able to read and understand
-doxygen markup, but cannot yet generate documentation from it.</li>
+<li><b>Improve clang-doc</b>: Clang's library-based design allows it to be used
+by a variety of tools that reason about source code.
+<a href="https://clang.llvm.org/extra/clang-doc.html">clang-doc</a> is one
+great application of this functionality, which generates code documentation
+from source code. The tool is in early stages of development and could use more
+dedicated effort to complete the implementation.</li>
 
 <li><b>Use clang libraries to implement better versions of existing tools</b>:
 Clang is built as a set of libraries, which means that it is possible to
