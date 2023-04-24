@@ -88,6 +88,7 @@ else()
     kmp_dispatch.cpp
     kmp_lock.cpp
     kmp_sched.cpp
+    kmp_collapse.cpp
   )
   if(WIN32)
     # Windows specific files

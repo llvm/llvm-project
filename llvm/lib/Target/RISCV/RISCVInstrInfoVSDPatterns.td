@@ -801,7 +801,7 @@ defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSGT",  SETGT>;
 defm : VPatIntegerSetCCSDNode_VI<"PseudoVMSGTU", SETUGT>;
 
 defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSLE", SETLT,
-                                      SplatPat_simm5_plus1_nonzero>;
+                                      SplatPat_simm5_plus1>;
 defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSLEU", SETULT,
                                       SplatPat_simm5_plus1_nonzero>;
 defm : VPatIntegerSetCCSDNode_VIPlus1<"PseudoVMSGT", SETGE,
