@@ -323,15 +323,9 @@ get_global_linear_id_z(void)
 ATTR static size_t
 get_local_linear_id_(void)
 {
-    if (OLD_ABI) {
-        return (__builtin_amdgcn_workitem_id_z() * __builtin_amdgcn_workgroup_size_y() +
-                __builtin_amdgcn_workitem_id_y()) * __builtin_amdgcn_workgroup_size_x() +
-                __builtin_amdgcn_workitem_id_x();
-    } else {
-        return (__builtin_amdgcn_workitem_id_z() * IMPLICITARG(ushort)[7] +
-                __builtin_amdgcn_workitem_id_y()) * IMPLICITARG(ushort)[6] +
-                __builtin_amdgcn_workitem_id_x();
-    }
+    return (__builtin_amdgcn_workitem_id_z()  * (uint)get_local_size_y() +
+            __builtin_amdgcn_workitem_id_y()) * (uint)get_local_size_x() +
+            __builtin_amdgcn_workitem_id_x();
 }
 
 ATTR size_t
