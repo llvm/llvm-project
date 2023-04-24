@@ -44,6 +44,7 @@ add_mlir_library(MLIRIR
   DEPENDS
   MLIRBuiltinAttributesIncGen
   MLIRBuiltinAttributeInterfacesIncGen
+  MLIRBuiltinDialectBytecodeIncGen
   MLIRBuiltinDialectIncGen
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinOpsIncGen
