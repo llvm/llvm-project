@@ -128,11 +128,11 @@ struct ELFWriter {
   /// @}
 
   // This holds the symbol table index of the last local symbol.
-  unsigned LastLocalSymbolIndex;
+  unsigned LastLocalSymbolIndex = ~0u;
   // This holds the .strtab section index.
-  unsigned StringTableIndex;
+  unsigned StringTableIndex = ~0u;
   // This holds the .symtab section index.
-  unsigned SymbolTableIndex;
+  unsigned SymbolTableIndex = ~0u;
 
   // Sections in the order they are to be output in the section table.
   std::vector<const MCSectionELF *> SectionTable;
