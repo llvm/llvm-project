@@ -42,16 +42,16 @@ add_llvm_target(M68kCodeGen
   CodeGen
   Core
   GlobalISel
+  M68kDesc
+  M68kInfo
   MC
   SelectionDAG
   Support
   Target
-  M68kDesc
-  M68kInfo
 
   ADD_TO_COMPONENT
   M68k
-)
+  )
 
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
