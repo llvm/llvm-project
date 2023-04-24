@@ -171,6 +171,22 @@ void LoopBase<BlockT, LoopT>::getExitEdges(
         ExitEdges.emplace_back(BB, Succ);
 }
 
+namespace detail {
+template <class BlockT>
+using has_hoist_check = decltype(&BlockT::isLegalToHoistInto);
+
+template <class BlockT>
+using detect_has_hoist_check = llvm::is_detected<has_hoist_check, BlockT>;
+
+/// SFINAE functions that dispatch to the isLegalToHoistInto member function or
+/// return false, if it doesn't exist.
+template <class BlockT> bool isLegalToHoistInto(BlockT *Block) {
+  if constexpr (detect_has_hoist_check<BlockT>::value)
+    return Block->isLegalToHoistInto();
+  return false;
+}
+} // namespace detail
+
 /// getLoopPreheader - If there is a preheader for this loop, return it.  A
 /// loop has a preheader if there is only one edge to the header of the loop
 /// from outside of the loop and it is legal to hoist instructions into the
@@ -188,7 +204,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPreheader() const {
     return nullptr;
 
   // Make sure we are allowed to hoist instructions into the predecessor.
-  if (!Out->isLegalToHoistInto())
+  if (!detail::isLegalToHoistInto(Out))
     return nullptr;
 
   // Make sure there is only one exit out of the preheader.
