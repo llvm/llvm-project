@@ -86,6 +86,39 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   case llvm::Triple::aarch64_be:
     return "aarch64_be-linux-gnu";
 
+  case llvm::Triple::loongarch64: {
+    const char *Libc;
+    const char *FPFlavor;
+
+    if (TargetTriple.isGNUEnvironment()) {
+      Libc = "gnu";
+    } else if (TargetTriple.isMusl()) {
+      Libc = "musl";
+    } else {
+      return TargetTriple.str();
+    }
+
+    switch (TargetEnvironment) {
+    default:
+      return TargetTriple.str();
+    case llvm::Triple::GNUSF:
+      FPFlavor = "sf";
+      break;
+    case llvm::Triple::GNUF32:
+      FPFlavor = "f32";
+      break;
+    case llvm::Triple::GNU:
+    case llvm::Triple::GNUF64:
+      // This was going to be "f64" in an earlier Toolchain Conventions
+      // revision, but starting from Feb 2023 the F64 ABI variants are
+      // unmarked in their canonical forms.
+      FPFlavor = "";
+      break;
+    }
+
+    return (Twine("loongarch64-linux-") + Libc + FPFlavor).str();
+  }
+
   case llvm::Triple::m68k:
     return "m68k-linux-gnu";
 
