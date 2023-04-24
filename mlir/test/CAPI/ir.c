@@ -28,6 +28,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+MlirValue makeConstantLiteral(MlirContext ctx, const char *literalStr,
+                              const char *typeStr) {
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  char attrStr[50];
+  sprintf(attrStr, "%s : %s", literalStr, typeStr);
+  MlirAttribute literal =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString(attrStr));
+  MlirNamedAttribute valueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")), literal);
+  MlirOperationState constState = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("arith.constant"), loc);
+  MlirType type =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(typeStr));
+  mlirOperationStateAddResults(&constState, 1, &type);
+  mlirOperationStateAddAttributes(&constState, 1, &valueAttr);
+  MlirOperation constOp = mlirOperationCreate(&constState);
+  return mlirOperationGetResult(constOp, 0);
+}
+
 static void registerAllUpstreamDialects(MlirContext ctx) {
   MlirDialectRegistry registry = mlirDialectRegistryCreate();
   mlirRegisterAllDialects(registry);
@@ -115,26 +134,17 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirOperation func = mlirOperationCreate(&funcState);
   mlirBlockInsertOwnedOperation(moduleBody, 0, func);
 
-  MlirType indexType =
-      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("index"));
-  MlirAttribute indexZeroLiteral =
-      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
-  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
-      indexZeroLiteral);
-  MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("arith.constant"), location);
-  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
-  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
-  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+  MlirValue constZeroValue = makeConstantLiteral(ctx, "0", "index");
+  MlirOperation constZero = mlirOpResultGetOwner(constZeroValue);
   mlirBlockAppendOwnedOperation(funcBody, constZero);
 
   MlirValue funcArg0 = mlirBlockGetArgument(funcBody, 0);
-  MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
   MlirValue dimOperands[] = {funcArg0, constZeroValue};
   MlirOperationState dimState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("memref.dim"), location);
   mlirOperationStateAddOperands(&dimState, 2, dimOperands);
+  MlirType indexType =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("index"));
   mlirOperationStateAddResults(&dimState, 1, &indexType);
   MlirOperation dim = mlirOperationCreate(&dimState);
   mlirBlockAppendOwnedOperation(funcBody, dim);
@@ -153,11 +163,11 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirStringRefCreateFromCString("arith.constant"), location);
   mlirOperationStateAddResults(&constOneState, 1, &indexType);
   mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
-  MlirOperation constOne = mlirOperationCreate(&constOneState);
+  MlirValue constOneValue = makeConstantLiteral(ctx, "1", "index");
+  MlirOperation constOne = mlirOpResultGetOwner(constOneValue);
   mlirBlockAppendOwnedOperation(funcBody, constOne);
 
   MlirValue dimValue = mlirOperationGetResult(dim, 0);
-  MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
   MlirValue loopOperands[] = {constZeroValue, dimValue, constOneValue};
   MlirOperationState loopState = mlirOperationStateGet(
       mlirStringRefCreateFromCString("scf.for"), location);
@@ -818,11 +828,6 @@ static int printBuiltinTypes(MlirContext ctx) {
   // CHECK: !dialect.type
 
   return 0;
-}
-
-void callbackSetFixedLengthString(const char *data, intptr_t len,
-                                  void *userData) {
-  strncpy(userData, data, len);
 }
 
 bool stringIsEqual(const char *lhs, MlirStringRef rhs) {
@@ -1794,32 +1799,10 @@ int testOperands(void) {
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("test"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
-  MlirType indexType = mlirIndexTypeGet(ctx);
 
   // Create some constants to use as operands.
-  MlirAttribute indexZeroLiteral =
-      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
-  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
-      indexZeroLiteral);
-  MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("arith.constant"), loc);
-  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
-  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
-  MlirOperation constZero = mlirOperationCreate(&constZeroState);
-  MlirValue constZeroValue = mlirOperationGetResult(constZero, 0);
-
-  MlirAttribute indexOneLiteral =
-      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
-  MlirNamedAttribute indexOneValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")),
-      indexOneLiteral);
-  MlirOperationState constOneState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("arith.constant"), loc);
-  mlirOperationStateAddResults(&constOneState, 1, &indexType);
-  mlirOperationStateAddAttributes(&constOneState, 1, &indexOneValueAttr);
-  MlirOperation constOne = mlirOperationCreate(&constOneState);
-  MlirValue constOneValue = mlirOperationGetResult(constOne, 0);
+  MlirValue constZeroValue = makeConstantLiteral(ctx, "0", "index");
+  MlirValue constOneValue = makeConstantLiteral(ctx, "1", "index");
 
   // Create the operation under test.
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -1873,9 +1856,49 @@ int testOperands(void) {
     return 3;
   }
 
+  MlirOperationState op2State =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op2"), loc);
+  MlirValue initialOperands2[] = {constOneValue};
+  mlirOperationStateAddOperands(&op2State, 1, initialOperands2);
+  (void)mlirOperationCreate(&op2State);
+
+  MlirOpOperand use3 = mlirValueGetFirstUse(constOneValue);
+  fprintf(stderr, "First use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use3), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: First use owner: "dummy.op2"
+
+  use3 = mlirOpOperandGetNextUse(mlirValueGetFirstUse(constOneValue));
+  fprintf(stderr, "Second use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use3), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: Second use owner: "dummy.op"
+
+  MlirValue constTwoValue = makeConstantLiteral(ctx, "2", "index");
+  mlirValueReplaceAllUsesOfWith(constOneValue, constTwoValue);
+
+  use3 = mlirValueGetFirstUse(constOneValue);
+  if (!mlirOpOperandIsNull(use3)) {
+    fprintf(stderr, "ERROR: Use should be null\n");
+    return 4;
+  }
+
+  MlirOpOperand use4 = mlirValueGetFirstUse(constTwoValue);
+  fprintf(stderr, "First replacement use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: First replacement use owner: "dummy.op"
+
+  use4 = mlirOpOperandGetNextUse(mlirValueGetFirstUse(constTwoValue));
+  fprintf(stderr, "Second replacement use owner: ");
+  mlirOperationPrint(mlirOpOperandGetOwner(use4), printToStderr, NULL);
+  fprintf(stderr, "\n");
+  // CHECK: Second replacement use owner: "dummy.op2"
+
   mlirOperationDestroy(op);
-  mlirOperationDestroy(constZero);
-  mlirOperationDestroy(constOne);
+  mlirOperationDestroy(mlirOpResultGetOwner(constZeroValue));
+  mlirOperationDestroy(mlirOpResultGetOwner(constOneValue));
+  mlirOperationDestroy(mlirOpResultGetOwner(constTwoValue));
   mlirContextDestroy(ctx);
 
   return 0;
@@ -1891,18 +1914,10 @@ int testClone(void) {
 
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
   MlirLocation loc = mlirLocationUnknownGet(ctx);
-  MlirType indexType = mlirIndexTypeGet(ctx);
   MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
 
-  MlirAttribute indexZeroLiteral =
-      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
-  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
-  MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("arith.constant"), loc);
-  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
-  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
-  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+  MlirValue constZeroValue = makeConstantLiteral(ctx, "0", "index");
+  MlirOperation constZero = mlirOpResultGetOwner(constZeroValue);
 
   MlirAttribute indexOneLiteral =
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("1 : index"));
@@ -1980,19 +1995,10 @@ int testTypeID(MlirContext ctx) {
   }
 
   MlirLocation loc = mlirLocationUnknownGet(ctx);
-  MlirType indexType = mlirIndexTypeGet(ctx);
-  MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
 
   // Create a registered operation, which should have a type id.
-  MlirAttribute indexZeroLiteral =
-      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : index"));
-  MlirNamedAttribute indexZeroValueAttr = mlirNamedAttributeGet(
-      mlirIdentifierGet(ctx, valueStringRef), indexZeroLiteral);
-  MlirOperationState constZeroState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("arith.constant"), loc);
-  mlirOperationStateAddResults(&constZeroState, 1, &indexType);
-  mlirOperationStateAddAttributes(&constZeroState, 1, &indexZeroValueAttr);
-  MlirOperation constZero = mlirOperationCreate(&constZeroState);
+  MlirValue constZeroValue = makeConstantLiteral(ctx, "0", "index");
+  MlirOperation constZero = mlirOpResultGetOwner(constZeroValue);
 
   if (!mlirOperationVerify(constZero)) {
     fprintf(stderr, "ERROR: Expected operation to verify correctly\n");
