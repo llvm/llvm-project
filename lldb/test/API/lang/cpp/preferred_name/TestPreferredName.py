@@ -6,8 +6,7 @@ Test formatting of types annotated with
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import decorators
-
+from lldbsuite.test.decorators import *
 
 class TestPreferredName(TestBase):
 
