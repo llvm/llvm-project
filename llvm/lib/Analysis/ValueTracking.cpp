@@ -4546,6 +4546,27 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known.copysign(KnownSign);
         break;
       }
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd: {
+        if ((InterestedClasses & fcNegative) == fcNone)
+          break;
+
+        if (II->getArgOperand(0) != II->getArgOperand(1))
+          break;
+
+        // The multiply cannot be -0 and therefore the add can't be -0
+        Known.knownNot(fcNegZero);
+
+        // x * x + y is non-negative if y is non-negative.
+        KnownFPClass KnownAddend;
+        computeKnownFPClass(II->getArgOperand(2), DemandedElts,
+                            InterestedClasses, KnownAddend, Depth + 1, Q, TLI);
+
+        // TODO: Known sign bit with no nans
+        if (KnownAddend.cannotBeOrderedLessThanZero())
+          Known.knownNot(fcNegative);
+        break;
+      }
       case Intrinsic::sin:
       case Intrinsic::cos: {
         // Return NaN on infinite inputs.
