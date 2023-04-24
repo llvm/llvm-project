@@ -61,15 +61,24 @@ public:
   /// Map \p Path, and saving the new (or existing) path in \p NewPath.
   ///
   /// \pre \p Path is not a reference into \p NewPath.
-  void map(StringRef Path, SmallVectorImpl<char> &NewPath);
-  void map(StringRef Path, std::string &NewPath);
+  /// \returns true if \c NewPath was mapped.
+  bool map(StringRef Path, SmallVectorImpl<char> &NewPath);
+  /// Map \p Path, and saving the new (or existing) path in \p NewPath.
+  ///
+  /// \pre \p Path is not a reference into \p NewPath.
+  /// \returns true if \c NewPath was mapped.
+  bool map(StringRef Path, std::string &NewPath);
 
   /// Map \p Path, returning \a std::string.
   std::string mapToString(StringRef Path);
 
   /// Map \p Path in place.
-  void mapInPlace(SmallVectorImpl<char> &Path);
-  void mapInPlace(std::string &Path);
+  /// \returns true if the path was modified.
+  bool mapInPlace(SmallVectorImpl<char> &Path);
+
+  /// Map \p Path in place.
+  /// \returns true if the path was modified.
+  bool mapInPlace(std::string &Path);
 
 protected:
   /// Map (or unmap) \p Path. On a match, fills \p Storage with the mapped path

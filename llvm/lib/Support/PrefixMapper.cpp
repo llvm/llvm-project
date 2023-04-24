@@ -117,18 +117,23 @@ std::optional<StringRef> PrefixMapper::mapImpl(StringRef Path,
   return std::nullopt;
 }
 
-void PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {
+bool PrefixMapper::map(StringRef Path, SmallVectorImpl<char> &NewPath) {
   NewPath.clear();
   std::optional<StringRef> Mapped = mapImpl(Path, NewPath);
   if (!NewPath.empty())
-    return;
+    return true;
+  bool Modified = Mapped.has_value();
   if (!Mapped)
     Mapped = Path;
   NewPath.assign(Mapped->begin(), Mapped->end());
+  return Modified;
 }
 
-void PrefixMapper::map(StringRef Path, std::string &NewPath) {
-  NewPath = mapToString(Path);
+bool PrefixMapper::map(StringRef Path, std::string &NewPath) {
+  SmallString<256> Storage;
+  std::optional<StringRef> Mapped = mapImpl(Path, Storage);
+  NewPath = Mapped ? Mapped->str() : Path.str();
+  return Mapped.has_value();
 }
 
 std::string PrefixMapper::mapToString(StringRef Path) {
@@ -137,24 +142,26 @@ std::string PrefixMapper::mapToString(StringRef Path) {
   return Mapped ? Mapped->str() : Path.str();
 }
 
-void PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
+bool PrefixMapper::mapInPlace(SmallVectorImpl<char> &Path) {
   SmallString<256> Storage;
   std::optional<StringRef> Mapped =
       mapImpl(StringRef(Path.begin(), Path.size()), Storage);
   if (!Mapped)
-    return;
+    return false;
   if (Storage.empty())
     Path.assign(Mapped->begin(), Mapped->end());
   else
     Storage.swap(Path);
+  return true;
 }
 
-void PrefixMapper::mapInPlace(std::string &Path) {
+bool PrefixMapper::mapInPlace(std::string &Path) {
   SmallString<256> Storage;
   std::optional<StringRef> Mapped = mapImpl(Path, Storage);
   if (!Mapped)
-    return;
+    return false;
   Path.assign(Mapped->begin(), Mapped->size());
+  return true;
 }
 
 void PrefixMapper::sort() {

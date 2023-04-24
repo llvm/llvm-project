@@ -653,7 +653,7 @@ bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
   if (PrebuiltModuleFileIt == PrebuiltModuleFiles.end())
     return false;
   assert("Prebuilt module came from the expected AST file" &&
-         PrebuiltModuleFileIt->second == M->getASTFile()->getName());
+         PrebuiltModuleFileIt->second == M->getASTFile()->getNameAsRequested());
   return true;
 }
 
