@@ -78,7 +78,8 @@ class PseudoToVInst<string PseudoInst> {
                         ["_M1", ""],
                         ["_M2", ""],
                         ["_M4", ""],
-                        ["_M8", ""]
+                        ["_M8", ""],
+                        ["_SE", ""]
                        ];
   string VInst = !foldl(PseudoInst, AffixSubsts, Acc, AffixSubst,
                         !subst(AffixSubst[0], AffixSubst[1], Acc));

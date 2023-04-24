@@ -462,8 +462,9 @@ enum RVVRequire : uint8_t {
   RVV_REQ_None = 0,
   RVV_REQ_RV64 = 1 << 0,
   RVV_REQ_FullMultiply = 1 << 1,
+  RVV_REQ_Xsfvcp = 1 << 2,
 
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_FullMultiply)
+  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Xsfvcp)
 };
 
 // Raw RVV intrinsic info, used to expand later.
