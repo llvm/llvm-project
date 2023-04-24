@@ -625,6 +625,58 @@ namespace Destructors {
                                // ref-note {{in call to 'testS()'}}
 }
 
+namespace BaseToDerived {
+namespace A {
+  struct A {};
+  struct B : A { int n; };
+  struct C : B {};
+  C c = {};
+  constexpr C *pb = (C*)((A*)&c + 1); // expected-error {{must be initialized by a constant expression}} \
+                                      // expected-note {{cannot access derived class of pointer past the end of object}} \
+                                      // ref-error {{must be initialized by a constant expression}} \
+                                      // ref-note {{cannot access derived class of pointer past the end of object}}
+}
+namespace B {
+  struct A {};
+  struct Z {};
+  struct B : Z, A {
+    int n;
+   constexpr B() : n(10) {}
+  };
+  struct C : B {
+   constexpr C() : B() {}
+  };
+
+  constexpr C c = {};
+  constexpr const A *pa = &c;
+  constexpr const C *cp = (C*)pa;
+  constexpr const B *cb = (B*)cp;
+
+  static_assert(cb->n == 10);
+  static_assert(cp->n == 10);
+}
+
+namespace C {
+  struct Base { int *a; };
+  struct Base2 : Base { int f[12]; };
+
+  struct Middle1 { int b[3]; };
+  struct Middle2 : Base2 { char c; };
+  struct Middle3 : Middle2 { char g[3]; };
+  struct Middle4 { int f[3]; };
+  struct Middle5 : Middle4, Middle3 { char g2[3]; };
+
+  struct NotQuiteDerived : Middle1, Middle5 { bool d; };
+  struct Derived : NotQuiteDerived { int e; };
+
+  constexpr NotQuiteDerived NQD1 = {};
+
+  constexpr Middle5 *M4 = (Middle5*)((Base2*)&NQD1);
+  static_assert(M4->a == nullptr);
+  static_assert(M4->g2[0] == 0);
+}
+}
+
 
 namespace VirtualDtors {
   class A {
