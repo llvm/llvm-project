@@ -15,7 +15,6 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "trec_mman.h"
 #include "trec_rtl.h"
 #include "ubsan/ubsan_flags.h"
 

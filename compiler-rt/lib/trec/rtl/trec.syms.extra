@@ -1,9 +1,6 @@
 __trec_init
 __trec_flush_memory
-__trec_read*
-__trec_write*
 __trec_func*
-__trec_atomic*
 __trec_unaligned*
 __trec_get_current_fiber
 __trec_create_fiber

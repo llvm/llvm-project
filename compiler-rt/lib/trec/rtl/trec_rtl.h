@@ -38,8 +38,6 @@
 #include "sanitizer_common/sanitizer_vector.h"
 #include "trec_defs.h"
 #include "trec_flags.h"
-#include "trec_mman.h"
-#include "trec_mutexset.h"
 #include "trec_platform.h"
 using namespace __sanitizer;
 
@@ -305,9 +303,6 @@ void OnUserAlloc(ThreadState *thr, uptr pc, uptr p, uptr sz, bool write,
 void OnUserFree(ThreadState *thr, uptr pc, uptr p, bool write,
                 bool record_trace = false);
 
-void CondBranch(ThreadState *thr, uptr pc, u64 cond);
-void FuncParam(ThreadState *thr, u16 param_idx, uptr src_addr, u16 src_idx,
-               uptr val);
 void FuncExitParam(ThreadState *thr, uptr src_addr, u16 src_idx, uptr val);
 
 void MemoryAccess(ThreadState *thr, uptr pc, uptr addr, int kAccessSizeLog,
@@ -331,48 +326,11 @@ const int kSizeLog2 = 1;
 const int kSizeLog4 = 2;
 const int kSizeLog8 = 3;
 
-void ALWAYS_INLINE MemoryRead(ThreadState *thr, uptr pc, uptr addr,
-                              int kAccessSizeLog, bool isPtr, uptr val,
-                              __trec_metadata::SourceAddressInfo SAI_addr) {
-  if (thr->tctx->prev_read_pc == 0) {
-    // just record pc
-    thr->tctx->prev_read_pc = pc;
-    return;
-  } else {
-    MemoryAccess(thr, thr->tctx->prev_read_pc, addr, kAccessSizeLog, false,
-                 false, isPtr, (uptr)val, SAI_addr);
-    thr->tctx->prev_read_pc = 0;
-  }
-}
-
-void ALWAYS_INLINE MemoryWrite(ThreadState *thr, uptr pc, uptr addr,
-                               int kAccessSizeLog, bool isPtr, uptr val,
-                               __trec_metadata::SourceAddressInfo SAI_addr,
-                               __trec_metadata::SourceAddressInfo SAI_val) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, false, isPtr, val, SAI_addr,
-               SAI_val);
-}
-
-void ALWAYS_INLINE
-MemoryReadAtomic(ThreadState *thr, uptr pc, uptr addr, int kAccessSizeLog,
-                 bool isPtr = false, uptr val = 0,
-                 __trec_metadata::SourceAddressInfo SAI_addr = {0, 0},
-                 __trec_metadata::SourceAddressInfo SAI_val = {0, 0}) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, false, true, isPtr, val, SAI_addr,
-               SAI_val);
-}
-
-void ALWAYS_INLINE MemoryWriteAtomic(
-    ThreadState *thr, uptr pc, uptr addr, int kAccessSizeLog, bool isPtr,
-    uptr val, __trec_metadata::SourceAddressInfo SAI_addr = {0, 0},
-    __trec_metadata::SourceAddressInfo SAI_val = {0, 0}) {
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, true, true, isPtr, val, SAI_addr,
-               SAI_val);
-}
 
 void RecordFuncEntry(ThreadState *thr, bool &should_record, const char *name,
                      __sanitizer::u64 pc);
 void RecordFuncExit(ThreadState *thr, bool &should_record, const char *name);
+void RecordBBLEntry(ThreadState *thr, bool &should_record);
 
 int ThreadCreate(ThreadState *thr, uptr pc, uptr uid, bool detached);
 void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
@@ -412,9 +370,6 @@ void MutexInvalidAccess(ThreadState *thr, uptr pc, uptr addr);
 void ReleaseStoreAcquire(ThreadState *thr, uptr pc, uptr addr);
 void ReleaseStore(ThreadState *thr, uptr pc, uptr addr);
 void AfterSleep(ThreadState *thr, uptr pc);
-void CondWait(ThreadState *thr, uptr pc, uptr cond, uptr mutex,
-              __trec_metadata::SourceAddressInfo cond_SAI,
-              __trec_metadata::SourceAddressInfo mutex_SAI);
 void CondSignal(ThreadState *thr, uptr pc, uptr cond, bool is_broadcase,
                 __trec_metadata::SourceAddressInfo SAI);
 
@@ -425,5 +380,4 @@ enum FiberSwitchFlags {
 };
 
 }  // namespace __trec
-
 #endif  // TREC_RTL_H

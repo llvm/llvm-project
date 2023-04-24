@@ -89,6 +89,7 @@ enum EventType : __sanitizer::u64 {
   CondBroadcast,
   None,
   EventTypeSize,
+  BBLEnter,
 };
 static_assert(EventType::EventTypeSize < 256,
               "ERROR: EventType::EventTypeSize >= 256");
@@ -300,6 +301,7 @@ enum RecordType : __sanitizer::u32 {
   CondSignal,
   CondBroadcast,
   EventTypeCnt,
+  BBLEnter,
 
   // trace information
   Tid,
@@ -330,20 +332,22 @@ struct TraceHeader {
 namespace __trec_debug_info {
 const char TREC_DEBUG_VER[] = "20221206";
 struct InstDebugInfo {
+  __sanitizer::u64 fid;
   __sanitizer::u32 line;
   __sanitizer::u16 column;
+  __sanitizer::u64 time;
 
   // val_name_len, addr_name_len for read/write events
   // func_name_len,file_name_len for funcEntry events
   __sanitizer::u8 name_len[2];
-  InstDebugInfo(__sanitizer::u32 _l, __sanitizer::u16 _c,
+  InstDebugInfo(__sanitizer::u64 _id, __sanitizer::u32 _l, __sanitizer::u16 _c, __sanitizer::u64  _t,
                 __sanitizer::u8 name_len_1 = 0, __sanitizer::u8 name_len_2 = 0)
-      : line(_l), column(_c) {
+      : fid(_id), line(_l), column(_c), time(_t) {
     name_len[0] = name_len_1;
     name_len[1] = name_len_2;
   }
 };
-static_assert(sizeof(InstDebugInfo) == 8, "ERROR: sizeof(InstDebugInfo)!=8");
+static_assert(sizeof(InstDebugInfo) == 32, "ERROR: sizeof(InstDebugInfo)!=32");
 
 }  // namespace __trec_debug_info
 

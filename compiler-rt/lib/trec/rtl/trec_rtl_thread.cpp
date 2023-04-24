@@ -13,12 +13,11 @@
 
 #include <errno.h>
 #include <sys/fcntl.h>
+#include <stdlib.h>
 
 #include "sanitizer_common/sanitizer_placement_new.h"
-#include "trec_mman.h"
 #include "trec_platform.h"
 #include "trec_rtl.h"
-
 namespace __trec {
 
 // ThreadContext implementation.
@@ -296,7 +295,7 @@ void ThreadContext::put_trace(void *msg, uptr len) {
     dbg_temp_buffer_size = 0;
   }
   if (UNLIKELY(trace_buffer == nullptr)) {
-    trace_buffer = (char *)internal_alloc(MBlockShadowStack, TREC_BUFFER_SIZE);
+    trace_buffer = (char *)malloc(TREC_BUFFER_SIZE);
     trace_buffer_size = 0;
   }
   if (UNLIKELY(trace_buffer_size + len >= TREC_BUFFER_SIZE)) {
@@ -312,7 +311,7 @@ void ThreadContext::put_trace(void *msg, uptr len) {
 void ThreadContext::put_metadata(void *msg, uptr len) {
   if (UNLIKELY(metadata_buffer == nullptr)) {
     metadata_buffer =
-        (char *)internal_alloc(MBlockShadowStack, TREC_BUFFER_SIZE);
+        (char *)malloc(TREC_BUFFER_SIZE);
     metadata_buffer_size = 0;
   }
   if (UNLIKELY(metadata_buffer_size + len > TREC_BUFFER_SIZE)) {
@@ -327,7 +326,7 @@ void ThreadContext::put_metadata(void *msg, uptr len) {
 
 void ThreadContext::put_debug_info(void *msg, uptr len) {
   if (UNLIKELY(debug_buffer == nullptr)) {
-    debug_buffer = (char *)internal_alloc(MBlockShadowStack, TREC_BUFFER_SIZE);
+    debug_buffer = (char *)malloc(TREC_BUFFER_SIZE);
     debug_buffer_size = 0;
   }
   if (UNLIKELY(debug_buffer_size + len > TREC_BUFFER_SIZE)) {
@@ -375,7 +374,7 @@ void ThreadFinalize(ThreadState *thr) {
       ctx->flush_seqc_summary();
       ctx->flush_seqc_trace();
       if (ctx->seqc_trace_buffer) {
-        internal_free(ctx->seqc_trace_buffer);
+        free(ctx->seqc_trace_buffer);
         ctx->seqc_trace_buffer = nullptr;
       }
       ctx->seqc_trace_buffer_size = 0;
@@ -391,15 +390,15 @@ void ThreadFinalize(ThreadState *thr) {
       thr->tctx->flush_metadata();
       thr->tctx->flush_header();
       if (thr->tctx->trace_buffer) {
-        internal_free(thr->tctx->trace_buffer);
+        free(thr->tctx->trace_buffer);
         thr->tctx->trace_buffer = nullptr;
       }
       if (thr->tctx->metadata_buffer) {
-        internal_free(thr->tctx->metadata_buffer);
+        free(thr->tctx->metadata_buffer);
         thr->tctx->metadata_buffer = nullptr;
       }
       if (thr->tctx->debug_buffer) {
-        internal_free(thr->tctx->debug_buffer);
+        free(thr->tctx->debug_buffer);
         thr->tctx->debug_buffer = nullptr;
       }
       thr->tctx->trace_buffer_size = 0;
@@ -520,7 +519,7 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
       } else {
         ctx->seqc_mtx.Lock();
         if (ctx->seqc_trace_buffer) {
-          internal_free(ctx->seqc_trace_buffer);
+          free(ctx->seqc_trace_buffer);
           ctx->seqc_trace_buffer = nullptr;
         }
         ctx->seqc_trace_buffer_size = 0;
@@ -529,15 +528,15 @@ void ThreadStart(ThreadState *thr, int tid, tid_t os_id,
       ctx->thread_after_fork = false;
     } else if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
       if (thr->tctx->trace_buffer) {
-        internal_free(thr->tctx->trace_buffer);
+        free(thr->tctx->trace_buffer);
         thr->tctx->trace_buffer = nullptr;
       }
       if (thr->tctx->metadata_buffer) {
-        internal_free(thr->tctx->metadata_buffer);
+        free(thr->tctx->metadata_buffer);
         thr->tctx->metadata_buffer = nullptr;
       }
       if (thr->tctx->debug_buffer) {
-        internal_free(thr->tctx->debug_buffer);
+        free(thr->tctx->debug_buffer);
         thr->tctx->debug_buffer = nullptr;
       }
       if (!thr->tctx->state_restore()) {
@@ -617,15 +616,15 @@ void ThreadFinish(ThreadState *thr) {
     }
   }
   if (thr->tctx->trace_buffer) {
-    internal_free(thr->tctx->trace_buffer);
+    free(thr->tctx->trace_buffer);
     thr->tctx->trace_buffer = nullptr;
   }
   if (thr->tctx->metadata_buffer) {
-    internal_free(thr->tctx->metadata_buffer);
+    free(thr->tctx->metadata_buffer);
     thr->tctx->metadata_buffer = nullptr;
   }
   if (thr->tctx->debug_buffer) {
-    internal_free(thr->tctx->debug_buffer);
+    free(thr->tctx->debug_buffer);
     thr->tctx->debug_buffer = nullptr;
   }
   thr->tctx->trace_buffer_size = 0;

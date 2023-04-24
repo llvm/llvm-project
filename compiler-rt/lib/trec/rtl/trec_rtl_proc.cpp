@@ -12,7 +12,6 @@
 
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "trec_rtl.h"
-#include "trec_mman.h"
 #include "trec_flags.h"
 
 namespace __trec {
@@ -23,7 +22,8 @@ Processor *ProcCreate() {
   Processor *proc = new(mem) Processor;
   proc->thr = nullptr;
 #if !SANITIZER_GO
-  AllocatorProcStart(proc);
+  //AllocatorProcStart(proc);
+  internal_allocator()->InitCache(&proc->internal_alloc_cache);
 #endif
   return proc;
 }
@@ -31,7 +31,9 @@ Processor *ProcCreate() {
 void ProcDestroy(Processor *proc) {
   CHECK_EQ(proc->thr, nullptr);
 #if !SANITIZER_GO
-  AllocatorProcFinish(proc);
+  //AllocatorProcFinish(proc);
+  internal_allocator()->DestroyCache(&proc->internal_alloc_cache);
+
 #endif
   proc->~Processor();
   InternalFree(proc);

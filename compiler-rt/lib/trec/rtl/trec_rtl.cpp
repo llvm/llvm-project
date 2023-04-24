@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <sys/fcntl.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <time.h>
 
 #include "sanitizer_common/sanitizer_atomic.h"
@@ -30,7 +31,6 @@
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 #include "trec_defs.h"
-#include "trec_mman.h"
 #include "trec_platform.h"
 #include "ubsan/ubsan_init.h"
 
@@ -56,7 +56,7 @@ Context *ctx;
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
-  void *mem = internal_alloc(MBlockThreadContex, sizeof(ThreadContext));
+  void *mem = malloc(sizeof(ThreadContext));
   return new (mem) ThreadContext(tid);
 }
 
@@ -75,8 +75,7 @@ Context::Context()
       seqc_trace_buffer_size(0),
       temp_dir_path(nullptr) {}
 int Context::CopyFile(const char *src_path, const char *dest_path) {
-  char *read_buff = (char *)internal_alloc(
-      MBlockShadowStack, TREC_BUFFER_SIZE);  // buffer size:32M
+  char *read_buff = (char *)malloc(TREC_BUFFER_SIZE);  // buffer size:32M
   int src_fd = internal_open(src_path, O_RDONLY);
   int dest_fd = internal_open(dest_path, O_CREAT | O_WRONLY | O_APPEND, 0700);
   if (src_fd < 0 || dest_fd < 0)
@@ -99,7 +98,7 @@ int Context::CopyFile(const char *src_path, const char *dest_path) {
   }
   internal_close(src_fd);
   internal_close(dest_fd);
-  internal_free(read_buff);
+  free(read_buff);
   return 0;
 }
 
@@ -357,8 +356,7 @@ void Context::flush_seqc_trace() {
 
 void Context::put_seqc_trace(void *msg, uptr len) {
   if (seqc_trace_buffer == nullptr) {
-    seqc_trace_buffer =
-        (char *)internal_alloc(MBlockShadowStack, SEQC_BUFFER_SIZE);
+    seqc_trace_buffer = (char *)malloc(SEQC_BUFFER_SIZE);
     seqc_trace_buffer_size = 0;
   }
   if (seqc_trace_buffer_size + len >= SEQC_BUFFER_SIZE) {
@@ -449,15 +447,12 @@ void Initialize(ThreadState *thr) {
 
 #if !SANITIZER_GO
 
-  InitializeAllocator();
-  ReplaceSystemMalloc();
 #endif
   Processor *proc = ProcCreate();
   ProcWire(proc, thr);
   InitializeInterceptors();
   InitializePlatform();
 #if !SANITIZER_GO
-  InitializeAllocatorLate();
 
   // Do not install SEGV handler
   // InstallDeadlySignalHandlers(TrecOnDeadlySignal);
@@ -496,9 +491,8 @@ void ForkBefore(ThreadState *thr, uptr pc) {
   unsigned int cur_forked_cnt =
       atomic_fetch_add(&ctx->forked_cnt, 1, memory_order_relaxed);
   if (!ctx->temp_dir_path)
-    internal_free(ctx->temp_dir_path);
-  ctx->temp_dir_path =
-      (char *)internal_alloc(MBlockShadowStack, TREC_DIR_PATH_LEN);
+    free(ctx->temp_dir_path);
+  ctx->temp_dir_path = (char *)malloc(TREC_DIR_PATH_LEN);
   internal_snprintf(ctx->temp_dir_path, TREC_DIR_PATH_LEN - 1, "%s/temp_%d_%d",
                     ctx->trace_dir, internal_getpid(), cur_forked_cnt);
   if (ctx->flags.output_trace &&
@@ -509,7 +503,7 @@ void ForkBefore(ThreadState *thr, uptr pc) {
       ctx->flush_seqc_trace();
       ctx->seqc_mtx.Unlock();
       if (ctx->seqc_trace_buffer) {
-        internal_free(ctx->seqc_trace_buffer);
+        free(ctx->seqc_trace_buffer);
         ctx->seqc_trace_buffer = nullptr;
       }
       ctx->seqc_trace_buffer_size = 0;
@@ -520,15 +514,15 @@ void ForkBefore(ThreadState *thr, uptr pc) {
       thr->tctx->flush_header();
 
       if (thr->tctx->trace_buffer) {
-        internal_free(thr->tctx->trace_buffer);
+        free(thr->tctx->trace_buffer);
         thr->tctx->trace_buffer = nullptr;
       }
       if (thr->tctx->metadata_buffer) {
-        internal_free(thr->tctx->metadata_buffer);
+        free(thr->tctx->metadata_buffer);
         thr->tctx->metadata_buffer = nullptr;
       }
       if (thr->tctx->debug_buffer) {
-        internal_free(thr->tctx->debug_buffer);
+        free(thr->tctx->debug_buffer);
         thr->tctx->debug_buffer = nullptr;
       }
       thr->tctx->trace_buffer_size = 0;
@@ -571,207 +565,21 @@ void ForkChildAfter(ThreadState *thr, uptr pc) {
       }
       ctx->thread_after_fork = true;
     }
-    internal_free(ctx->temp_dir_path);
+    free(ctx->temp_dir_path);
     ctx->temp_dir_path = nullptr;
   }
 }
 #endif
-
-void UnalignedMemoryAccess(ThreadState *thr, uptr pc, uptr addr, int size,
-                           bool kAccessIsWrite, bool kIsAtomic, bool isPtr,
-                           uptr val,
-                           __trec_metadata::SourceAddressInfo SAI_addr,
-                           __trec_metadata::SourceAddressInfo SAI_val) {
-  int kAccessSizeLog;
-  switch (size) {
-    case 1:
-      kAccessSizeLog = kSizeLog1;
-      break;
-    case 2:
-      kAccessSizeLog = kSizeLog2;
-      break;
-    case 4:
-      kAccessSizeLog = kSizeLog4;
-      break;
-    case 8:
-      kAccessSizeLog = kSizeLog8;
-      break;
-    default:
-      kAccessSizeLog = kSizeLog1;
-  }
-
-  MemoryAccess(thr, pc, addr, kAccessSizeLog, kAccessIsWrite, kIsAtomic, isPtr,
-               val, SAI_addr, SAI_val);
-}
-
-ALWAYS_INLINE USED void CondBranch(ThreadState *thr, uptr pc,
-                                   __sanitizer::u64 cond) {
-  if (UNLIKELY(!ctx->flags.record_branch))
-    return;
-  if (LIKELY(ctx->flags.output_trace) &&
-      LIKELY(thr->ignore_interceptors == 0) && LIKELY(thr->should_record)) {
-    if (ctx->flags.trace_mode == 1) {
-      __seqc_trace::Event e;
-      e.type = __seqc_trace::EventType::BRANCH;
-      e.eid = thr->tctx->event_cnt++;
-      e.iid = pc;
-      e.oid = 0;
-      e.tid = thr->tid;
-      ctx->seqc_mtx.Lock();
-      e.tot = atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed);
-      ctx->put_seqc_trace(&e, sizeof(e));
-      ctx->trace_summary.brNum += 1;
-      ctx->seqc_mtx.Unlock();
-    } else if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
-      __trec_trace::Event e(
-          __trec_trace::EventType::Branch, thr->tid,
-          atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), cond,
-          thr->tctx->dbg_temp_buffer_size ? thr->tctx->metadata_offset : 0, pc);
-      if (thr->tctx->dbg_temp_buffer_size) {
-        __trec_metadata::BranchMeta meta(thr->tctx->debug_offset);
-        thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
-                                  thr->tctx->dbg_temp_buffer_size);
-        thr->tctx->put_metadata(&meta, sizeof(meta));
-      }
-      thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
-      thr->tctx->header.StateInc(__trec_header::RecordType::Branch);
-    }
-  }
-}
-
-ALWAYS_INLINE USED void FuncParam(ThreadState *thr, u16 param_idx,
-                                  uptr src_addr, u16 src_idx, uptr val) {
-  if (LIKELY(ctx->flags.output_trace) && LIKELY(ctx->flags.record_func_param) &&
-      LIKELY(cur_thread()->ignore_interceptors == 0)) {
-    if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
-      if (param_idx != 0) {
-        if (thr->tctx->isFuncEnterMetaVaild) {
-          __trec_metadata::FuncParamMeta meta(param_idx, src_idx, src_addr,
-                                              val);
-          thr->tctx->parammetas.PushBack(meta);
-          thr->tctx->entry_meta.parammeta_cnt += 1;
-        }
-      } else {
-        thr->tctx->entry_meta.order = src_addr;
-        thr->tctx->entry_meta.arg_size = src_idx;
-        thr->tctx->entry_meta.parammeta_cnt = 0;
-        thr->tctx->isFuncEnterMetaVaild = true;
-        thr->tctx->parammetas.Resize(0);
-      }
-    }
-  }
-}
-
-ALWAYS_INLINE USED void FuncExitParam(ThreadState *thr, uptr src_addr,
-                                      u16 src_idx, uptr val) {
-  if (LIKELY(ctx->flags.output_trace) && LIKELY(ctx->flags.record_func_param) &&
-      LIKELY(cur_thread()->ignore_interceptors == 0)) {
-    if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
-      thr->tctx->exit_meta.src_idx = src_idx;
-      thr->tctx->exit_meta.src_addr = src_addr;
-      thr->tctx->exit_meta.val = val;
-      thr->tctx->isFuncExitMetaVaild = src_idx || src_addr;
-    }
-  }
-}
-
-ALWAYS_INLINE USED void MemoryAccess(
-    ThreadState *thr, uptr pc, uptr addr, int kAccessSizeLog,
-    bool kAccessIsWrite, bool kIsAtomic, bool isPtr, uptr val,
-    __trec_metadata::SourceAddressInfo SAI_addr,
-    __trec_metadata::SourceAddressInfo SAI_val, bool isMemCpyFlag) {
-  if (LIKELY(ctx->flags.output_trace) &&
-      LIKELY(thr->ignore_interceptors == 0) && LIKELY(thr->should_record)) {
-    if (kAccessIsWrite && LIKELY(ctx->flags.record_write)) {
-      if (ctx->flags.trace_mode == 1) {
-        __seqc_trace::Event e;
-        e.type = __seqc_trace::EventType::WRITE;
-        e.eid = thr->tctx->event_cnt++;
-        e.iid = pc;
-        e.oid = addr;
-        e.tid = thr->tid;
-        ctx->seqc_mtx.Lock();
-        e.tot = atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed);
-        ctx->put_seqc_trace(&e, sizeof(e));
-        ctx->trace_summary.rwNum += 1;
-        ctx->seqc_mtx.Unlock();
-      } else if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
-        __trec_trace::Event e(
-            isPtr ? (val ? __trec_trace::EventType::PtrWrite
-                         : __trec_trace::EventType::PtrZeroWrite)
-                  : (val ? __trec_trace::EventType::PlainWrite
-                         : __trec_trace::EventType::ZeroWrite),
-            thr->tid,
-            atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed),
-            ((((u64)1) << (kAccessSizeLog + 48)) |
-             (addr & ((((u64)1) << 48) - 1))),
-            thr->tctx->metadata_offset, pc);
-
-        __trec_metadata::WriteMeta meta(
-            val, SAI_addr.idx, SAI_addr.addr, SAI_val.idx, SAI_val.addr,
-            isMemCpyFlag,
-            thr->tctx->dbg_temp_buffer_size ? thr->tctx->debug_offset : 0);
-        thr->tctx->put_metadata(&meta, sizeof(meta));
-        if (thr->tctx->dbg_temp_buffer_size)
-          thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
-                                    thr->tctx->dbg_temp_buffer_size);
-        thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
-        thr->tctx->header.StateInc(
-            isPtr ? (val ? __trec_header::RecordType::PtrWrite
-                         : __trec_header::RecordType::PtrZeroWrite)
-                  : (val ? __trec_header::RecordType::PlainWrite
-                         : __trec_header::RecordType::ZeroWrite));
-      }
-    } else if (!kAccessIsWrite && LIKELY(ctx->flags.record_read)) {
-      if (ctx->flags.trace_mode == 1) {
-        __seqc_trace::Event e;
-        e.type = __seqc_trace::EventType::READ;
-        e.eid = thr->tctx->event_cnt++;
-        e.iid = pc;
-        e.oid = addr;
-        e.tid = thr->tid;
-        ctx->seqc_mtx.Lock();
-        e.tot = atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed);
-        ctx->put_seqc_trace(&e, sizeof(e));
-        ctx->trace_summary.rwNum += 1;
-        ctx->seqc_mtx.Unlock();
-      } else if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
-        __trec_trace::Event e(
-            isPtr ? __trec_trace::EventType::PtrRead
-                  : __trec_trace::EventType::PlainRead,
-            thr->tid,
-            atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed),
-            ((((u64)1) << (kAccessSizeLog + 48)) |
-             (addr & ((((u64)1) << 48) - 1))),
-            thr->tctx->metadata_offset, pc);
-
-        __trec_metadata::ReadMeta meta(
-            val, SAI_addr.idx, SAI_addr.addr, isMemCpyFlag,
-            thr->tctx->dbg_temp_buffer_size ? thr->tctx->debug_offset : 0);
-        thr->tctx->put_metadata(&meta, sizeof(meta));
-        if (thr->tctx->dbg_temp_buffer_size) {
-          __sanitizer::u64 prev = thr->tctx->debug_offset;
-          thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
-                                    thr->tctx->dbg_temp_buffer_size);
-        }
-        thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
-        thr->tctx->header.StateInc(isPtr
-                                       ? __trec_header::RecordType::PtrRead
-                                       : __trec_header::RecordType::PlainRead);
-      }
-    }
-  }
-}
 
 ALWAYS_INLINE USED void RecordFuncEntry(ThreadState *thr, bool &should_record,
                                         const char *name, __sanitizer::u64 pc) {
   if (LIKELY(ctx->flags.output_trace) &&
       LIKELY(ctx->flags.record_func_enter_exit) &&
       LIKELY(thr->ignore_interceptors == 0)) {
-           
     if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
       should_record = should_record || thr->tctx->isFuncEnterMetaVaild ||
                       thr->tctx->dbg_temp_buffer_size != 0;
+
       if (should_record && thr->should_record) {
         __sanitizer::u64 oid =
             (((thr->tctx->isFuncEnterMetaVaild ? thr->tctx->entry_meta.order
@@ -791,9 +599,16 @@ ALWAYS_INLINE USED void RecordFuncEntry(ThreadState *thr, bool &should_record,
         for (uptr i = 0; i < thr->tctx->parammetas.Size(); i++)
           thr->tctx->put_metadata(&thr->tctx->parammetas[i],
                                   sizeof(__trec_metadata::FuncParamMeta));
+
         if (ctx->flags.output_debug && thr->tctx->dbg_temp_buffer_size) {
           __trec_debug_info::InstDebugInfo &debug_info =
               (*(__trec_debug_info::InstDebugInfo *)thr->tctx->dbg_temp_buffer);
+          timespec current_time;
+          clock_gettime(CLOCK_THREAD_CPUTIME_ID, &current_time);
+          u64 sec = current_time.tv_sec;
+          u64 nsec = current_time.tv_nsec;
+          debug_info.time = (sec * 1000000000 + nsec);
+
           if (debug_info.name_len[0] == 0 && internal_strlen(name) != 0) {
             internal_memmove(thr->tctx->dbg_temp_buffer +
                                  sizeof(__trec_debug_info::InstDebugInfo) +
@@ -829,13 +644,26 @@ ALWAYS_INLINE USED void RecordFuncExit(ThreadState *thr, bool &should_record,
       LIKELY(ctx->flags.record_func_enter_exit) && should_record &&
       thr->should_record && LIKELY(thr->ignore_interceptors == 0)) {
     if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
+      __sanitizer::u64 oid =
+          (((((u64)1) << 48) - 1) & (thr->tctx->debug_offset));
       __trec_trace::Event e(
           __trec_trace::EventType::FuncExit, thr->tid,
-          atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), 0,
+          atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), oid,
           thr->tctx->isFuncExitMetaVaild ? thr->tctx->metadata_offset : 0, 0);
       if (thr->tctx->isFuncExitMetaVaild)
         thr->tctx->put_metadata(&thr->tctx->exit_meta,
                                 sizeof(thr->tctx->exit_meta));
+      __trec_debug_info::InstDebugInfo &debug_info =
+          (*(__trec_debug_info::InstDebugInfo *)thr->tctx->dbg_temp_buffer);
+      timespec current_time;
+      clock_gettime(CLOCK_THREAD_CPUTIME_ID, &current_time);
+      u64 sec = current_time.tv_sec;
+      u64 nsec = current_time.tv_nsec;
+      debug_info.time = (sec * 1000000000 + nsec);
+      thr->tctx->dbg_temp_buffer_size =
+          sizeof(__trec_debug_info::InstDebugInfo);
+      thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
+                                thr->tctx->dbg_temp_buffer_size);
 
       thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
       thr->tctx->header.StateInc(__trec_header::RecordType::FuncExit);
@@ -843,6 +671,51 @@ ALWAYS_INLINE USED void RecordFuncExit(ThreadState *thr, bool &should_record,
       thr->tctx->isFuncExitMetaVaild = false;
       thr->tctx->parammetas.Resize(0);
       thr->tctx->dbg_temp_buffer_size = 0;
+    }
+  }
+}
+
+ALWAYS_INLINE USED void RecordBBLEntry(ThreadState *thr, bool &should_record) {
+  
+  if (getenv("FUNC_ID") == nullptr) {
+    return;
+  }
+  if (LIKELY(ctx->flags.output_trace) &&
+      LIKELY(ctx->flags.record_func_enter_exit) && should_record &&
+      thr->should_record && LIKELY(thr->ignore_interceptors == 0)) {
+    if (ctx->flags.trace_mode == 2 || ctx->flags.trace_mode == 3) {
+      __trec_debug_info::InstDebugInfo &debug_info =
+          (*(__trec_debug_info::InstDebugInfo *)thr->tctx->dbg_temp_buffer);
+      __sanitizer::u64 fid = debug_info.fid;
+      __sanitizer::u64 func_id = 0;
+      func_id = strtoull(getenv("FUNC_ID"), nullptr, 10);
+
+      if (fid == func_id) {
+        __sanitizer::u64 oid =
+            (((((u64)1) << 48) - 1) & (thr->tctx->debug_offset));
+        __trec_trace::Event e(
+            __trec_trace::EventType::BBLEnter, thr->tid,
+            atomic_fetch_add(&ctx->global_id, 1, memory_order_relaxed), oid,
+            thr->tctx->isFuncExitMetaVaild ? thr->tctx->metadata_offset : 0, 0);
+
+        timespec current_time;
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &current_time);
+        u64 sec = current_time.tv_sec;
+        u64 nsec = current_time.tv_nsec;
+        debug_info.time = (sec * 1000000000 + nsec);
+
+        thr->tctx->dbg_temp_buffer_size =
+            sizeof(__trec_debug_info::InstDebugInfo);
+        thr->tctx->put_debug_info(thr->tctx->dbg_temp_buffer,
+                                  thr->tctx->dbg_temp_buffer_size);
+
+        thr->tctx->put_trace(&e, sizeof(__trec_trace::Event));
+        thr->tctx->header.StateInc(__trec_header::RecordType::BBLEnter);
+        thr->tctx->isFuncEnterMetaVaild = false;
+        thr->tctx->isFuncExitMetaVaild = false;
+        thr->tctx->parammetas.Resize(0);
+        thr->tctx->dbg_temp_buffer_size = 0;
+      }
     }
   }
 }
