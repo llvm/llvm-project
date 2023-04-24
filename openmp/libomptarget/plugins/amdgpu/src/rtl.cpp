@@ -37,7 +37,7 @@
 #include "internal.h"
 #include "rt.h"
 
-#include "Environment.h"
+#include "DeviceEnvironment.h"
 #include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"

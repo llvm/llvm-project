@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "Debug.h"
-#include "Environment.h"
+#include "DeviceEnvironment.h"
 #include "omptarget.h"
 #include "omptargetplugin.h"
 

@@ -17,9 +17,6 @@
 #include "Types.h"
 #include "Utils.h"
 
-// Forward declaration.
-struct KernelEnvironmentTy;
-
 #pragma omp begin declare target device_type(nohost)
 
 namespace ompx {
@@ -116,10 +113,7 @@ extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
-
-/// Return the kernel environment associated with the current kernel.
-KernelEnvironmentTy &getKernelEnvironment();
+void init(bool IsSPMD);
 
 /// TODO
 enum ValueKind {
