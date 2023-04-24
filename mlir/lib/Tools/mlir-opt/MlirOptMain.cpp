@@ -300,8 +300,6 @@ static LogicalResult processBuffer(raw_ostream &os,
     return failure();
 
   // Parse the input file.
-  if (config.shouldPreloadDialectsInContext())
-    context.loadAllAvailableDialects();
   context.allowUnregisteredDialects(config.shouldAllowUnregisteredDialects());
   if (config.shouldVerifyDiagnostics())
     context.printOpOnDiagnostic(false);
@@ -363,8 +361,7 @@ LogicalResult mlir::MlirOptMain(llvm::raw_ostream &outputStream,
 }
 
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                                DialectRegistry &registry,
-                                bool preloadDialectsInContext) {
+                                DialectRegistry &registry) {
   static cl::opt<std::string> inputFilename(
       cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
@@ -392,7 +389,6 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
   MlirOptMainConfig config = MlirOptMainConfig::createFromCLOptions();
-  config.preloadDialectsInContext(preloadDialectsInContext);
 
   // When reading from stdin and the input is a tty, it is often a user mistake
   // and the process "appears to be stuck". Print a message to let the user know

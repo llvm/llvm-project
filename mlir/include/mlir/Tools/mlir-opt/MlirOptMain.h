@@ -107,15 +107,6 @@ public:
     return success();
   }
 
-  // Deprecated.
-  MlirOptMainConfig &preloadDialectsInContext(bool preload) {
-    preloadDialectsInContextFlag = preload;
-    return *this;
-  }
-  bool shouldPreloadDialectsInContext() const {
-    return preloadDialectsInContextFlag;
-  }
-
   /// Show the registered dialects before trying to load the input file.
   MlirOptMainConfig &showDialects(bool show) {
     showDialectsFlag = show;
@@ -180,9 +171,6 @@ protected:
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
 
-  /// Deprecated.
-  bool preloadDialectsInContextFlag = false;
-
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
 
@@ -219,12 +207,8 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
-/// - preloadDialectsInContext will trigger the upfront loading of all
-///   dialects from the global registry in the MLIRContext. This option is
-///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                          DialectRegistry &registry,
-                          bool preloadDialectsInContext = false);
+                          DialectRegistry &registry);
 
 /// Helper wrapper to return the result of MlirOptMain directly from main.
 ///
