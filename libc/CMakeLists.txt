@@ -76,7 +76,7 @@ option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ign
 set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
 set(LIBC_ENABLE_UNITTESTS ON)
-set(LIBC_ENABLE_HERMETIC_TESTS ON)
+set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
