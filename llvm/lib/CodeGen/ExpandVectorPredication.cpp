@@ -601,6 +601,11 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   switch (VPI.getIntrinsicID()) {
   default:
     break;
+  case Intrinsic::vp_fneg: {
+    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0), VPI.getName());
+    replaceOperation(*NewNegOp, VPI);
+    return NewNegOp;  
+  }
   case Intrinsic::vp_fabs:
     return expandPredicationToFPCall(Builder, VPI, Intrinsic::fabs);
   case Intrinsic::vp_sqrt:
