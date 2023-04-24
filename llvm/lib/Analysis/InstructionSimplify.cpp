@@ -996,6 +996,82 @@ Value *llvm::simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   return ::simplifyMulInst(Op0, Op1, IsNSW, IsNUW, Q, RecursionLimit);
 }
 
+/// Given a predicate and two operands, return true if the comparison is true.
+/// This is a helper for div/rem simplification where we return some other value
+/// when we can prove a relationship between the operands.
+static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                       const SimplifyQuery &Q, unsigned MaxRecurse) {
+  Value *V = simplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
+  Constant *C = dyn_cast_or_null<Constant>(V);
+  return (C && C->isAllOnesValue());
+}
+
+/// Return true if we can simplify X / Y to 0. Remainder can adapt that answer
+/// to simplify X % Y to X.
+static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
+                      unsigned MaxRecurse, bool IsSigned) {
+  // Recursion is always used, so bail out at once if we already hit the limit.
+  if (!MaxRecurse--)
+    return false;
+
+  if (IsSigned) {
+    // (X srem Y) sdiv Y --> 0
+    if (match(X, m_SRem(m_Value(), m_Specific(Y))))
+      return true;
+
+    // |X| / |Y| --> 0
+    //
+    // We require that 1 operand is a simple constant. That could be extended to
+    // 2 variables if we computed the sign bit for each.
+    //
+    // Make sure that a constant is not the minimum signed value because taking
+    // the abs() of that is undefined.
+    Type *Ty = X->getType();
+    const APInt *C;
+    if (match(X, m_APInt(C)) && !C->isMinSignedValue()) {
+      // Is the variable divisor magnitude always greater than the constant
+      // dividend magnitude?
+      // |Y| > |C| --> Y < -abs(C) or Y > abs(C)
+      Constant *PosDividendC = ConstantInt::get(Ty, C->abs());
+      Constant *NegDividendC = ConstantInt::get(Ty, -C->abs());
+      if (isICmpTrue(CmpInst::ICMP_SLT, Y, NegDividendC, Q, MaxRecurse) ||
+          isICmpTrue(CmpInst::ICMP_SGT, Y, PosDividendC, Q, MaxRecurse))
+        return true;
+    }
+    if (match(Y, m_APInt(C))) {
+      // Special-case: we can't take the abs() of a minimum signed value. If
+      // that's the divisor, then all we have to do is prove that the dividend
+      // is also not the minimum signed value.
+      if (C->isMinSignedValue())
+        return isICmpTrue(CmpInst::ICMP_NE, X, Y, Q, MaxRecurse);
+
+      // Is the variable dividend magnitude always less than the constant
+      // divisor magnitude?
+      // |X| < |C| --> X > -abs(C) and X < abs(C)
+      Constant *PosDivisorC = ConstantInt::get(Ty, C->abs());
+      Constant *NegDivisorC = ConstantInt::get(Ty, -C->abs());
+      if (isICmpTrue(CmpInst::ICMP_SGT, X, NegDivisorC, Q, MaxRecurse) &&
+          isICmpTrue(CmpInst::ICMP_SLT, X, PosDivisorC, Q, MaxRecurse))
+        return true;
+    }
+    return false;
+  }
+
+  // IsSigned == false.
+
+  // Is the unsigned dividend known to be less than a constant divisor?
+  // TODO: Convert this (and above) to range analysis
+  //      ("computeConstantRangeIncludingKnownBits")?
+  const APInt *C;
+  if (match(Y, m_APInt(C)) &&
+      computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI, Q.DT).getMaxValue().ult(*C))
+    return true;
+
+  // Try again for any divisor:
+  // Is the dividend unsigned less than the divisor?
+  return isICmpTrue(ICmpInst::ICMP_ULT, X, Y, Q, MaxRecurse);
+}
+
 /// Check for common or similar folds of integer division or integer remainder.
 /// This applies to all 4 opcodes (sdiv/udiv/srem/urem).
 static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
@@ -1075,86 +1151,25 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
     }
   }
 
+  if (isDivZero(Op0, Op1, Q, MaxRecurse, IsSigned))
+    return IsDiv ? Constant::getNullValue(Op0->getType()) : Op0;
+
   if (Value *V = simplifyByDomEq(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
 
+  // If the operation is with the result of a select instruction, check whether
+  // operating on either branch of the select always yields the same value.
+  if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
+    if (Value *V = threadBinOpOverSelect(Opcode, Op0, Op1, Q, MaxRecurse))
+      return V;
+
+  // If the operation is with the result of a phi instruction, check whether
+  // operating on all incoming values of the phi always yields the same value.
+  if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
+    if (Value *V = threadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
+      return V;
+
   return nullptr;
-}
-
-/// Given a predicate and two operands, return true if the comparison is true.
-/// This is a helper for div/rem simplification where we return some other value
-/// when we can prove a relationship between the operands.
-static bool isICmpTrue(ICmpInst::Predicate Pred, Value *LHS, Value *RHS,
-                       const SimplifyQuery &Q, unsigned MaxRecurse) {
-  Value *V = simplifyICmpInst(Pred, LHS, RHS, Q, MaxRecurse);
-  Constant *C = dyn_cast_or_null<Constant>(V);
-  return (C && C->isAllOnesValue());
-}
-
-/// Return true if we can simplify X / Y to 0. Remainder can adapt that answer
-/// to simplify X % Y to X.
-static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
-                      unsigned MaxRecurse, bool IsSigned) {
-  // Recursion is always used, so bail out at once if we already hit the limit.
-  if (!MaxRecurse--)
-    return false;
-
-  if (IsSigned) {
-    // (X srem Y) sdiv Y --> 0
-    if (match(X, m_SRem(m_Value(), m_Specific(Y))))
-      return true;
-
-    // |X| / |Y| --> 0
-    //
-    // We require that 1 operand is a simple constant. That could be extended to
-    // 2 variables if we computed the sign bit for each.
-    //
-    // Make sure that a constant is not the minimum signed value because taking
-    // the abs() of that is undefined.
-    Type *Ty = X->getType();
-    const APInt *C;
-    if (match(X, m_APInt(C)) && !C->isMinSignedValue()) {
-      // Is the variable divisor magnitude always greater than the constant
-      // dividend magnitude?
-      // |Y| > |C| --> Y < -abs(C) or Y > abs(C)
-      Constant *PosDividendC = ConstantInt::get(Ty, C->abs());
-      Constant *NegDividendC = ConstantInt::get(Ty, -C->abs());
-      if (isICmpTrue(CmpInst::ICMP_SLT, Y, NegDividendC, Q, MaxRecurse) ||
-          isICmpTrue(CmpInst::ICMP_SGT, Y, PosDividendC, Q, MaxRecurse))
-        return true;
-    }
-    if (match(Y, m_APInt(C))) {
-      // Special-case: we can't take the abs() of a minimum signed value. If
-      // that's the divisor, then all we have to do is prove that the dividend
-      // is also not the minimum signed value.
-      if (C->isMinSignedValue())
-        return isICmpTrue(CmpInst::ICMP_NE, X, Y, Q, MaxRecurse);
-
-      // Is the variable dividend magnitude always less than the constant
-      // divisor magnitude?
-      // |X| < |C| --> X > -abs(C) and X < abs(C)
-      Constant *PosDivisorC = ConstantInt::get(Ty, C->abs());
-      Constant *NegDivisorC = ConstantInt::get(Ty, -C->abs());
-      if (isICmpTrue(CmpInst::ICMP_SGT, X, NegDivisorC, Q, MaxRecurse) &&
-          isICmpTrue(CmpInst::ICMP_SLT, X, PosDivisorC, Q, MaxRecurse))
-        return true;
-    }
-    return false;
-  }
-
-  // IsSigned == false.
-
-  // Is the unsigned dividend known to be less than a constant divisor?
-  // TODO: Convert this (and above) to range analysis
-  //      ("computeConstantRangeIncludingKnownBits")?
-  const APInt *C;
-  if (match(Y, m_APInt(C)) &&
-      computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI, Q.DT).getMaxValue().ult(*C))
-    return true;
-
-  // Try again for any divisor:
-  // Is the dividend unsigned less than the divisor?
-  return isICmpTrue(ICmpInst::ICMP_ULT, X, Y, Q, MaxRecurse);
 }
 
 /// These are simplifications common to SDiv and UDiv.
@@ -1177,23 +1192,6 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
       return PoisonValue::get(Op0->getType());
   }
 
-  bool IsSigned = Opcode == Instruction::SDiv;
-
-  // If the operation is with the result of a select instruction, check whether
-  // operating on either branch of the select always yields the same value.
-  if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
-    if (Value *V = threadBinOpOverSelect(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  // If the operation is with the result of a phi instruction, check whether
-  // operating on all incoming values of the phi always yields the same value.
-  if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
-    if (Value *V = threadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  if (isDivZero(Op0, Op1, Q, MaxRecurse, IsSigned))
-    return Constant::getNullValue(Op0->getType());
-
   return nullptr;
 }
 
@@ -1213,22 +1211,6 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
        (Opcode == Instruction::URem &&
         match(Op0, m_NUWShl(m_Specific(Op1), m_Value())))))
     return Constant::getNullValue(Op0->getType());
-
-  // If the operation is with the result of a select instruction, check whether
-  // operating on either branch of the select always yields the same value.
-  if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
-    if (Value *V = threadBinOpOverSelect(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  // If the operation is with the result of a phi instruction, check whether
-  // operating on all incoming values of the phi always yields the same value.
-  if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
-    if (Value *V = threadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  // If X / Y == 0, then X % Y == X.
-  if (isDivZero(Op0, Op1, Q, MaxRecurse, Opcode == Instruction::SRem))
-    return Op0;
 
   return nullptr;
 }
