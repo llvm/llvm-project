@@ -297,7 +297,8 @@ Error IncludeTreeActionController::initialize(
       return;
 
     PreprocessorOptions &PPOpts = ScanInstance.getPreprocessorOpts();
-    if (PPOpts.Includes.empty() && PPOpts.ImplicitPCHInclude.empty())
+    if (PPOpts.Includes.empty() && PPOpts.ImplicitPCHInclude.empty() &&
+        !ScanInstance.getLangOpts().Modules)
       return;
 
     addReversePrefixMappingFileSystem(PrefixMapper, ScanInstance);
@@ -365,6 +366,7 @@ Error IncludeTreeActionController::initializeModuleBuild(
         return std::make_unique<LookupPCHModulesListener>(R);
       });
   ModuleScanInstance.addDependencyCollector(std::move(DC));
+  ModuleScanInstance.setPrefixMapper(PrefixMapper);
 
   return Error::success();
 }

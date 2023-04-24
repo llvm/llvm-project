@@ -25,6 +25,7 @@
 #include "llvm/CAS/CASOutputBackend.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include <cassert>
 #include <list>
@@ -94,6 +95,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The \c ActionCache key for this compilation, if caching is enabled.
   std::optional<cas::CASID> CompileJobCacheKey;
+
+  /// The prefix mapper; empty by default.
+  llvm::PrefixMapper PrefixMapper;
 
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
@@ -362,6 +366,10 @@ public:
     CompileJobCacheKey = std::move(Key);
   }
   bool isSourceNonReproducible() const;
+
+  llvm::PrefixMapper &getPrefixMapper() { return PrefixMapper; }
+
+  void setPrefixMapper(llvm::PrefixMapper PM) { PrefixMapper = std::move(PM); }
 
   /// }
   /// @name Diagnostics Engine

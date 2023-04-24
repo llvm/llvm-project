@@ -3,8 +3,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t/dir1
 // RUN: cp -r %t/dir1 %t/dir2
-// RUN: sed "s|DIR|%/t/dir1|g" %t/dir1/cdb.json.template > %t/cdb1.json
-// RUN: sed "s|DIR|%/t/dir2|g" %t/dir1/cdb.json.template > %t/cdb2.json
+// RUN: sed -e "s|DIR|%/t/dir1|g" -e "s|CLANG|%clang|g" %t/dir1/cdb.json.template > %t/cdb1.json
+// RUN: sed -e "s|DIR|%/t/dir2|g" -e "s|CLANG|%clang|g" %t/dir1/cdb.json.template > %t/cdb2.json
 
 // RUN: clang-scan-deps -compilation-database %t/cdb1.json \
 // RUN:   -cas-path %t/cas -module-files-dir %t/dir1/outputs \
@@ -16,12 +16,14 @@
 // RUN: %deps-to-rsp %t/deps.json --module-name Top > %t/Top.rsp
 // RUN: %deps-to-rsp %t/deps.json --module-name Left > %t/Left.rsp
 // RUN: %deps-to-rsp %t/deps.json --module-name Right > %t/Right.rsp
+// RUN: %deps-to-rsp %t/deps.json --module-name System > %t/System.rsp
 // RUN: %deps-to-rsp %t/deps.json --tu-index 0 > %t/tu.rsp
 
 // Extract include-tree casids
 // RUN: cat %t/Top.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/Top.casid
 // RUN: cat %t/Left.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/Left.casid
 // RUN: cat %t/Right.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/Right.casid
+// RUN: cat %t/System.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/System.casid
 // RUN: cat %t/tu.rsp | sed -E 's|.*"-fcas-include-tree" "(llvmcas://[[:xdigit:]]+)".*|\1|' > %t/tu.casid
 
 // RUN: echo "MODULE Top" > %t/result.txt
@@ -32,6 +34,10 @@
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/Right.casid >> %t/result.txt
 // RUN: echo "TRANSLATION UNIT" >> %t/result.txt
 // RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/tu.casid >> %t/result.txt
+
+// RUN: clang-cas-test -cas %t/cas -print-include-tree @%t/System.casid | grep '<module-includes>' | sed 's|.* llvmcas|llvmcas|' > %t/system-module-includes.casid
+// RUN: echo "System module-includes" >> %t/result.txt
+// RUN: llvm-cas -cas %t/cas -cat-blob @%t/system-module-includes.casid >> %t/result.txt
 
 // RUN: FileCheck %s -input-file %t/result.txt -DPREFIX=%/t -check-prefix=NO_PATHS
 // NO_PATHS-NOT: [[PREFIX]]
@@ -97,7 +103,11 @@
 // CHECK: /^src/Top.h llvmcas://{{[[:xdigit:]]+}}
 // CHECK: /^src/Right.h llvmcas://{{[[:xdigit:]]+}}
 
-// CHECK:      {
+// CHECK-LABEL: System module-includes
+// CHECK-NEXT: #import "sys.h"
+// CHECK-NEXT: #import "/^tc/{{.*}}/stdbool.h"
+
+// CHECK-NEXT:      {
 // CHECK-NEXT   "modules": [
 // CHECK-NEXT     {
 // CHECK:            "cas-include-tree-id": "[[LEFT_TREE:llvmcas://[[:xdigit:]]+]]"
@@ -170,6 +180,33 @@
 // CHECK:            "name": "Right"
 // CHECK:          }
 // CHECK-NEXT:     {
+// CHECK:            "cas-include-tree-id": "[[SYS_TREE:llvmcas://[[:xdigit:]]+]]"
+// CHECK:            "clang-module-deps": []
+// CHECK:            "clang-modulemap-file": "[[PREFIX]]/dir1/System/module.modulemap"
+// CHECK:            "command-line": [
+// CHECK-NEXT:         "-cc1"
+// CHECK:              "-fcas-path"
+// CHECK-NEXT:         "[[PREFIX]]/cas"
+// CHECK:              "-o"
+// CHECK-NEXT:         "[[PREFIX]]/dir1/outputs/{{.*}}/System-{{.*}}.pcm"
+// CHECK:              "-disable-free"
+// CHECK:              "-fno-pch-timestamp"
+// CHECK:              "-fcas-include-tree"
+// CHECK-NEXT:         "[[SYS_TREE]]"
+// CHECK:              "-fcache-compile-job"
+// CHECK:              "-emit-module"
+// CHECK:              "-fmodules"
+// CHECK:              "-fmodule-name=System"
+// CHECK:              "-fno-implicit-modules"
+// CHECK:            ]
+// CHECK:            "file-deps": [
+// CHECK-DAG:         "{{.*}}/stdbool.h"
+// CHECK-DAG:         "[[PREFIX]]/dir1/System/module.modulemap"
+// CHECK-DAG:         "[[PREFIX]]/dir1/System/sys.h"
+// CHECK:            ]
+// CHECK:            "name": "System"
+// CHECK:          }
+// CHECK-NEXT:     {
 // CHECK:            "cas-include-tree-id": "[[TOP_TREE:llvmcas://[[:xdigit:]]+]]"
 // CHECK:            "clang-module-deps": []
 // CHECK:            "clang-modulemap-file": "[[PREFIX]]/dir1/module.modulemap"
@@ -208,6 +245,9 @@
 // CHECK-NEXT:             {
 // CHECK:                    "module-name": "Right"
 // CHECK:                  }
+// CHECK-NEXT:             {
+// CHECK:                    "module-name": "System"
+// CHECK:                  }
 // CHECK-NEXT:           ]
 // CHECK:                "command-line": [
 // CHECK-NEXT:             "-cc1"
@@ -244,6 +284,7 @@
 // RUN: %clang @%t/Top.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
 // RUN: %clang @%t/Left.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
 // RUN: %clang @%t/Right.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
+// RUN: %clang @%t/System.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
 // RUN: %clang @%t/tu.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_MISS
 
 // Scan in a different directory
@@ -256,12 +297,14 @@
 // RUN: %deps-to-rsp %t/deps2.json --module-name Top > %t/Top2.rsp
 // RUN: %deps-to-rsp %t/deps2.json --module-name Left > %t/Left2.rsp
 // RUN: %deps-to-rsp %t/deps2.json --module-name Right > %t/Right2.rsp
+// RUN: %deps-to-rsp %t/deps2.json --module-name System > %t/System2.rsp
 // RUN: %deps-to-rsp %t/deps2.json --tu-index 0 > %t/tu2.rsp
 
 // Check cache hits
 // RUN: %clang @%t/Top2.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
 // RUN: %clang @%t/Left2.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
 // RUN: %clang @%t/Right2.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
+// RUN: %clang @%t/System2.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
 // RUN: %clang @%t/tu2.rsp 2>&1 | FileCheck %s -check-prefix=CACHE_HIT
 
 // CACHE_MISS: compile job cache miss
@@ -271,7 +314,7 @@
 [{
   "file": "DIR/tu.m",
   "directory": "DIR",
-  "command": "clang -fsyntax-only DIR/tu.m -I DIR -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache -Rcompile-job-cache"
+  "command": "CLANG -fsyntax-only DIR/tu.m -I DIR -isystem DIR/System -fmodules -fimplicit-modules -fimplicit-module-maps -fmodules-cache-path=DIR/module-cache -Rcompile-job-cache"
 }]
 
 //--- module.modulemap
@@ -294,12 +337,25 @@ void left(void);
 #include "Top.h"
 void right(void);
 
+//--- System/module.modulemap
+module System [system] {
+  header "sys.h"
+  header "stdbool.h"
+}
+
+//--- System/sys.h
+#include <stdbool.h>
+bool sys(void);
+
 //--- tu.m
 #import "Left.h"
 #import <Right.h>
+#import <sys.h>
 
 void tu(void) {
   top();
   left();
   right();
+  bool b = sys();
+  (void)b;
 }
