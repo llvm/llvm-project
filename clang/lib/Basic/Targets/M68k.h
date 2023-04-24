@@ -49,7 +49,7 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
-  const char *getClobbers() const override;
+  std::string_view getClobbers() const override;
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(const std::string &Name) override;
 };

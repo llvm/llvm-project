@@ -1295,7 +1295,7 @@ bool AArch64TargetInfo::validateConstraintModifier(
   }
 }
 
-const char *AArch64TargetInfo::getClobbers() const { return ""; }
+std::string_view AArch64TargetInfo::getClobbers() const { return ""; }
 
 int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   if (RegNo == 0)
