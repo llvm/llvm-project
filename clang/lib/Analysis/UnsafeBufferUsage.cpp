@@ -1117,42 +1117,44 @@ static std::string getAPIntText(APInt Val) {
 
 // Return the source location of the last character of the AST `Node`.
 template <typename NodeTy>
-static SourceLocation getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
-                                    const LangOptions &LangOpts) {
+static std::optional<SourceLocation>
+getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
+              const LangOptions &LangOpts) {
   unsigned TkLen = Lexer::MeasureTokenLength(Node->getEndLoc(), SM, LangOpts);
   SourceLocation Loc = Node->getEndLoc().getLocWithOffset(TkLen - 1);
 
-  // We expect `Loc` to be valid. The location is obtained by moving forward
-  // from the beginning of the token 'len(token)-1' characters. The file ID of
-  // the locations within a token must be consistent.
-  assert(Loc.isValid() && "Expected the source location of the last"
-                          "character of an AST Node to be always valid");
-  return Loc;
+  if (Loc.isValid())
+    return Loc;
+
+  return std::nullopt;
 }
 
 // Return the source location just past the last character of the AST `Node`.
 template <typename NodeTy>
-static SourceLocation getPastLoc(const NodeTy *Node, const SourceManager &SM,
-                                 const LangOptions &LangOpts) {
+static std::optional<SourceLocation> getPastLoc(const NodeTy *Node,
+                                                const SourceManager &SM,
+                                                const LangOptions &LangOpts) {
   SourceLocation Loc =
       Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
 
-  // We expect `Loc` to be valid as it is either associated to a file ID or
-  //   it must be the end of a macro expansion. (see
-  //   `Lexer::getLocForEndOfToken`)
-  assert(Loc.isValid() && "Expected the source location just past the last "
-                          "character of an AST Node to be always valid");
-  return Loc;
+  if (Loc.isValid())
+    return Loc;
+
+  return std::nullopt;
 }
 
 // Return text representation of an `Expr`.
-static StringRef getExprText(const Expr *E, const SourceManager &SM,
-                             const LangOptions &LangOpts) {
-  SourceLocation LastCharLoc = getPastLoc(E, SM, LangOpts);
+static std::optional<StringRef> getExprText(const Expr *E,
+                                            const SourceManager &SM,
+                                            const LangOptions &LangOpts) {
+  std::optional<SourceLocation> LastCharLoc = getPastLoc(E, SM, LangOpts);
 
-  return Lexer::getSourceText(
-      CharSourceRange::getCharRange(E->getBeginLoc(), LastCharLoc), SM,
-      LangOpts);
+  if (LastCharLoc)
+    return Lexer::getSourceText(
+        CharSourceRange::getCharRange(E->getBeginLoc(), *LastCharLoc), SM,
+        LangOpts);
+
+  return std::nullopt;
 }
 
 std::optional<FixItList>
@@ -1191,12 +1193,24 @@ DerefSimplePtrArithFixableGadget::getFixits(const Strategy &s) const {
     CharSourceRange StarWithTrailWhitespace =
         clang::CharSourceRange::getCharRange(DerefOp->getOperatorLoc(),
                                              LHS->getBeginLoc());
+
+    std::optional<SourceLocation> LHSLocation = getPastLoc(LHS, SM, LangOpts);
+    if (!LHSLocation)
+      return std::nullopt;
+
     CharSourceRange PlusWithSurroundingWhitespace =
-        clang::CharSourceRange::getCharRange(getPastLoc(LHS, SM, LangOpts),
-                                             RHS->getBeginLoc());
+        clang::CharSourceRange::getCharRange(*LHSLocation, RHS->getBeginLoc());
+
+    std::optional<SourceLocation> AddOpLocation =
+        getPastLoc(AddOp, SM, LangOpts);
+    std::optional<SourceLocation> DerefOpLocation =
+        getPastLoc(DerefOp, SM, LangOpts);
+
+    if (!AddOpLocation || !DerefOpLocation)
+      return std::nullopt;
+
     CharSourceRange ClosingParenWithPrecWhitespace =
-        clang::CharSourceRange::getCharRange(getPastLoc(AddOp, SM, LangOpts),
-                                             getPastLoc(DerefOp, SM, LangOpts));
+        clang::CharSourceRange::getCharRange(*AddOpLocation, *DerefOpLocation);
 
     return FixItList{
         {FixItHint::CreateRemoval(StarWithTrailWhitespace),
@@ -1218,12 +1232,12 @@ PointerDereferenceGadget::getFixits(const Strategy &S) const {
     CharSourceRange derefRange = clang::CharSourceRange::getCharRange(
         Op->getBeginLoc(), Op->getBeginLoc().getLocWithOffset(1));
     // Inserts the [0]
-    std::optional<SourceLocation> endOfOperand =
+    std::optional<SourceLocation> EndOfOperand =
         getEndCharLoc(BaseDeclRefExpr, SM, Ctx.getLangOpts());
-    if (endOfOperand) {
+    if (EndOfOperand) {
       return FixItList{{FixItHint::CreateRemoval(derefRange),
                         FixItHint::CreateInsertion(
-                            endOfOperand.value().getLocWithOffset(1), "[0]")}};
+                            (*EndOfOperand).getLocWithOffset(1), "[0]")}};
     }
   }
     [[fallthrough]];
@@ -1248,10 +1262,12 @@ std::optional<FixItList> UPCStandalonePointerGadget::getFixits(const Strategy &S
       ASTContext &Ctx = VD->getASTContext();
       SourceManager &SM = Ctx.getSourceManager();
       // Inserts the .data() after the DRE
-      SourceLocation endOfOperand = getEndCharLoc(Node, SM, Ctx.getLangOpts());
+      std::optional<SourceLocation> EndOfOperand =
+          getPastLoc(Node, SM, Ctx.getLangOpts());
 
-      return FixItList{{FixItHint::CreateInsertion(
-          endOfOperand.getLocWithOffset(1), ".data()")}};
+      if (EndOfOperand)
+        return FixItList{{FixItHint::CreateInsertion(
+            *EndOfOperand, ".data()")}};
     }
     case Strategy::Kind::Wontfix:
     case Strategy::Kind::Iterator:
@@ -1281,12 +1297,20 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
   if (auto ICE = Idx->getIntegerConstantExpr(Ctx))
     if ((*ICE).isZero())
       IdxIsLitZero = true;
+  std::optional<StringRef> DreString = getExprText(DRE, SM, LangOpts);
+  if (!DreString)
+    return std::nullopt;
+
   if (IdxIsLitZero) {
     // If the index is literal zero, we produce the most concise fix-it:
-    SS << getExprText(DRE, SM, LangOpts).str() << ".data()";
+    SS << (*DreString).str() << ".data()";
   } else {
-    SS << "&" << getExprText(DRE, SM, LangOpts).str() << ".data()"
-       << "[" << getExprText(Idx, SM, LangOpts).str() << "]";
+    std::optional<StringRef> IndexString = getExprText(Idx, SM, LangOpts);
+    if (!IndexString)
+      return std::nullopt;
+
+    SS << "&" << (*DreString).str() << ".data()"
+       << "[" << (*IndexString).str() << "]";
   }
   return FixItList{
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
@@ -1310,11 +1334,13 @@ std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) con
       // To transform UPC(++p) to UPC((p = p.subspan(1)).data()):
       SS << "(" << varName.data() << " = " << varName.data()
          << ".subspan(1)).data()";
+      std::optional<SourceLocation> PreIncLocation =
+          getEndCharLoc(PreIncNode, Ctx.getSourceManager(), Ctx.getLangOpts());
+      if (!PreIncLocation)
+        return std::nullopt;
+
       Fixes.push_back(FixItHint::CreateReplacement(
-          SourceRange(PreIncNode->getBeginLoc(),
-                      getEndCharLoc(PreIncNode, Ctx.getSourceManager(),
-                                    Ctx.getLangOpts())),
-          SS.str()));
+          SourceRange(PreIncNode->getBeginLoc(), *PreIncLocation), SS.str()));
       return Fixes;
     }
   }
@@ -1350,7 +1376,12 @@ populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
           // &`? It should. Maybe worth an NFC patch later.
           Expr::NullPointerConstantValueDependence::
               NPC_ValueDependentIsNotNull)) {
-    SourceRange SR(Init->getBeginLoc(), getEndCharLoc(Init, SM, LangOpts));
+    std::optional<SourceLocation> InitLocation =
+        getEndCharLoc(Init, SM, LangOpts);
+    if (!InitLocation)
+      return {};
+
+    SourceRange SR(Init->getBeginLoc(), *InitLocation);
 
     return {FixItHint::CreateRemoval(SR)};
   }
@@ -1368,8 +1399,12 @@ populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
     // of `T`. So the extent is `n` unless `n` has side effects.  Similar but
     // simpler for the case where `Init` is `new T`.
     if (const Expr *Ext = CxxNew->getArraySize().value_or(nullptr)) {
-      if (!Ext->HasSideEffects(Ctx))
-        ExtentText = getExprText(Ext, SM, LangOpts);
+      if (!Ext->HasSideEffects(Ctx)) {
+        std::optional<StringRef> ExtentString = getExprText(Ext, SM, LangOpts);
+        if (!ExtentString)
+          return {};
+        ExtentText = *ExtentString;
+      }
     } else if (!CxxNew->isArray())
       // Although the initializer is not allocating a buffer, the pointer
       // variable could still be used in buffer access operations.
@@ -1392,12 +1427,15 @@ populateInitializerFixItWithSpan(const Expr *Init, const ASTContext &Ctx,
   }
 
   SmallString<32> StrBuffer{};
-  SourceLocation LocPassInit = getPastLoc(Init, SM, LangOpts);
+  std::optional<SourceLocation> LocPassInit = getPastLoc(Init, SM, LangOpts);
+
+  if (!LocPassInit)
+    return {};
 
   StrBuffer.append(", ");
   StrBuffer.append(ExtentText);
   StrBuffer.append("}");
-  FixIts.push_back(FixItHint::CreateInsertion(LocPassInit, StrBuffer.str()));
+  FixIts.push_back(FixItHint::CreateInsertion(*LocPassInit, StrBuffer.str()));
   return FixIts;
 }
 
@@ -1420,7 +1458,7 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
   assert(!SpanEltT.isNull() && "Trying to fix a non-pointer type variable!");
 
   FixItList FixIts{};
-  SourceLocation
+  std::optional<SourceLocation>
       ReplacementLastLoc; // the inclusive end location of the replacement
   const SourceManager &SM = Ctx.getSourceManager();
 
@@ -1428,8 +1466,9 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
     FixItList InitFixIts =
         populateInitializerFixItWithSpan(Init, Ctx, UserFillPlaceHolder);
 
-    assert(!InitFixIts.empty() &&
-           "Unable to fix initializer of unsafe variable declaration");
+    if (InitFixIts.empty())
+      return {};
+
     // The loc right before the initializer:
     ReplacementLastLoc = Init->getBeginLoc().getLocWithOffset(-1);
     FixIts.insert(FixIts.end(), std::make_move_iterator(InitFixIts.begin()),
@@ -1442,8 +1481,12 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, const ASTContext &Ctx,
   raw_svector_ostream OS(Replacement);
 
   OS << "std::span<" << SpanEltT.getAsString() << "> " << D->getName();
+
+  if (!ReplacementLastLoc)
+    return {};
+
   FixIts.push_back(FixItHint::CreateReplacement(
-      SourceRange{D->getBeginLoc(), ReplacementLastLoc}, OS.str()));
+      SourceRange{D->getBeginLoc(), *ReplacementLastLoc}, OS.str()));
   return FixIts;
 }
 
