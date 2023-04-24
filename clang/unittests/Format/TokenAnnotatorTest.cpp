@@ -146,18 +146,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[12], tok::star, TT_PointerOrReference);
 
-  Tokens = annotate("if (Foo * Bar / Test)");
-  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
-
-  Tokens = annotate("if (Class* obj {getObj()})");
-  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
-
-  Tokens = annotate("if (Foo* Bar = getObj())");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
-
   Tokens = annotate("int f3() { return sizeof(Foo&); }");
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::amp, TT_PointerOrReference);
@@ -278,12 +266,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsClasses) {
   Tokens = annotate("const class {} c;");
   EXPECT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_ClassLBrace);
+
+  Tokens = annotate("class [[deprecated(\"\")]] C { int i; };");
+  EXPECT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_ClassLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   auto Tokens = annotate("struct S {};");
   EXPECT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
+
+  Tokens = annotate("struct EXPORT_MACRO [[nodiscard]] C { int i; };");
+  EXPECT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
+
+  Tokens = annotate("struct [[deprecated]] [[nodiscard]] C { int i; };");
+  EXPECT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_StructLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {

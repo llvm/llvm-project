@@ -409,7 +409,31 @@ entry:
   ret i32 %r
 }
 
+; When promoting speculative instruction, metadata that may trigger immediate UB should be dropped.
+define void @load_of_select_with_noundef_nonnull(ptr %buffer, i1 %b) {
+; CHECK-PRESERVE-CFG-LABEL: @load_of_select_with_noundef_nonnull(
+; CHECK-PRESERVE-CFG-NEXT:    [[UB_PTR:%.*]] = alloca ptr, align 8
+; CHECK-PRESERVE-CFG-NEXT:    [[SELECT_PTR:%.*]] = select i1 [[B:%.*]], ptr [[BUFFER:%.*]], ptr [[UB_PTR]]
+; CHECK-PRESERVE-CFG-NEXT:    [[LOAD_PTR:%.*]] = load ptr, ptr [[SELECT_PTR]], align 8, !nonnull !1, !noundef !1
+; CHECK-PRESERVE-CFG-NEXT:    ret void
+;
+; CHECK-MODIFY-CFG-LABEL: @load_of_select_with_noundef_nonnull(
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[B:%.*]], label [[DOTTHEN:%.*]], label [[DOTCONT:%.*]]
+; CHECK-MODIFY-CFG:       .then:
+; CHECK-MODIFY-CFG-NEXT:    [[LOAD_PTR_THEN_VAL:%.*]] = load ptr, ptr [[BUFFER:%.*]], align 8, !nonnull !2, !noundef !2
+; CHECK-MODIFY-CFG-NEXT:    br label [[DOTCONT]]
+; CHECK-MODIFY-CFG:       .cont:
+; CHECK-MODIFY-CFG-NEXT:    [[LOAD_PTR:%.*]] = phi ptr [ [[LOAD_PTR_THEN_VAL]], [[DOTTHEN]] ], [ undef, [[TMP0:%.*]] ]
+; CHECK-MODIFY-CFG-NEXT:    ret void
+;
+  %ub_ptr = alloca ptr
+  %select_ptr = select i1 %b, ptr %buffer, ptr %ub_ptr
+  %load_ptr = load ptr, ptr %select_ptr, !nonnull !1, !noundef !1
+  ret void
+}
+
 !0  = !{!"branch_weights", i32 1,  i32 99}
+!1 = !{}
 
 ; Ensure that the branch metadata is reversed to match the reversals above.
 

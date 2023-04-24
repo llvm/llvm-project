@@ -239,6 +239,16 @@ bool RISCVELFStreamer::requiresFixups(MCContext &C, const MCExpr *Value,
   if (B.isInSection() && B.getSection().getKind().isText())
     return true;
 
+  // If A is undefined and B is defined, we should emit ADD/SUB for A-B.
+  // Unfortunately, A may be defined later, but this requiresFixups call has to
+  // eagerly make a decision. For now, emit ADD/SUB unless A is .L*. This
+  // heuristic handles many temporary label differences for .debug_* and
+  // .apple_types sections.
+  //
+  // TODO Implement delayed relocation decision.
+  if (!A.isInSection() && !A.isTemporary() && B.isInSection())
+    return true;
+
   // Support cross-section symbolic differences ...
   return A.isInSection() && B.isInSection() &&
          A.getSection().getName() != B.getSection().getName();

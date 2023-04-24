@@ -1297,10 +1297,17 @@ public:
   bool loopIsFiniteByAssumption(const Loop *L);
 
   class FoldID {
-    SmallVector<unsigned, 4> Bits;
+    SmallVector<unsigned, 5> Bits;
 
   public:
-    void addInteger(unsigned long I) { Bits.push_back(I); }
+    void addInteger(unsigned long I) {
+      if (sizeof(long) == sizeof(int))
+        addInteger(unsigned(I));
+      else if (sizeof(long) == sizeof(long long))
+        addInteger((unsigned long long)I);
+      else
+        llvm_unreachable("unexpected sizeof(long)");
+    }
     void addInteger(unsigned I) { Bits.push_back(I); }
     void addInteger(int I) { Bits.push_back(I); }
 

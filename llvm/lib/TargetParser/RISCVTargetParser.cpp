@@ -14,6 +14,7 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace RISCV {
@@ -98,6 +99,11 @@ bool getCPUFeaturesExceptStdExt(CPUKind Kind,
     Features.push_back("-64bit");
 
   return true;
+}
+
+bool isX18ReservedByDefault(const Triple &TT) {
+  // X18 is reserved for the ShadowCallStack ABI (even when not enabled).
+  return TT.isOSFuchsia();
 }
 
 } // namespace RISCV

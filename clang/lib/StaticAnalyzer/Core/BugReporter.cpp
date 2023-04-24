@@ -766,7 +766,7 @@ PathDiagnosticPieceRef PathDiagnosticBuilder::generateDiagForSwitchOP(
     case Stmt::CaseStmtClass: {
       os << "Control jumps to 'case ";
       const auto *Case = cast<CaseStmt>(S);
-      const Expr *LHS = Case->getLHS()->IgnoreParenCasts();
+      const Expr *LHS = Case->getLHS()->IgnoreParenImpCasts();
 
       // Determine if it is an enum.
       bool GetRawInt = true;

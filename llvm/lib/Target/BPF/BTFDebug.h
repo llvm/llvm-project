@@ -338,6 +338,9 @@ class BTFDebug : public DebugHandlerBase {
   void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
   /// @}
 
+  /// Check whether the type is a forward declaration candidate or not.
+  bool IsForwardDeclCandidate(const DIType *Base);
+
   /// Get the file content for the subprogram. Certain lines of the file
   /// later may be put into string table and referenced by line info.
   std::string populateFileContent(const DISubprogram *SP);

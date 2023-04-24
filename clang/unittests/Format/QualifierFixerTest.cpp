@@ -420,6 +420,16 @@ TEST_F(QualifierFixerTest, RightQualifier) {
 
   // don't adjust macros
   verifyFormat("const INTPTR a;", "const INTPTR a;", Style);
+
+  // Pointers to members
+  verifyFormat("int S::*a;", Style);
+  verifyFormat("int const S::*a;", "const int S:: *a;", Style);
+  verifyFormat("int const S::*const a;", "const int S::* const a;", Style);
+  verifyFormat("int A::*const A::*p1;", Style);
+  verifyFormat("float (C::*p)(int);", Style);
+  verifyFormat("float (C::*const p)(int);", Style);
+  verifyFormat("float (C::*p)(int) const;", Style);
+  verifyFormat("float const (C::*p)(int);", "const float (C::*p)(int);", Style);
 }
 
 TEST_F(QualifierFixerTest, LeftQualifier) {
@@ -565,6 +575,16 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
 
   // don't adjust macros
   verifyFormat("INTPTR const a;", "INTPTR const a;", Style);
+
+  // Pointers to members
+  verifyFormat("int S::*a;", Style);
+  verifyFormat("const int S::*a;", "int const S:: *a;", Style);
+  verifyFormat("const int S::*const a;", "int const S::* const a;", Style);
+  verifyFormat("int A::*const A::*p1;", Style);
+  verifyFormat("float (C::*p)(int);", Style);
+  verifyFormat("float (C::*const p)(int);", Style);
+  verifyFormat("float (C::*p)(int) const;", Style);
+  verifyFormat("const float (C::*p)(int);", "float const (C::*p)(int);", Style);
 }
 
 TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {

@@ -51,11 +51,7 @@ void *&AsyncInfoTy::getVoidPtrLocation() {
   return BufferLocations.back();
 }
 
-bool AsyncInfoTy::isDone() {
-  synchronize();
-  // The async info operations are completed when the internal queue is empty.
-  return isQueueEmpty();
-}
+bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
 
 int32_t AsyncInfoTy::runPostProcessing() {
   size_t Size = PostProcessingFunctions.size();

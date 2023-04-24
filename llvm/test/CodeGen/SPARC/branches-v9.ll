@@ -20,7 +20,7 @@ define void @i(i32 signext %sel) {
 ; CHECK-NEXT:  ! %bb.1: ! %fbb
 ; CHECK-NEXT:    call f2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    ba %icc, .LBB0_3
+; CHECK-NEXT:    ba .LBB0_3
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB0_2: ! %tbb
 ; CHECK-NEXT:    call f1
@@ -61,7 +61,7 @@ define void @l(i64 %sel) {
 ; CHECK-NEXT:  ! %bb.1: ! %fbb
 ; CHECK-NEXT:    call f2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    ba %icc, .LBB1_3
+; CHECK-NEXT:    ba .LBB1_3
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB1_2: ! %tbb
 ; CHECK-NEXT:    call f1

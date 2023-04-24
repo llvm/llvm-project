@@ -12,7 +12,7 @@ C++20,`take_while <https://wg21.link/P1035R7>`_,Hui Xie,`D134952 <https://llvm.o
 C++20,`drop <https://wg21.link/P1035R7>`_,Zoe Carver,`D102037 <https://llvm.org/D102037>`_,✅
 C++20,`drop_while <https://wg21.link/P1035R7>`_,Hui Xie,`D135460 <https://llvm.org/D135460>`_,✅
 C++20,`join <https://wg21.link/P0896R4>`_,Zoe Carver,`D107671 <https://llvm.org/D107671>`_,✅
-C++20,`split <https://wg21.link/P2210R2>`_,Unassigned,No patch yet,Not started
+C++20,`split <https://wg21.link/P2210R2>`_,Hui Xie,`D142063 <https://llvm.org/D142063>`_,✅
 C++20,`lazy_split <https://wg21.link/P0896R4>`_,Zoe Carver and Konstantin Varlamov,`D107500 <https://llvm.org/D107500>`_,✅
 C++20,`counted <https://wg21.link/P0896R4>`_,Zoe Carver,`D106923 <https://llvm.org/D106923>`_,✅
 C++20,`common <https://wg21.link/P0896R4>`_,Zoe Carver,`D105753 <https://llvm.org/D105753>`_,✅

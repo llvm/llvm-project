@@ -629,6 +629,50 @@ define i1 @ashr_uge_sub(i8 %b, i8 %x, i8 %y) {
   ret i1 %r
 }
 
+define i1 @icmp_eq_bool_0(ptr %ptr) {
+; CHECK-LABEL: @icmp_eq_bool_0(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6:![0-9]+]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp eq i64 %val, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_bool_1(ptr %ptr) {
+; CHECK-LABEL: @icmp_eq_bool_1(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp eq i64 %val, 1
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_bool_0(ptr %ptr) {
+; CHECK-LABEL: @icmp_ne_bool_0(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp ne i64 %val, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_ne_bool_1(ptr %ptr) {
+; CHECK-LABEL: @icmp_ne_bool_1(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG6]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp ne i64 %val, 1
+  ret i1 %cmp
+}
+
 !0 = !{i32 1, i32 6}
 !1 = !{i32 0, i32 6}
 !2 = !{i8 0, i8 1}

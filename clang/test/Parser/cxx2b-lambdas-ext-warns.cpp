@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20
 // RUN: %clang_cc1 -std=c++2b %s -verify=cxx2b
 // RUN: %clang_cc1 -std=c++2b -Wpre-c++2b-compat %s -verify=precxx2b
+// RUN: %clang_cc1 -std=c++2b -pedantic %s -verify=cxx2b
 
 //cxx2b-no-diagnostics
 

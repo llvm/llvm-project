@@ -103,7 +103,7 @@
 "`2960 <https://wg21.link/LWG2960>`__","[fund.ts.v3] ``nonesuch``\  is insufficiently useless","San Diego","|Complete|",""
 "`2995 <https://wg21.link/LWG2995>`__","``basic_stringbuf``\  default constructor forbids it from using SSO capacity","San Diego","",""
 "`2996 <https://wg21.link/LWG2996>`__","Missing rvalue overloads for ``shared_ptr``\  operations","San Diego","",""
-"`3008 <https://wg21.link/LWG3008>`__","``make_shared``\  (sub)object destruction semantics are not specified","San Diego","",""
+"`3008 <https://wg21.link/LWG3008>`__","``make_shared``\  (sub)object destruction semantics are not specified","San Diego","|Complete|","16.0"
 "`3022 <https://wg21.link/LWG3022>`__","``is_convertible<derived*, base*>``\  may lead to ODR","San Diego","Resolved by 1285R0",""
 "`3025 <https://wg21.link/LWG3025>`__","Map-like container deduction guides should use ``pair<Key, T>``\ , not ``pair<const Key, T>``\ ","San Diego","|Complete|",""
 "`3031 <https://wg21.link/LWG3031>`__","Algorithms and predicates with non-const reference arguments","San Diego","",""

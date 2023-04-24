@@ -8,6 +8,7 @@ include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
 include(GNUInstallDirs)
 include(ExtendPath)
+include(CompilerRTDarwinUtils)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
 
@@ -145,7 +146,18 @@ if(APPLE)
                    "-darwin-target-variant" "x86_64-apple-ios13.1-macabi"
                    "-Werror")
   option(COMPILER_RT_ENABLE_MACCATALYST "Enable building for Mac Catalyst" ${COMPILER_RT_HAS_DARWIN_TARGET_VARIANT_FLAG})
-  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" On)
+
+  # Don't enable COMPILER_RT_ENABLE_IOS if we can't find the sdk dir.
+  # This can happen when you only have the commandline tools installed
+  # which doesn't come with the iOS SDK.
+  find_darwin_sdk_dir(HAS_IOS_SDK "iphoneos")
+  set(COMPILER_RT_ENABLE_IOS_DEFAULT On)
+  if("${HAS_IOS_SDK}" STREQUAL "")
+    message(WARNING "iOS SDK not found! Building compiler-rt without iOS support.")
+    set(COMPILER_RT_ENABLE_IOS_DEFAULT Off)
+  endif()
+  option(COMPILER_RT_ENABLE_IOS "Enable building for iOS" ${COMPILER_RT_ENABLE_IOS_DEFAULT})
+
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
 

@@ -90,7 +90,6 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
 
   NO_INSTALL_RPATH
 )
-add_dependencies(omptarget.rtl.amdgpu omptarget.devicertl.amdgpu)
 
 target_include_directories(
   omptarget.rtl.amdgpu

@@ -1043,6 +1043,16 @@ void RewriteInstance::discoverFileObjects() {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
 
+    if (Address == Section->getAddress() + Section->getSize()) {
+      assert(SymbolSize == 0 &&
+             "unexpect non-zero sized symbol at end of section");
+      LLVM_DEBUG(
+          dbgs()
+          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
+      registerName(SymbolSize);
+      continue;
+    }
+
     if (!Section->isText()) {
       assert(SymbolType != SymbolRef::ST_Function &&
              "unexpected function inside non-code section");
@@ -2452,8 +2462,21 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
       ReferencedSymbol = BD->getSymbol();
 
-  ErrorOr<BinarySection &> ReferencedSection =
-      BC->getSectionForAddress(SymbolAddress);
+  ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
+  symbol_iterator SymbolIter = Rel.getSymbol();
+  if (SymbolIter != InputFile->symbol_end()) {
+    SymbolRef Symbol = *SymbolIter;
+    section_iterator Section =
+        cantFail(Symbol.getSection(), "cannot get symbol section");
+    if (Section != InputFile->section_end()) {
+      Expected<StringRef> SectionName = Section->getName();
+      if (SectionName && !SectionName->empty())
+        ReferencedSection = BC->getUniqueSectionByName(*SectionName);
+    }
+  }
+
+  if (!ReferencedSection)
+    ReferencedSection = BC->getSectionForAddress(SymbolAddress);
 
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 

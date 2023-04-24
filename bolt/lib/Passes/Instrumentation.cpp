@@ -360,12 +360,13 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   // instructions to protect the red zone
   bool IsLeafFunction = true;
   DenseSet<const BinaryBasicBlock *> InvokeBlocks;
-  for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
-    for (auto I = BBI->begin(), E = BBI->end(); I != E; ++I) {
-      if (BC.MIB->isCall(*I)) {
-        if (BC.MIB->isInvoke(*I))
-          InvokeBlocks.insert(&*BBI);
-        IsLeafFunction = false;
+  for (const BinaryBasicBlock &BB : Function) {
+    for (const MCInst &Inst : BB) {
+      if (BC.MIB->isCall(Inst)) {
+        if (BC.MIB->isInvoke(Inst))
+          InvokeBlocks.insert(&BB);
+        if (!BC.MIB->isTailCall(Inst))
+          IsLeafFunction = false;
       }
     }
   }

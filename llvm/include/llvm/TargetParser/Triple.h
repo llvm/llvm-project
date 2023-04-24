@@ -882,6 +882,14 @@ public:
     return getArch() == Triple::ppc64 || getArch() == Triple::ppc64le;
   }
 
+  /// Tests whether the target 64-bit PowerPC big endian ABI is ELFv2.
+  bool isPPC64ELFv2ABI() const {
+    return (getArch() == Triple::ppc64 &&
+            ((getOS() == Triple::FreeBSD &&
+            (getOSMajorVersion() >= 13 || getOSVersion().empty())) ||
+            getOS() == Triple::OpenBSD || isMusl()));
+  }
+
   /// Tests whether the target is 32-bit RISC-V.
   bool isRISCV32() const { return getArch() == Triple::riscv32; }
 

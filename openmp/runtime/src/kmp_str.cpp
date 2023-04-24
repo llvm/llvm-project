@@ -137,8 +137,8 @@ void __kmp_str_buf_cat(kmp_str_buf_t *buffer, char const *str, size_t len) {
   KMP_DEBUG_ASSERT(len >= 0);
 
   __kmp_str_buf_reserve(buffer, buffer->used + len + 1);
-  KMP_MEMCPY(buffer->str + buffer->used, str, len);
-  buffer->str[buffer->used + len] = 0;
+  buffer->str[buffer->used] = '\0';
+  KMP_STRNCAT_S(buffer->str + buffer->used, len + 1, str, len);
   __kmp_type_convert(buffer->used + len, &(buffer->used));
   KMP_STR_BUF_INVARIANT(buffer);
 } // __kmp_str_buf_cat
@@ -151,8 +151,8 @@ void __kmp_str_buf_catbuf(kmp_str_buf_t *dest, const kmp_str_buf_t *src) {
   if (!src->str || !src->used)
     return;
   __kmp_str_buf_reserve(dest, dest->used + src->used + 1);
-  KMP_MEMCPY(dest->str + dest->used, src->str, src->used);
-  dest->str[dest->used + src->used] = 0;
+  dest->str[dest->used] = '\0';
+  KMP_STRNCAT_S(dest->str + dest->used, src->used + 1, src->str, src->used);
   dest->used += src->used;
   KMP_STR_BUF_INVARIANT(dest);
 } // __kmp_str_buf_catbuf

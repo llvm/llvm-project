@@ -128,6 +128,7 @@
     __cpp_lib_polymorphic_allocator                201902L [C++20]
     __cpp_lib_quoted_string_io                     201304L [C++14]
     __cpp_lib_ranges                               202106L [C++20]
+    __cpp_lib_ranges_as_rvalue                     202207L [C++2b]
     __cpp_lib_ranges_chunk                         202202L [C++2b]
     __cpp_lib_ranges_chunk_by                      202202L [C++2b]
     __cpp_lib_ranges_iota                          202202L [C++2b]
@@ -619,6 +620,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_chunk
@@ -1293,6 +1298,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_chunk
@@ -2132,6 +2141,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_chunk
@@ -3240,6 +3253,10 @@
 #   error "__cpp_lib_ranges should have the value 202106L in c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_chunk
 #   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
 # endif
@@ -3391,7 +3408,7 @@
 #   endif
 # endif
 
-# if __has_builtin(__builtin_source_location)
+# if __has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)
 #   ifndef __cpp_lib_source_location
 #     error "__cpp_lib_source_location should be defined in c++20"
 #   endif
@@ -3400,7 +3417,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location)' is not met!"
+#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)' is not met!"
 #   endif
 # endif
 
@@ -4505,6 +4522,13 @@
 #   error "__cpp_lib_ranges should have the value 202106L in c++2b"
 # endif
 
+# ifndef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should be defined in c++2b"
+# endif
+# if __cpp_lib_ranges_as_rvalue != 202207L
+#   error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++2b"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_chunk
 #     error "__cpp_lib_ranges_chunk should be defined in c++2b"
@@ -4737,7 +4761,7 @@
 #   endif
 # endif
 
-# if __has_builtin(__builtin_source_location)
+# if __has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)
 #   ifndef __cpp_lib_source_location
 #     error "__cpp_lib_source_location should be defined in c++2b"
 #   endif
@@ -4746,7 +4770,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_source_location
-#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location)' is not met!"
+#     error "__cpp_lib_source_location should not be defined when the requirement '__has_builtin(__builtin_source_location) && !(defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER <= 1403)' is not met!"
 #   endif
 # endif
 

@@ -64,6 +64,8 @@ public:
   unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+  MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
+
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
@@ -79,6 +81,9 @@ public:
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  /// Determine if the branch target is in range.
+  bool isBranchOffsetInRange(unsigned BranchOpc, int64_t Offset) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
@@ -98,6 +103,10 @@ public:
                             Register VReg) const override;
 
   Register getGlobalBaseReg(MachineFunction *MF) const;
+
+  /// GetInstSize - Return the number of bytes of code the specified
+  /// instruction may be.  This returns the maximum number of bytes.
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;
