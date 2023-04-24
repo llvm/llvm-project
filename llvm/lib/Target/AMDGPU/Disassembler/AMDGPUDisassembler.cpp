@@ -501,6 +501,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       if (Res)
         break;
 
+      Res = tryDecodeInst(DecoderTableGFX12_1096, MI, DecW, Address);
+      if (Res)
+        break;
+
       Res = tryDecodeInst(DecoderTableGFX1296, MI, DecW, Address);
       if (Res)
         break;
@@ -644,6 +648,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address);
+    if (Res) break;
+
+    Res = tryDecodeInst(DecoderTableGFX12_1064, MI, QW, Address);
     if (Res) break;
 
     Res = tryDecodeInst(DecoderTableGFX1264, MI, QW, Address);

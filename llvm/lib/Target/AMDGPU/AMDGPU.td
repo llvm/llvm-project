@@ -1815,6 +1815,18 @@ def isGFX12Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX12Insts)>;
 
+def isGFX12Not12_10 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 && !hasGFX12_10Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12Insts, (not FeatureGFX12_10Insts))>;
+
+def isGFX12_10Only :
+  Predicate<"Subtarget->hasGFX12_10Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12_10Insts)>;
+
+def isGFX12_10Plus :
+  Predicate<"Subtarget->hasGFX12_10Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX12_10Insts)>;
+
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 

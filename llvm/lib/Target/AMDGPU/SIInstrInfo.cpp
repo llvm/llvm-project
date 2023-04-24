@@ -8336,6 +8336,7 @@ enum SIEncodingFamily {
   GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
+  GFX12_10 = 12,
 };
 
 static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
@@ -8356,6 +8357,19 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
+}
+
+unsigned llvm::AMDGPU::getVOPDEncodingFamily(const GCNSubtarget &ST) {
+  switch (ST.getGeneration()) {
+  default:
+    break;
+  case AMDGPUSubtarget::GFX11:
+    return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    return ST.hasGFX12_10Insts() ? SIEncodingFamily::GFX12_10
+                                 : SIEncodingFamily::GFX12;
+  }
+  llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
 bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
@@ -8412,6 +8426,13 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+
+  if (MCOp == (uint16_t)-1 && ST.hasGFX12_10Insts()) {
+    uint16_t NMCOp = (uint16_t)-1;
+    NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12_10);
+    if (NMCOp != (uint16_t)-1)
+      MCOp = NMCOp;
+  }
 
   // TODO-GFX12: Remove this.
   // Hack to allow some GFX12 codegen tests to run before all the encodings are

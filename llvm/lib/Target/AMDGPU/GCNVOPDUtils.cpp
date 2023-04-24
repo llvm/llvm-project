@@ -125,15 +125,17 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
                                        const MachineInstr *FirstMI,
                                        const MachineInstr &SecondMI) {
   const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(STII.getSubtarget());
+
   unsigned Opc2 = SecondMI.getOpcode();
-  auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
+  auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily);
 
   // One instruction case
   if (!FirstMI)
     return SecondCanBeVOPD.Y;
 
   unsigned Opc = FirstMI->getOpcode();
-  auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
+  auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc, EncodingFamily);
 
   if (!((FirstCanBeVOPD.X && SecondCanBeVOPD.Y) ||
         (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))

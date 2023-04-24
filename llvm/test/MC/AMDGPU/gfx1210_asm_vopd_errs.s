@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck %s -check-prefix=GFX12 --implicit-check-not=error: --strict-whitespace
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1210 %s 2>&1 | FileCheck %s -check-prefix=GFX12 --implicit-check-not=error: --strict-whitespace
 
 //===----------------------------------------------------------------------===//
 // A VOPD instruction can use only one literal.
@@ -79,9 +79,9 @@ v_dual_fmamk_f32    v122, s0, 0xdeadbeef, v161   ::  v_dual_fmamk_f32  v123, s0,
 
 // 2 different SGPRs + LITERAL
 
-v_dual_fmaak_f32    v122, s74, v161, 2.741       ::  v_dual_and_b32       v247, s75, v98
+v_dual_fmaak_f32    v122, s74, v161, 2.741       ::  v_dual_max_i32       v247, s75, v98
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
-// GFX12-NEXT:{{^}}v_dual_fmaak_f32    v122, s74, v161, 2.741       ::  v_dual_and_b32       v247, s75, v98
+// GFX12-NEXT:{{^}}v_dual_fmaak_f32    v122, s74, v161, 2.741       ::  v_dual_max_i32       v247, s75, v98
 // GFX12-NEXT:{{^}}                                                                                ^
 
 v_dual_mov_b32      v247, s73                    ::  v_dual_fmaak_f32     v122, s74, v161, 2.741
@@ -141,3 +141,9 @@ v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, s1
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
 // GFX12-NEXT:{{^}}v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, s1, v3
 // GFX12-NEXT:{{^}}                                                                              ^
+
+// FIXME: Error should be 'unsupported instruction'
+v_dual_add_f32 v255, v4, v2 :: v_dual_and_b32 v6, v1, v3
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// GFX12-NEXT:{{^}}v_dual_add_f32 v255, v4, v2 :: v_dual_and_b32 v6, v1, v3
+// GFX12-NEXT:{{^}}^

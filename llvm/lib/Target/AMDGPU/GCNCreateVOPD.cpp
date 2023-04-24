@@ -63,10 +63,11 @@ public:
     auto *SecondMI = Pair.second;
     unsigned Opc1 = FirstMI->getOpcode();
     unsigned Opc2 = SecondMI->getOpcode();
-    int Subtarget = SII->getSubtarget().getGeneration();
+    unsigned EncodingFamily =
+        AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
     int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
                                         AMDGPU::getVOPDOpcode(Opc2),
-                                        Subtarget);
+                                        EncodingFamily);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
@@ -115,6 +116,7 @@ public:
 
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
+    unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(*ST);
 
     SmallVector<std::pair<MachineInstr *, MachineInstr *>> ReplaceCandidates;
 
@@ -130,8 +132,10 @@ public:
         auto *SecondMI = &*MII;
         unsigned Opc = FirstMI->getOpcode();
         unsigned Opc2 = SecondMI->getOpcode();
-        llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
-        llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
+        llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD =
+            AMDGPU::getCanBeVOPD(Opc, EncodingFamily);
+        llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD =
+            AMDGPU::getCanBeVOPD(Opc2, EncodingFamily);
         std::pair<MachineInstr *, MachineInstr *> Pair;
 
         if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y)
