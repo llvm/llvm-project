@@ -74,6 +74,10 @@ static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>, bool,
                               const SimplifyQuery &, unsigned);
 static Value *simplifySelectInst(Value *, Value *, Value *,
                                  const SimplifyQuery &, unsigned);
+static Value *simplifyInstructionWithOperands(Instruction *I,
+                                              ArrayRef<Value *> NewOps,
+                                              const SimplifyQuery &SQ,
+                                              unsigned MaxRecurse);
 
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
@@ -996,91 +1000,6 @@ Value *llvm::simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   return ::simplifyMulInst(Op0, Op1, IsNSW, IsNUW, Q, RecursionLimit);
 }
 
-/// Check for common or similar folds of integer division or integer remainder.
-/// This applies to all 4 opcodes (sdiv/udiv/srem/urem).
-static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
-                             Value *Op1, const SimplifyQuery &Q,
-                             unsigned MaxRecurse) {
-  bool IsDiv = (Opcode == Instruction::SDiv || Opcode == Instruction::UDiv);
-  bool IsSigned = (Opcode == Instruction::SDiv || Opcode == Instruction::SRem);
-
-  Type *Ty = Op0->getType();
-
-  // X / undef -> poison
-  // X % undef -> poison
-  if (Q.isUndefValue(Op1) || isa<PoisonValue>(Op1))
-    return PoisonValue::get(Ty);
-
-  // X / 0 -> poison
-  // X % 0 -> poison
-  // We don't need to preserve faults!
-  if (match(Op1, m_Zero()))
-    return PoisonValue::get(Ty);
-
-  // If any element of a constant divisor fixed width vector is zero or undef
-  // the behavior is undefined and we can fold the whole op to poison.
-  auto *Op1C = dyn_cast<Constant>(Op1);
-  auto *VTy = dyn_cast<FixedVectorType>(Ty);
-  if (Op1C && VTy) {
-    unsigned NumElts = VTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = Op1C->getAggregateElement(i);
-      if (Elt && (Elt->isNullValue() || Q.isUndefValue(Elt)))
-        return PoisonValue::get(Ty);
-    }
-  }
-
-  // poison / X -> poison
-  // poison % X -> poison
-  if (isa<PoisonValue>(Op0))
-    return Op0;
-
-  // undef / X -> 0
-  // undef % X -> 0
-  if (Q.isUndefValue(Op0))
-    return Constant::getNullValue(Ty);
-
-  // 0 / X -> 0
-  // 0 % X -> 0
-  if (match(Op0, m_Zero()))
-    return Constant::getNullValue(Op0->getType());
-
-  // X / X -> 1
-  // X % X -> 0
-  if (Op0 == Op1)
-    return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty);
-
-  // X / 1 -> X
-  // X % 1 -> 0
-  // If this is a boolean op (single-bit element type), we can't have
-  // division-by-zero or remainder-by-zero, so assume the divisor is 1.
-  // Similarly, if we're zero-extending a boolean divisor, then assume it's a 1.
-  Value *X;
-  if (match(Op1, m_One()) || Ty->isIntOrIntVectorTy(1) ||
-      (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
-    return IsDiv ? Op0 : Constant::getNullValue(Ty);
-
-  // If X * Y does not overflow, then:
-  //   X * Y / Y -> X
-  //   X * Y % Y -> 0
-  if (match(Op0, m_c_Mul(m_Value(X), m_Specific(Op1)))) {
-    auto *Mul = cast<OverflowingBinaryOperator>(Op0);
-    // The multiplication can't overflow if it is defined not to, or if
-    // X == A / Y for some A.
-    if ((IsSigned && Q.IIQ.hasNoSignedWrap(Mul)) ||
-        (!IsSigned && Q.IIQ.hasNoUnsignedWrap(Mul)) ||
-        (IsSigned && match(X, m_SDiv(m_Value(), m_Specific(Op1)))) ||
-        (!IsSigned && match(X, m_UDiv(m_Value(), m_Specific(Op1))))) {
-      return IsDiv ? X : Constant::getNullValue(Op0->getType());
-    }
-  }
-
-  if (Value *V = simplifyByDomEq(Opcode, Op0, Op1, Q, MaxRecurse))
-    return V;
-
-  return nullptr;
-}
-
 /// Given a predicate and two operands, return true if the comparison is true.
 /// This is a helper for div/rem simplification where we return some other value
 /// when we can prove a relationship between the operands.
@@ -1157,6 +1076,106 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   return isICmpTrue(ICmpInst::ICMP_ULT, X, Y, Q, MaxRecurse);
 }
 
+/// Check for common or similar folds of integer division or integer remainder.
+/// This applies to all 4 opcodes (sdiv/udiv/srem/urem).
+static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
+                             Value *Op1, const SimplifyQuery &Q,
+                             unsigned MaxRecurse) {
+  bool IsDiv = (Opcode == Instruction::SDiv || Opcode == Instruction::UDiv);
+  bool IsSigned = (Opcode == Instruction::SDiv || Opcode == Instruction::SRem);
+
+  Type *Ty = Op0->getType();
+
+  // X / undef -> poison
+  // X % undef -> poison
+  if (Q.isUndefValue(Op1) || isa<PoisonValue>(Op1))
+    return PoisonValue::get(Ty);
+
+  // X / 0 -> poison
+  // X % 0 -> poison
+  // We don't need to preserve faults!
+  if (match(Op1, m_Zero()))
+    return PoisonValue::get(Ty);
+
+  // If any element of a constant divisor fixed width vector is zero or undef
+  // the behavior is undefined and we can fold the whole op to poison.
+  auto *Op1C = dyn_cast<Constant>(Op1);
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (Op1C && VTy) {
+    unsigned NumElts = VTy->getNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = Op1C->getAggregateElement(i);
+      if (Elt && (Elt->isNullValue() || Q.isUndefValue(Elt)))
+        return PoisonValue::get(Ty);
+    }
+  }
+
+  // poison / X -> poison
+  // poison % X -> poison
+  if (isa<PoisonValue>(Op0))
+    return Op0;
+
+  // undef / X -> 0
+  // undef % X -> 0
+  if (Q.isUndefValue(Op0))
+    return Constant::getNullValue(Ty);
+
+  // 0 / X -> 0
+  // 0 % X -> 0
+  if (match(Op0, m_Zero()))
+    return Constant::getNullValue(Op0->getType());
+
+  // X / X -> 1
+  // X % X -> 0
+  if (Op0 == Op1)
+    return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty);
+
+  // X / 1 -> X
+  // X % 1 -> 0
+  // If the divisor can only be zero or one, we can't have division-by-zero
+  // or remainder-by-zero, so assume the divisor is 1.
+  //   e.g. 1, zext (i8 X), sdiv X (Y and 1)
+  KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  if (Known.countMinLeadingZeros() == Known.getBitWidth() - 1)
+    return IsDiv ? Op0 : Constant::getNullValue(Ty);
+
+  // If X * Y does not overflow, then:
+  //   X * Y / Y -> X
+  //   X * Y % Y -> 0
+  Value *X;
+  if (match(Op0, m_c_Mul(m_Value(X), m_Specific(Op1)))) {
+    auto *Mul = cast<OverflowingBinaryOperator>(Op0);
+    // The multiplication can't overflow if it is defined not to, or if
+    // X == A / Y for some A.
+    if ((IsSigned && Q.IIQ.hasNoSignedWrap(Mul)) ||
+        (!IsSigned && Q.IIQ.hasNoUnsignedWrap(Mul)) ||
+        (IsSigned && match(X, m_SDiv(m_Value(), m_Specific(Op1)))) ||
+        (!IsSigned && match(X, m_UDiv(m_Value(), m_Specific(Op1))))) {
+      return IsDiv ? X : Constant::getNullValue(Op0->getType());
+    }
+  }
+
+  if (isDivZero(Op0, Op1, Q, MaxRecurse, IsSigned))
+    return IsDiv ? Constant::getNullValue(Op0->getType()) : Op0;
+
+  if (Value *V = simplifyByDomEq(Opcode, Op0, Op1, Q, MaxRecurse))
+    return V;
+
+  // If the operation is with the result of a select instruction, check whether
+  // operating on either branch of the select always yields the same value.
+  if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
+    if (Value *V = threadBinOpOverSelect(Opcode, Op0, Op1, Q, MaxRecurse))
+      return V;
+
+  // If the operation is with the result of a phi instruction, check whether
+  // operating on all incoming values of the phi always yields the same value.
+  if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
+    if (Value *V = threadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
+      return V;
+
+  return nullptr;
+}
+
 /// These are simplifications common to SDiv and UDiv.
 static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
                           bool IsExact, const SimplifyQuery &Q,
@@ -1177,33 +1196,6 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
       return PoisonValue::get(Op0->getType());
   }
 
-  bool IsSigned = Opcode == Instruction::SDiv;
-
-  // (X /u C1) /u C2 -> 0 if C1 * C2 overflow
-  ConstantInt *C1, *C2;
-  if (!IsSigned && match(Op0, m_UDiv(m_Value(), m_ConstantInt(C1))) &&
-      match(Op1, m_ConstantInt(C2))) {
-    bool Overflow;
-    (void)C1->getValue().umul_ov(C2->getValue(), Overflow);
-    if (Overflow)
-      return Constant::getNullValue(Op0->getType());
-  }
-
-  // If the operation is with the result of a select instruction, check whether
-  // operating on either branch of the select always yields the same value.
-  if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
-    if (Value *V = threadBinOpOverSelect(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  // If the operation is with the result of a phi instruction, check whether
-  // operating on all incoming values of the phi always yields the same value.
-  if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
-    if (Value *V = threadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  if (isDivZero(Op0, Op1, Q, MaxRecurse, IsSigned))
-    return Constant::getNullValue(Op0->getType());
-
   return nullptr;
 }
 
@@ -1223,22 +1215,6 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
        (Opcode == Instruction::URem &&
         match(Op0, m_NUWShl(m_Specific(Op1), m_Value())))))
     return Constant::getNullValue(Op0->getType());
-
-  // If the operation is with the result of a select instruction, check whether
-  // operating on either branch of the select always yields the same value.
-  if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
-    if (Value *V = threadBinOpOverSelect(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  // If the operation is with the result of a phi instruction, check whether
-  // operating on all incoming values of the phi always yields the same value.
-  if (isa<PHINode>(Op0) || isa<PHINode>(Op1))
-    if (Value *V = threadBinOpOverPHI(Opcode, Op0, Op1, Q, MaxRecurse))
-      return V;
-
-  // If X / Y == 0, then X % Y == X.
-  if (isDivZero(Op0, Op1, Q, MaxRecurse, Opcode == Instruction::SRem))
-    return Op0;
 
   return nullptr;
 }
@@ -4298,23 +4274,8 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       return Simplified != V ? Simplified : nullptr;
     };
 
-    if (auto *B = dyn_cast<BinaryOperator>(I))
-      return PreventSelfSimplify(simplifyBinOp(B->getOpcode(), NewOps[0],
-                                               NewOps[1], Q, MaxRecurse - 1));
-
-    if (CmpInst *C = dyn_cast<CmpInst>(I))
-      return PreventSelfSimplify(simplifyCmpInst(C->getPredicate(), NewOps[0],
-                                                 NewOps[1], Q, MaxRecurse - 1));
-
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
-      return PreventSelfSimplify(simplifyGEPInst(
-          GEP->getSourceElementType(), NewOps[0], ArrayRef(NewOps).slice(1),
-          GEP->isInBounds(), Q, MaxRecurse - 1));
-
-    if (isa<SelectInst>(I))
-      return PreventSelfSimplify(simplifySelectInst(
-          NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse - 1));
-    // TODO: We could hand off more cases to instsimplify here.
+    return PreventSelfSimplify(
+        ::simplifyInstructionWithOperands(I, NewOps, Q, MaxRecurse - 1));
   }
 
   // If all operands are constant after substituting Op for RepOp then we can
