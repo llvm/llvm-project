@@ -364,6 +364,33 @@ bool FunctionSpecializer::run() {
     updateCallSites(F, AllSpecs.begin() + Begin, AllSpecs.begin() + End);
   }
 
+  for (Function *F : Clones) {
+    if (F->getReturnType()->isVoidTy())
+      continue;
+    if (F->getReturnType()->isStructTy()) {
+      auto *STy = cast<StructType>(F->getReturnType());
+      if (!Solver.isStructLatticeConstant(F, STy))
+        continue;
+    } else {
+      auto It = Solver.getTrackedRetVals().find(F);
+      assert(It != Solver.getTrackedRetVals().end() &&
+             "Return value ought to be tracked");
+      if (SCCPSolver::isOverdefined(It->second))
+        continue;
+    }
+    for (User *U : F->users()) {
+      if (auto *CS = dyn_cast<CallBase>(U)) {
+        //The user instruction does not call our function.
+        if (CS->getCalledFunction() != F)
+          continue;
+        Solver.resetLatticeValueFor(CS);
+      }
+    }
+  }
+
+  // Rerun the solver to notify the users of the modified callsites.
+  Solver.solveWhileResolvedUndefs();
+
   promoteConstantStackValues();
   return true;
 }
@@ -538,9 +565,9 @@ Function *FunctionSpecializer::createSpecialization(Function *F, const SpecSig &
   // marking the argument on which we specialized the function constant
   // with the given value.
   Solver.setLatticeValueForSpecializationArguments(Clone, S.Args);
-
-  Solver.addArgumentTrackedFunction(Clone);
   Solver.markBlockExecutable(&Clone->front());
+  Solver.addArgumentTrackedFunction(Clone);
+  Solver.addTrackedFunction(Clone);
 
   // Mark all the specialized functions
   Specializations.insert(Clone);

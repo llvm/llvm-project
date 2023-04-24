@@ -71,8 +71,6 @@ static cl::opt<bool> DisableTriangleR("disable-ifcvt-triangle-rev",
                                       cl::init(false), cl::Hidden);
 static cl::opt<bool> DisableTriangleF("disable-ifcvt-triangle-false",
                                       cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableTriangleFR("disable-ifcvt-triangle-false-rev",
-                                       cl::init(false), cl::Hidden);
 static cl::opt<bool> DisableDiamond("disable-ifcvt-diamond",
                                     cl::init(false), cl::Hidden);
 static cl::opt<bool> DisableForkedDiamond("disable-ifcvt-forked-diamond",
@@ -532,7 +530,6 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
         if (DisableTriangle && !isFalse && !isRev) break;
         if (DisableTriangleR && !isFalse && isRev) break;
         if (DisableTriangleF && isFalse && !isRev) break;
-        if (DisableTriangleFR && isFalse && isRev) break;
         LLVM_DEBUG(dbgs() << "Ifcvt (Triangle");
         if (isFalse)
           LLVM_DEBUG(dbgs() << " false");

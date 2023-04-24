@@ -1269,13 +1269,13 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
   else
     TypeVis = llvm::GlobalObject::VCallVisibilityPublic;
 
-  for (auto B : RD->bases())
+  for (const auto &B : RD->bases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
       TypeVis = std::min(
           TypeVis,
           GetVCallVisibilityLevel(B.getType()->getAsCXXRecordDecl(), Visited));
 
-  for (auto B : RD->vbases())
+  for (const auto &B : RD->vbases())
     if (B.getType()->getAsCXXRecordDecl()->isDynamicClass())
       TypeVis = std::min(
           TypeVis,
