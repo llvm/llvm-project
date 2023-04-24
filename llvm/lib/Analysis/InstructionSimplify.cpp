@@ -1128,17 +1128,17 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
 
   // X / 1 -> X
   // X % 1 -> 0
-  // If this is a boolean op (single-bit element type), we can't have
-  // division-by-zero or remainder-by-zero, so assume the divisor is 1.
-  // Similarly, if we're zero-extending a boolean divisor, then assume it's a 1.
-  Value *X;
-  if (match(Op1, m_One()) || Ty->isIntOrIntVectorTy(1) ||
-      (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)))
+  // If the divisor can only be zero or one, we can't have division-by-zero
+  // or remainder-by-zero, so assume the divisor is 1.
+  //   e.g. 1, zext (i8 X), sdiv X (Y and 1)
+  KnownBits Known = computeKnownBits(Op1, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
+  if (Known.countMinLeadingZeros() == Known.getBitWidth() - 1)
     return IsDiv ? Op0 : Constant::getNullValue(Ty);
 
   // If X * Y does not overflow, then:
   //   X * Y / Y -> X
   //   X * Y % Y -> 0
+  Value *X;
   if (match(Op0, m_c_Mul(m_Value(X), m_Specific(Op1)))) {
     auto *Mul = cast<OverflowingBinaryOperator>(Op0);
     // The multiplication can't overflow if it is defined not to, or if

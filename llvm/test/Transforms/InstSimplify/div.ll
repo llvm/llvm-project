@@ -437,9 +437,7 @@ define <2 x i8> @udiv_exact_trailing_zeros_nonuniform_vector(<2 x i8> %x) {
 
 define i32 @sdiv_one_srem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sdiv_one_srem_divisor(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[A:%.*]], [[SREM]]
-; CHECK-NEXT:    ret i32 [[SDIV]]
+; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
   %srem = srem i32 1, %b
   %sdiv = sdiv i32 %a, %srem
@@ -448,9 +446,7 @@ define i32 @sdiv_one_srem_divisor(i32 %a, i32 %b) {
 
 define i32 @sdiv_one_urem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @sdiv_one_urem_divisor(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[A:%.*]], [[UREM]]
-; CHECK-NEXT:    ret i32 [[SDIV]]
+; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
   %urem = urem i32 1, %b
   %sdiv = sdiv i32 %a, %urem
@@ -459,9 +455,7 @@ define i32 @sdiv_one_urem_divisor(i32 %a, i32 %b) {
 
 define i32 @udiv_one_srem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @udiv_one_srem_divisor(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[A:%.*]], [[SREM]]
-; CHECK-NEXT:    ret i32 [[UDIV]]
+; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
   %srem = srem i32 1, %b
   %udiv = udiv i32 %a, %srem
@@ -470,9 +464,7 @@ define i32 @udiv_one_srem_divisor(i32 %a, i32 %b) {
 
 define i32 @udiv_one_urem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @udiv_one_urem_divisor(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[A:%.*]], [[UREM]]
-; CHECK-NEXT:    ret i32 [[UDIV]]
+; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
   %urem = urem i32 1, %b
   %udiv = udiv i32 %a, %urem
@@ -481,9 +473,7 @@ define i32 @udiv_one_urem_divisor(i32 %a, i32 %b) {
 
 define i32 @srem_one_srem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @srem_one_srem_divisor(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[SREM1:%.*]] = srem i32 [[A:%.*]], [[SREM]]
-; CHECK-NEXT:    ret i32 [[SREM1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %srem = srem i32 1, %b
   %srem1 = srem i32 %a, %srem
@@ -492,9 +482,7 @@ define i32 @srem_one_srem_divisor(i32 %a, i32 %b) {
 
 define i32 @urem_one_srem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @urem_one_srem_divisor(
-; CHECK-NEXT:    [[SREM:%.*]] = srem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 [[A:%.*]], [[SREM]]
-; CHECK-NEXT:    ret i32 [[UREM]]
+; CHECK-NEXT:    ret i32 0
 ;
   %srem = srem i32 1, %b
   %urem = urem i32 %a, %srem
@@ -503,9 +491,7 @@ define i32 @urem_one_srem_divisor(i32 %a, i32 %b) {
 
 define i32 @srem_one_urem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @srem_one_urem_divisor(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A:%.*]], [[UREM]]
-; CHECK-NEXT:    ret i32 [[SREM]]
+; CHECK-NEXT:    ret i32 0
 ;
   %urem = urem i32 1, %b
   %srem = srem i32 %a, %urem
@@ -514,9 +500,7 @@ define i32 @srem_one_urem_divisor(i32 %a, i32 %b) {
 
 define i32 @urem_one_urem_divisor(i32 %a, i32 %b) {
 ; CHECK-LABEL: @urem_one_urem_divisor(
-; CHECK-NEXT:    [[UREM:%.*]] = urem i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[UREM1:%.*]] = urem i32 [[A:%.*]], [[UREM]]
-; CHECK-NEXT:    ret i32 [[UREM1]]
+; CHECK-NEXT:    ret i32 0
 ;
   %urem = urem i32 1, %b
   %urem1 = urem i32 %a, %urem
@@ -525,9 +509,7 @@ define i32 @urem_one_urem_divisor(i32 %a, i32 %b) {
 
 define <2 x i8> @sdiv_one_vec_srem_divisor(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @sdiv_one_vec_srem_divisor(
-; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i8> <i8 1, i8 1>, [[B:%.*]]
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv <2 x i8> [[A:%.*]], [[SREM]]
-; CHECK-NEXT:    ret <2 x i8> [[SDIV]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %srem = srem <2 x i8> <i8 1, i8 1>, %b
   %sdiv = sdiv <2 x i8> %a, %srem
@@ -536,9 +518,7 @@ define <2 x i8> @sdiv_one_vec_srem_divisor(<2 x i8> %a, <2 x i8> %b) {
 
 define i32 @sdiv_and_one_divisor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_and_one_divisor(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[RES:%.*]] = sdiv i32 [[Y:%.*]], [[AND]]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %and = and i32 %x, 1
   %res = sdiv i32 %y, %and
@@ -547,9 +527,7 @@ define i32 @sdiv_and_one_divisor(i32 %x, i32 %y) {
 
 define <2 x i8> @sdiv_and_one_vec_divisor(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sdiv_and_one_vec_divisor(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[RES:%.*]] = sdiv <2 x i8> [[Y:%.*]], [[AND]]
-; CHECK-NEXT:    ret <2 x i8> [[RES]]
+; CHECK-NEXT:    ret <2 x i8> [[Y:%.*]]
 ;
   %and = and <2 x i8> %x, <i8 1, i8 1>
   %res = sdiv <2 x i8> %y, %and
@@ -558,10 +536,7 @@ define <2 x i8> @sdiv_and_one_vec_divisor(<2 x i8> %x, <2 x i8> %y) {
 
 define i32 @sdiv_neg_or_divisor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sdiv_neg_or_divisor(
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[OR]], -1
-; CHECK-NEXT:    [[RES:%.*]] = sdiv i32 [[Y:%.*]], [[NEG]]
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %or = or i32 %x, -2
   %neg = xor i32 %or, -1
