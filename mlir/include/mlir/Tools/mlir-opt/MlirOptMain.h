@@ -216,27 +216,6 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           DialectRegistry &registry,
                           const MlirOptMainConfig &config);
 
-/// Perform the core processing behind `mlir-opt`.
-/// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
-                          std::unique_ptr<llvm::MemoryBuffer> buffer,
-                          const PassPipelineCLParser &passPipeline,
-                          DialectRegistry &registry, bool splitInputFile,
-                          bool verifyDiagnostics, bool verifyPasses,
-                          bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = false,
-                          bool emitBytecode = false, bool explicitModule = true,
-                          bool dumpPassPipeline = false);
-
-/// Perform the core processing behind `mlir-opt`.
-/// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult MlirOptMain(
-    llvm::raw_ostream &outputStream, std::unique_ptr<llvm::MemoryBuffer> buffer,
-    PassPipelineFn passManagerSetupFn, DialectRegistry &registry,
-    bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
-    bool allowUnregisteredDialects, bool preloadDialectsInContext = false,
-    bool emitBytecode = false, bool explicitModule = true);
-
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
