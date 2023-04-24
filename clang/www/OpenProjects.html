@@ -22,6 +22,47 @@ intended to be comprehensive. Please ask on
 or to verify that one of these isn't already completed.</p>
 
 <ul>
+<li><b>Refresh and improve Clang's documentation</b>: Clang is inconsistent
+with documenting implementation-defined behaviors. We have significant
+documentation in the <a href="https://clang.llvm.org/docs/LanguageExtensions.html">
+Language Extensions</a> page, but the information is incomplete and the page is
+difficult to navigate. We would appreciate help with:
+<ul>
+  <li>improving the way this information is presented to users,</li>
+  <li><a href="https://llvm.org/docs/TableGen/">table generating</a>
+      documentation where possible, such as for implementation limits or other
+      target-specific information,</li>
+  <li>adding documentation for currently
+     <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/AttrDocs.td">
+     undocumented attributes,</li>
+  <li>documenting <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/DiagnosticDocs.td">
+      diagnostic group flags (adding code examples of what is diagnosed, or
+      other relevant information), or</li>
+  <li>help with completing other missing documentation.</li>
+</ul>
+These projects are independent of each other.</li>
+
+<li><b>Improve Clang's standard conformance test coverage</b>: Clang's test
+suite is structured such that most tests are written to provide coverage for
+what part of the compiler the feature's implementation exists in; we have
+parsing tests in <code>clang/test/Parser</code>, and semantic analysis tests in
+<code>clang/test/Sema*</code>, etc. We also have tests written to provide
+coverage for the standard requirements (<code>clang/test/CXX</code> and <code>
+clang/test/C</code>). The standards coverage is not structured in a way that
+makes it easy to maintain as the standards change over time. No commercial
+conformance test suite has a license model suitable for open source projects,
+so we would appreciate help in improving the existing coverage we have both in
+terms of layout of the tests as well as in coverage of the various standard
+modes.</li>
+
+<li><b>Bug triage</b>: Clang's <a href="https://github.com/llvm/llvm-project/issues">
+issue tracker</a>currently has over 20,000 open issues, many of which are not
+appropriately tagged, are no longer reproducible, could use a reduced test case,
+or otherwise needs some manual interaction. We can always use help with
+<a href="https://llvm.org/docs/BugLifeCycle.html#triaging-bugs">bug triage and
+issue tracker maintenance</a>.
+</li>
+
 <li><b>Implement an tool to generate code documentation</b>: Clang's
 library-based design allows it to be used by a variety of tools that reason
 about source code. One great application of Clang would be to build an
@@ -80,7 +121,7 @@ optional elements of your particular system can be a pain.
 
 <p>A tool that would investigate hosts and targets, and store the configuration
 in files that can later be used by Clang itself to avoid command-line options,
-especially the ones regarding which target options to use, would greatle alleviate
+especially the ones regarding which target options to use, would greatly alleviate
 this problem. A simple tool, with little or no dependency on LLVM itself, that
 will investigate a target architecture by probing hardware, software, libraries
 and compiling and executing code to identify all properties that would be relevant
