@@ -755,6 +755,12 @@ mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
 /// operand if there are no uses.
 MLIR_CAPI_EXPORTED MlirOpOperand mlirValueGetFirstUse(MlirValue value);
 
+/// Replace all uses of 'of' value with the 'with' value, updating anything in
+/// the IR that uses 'of' to use the other value instead.  When this returns
+/// there are zero uses of 'of'.
+MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
+                                                      MlirValue with);
+
 //===----------------------------------------------------------------------===//
 // OpOperand API.
 //===----------------------------------------------------------------------===//
