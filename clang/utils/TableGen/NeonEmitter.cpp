@@ -389,7 +389,7 @@ public:
       Mods = getNextModifiers(Proto, Pos);
     }
 
-    for (auto Type : Types) {
+    for (const auto &Type : Types) {
       // If this builtin takes an immediate argument, we need to #define it rather
       // than use a standard declaration, so that SemaChecking can range check
       // the immediate passed by the user.
