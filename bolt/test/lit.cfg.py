@@ -110,4 +110,4 @@ llvm_config.feature_config(
         ('--targets-built', calculate_arch_features)
      ])
 
-config.targets = frozenset(config.targets_to_build.split())
+config.targets = frozenset(config.targets_to_build.split(';'))
