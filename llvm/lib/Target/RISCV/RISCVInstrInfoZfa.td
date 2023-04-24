@@ -94,9 +94,9 @@ def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, /*Commutable*/ 1>;
 }
 
 def FROUND_S : FPUnaryOp_r_frm<0b0100000, 0b00100, FPR32, FPR32, "fround.s">,
-               Sched<[WriteFCvtF32ToF32, ReadFCvtF32ToF32]>;
+               Sched<[WriteFRoundF32, ReadFRoundF32]>;
 def FROUNDNX_S : FPUnaryOp_r_frm<0b0100000, 0b00101, FPR32, FPR32, "froundnx.s">,
-                 Sched<[WriteFCvtF32ToF32, ReadFCvtF32ToF32]>;
+                 Sched<[WriteFRoundF32, ReadFRoundF32]>;
 
 let SchedRW = [WriteFCmp32, ReadFCmp32, ReadFCmp32] in {
 def FLTQ_S : FPCmp_rr<0b1010000, 0b101, "fltq.s", FPR32>;
@@ -116,9 +116,9 @@ def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, /*Commutable*/ 1>;
 }
 
 def FROUND_D : FPUnaryOp_r_frm<0b0100001, 0b00100, FPR64, FPR64, "fround.d">,
-               Sched<[WriteFCvtF64ToF64, ReadFCvtF64ToF64]>;
+               Sched<[WriteFRoundF64, ReadFRoundF64]>;
 def FROUNDNX_D : FPUnaryOp_r_frm<0b0100001, 0b00101, FPR64, FPR64, "froundnx.d">,
-                 Sched<[WriteFCvtF64ToF64, ReadFCvtF64ToF64]>;
+                 Sched<[WriteFRoundF64, ReadFRoundF64]>;
 
 def FCVTMOD_W_D
     : FPUnaryOp_r_rtz<0b1100001, 0b01000, GPR, FPR64, "fcvtmod.w.d">,
@@ -157,9 +157,9 @@ def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, /*Commutable*/ 1>;
 }
 
 def FROUND_H : FPUnaryOp_r_frm<0b0100010, 0b00100, FPR16, FPR16, "fround.h">,
-               Sched<[WriteFCvtF16ToF16, ReadFCvtF16ToF16]>;
+               Sched<[WriteFRoundF16, ReadFRoundF16]>;
 def FROUNDNX_H : FPUnaryOp_r_frm<0b0100010, 0b00101, FPR16, FPR16, "froundnx.h">,
-                 Sched<[WriteFCvtF16ToF16, ReadFCvtF16ToF16]>;
+                 Sched<[WriteFRoundF16, ReadFRoundF16]>;
 
 let SchedRW = [WriteFCmp16, ReadFCmp16, ReadFCmp16] in {
 def FLTQ_H : FPCmp_rr<0b1010010, 0b101, "fltq.h", FPR16>;
