@@ -36,4 +36,4 @@ BAR bar = 17;
 // CHECK-FOO: definition of macro 'FOO' differs between the precompiled header ('1') and the command line ('blah')
 // CHECK-NOFOO: macro 'FOO' was defined in the precompiled header but undef'd on the command line
 
-// expected-warning@1 {{definition of macro 'BAR' does not match definition in precompiled header}}
+// expected-warning@2 {{definition of macro 'BAR' does not match definition in precompiled header}}
