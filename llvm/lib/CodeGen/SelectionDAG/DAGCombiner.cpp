@@ -12309,11 +12309,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  assert((Opcode == ISD::SIGN_EXTEND || Opcode == ISD::ZERO_EXTEND ||
-          Opcode == ISD::ANY_EXTEND ||
-          Opcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
-          Opcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
-          Opcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
+  assert((ISD::isExtOpcode(Opcode) || ISD::isExtVecInRegOpcode(Opcode)) &&
          "Expected EXTEND dag node in input!");
 
   // fold (sext c1) -> c1
@@ -14041,9 +14037,7 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
   // fold (sext_in_reg (*_extend_vector_inreg x)) -> (sext_vector_inreg x)
   // if x is small enough or if we know that x has more than 1 sign bit and the
   // sign_extend_inreg is extending from one of them.
-  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
-      N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ||
-      N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
+  if (ISD::isExtVecInRegOpcode(N0.getOpcode())) {
     SDValue N00 = N0.getOperand(0);
     unsigned N00Bits = N00.getScalarValueSizeInBits();
     unsigned DstElts = N0.getValueType().getVectorMinNumElements();
@@ -14211,9 +14205,7 @@ foldExtendVectorInregToExtendOfSubvector(SDNode *N, const TargetLowering &TLI,
                                Src.getValueType().getVectorElementType(),
                                VT.getVectorElementCount());
 
-  assert((InregOpcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
-          InregOpcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
-          InregOpcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
+  assert(ISD::isExtVecInRegOpcode(InregOpcode) &&
          "Expected EXTEND_VECTOR_INREG dag node in input!");
 
   // Profitability check: our operand must be an one-use CONCAT_VECTORS.
@@ -24154,9 +24146,7 @@ static SDValue combineTruncationShuffle(ShuffleVectorSDNode *SVN,
   SDValue N0 = peekThroughBitcasts(SVN->getOperand(0));
 
   unsigned Opcode = N0.getOpcode();
-  if (Opcode != ISD::ANY_EXTEND_VECTOR_INREG &&
-      Opcode != ISD::SIGN_EXTEND_VECTOR_INREG &&
-      Opcode != ISD::ZERO_EXTEND_VECTOR_INREG)
+  if (!ISD::isExtVecInRegOpcode(Opcode))
     return SDValue();
 
   SDValue N00 = N0.getOperand(0);
