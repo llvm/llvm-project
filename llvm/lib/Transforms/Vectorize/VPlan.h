@@ -2325,7 +2325,7 @@ public:
   void setName(const Twine &newName) { Name = newName.str(); }
 
   void addVPValue(Value *V, VPValue *VPV) {
-    assert((Value2VPValueEnabled || !VPV->getDefiningRecipe()) &&
+    assert((Value2VPValueEnabled || VPV->isLiveIn()) &&
            "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
@@ -2338,7 +2338,7 @@ public:
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
     assert((Value2VPValueEnabled || OverrideAllowed ||
-            !Value2VPValue[V]->getDefiningRecipe()) &&
+            Value2VPValue[V]->isLiveIn()) &&
            "Value2VPValue mapping may be out of date!");
     return Value2VPValue[V];
   }

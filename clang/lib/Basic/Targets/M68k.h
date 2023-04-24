@@ -36,6 +36,8 @@ class LLVM_LIBRARY_VISIBILITY M68kTargetInfo : public TargetInfo {
     CK_68060
   } CPU = CK_Unknown;
 
+  const TargetOptions &TargetOpts;
+
 public:
   M68kTargetInfo(const llvm::Triple &Triple, const TargetOptions &);
 
