@@ -1,6 +1,6 @@
 ! This test checks lowering of atomic and atomic update constructs
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -fopenmp %s -o - | FileCheck %s
 
 program OmpAtomicUpdate
     use omp_lib

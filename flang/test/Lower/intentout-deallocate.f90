@@ -1,5 +1,5 @@
 ! Test correct deallocation of intent(out) allocatables.
-! RUN: bbc -emit-fir -polymorphic-type %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -polymorphic-type %s -o - | FileCheck %s
 
 module mod1
   type, bind(c) :: t1
