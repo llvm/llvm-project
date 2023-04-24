@@ -205,13 +205,36 @@ define void @vp_sqrt_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) 
 }
 declare <4 x float> @llvm.vp.sqrt.v4f32(<4 x float>, <4 x i1>, i32)
 
-; TODO: @llvm.vp.fneg.v4f32
-;define void @vp_fneg_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
-;  %res = call <4 x float> @llvm.vp.fneg.v4f32(<4 x float> %a0, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
-;  store <4 x float> %res, ptr %out
-;  ret void
-;}
-;declare <4 x float> @llvm.vp.fneg.v4f32(<4 x float>, <4 x i1>, i32)
+define void @vp_fneg_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i32 %vp) nounwind {
+; SSE-LABEL: vp_fneg_v4f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movaps %xmm0, (%rdi)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: vp_fneg_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vp_fneg_v4f32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX2-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: vp_fneg_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    retq
+  %res = call <4 x float> @llvm.vp.fneg.v4f32(<4 x float> %a0, <4 x i1> <i1 -1, i1 -1, i1 -1, i1 -1>, i32 %vp)
+  store <4 x float> %res, ptr %out
+  ret void
+}
+declare <4 x float> @llvm.vp.fneg.v4f32(<4 x float>, <4 x i1>, i32)
 
 define void @vp_fma_v4f32(<4 x float> %a0, <4 x float> %a1, ptr %out, i4 %a5) nounwind {
 ; SSE-LABEL: vp_fma_v4f32:
