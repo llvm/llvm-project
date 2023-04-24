@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false %s -o - | FileCheck %s
 
 !  Constant array ctor.
 ! CHECK-LABEL: func @_QPtest1(

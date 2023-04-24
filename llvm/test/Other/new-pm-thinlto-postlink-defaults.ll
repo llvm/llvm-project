@@ -36,11 +36,10 @@
 ; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
 ; CHECK-NOEXT: {{^}}
 
-; CHECK-O: Running pass: ForceFunctionAttrsPass
-; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
-; CHECK-DIS-NEXT: Running analysis: InnerAnalysisManagerProxy
+; CHECK-EP-PIPELINE-START: Running pass: NoOpModulePass
+; CHECK-DIS: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
-; CHECK-POSTLINK-O-NEXT: Running pass: PGOIndirectCallPromotion
+; CHECK-POSTLINK-O: Running pass: PGOIndirectCallPromotion
 ; CHECK-POSTLINK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-POSTLINK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-POSTLINK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis

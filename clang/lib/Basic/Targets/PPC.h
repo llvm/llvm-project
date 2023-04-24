@@ -330,7 +330,7 @@ public:
     return R;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     if (RegNo == 0)
       return 3;

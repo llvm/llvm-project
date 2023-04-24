@@ -481,7 +481,14 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   State.setDebugLocFromInst(&CI);
 
   for (unsigned Part = 0; Part < State.UF; ++Part) {
-    SmallVector<Type *, 2> TysForDecl = {CI.getType()};
+    SmallVector<Type *, 2> TysForDecl;
+    // Add return type if intrinsic is overloaded on it.
+    if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1)) {
+      TysForDecl.push_back(
+          State.VF.isVector()
+              ? VectorType::get(CI.getType()->getScalarType(), State.VF)
+              : CI.getType());
+    }
     SmallVector<Value *, 4> Args;
     for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
@@ -500,9 +507,6 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     Function *VectorF;
     if (VectorIntrinsicID != Intrinsic::not_intrinsic) {
       // Use vector version of the intrinsic.
-      if (State.VF.isVector())
-        TysForDecl[0] =
-            VectorType::get(CI.getType()->getScalarType(), State.VF);
       Module *M = State.Builder.GetInsertBlock()->getModule();
       VectorF = Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
       assert(VectorF && "Can't retrieve vector intrinsic.");

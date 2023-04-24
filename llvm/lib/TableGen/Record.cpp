@@ -318,11 +318,8 @@ RecTy *llvm::resolveTypes(RecTy *T1, RecTy *T2) {
       return resolveRecordTypes(RecTy1, RecTy2);
   }
 
-  assert(T1 != nullptr && "Invalid record type");
   if (T1->typeIsConvertibleTo(T2))
     return T2;
-
-  assert(T2 != nullptr && "Invalid record type");
   if (T2->typeIsConvertibleTo(T1))
     return T1;
 
