@@ -1,6 +1,6 @@
 ! This test checks lowering of complex OpenACC data operands.
 
-! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -fopenacc -emit-fir %s -o - | FileCheck %s
 
 module acc_data_operand
 

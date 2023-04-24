@@ -32,7 +32,7 @@ public:
   using Base = tracing::ActionImpl<ApplyPatternAction>;
   ApplyPatternAction(ArrayRef<IRUnit> irUnits, const Pattern &pattern)
       : Base(irUnits), pattern(pattern) {}
-  static constexpr StringLiteral tag = "apply-pattern-action";
+  static constexpr StringLiteral tag = "apply-pattern";
   static constexpr StringLiteral desc =
       "Encapsulate the application of rewrite patterns";
 

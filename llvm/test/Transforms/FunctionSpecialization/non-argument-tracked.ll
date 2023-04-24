@@ -29,9 +29,10 @@ define internal i32 @f2(i32 %i) {
 ;; All calls are to specilisation instances.
 
 ; CHECK-LABEL: define i32 @g0
-; CHECK:         [[U0:%.*]] = call i32 @f0.[[#A:]]()
-; CHECK-NEXT:    [[U1:%.*]] = call i32 @f1.[[#B:]]()
-; CHECK-NEXT:    [[U2:%.*]] = call i32 @f2.[[#C:]]()
+; CHECK:         call void @f0.[[#A:]]()
+; CHECK-NEXT:    call void @f1.[[#B:]]()
+; CHECK-NEXT:    call void @f2.[[#C:]]()
+; CHECK-NEXT:    ret i32 9
 define i32 @g0(i32 %i) {
   %u0 = call i32 @f0(i32 1)
   %u1 = call i32 @f1(i32 2)
@@ -42,9 +43,10 @@ define i32 @g0(i32 %i) {
 }
 
 ; CHECK-LABEL: define i32 @g1
-; CHECK:         [[U0:%.*]] = call i32 @f0.[[#D:]]()
-; CHECK-NEXT:    [[U1:%.*]] = call i32 @f1.[[#E:]]()
-; CHECK-NEXT:    [[U2:%.*]] = call i32 @f2.[[#F:]]()
+; CHECK:         call void @f0.[[#D:]]()
+; CHECK-NEXT:    call void @f1.[[#E:]]()
+; CHECK-NEXT:    call void @f2.[[#F:]]()
+; CHECK-NEXT:    ret i32 12
 define i32 @g1(i32 %i) {
   %u0 = call i32 @f0(i32 2)
   %u1 = call i32 @f1(i32 3)
@@ -56,9 +58,9 @@ define i32 @g1(i32 %i) {
 
 ; All of the function are specialized and all clones are with internal linkage.
 
-; CHECK-DAG: define internal i32 @f0.[[#A]]() {
-; CHECK-DAG: define internal i32 @f1.[[#B]]() {
-; CHECK-DAG: define internal i32 @f2.[[#C]]() {
-; CHECK-DAG: define internal i32 @f0.[[#D]]() {
-; CHECK-DAG: define internal i32 @f1.[[#E]]() {
-; CHECK-DAG: define internal i32 @f2.[[#F]]() {
+; CHECK-DAG: define internal void @f0.[[#A]]() {
+; CHECK-DAG: define internal void @f1.[[#B]]() {
+; CHECK-DAG: define internal void @f2.[[#C]]() {
+; CHECK-DAG: define internal void @f0.[[#D]]() {
+; CHECK-DAG: define internal void @f1.[[#E]]() {
+; CHECK-DAG: define internal void @f2.[[#F]]() {

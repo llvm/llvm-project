@@ -347,9 +347,9 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 bool isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                         unsigned ScalarOpdIdx);
 
-/// Identifies if the vector form of the intrinsic has a operand that has
-/// an overloaded type.
-bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, unsigned OpdIdx);
+/// Identifies if the vector form of the intrinsic is overloaded on the type of
+/// the operand at index \p OpdIdx, or on the return type if \p OpdIdx is -1.
+bool isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx);
 
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns

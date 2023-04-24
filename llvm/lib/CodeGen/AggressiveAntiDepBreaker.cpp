@@ -920,7 +920,6 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
         }
 
         assert(AntiDepReg != 0);
-        if (AntiDepReg == 0) continue;
 
         // Determine AntiDepReg's register group.
         const unsigned GroupIndex = State->GetGroup(AntiDepReg);

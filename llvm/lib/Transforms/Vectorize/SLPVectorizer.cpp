@@ -10335,8 +10335,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       Value *ScalarArg = nullptr;
       std::vector<Value *> OpVecs;
-      SmallVector<Type *, 2> TysForDecl =
-          {FixedVectorType::get(CI->getType(), E->Scalars.size())};
+      SmallVector<Type *, 2> TysForDecl;
+      // Add return type if intrinsic is overloaded on it.
+      if (isVectorIntrinsicWithOverloadTypeAtArg(IID, -1))
+        TysForDecl.push_back(
+            FixedVectorType::get(CI->getType(), E->Scalars.size()));
       for (int j = 0, e = CI->arg_size(); j < e; ++j) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be

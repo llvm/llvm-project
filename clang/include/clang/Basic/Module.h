@@ -741,16 +741,11 @@ public:
   using submodule_iterator = std::vector<Module *>::iterator;
   using submodule_const_iterator = std::vector<Module *>::const_iterator;
 
-  submodule_iterator submodule_begin() { return SubModules.begin(); }
-  submodule_const_iterator submodule_begin() const {return SubModules.begin();}
-  submodule_iterator submodule_end()   { return SubModules.end(); }
-  submodule_const_iterator submodule_end() const { return SubModules.end(); }
-
   llvm::iterator_range<submodule_iterator> submodules() {
-    return llvm::make_range(submodule_begin(), submodule_end());
+    return llvm::make_range(SubModules.begin(), SubModules.end());
   }
   llvm::iterator_range<submodule_const_iterator> submodules() const {
-    return llvm::make_range(submodule_begin(), submodule_end());
+    return llvm::make_range(SubModules.begin(), SubModules.end());
   }
 
   /// Appends this module's list of exported modules to \p Exported.

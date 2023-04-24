@@ -605,8 +605,9 @@ struct ReadModuleNames : ASTReaderListener {
           Module *Current = Stack.pop_back_val();
           if (Current->IsUnimportable) continue;
           Current->IsAvailable = true;
-          Stack.insert(Stack.end(),
-                       Current->submodule_begin(), Current->submodule_end());
+          auto SubmodulesRange = Current->submodules();
+          Stack.insert(Stack.end(), SubmodulesRange.begin(),
+                       SubmodulesRange.end());
         }
       }
     }

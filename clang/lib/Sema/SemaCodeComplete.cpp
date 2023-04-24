@@ -4309,16 +4309,13 @@ void Sema::CodeCompleteModuleImport(SourceLocation ImportLoc,
                                         /*IsInclusionDirective=*/false);
     // Enumerate submodules.
     if (Mod) {
-      for (Module::submodule_iterator Sub = Mod->submodule_begin(),
-                                      SubEnd = Mod->submodule_end();
-           Sub != SubEnd; ++Sub) {
-
+      for (auto *Submodule : Mod->submodules()) {
         Builder.AddTypedTextChunk(
-            Builder.getAllocator().CopyString((*Sub)->Name));
+            Builder.getAllocator().CopyString(Submodule->Name));
         Results.AddResult(Result(
             Builder.TakeString(), CCP_Declaration, CXCursor_ModuleImportDecl,
-            (*Sub)->isAvailable() ? CXAvailability_Available
-                                  : CXAvailability_NotAvailable));
+            Submodule->isAvailable() ? CXAvailability_Available
+                                     : CXAvailability_NotAvailable));
       }
     }
   }

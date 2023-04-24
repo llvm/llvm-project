@@ -3971,7 +3971,7 @@ namespace {
     }
 
     llvm::SmallPtrSet<QualType, 4> UninitializedBaseClasses;
-    for (auto I : RD->bases())
+    for (const auto &I : RD->bases())
       UninitializedBaseClasses.insert(I.getType().getCanonicalType());
 
     if (UninitializedFields.empty() && UninitializedBaseClasses.empty())
