@@ -34,8 +34,8 @@ declare i32 @bar()
 define i32 @f3() shadowcallstack {
 ; RV32-LABEL: f3:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw ra, 0(gp)
 ; RV32-NEXT:    addi gp, gp, 4
+; RV32-NEXT:    sw ra, -4(gp)
 ; RV32-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
@@ -51,8 +51,8 @@ define i32 @f3() shadowcallstack {
 ;
 ; RV64-LABEL: f3:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sd ra, 0(gp)
 ; RV64-NEXT:    addi gp, gp, 8
+; RV64-NEXT:    sd ra, -8(gp)
 ; RV64-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
@@ -73,8 +73,8 @@ define i32 @f3() shadowcallstack {
 define i32 @f4() shadowcallstack {
 ; RV32-LABEL: f4:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw ra, 0(gp)
 ; RV32-NEXT:    addi gp, gp, 4
+; RV32-NEXT:    sw ra, -4(gp)
 ; RV32-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
@@ -108,8 +108,8 @@ define i32 @f4() shadowcallstack {
 ;
 ; RV64-LABEL: f4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sd ra, 0(gp)
 ; RV64-NEXT:    addi gp, gp, 8
+; RV64-NEXT:    sd ra, -8(gp)
 ; RV64-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 32
@@ -153,8 +153,8 @@ define i32 @f4() shadowcallstack {
 define i32 @f5() shadowcallstack nounwind {
 ; RV32-LABEL: f5:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sw ra, 0(gp)
 ; RV32-NEXT:    addi gp, gp, 4
+; RV32-NEXT:    sw ra, -4(gp)
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    call bar@plt
@@ -166,8 +166,8 @@ define i32 @f5() shadowcallstack nounwind {
 ;
 ; RV64-LABEL: f5:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sd ra, 0(gp)
 ; RV64-NEXT:    addi gp, gp, 8
+; RV64-NEXT:    sd ra, -8(gp)
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    call bar@plt
