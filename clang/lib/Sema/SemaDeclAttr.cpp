@@ -447,7 +447,7 @@ static bool threadSafetyCheckIsSmartPointer(Sema &S, const RecordType* RT) {
   if (!CXXRecord)
     return false;
 
-  for (auto BaseSpecifier : CXXRecord->bases()) {
+  for (const auto &BaseSpecifier : CXXRecord->bases()) {
     if (!foundStarOperator)
       foundStarOperator = IsOverloadedOperatorPresent(
           BaseSpecifier.getType()->getAsRecordDecl(), OO_Star);
