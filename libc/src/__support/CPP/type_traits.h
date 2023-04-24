@@ -12,7 +12,9 @@
 namespace __llvm_libc {
 namespace cpp {
 
-template <typename T> struct type_identity { using type = T; };
+template <typename T> struct type_identity {
+  using type = T;
+};
 
 template <bool B, typename T> struct enable_if;
 template <typename T> struct enable_if<true, T> : type_identity<T> {};
@@ -48,6 +50,19 @@ template <typename T> struct remove_cv<const T> : type_identity<T> {};
 template <typename T> struct remove_cv<volatile T> : type_identity<T> {};
 template <typename T> struct remove_cv<const volatile T> : type_identity<T> {};
 template <typename T> using remove_cv_t = typename remove_cv<T>::type;
+
+template <typename T> struct remove_reference : type_identity<T> {};
+template <typename T> struct remove_reference<T &> : type_identity<T> {};
+template <typename T> struct remove_reference<T &&> : type_identity<T> {};
+template <typename T>
+using remove_reference_t = typename remove_reference<T>::type;
+
+template <typename T> struct add_rvalue_reference : type_identity<T &&> {};
+
+template <typename T> struct remove_cvref {
+  using type = remove_cv_t<remove_reference_t<T>>;
+};
+template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
 
 namespace details {
 template <typename T, typename... Args> constexpr bool is_unqualified_any_of() {
@@ -147,6 +162,26 @@ template <typename T, typename F>
 struct conditional<false, T, F> : type_identity<F> {};
 template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
+
+template <typename T>
+struct is_void : is_same<void, typename remove_cv<T>::type> {};
+template <typename T> inline constexpr bool is_void_v = is_void<T>::value;
+template <class T> T declval();
+
+// Compile time checks on implicit conversions.
+namespace details {
+template <typename...> using void_t = void;
+template <typename T> void convertible_to_helper(T);
+} // namespace details
+
+template <typename F, typename T, typename = void>
+inline constexpr bool is_convertible_v = false;
+
+template <typename F, typename T>
+inline constexpr bool
+    is_convertible_v<F, T,
+                     details::void_t<decltype(details::convertible_to_helper<T>(
+                         declval<F>()))>> = true;
 
 } // namespace cpp
 } // namespace __llvm_libc

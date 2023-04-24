@@ -646,9 +646,12 @@ public:
       assert(Arg1 != nullptr);
 
       // Evaluate only copy and move assignment operators.
-      auto *Arg0Type = Arg0->getType()->getUnqualifiedDesugaredType();
-      auto *Arg1Type = Arg1->getType()->getUnqualifiedDesugaredType();
-      if (Arg0Type != Arg1Type)
+      const auto *Method =
+          dyn_cast_or_null<CXXMethodDecl>(S->getDirectCallee());
+      if (!Method)
+        return;
+      if (!Method->isCopyAssignmentOperator() &&
+          !Method->isMoveAssignmentOperator())
         return;
 
       auto *ObjectLoc = Env.getStorageLocation(*Arg0, SkipPast::Reference);

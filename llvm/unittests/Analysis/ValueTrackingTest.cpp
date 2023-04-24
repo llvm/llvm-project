@@ -1448,7 +1448,7 @@ TEST_F(ComputeKnownFPClassTest, FabsUnknown) {
       "  %A = call float @llvm.fabs.f32(float %arg)"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcAllFlags, false);
+  expectKnownFPClass(fcPositive | fcNan, false);
 }
 
 TEST_F(ComputeKnownFPClassTest, FNegFabsUnknown) {
@@ -1459,7 +1459,7 @@ TEST_F(ComputeKnownFPClassTest, FNegFabsUnknown) {
       "  %A = fneg float %fabs"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcAllFlags, true);
+  expectKnownFPClass(fcNegative | fcNan, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, NegFabsNInf) {
@@ -1470,7 +1470,7 @@ TEST_F(ComputeKnownFPClassTest, NegFabsNInf) {
       "  %A = fneg float %fabs"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(~fcInf, true);
+  expectKnownFPClass((fcNegative & ~fcNegInf) | fcNan, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, FNegFabsNNaN) {
@@ -1481,7 +1481,7 @@ TEST_F(ComputeKnownFPClassTest, FNegFabsNNaN) {
       "  %A = fneg float %fabs"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(~fcNan, true);
+  expectKnownFPClass(fcNegative, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, CopySignNNanSrc0) {
@@ -1493,7 +1493,7 @@ TEST_F(ComputeKnownFPClassTest, CopySignNNanSrc0) {
       "  %A = call float @llvm.copysign.f32(float %fabs, float %arg1)"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(~fcNan, std::nullopt);
+  expectKnownFPClass(fcPositive, std::nullopt);
 }
 
 TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {

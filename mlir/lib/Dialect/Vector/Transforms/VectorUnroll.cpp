@@ -641,6 +641,61 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
+  UnrollGatherPattern(MLIRContext *context,
+                      const vector::UnrollVectorOptions &options,
+                      PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::GatherOp>(context, benefit), options(options) {
+  }
+
+  LogicalResult matchAndRewrite(vector::GatherOp gatherOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType sourceVectorType = gatherOp.getVectorType();
+    if (sourceVectorType.getRank() == 0)
+      return failure();
+    auto targetShape = getTargetShape(options, gatherOp);
+    if (!targetShape)
+      return failure();
+    SmallVector<int64_t> strides(targetShape->size(), 1);
+    Location loc = gatherOp.getLoc();
+    ArrayRef<int64_t> originalSize = gatherOp.getVectorType().getShape();
+
+    // Prepare the result vector;
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, sourceVectorType, rewriter.getZeroAttr(sourceVectorType));
+    auto targetType =
+        VectorType::get(*targetShape, sourceVectorType.getElementType());
+
+    SmallVector<int64_t> loopOrder =
+        getUnrollOrder(originalSize.size(), gatherOp, options);
+    DecomposeShapeIterator indexToOffsets(originalSize, *targetShape,
+                                          loopOrder);
+    for (int64_t i = 0, e = indexToOffsets.maxIndex(); i < e; ++i) {
+      // To get the unrolled gather, extract the same slice based on the
+      // decomposed shape from each of the index, mask, and pass-through
+      // vectors.
+      SmallVector<int64_t> elementOffsets = indexToOffsets.getVectorOffset(i);
+      Value indexSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, gatherOp.getIndexVec(), elementOffsets, *targetShape, strides);
+      Value maskSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, gatherOp.getMask(), elementOffsets, *targetShape, strides);
+      Value passThruSubVec = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, gatherOp.getPassThru(), elementOffsets, *targetShape, strides);
+      auto slicedGather = rewriter.create<vector::GatherOp>(
+          loc, targetType, gatherOp.getBase(), gatherOp.getIndices(),
+          indexSubVec, maskSubVec, passThruSubVec);
+
+      result = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, slicedGather, result, elementOffsets, strides);
+    }
+    rewriter.replaceOp(gatherOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -649,5 +704,6 @@ void mlir::vector::populateVectorUnrollPatterns(
   patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
-               UnrollTransposePattern>(patterns.getContext(), options, benefit);
+               UnrollTransposePattern, UnrollGatherPattern>(
+      patterns.getContext(), options, benefit);
 }

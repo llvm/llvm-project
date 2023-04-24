@@ -2806,7 +2806,7 @@ struct JavaImportDirective {
 // Determines whether 'Ranges' intersects with ('Start', 'End').
 static bool affectsRange(ArrayRef<tooling::Range> Ranges, unsigned Start,
                          unsigned End) {
-  for (auto Range : Ranges) {
+  for (const auto &Range : Ranges) {
     if (Range.getOffset() < End &&
         Range.getOffset() + Range.getLength() > Start) {
       return true;

@@ -13,7 +13,7 @@
 using namespace __llvm_libc;
 
 static void test_add_simple() {
-  uint32_t num_additions = 1000 + 10 * get_block_id_x();
+  uint32_t num_additions = 1000 + 10 * gpu::get_block_id_x();
   uint64_t cnt = 0;
   for (uint32_t i = 0; i < num_additions; ++i) {
     rpc::Port port = rpc::client.open(rpc::TEST_INCREMENT);

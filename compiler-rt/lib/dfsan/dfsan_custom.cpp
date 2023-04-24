@@ -204,6 +204,57 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strpbrk(
   return const_cast<char *>(ret);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strsep(char **s, const char *delim,
+                                                  dfsan_label s_label,
+                                                  dfsan_label delim_label,
+                                                  dfsan_label *ret_label) {
+  dfsan_label base_label = dfsan_read_label(s, sizeof(*s));
+  char *base = *s;
+  char *res = strsep(s, delim);
+  if (res != *s) {
+    char *token_start = res;
+    int token_length = strlen(res);
+    // the delimiter byte has been set to NULL
+    dfsan_set_label(0, token_start + token_length, 1);
+  }
+
+  if (flags().strict_data_dependencies) {
+    *ret_label = res ? base_label : 0;
+  } else {
+    size_t s_bytes_read = (res ? strlen(res) : strlen(base)) + 1;
+    *ret_label = dfsan_union(
+        dfsan_union(base_label, dfsan_read_label(base, sizeof(s_bytes_read))),
+        dfsan_union(dfsan_read_label(delim, strlen(delim) + 1),
+                    dfsan_union(s_label, delim_label)));
+  }
+
+  return res;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strsep(
+    char **s, const char *delim, dfsan_label s_label, dfsan_label delim_label,
+    dfsan_label *ret_label, dfsan_origin s_origin, dfsan_origin delim_origin,
+    dfsan_origin *ret_origin) {
+  dfsan_origin base_origin = dfsan_read_origin_of_first_taint(s, sizeof(*s));
+  char *res = __dfsw_strsep(s, delim, s_label, delim_label, ret_label);
+  if (flags().strict_data_dependencies) {
+    if (res)
+      *ret_origin = base_origin;
+  } else {
+    if (*ret_label) {
+      if (base_origin) {
+        *ret_origin = base_origin;
+      } else {
+        dfsan_origin o =
+            dfsan_read_origin_of_first_taint(delim, strlen(delim) + 1);
+        *ret_origin = o ? o : (s_label ? s_origin : delim_origin);
+      }
+    }
+  }
+
+  return res;
+}
+
 static int dfsan_memcmp_bcmp(const void *s1, const void *s2, size_t n,
                              size_t *bytes_read) {
   const char *cs1 = (const char *) s1, *cs2 = (const char *) s2;

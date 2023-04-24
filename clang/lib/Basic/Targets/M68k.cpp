@@ -27,8 +27,8 @@ namespace clang {
 namespace targets {
 
 M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
-                               const TargetOptions &)
-    : TargetInfo(Triple) {
+                               const TargetOptions &Opts)
+    : TargetInfo(Triple), TargetOpts(Opts) {
 
   std::string Layout;
 
@@ -120,6 +120,11 @@ void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   }
+
+  // Floating point
+  if (TargetOpts.FeatureMap.lookup("isa-68881") ||
+      TargetOpts.FeatureMap.lookup("isa-68882"))
+    Builder.defineMacro("__HAVE_68881__");
 }
 
 ArrayRef<Builtin::Info> M68kTargetInfo::getTargetBuiltins() const {
