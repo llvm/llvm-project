@@ -2,6 +2,8 @@
 typedef int * Int_ptr_t;
 typedef int Int_t;
 
+#define DEFINE_PTR(X) int* ptr = (X);
+
 void local_array_subscript_simple() {
   int tmp;
   int *p = new int[10];
@@ -221,4 +223,29 @@ void unsupported_subscript_negative(int i, unsigned j, unsigned long k) {
 
   tmp = r[j] + r[k]; // both `j` and `k` are unsigned so they must be non-negative
   tmp = r[(unsigned int)-1]; // a cast-to-unsigned-expression is also non-negative
+}
+
+void all_vars_in_macro() {
+  int* local;
+  DEFINE_PTR(local)
+  ptr[1] = 0;
+}
+
+void few_vars_in_macro() {
+  int* local;
+  DEFINE_PTR(local)
+  ptr[1] = 0;
+  int tmp;
+  ptr[2] = 30;
+  auto p = new int[10];
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> p"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:12-[[@LINE-2]]:12}:"{"
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:23}:", 10}"
+  tmp = p[5];
+  int val = *p;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:14}:""
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:15-[[@LINE-2]]:15}:"[0]"
+  val = *p + 30;
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:9-[[@LINE-1]]:10}:""
+  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:11-[[@LINE-2]]:11}:"[0]"
 }

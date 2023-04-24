@@ -14,5 +14,6 @@ add_mlir_library(MLIRDebug
   ${LLVM_PTHREAD_LIB}
   MLIRIR
   MLIRSupport
+  MLIRObservers
 )
 

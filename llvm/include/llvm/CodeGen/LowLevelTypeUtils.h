@@ -1,4 +1,4 @@
-//== llvm/CodeGen/LowLevelType.h ------------------------------- -*- C++ -*-==//
+//== llvm/CodeGen/LowLevelTypeUtils.h -------------------------- -*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_LOWLEVELTYPE_H
-#define LLVM_CODEGEN_LOWLEVELTYPE_H
+#ifndef LLVM_CODEGEN_LOWLEVELTYPEUTILS_H
+#define LLVM_CODEGEN_LOWLEVELTYPEUTILS_H
 
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
@@ -42,4 +42,4 @@ LLT getLLTForMVT(MVT Ty);
 const llvm::fltSemantics &getFltSemanticForLLT(LLT Ty);
 }
 
-#endif // LLVM_CODEGEN_LOWLEVELTYPE_H
+#endif // LLVM_CODEGEN_LOWLEVELTYPEUTILS_H

@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_inttypes_unittests)
+add_custom_target(libc_inttypes_unittests)
 
 add_libc_unittest(
   strtoimax_test
