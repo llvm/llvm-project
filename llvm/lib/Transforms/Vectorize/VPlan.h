@@ -25,7 +25,6 @@
 
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -38,7 +37,6 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
-#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -62,6 +60,7 @@ class VPlan;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
+class LoopVersioning;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -410,7 +409,7 @@ struct VPTransformState {
   ///
   /// This is currently only used to add no-alias metadata based on the
   /// memchecks.  The actually versioning is performed manually.
-  std::unique_ptr<LoopVersioning> LVer;
+  LoopVersioning *LVer = nullptr;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
