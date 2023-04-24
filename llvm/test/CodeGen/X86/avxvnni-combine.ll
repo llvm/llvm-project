@@ -126,5 +126,104 @@ define dso_local <4 x i64> @foo(i32 %0, <4 x i64> %1, <4 x i64> %2, ptr %3) {
   %60 = icmp eq i64 %59, %13
   br i1 %60, label %14, label %35
 }
-
 declare <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>)
+
+; void bar(int cnt, __m256i *c, __m256i b, __m256i *p) {
+;     for (int i = 0; i < cnt; ++i) {
+;         __m256i a = p[i];
+;         c[i] = _mm256_dpwssd_epi32(c[i], b, a);
+;     }
+; }
+define void @bar(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
+; CHECK-LABEL: bar:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    jle .LBB1_5
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    jne .LBB1_6
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    jmp .LBB1_3
+; CHECK-NEXT:  .LBB1_6:
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    andl $-2, %edi
+; CHECK-NEXT:    movl $32, %r8d
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB1_7: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vmovdqa -32(%rsi,%r8), %ymm1
+; CHECK-NEXT:    vmovdqa (%rsi,%r8), %ymm2
+; CHECK-NEXT:    {vex} vpdpwssd -32(%rdx,%r8), %ymm0, %ymm1
+; CHECK-NEXT:    vmovdqa %ymm1, -32(%rsi,%r8)
+; CHECK-NEXT:    {vex} vpdpwssd (%rdx,%r8), %ymm0, %ymm2
+; CHECK-NEXT:    vmovdqa %ymm2, (%rsi,%r8)
+; CHECK-NEXT:    addq $2, %rcx
+; CHECK-NEXT:    addq $64, %r8
+; CHECK-NEXT:    cmpq %rcx, %rdi
+; CHECK-NEXT:    jne .LBB1_7
+; CHECK-NEXT:  .LBB1_3:
+; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    je .LBB1_5
+; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    shlq $5, %rcx
+; CHECK-NEXT:    vmovdqa (%rsi,%rcx), %ymm1
+; CHECK-NEXT:    {vex} vpdpwssd (%rdx,%rcx), %ymm0, %ymm1
+; CHECK-NEXT:    vmovdqa %ymm1, (%rsi,%rcx)
+; CHECK-NEXT:  .LBB1_5:
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %5 = icmp sgt i32 %0, 0
+  br i1 %5, label %6, label %22
+
+6:                                                ; preds = %4
+  %7 = bitcast <4 x i64> %2 to <8 x i32>
+  %8 = zext i32 %0 to i64
+  %9 = and i64 %8, 1
+  %10 = icmp eq i32 %0, 1
+  br i1 %10, label %13, label %11
+
+11:                                               ; preds = %6
+  %12 = and i64 %8, 4294967294
+  br label %23
+
+13:                                               ; preds = %23, %6
+  %14 = phi i64 [ 0, %6 ], [ %37, %23 ]
+  %15 = icmp eq i64 %9, 0
+  br i1 %15, label %22, label %16
+
+16:                                               ; preds = %13
+  %17 = getelementptr inbounds <4 x i64>, ptr %3, i64 %14
+  %18 = load <8 x i32>, ptr %17, align 32
+  %19 = getelementptr inbounds <4 x i64>, ptr %1, i64 %14
+  %20 = load <8 x i32>, ptr %19, align 32
+  %21 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %20, <8 x i32> %7, <8 x i32> %18)
+  store <8 x i32> %21, ptr %19, align 32
+  br label %22
+
+22:                                               ; preds = %16, %13, %4
+  ret void
+
+23:                                               ; preds = %23, %11
+  %24 = phi i64 [ 0, %11 ], [ %37, %23 ]
+  %25 = phi i64 [ 0, %11 ], [ %38, %23 ]
+  %26 = getelementptr inbounds <4 x i64>, ptr %3, i64 %24
+  %27 = load <8 x i32>, ptr %26, align 32
+  %28 = getelementptr inbounds <4 x i64>, ptr %1, i64 %24
+  %29 = load <8 x i32>, ptr %28, align 32
+  %30 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %29, <8 x i32> %7, <8 x i32> %27)
+  store <8 x i32> %30, ptr %28, align 32
+  %31 = or i64 %24, 1
+  %32 = getelementptr inbounds <4 x i64>, ptr %3, i64 %31
+  %33 = load <8 x i32>, ptr %32, align 32
+  %34 = getelementptr inbounds <4 x i64>, ptr %1, i64 %31
+  %35 = load <8 x i32>, ptr %34, align 32
+  %36 = tail call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %35, <8 x i32> %7, <8 x i32> %33)
+  store <8 x i32> %36, ptr %34, align 32
+  %37 = add nuw nsw i64 %24, 2
+  %38 = add i64 %25, 2
+  %39 = icmp eq i64 %38, %12
+  br i1 %39, label %13, label %23
+}
+declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
