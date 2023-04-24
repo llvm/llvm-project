@@ -100,7 +100,7 @@ public:
 
     auto P = std::make_shared<PoolEntry>(*this, std::move(ValueKey));
     EntrySet.insert(P.get());
-    return PoolRef(P, &P->getValue());
+    return PoolRef(std::move(P), &P->getValue());
   }
 };
 

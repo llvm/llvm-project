@@ -278,7 +278,7 @@ public:
     return TargetInfo::convertConstraint(Constraint);
   }
 
-  const char *getClobbers() const override {
+  std::string_view getClobbers() const override {
     // In GCC, $1 is not widely used in generated code (it's used only in a few
     // specific situations), so there is no real need for users to add it to
     // the clobbers list if they want to use it in their inline assembly code.

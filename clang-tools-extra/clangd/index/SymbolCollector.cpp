@@ -687,8 +687,10 @@ bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
 
   const auto &SM = PP->getSourceManager();
   auto DefLoc = MI->getDefinitionLoc();
-  // Also avoid storing predefined macros like __DBL_MIN__.
+  // Also avoid storing macros that aren't defined in any file, i.e. predefined
+  // macros like __DBL_MIN__ and those defined on the command line.
   if (SM.isWrittenInBuiltinFile(DefLoc) ||
+      SM.isWrittenInCommandLineFile(DefLoc) ||
       Name->getName() == "__GCC_HAVE_DWARF2_CFI_ASM")
     return true;
 

@@ -236,7 +236,7 @@ std::string M68kTargetInfo::convertConstraint(const char *&Constraint) const {
   return std::string(1, *Constraint);
 }
 
-const char *M68kTargetInfo::getClobbers() const {
+std::string_view M68kTargetInfo::getClobbers() const {
   // FIXME: Is this really right?
   return "";
 }

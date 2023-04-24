@@ -36,7 +36,7 @@ define internal i64 @zoo(i1 %flag) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.1(ptr getelementptr inbounds ([[STRUCT]], ptr @Global, i32 0, i32 4))
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP0]], [[PLUS]] ], [ [[TMP1]], [[MINUS]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ ptrtoint (ptr getelementptr inbounds ([[STRUCT:%.*]], ptr @Global, i32 0, i32 3) to i64), [[PLUS]] ], [ ptrtoint (ptr getelementptr inbounds ([[STRUCT:%.*]], ptr @Global, i32 0, i32 4) to i64), [[MINUS]] ]
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
 entry:
@@ -70,3 +70,4 @@ define i64 @main() {
   %3 = add i64 %1, %2
   ret i64 %3
 }
+
