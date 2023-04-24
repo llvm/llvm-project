@@ -8418,6 +8418,18 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
   llvm_unreachable("Unknown subtarget generation!");
 }
 
+unsigned llvm::AMDGPU::getVOPDEncodingFamily(const GCNSubtarget &ST) {
+  switch (ST.getGeneration()) {
+  default:
+    break;
+  case AMDGPUSubtarget::GFX11:
+    return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    return SIEncodingFamily::GFX12;
+  }
+  llvm_unreachable("Subtarget generation does not support VOPD!");
+}
+
 bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
   switch(MCOp) {
   // These opcodes use indirect register addressing so

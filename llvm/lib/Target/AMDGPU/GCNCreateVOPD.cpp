@@ -63,10 +63,11 @@ public:
     auto *SecondMI = Pair.second;
     unsigned Opc1 = FirstMI->getOpcode();
     unsigned Opc2 = SecondMI->getOpcode();
-    int Subtarget = SII->getSubtarget().getGeneration();
+    unsigned EncodingFamily =
+        AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
     int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
                                         AMDGPU::getVOPDOpcode(Opc2),
-                                        Subtarget);
+                                        EncodingFamily);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
