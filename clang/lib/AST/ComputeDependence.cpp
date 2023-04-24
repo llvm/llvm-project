@@ -663,7 +663,7 @@ ExprDependence clang::computeDependence(GenericSelectionExpr *E,
 
 ExprDependence clang::computeDependence(DesignatedInitExpr *E) {
   auto Deps = E->getInit()->getDependence();
-  for (auto D : E->designators()) {
+  for (const auto &D : E->designators()) {
     auto DesignatorDeps = ExprDependence::None;
     if (D.isArrayDesignator())
       DesignatorDeps |= E->getArrayIndex(D)->getDependence();
