@@ -1179,16 +1179,6 @@ static Value *simplifyDiv(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   bool IsSigned = Opcode == Instruction::SDiv;
 
-  // (X /u C1) /u C2 -> 0 if C1 * C2 overflow
-  ConstantInt *C1, *C2;
-  if (!IsSigned && match(Op0, m_UDiv(m_Value(), m_ConstantInt(C1))) &&
-      match(Op1, m_ConstantInt(C2))) {
-    bool Overflow;
-    (void)C1->getValue().umul_ov(C2->getValue(), Overflow);
-    if (Overflow)
-      return Constant::getNullValue(Op0->getType());
-  }
-
   // If the operation is with the result of a select instruction, check whether
   // operating on either branch of the select always yields the same value.
   if (isa<SelectInst>(Op0) || isa<SelectInst>(Op1))
