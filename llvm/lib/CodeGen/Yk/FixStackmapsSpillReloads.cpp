@@ -190,6 +190,12 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
           }
           MOI++;
         }
+        MachineOperand *Last = NewMI->operands_end() - 1;
+        if (!Last->isReg() || !Last->isImplicit()) {
+          // Unless the last operand is an implicit register, the last operand
+          // needs to be `NextLive` due to the way stackmaps are parsed.
+          MIB.addImm(StackMaps::NextLive);
+        }
         // Insert the new stackmap instruction just after the last call.
         MI.getParent()->insertAfter(LastCall, NewMI);
         // Remember the old stackmap instruction for deletion later.
