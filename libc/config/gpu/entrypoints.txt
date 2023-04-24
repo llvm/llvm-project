@@ -53,6 +53,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+
+    # stdlib.h entrypoints
+    libc.src.stdlib.atoi
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
