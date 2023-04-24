@@ -1269,6 +1269,7 @@ std::optional<FixItList> UPCStandalonePointerGadget::getFixits(const Strategy &S
         return FixItList{{FixItHint::CreateInsertion(
             *EndOfOperand, ".data()")}};
     }
+      [[fallthrough]];
     case Strategy::Kind::Wontfix:
     case Strategy::Kind::Iterator:
     case Strategy::Kind::Array:
