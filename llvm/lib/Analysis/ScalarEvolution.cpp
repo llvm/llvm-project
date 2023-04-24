@@ -6281,59 +6281,87 @@ const SCEV *ScalarEvolution::createNodeForGEP(GEPOperator *GEP) {
   return getGEPExpr(GEP, IndexExprs);
 }
 
-uint32_t ScalarEvolution::getMinTrailingZerosImpl(const SCEV *S) {
+APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S) {
+  uint64_t BitWidth = getTypeSizeInBits(S->getType());
+  auto GetShiftedByZeros = [BitWidth](uint32_t TrailingZeros) {
+    return TrailingZeros >= BitWidth
+               ? APInt::getZero(BitWidth)
+               : APInt::getOneBitSet(BitWidth, TrailingZeros);
+  };
+
   switch (S->getSCEVType()) {
   case scConstant:
-    return cast<SCEVConstant>(S)->getAPInt().countr_zero();
+    return cast<SCEVConstant>(S)->getAPInt();
+  case scPtrToInt:
+    return getConstantMultiple(cast<SCEVPtrToIntExpr>(S)->getOperand());
+  case scUDivExpr:
+  case scVScale:
+    return APInt(BitWidth, 1);
   case scTruncate: {
+    // Only multiples that are a power of 2 will hold after truncation.
     const SCEVTruncateExpr *T = cast<SCEVTruncateExpr>(S);
-    return std::min(getMinTrailingZeros(T->getOperand()),
-                    (uint32_t)getTypeSizeInBits(T->getType()));
+    uint32_t TZ = getMinTrailingZeros(T->getOperand());
+    return GetShiftedByZeros(TZ);
   }
-  case scZeroExtend:
+  case scZeroExtend: {
+    const SCEVZeroExtendExpr *Z = cast<SCEVZeroExtendExpr>(S);
+    return getConstantMultiple(Z->getOperand()).zext(BitWidth);
+  }
   case scSignExtend: {
-    const SCEVIntegralCastExpr *E = cast<SCEVIntegralCastExpr>(S);
-    uint32_t OpRes = getMinTrailingZeros(E->getOperand());
-    return OpRes == getTypeSizeInBits(E->getOperand()->getType())
-               ? getTypeSizeInBits(E->getType())
-               : OpRes;
+    const SCEVSignExtendExpr *E = cast<SCEVSignExtendExpr>(S);
+    return getConstantMultiple(E->getOperand()).sext(BitWidth);
   }
   case scMulExpr: {
     const SCEVMulExpr *M = cast<SCEVMulExpr>(S);
-    // The result is the sum of all operands results.
-    uint32_t SumOpRes = getMinTrailingZeros(M->getOperand(0));
-    uint32_t BitWidth = getTypeSizeInBits(M->getType());
-    for (unsigned I = 1, E = M->getNumOperands();
-         SumOpRes != BitWidth && I != E; ++I)
-      SumOpRes =
-          std::min(SumOpRes + getMinTrailingZeros(M->getOperand(I)), BitWidth);
-    return SumOpRes;
+    if (M->hasNoUnsignedWrap()) {
+      // The result is the product of all operand results.
+      APInt Res = getConstantMultiple(M->getOperand(0));
+      for (const SCEV *Operand : M->operands().drop_front())
+        Res = Res * getConstantMultiple(Operand);
+      return Res;
+    }
+
+    // If there are no wrap guarentees, find the trailing zeros, which is the
+    // sum of trailing zeros for all its operands.
+    uint32_t TZ = 0;
+    for (const SCEV *Operand : M->operands())
+      TZ += getMinTrailingZeros(Operand);
+    return GetShiftedByZeros(TZ);
   }
-  case scVScale:
-    return 0;
-  case scUDivExpr:
-    return 0;
-  case scPtrToInt:
   case scAddExpr:
-  case scAddRecExpr:
+  case scAddRecExpr: {
+    const SCEVNAryExpr *N = cast<SCEVNAryExpr>(S);
+    if (N->hasNoUnsignedWrap()) {
+      // The result is GCD of all operands results.
+      APInt Res = getConstantMultiple(N->getOperand(0));
+      for (unsigned I = 1, E = N->getNumOperands(); I < E && Res != 1; ++I)
+        Res = APIntOps::GreatestCommonDivisor(
+            Res, getConstantMultiple(N->getOperand(I)));
+      return Res;
+    }
+  }
+    // If there is no unsigned wrap guarentees, fall through to find trailing
+    // bits.
+    LLVM_FALLTHROUGH;
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr:
   case scSequentialUMinExpr: {
-    // The result is the min of all operands results.
-    ArrayRef<const SCEV *> Ops = S->operands();
-    uint32_t MinOpRes = getMinTrailingZeros(Ops[0]);
-    for (unsigned I = 1, E = Ops.size(); MinOpRes && I != E; ++I)
-      MinOpRes = std::min(MinOpRes, getMinTrailingZeros(Ops[I]));
-    return MinOpRes;
+    const SCEVNAryExpr *N = cast<SCEVNAryExpr>(S);
+    // Find the trailing bits, which is the minimum of its operands.
+    uint32_t TZ = getMinTrailingZeros(N->getOperand(0));
+    for (const SCEV *Operand : N->operands().drop_front())
+      TZ = std::min(TZ, getMinTrailingZeros(Operand));
+    return GetShiftedByZeros(TZ);
   }
   case scUnknown: {
+    // ask ValueTracking for known bits
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
-    // For a SCEVUnknown, ask ValueTracking.
-    KnownBits Known =
-        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT);
-    return Known.countMinTrailingZeros();
+    unsigned Known =
+        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT)
+            .countMinTrailingZeros();
+    return GetShiftedByZeros(Known);
   }
   case scCouldNotCompute:
     llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
@@ -6341,15 +6369,25 @@ uint32_t ScalarEvolution::getMinTrailingZerosImpl(const SCEV *S) {
   llvm_unreachable("Unknown SCEV kind!");
 }
 
-uint32_t ScalarEvolution::getMinTrailingZeros(const SCEV *S) {
-  auto I = MinTrailingZerosCache.find(S);
-  if (I != MinTrailingZerosCache.end())
+APInt ScalarEvolution::getConstantMultiple(const SCEV *S) {
+  auto I = ConstantMultipleCache.find(S);
+  if (I != ConstantMultipleCache.end())
     return I->second;
 
-  uint32_t Result = getMinTrailingZerosImpl(S);
-  auto InsertPair = MinTrailingZerosCache.insert({S, Result});
+  APInt Result = getConstantMultipleImpl(S);
+  auto InsertPair = ConstantMultipleCache.insert({S, Result});
   assert(InsertPair.second && "Should insert a new key");
   return InsertPair.first->second;
+}
+
+APInt ScalarEvolution::getNonZeroConstantMultiple(const SCEV *S) {
+  APInt Multiple = getConstantMultiple(S);
+  return Multiple == 0 ? APInt(Multiple.getBitWidth(), 1) : Multiple;
+}
+
+uint32_t ScalarEvolution::getMinTrailingZeros(const SCEV *S) {
+  return std::min(getConstantMultiple(S).countTrailingZeros(),
+                  (unsigned)getTypeSizeInBits(S->getType()));
 }
 
 /// Helper method to assign a range to V from metadata present in the IR.
@@ -6600,16 +6638,21 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
   // If the value has known zeros, the maximum value will have those known zeros
   // as well.
-  uint32_t TZ = getMinTrailingZeros(S);
-  if (TZ != 0) {
-    if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED)
+  if (SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED) {
+    APInt Multiple = getNonZeroConstantMultiple(S);
+    APInt Remainder = APInt::getMaxValue(BitWidth).urem(Multiple);
+    if (!Remainder.isZero())
       ConservativeResult =
           ConstantRange(APInt::getMinValue(BitWidth),
-                        APInt::getMaxValue(BitWidth).lshr(TZ).shl(TZ) + 1);
-    else
+                        APInt::getMaxValue(BitWidth) - Remainder + 1);
+  }
+  else {
+    uint32_t TZ = getMinTrailingZeros(S);
+    if (TZ != 0) {
       ConservativeResult = ConstantRange(
           APInt::getSignedMinValue(BitWidth),
           APInt::getSignedMaxValue(BitWidth).ashr(TZ).shl(TZ) + 1);
+    }
   }
 
   switch (S->getSCEVType()) {
@@ -8228,10 +8271,10 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L,
   };
 
   const SCEVConstant *TC = dyn_cast<SCEVConstant>(TCExpr);
-  if (!TC)
-    // Attempt to factor more general cases. Returns the greatest power of
-    // two divisor.
-    return GetSmallMultiple(getMinTrailingZeros(TCExpr));
+  if (!TC) {
+    APInt Multiple = getNonZeroConstantMultiple(TCExpr);
+    return Multiple.getActiveBits() > 32 ? 1 : *Multiple.getRawData();
+  }
 
   ConstantInt *Result = TC->getValue();
   assert(Result && "SCEVConstant expected to have non-null ConstantInt");
@@ -8412,7 +8455,7 @@ void ScalarEvolution::forgetAllLoops() {
   SignedRanges.clear();
   ExprValueMap.clear();
   HasRecMap.clear();
-  MinTrailingZerosCache.clear();
+  ConstantMultipleCache.clear();
   PredicatedSCEVRewrites.clear();
   FoldCache.clear();
   FoldCacheUser.clear();
@@ -13437,7 +13480,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingPhiRanges(std::move(Arg.PendingPhiRanges)),
       PendingMerges(std::move(Arg.PendingMerges)),
-      MinTrailingZerosCache(std::move(Arg.MinTrailingZerosCache)),
+      ConstantMultipleCache(std::move(Arg.ConstantMultipleCache)),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
@@ -13912,7 +13955,7 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   UnsignedRanges.erase(S);
   SignedRanges.erase(S);
   HasRecMap.erase(S);
-  MinTrailingZerosCache.erase(S);
+  ConstantMultipleCache.erase(S);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     UnsignedWrapViaInductionTried.erase(AR);
@@ -14290,6 +14333,17 @@ void ScalarEvolution::verify() const {
                << *I->second << " != " << *Expr << "!\n";
         std::abort();
       }
+    }
+  }
+
+  // Verify that ConstantMultipleCache computations are correct.
+  for (auto [S, Multiple] : ConstantMultipleCache) {
+    APInt RecomputedMultiple = SE2.getConstantMultipleImpl(S);
+    if (Multiple != RecomputedMultiple) {
+      dbgs() << "Incorrect computation in ConstantMultipleCache for " << *S
+             << " : Expected " << RecomputedMultiple << " but got " << Multiple
+             << "!\n";
+      std::abort();
     }
   }
 }

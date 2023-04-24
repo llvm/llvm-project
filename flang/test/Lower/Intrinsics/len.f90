@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: len_test
 subroutine len_test(i, c)
