@@ -835,7 +835,7 @@ public:
   OpPrintingFlags &printGenericOpForm();
 
   /// Skip printing regions.
-  OpPrintingFlags &skipRegions();
+  OpPrintingFlags &skipRegions(bool skip = true);
 
   /// Do not verify the operation when using custom operation printers.
   OpPrintingFlags &assumeVerified();

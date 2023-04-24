@@ -663,7 +663,7 @@ ExprDependence clang::computeDependence(GenericSelectionExpr *E,
 
 ExprDependence clang::computeDependence(DesignatedInitExpr *E) {
   auto Deps = E->getInit()->getDependence();
-  for (auto D : E->designators()) {
+  for (const auto &D : E->designators()) {
     auto DesignatorDeps = ExprDependence::None;
     if (D.isArrayDesignator())
       DesignatorDeps |= E->getArrayIndex(D)->getDependence();
@@ -760,7 +760,7 @@ ExprDependence clang::computeDependence(DependentScopeDeclRefExpr *E) {
   D |= getDependenceInExpr(E->getNameInfo());
   if (auto *Q = E->getQualifier())
     D |= toExprDependence(Q->getDependence());
-  for (auto A : E->template_arguments())
+  for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
 }
@@ -813,7 +813,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
   if (auto *Q = E->getQualifier())
     D |= toExprDependence(Q->getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
-  for (auto A : E->template_arguments())
+  for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
 }

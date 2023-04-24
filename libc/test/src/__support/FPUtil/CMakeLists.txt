@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_fputil_unittests)
+add_custom_target(libc_fputil_unittests)
 
 add_fp_unittest(
   dyadic_float_test

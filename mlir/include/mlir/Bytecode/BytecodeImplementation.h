@@ -345,6 +345,37 @@ public:
   }
 };
 
+/// Helper for resource handle reading that returns LogicalResult.
+template <typename T, typename... Ts>
+static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
+                                        FailureOr<T> &value, Ts &&...params) {
+  FailureOr<T> handle = reader.readResourceHandle<T>();
+  if (failed(handle))
+    return failure();
+  if (auto *result = dyn_cast<T>(&*handle)) {
+    value = std::move(*result);
+    return success();
+  }
+  return failure();
+}
+
+/// Helper method that injects context only if needed, this helps unify some of
+/// the attribute construction methods.
+template <typename T, typename... Ts>
+auto get(MLIRContext *context, Ts &&...params) {
+  // Prefer a direct `get` method if one exists.
+  if constexpr (llvm::is_detected<detail::has_get_method, T, Ts...>::value) {
+    (void)context;
+    return T::get(std::forward<Ts>(params)...);
+  } else if constexpr (llvm::is_detected<detail::has_get_method, T,
+                                         MLIRContext *, Ts...>::value) {
+    return T::get(context, std::forward<Ts>(params)...);
+  } else {
+    // Otherwise, pass to the base get.
+    return T::Base::get(context, std::forward<Ts>(params)...);
+  }
+}
+
 } // namespace mlir
 
 #endif // MLIR_BYTECODE_BYTECODEIMPLEMENTATION_H

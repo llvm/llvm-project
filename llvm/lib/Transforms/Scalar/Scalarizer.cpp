@@ -583,7 +583,9 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   Scattered.resize(NumArgs);
 
   SmallVector<llvm::Type *, 3> Tys;
-  Tys.push_back(VT->getScalarType());
+  // Add return type if intrinsic is overloaded on it.
+  if (isVectorIntrinsicWithOverloadTypeAtArg(ID, -1))
+    Tys.push_back(VT->getScalarType());
 
   // Assumes that any vector type has the same number of elements as the return
   // vector type, which is true for all current intrinsics.

@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_fenv_unittests)
+add_custom_target(libc_fenv_unittests)
 
 add_libc_unittest(
   rounding_mode_test

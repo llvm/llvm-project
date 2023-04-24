@@ -60,7 +60,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {

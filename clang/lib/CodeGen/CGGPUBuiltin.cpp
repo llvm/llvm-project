@@ -145,7 +145,7 @@ CodeGenFunction::EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E,
                /* ParamsToSkip = */ 0);
 
   SmallVector<llvm::Value *, 8> Args;
-  for (auto A : CallArgs) {
+  for (const auto &A : CallArgs) {
     // We don't know how to emit non-scalar varargs.
     if (!A.getRValue(*this).isScalar()) {
       CGM.ErrorUnsupported(E, "non-scalar arg to printf");

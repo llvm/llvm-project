@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_ctype_unittests)
+add_custom_target(libc_ctype_unittests)
 
 add_libc_unittest(
   isalnum_test

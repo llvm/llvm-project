@@ -261,8 +261,8 @@ struct TestVectorTransferUnrollingPatterns
     UnrollVectorOptions opts;
     opts.setNativeShape(ArrayRef<int64_t>{2, 2})
         .setFilterConstraint([](Operation *op) {
-          return success(
-              isa<vector::TransferReadOp, vector::TransferWriteOp>(op));
+          return success(isa<vector::TransferReadOp, vector::TransferWriteOp,
+                             vector::GatherOp>(op));
         });
     if (reverseUnrollOrder.getValue()) {
       opts.setUnrollTraversalOrderFn(
@@ -272,6 +272,8 @@ struct TestVectorTransferUnrollingPatterns
               numLoops = readOp.getVectorType().getRank();
             else if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op))
               numLoops = writeOp.getVectorType().getRank();
+            else if (auto gatherOp = dyn_cast<vector::GatherOp>(op))
+              numLoops = gatherOp.getVectorType().getRank();
             else
               return std::nullopt;
             auto order = llvm::reverse(llvm::seq<int64_t>(0, numLoops));

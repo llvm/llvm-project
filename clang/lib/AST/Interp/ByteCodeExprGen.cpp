@@ -390,7 +390,7 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
   if (!T)
     return false;
 
-  return this->visitZeroInitializer(*T, E);
+  return this->visitZeroInitializer(E->getType(), E);
 }
 
 template <class Emitter>
@@ -929,7 +929,12 @@ bool ByteCodeExprGen<Emitter>::visitConditional(
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, const Expr *E) {
+bool ByteCodeExprGen<Emitter>::visitZeroInitializer(QualType QT,
+                                                    const Expr *E) {
+  // FIXME: We need the QualType to get the float semantics, but that means we
+  //   classify it over and over again in array situations.
+  PrimType T = classifyPrim(QT);
+
   switch (T) {
   case PT_Bool:
     return this->emitZeroBool(E);
@@ -954,8 +959,7 @@ bool ByteCodeExprGen<Emitter>::visitZeroInitializer(PrimType T, const Expr *E) {
   case PT_FnPtr:
     return this->emitNullFnPtr(E);
   case PT_Float: {
-    return this->emitConstFloat(
-        APFloat::getZero(Ctx.getFloatSemantics(E->getType())), E);
+    return this->emitConstFloat(APFloat::getZero(Ctx.getFloatSemantics(QT)), E);
   }
   }
   llvm_unreachable("unknown primitive type");

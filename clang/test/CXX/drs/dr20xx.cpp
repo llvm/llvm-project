@@ -19,6 +19,8 @@ int a = b2[0]; // expected-error {{does not provide a subscript operator}}
 int b = __builtin_addressof(b2)->foo; // expected-error {{no member}}
 }
 
+// dr2009: na
+
 namespace dr2026 { // dr2026: 11
   template<int> struct X {};
 
