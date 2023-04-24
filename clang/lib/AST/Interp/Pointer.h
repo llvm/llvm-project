@@ -109,6 +109,14 @@ public:
     return Pointer(Pointee, Field, Field);
   }
 
+  /// Subtract the given offset from the current Base and Offset
+  /// of the pointer.
+  Pointer atFieldSub(unsigned Off) const {
+    assert(Offset >= Off);
+    unsigned O = Offset - Off;
+    return Pointer(Pointee, O, O);
+  }
+
   /// Restricts the scope of an array element pointer.
   Pointer narrow() const {
     // Null pointers cannot be narrowed.

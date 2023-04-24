@@ -213,6 +213,16 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
+bool CheckBaseDerived(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                      CheckSubobjectKind CSK) {
+  if (!Ptr.isOnePastEnd())
+    return true;
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  return false;
+}
+
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isConst())
