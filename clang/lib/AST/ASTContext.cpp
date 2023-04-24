@@ -8215,7 +8215,7 @@ static bool hasTemplateSpecializationInEncodedString(const Type *T,
   if (!CXXRD->hasDefinition() || !VisitBasesAndFields)
     return false;
 
-  for (auto B : CXXRD->bases())
+  for (const auto &B : CXXRD->bases())
     if (hasTemplateSpecializationInEncodedString(B.getType().getTypePtr(),
                                                  true))
       return true;
