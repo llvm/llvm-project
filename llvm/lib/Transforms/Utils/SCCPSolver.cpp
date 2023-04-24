@@ -352,6 +352,10 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   MapVector<std::pair<Function *, unsigned>, ValueLatticeElement>
       TrackedMultipleRetVals;
 
+  /// The set of values whose lattice has been invalidated.
+  /// Populated by resetLatticeValueFor(), cleared after resolving undefs.
+  DenseSet<Value *> Invalidated;
+
   /// MRVFunctionsTracked - Each function in TrackedMultipleRetVals is
   /// represented here for efficient lookup.
   SmallPtrSet<Function *, 16> MRVFunctionsTracked;
@@ -475,6 +479,64 @@ private:
 
     // All others are underdefined by default.
     return LV;
+  }
+
+  /// Traverse the use-def chain of \p Call, marking itself and its users as
+  /// "unknown" on the way.
+  void invalidate(CallBase *Call) {
+    SmallVector<Instruction *, 64> ToInvalidate;
+    ToInvalidate.push_back(Call);
+
+    while (!ToInvalidate.empty()) {
+      Instruction *Inst = ToInvalidate.pop_back_val();
+
+      if (!Invalidated.insert(Inst).second)
+        continue;
+
+      if (!BBExecutable.count(Inst->getParent()))
+        continue;
+
+      Value *V = nullptr;
+      // For return instructions we need to invalidate the tracked returns map.
+      // Anything else has its lattice in the value map.
+      if (auto *RetInst = dyn_cast<ReturnInst>(Inst)) {
+        Function *F = RetInst->getParent()->getParent();
+        if (auto It = TrackedRetVals.find(F); It != TrackedRetVals.end()) {
+          It->second = ValueLatticeElement();
+          V = F;
+        } else if (MRVFunctionsTracked.count(F)) {
+          auto *STy = cast<StructType>(F->getReturnType());
+          for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I)
+            TrackedMultipleRetVals[{F, I}] = ValueLatticeElement();
+          V = F;
+        }
+      } else if (auto *STy = dyn_cast<StructType>(Inst->getType())) {
+        for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
+          if (auto It = StructValueState.find({Inst, I});
+              It != StructValueState.end()) {
+            It->second = ValueLatticeElement();
+            V = Inst;
+          }
+        }
+      } else if (auto It = ValueState.find(Inst); It != ValueState.end()) {
+        It->second = ValueLatticeElement();
+        V = Inst;
+      }
+
+      if (V) {
+        LLVM_DEBUG(dbgs() << "Invalidated lattice for " << *V << "\n");
+
+        for (User *U : V->users())
+          if (auto *UI = dyn_cast<Instruction>(U))
+            ToInvalidate.push_back(UI);
+
+        auto It = AdditionalUsers.find(V);
+        if (It != AdditionalUsers.end())
+          for (User *U : It->second)
+            if (auto *UI = dyn_cast<Instruction>(U))
+              ToInvalidate.push_back(UI);
+      }
+    }
   }
 
   /// markEdgeExecutable - Mark a basic block as executable, adding it to the BB
@@ -657,6 +719,8 @@ public:
 
   void solve();
 
+  bool resolvedUndef(Instruction &I);
+
   bool resolvedUndefsIn(Function &F);
 
   bool isBlockExecutable(BasicBlock *BB) const {
@@ -678,6 +742,19 @@ public:
   }
 
   void removeLatticeValueFor(Value *V) { ValueState.erase(V); }
+
+  /// Invalidate the Lattice Value of \p Call and its users after specializing
+  /// the call. Then recompute it.
+  void resetLatticeValueFor(CallBase *Call) {
+    // Calls to void returning functions do not need invalidation.
+    Function *F = Call->getCalledFunction();
+    (void)F;
+    assert(!F->getReturnType()->isVoidTy() &&
+           (TrackedRetVals.count(F) || MRVFunctionsTracked.count(F)) &&
+           "All non void specializations should be tracked");
+    invalidate(Call);
+    handleCallResult(*Call);
+  }
 
   const ValueLatticeElement &getLatticeValueFor(Value *V) const {
     assert(!V->getType()->isStructTy() &&
@@ -745,6 +822,18 @@ public:
       for (Function *F : WorkList)
         ResolvedUndefs |= resolvedUndefsIn(*F);
     }
+  }
+
+  void solveWhileResolvedUndefs() {
+    bool ResolvedUndefs = true;
+    while (ResolvedUndefs) {
+      solve();
+      ResolvedUndefs = false;
+      for (Value *V : Invalidated)
+        if (auto *I = dyn_cast<Instruction>(V))
+          ResolvedUndefs |= resolvedUndef(*I);
+    }
+    Invalidated.clear();
   }
 };
 
@@ -1720,6 +1809,7 @@ void SCCPInstVisitor::solve() {
     // things to overdefined more quickly.
     while (!OverdefinedInstWorkList.empty()) {
       Value *I = OverdefinedInstWorkList.pop_back_val();
+      Invalidated.erase(I);
 
       LLVM_DEBUG(dbgs() << "\nPopped off OI-WL: " << *I << '\n');
 
@@ -1736,6 +1826,7 @@ void SCCPInstVisitor::solve() {
     // Process the instruction work list.
     while (!InstWorkList.empty()) {
       Value *I = InstWorkList.pop_back_val();
+      Invalidated.erase(I);
 
       LLVM_DEBUG(dbgs() << "\nPopped off I-WL: " << *I << '\n');
 
@@ -1763,6 +1854,61 @@ void SCCPInstVisitor::solve() {
   }
 }
 
+bool SCCPInstVisitor::resolvedUndef(Instruction &I) {
+  // Look for instructions which produce undef values.
+  if (I.getType()->isVoidTy())
+    return false;
+
+  if (auto *STy = dyn_cast<StructType>(I.getType())) {
+    // Only a few things that can be structs matter for undef.
+
+    // Tracked calls must never be marked overdefined in resolvedUndefsIn.
+    if (auto *CB = dyn_cast<CallBase>(&I))
+      if (Function *F = CB->getCalledFunction())
+        if (MRVFunctionsTracked.count(F))
+          return false;
+
+    // extractvalue and insertvalue don't need to be marked; they are
+    // tracked as precisely as their operands.
+    if (isa<ExtractValueInst>(I) || isa<InsertValueInst>(I))
+      return false;
+    // Send the results of everything else to overdefined.  We could be
+    // more precise than this but it isn't worth bothering.
+    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+      ValueLatticeElement &LV = getStructValueState(&I, i);
+      if (LV.isUnknown()) {
+        markOverdefined(LV, &I);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  ValueLatticeElement &LV = getValueState(&I);
+  if (!LV.isUnknown())
+    return false;
+
+  // There are two reasons a call can have an undef result
+  // 1. It could be tracked.
+  // 2. It could be constant-foldable.
+  // Because of the way we solve return values, tracked calls must
+  // never be marked overdefined in resolvedUndefsIn.
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    if (Function *F = CB->getCalledFunction())
+      if (TrackedRetVals.count(F))
+        return false;
+
+  if (isa<LoadInst>(I)) {
+    // A load here means one of two things: a load of undef from a global,
+    // a load from an unknown pointer.  Either way, having it return undef
+    // is okay.
+    return false;
+  }
+
+  markOverdefined(&I);
+  return true;
+}
+
 /// While solving the dataflow for a function, we don't compute a result for
 /// operations with an undef operand, to allow undef to be lowered to a
 /// constant later. For example, constant folding of "zext i8 undef to i16"
@@ -1782,60 +1928,8 @@ bool SCCPInstVisitor::resolvedUndefsIn(Function &F) {
     if (!BBExecutable.count(&BB))
       continue;
 
-    for (Instruction &I : BB) {
-      // Look for instructions which produce undef values.
-      if (I.getType()->isVoidTy())
-        continue;
-
-      if (auto *STy = dyn_cast<StructType>(I.getType())) {
-        // Only a few things that can be structs matter for undef.
-
-        // Tracked calls must never be marked overdefined in resolvedUndefsIn.
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          if (Function *F = CB->getCalledFunction())
-            if (MRVFunctionsTracked.count(F))
-              continue;
-
-        // extractvalue and insertvalue don't need to be marked; they are
-        // tracked as precisely as their operands.
-        if (isa<ExtractValueInst>(I) || isa<InsertValueInst>(I))
-          continue;
-        // Send the results of everything else to overdefined.  We could be
-        // more precise than this but it isn't worth bothering.
-        for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
-          ValueLatticeElement &LV = getStructValueState(&I, i);
-          if (LV.isUnknown()) {
-            markOverdefined(LV, &I);
-            MadeChange = true;
-          }
-        }
-        continue;
-      }
-
-      ValueLatticeElement &LV = getValueState(&I);
-      if (!LV.isUnknown())
-        continue;
-
-      // There are two reasons a call can have an undef result
-      // 1. It could be tracked.
-      // 2. It could be constant-foldable.
-      // Because of the way we solve return values, tracked calls must
-      // never be marked overdefined in resolvedUndefsIn.
-      if (auto *CB = dyn_cast<CallBase>(&I))
-        if (Function *F = CB->getCalledFunction())
-          if (TrackedRetVals.count(F))
-            continue;
-
-      if (isa<LoadInst>(I)) {
-        // A load here means one of two things: a load of undef from a global,
-        // a load from an unknown pointer.  Either way, having it return undef
-        // is okay.
-        continue;
-      }
-
-      markOverdefined(&I);
-      MadeChange = true;
-    }
+    for (Instruction &I : BB)
+      MadeChange |= resolvedUndef(I);
   }
 
   LLVM_DEBUG(if (MadeChange) dbgs()
@@ -1913,6 +2007,10 @@ SCCPSolver::solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList) {
   Visitor->solveWhileResolvedUndefsIn(WorkList);
 }
 
+void SCCPSolver::solveWhileResolvedUndefs() {
+  Visitor->solveWhileResolvedUndefs();
+}
+
 bool SCCPSolver::isBlockExecutable(BasicBlock *BB) const {
   return Visitor->isBlockExecutable(BB);
 }
@@ -1928,6 +2026,10 @@ SCCPSolver::getStructLatticeValueFor(Value *V) const {
 
 void SCCPSolver::removeLatticeValueFor(Value *V) {
   return Visitor->removeLatticeValueFor(V);
+}
+
+void SCCPSolver::resetLatticeValueFor(CallBase *Call) {
+  Visitor->resetLatticeValueFor(Call);
 }
 
 const ValueLatticeElement &SCCPSolver::getLatticeValueFor(Value *V) const {
