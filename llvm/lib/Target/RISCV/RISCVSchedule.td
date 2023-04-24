@@ -76,9 +76,11 @@ def WriteFCvtF16ToF32  : SchedWrite;
 def WriteFCvtF32ToF16  : SchedWrite;
 def WriteFCvtF16ToF64  : SchedWrite;
 def WriteFCvtF64ToF16  : SchedWrite;
-def WriteFCvtF32ToF32  : SchedWrite;
-def WriteFCvtF64ToF64  : SchedWrite;
-def WriteFCvtF16ToF16  : SchedWrite;
+
+// Zfa found instructions.
+def WriteFRoundF32     : SchedWrite;
+def WriteFRoundF64     : SchedWrite;
+def WriteFRoundF16     : SchedWrite;
 
 def WriteFClass16   : SchedWrite;    // 16-bit floating point classify
 def WriteFClass32   : SchedWrite;    // 32-bit floating point classify
@@ -189,9 +191,9 @@ def ReadFCvtF16ToF32     : SchedRead;
 def ReadFCvtF32ToF16     : SchedRead;
 def ReadFCvtF16ToF64     : SchedRead;
 def ReadFCvtF64ToF16     : SchedRead;
-def ReadFCvtF32ToF32     : SchedRead;
-def ReadFCvtF64ToF64     : SchedRead;
-def ReadFCvtF16ToF16     : SchedRead;
+def ReadFRoundF16        : SchedRead;
+def ReadFRoundF32        : SchedRead;
+def ReadFRoundF64        : SchedRead;
 def ReadFClass16         : SchedRead;
 def ReadFClass32         : SchedRead;
 def ReadFClass64         : SchedRead;
@@ -252,16 +254,16 @@ def : ReadAdvance<ReadSFB, 0>;
 
 multiclass UnsupportedSchedZfa {
 let Unsupported = true in {
-def : WriteRes<WriteFCvtF32ToF32, []>;
-def : WriteRes<WriteFCvtF64ToF64, []>;
-def : WriteRes<WriteFCvtF16ToF16, []>;
+def : WriteRes<WriteFRoundF16, []>;
+def : WriteRes<WriteFRoundF32, []>;
+def : WriteRes<WriteFRoundF64, []>;
 def : WriteRes<WriteFLI16, []>;
 def : WriteRes<WriteFLI32, []>;
 def : WriteRes<WriteFLI64, []>;
 
-def : ReadAdvance<ReadFCvtF32ToF32, 0>;
-def : ReadAdvance<ReadFCvtF64ToF64, 0>;
-def : ReadAdvance<ReadFCvtF16ToF16, 0>;
+def : ReadAdvance<ReadFRoundF32, 0>;
+def : ReadAdvance<ReadFRoundF64, 0>;
+def : ReadAdvance<ReadFRoundF16, 0>;
 } // Unsupported = true
 }
 
