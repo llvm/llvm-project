@@ -4,9 +4,28 @@
 define void @d() {
 ; CHECK-LABEL: define void @d() {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr @d, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> zeroinitializer, i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x float> zeroinitializer, <2 x float> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 0, 0
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I7:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I3:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr float, ptr @d, i64 [[I]]
 ; CHECK-NEXT:    [[I5:%.*]] = tail call i1 @llvm.is.fpclass.f32(float 0.000000e+00, i32 0)
@@ -14,7 +33,7 @@ define void @d() {
 ; CHECK-NEXT:    store float [[I6]], ptr [[I4]], align 4
 ; CHECK-NEXT:    [[I7]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[I8:%.*]] = icmp eq i64 [[I7]], 0
-; CHECK-NEXT:    br i1 [[I8]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 [[I8]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
