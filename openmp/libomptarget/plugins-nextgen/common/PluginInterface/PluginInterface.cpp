@@ -582,32 +582,45 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
   return Plugin::success();
 }
 
+Expected<KernelEnvironmentTy>
+GenericDeviceTy::getKernelEnvironmentForKernel(StringRef Name,
+                                               DeviceImageTy &Image) {
+  // Create a metadata object for the kernel environment object.
+  StaticGlobalTy<KernelEnvironmentTy> KernelEnv(Name.data(),
+                                                "_kernel_environment");
+
+  // Retrieve kernel environment object for the kernel.
+  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+  if (auto Err = GHandler.readGlobalFromImage(*this, Image, KernelEnv)) {
+    // Consume the error since it is acceptable to fail.
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to read kernel environment object for '%s': %s\n", Name.data(),
+       ErrStr.data());
+
+    return createStringError(inconvertibleErrorCode(), ErrStr);
+  }
+
+  return KernelEnv.getValue();
+}
+
 Expected<OMPTgtExecModeFlags>
 GenericDeviceTy::getExecutionModeForKernel(StringRef Name,
                                            DeviceImageTy &Image) {
-  // Create a metadata object for the exec mode global (auto-generated).
-  StaticGlobalTy<llvm::omp::OMPTgtExecModeFlags> ExecModeGlobal(Name.data(),
-                                                                "_exec_mode");
-
-  // Retrieve execution mode for the kernel. This may fail since some kernels
-  // may not have an execution mode.
-  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-  if (auto Err = GHandler.readGlobalFromImage(*this, Image, ExecModeGlobal)) {
-    // Consume the error since it is acceptable to fail.
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failed to read execution mode for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
-       Name.data(), ErrStr.data());
-
+  auto KernelEnvOrError = getKernelEnvironmentForKernel(Name, Image);
+  if (!KernelEnvOrError) {
+    (void)KernelEnvOrError.takeError();
     return OMP_TGT_EXEC_MODE_SPMD;
   }
 
-  // Check that the retrieved execution mode is valid.
-  if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
-    return Plugin::error("Invalid execution mode %d for '%s'",
-                         ExecModeGlobal.getValue(), Name.data());
+  auto &KernelEnv = *KernelEnvOrError;
+  auto ExecMode = KernelEnv.Configuration.ExecMode;
 
-  return ExecModeGlobal.getValue();
+  // Check that the retrieved execution mode is valid.
+  if (!GenericKernelTy::isValidExecutionMode(ExecMode))
+    return Plugin::error("Invalid execution mode %d for '%s'", ExecMode,
+                         Name.data());
+
+  return ExecMode;
 }
 
 Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,

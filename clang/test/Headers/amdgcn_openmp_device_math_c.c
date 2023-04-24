@@ -36,7 +36,7 @@ void test_math_long_long(long long x) {
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    [[L1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[L1]] to ptr
 // CHECK-NEXT:    store i64 [[X]], ptr [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), i8 1, i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_test_math_int_l9_kernel_environment to ptr))
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -54,7 +54,7 @@ void test_math_long_long(long long x) {
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[__SGN_ASCAST_I]], align 4
 // CHECK-NEXT:    [[SUB_I:%.*]] = sub nsw i32 [[XOR_I]], [[TMP5]]
 // CHECK-NEXT:    store i32 [[SUB_I]], ptr [[L1_ASCAST]], align 4
-// CHECK-NEXT:    call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1)
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
@@ -71,7 +71,7 @@ void test_math_long_long(long long x) {
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    [[L1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[L1]] to ptr
 // CHECK-NEXT:    store i64 [[X]], ptr [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1, i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_test_math_long_l16_kernel_environment to ptr))
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -89,7 +89,7 @@ void test_math_long_long(long long x) {
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[__SGN_ASCAST_I]], align 8
 // CHECK-NEXT:    [[SUB_I:%.*]] = sub nsw i64 [[XOR_I]], [[TMP5]]
 // CHECK-NEXT:    store i64 [[SUB_I]], ptr [[L1_ASCAST]], align 8
-// CHECK-NEXT:    call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1)
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
@@ -106,7 +106,7 @@ void test_math_long_long(long long x) {
 // CHECK-NEXT:    [[X_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[X_ADDR]] to ptr
 // CHECK-NEXT:    [[L1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[L1]] to ptr
 // CHECK-NEXT:    store i64 [[X]], ptr [[X_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1, i1 true)
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_test_math_long_long_l23_kernel_environment to ptr))
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
@@ -124,7 +124,7 @@ void test_math_long_long(long long x) {
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[__SGN_ASCAST_I]], align 8
 // CHECK-NEXT:    [[SUB_I:%.*]] = sub nsw i64 [[XOR_I]], [[TMP5]]
 // CHECK-NEXT:    store i64 [[SUB_I]], ptr [[L1_ASCAST]], align 8
-// CHECK-NEXT:    call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1)
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void
