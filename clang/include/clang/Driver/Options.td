@@ -4650,6 +4650,8 @@ def m68030 : Flag<["-"], "m68030">, Group<m_m68k_Features_Group>;
 def m68040 : Flag<["-"], "m68040">, Group<m_m68k_Features_Group>;
 def m68060 : Flag<["-"], "m68060">, Group<m_m68k_Features_Group>;
 
+def m68881 : Flag<["-"], "m68881">, Group<m_m68k_Features_Group>;
+
 foreach i = {0-6} in
   def ffixed_a#i : Flag<["-"], "ffixed-a"#i>, Group<m_m68k_Features_Group>,
     HelpText<"Reserve the a"#i#" register (M68k only)">;
