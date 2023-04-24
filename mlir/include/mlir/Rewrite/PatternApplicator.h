@@ -37,8 +37,7 @@ public:
       "Encapsulate the application of rewrite patterns";
 
   void print(raw_ostream &os) const override {
-    os << "`" << tag << "`\n"
-       << " pattern: " << pattern.getDebugName() << '\n';
+    os << "`" << tag << " pattern: " << pattern.getDebugName();
   }
 
 private:
