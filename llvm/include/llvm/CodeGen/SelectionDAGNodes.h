@@ -1135,6 +1135,7 @@ inline SDValue::SDValue(SDNode *node, unsigned resno)
 }
 
 inline unsigned SDValue::getOpcode() const {
+  assert(Node != nullptr && "Invalid Node");
   return Node->getOpcode();
 }
 
