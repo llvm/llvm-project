@@ -22,16 +22,6 @@ intended to be comprehensive. Please ask on
 or to verify that one of these isn't already completed.</p>
 
 <ul>
-<li><b>Undefined behavior checking</b>:
-Improve and extend the runtime checks for undefined behavior which CodeGen
-inserts for the various <tt>-fsanitize=</tt> modes. A lot of issues can already
-be caught, but there is more to do here.</li>
-
-<li><b>Improve target support</b>: The current target interfaces are heavily
-stubbed out and need to be implemented fully.  See the FIXME's in TargetInfo.
-Additionally, the actual target implementations (instances of TargetInfoImpl)
-also need to be completed.</li>
-
 <li><b>Implement an tool to generate code documentation</b>: Clang's
 library-based design allows it to be used by a variety of tools that reason
 about source code. One great application of Clang would be to build an
@@ -56,12 +46,6 @@ could be taught to handle simple structural rules like those in <a
 href="https://llvm.org/docs/CodingStandards.html#use-early-exits-and-continue-to-simplify-code">the LLVM coding
 standards</a>.</li>
 
-<li><b>Use clang libraries to extend Ragel with a JIT</b>: <a
-href="https://www.colm.net/open-source/ragel/">Ragel</a> is a state
-machine compiler that lets you embed C code into state machines and generate
-C code.  It would be relatively easy to turn this into a JIT compiler using
-LLVM.</li>
-
 <li><b>Self-testing using clang</b>: There are several neat ways to
 improve the quality of clang by self-testing. Some examples:
 <ul>
@@ -77,29 +61,16 @@ improve the quality of clang by self-testing. Some examples:
 </ul>
 </li>
 
-<li><b>Continue work on C++1y support</b>:
-  C++98 and C++11 are feature-complete, but there are still several C++1y features to
-  implement.  Please see the <a href="cxx_status.html">C++ status report
-  page</a> to find out what is missing.</li>
+<li><b>Continue work on C++20, C++2b, and C2x support</b>:
+  There are still several C++20 features to complete, and work has begun on
+  supporting the latest language standards. Please see the
+  <a href="cxx_status.html">C++ status report page</a> to find out what is
+  missing.</li>
 
 <li><b>StringRef'ize APIs</b>: A thankless but incredibly useful project is
 StringRef'izing (converting to use <tt>llvm::StringRef</tt> instead of <tt>const
 char *</tt> or <tt>std::string</tt>) various clang interfaces. This generally
 simplifies the code and makes it more efficient.</li>
-
-<li><b>Universal Driver</b>: Clang is inherently a cross compiler. We would like
-to define a new model for cross compilation which provides a great user
-experience -- it should be easy to cross compile applications, install support
-for new architectures, access different compilers and tools, and be consistent
-across different platforms. See the <a href="UniversalDriver.html">Universal
-Driver</a> web page for more information.</li>
-
-<li><b>XML Representation of ASTs</b>: Clang maintains a rich Abstract Syntax Tree that describes the program. Clang could emit an XML document that describes the program, which others tools could consume rather than being tied directly to the Clang binary.The XML representation needs to meet several requirements:
-  <ul>
-    <li><i>General</i>, so that it's able to represent C/C++/Objective-C abstractly, and isn't tied to the specific internal ASTs that Clang uses.</li>
-    <li><i>Documented</i>, with appropriate Schema against which the output of Clang's XML formatter can be verified.</li>
-    <li><i>Stable</i> across Clang versions.</li>
-  </ul></li>
 
 <li><b>Configuration Manager</b>: Clang/LLVM works on a large number of
 architectures and operating systems and can cross-compile to a similarly large
