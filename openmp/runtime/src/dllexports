@@ -401,9 +401,6 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_sections_init                289
         __kmpc_next_section                 290
         __kmpc_end_sections                 291
-        __kmpc_process_loop_nest_rectang    293
-        __kmpc_calc_original_ivs_rectang    295
-        __kmpc_for_collapsed_init           296
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.

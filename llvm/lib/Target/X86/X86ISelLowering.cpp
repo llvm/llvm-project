@@ -13332,12 +13332,20 @@ static SDValue lowerShuffleAsUNPCKAndPermute(const SDLoc &DL, MVT VT,
   SmallVector<int, 32> PermuteMask(NumElts, -1);
   for (int Elt = 0; Elt != NumElts; ++Elt) {
     int M = Mask[Elt];
+    if (M < 0)
+      continue;
+    int NormM = M;
     if (NumElts <= M)
-      PermuteMask[Elt] = NumLaneElts * ((M - NumElts) / NumLaneElts) +
-                         (2 * (M % NumHalfLaneElts)) + 1;
-    else if (0 <= M)
-      PermuteMask[Elt] =
-          NumLaneElts * (M / NumLaneElts) + (2 * (M % NumHalfLaneElts));
+      NormM -= NumElts;
+    bool IsFirstOp = M < NumElts;
+    int BaseMaskElt =
+        NumLaneElts * (NormM / NumLaneElts) + (2 * (NormM % NumHalfLaneElts));
+    if ((IsFirstOp && V1 == Ops[0]) || (!IsFirstOp && V2 == Ops[0]))
+      PermuteMask[Elt] = BaseMaskElt;
+    else if ((IsFirstOp && V1 == Ops[1]) || (!IsFirstOp && V2 == Ops[1]))
+      PermuteMask[Elt] = BaseMaskElt + 1;
+    assert(PermuteMask[Elt] != -1 &&
+           "Input mask element is defined but failed to assign permute mask");
   }
 
   unsigned UnpckOp = MatchLo ? X86ISD::UNPCKL : X86ISD::UNPCKH;

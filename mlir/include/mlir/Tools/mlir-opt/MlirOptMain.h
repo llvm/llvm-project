@@ -13,7 +13,7 @@
 #ifndef MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 #define MLIR_TOOLS_MLIROPT_MLIROPTMAIN_H
 
-#include "mlir/Debug/BreakpointManagers/FileLineColLocBreakpointManager.h"
+#include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -30,9 +30,6 @@ namespace mlir {
 class DialectRegistry;
 class PassPipelineCLParser;
 class PassManager;
-namespace tracing {
-class FileLineColLocBreakpointManager;
-}
 
 /// Configuration options for the mlir-opt tool.
 /// This is intended to help building tools like mlir-opt by collecting the
@@ -64,6 +61,14 @@ public:
     return allowUnregisteredDialectsFlag;
   }
 
+  /// Set the debug configuration to use.
+  MlirOptMainConfig &setDebugConfig(tracing::DebugConfig config) {
+    debugConfig = std::move(config);
+    return *this;
+  }
+  tracing::DebugConfig &getDebugConfig() { return debugConfig; }
+  const tracing::DebugConfig &getDebugConfig() const { return debugConfig; }
+
   /// Print the pass-pipeline as text before executing.
   MlirOptMainConfig &dumpPassPipeline(bool dump) {
     dumpPassPipelineFlag = dump;
@@ -85,26 +90,6 @@ public:
   }
   StringRef getIrdlFile() const { return irdlFileFlag; }
 
-  /// Set the filename to use for logging actions, use "-" for stdout.
-  MlirOptMainConfig &logActionsTo(StringRef filename) {
-    logActionsToFlag = filename;
-    return *this;
-  }
-  /// Get the filename to use for logging actions.
-  StringRef getLogActionsTo() const { return logActionsToFlag; }
-
-  /// Set a location breakpoint manager to filter out action logging based on
-  /// the attached IR location in the Action context. Ownership stays with the
-  /// caller.
-  void addLogActionLocFilter(tracing::BreakpointManager *breakpointManager) {
-    logActionLocationFilter.push_back(breakpointManager);
-  }
-
-  /// Get the location breakpoint managers to use to filter out action logging.
-  ArrayRef<tracing::BreakpointManager *> getLogActionsLocFilters() const {
-    return logActionLocationFilter;
-  }
-
   /// Set the callback to populate the pass manager.
   MlirOptMainConfig &
   setPassPipelineSetupFn(std::function<LogicalResult(PassManager &)> callback) {
@@ -120,15 +105,6 @@ public:
     if (passPipelineCallback)
       return passPipelineCallback(pm);
     return success();
-  }
-
-  // Deprecated.
-  MlirOptMainConfig &preloadDialectsInContext(bool preload) {
-    preloadDialectsInContextFlag = preload;
-    return *this;
-  }
-  bool shouldPreloadDialectsInContext() const {
-    return preloadDialectsInContextFlag;
   }
 
   /// Show the registered dialects before trying to load the input file.
@@ -174,26 +150,26 @@ protected:
   /// general.
   bool allowUnregisteredDialectsFlag = false;
 
+  /// Configuration for the debugging hooks.
+  tracing::DebugConfig debugConfig;
+
   /// Print the pipeline that will be run.
   bool dumpPassPipelineFlag = false;
 
   /// Emit bytecode instead of textual assembly when generating output.
   bool emitBytecodeFlag = false;
 
+  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
+  bool enableDebuggerActionHookFlag = false;
+
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
-
-  /// Log action execution to the given file (or "-" for stdout)
-  std::string logActionsToFlag;
 
   /// Location Breakpoints to filter the action logging.
   std::vector<tracing::BreakpointManager *> logActionLocationFilter;
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
-
-  /// Deprecated.
-  bool preloadDialectsInContextFlag = false;
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
@@ -228,36 +204,11 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           DialectRegistry &registry,
                           const MlirOptMainConfig &config);
 
-/// Perform the core processing behind `mlir-opt`.
-/// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
-                          std::unique_ptr<llvm::MemoryBuffer> buffer,
-                          const PassPipelineCLParser &passPipeline,
-                          DialectRegistry &registry, bool splitInputFile,
-                          bool verifyDiagnostics, bool verifyPasses,
-                          bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = false,
-                          bool emitBytecode = false, bool explicitModule = true,
-                          bool dumpPassPipeline = false);
-
-/// Perform the core processing behind `mlir-opt`.
-/// This API is deprecated, use the MlirOptMainConfig version above instead.
-LogicalResult MlirOptMain(
-    llvm::raw_ostream &outputStream, std::unique_ptr<llvm::MemoryBuffer> buffer,
-    PassPipelineFn passManagerSetupFn, DialectRegistry &registry,
-    bool splitInputFile, bool verifyDiagnostics, bool verifyPasses,
-    bool allowUnregisteredDialects, bool preloadDialectsInContext = false,
-    bool emitBytecode = false, bool explicitModule = true);
-
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
-/// - preloadDialectsInContext will trigger the upfront loading of all
-///   dialects from the global registry in the MLIRContext. This option is
-///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
-                          DialectRegistry &registry,
-                          bool preloadDialectsInContext = false);
+                          DialectRegistry &registry);
 
 /// Helper wrapper to return the result of MlirOptMain directly from main.
 ///

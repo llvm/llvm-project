@@ -14,9 +14,51 @@
 #include <stdint.h>
 
 namespace __llvm_libc {
+namespace gpu {
+
+constexpr const uint64_t LANE_SIZE = 1;
+
+LIBC_INLINE uint32_t get_num_blocks_x() { return 1; }
+
+LIBC_INLINE uint32_t get_num_blocks_y() { return 0; }
+
+LIBC_INLINE uint32_t get_num_blocks_z() { return 0; }
 
 LIBC_INLINE uint32_t get_block_id_x() { return 0; }
 
+LIBC_INLINE uint32_t get_block_id_y() { return 0; }
+
+LIBC_INLINE uint32_t get_block_id_z() { return 0; }
+
+LIBC_INLINE uint64_t get_block_id() { return 0; }
+
+LIBC_INLINE uint32_t get_num_threads_x() { return 1; }
+
+LIBC_INLINE uint32_t get_num_threads_y() { return 0; }
+
+LIBC_INLINE uint32_t get_num_threads_z() { return 0; }
+
+LIBC_INLINE uint32_t get_thread_id_x() { return 0; }
+
+LIBC_INLINE uint32_t get_thread_id_y() { return 0; }
+
+LIBC_INLINE uint32_t get_thread_id_z() { return 0; }
+
+LIBC_INLINE uint64_t get_thread_id() { return 0; }
+
+LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
+
+LIBC_INLINE uint32_t get_lane_id() { return 0; }
+
+LIBC_INLINE uint64_t get_lane_mask() { return 1; }
+
+LIBC_INLINE uint32_t broadcast_value(uint32_t x) { return x; }
+
+LIBC_INLINE void sync_threads() {}
+
+LIBC_INLINE void sync_lane(uint64_t) {}
+
+} // namespace gpu
 } // namespace __llvm_libc
 
 #endif
