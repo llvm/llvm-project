@@ -4525,11 +4525,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Op)) {
       const Intrinsic::ID IID = II->getIntrinsicID();
       switch (IID) {
-      case Intrinsic::fabs:
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, Known, Depth + 1, Q, TLI);
+      case Intrinsic::fabs: {
+        if ((InterestedClasses & (fcNan | fcPositive)) != fcNone) {
+          // If we only care about the sign bit we don't need to inspect the
+          // operand.
+          computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                              InterestedClasses, Known, Depth + 1, Q, TLI);
+        }
+
         Known.fabs();
         break;
+      }
       case Intrinsic::copysign: {
         KnownFPClass KnownSign;
 
