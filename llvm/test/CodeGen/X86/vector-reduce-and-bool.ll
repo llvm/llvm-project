@@ -16,7 +16,7 @@ define i1 @trunc_v2i64_v2i1(<2 x i64>) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psllq $63, %xmm0
 ; SSE2-NEXT:    movmskpd %xmm0, %eax
-; SSE2-NEXT:    cmpb $3, %al
+; SSE2-NEXT:    cmpl $3, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -151,7 +151,7 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) {
 ; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; SSE2-NEXT:    pslld $31, %xmm0
 ; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    cmpb $15, %al
+; SSE2-NEXT:    cmpl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
