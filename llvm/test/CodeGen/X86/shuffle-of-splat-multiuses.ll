@@ -7,7 +7,7 @@
 define <2 x double> @foo2(<2 x double> %v, ptr%p) nounwind {
 ; AVX2-LABEL: foo2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,1]
+; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,1]
 ; AVX2-NEXT:    vmovapd %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
   %res = shufflevector <2 x double> %v, <2 x double> undef, <2 x i32> <i32 1, i32 1>
