@@ -43,7 +43,9 @@
 #include <llvm-libc-macros/generic-error-number-macros.h>
 #endif
 
+#if !defined(__AMDGPU__) && !defined(__NVPTX__)
 extern _Thread_local int __llvmlibc_errno;
 #define errno __llvmlibc_errno
+#endif
 
 #endif // LLVM_LIBC_ERRNO_H
