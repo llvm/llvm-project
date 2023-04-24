@@ -2001,9 +2001,9 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   //
   // We shouldn't actually have any None type edges, so the sorting priority for
   // that is arbitrary, and we assert in that case below.
-  constexpr unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
-                                                   /*Cold*/ 1,
-                                                   /*NotColdCold*/ 2};
+  const unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
+                                               /*Cold*/ 1,
+                                               /*NotColdCold*/ 2};
   assert(std::size(AllocTypeCloningPriority) ==
          (std::size_t)AllocationType::All + 1);
   std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
