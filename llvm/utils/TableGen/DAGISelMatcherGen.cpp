@@ -110,15 +110,13 @@ namespace {
     Matcher *GetMatcher() const { return TheMatcher; }
   private:
     void AddMatcher(Matcher *NewNode);
-    void InferPossibleTypes(unsigned ForceMode);
+    void InferPossibleTypes();
 
     // Matcher Generation.
-    void EmitMatchCode(const TreePatternNode *N, TreePatternNode *NodeNoTypes,
-                       unsigned ForceMode);
+    void EmitMatchCode(const TreePatternNode *N, TreePatternNode *NodeNoTypes);
     void EmitLeafMatchCode(const TreePatternNode *N);
     void EmitOperatorMatchCode(const TreePatternNode *N,
-                               TreePatternNode *NodeNoTypes,
-                               unsigned ForceMode);
+                               TreePatternNode *NodeNoTypes);
 
     /// If this is the first time a node with unique identifier Name has been
     /// seen, record it. Otherwise, emit a check to make sure this is the same
@@ -167,19 +165,17 @@ MatcherGen::MatcherGen(const PatternToMatch &pattern,
   PatWithNoTypes->RemoveAllTypes();
 
   // If there are types that are manifestly known, infer them.
-  InferPossibleTypes(Pattern.getForceMode());
+  InferPossibleTypes();
 }
 
 /// InferPossibleTypes - As we emit the pattern, we end up generating type
 /// checks and applying them to the 'PatWithNoTypes' tree.  As we do this, we
 /// want to propagate implied types as far throughout the tree as possible so
 /// that we avoid doing redundant type checks.  This does the type propagation.
-void MatcherGen::InferPossibleTypes(unsigned ForceMode) {
+void MatcherGen::InferPossibleTypes() {
   // TP - Get *SOME* tree pattern, we don't care which.  It is only used for
   // diagnostics, which we know are impossible at this point.
   TreePattern &TP = *CGP.pf_begin()->second;
-  TP.getInfer().CodeGen = true;
-  TP.getInfer().ForceMode = ForceMode;
 
   bool MadeChange = true;
   while (MadeChange)
@@ -304,8 +300,7 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
 }
 
 void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
-                                       TreePatternNode *NodeNoTypes,
-                                       unsigned ForceMode) {
+                                       TreePatternNode *NodeNoTypes) {
   assert(!N->isLeaf() && "Not an operator?");
 
   if (N->getOperator()->isSubClassOf("ComplexPattern")) {
@@ -359,7 +354,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
 
         // Match the LHS of the AND as appropriate.
         AddMatcher(new MoveChildMatcher(0));
-        EmitMatchCode(N->getChild(0), NodeNoTypes->getChild(0), ForceMode);
+        EmitMatchCode(N->getChild(0), NodeNoTypes->getChild(0));
         AddMatcher(new MoveParentMatcher());
         return;
       }
@@ -458,7 +453,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
     // Get the code suitable for matching this child.  Move to the child, check
     // it then move back to the parent.
     AddMatcher(new MoveChildMatcher(OpNo));
-    EmitMatchCode(N->getChild(i), NodeNoTypes->getChild(i), ForceMode);
+    EmitMatchCode(N->getChild(i), NodeNoTypes->getChild(i));
     AddMatcher(new MoveParentMatcher());
   }
 }
@@ -499,8 +494,7 @@ bool MatcherGen::recordUniqueNode(ArrayRef<std::string> Names) {
 }
 
 void MatcherGen::EmitMatchCode(const TreePatternNode *N,
-                               TreePatternNode *NodeNoTypes,
-                               unsigned ForceMode) {
+                               TreePatternNode *NodeNoTypes) {
   // If N and NodeNoTypes don't agree on a type, then this is a case where we
   // need to do a type check.  Emit the check, apply the type to NodeNoTypes and
   // reinfer any correlated types.
@@ -509,7 +503,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode *N,
   for (unsigned i = 0, e = NodeNoTypes->getNumTypes(); i != e; ++i) {
     if (NodeNoTypes->getExtType(i) == N->getExtType(i)) continue;
     NodeNoTypes->setType(i, N->getExtType(i));
-    InferPossibleTypes(ForceMode);
+    InferPossibleTypes();
     ResultsToTypeCheck.push_back(i);
   }
 
@@ -531,7 +525,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode *N,
   if (N->isLeaf())
     EmitLeafMatchCode(N);
   else
-    EmitOperatorMatchCode(N, NodeNoTypes, ForceMode);
+    EmitOperatorMatchCode(N, NodeNoTypes);
 
   // If there are node predicates for this node, generate their checks.
   for (unsigned i = 0, e = N->getPredicateCalls().size(); i != e; ++i) {
@@ -573,8 +567,7 @@ bool MatcherGen::EmitMatcherCode(unsigned Variant) {
   }
 
   // Emit the matcher for the pattern structure and types.
-  EmitMatchCode(Pattern.getSrcPattern(), PatWithNoTypes.get(),
-                Pattern.getForceMode());
+  EmitMatchCode(Pattern.getSrcPattern(), PatWithNoTypes.get());
 
   // If the pattern has a predicate on it (e.g. only enabled when a subtarget
   // feature is around, do the check).
