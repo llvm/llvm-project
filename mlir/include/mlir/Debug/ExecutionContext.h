@@ -28,8 +28,16 @@ public:
   const ActionActiveStack *getParent() const { return parent; }
   const Action &getAction() const { return action; }
   int getDepth() const { return depth; }
+  void print(raw_ostream &os, bool withContext) const;
+  void dump() const {
+    print(llvm::errs(), /*withContext=*/true);
+    llvm::errs() << "\n";
+  }
+  Breakpoint *getBreakpoint() const { return breakpoint; }
+  void setBreakpoint(Breakpoint *breakpoint) { this->breakpoint = breakpoint; }
 
 private:
+  Breakpoint *breakpoint = nullptr;
   const ActionActiveStack *parent;
   const Action &action;
   int depth;
@@ -69,7 +77,9 @@ public:
   ExecutionContext() = default;
 
   /// Set the callback that is used to control the execution.
-  void setCallback(CallbackTy callback);
+  void setCallback(CallbackTy callback) {
+    onBreakpointControlExecutionCallback = callback;
+  }
 
   /// This abstract class defines the interface used to observe an Action
   /// execution. It allows to be notified before and after the callback is

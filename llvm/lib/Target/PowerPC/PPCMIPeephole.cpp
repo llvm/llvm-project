@@ -1315,13 +1315,16 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
     if (isEligibleBB(*Pred1MBB) && isEligibleForMoveCmp(*Pred2MBB)) {
       // We assume Pred1MBB is the BB containing the compare to be merged and
       // Pred2MBB is the BB to which we will append a compare instruction.
-      // Hence we can proceed as is.
+      // Proceed as is if Pred1MBB is different from MBB.
     }
     else if (isEligibleBB(*Pred2MBB) && isEligibleForMoveCmp(*Pred1MBB)) {
       // We need to swap Pred1MBB and Pred2MBB to canonicalize.
       std::swap(Pred1MBB, Pred2MBB);
     }
     else return false;
+
+    if (Pred1MBB == &MBB)
+      return false;
 
     // Here, Pred2MBB is the BB to which we need to append a compare inst.
     // We cannot move the compare instruction if operands are not available

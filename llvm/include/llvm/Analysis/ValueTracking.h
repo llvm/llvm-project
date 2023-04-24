@@ -311,7 +311,7 @@ struct KnownFPClass {
   }
 
   void fabs() {
-    KnownFPClasses = llvm::fabs(KnownFPClasses);
+    KnownFPClasses &= (fcPositive | fcNan);
     SignBit = false;
   }
 

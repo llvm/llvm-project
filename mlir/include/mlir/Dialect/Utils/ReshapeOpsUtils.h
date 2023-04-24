@@ -522,6 +522,7 @@ getSimplifyCollapseShapeWithRankReducingSliceInfo(
 
 struct PackingMetadata {
   SmallVector<int64_t> insertPositions;
+  SmallVector<int64_t> outerPositions;
   SmallVector<ReassociationIndices> reassociations;
 };
 

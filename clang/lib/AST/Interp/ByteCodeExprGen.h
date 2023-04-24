@@ -201,7 +201,7 @@ private:
   friend class ArrayIndexScope<Emitter>;
 
   /// Emits a zero initializer.
-  bool visitZeroInitializer(PrimType T, const Expr *E);
+  bool visitZeroInitializer(QualType QT, const Expr *E);
 
   enum class DerefKind {
     /// Value is read and pushed to stack.

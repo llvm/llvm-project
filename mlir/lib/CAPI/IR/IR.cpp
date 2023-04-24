@@ -751,6 +751,10 @@ MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
   return wrap(opOperand);
 }
 
+void mlirValueReplaceAllUsesOfWith(MlirValue oldValue, MlirValue newValue) {
+  unwrap(oldValue).replaceAllUsesWith(unwrap(newValue));
+}
+
 //===----------------------------------------------------------------------===//
 // OpOperand API.
 //===----------------------------------------------------------------------===//

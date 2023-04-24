@@ -171,6 +171,10 @@ struct CachingVPExpander {
   Value *expandPredicationInBinaryOperator(IRBuilder<> &Builder,
                                            VPIntrinsic &PI);
 
+  /// Lower this VP fp call to a unpredicated fp call.
+  Value *expandPredicationToFPCall(IRBuilder<> &Builder, VPIntrinsic &PI,
+                                   unsigned UnpredicatedIntrinsicID);
+
   /// Lower this VP reduction to a call to an unpredicated reduction intrinsic.
   Value *expandPredicationInReduction(IRBuilder<> &Builder,
                                       VPReductionIntrinsic &PI);
@@ -269,6 +273,38 @@ CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
 
   replaceOperation(*NewBinOp, VPI);
   return NewBinOp;
+}
+
+Value *CachingVPExpander::expandPredicationToFPCall(
+    IRBuilder<> &Builder, VPIntrinsic &VPI, unsigned UnpredicatedIntrinsicID) {
+  assert((maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam()) &&
+         "Implicitly dropping %evl in non-speculatable operator!");
+
+  switch (UnpredicatedIntrinsicID) {
+  case Intrinsic::fabs:
+  case Intrinsic::sqrt: {
+    Value *Op0 = VPI.getOperand(0);
+    Function *Fn = Intrinsic::getDeclaration(
+        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
+    Value *NewOp = Builder.CreateCall(Fn, {Op0}, VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
+  case Intrinsic::experimental_constrained_fma:
+  case Intrinsic::experimental_constrained_fmuladd: {
+    Value *Op0 = VPI.getOperand(0);
+    Value *Op1 = VPI.getOperand(1);
+    Value *Op2 = VPI.getOperand(2);
+    Function *Fn = Intrinsic::getDeclaration(
+        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
+    Value *NewOp =
+        Builder.CreateConstrainedFPCall(Fn, {Op0, Op1, Op2}, VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
+  }
+
+  return nullptr;
 }
 
 static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
@@ -565,12 +601,25 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   switch (VPI.getIntrinsicID()) {
   default:
     break;
+  case Intrinsic::vp_fneg: {
+    Value *NewNegOp = Builder.CreateFNeg(VPI.getOperand(0), VPI.getName());
+    replaceOperation(*NewNegOp, VPI);
+    return NewNegOp;  
+  }
+  case Intrinsic::vp_fabs:
+    return expandPredicationToFPCall(Builder, VPI, Intrinsic::fabs);
+  case Intrinsic::vp_sqrt:
+    return expandPredicationToFPCall(Builder, VPI, Intrinsic::sqrt);
   case Intrinsic::vp_load:
   case Intrinsic::vp_store:
   case Intrinsic::vp_gather:
   case Intrinsic::vp_scatter:
     return expandPredicationInMemoryIntrinsic(Builder, VPI);
   }
+
+  if (auto CID = VPI.getConstrainedIntrinsicID())
+    if (Value *Call = expandPredicationToFPCall(Builder, VPI, *CID))
+      return Call;
 
   return &VPI;
 }

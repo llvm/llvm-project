@@ -2330,17 +2330,14 @@ public:
   template<typename Fn> void match(Fn F) const { F(Contents); }
 
   void printLeft(OutputBuffer &OB) const override {
-    const char *first = &*Contents.begin();
-    const char *last = &*Contents.end() + 1;
-
     const size_t N = FloatData<Float>::mangled_size;
-    if (static_cast<std::size_t>(last - first) > N) {
-      last = first + N;
+    if (Contents.size() >= N) {
       union {
         Float value;
         char buf[sizeof(Float)];
       };
-      const char *t = first;
+      const char *t = &*Contents.begin();
+      const char *last = t + N;
       char *e = buf;
       for (; t != last; ++t, ++e) {
         unsigned d1 = isdigit(*t) ? static_cast<unsigned>(*t - '0')

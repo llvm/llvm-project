@@ -20,5 +20,6 @@ add_object_library(
   HDRS
     rpc_client.h
   DEPENDS
+    libc.src.__support.GPU.utils
     .rpc
 )

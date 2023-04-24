@@ -71,7 +71,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       InterfaceMethod<
       /*description=*/[{
         Get the IsDeviceAttr attribute on the current module if it exists and return
-        its value, if it doesn't exit it returns false by default.
+        its value, if it doesn't exist it returns false by default.
       }],
       /*retTy=*/"bool",
       /*methodName=*/"getIsDevice",
@@ -138,6 +138,34 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
                                              targetCPU.str(),
                                              targetFeatures.str()));
       }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Set a StringAttr on the current module containing the host IR file path. This 
+        file path is used in two-phase compilation during the device phase to generate
+        device side LLVM IR when lowering MLIR. 
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setHostIRFilePath", 
+      (ins "std::string":$hostIRFilePath), [{}], [{
+        $_op->setAttr(
+          mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.host_ir_filepath"}),
+            mlir::StringAttr::get($_op->getContext(), hostIRFilePath));
+       }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Find the host-ir file path StringAttr from the current module if it exists and 
+        return its contained value, if it doesn't exist it returns an empty string. This 
+        file path is used in two-phase compilation during the device phase to generate
+        device side LLVM IR when lowering MLIR. 
+      }],
+      /*retTy=*/"llvm::StringRef",
+      /*methodName=*/"getHostIRFilePath", 
+      (ins), [{}], [{
+        if (Attribute filepath = $_op->getAttr("omp.host_ir_filepath"))
+          if (filepath.isa<mlir::StringAttr>())
+            return filepath.dyn_cast<mlir::StringAttr>().getValue();
+        return {};
+      }]>
   ];
 }
 
