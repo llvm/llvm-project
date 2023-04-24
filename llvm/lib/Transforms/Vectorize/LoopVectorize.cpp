@@ -7741,6 +7741,7 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
   const LoopAccessInfo *LAI = ILV.Legal->getLAI();
+  std::unique_ptr<LoopVersioning> LVer = nullptr;
   if (LAI && !LAI->getRuntimePointerChecking()->getChecks().empty() &&
       !LAI->getRuntimePointerChecking()->getDiffChecks()) {
 
@@ -7748,9 +7749,10 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
     //  still use it to add the noalias metadata.
     //  TODO: Find a better way to re-use LoopVersioning functionality to add
     //        metadata.
-    State.LVer = std::make_unique<LoopVersioning>(
+    LVer = std::make_unique<LoopVersioning>(
         *LAI, LAI->getRuntimePointerChecking()->getChecks(), OrigLoop, LI, DT,
         PSE.getSE());
+    State.LVer = &*LVer;
     State.LVer->prepareNoAliasMetadata();
   }
 
