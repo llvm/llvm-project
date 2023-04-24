@@ -194,15 +194,29 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
 
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
-  // adds the other secondary input (e.g. device bitcode files for embedding)
-  // to the embed offload object. This is condensed logic from the Clang driver
-  // for embedding offload objects during HostOffloading.
-  if (IsHostOffloadingAction) {
-    for (size_t i = 1; i < Inputs.size(); ++i) {
-      if (Inputs[i].getType() != types::TY_Nothing)
-        CmdArgs.push_back(
-            Args.MakeArgString("-fembed-offload-object=" +
-                               getToolChain().getInputFilename(Inputs[i])));
+  // adds other secondary input (e.g. device bitcode files for embedding to the
+  // -fembed-offload-object argument or the host IR file for proccessing
+  // during device compilation to the fopenmp-host-ir-file-path argument via
+  // OpenMPDeviceInput). This is condensed logic from the ConstructJob
+  // function inside of the Clang driver for pushing on further input arguments
+  // needed for offloading during various phases of compilation.
+  for (size_t i = 1; i < Inputs.size(); ++i) {
+    if (Inputs[i].getType() == types::TY_Nothing) {
+      // contains nothing, so it's skippable
+    } else if (IsHostOffloadingAction) {
+      CmdArgs.push_back(
+          Args.MakeArgString("-fembed-offload-object=" +
+                             getToolChain().getInputFilename(Inputs[i])));
+    } else if (IsOpenMPDevice) {
+      if (Inputs[i].getFilename()) {
+        CmdArgs.push_back("-fopenmp-host-ir-file-path");
+        CmdArgs.push_back(Args.MakeArgString(Inputs[i].getFilename()));
+      } else {
+        llvm_unreachable("missing openmp host-ir file for device offloading");
+      }
+    } else {
+      llvm_unreachable(
+          "unexpectedly given multiple inputs or given unknown input");
     }
   }
 

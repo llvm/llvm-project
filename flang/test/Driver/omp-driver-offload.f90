@@ -47,15 +47,15 @@
 ! RUN: %flang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa %s 2>&1 | FileCheck --check-prefixes=CHECK-OPENMP-IS-DEVICE %s
 ! CHECK-OPENMP-IS-DEVICE: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-device" {{.*}}.f90"
 
-! Testing fembed-offload-object and fopenmp-is-device
+! Testing appropriate flags are gnerated and appropriately assigned by the driver when offloading
 ! RUN: %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
 ! RUN: --target=aarch64-unknown-linux-gnu \
-! RUN:   | FileCheck %s --check-prefixes=CHECK-OPENMP-EMBED
-! CHECK-OPENMP-EMBED: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}}.f90"
-! CHECK-OPENMP-EMBED-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-device" {{.*}}.f90"
-! CHECK-OPENMP-EMBED: "{{[^"]*}}clang-offload-packager{{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
-! CHECK-OPENMP-EMBED-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}} "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
+! RUN:   | FileCheck %s --check-prefix=OPENMP-OFFLOAD-ARGS
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}}.f90"
+! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp" {{.*}} "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-device" {{.*}}.f90"
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}clang-offload-packager" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}} "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
 
 ! Test -fopenmp with offload for RTL Flag Options
 ! RUN: %flang -### %s -o %t 2>&1 \
@@ -103,3 +103,9 @@
 ! CHECK-RTL-ALL: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-device" "-fopenmp-target-debug" "-fopenmp-assume-teams-oversubscription"
 ! CHECK-RTL-ALL: "-fopenmp-assume-threads-oversubscription" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
 ! CHECK-RTL-ALL: {{.*}}.f90"
+
+! Test diagnostic error when host IR file is non-existent 
+! RUN: not %flang_fc1 %s -o %t 2>&1 -fopenmp -fopenmp-is-device \
+! RUN: -fopenmp-host-ir-file-path non-existant-file.bc \
+! RUN: | FileCheck %s --check-prefix=HOST-IR-MISSING
+! HOST-IR-MISSING: error: provided host compiler IR file 'non-existant-file.bc' is required to generate code for OpenMP target regions but cannot be found
