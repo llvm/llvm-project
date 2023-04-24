@@ -447,7 +447,8 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     case OPT_throwingnew:
       break;
     default:
-      error(arg->getSpelling() + " is not allowed in .drectve");
+      error(arg->getSpelling() + " is not allowed in .drectve (" +
+            toString(file) + ")");
     }
   }
 }
