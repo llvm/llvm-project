@@ -2,9 +2,9 @@
 
 \[TOC\]
 
-See also the[slides](https://mlir.llvm.org/OpenMeetings/2023-02-23-Actions.pdf)
-and the [recording](<>) from the MLIR Open Meeting where this feature was
-demoed.
+See also the [slides](https://mlir.llvm.org/OpenMeetings/2023-02-23-Actions.pdf)
+and the [recording](https://youtu.be/ayQSyekVa3c) from the MLIR Open Meeting
+where this feature was demoed.
 
 ## Overview
 
@@ -68,7 +68,7 @@ public:
 };
 ```
 
-Any transformation can then be dispatch with this `Action` through the
+Any transformation can then be dispatched with this `Action` through the
 `MLIRContext`:
 
 ```c++
@@ -251,24 +251,31 @@ injection and control from a debugger.
   ///           operation, the execution continues without stopping.
   enum Control { Apply = 1, Skip = 2, Step = 3, Next = 4, Finish = 5 };
   ```
-  Since the callback actually controls the execution, there can be only one registered at any given time.
+  Since the callback actually controls the execution, there can be only one
+  registered at any given time.
 
 #### Debugger ExecutionContext Hook
 
-MLIR provides a callback for the `ExecutionContext` that implements a small runtime
-suitable for debuggers like `gdb` or `lldb` to interactively control the execution.
-It can be setup with `mlir::setupDebuggerExecutionContextHook(executionContext);` or
-using `mlir-opt` with the `--mlir-enable-debugger-hook` flag. This runtime exposes a
-set of C API function that can be called from a debugger to:
-- set breakpoints matching either action tags, or the `FileLineCol` locations of the IR associated with the action.
-- set the `Control` flag to be returned to the `ExecutionContext`.
-- control a "cursor" allowing to navigate through the IR and inspect it from the IR context associated with the action.
+MLIR provides a callback for the `ExecutionContext` that implements a small
+runtime suitable for debuggers like `gdb` or `lldb` to interactively control the
+execution. It can be setup with
+`mlir::setupDebuggerExecutionContextHook(executionContext);` or using `mlir-opt`
+with the `--mlir-enable-debugger-hook` flag. This runtime exposes a set of C API
+function that can be called from a debugger to:
 
-The implementation of this runtime can serve as an example for other implementation
-of programmatic control of the execution.
+- set breakpoints matching either action tags, or the `FileLineCol` locations of
+  the IR associated with the action.
+- set the `Control` flag to be returned to the `ExecutionContext`.
+- control a "cursor" allowing to navigate through the IR and inspect it from the
+  IR context associated with the action.
+
+The implementation of this runtime can serve as an example for other
+implementation of programmatic control of the execution.
 
 #### Logging Observer
 
-One observer is provided that allows to log action execution on a provided stream.
-It can be exercised with `mlir-opt` using `--log-actions-to=<filename>`, and optionally filtering the output with `--log-mlir-actions-filter=<FileLineCol>`.
-This observer is not thread-safe at the moment.
+One observer is provided that allows to log action execution on a provided
+stream. It can be exercised with `mlir-opt` using `--log-actions-to=<filename>`,
+and optionally filtering the output with
+`--log-mlir-actions-filter=<FileLineCol>`. This observer is not thread-safe at
+the moment.
