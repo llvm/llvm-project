@@ -967,8 +967,10 @@ def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   MetaVarName<"<directory>">;
 def c : Flag<["-"], "c">, Flags<[NoXarchOption, FlangOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
-def fconvergent_functions : Flag<["-"], "fconvergent-functions">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Assume functions may be convergent">;
+defm convergent_functions : BoolFOption<"convergent-functions",
+  LangOpts<"ConvergentFunctions">, DefaultFalse,
+  NegFlag<SetFalse, [], "Assume all functions may be convergent.">,
+  PosFlag<SetTrue, [CC1Option]>>;
 
 def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
   InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
