@@ -779,6 +779,29 @@ if.end3:
   ret void
 }
 
+;; The result of %cmp may change in a tail call. Don't lift %cmp to the entry block.
+; CHECK-LABEL: func_tailrecurse:
+; CHECK-NOT:     cmp
+; CHECK:       .LBB{{.*}}:
+; CHECK:         cmplw
+; CHECK:         blt
+define fastcc zeroext i32 @func_tailrecurse(i32 zeroext %a, i32 zeroext %b) {
+entry:
+  br label %tailrecurse
+
+tailrecurse:                                      ; preds = %tailrecurse, %entry
+  %a.tr = phi i32 [ %a, %entry ], [ %b.tr, %tailrecurse ]
+  %b.tr = phi i32 [ %b, %entry ], [ %a.tr, %tailrecurse ]
+  %cmp = icmp ult i32 %a.tr, %b.tr
+  %conv = zext i1 %cmp to i32
+  %ignore = call signext i32 (i32) @func(i32 %conv)
+  br i1 %cmp, label %tailrecurse, label %if.end
+
+if.end:                                           ; preds = %tailrecurse
+  %sub = sub nsw i32 %a.tr, %b.tr
+  ret i32 %sub
+}
+
 declare void @dummy1()
 declare void @dummy2()
 declare void @dummy3()

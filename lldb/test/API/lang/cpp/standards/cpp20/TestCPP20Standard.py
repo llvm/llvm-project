@@ -4,6 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestCPP20Standard(TestBase):
+    @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     def test_cpp20(self):
         """
         Tests that we can evaluate an expression in C++20 mode

@@ -179,7 +179,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitFunctionDecl(
       return true;
 
     // Skip methods in records.
-    for (auto P : Context.getParents(*Method)) {
+    for (const auto &P : Context.getParents(*Method)) {
       if (P.template get<CXXRecordDecl>())
         return true;
     }

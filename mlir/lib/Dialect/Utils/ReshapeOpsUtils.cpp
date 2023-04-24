@@ -480,6 +480,7 @@ PackingMetadata mlir::computePackingMetadata(int64_t packedRank,
                            res.insertPositions.end());
   res.reassociations.reserve(packedRank);
   for (int64_t i = 1; i <= packedRank; ++i) {
+    res.outerPositions.push_back(i - 1);
     if (!posSet.contains(i)) {
       res.reassociations.push_back(ReassociationIndices{i - 1});
       continue;

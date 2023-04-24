@@ -153,6 +153,8 @@
 ! HELP-FC1-NEXT: -fno-version-loops-for-stride
 ! HELP-FC1-NEXT:                        Do not create unit-strided loops (default)
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
+! HELP-FC1-NEXT: -fopenmp-host-ir-file-path <value> 
+! HELP-FC1-NEXT:                        Path to the IR file produced by the frontend for the host.
 ! HELP-FC1-NEXT: -fopenmp-is-device     Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug  Enable debugging in the OpenMP offloading device RTL
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.

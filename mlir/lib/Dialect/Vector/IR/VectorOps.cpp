@@ -4630,6 +4630,10 @@ Type GatherOp::getExpectedMaskType() {
                          IntegerType::get(vecType.getContext(), /*width=*/1));
 }
 
+std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
 namespace {
 class GatherFolder final : public OpRewritePattern<GatherOp> {
 public:
