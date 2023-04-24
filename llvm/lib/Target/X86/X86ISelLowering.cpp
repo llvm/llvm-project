@@ -47665,13 +47665,21 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
 
   // MOVMSKPS(V) !=/== 0 -> TESTPS(V,V)
   // MOVMSKPD(V) !=/== 0 -> TESTPD(V,V)
+  // MOVMSKPS(V) !=/== -1 -> TESTPS(V,V)
+  // MOVMSKPD(V) !=/== -1 -> TESTPD(V,V)
   // iff every element is referenced.
-  if (NumElts <= CmpBits && IsAnyOf && Subtarget.hasAVX() && IsOneUse &&
+  if (NumElts <= CmpBits && Subtarget.hasAVX() && IsOneUse &&
       (NumEltBits == 32 || NumEltBits == 64)) {
+    SDLoc DL(EFLAGS);
     MVT FloatSVT = MVT::getFloatingPointVT(NumEltBits);
     MVT FloatVT = MVT::getVectorVT(FloatSVT, NumElts);
-    SDValue V = DAG.getBitcast(FloatVT, Vec);
-    return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), MVT::i32, V, V);
+    MVT IntVT = FloatVT.changeVectorElementTypeToInteger();
+    SDValue LHS = Vec;
+    SDValue RHS = IsAnyOf ? Vec : DAG.getAllOnesConstant(DL, IntVT);
+    CC = IsAnyOf ? CC : (CC == X86::COND_E ? X86::COND_B : X86::COND_AE);
+    return DAG.getNode(X86ISD::TESTP, DL, MVT::i32,
+                       DAG.getBitcast(FloatVT, LHS),
+                       DAG.getBitcast(FloatVT, RHS));
   }
 
   return SDValue();
