@@ -80,6 +80,10 @@ def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
 
 def GetoptArgvT : NamedType<"__getoptargv_t">;
 
+def StructSockAddr : NamedType<"struct sockaddr">;
+def StructSockAddrPtr : PtrType<StructSockAddr>;
+def SAFamilyType : NamedType<"sa_family_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -1347,6 +1351,34 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec SysSocket = HeaderSpec<
+      "sys/socket.h",
+      [
+        Macro<"AF_UNSPEC">,
+        Macro<"AF_UNIX">,
+        Macro<"AF_LOCAL">,
+        Macro<"AF_INET">,
+        Macro<"AF_INET6">,
+        Macro<"SOCK_STREAM">,
+        Macro<"SOCK_DGRAM">,
+        Macro<"SOCK_RAW">,
+        Macro<"SOCK_RDM">,
+        Macro<"SOCK_SEQPACKET">,
+        Macro<"SOCK_PACKET">,
+      ], // Macros
+      [
+        StructSockAddr, SAFamilyType,
+      ], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+          "socket",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<IntType>]
+        >,
+      ]  // Functions
+  >;
+
   HeaderSpec SysTypes = HeaderSpec<
     "sys/types.h",
     [], // Macros
@@ -1373,6 +1405,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysMMan,
     SysResource,
     SysSelect,
+    SysSocket,
     SysStat,
     SysTypes,
     SysUtsName,
