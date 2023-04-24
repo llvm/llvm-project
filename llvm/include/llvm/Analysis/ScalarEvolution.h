@@ -964,12 +964,6 @@ public:
   /// If S is guaranteed to be 0, it returns the bitwidth of S.
   uint32_t getMinTrailingZeros(const SCEV *S);
 
-  /// Returns the max constant multiple of S.
-  APInt getConstantMultiple(const SCEV *S);
-
-  // Returns the max constant multiple of S. If S is exactly 0, return 1.
-  APInt getNonZeroConstantMultiple(const SCEV *S);
-
   /// Determine the unsigned range for a particular SCEV.
   /// NOTE: This returns a copy of the reference returned by getRangeRef.
   ConstantRange getUnsignedRange(const SCEV *S) {
@@ -1437,14 +1431,14 @@ private:
   /// predicate by splitting it into a set of independent predicates.
   bool ProvingSplitPredicate = false;
 
-  /// Memoized values for the getConstantMultiple
-  DenseMap<const SCEV *, APInt> ConstantMultipleCache;
+  /// Memoized values for the GetMinTrailingZeros
+  DenseMap<const SCEV *, uint32_t> MinTrailingZerosCache;
 
   /// Return the Value set from which the SCEV expr is generated.
   ArrayRef<Value *> getSCEVValues(const SCEV *S);
 
-  /// Private helper method for the getConstantMultiple method.
-  APInt getConstantMultipleImpl(const SCEV *S);
+  /// Private helper method for the GetMinTrailingZeros method
+  uint32_t getMinTrailingZerosImpl(const SCEV *S);
 
   /// Information about the number of times a particular loop exit may be
   /// reached before exiting the loop.
