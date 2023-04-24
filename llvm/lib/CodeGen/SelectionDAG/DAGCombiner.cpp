@@ -3934,11 +3934,6 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   // If the relocation model supports it, consider symbol offsets.
   if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0))
     if (!LegalOperations && TLI.isOffsetFoldingLegal(GA)) {
-      // fold (sub Sym, c) -> Sym-c
-      if (N1C && GA->getOpcode() == ISD::GlobalAddress)
-        return DAG.getGlobalAddress(GA->getGlobal(), SDLoc(N1C), VT,
-                                    GA->getOffset() -
-                                        (uint64_t)N1C->getSExtValue());
       // fold (sub Sym+c1, Sym+c2) -> c1-c2
       if (GlobalAddressSDNode *GB = dyn_cast<GlobalAddressSDNode>(N1))
         if (GA->getGlobal() == GB->getGlobal())
