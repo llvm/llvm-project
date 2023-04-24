@@ -34,26 +34,45 @@ difficult to navigate. We would appreciate help with:
       target-specific information,</li>
   <li>adding documentation for currently
      <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/AttrDocs.td">
-     undocumented attributes,</li>
+     undocumented attributes</a>,</li>
   <li>documenting <a href="https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Basic/DiagnosticDocs.td">
-      diagnostic group flags (adding code examples of what is diagnosed, or
+      diagnostic group flags</a> (adding code examples of what is diagnosed, or
       other relevant information), or</li>
   <li>help with completing other missing documentation.</li>
 </ul>
 These projects are independent of each other.</li>
 
-<li><b>Improve Clang's standard conformance test coverage</b>: Clang's test
-suite is structured such that most tests are written to provide coverage for
-what part of the compiler the feature's implementation exists in; we have
-parsing tests in <code>clang/test/Parser</code>, and semantic analysis tests in
-<code>clang/test/Sema*</code>, etc. We also have tests written to provide
-coverage for the standard requirements (<code>clang/test/CXX</code> and <code>
-clang/test/C</code>). The standards coverage is not structured in a way that
-makes it easy to maintain as the standards change over time. No commercial
+<li><b>Complete the investigation into Clang's C conformance</b>: Clang's
+<a href="c_status.html">C status page</a> contain a number of entries marked as
+<code>Unknown</code>. Completing the investigation involves adding
+<a href="https://github.com/llvm/llvm-project/tree/main/clang/test/C">test
+coverage</a> for the various standards papers and updating the documentation
+accordingly.
+</li>
+
+<li><b>Improve Clang's C and C++ standard conformance test coverage</b>:
+Clang's test suite is structured such that most tests are written to provide
+coverage for what part of the compiler the feature's implementation exists in;
+we have parsing tests in <code>clang/test/Parser</code>, and semantic analysis
+tests in <code>clang/test/Sema*</code>, etc. We also have tests written to
+provide coverage for the standard requirements (<code>clang/test/CXX</code> and
+<code>clang/test/C</code>). The standards coverage is not structured in a way
+that makes it easy to maintain as the standards change over time. No commercial
 conformance test suite has a license model suitable for open source projects,
 so we would appreciate help in improving the existing coverage we have both in
 terms of layout of the tests as well as in coverage of the various standard
 modes.</li>
+
+<li><b>Complete the investigation into Clang's C and C++ Defect Report
+conformance</b>: Separate from (but related to) general conformance testing is
+determining which <a href="c_dr_status.html">C defect reports</a> and
+<a href="cxx_dr_status.html">C++ defect reports</a> Clang implements. These
+lists currently have a number of entries marked as <code>Unknown</code>.
+Completing the investigation involves adding test coverage for
+<a href="https://github.com/llvm/llvm-project/tree/main/clang/test/C/drs">C</a>
+and
+<a href="https://github.com/llvm/llvm-project/tree/main/clang/test/CXX/drs">C++</a>
+defect reports and updating the documentation accordingly.
 
 <li><b>Bug triage</b>: Clang's <a href="https://github.com/llvm/llvm-project/issues">
 issue tracker</a>currently has over 20,000 open issues, many of which are not
@@ -62,6 +81,12 @@ or otherwise needs some manual interaction. We can always use help with
 <a href="https://llvm.org/docs/BugLifeCycle.html#triaging-bugs">bug triage and
 issue tracker maintenance</a>.
 </li>
+
+<li><b>Improve build times with Clang</b>: the time it takes Clang to process a
+translation unit is very important to our users; the lower the build time, the
+better the overall user experience. It would be good to improve Clang's
+performance as well as to find ways to proactively alert us when we've
+introduced a change that has significant negative impact on build times.</li>
 
 <li><b>Implement an tool to generate code documentation</b>: Clang's
 library-based design allows it to be used by a variety of tools that reason
