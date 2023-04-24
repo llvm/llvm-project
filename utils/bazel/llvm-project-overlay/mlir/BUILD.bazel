@@ -6746,7 +6746,6 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":ViewLikeInterface",
-        "//llvm:Analysis",
         "//llvm:Support",
     ],
 )
