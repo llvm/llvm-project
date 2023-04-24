@@ -1860,7 +1860,7 @@ int testOperands(void) {
       mlirOperationStateGet(mlirStringRefCreateFromCString("dummy.op2"), loc);
   MlirValue initialOperands2[] = {constOneValue};
   mlirOperationStateAddOperands(&op2State, 1, initialOperands2);
-  (void)mlirOperationCreate(&op2State);
+  MlirOperation op2 = mlirOperationCreate(&op2State);
 
   MlirOpOperand use3 = mlirValueGetFirstUse(constOneValue);
   fprintf(stderr, "First use owner: ");
@@ -1896,6 +1896,7 @@ int testOperands(void) {
   // CHECK: Second replacement use owner: "dummy.op2"
 
   mlirOperationDestroy(op);
+  mlirOperationDestroy(op2);
   mlirOperationDestroy(mlirOpResultGetOwner(constZeroValue));
   mlirOperationDestroy(mlirOpResultGetOwner(constOneValue));
   mlirOperationDestroy(mlirOpResultGetOwner(constTwoValue));
@@ -1913,7 +1914,6 @@ int testClone(void) {
   registerAllUpstreamDialects(ctx);
 
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
-  MlirLocation loc = mlirLocationUnknownGet(ctx);
   MlirStringRef valueStringRef = mlirStringRefCreateFromCString("value");
 
   MlirValue constZeroValue = makeConstantLiteral(ctx, "0", "index");
