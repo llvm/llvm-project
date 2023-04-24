@@ -57,7 +57,8 @@ int atexit(void (*func)(void)) { return __llvm_libc::atexit(func); }
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 
-static uint8_t memory[16384];
+static constexpr uint64_t MEMORY_SIZE = 16384;
+static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 
 extern "C" {
@@ -65,7 +66,7 @@ extern "C" {
 void *malloc(size_t s) {
   void *mem = ptr;
   ptr += s;
-  return mem;
+  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
 
 void free(void *) {}
