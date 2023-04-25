@@ -4,6 +4,7 @@ add_flang_library(HLFIRTransforms
   BufferizeHLFIR.cpp
   ConvertToFIR.cpp
   LowerHLFIRIntrinsics.cpp
+  SimplifyHLFIRIntrinsics.cpp
 
   DEPENDS
   FIRDialect
