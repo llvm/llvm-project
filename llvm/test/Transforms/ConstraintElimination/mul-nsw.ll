@@ -4,8 +4,8 @@
 declare void @use(i1)
 declare void @llvm.assume(i1)
 
-define void @slt_mul_nsw_3_known_positive(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_3_known_positive(
+define void @slt_mul_nsw_3_known_positive_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_known_positive_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -29,20 +29,6 @@ define void @slt_mul_nsw_3_known_positive(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
-; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
-; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
-; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -70,6 +56,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_nsw_3_known_positive_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_known_positive_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, 3
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp sgt i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.4 = icmp slt i8 %start, %high
   call void @use(i1 %c.4)
   %else.start.1 = mul nsw i8 %start, 1
@@ -87,8 +114,8 @@ else:
   ret void
 }
 
-define void @slt_mul_no_nsw_3_known_positive(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_no_nsw_3_known_positive(
+define void @slt_mul_no_nsw_3_known_positive_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_no_nsw_3_known_positive_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul i8 [[START:%.*]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -112,20 +139,6 @@ define void @slt_mul_no_nsw_3_known_positive(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_7]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
-; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_9]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
-; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_10]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
-; CHECK-NEXT:    [[C_11:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_11]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
-; CHECK-NEXT:    [[C_12:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_12]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -153,6 +166,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_no_nsw_3_known_positive_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_no_nsw_3_known_positive_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_9]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_10]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_11:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_11]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_12:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_12]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul i8 %start, 3
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp sgt i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.8 = icmp slt i8 %start, %high
   call void @use(i1 %c.8)
   %else.start.1 = mul nsw i8 %start, 1
@@ -170,8 +224,8 @@ else:
   ret void
 }
 
-define void @slt_mul_nsw_3_not_known_positive(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_3_not_known_positive(
+define void @slt_mul_nsw_3_not_known_positive_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_not_known_positive_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul i8 [[START:%.*]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -193,20 +247,6 @@ define void @slt_mul_nsw_3_not_known_positive(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_7]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
-; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_9]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
-; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_10]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
-; CHECK-NEXT:    [[C_11:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_11]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
-; CHECK-NEXT:    [[C_12:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_12]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -232,6 +272,43 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_nsw_3_not_known_positive_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_not_known_positive_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_9]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_10]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_11:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_11]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_12:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_12]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul i8 %start, 3
+  %c.1 = icmp slt i8 %mul.3, %high
+  br i1 %c.1, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.8 = icmp slt i8 %start, %high
   call void @use(i1 %c.8)
   %else.start.1 = mul nsw i8 %start, 1
@@ -249,8 +326,8 @@ else:
   ret void
 }
 
-define void @slt_mul_nsw_neg_3_known_negative(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_neg_3_known_negative(
+define void @slt_mul_nsw_neg_3_known_negative_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_neg_3_known_negative_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], -3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -274,20 +351,6 @@ define void @slt_mul_nsw_neg_3_known_negative(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], -1
-; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], -2
-; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], -3
-; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], -4
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -315,6 +378,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_nsw_neg_3_known_negative_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_neg_3_known_negative_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], -3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], -1
+; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], -2
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], -3
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], -4
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, -3
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp slt i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.4 = icmp slt i8 %start, %high
   call void @use(i1 %c.4)
   %else.start.1 = mul nsw i8 %start, -1
@@ -332,8 +436,8 @@ else:
   ret void
 }
 
-define void @slt_mul_nsw_3_known_negative(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_3_known_negative(
+define void @slt_mul_nsw_3_known_negative_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_known_negative_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -357,20 +461,6 @@ define void @slt_mul_nsw_3_known_negative(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
-; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
-; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_9]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
-; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_10]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -398,6 +488,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_nsw_3_known_negative_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_known_negative_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_9]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_10]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, 3
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp slt i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.6 = icmp slt i8 %start, %high
   call void @use(i1 %c.6)
   %else.start.1 = mul nsw i8 %start, 1
@@ -415,8 +546,8 @@ else:
   ret void
 }
 
-define void @slt_mul_nsw_neg_3_known_positive(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_neg_3_known_positive(
+define void @slt_mul_nsw_neg_3_known_positive_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_neg_3_known_positive_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], -3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -440,20 +571,6 @@ define void @slt_mul_nsw_neg_3_known_positive(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], -1
-; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], -2
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], -3
-; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_9]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], -4
-; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_10]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -481,6 +598,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_nsw_neg_3_known_positive_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_neg_3_known_positive_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], -3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], -1
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], -2
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], -3
+; CHECK-NEXT:    [[C_9:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_9]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], -4
+; CHECK-NEXT:    [[C_10:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_10]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, -3
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp sgt i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.6 = icmp slt i8 %start, %high
   call void @use(i1 %c.6)
   %else.start.1 = mul nsw i8 %start, -1
@@ -498,8 +656,8 @@ else:
   ret void
 }
 
-define void @slt_mul_nsw_3_known_nonnegative(i8 %start, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_3_known_nonnegative(
+define void @slt_mul_nsw_3_known_nonnegative_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_known_nonnegative_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -523,20 +681,6 @@ define void @slt_mul_nsw_3_known_nonnegative(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
-; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
-; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
-; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -564,6 +708,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @slt_mul_nsw_3_known_nonnegative_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_3_known_nonnegative_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, 3
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp sge i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.4 = icmp slt i8 %start, %high
   call void @use(i1 %c.4)
   %else.start.1 = mul nsw i8 %start, 1
@@ -581,8 +766,8 @@ else:
   ret void
 }
 
-define void @slt_mul_nsw_both_var_non_negative(i8 %start, i8 %scale, i8 %high) {
-; CHECK-LABEL: @slt_mul_nsw_both_var_non_negative(
+define void @slt_mul_nsw_both_var_non_negative_1(i8 %start, i8 %scale, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_both_var_non_negative_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], [[SCALE:%.*]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
@@ -672,8 +857,71 @@ else:
   ret void
 }
 
-define void @ult_mul_nsw_3_known_positive(i8 %start, i8 %high) {
-; CHECK-LABEL: @ult_mul_nsw_3_known_positive(
+define void @slt_mul_nsw_both_var_non_negative_2(i8 %start, i8 %scale, i8 %high) {
+; CHECK-LABEL: @slt_mul_nsw_both_var_non_negative_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], [[SCALE:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp slt i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i8 [[START]], 0
+; CHECK-NEXT:    [[C3:%.*]] = icmp sgt i8 [[SCALE]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
+; CHECK-NEXT:    [[C4:%.*]] = icmp sle i8 [[SCALE]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C3]])
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, %scale
+  %c.1 = icmp slt i8 %mul.3, %high
+  %c.2 = icmp sgt i8 %start, 0
+  %c3 = icmp sgt i8 %scale, 0
+  call void @llvm.assume(i1 %c3)
+  %c4 = icmp sle i8 %scale, 3
+  call void @llvm.assume(i1 %c3)
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
+  %c.4 = icmp slt i8 %start, %high
+  call void @use(i1 %c.4)
+  %else.start.1 = mul nsw i8 %start, 1
+  %c.5 = icmp slt i8 %else.start.1, %high
+  call void @use(i1 %c.5)
+  %else.start.2 = mul nsw i8 %start, 2
+  %c.6 = icmp slt i8 %else.start.2, %high
+  call void @use(i1 %c.6)
+  %else.start.3 = mul nsw i8 %start, 3
+  %c.7 = icmp slt i8 %else.start.3, %high
+  call void @use(i1 %c.7)
+  %else.start.4 = mul nsw i8 %start, 4
+  %c.8 = icmp slt i8 %else.start.4, %high
+  call void @use(i1 %c.8)
+  ret void
+}
+
+define void @ult_mul_nsw_3_known_positive_1(i8 %start, i8 %high) {
+; CHECK-LABEL: @ult_mul_nsw_3_known_positive_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[MUL_3]], [[HIGH:%.*]]
@@ -697,20 +945,6 @@ define void @ult_mul_nsw_3_known_positive(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
-; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
-; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_5]])
-; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
-; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_6]])
-; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
-; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_7]])
-; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
-; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[C_8]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -738,6 +972,47 @@ then:
   ret void
 
 else:
+  ret void
+}
+
+define void @ult_mul_nsw_3_known_positive_2(i8 %start, i8 %high) {
+; CHECK-LABEL: @ult_mul_nsw_3_known_positive_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul nsw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[MUL_3]], [[HIGH:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[START]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[ELSE_START_1:%.*]] = mul nsw i8 [[START]], 1
+; CHECK-NEXT:    [[C_5:%.*]] = icmp slt i8 [[ELSE_START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[ELSE_START_2:%.*]] = mul nsw i8 [[START]], 2
+; CHECK-NEXT:    [[C_6:%.*]] = icmp slt i8 [[ELSE_START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[ELSE_START_3:%.*]] = mul nsw i8 [[START]], 3
+; CHECK-NEXT:    [[C_7:%.*]] = icmp slt i8 [[ELSE_START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[ELSE_START_4:%.*]] = mul nsw i8 [[START]], 4
+; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i8 [[ELSE_START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %mul.3  = mul nsw i8 %start, 3
+  %c.1 = icmp ult i8 %mul.3, %high
+  %c.2 = icmp ugt i8 %start, 0
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %then, label %else
+
+then:
+  ret void
+
+else:
   %c.4 = icmp slt i8 %start, %high
   call void @use(i1 %c.4)
   %else.start.1 = mul nsw i8 %start, 1
@@ -754,5 +1029,3 @@ else:
   call void @use(i1 %c.8)
   ret void
 }
-
-
