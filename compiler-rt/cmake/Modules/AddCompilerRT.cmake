@@ -508,7 +508,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   set(output_dir "${output_dir}/${CMAKE_CFG_INTDIR}")
   file(MAKE_DIRECTORY "${output_dir}")
   set(output_bin "${output_dir}/${test_name}")
-  if(MSVC)
+  if(WIN32)
     set(output_bin "${output_bin}.exe")
   endif()
 

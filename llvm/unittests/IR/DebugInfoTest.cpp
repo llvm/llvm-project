@@ -190,6 +190,47 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
   EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
 }
 
+TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
+    entry:
+      call void @llvm.dbg.declare(metadata !{}, metadata !13, metadata !DIExpression()), !dbg !16
+      ret void, !dbg !16
+    }
+
+    declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3}
+    !llvm.ident = !{!8}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 16.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "test.c", directory: "/")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !8 = !{!"clang version 16.0.0"}
+    !9 = distinct !DISubprogram(name: "fun", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+    !10 = !DISubroutineType(types: !11)
+    !11 = !{null}
+    !12 = !{!13}
+    !13 = !DILocalVariable(name: "a", scope: !9, file: !1, line: 1, type: !14)
+    !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !16 = !DILocation(line: 1, column: 21, scope: !9)
+    )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+
+  // Get the dbg.declare.
+  Function &F = *cast<Function>(M->getNamedValue("fun"));
+  DbgVariableIntrinsic *DbgDeclare =
+      cast<DbgVariableIntrinsic>(&F.front().front());
+  // Check that this form counts as a "no location" marker.
+  EXPECT_TRUE(DbgDeclare->isKillLocation());
+}
+
 TEST(DIBuiler, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));

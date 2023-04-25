@@ -2185,7 +2185,7 @@ void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
       if (NewVM)
         VM = NewVM;
       else
-        VM = ValueAsMetadata::get(UndefValue::get(VM->getValue()->getType()));
+        VM = ValueAsMetadata::get(PoisonValue::get(VM->getValue()->getType()));
     }
   }
   if (Uniq) {
