@@ -511,9 +511,14 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
     return false;
 
   m_element_stride = *stride;
-
   if (m_children.empty()) {
     size_t buffer_size = num_children * m_element_stride;
+    if (buffer_size > 512*1024*1024) {
+      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+               "Suspiciously large object: num_children={0}, stride={1}",
+               num_children, m_element_stride);
+      return false;
+    }
     m_buffer_sp.reset(new DataBufferHeap(buffer_size, 0));
 
     Status error;
