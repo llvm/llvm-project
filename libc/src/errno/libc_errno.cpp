@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/properties/architectures.h"
+#include "libc_errno.h"
 
 namespace __llvm_libc {
 
