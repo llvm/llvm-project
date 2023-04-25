@@ -5230,14 +5230,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {
-    StringRef v = A->getValue();
-    // FIXME: Validate the argument here so we don't produce meaningless errors
-    // about -fwarn-stack-size=.
-    if (v.empty())
-      D.Diag(diag::err_drv_missing_argument) << A->getSpelling() << 1;
+    StringRef V = A->getValue(), V1 = V;
+    unsigned Size;
+    if (V1.consumeInteger(10, Size) || !V1.empty())
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << V << A->getOption().getName();
     else
-      CmdArgs.push_back(Args.MakeArgString("-fwarn-stack-size=" + v));
-    A->claim();
+      CmdArgs.push_back(Args.MakeArgString("-fwarn-stack-size=" + V));
   }
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fjump_tables,
