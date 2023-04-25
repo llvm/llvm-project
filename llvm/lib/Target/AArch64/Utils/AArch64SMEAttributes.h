@@ -30,7 +30,7 @@ public:
     Normal = 0,
     SM_Enabled = 1 << 0,    // aarch64_pstate_sm_enabled
     SM_Compatible = 1 << 1, // aarch64_pstate_sm_compatible
-    SM_Body = 1 << 2,       // aarch64_pstate_sm_locally
+    SM_Body = 1 << 2,       // aarch64_pstate_sm_body
     ZA_Shared = 1 << 3,     // aarch64_pstate_sm_shared
     ZA_New = 1 << 4,        // aarch64_pstate_sm_new
     ZA_Preserved = 1 << 5,  // aarch64_pstate_sm_preserved
