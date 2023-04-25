@@ -260,7 +260,10 @@ Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
     return Status("Scripted Processes don't support hardware breakpoints");
   }
 
-  return EnableSoftwareBreakpoint(bp_site);
+  Status error;
+  GetInterface().CreateBreakpoint(bp_site->GetLoadAddress(), error);
+
+  return error;
 }
 
 ArchSpec ScriptedProcess::GetArchitecture() {
