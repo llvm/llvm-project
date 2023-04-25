@@ -33,10 +33,10 @@ add_llvm_target(CSKYCodeGen
   LINK_COMPONENTS
   Analysis
   AsmPrinter
-  Core
-  CodeGen
   CSKYDesc
   CSKYInfo
+  CodeGen
+  Core
   MC
   SelectionDAG
   Support

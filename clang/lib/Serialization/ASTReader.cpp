@@ -2523,7 +2523,8 @@ void ASTReader::ResolveImportedPath(ModuleFile &M, std::string &Filename) {
 }
 
 void ASTReader::ResolveImportedPath(std::string &Filename, StringRef Prefix) {
-  if (Filename.empty() || llvm::sys::path::is_absolute(Filename))
+  if (Filename.empty() || llvm::sys::path::is_absolute(Filename) ||
+      Filename == "<built-in>" || Filename == "<command line>")
     return;
 
   SmallString<128> Buffer;

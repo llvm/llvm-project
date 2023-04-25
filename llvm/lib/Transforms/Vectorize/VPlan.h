@@ -25,7 +25,6 @@
 
 #include "VPlanValue.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -38,7 +37,6 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
-#include "llvm/Transforms/Utils/LoopVersioning.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -62,6 +60,7 @@ class VPlan;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
+class LoopVersioning;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -410,7 +409,7 @@ struct VPTransformState {
   ///
   /// This is currently only used to add no-alias metadata based on the
   /// memchecks.  The actually versioning is performed manually.
-  std::unique_ptr<LoopVersioning> LVer;
+  LoopVersioning *LVer = nullptr;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
@@ -2326,7 +2325,7 @@ public:
   void setName(const Twine &newName) { Name = newName.str(); }
 
   void addVPValue(Value *V, VPValue *VPV) {
-    assert((Value2VPValueEnabled || !VPV->getDefiningRecipe()) &&
+    assert((Value2VPValueEnabled || VPV->isLiveIn()) &&
            "Value2VPValue mapping may be out of date!");
     assert(V && "Trying to add a null Value to VPlan");
     assert(!Value2VPValue.count(V) && "Value already exists in VPlan");
@@ -2339,7 +2338,7 @@ public:
     assert(V && "Trying to get the VPValue of a null Value");
     assert(Value2VPValue.count(V) && "Value does not exist in VPlan");
     assert((Value2VPValueEnabled || OverrideAllowed ||
-            !Value2VPValue[V]->getDefiningRecipe()) &&
+            Value2VPValue[V]->isLiveIn()) &&
            "Value2VPValue mapping may be out of date!");
     return Value2VPValue[V];
   }

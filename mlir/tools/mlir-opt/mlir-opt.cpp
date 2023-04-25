@@ -261,6 +261,5 @@ int main(int argc, char **argv) {
   ::test::registerTestDynDialect(registry);
 #endif
   return mlir::asMainReturnCode(
-      mlir::MlirOptMain(argc, argv, "MLIR modular optimizer driver\n", registry,
-                        /*preloadDialectsInContext=*/false));
+      mlir::MlirOptMain(argc, argv, "MLIR modular optimizer driver\n", registry));
 }

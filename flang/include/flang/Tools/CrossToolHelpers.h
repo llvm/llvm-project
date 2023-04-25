@@ -23,13 +23,14 @@ struct OffloadModuleOpts {
   OffloadModuleOpts() {}
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
-      bool OpenMPNoNestedParallelism, bool OpenMPIsDevice)
+      bool OpenMPNoNestedParallelism, bool OpenMPIsDevice,
+      std::string OMPHostIRFile = {})
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
         OpenMPThreadSubscription(OpenMPThreadSubscription),
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
-        OpenMPIsDevice(OpenMPIsDevice) {}
+        OpenMPIsDevice(OpenMPIsDevice), OMPHostIRFile(OMPHostIRFile) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
@@ -37,7 +38,8 @@ struct OffloadModuleOpts {
         OpenMPThreadSubscription(Opts.OpenMPThreadSubscription),
         OpenMPNoThreadState(Opts.OpenMPNoThreadState),
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
-        OpenMPIsDevice(Opts.OpenMPIsDevice) {}
+        OpenMPIsDevice(Opts.OpenMPIsDevice), OMPHostIRFile(Opts.OMPHostIRFile) {
+  }
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -45,6 +47,7 @@ struct OffloadModuleOpts {
   bool OpenMPNoThreadState = false;
   bool OpenMPNoNestedParallelism = false;
   bool OpenMPIsDevice = false;
+  std::string OMPHostIRFile = {};
 };
 
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
@@ -59,6 +62,9 @@ void setOffloadModuleInterfaceAttributes(
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
           Opts.OpenMPNoNestedParallelism);
+
+      if (!Opts.OMPHostIRFile.empty())
+        offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
     }
   }
 }

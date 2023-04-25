@@ -1630,6 +1630,51 @@ void test_strpbrk() {
 #endif
 }
 
+void test_strsep() {
+  char *s = strdup("Hello world/");
+  char *delim = strdup(" /");
+
+  char *p_s = s;
+  char *base = s;
+  char *p_delim = delim;
+
+  // taint delim bytes
+  dfsan_set_label(i_label, p_delim, strlen(p_delim));
+  // taint delim pointer
+  dfsan_set_label(j_label, &p_delim, sizeof(p_delim));
+  // taint the string data bytes
+  dfsan_set_label(k_label, s, 5);
+  // taint the string pointer
+  dfsan_set_label(m_label, &p_s, sizeof(p_s));
+
+  char *rv = strsep(&p_s, p_delim);
+  assert(rv == &base[0]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, m_label);
+  ASSERT_READ_LABEL(rv, strlen(rv), k_label);
+#else
+  ASSERT_LABEL(rv, dfsan_union(dfsan_union(i_label, j_label),
+                               dfsan_union(k_label, m_label)));
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, p_s);
+#endif
+
+  // taint the remaining string's pointer
+  char **pp_s = &p_s;
+  char **pp_s_base = pp_s;
+  dfsan_set_label(n_label, pp_s, sizeof(pp_s));
+
+  rv = strsep(pp_s, p_delim);
+
+  assert(rv == &base[6]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, n_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, *pp_s);
+#else
+  ASSERT_LABEL(rv, dfsan_union(dfsan_union(i_label, j_label), n_label));
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, *pp_s);
+#endif
+}
+
 void test_memchr() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -2044,6 +2089,7 @@ int main(void) {
   test_strncmp();
   test_strncpy();
   test_strpbrk();
+  test_strsep();
   test_strrchr();
   test_strstr();
   test_strtod();

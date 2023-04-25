@@ -726,6 +726,16 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (args.hasArg(clang::driver::options::OPT_fopenmp_is_device)) {
       res.getLangOpts().OpenMPIsDevice = 1;
 
+      // Get OpenMP host file path if any and report if a non existent file is
+      // found
+      if (auto *arg = args.getLastArg(
+              clang::driver::options::OPT_fopenmp_host_ir_file_path)) {
+        res.getLangOpts().OMPHostIRFile = arg->getValue();
+        if (!llvm::sys::fs::exists(res.getLangOpts().OMPHostIRFile))
+          diags.Report(clang::diag::err_drv_omp_host_ir_file_not_found)
+              << res.getLangOpts().OMPHostIRFile;
+      }
+
       if (args.hasFlag(
               clang::driver::options::OPT_fopenmp_assume_teams_oversubscription,
               clang::driver::options::

@@ -9,6 +9,7 @@
 #include "mlir/Debug/ExecutionContext.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <cstddef>
 
@@ -16,14 +17,38 @@ using namespace mlir;
 using namespace mlir::tracing;
 
 //===----------------------------------------------------------------------===//
+// ActionActiveStack
+//===----------------------------------------------------------------------===//
+
+void ActionActiveStack::print(raw_ostream &os, bool withContext) const {
+  os << "ActionActiveStack depth " << getDepth() << "\n";
+  const ActionActiveStack *current = this;
+  int count = 0;
+  while (current) {
+    llvm::errs() << llvm::formatv("#{0,3}: ", count++);
+    current->action.print(llvm::errs());
+    llvm::errs() << "\n";
+    ArrayRef<IRUnit> context = current->action.getContextIRUnits();
+    if (withContext && !context.empty()) {
+      llvm::errs() << "Context:\n";
+      llvm::interleave(
+          current->action.getContextIRUnits(),
+          [&](const IRUnit &unit) {
+            llvm::errs() << "  - ";
+            unit.print(llvm::errs());
+          },
+          [&]() { llvm::errs() << "\n"; });
+      llvm::errs() << "\n";
+    }
+    current = current->parent;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // ExecutionContext
 //===----------------------------------------------------------------------===//
 
-static const thread_local ActionActiveStack *actionStack = nullptr;
-
-void ExecutionContext::setCallback(CallbackTy callback) {
-  onBreakpointControlExecutionCallback = callback;
-}
+static const LLVM_THREAD_LOCAL ActionActiveStack *actionStack = nullptr;
 
 void ExecutionContext::registerObserver(Observer *observer) {
   observers.push_back(observer);
@@ -72,6 +97,7 @@ void ExecutionContext::operator()(llvm::function_ref<void()> transform,
     if (breakpoint)
       break;
   }
+  info.setBreakpoint(breakpoint);
 
   bool shouldExecuteAction = true;
   // If we have a breakpoint, or if `depthToBreak` was previously set and the
