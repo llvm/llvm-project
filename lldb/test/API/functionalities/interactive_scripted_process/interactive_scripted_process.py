@@ -6,7 +6,7 @@
 #   -o "create_sub" \
 #   -o "br set -p 'also break here'" -o 'continue'
 
-import os, json, struct, signal
+import os, json, struct, signal, tempfile
 
 from threading import Thread
 from typing import Any, Dict
@@ -151,6 +151,11 @@ class MultiplexedScriptedProcess(PassthruScriptedProcess):
                 filtered_threads.items(),
             )
         )
+
+    def create_breakpoint(self, addr, error, pid=None):
+        if not self.multiplexer:
+            error.SetErrorString("Multiplexer is not set.")
+        return self.multiplexer.create_breakpoint(addr, error, self.get_process_id())
 
     def get_scripted_thread_plugin(self) -> str:
         return f"{MultiplexedScriptedThread.__module__}.{MultiplexedScriptedThread.__name__}"
@@ -300,6 +305,40 @@ class MultiplexerScriptedProcess(PassthruScriptedProcess):
             )
             self.multiplexed_processes = {}
 
+            # Copy breakpoints from real target to passthrough
+            with tempfile.NamedTemporaryFile() as tf:
+                bkpt_file = lldb.SBFileSpec(tf.name)
+                error = self.driving_target.BreakpointsWriteToFile(bkpt_file)
+                if error.Fail():
+                    log(
+                        "Failed to save breakpoints from driving target (%s)"
+                        % error.GetCString()
+                    )
+                bkpts_list = lldb.SBBreakpointList(self.target)
+                error = self.target.BreakpointsCreateFromFile(bkpt_file, bkpts_list)
+                if error.Fail():
+                    log(
+                        "Failed create breakpoints from driving target \
+                        (bkpt file: %s)"
+                        % tf.name
+                    )
+
+            # Copy breakpoint from passthrough to real target
+            if error.Success():
+                self.driving_target.DeleteAllBreakpoints()
+                for bkpt in self.target.breakpoints:
+                    if bkpt.IsValid():
+                        for bl in bkpt:
+                            real_bpkt = self.driving_target.BreakpointCreateBySBAddress(
+                                bl.GetAddress()
+                            )
+                            if not real_bpkt.IsValid():
+                                log(
+                                    "Failed to set breakpoint at address %s in \
+                                    driving target"
+                                    % hex(bl.GetLoadAddress())
+                                )
+
             self.listener_thread = Thread(
                 target=self.wait_for_driving_process_to_stop, daemon=True
             )
@@ -363,6 +402,47 @@ class MultiplexerScriptedProcess(PassthruScriptedProcess):
             return super().get_threads_info()
         parity = pid % 2
         return dict(filter(lambda pair: pair[0] % 2 == parity, self.threads.items()))
+
+    def create_breakpoint(self, addr, error, pid=None):
+        if not self.driving_target:
+            error.SetErrorString("%s has no driving target." % self.__class__.__name__)
+            return False
+
+        def create_breakpoint_with_name(target, load_addr, name, error):
+            addr = lldb.SBAddress(load_addr, target)
+            if not addr.IsValid():
+                error.SetErrorString("Invalid breakpoint address %s" % hex(load_addr))
+                return False
+            bkpt = target.BreakpointCreateBySBAddress(addr)
+            if not bkpt.IsValid():
+                error.SetErrorString(
+                    "Failed to create breakpoint at address %s"
+                    % hex(addr.GetLoadAddress())
+                )
+                return False
+            error = bkpt.AddNameWithErrorHandling(name)
+            return error.Success()
+
+        name = (
+            "multiplexer_scripted_process"
+            if not pid
+            else f"multiplexed_scripted_process_{pid}"
+        )
+
+        if pid is not None:
+            # This means that this method has been called from one of the
+            # multiplexed scripted process. That also means that the multiplexer
+            # target doesn't have this breakpoint created.
+            mux_error = lldb.SBError()
+            bkpt = create_breakpoint_with_name(self.target, addr, name, mux_error)
+            if mux_error.Fail():
+                error.SetError(
+                    "Failed to create breakpoint in multiplexer \
+                               target: %s"
+                    % mux_error.GetCString()
+                )
+                return False
+        return create_breakpoint_with_name(self.driving_target, addr, name, error)
 
 
 def multiplex(mux_process, muxed_process):
