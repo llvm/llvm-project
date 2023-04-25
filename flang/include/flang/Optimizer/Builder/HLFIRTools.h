@@ -315,6 +315,11 @@ llvm::SmallVector<mlir::Value> getIndexExtents(mlir::Location loc,
                                                fir::FirOpBuilder &builder,
                                                mlir::Value shape);
 
+/// Return explicit extents. If the base is a fir.box, this won't read it to
+/// return the extents and will instead return an empty vector.
+llvm::SmallVector<mlir::Value>
+getExplicitExtentsFromShape(mlir::Value shape, fir::FirOpBuilder &builder);
+
 /// Read length parameters into result if this entity has any.
 void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
                          Entity entity,

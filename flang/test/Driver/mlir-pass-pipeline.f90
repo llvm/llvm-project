@@ -13,6 +13,8 @@ end program
 
 ! ALL: Fortran::lower::VerifierPass
 ! O2-NEXT: Canonicalizer
+! O2-NEXT: 'func.func' Pipeline
+! O2-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
 ! ALL-NEXT: ConvertHLFIRtoFIR
