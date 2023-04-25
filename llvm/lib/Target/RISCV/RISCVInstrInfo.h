@@ -25,6 +25,11 @@ namespace llvm {
 
 class RISCVSubtarget;
 
+static const MachineMemOperand::Flags MONontemporalBit0 =
+    MachineMemOperand::MOTargetFlag1;
+static const MachineMemOperand::Flags MONontemporalBit1 =
+    MachineMemOperand::MOTargetFlag2;
+
 namespace RISCVCC {
 
 enum CondCode {
@@ -226,6 +231,9 @@ public:
                                    bool Invert) const override;
 
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
+
+  ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+  getSerializableMachineMemOperandTargetFlags() const override;
 
 protected:
   const RISCVSubtarget &STI;
