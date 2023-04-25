@@ -1404,3 +1404,37 @@ define <2 x i32> @select_icmp_and_shl2_vect(<2 x i32> %x) {
   %cond = select <2 x i1> %tobool.not, <2 x i32> %mul, <2 x i32> zeroinitializer
   ret <2 x i32> %cond
 }
+
+define ptr @select_op_replacement_in_phi(ptr %head) {
+; CHECK-LABEL: @select_op_replacement_in_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CURRENT:%.*]] = phi ptr [ [[HEAD:%.*]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[PREV:%.*]] = phi ptr [ null, [[ENTRY]] ], [ [[CURRENT]], [[LATCH]] ]
+; CHECK-NEXT:    [[CURRENT_NULL:%.*]] = icmp eq ptr [[CURRENT]], null
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CURRENT_NULL]], ptr [[PREV]], ptr null
+; CHECK-NEXT:    br i1 [[CURRENT_NULL]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[NEXT]] = load ptr, ptr [[CURRENT]], align 8
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[SEL]]
+;
+entry:
+  br label %loop
+
+loop:
+  %current = phi ptr [ %head, %entry ], [ %next, %latch ]
+  %prev = phi ptr [ null, %entry ], [ %current, %latch ]
+  %current.null = icmp eq ptr %current, null
+  %sel = select i1 %current.null, ptr %prev, ptr null
+  br i1 %current.null, label %exit, label %latch
+
+latch:
+  %next = load ptr, ptr %current
+  br label %loop
+
+exit:
+  ret ptr %sel
+}
