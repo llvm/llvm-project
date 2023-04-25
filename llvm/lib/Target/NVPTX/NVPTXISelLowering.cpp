@@ -89,6 +89,12 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+static cl::opt<bool> ForceMinByValParamAlign(
+    "nvptx-force-min-byval-param-align", cl::Hidden,
+    cl::desc("NVPTX Specific: force 4-byte minimal alignment for byval"
+             " params of device functions."),
+    cl::init(false));
+
 int NVPTXTargetLowering::getDivF32Level() const {
   if (UsePrecDivF32.getNumOccurrences() > 0) {
     // If nvptx-prec-div32=N is used on the command-line, always honor it
@@ -4502,16 +4508,17 @@ Align NVPTXTargetLowering::getFunctionByValParamAlign(
   if (F)
     ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
 
-  // Work around a bug in ptxas. When PTX code takes address of
+  // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
   // spill argument into memory. Alas on sm_50+ ptxas generates
   // SASS code that fails with misaligned access. To work around
   // the problem, make sure that we align byval parameters by at
-  // least 4.
-  // TODO: this will need to be undone when we get to support multi-TU
-  // device-side compilation as it breaks ABI compatibility with nvcc.
-  // Hopefully ptxas bug is fixed by then.
-  ArgAlign = std::max(ArgAlign, Align(4));
+  // least 4. This bug seems to be fixed at least starting from
+  // ptxas > 9.0.
+  // TODO: remove this after verifying the bug is not reproduced
+  // on non-deprecated ptxas versions.
+  if (ForceMinByValParamAlign)
+    ArgAlign = std::max(ArgAlign, Align(4));
 
   return ArgAlign;
 }

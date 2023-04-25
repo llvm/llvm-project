@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_cpp_utils_unittests)
+add_custom_target(libc_cpp_utils_unittests)
 
 add_libc_unittest(
   bitset_test

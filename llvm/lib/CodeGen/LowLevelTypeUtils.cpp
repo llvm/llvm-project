@@ -1,4 +1,4 @@
-//===-- llvm/CodeGen/LowLevelType.cpp -------------------------------------===//
+//===-- llvm/CodeGen/LowLevelTypeUtils.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
