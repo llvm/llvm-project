@@ -1328,8 +1328,7 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
 
 static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
                                    AsmWriterContext &WriterCtx,
-                                   bool FromValue = false,
-                                   bool AsOperand = false);
+                                   bool FromValue = false);
 
 static void WriteOptimizationInfo(raw_ostream &Out, const User *U) {
   if (const FPMathOperator *FPO = dyn_cast<const FPMathOperator>(U))
@@ -2454,7 +2453,7 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
 
   if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
     WriteAsOperandInternal(Out, MD->getMetadata(), WriterCtx,
-                           /* FromValue */ true, /* AsOperand */ true);
+                           /* FromValue */ true);
     return;
   }
 
@@ -2499,8 +2498,8 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Value *V,
 }
 
 static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
-                                   AsmWriterContext &WriterCtx, bool FromValue,
-                                   bool AsOperand) {
+                                   AsmWriterContext &WriterCtx,
+                                   bool FromValue) {
   // Write DIExpressions and DIArgLists inline when used as a value. Improves
   // readability of debug info intrinsics.
   if (const DIExpression *Expr = dyn_cast<DIExpression>(MD)) {
@@ -2513,12 +2512,6 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
   }
 
   if (const MDNode *N = dyn_cast<MDNode>(MD)) {
-    // Write empty metadata tuples wrapped in MetadataAsValue inline.
-    if (isa<MDTuple>(N) && !N->getNumOperands() && AsOperand) {
-      WriteMDNodeBodyInternal(Out, N, WriterCtx);
-      return;
-    }
-
     std::unique_ptr<SlotTracker> MachineStorage;
     SaveAndRestore SARMachine(WriterCtx.Machine);
     if (!WriterCtx.Machine) {
@@ -4887,8 +4880,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
     WriterCtx =
         std::make_unique<AsmWriterContext>(&TypePrinter, MST.getMachine(), M);
 
-  WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true,
-                         OnlyAsOperand);
+  WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
   if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIArgList>(MD))
