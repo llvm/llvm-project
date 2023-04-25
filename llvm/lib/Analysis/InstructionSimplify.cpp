@@ -4437,6 +4437,24 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
 }
 
 /// Try to simplify a select instruction when its condition operand is an
+/// integer equality comparison.
+static Value *simplifySelectWithICmpEq(Value *CmpLHS, Value *CmpRHS,
+                                       Value *TrueVal, Value *FalseVal,
+                                       const SimplifyQuery &Q,
+                                       unsigned MaxRecurse) {
+  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
+                             /* AllowRefinement */ false,
+                             MaxRecurse) == TrueVal)
+    return FalseVal;
+  if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+                             /* AllowRefinement */ true,
+                             MaxRecurse) == FalseVal)
+    return FalseVal;
+
+  return nullptr;
+}
+
+/// Try to simplify a select instruction when its condition operand is an
 /// integer comparison.
 static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                          Value *FalseVal,
@@ -4524,30 +4542,31 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
-                               /* AllowRefinement */ false,
-                               MaxRecurse) == TrueVal ||
-        simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
-                               /* AllowRefinement */ false,
-                               MaxRecurse) == TrueVal)
-      return FalseVal;
-    if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
-                               /* AllowRefinement */ true,
-                               MaxRecurse) == FalseVal ||
-        simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q,
-                               /* AllowRefinement */ true,
-                               MaxRecurse) == FalseVal)
-      return FalseVal;
+    if (Value *V = simplifySelectWithICmpEq(CmpLHS, CmpRHS, TrueVal, FalseVal,
+                                            Q, MaxRecurse))
+      return V;
+    if (Value *V = simplifySelectWithICmpEq(CmpRHS, CmpLHS, TrueVal, FalseVal,
+                                            Q, MaxRecurse))
+      return V;
+
+    // select(X | Y == 0 ?  X : 0) --> 0 (commuted 2 ways)
+    Value *X;
+    Value *Y;
+    if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y))) &&
+        match(CmpRHS, m_Zero())) {
+      // X | Y == 0 implies X == 0 and Y == 0.
+      if (Value *V = simplifySelectWithICmpEq(X, CmpRHS, TrueVal, FalseVal, Q,
+                                              MaxRecurse))
+        return V;
+      if (Value *V = simplifySelectWithICmpEq(Y, CmpRHS, TrueVal, FalseVal, Q,
+                                              MaxRecurse))
+        return V;
+    }
   }
 
   if (Pred == ICmpInst::Predicate::ICMP_EQ) {
     Value *X;
     Value *Y;
-    // select(X | Y == 0, X or Y, X | Y) -> X | Y
-    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_Zero())) &&
-        match(FalseVal, m_Or(m_Value(X), m_Value(Y))) &&
-        (TrueVal == X || TrueVal == Y))
-      return FalseVal;
     // select(X & Y == -1, X or Y, X & Y) -> X & Y
     if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_AllOnes())) &&
         match(FalseVal, m_And(m_Value(X), m_Value(Y))) &&
