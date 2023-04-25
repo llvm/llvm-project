@@ -393,6 +393,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     }
   }
 
+  if (Args.hasArg(options::OPT_mkernel) ||
+      Args.hasArg(options::OPT_fapple_kext) ||
+      Args.hasArg(options::OPT_ffreestanding)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-disable-atexit-based-global-dtor-lowering");
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_prebind);
   Args.AddLastArg(CmdArgs, options::OPT_noprebind);
   Args.AddLastArg(CmdArgs, options::OPT_nofixprebinding);

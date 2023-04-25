@@ -7381,13 +7381,9 @@ void Parser::ParseParameterDeclarationClause(
           DefArgToks.reset(new CachedTokens);
 
           SourceLocation ArgStartLoc = NextToken().getLocation();
-          if (!ConsumeAndStoreInitializer(*DefArgToks, CIK_DefaultArgument)) {
-            DefArgToks.reset();
-            Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
-          } else {
-            Actions.ActOnParamUnparsedDefaultArgument(Param, EqualLoc,
-                                                      ArgStartLoc);
-          }
+          ConsumeAndStoreInitializer(*DefArgToks, CIK_DefaultArgument);
+          Actions.ActOnParamUnparsedDefaultArgument(Param, EqualLoc,
+                                                    ArgStartLoc);
         } else {
           // Consume the '='.
           ConsumeToken();

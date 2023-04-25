@@ -100,6 +100,9 @@ static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
 static cl::opt<bool> DisablePartialLibcallInlining("disable-partial-libcall-inlining",
     cl::Hidden, cl::desc("Disable Partial Libcall Inlining"));
+static cl::opt<bool> DisableAtExitBasedGlobalDtorLowering(
+    "disable-atexit-based-global-dtor-lowering", cl::Hidden,
+    cl::desc("For MachO, disable atexit()-based global destructor lowering"));
 static cl::opt<bool> EnableImplicitNullChecks(
     "enable-implicit-null-checks",
     cl::desc("Fold null checks into faulting memory operations"),
@@ -878,7 +881,8 @@ void TargetPassConfig::addIRPasses() {
 
   // For MachO, lower @llvm.global_dtors into @llvm.global_ctors with
   // __cxa_atexit() calls to avoid emitting the deprecated __mod_term_func.
-  if (TM->getTargetTriple().isOSBinFormatMachO())
+  if (TM->getTargetTriple().isOSBinFormatMachO() &&
+      !DisableAtExitBasedGlobalDtorLowering)
     addPass(createLowerGlobalDtorsLegacyPass());
 
   // Make sure that no unreachable blocks are instruction selected.

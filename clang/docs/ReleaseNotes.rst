@@ -321,6 +321,8 @@ Bug Fixes in This Version
   (`#61885 <https://github.com/llvm/llvm-project/issues/61885>`_)
 - Clang constexpr evaluator now treats comparison of [[gnu::weak]]-attributed
   member pointer as an invalid expression.
+- Fix crash when member function contains invalid default argument.
+  (`#62122 <https://github.com/llvm/llvm-project/issues/62122>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
