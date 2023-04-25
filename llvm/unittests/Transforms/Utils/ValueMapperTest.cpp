@@ -421,4 +421,19 @@ TEST(ValueMapperTest, mapValuePoisonWithTypeRemap) {
   EXPECT_EQ(NewPoison, Mapper.mapValue(*OldPoison));
 }
 
+TEST(ValueMapperTest, mapValueConstantTargetNoneToLayoutTypeNullValue) {
+  LLVMContext C;
+  auto *OldTy = TargetExtType::get(C, "spirv.Image");
+  Type *NewTy = OldTy->getLayoutType();
+
+  TestTypeRemapper TM(NewTy);
+  ValueToValueMapTy VM;
+  ValueMapper Mapper(VM, RF_None, &TM);
+
+  // Check that ConstantTargetNone is mapped to '0' constant of its layout type.
+  auto *OldConstant = ConstantTargetNone::get(OldTy);
+  auto *NewConstant = Constant::getNullValue(NewTy);
+  EXPECT_EQ(NewConstant, Mapper.mapValue(*OldConstant));
+}
+
 } // end namespace
