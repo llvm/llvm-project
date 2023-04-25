@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_wchar_unittests)
+add_custom_target(libc_wchar_unittests)
 
 add_libc_unittest(
   btowc_test

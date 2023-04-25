@@ -254,6 +254,17 @@ bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
 
+struct TextDocumentEdit {
+  /// The text document to change.
+  VersionedTextDocumentIdentifier textDocument;
+
+	/// The edits to be applied.
+  /// FIXME: support the AnnotatedTextEdit variant.
+  std::vector<TextEdit> edits;
+};
+bool fromJSON(const llvm::json::Value &, TextDocumentEdit &, llvm::json::Path);
+llvm::json::Value toJSON(const TextDocumentEdit &);
+
 struct TextDocumentItem {
   /// The text document's URI.
   URIForFile uri;
@@ -516,6 +527,9 @@ struct ClientCapabilities {
   /// Whether the client implementation supports a refresh request sent from the
   /// server to the client.
   bool SemanticTokenRefreshSupport = false;
+
+  /// The client supports versioned document changes for WorkspaceEdit.
+  bool DocumentChanges = false;
 
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
@@ -970,12 +984,18 @@ struct CodeActionParams {
 };
 bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
+/// The edit should either provide changes or documentChanges. If the client
+/// can handle versioned document edits and if documentChanges are present,
+/// the latter are preferred over changes.
 struct WorkspaceEdit {
   /// Holds changes to existing resources.
-  std::map<std::string, std::vector<TextEdit>> changes;
-
-  /// Note: "documentChanges" is not currently used because currently there is
-  /// no support for versioned edits.
+  std::optional<std::map<std::string, std::vector<TextEdit>>> changes;
+  /// Versioned document edits.
+  ///
+  /// If a client neither supports `documentChanges` nor
+	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+	/// using the `changes` property are supported.
+  std::optional<std::vector<TextDocumentEdit>> documentChanges;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const WorkspaceEdit &WE);

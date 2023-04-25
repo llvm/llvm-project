@@ -217,6 +217,10 @@ public:
     if (auto *op = returnedValue.getDefiningOp())
       if (auto load = mlir::dyn_cast<fir::LoadOp>(op)) {
         auto resultStorage = load.getMemref();
+        // The result alloca may be behind a fir.declare, if any.
+        if (auto declare = mlir::dyn_cast_or_null<fir::DeclareOp>(
+                resultStorage.getDefiningOp()))
+          resultStorage = declare.getMemref();
         // TODO: This should be generalized for derived types, and it is
         // architecture and OS dependent.
         if (fir::isa_builtin_cptr_type(returnedValue.getType())) {
@@ -232,7 +236,7 @@ public:
               ret, mlir::ValueRange{retValue});
           return mlir::success();
         }
-        load.getMemref().replaceAllUsesWith(newArg);
+        resultStorage.replaceAllUsesWith(newArg);
         replacedStorage = true;
         if (auto *alloc = resultStorage.getDefiningOp())
           if (alloc->use_empty())

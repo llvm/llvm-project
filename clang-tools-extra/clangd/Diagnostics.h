@@ -120,9 +120,6 @@ void toLSPDiags(
     const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
     llvm::function_ref<void(clangd::Diagnostic, llvm::ArrayRef<Fix>)> OutFn);
 
-/// Convert from Fix to LSP CodeAction.
-CodeAction toCodeAction(const Fix &D, const URIForFile &File);
-
 /// Convert from clang diagnostic level to LSP severity.
 int getSeverity(DiagnosticsEngine::Level L);
 
