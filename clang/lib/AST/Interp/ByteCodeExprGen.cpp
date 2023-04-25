@@ -1291,7 +1291,7 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
       //   since we memset our Block*s to 0 and so we have the desired value
       //   without this.
       for (size_t I = 0; I != NumElems; ++I) {
-        if (!this->emitZero(*ElemT, Initializer))
+        if (!this->visitZeroInitializer(CAT->getElementType(), Initializer))
           return false;
         if (!this->emitInitElem(*ElemT, I, Initializer))
           return false;

@@ -74,6 +74,10 @@ static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>, bool,
                               const SimplifyQuery &, unsigned);
 static Value *simplifySelectInst(Value *, Value *, Value *,
                                  const SimplifyQuery &, unsigned);
+static Value *simplifyInstructionWithOperands(Instruction *I,
+                                              ArrayRef<Value *> NewOps,
+                                              const SimplifyQuery &SQ,
+                                              unsigned MaxRecurse);
 
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
@@ -4206,6 +4210,11 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (!I || !is_contained(I->operands(), Op))
     return nullptr;
 
+  // The arguments of a phi node might refer to a value from a previous
+  // cycle iteration.
+  if (isa<PHINode>(I))
+    return nullptr;
+
   if (Op->getType()->isVectorTy()) {
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
@@ -4270,23 +4279,8 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       return Simplified != V ? Simplified : nullptr;
     };
 
-    if (auto *B = dyn_cast<BinaryOperator>(I))
-      return PreventSelfSimplify(simplifyBinOp(B->getOpcode(), NewOps[0],
-                                               NewOps[1], Q, MaxRecurse - 1));
-
-    if (CmpInst *C = dyn_cast<CmpInst>(I))
-      return PreventSelfSimplify(simplifyCmpInst(C->getPredicate(), NewOps[0],
-                                                 NewOps[1], Q, MaxRecurse - 1));
-
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
-      return PreventSelfSimplify(simplifyGEPInst(
-          GEP->getSourceElementType(), NewOps[0], ArrayRef(NewOps).slice(1),
-          GEP->isInBounds(), Q, MaxRecurse - 1));
-
-    if (isa<SelectInst>(I))
-      return PreventSelfSimplify(simplifySelectInst(
-          NewOps[0], NewOps[1], NewOps[2], Q, MaxRecurse - 1));
-    // TODO: We could hand off more cases to instsimplify here.
+    return PreventSelfSimplify(
+        ::simplifyInstructionWithOperands(I, NewOps, Q, MaxRecurse - 1));
   }
 
   // If all operands are constant after substituting Op for RepOp then we can
@@ -4443,6 +4437,24 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *CmpRHS,
 }
 
 /// Try to simplify a select instruction when its condition operand is an
+/// integer equality comparison.
+static Value *simplifySelectWithICmpEq(Value *CmpLHS, Value *CmpRHS,
+                                       Value *TrueVal, Value *FalseVal,
+                                       const SimplifyQuery &Q,
+                                       unsigned MaxRecurse) {
+  if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
+                             /* AllowRefinement */ false,
+                             MaxRecurse) == TrueVal)
+    return FalseVal;
+  if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+                             /* AllowRefinement */ true,
+                             MaxRecurse) == FalseVal)
+    return FalseVal;
+
+  return nullptr;
+}
+
+/// Try to simplify a select instruction when its condition operand is an
 /// integer comparison.
 static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                          Value *FalseVal,
@@ -4530,30 +4542,31 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
-                               /* AllowRefinement */ false,
-                               MaxRecurse) == TrueVal ||
-        simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
-                               /* AllowRefinement */ false,
-                               MaxRecurse) == TrueVal)
-      return FalseVal;
-    if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
-                               /* AllowRefinement */ true,
-                               MaxRecurse) == FalseVal ||
-        simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q,
-                               /* AllowRefinement */ true,
-                               MaxRecurse) == FalseVal)
-      return FalseVal;
+    if (Value *V = simplifySelectWithICmpEq(CmpLHS, CmpRHS, TrueVal, FalseVal,
+                                            Q, MaxRecurse))
+      return V;
+    if (Value *V = simplifySelectWithICmpEq(CmpRHS, CmpLHS, TrueVal, FalseVal,
+                                            Q, MaxRecurse))
+      return V;
+
+    // select(X | Y == 0 ?  X : 0) --> 0 (commuted 2 ways)
+    Value *X;
+    Value *Y;
+    if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y))) &&
+        match(CmpRHS, m_Zero())) {
+      // X | Y == 0 implies X == 0 and Y == 0.
+      if (Value *V = simplifySelectWithICmpEq(X, CmpRHS, TrueVal, FalseVal, Q,
+                                              MaxRecurse))
+        return V;
+      if (Value *V = simplifySelectWithICmpEq(Y, CmpRHS, TrueVal, FalseVal, Q,
+                                              MaxRecurse))
+        return V;
+    }
   }
 
   if (Pred == ICmpInst::Predicate::ICMP_EQ) {
     Value *X;
     Value *Y;
-    // select(X | Y == 0, X or Y, X | Y) -> X | Y
-    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_Zero())) &&
-        match(FalseVal, m_Or(m_Value(X), m_Value(Y))) &&
-        (TrueVal == X || TrueVal == Y))
-      return FalseVal;
     // select(X & Y == -1, X or Y, X & Y) -> X & Y
     if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_AllOnes())) &&
         match(FalseVal, m_And(m_Value(X), m_Value(Y))) &&

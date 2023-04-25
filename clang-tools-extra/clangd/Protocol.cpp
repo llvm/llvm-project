@@ -197,6 +197,17 @@ llvm::json::Value toJSON(const TextEdit &P) {
   };
 }
 
+bool fromJSON(const llvm::json::Value &Params, TextDocumentEdit &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("textDocument", R.textDocument) && O.map("edits", R.edits);
+}
+llvm::json::Value toJSON(const TextDocumentEdit &P) {
+  llvm::json::Object Result{{"textDocument", P.textDocument},
+                            {"edits", P.edits}};
+  return Result;
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const TextEdit &TE) {
   OS << TE.range << " => \"";
   llvm::printEscapedString(TE.newText, OS);
@@ -443,6 +454,10 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
     if (auto *SemanticTokens = Workspace->getObject("semanticTokens")) {
       if (auto RefreshSupport = SemanticTokens->getBoolean("refreshSupport"))
         R.SemanticTokenRefreshSupport = *RefreshSupport;
+    }
+    if (auto *WorkspaceEdit = Workspace->getObject("workspaceEdit")) {
+      if (auto DocumentChanges = WorkspaceEdit->getBoolean("documentChanges"))
+        R.DocumentChanges = *DocumentChanges;
     }
   }
   if (auto *Window = O->getObject("window")) {
@@ -717,7 +732,8 @@ bool fromJSON(const llvm::json::Value &Params, CodeActionParams &R,
 bool fromJSON(const llvm::json::Value &Params, WorkspaceEdit &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("changes", R.changes);
+  return O && O.map("changes", R.changes) &&
+         O.map("documentChanges", R.documentChanges);
 }
 
 bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
@@ -863,10 +879,16 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
 }
 
 llvm::json::Value toJSON(const WorkspaceEdit &WE) {
-  llvm::json::Object FileChanges;
-  for (auto &Change : WE.changes)
-    FileChanges[Change.first] = llvm::json::Array(Change.second);
-  return llvm::json::Object{{"changes", std::move(FileChanges)}};
+  llvm::json::Object Result;
+  if (WE.changes) {
+    llvm::json::Object FileChanges;
+    for (auto &Change : *WE.changes)
+      FileChanges[Change.first] = llvm::json::Array(Change.second);
+    Result["changes"] = std::move(FileChanges);
+  }
+  if (WE.documentChanges)
+    Result["documentChanges"] = *WE.documentChanges;
+  return Result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, TweakArgs &A,

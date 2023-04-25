@@ -1217,6 +1217,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XListConcat:
   case tgtok::XListSplat:
   case tgtok::XListRemove:
+  case tgtok::XRange:
   case tgtok::XStrConcat:
   case tgtok::XInterleave:
   case tgtok::XSetDagOp: { // Value ::= !binop '(' Value ',' Value ')'
@@ -1247,6 +1248,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XListConcat: Code = BinOpInit::LISTCONCAT; break;
     case tgtok::XListSplat:  Code = BinOpInit::LISTSPLAT; break;
     case tgtok::XListRemove: Code = BinOpInit::LISTREMOVE; break;
+    case tgtok::XRange:      Code = BinOpInit::RANGE; break;
     case tgtok::XStrConcat:  Code = BinOpInit::STRCONCAT; break;
     case tgtok::XInterleave: Code = BinOpInit::INTERLEAVE; break;
     case tgtok::XSetDagOp:   Code = BinOpInit::SETDAGOP; break;
@@ -1294,6 +1296,10 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XListRemove:
       // We don't know the list type until we parse the first argument.
       ArgType = ItemType;
+      break;
+    case tgtok::XRange:
+      Type = IntRecTy::get(Records)->getListTy();
+      // ArgType may be either Int or List.
       break;
     case tgtok::XStrConcat:
       Type = StringRecTy::get(Records);
@@ -1376,6 +1382,27 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           if (!isa<ListRecTy>(ArgType)) {
             Error(InitLoc, Twine("expected a list, got value of type '") +
                                ArgType->getAsString() + "'");
+            return nullptr;
+          }
+          break;
+        case BinOpInit::RANGE:
+          if (InitList.size() == 1) {
+            if (isa<ListRecTy>(ArgType)) {
+              ArgType = nullptr; // Detect error if 2nd arg were present.
+            } else if (isa<IntRecTy>(ArgType)) {
+              // Assume 2nd arg should be IntRecTy
+            } else {
+              Error(InitLoc,
+                    Twine("expected list or int, got value of type '") +
+                        ArgType->getAsString() + "'");
+              return nullptr;
+            }
+          } else {
+            // Don't come here unless 1st arg is ListRecTy.
+            assert(isa<ListRecTy>(cast<TypedInit>(InitList[0])->getType()));
+            Error(InitLoc,
+                  Twine("expected one list, got extra value of type '") +
+                      ArgType->getAsString() + "'");
             return nullptr;
           }
           break;
@@ -1476,6 +1503,37 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     // listremove returns a list with type of the argument.
     if (Code == BinOpInit::LISTREMOVE)
       Type = ArgType;
+
+    if (Code == BinOpInit::RANGE) {
+      Init *LHS, *RHS;
+      auto ArgCount = InitList.size();
+      assert(ArgCount >= 1);
+      auto *Arg0 = cast<TypedInit>(InitList[0]);
+      auto *Arg0Ty = Arg0->getType();
+      if (ArgCount == 1) {
+        if (isa<ListRecTy>(Arg0Ty)) {
+          // (0, !size(arg))
+          LHS = IntInit::get(Records, 0);
+          RHS = UnOpInit::get(UnOpInit::SIZE, Arg0, IntRecTy::get(Records))
+                    ->Fold(CurRec);
+        } else {
+          assert(isa<IntRecTy>(Arg0Ty));
+          // (0, arg)
+          LHS = IntInit::get(Records, 0);
+          RHS = Arg0;
+        }
+      } else if (ArgCount == 2) {
+        assert(isa<IntRecTy>(Arg0Ty));
+        auto *Arg1 = cast<TypedInit>(InitList[1]);
+        assert(isa<IntRecTy>(Arg1->getType()));
+        LHS = Arg0;
+        RHS = Arg1;
+      } else {
+        Error(OpLoc, "expected at most two values of integer");
+        return nullptr;
+      }
+      return BinOpInit::get(Code, LHS, RHS, Type)->Fold(CurRec);
+    }
 
     // We allow multiple operands to associative operators like !strconcat as
     // shorthand for nesting them.
@@ -2208,6 +2266,8 @@ Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
 ///   SimpleValue ::= LISTCONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= LISTSPLATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= LISTREMOVETOK '(' Value ',' Value ')'
+///   SimpleValue ::= RANGE '(' Value ')'
+///   SimpleValue ::= RANGE '(' Value ',' Value ')'
 ///   SimpleValue ::= STRCONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= COND '(' [Value ':' Value,]+ ')'
 ///
@@ -2510,6 +2570,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XListConcat:
   case tgtok::XListSplat:
   case tgtok::XListRemove:
+  case tgtok::XRange:
   case tgtok::XStrConcat:
   case tgtok::XInterleave:
   case tgtok::XSetDagOp: // Value ::= !binop '(' Value ',' Value ')'

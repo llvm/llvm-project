@@ -1,6 +1,6 @@
 # Action: Tracing and Debugging MLIR-based Compilers
 
-\[TOC\]
+[TOC]
 
 See also the [slides](https://mlir.llvm.org/OpenMeetings/2023-02-23-Actions.pdf)
 and the [recording](https://youtu.be/ayQSyekVa3c) from the MLIR Open Meeting

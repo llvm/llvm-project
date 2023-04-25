@@ -857,6 +857,7 @@ public:
     LISTCONCAT,
     LISTSPLAT,
     LISTREMOVE,
+    RANGE,
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
