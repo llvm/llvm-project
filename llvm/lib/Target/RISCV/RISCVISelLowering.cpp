@@ -9120,13 +9120,14 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
   SDValue Extract = N->getOperand(ReduceIdx);
   SDValue Reduce = Extract.getOperand(0);
-  if (!Reduce.hasOneUse())
+  if (!Extract.hasOneUse() || !Reduce.hasOneUse())
     return SDValue();
 
   SDValue ScalarV = Reduce.getOperand(2);
   EVT ScalarVT = ScalarV.getValueType();
   if (ScalarV.getOpcode() == ISD::INSERT_SUBVECTOR &&
-      ScalarV.getOperand(0)->isUndef())
+      ScalarV.getOperand(0)->isUndef() &&
+      isNullConstant(ScalarV.getOperand(2)))
     ScalarV = ScalarV.getOperand(1);
 
   // Make sure that ScalarV is a splat with VL=1.
