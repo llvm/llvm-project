@@ -4630,7 +4630,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SELECT_CC: {
     // This occurs because we custom legalize SETGT and SETUGT for setcc. That
     // causes LegalizeDAG to think we need to custom legalize select_cc. Expand
-    // into separate SETCC+SELECT_CC just like LegalizeDAG.
+    // into separate SETCC+SELECT just like LegalizeDAG.
     SDValue Tmp1 = Op.getOperand(0);
     SDValue Tmp2 = Op.getOperand(1);
     SDValue True = Op.getOperand(2);
