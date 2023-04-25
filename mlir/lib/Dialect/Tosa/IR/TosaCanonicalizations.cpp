@@ -105,11 +105,9 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
                                          "Used more than once or not-splat");
 
     // Build new const op with correct output shape
-    ShapedType inputShape = input.getType().cast<ShapedType>();
-    DenseElementsAttr outputAttr =
-        inputAttr.reshape(inputShape.clone(op.getNewShape()));
-    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, outputAttr.getType(),
-                                               outputAttr);
+    DenseElementsAttr outputAttr = inputAttr.reshape(
+        inputAttr.getType().cast<ShapedType>().clone(op.getNewShape()));
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, resultTy, outputAttr);
     return success();
   }
 };
