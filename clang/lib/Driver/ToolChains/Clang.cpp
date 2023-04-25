@@ -1976,6 +1976,7 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
   const llvm::Triple &T = getToolChain().getTriple();
   if (Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
@@ -2003,13 +2004,22 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   }
 
   bool IEEELongDouble = getToolChain().defaultToIEEELongDouble();
+  bool VecExtabi = false;
   for (const Arg *A : Args.filtered(options::OPT_mabi_EQ)) {
     StringRef V = A->getValue();
-    if (V == "ieeelongdouble")
+    if (V == "ieeelongdouble") {
       IEEELongDouble = true;
-    else if (V == "ibmlongdouble")
+      A->claim();
+    } else if (V == "ibmlongdouble") {
       IEEELongDouble = false;
-    else if (V != "altivec")
+      A->claim();
+    } else if (V == "vec-default") {
+      VecExtabi = false;
+      A->claim();
+    } else if (V == "vec-extabi") {
+      VecExtabi = true;
+      A->claim();
+    } else if (V != "altivec")
       // The ppc64 linux abis are all "altivec" abis by default. Accept and ignore
       // the option if given as we don't have backend support for any targets
       // that don't use the altivec abi.
@@ -2017,10 +2027,14 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   }
   if (IEEELongDouble)
     CmdArgs.push_back("-mabi=ieeelongdouble");
+  if (VecExtabi) {
+    if (!T.isOSAIX())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-mabi=vec-extabi" << T.str();
+    CmdArgs.push_back("-mabi=vec-extabi");
+  }
 
-  ppc::FloatABI FloatABI =
-      ppc::getPPCFloatABI(getToolChain().getDriver(), Args);
-
+  ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
   if (FloatABI == ppc::FloatABI::Soft) {
     // Floating point operations and argument passing are soft.
     CmdArgs.push_back("-msoft-float");
@@ -5201,17 +5215,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       A->render(Args, CmdArgs);
       A->claim();
     }
-  }
-
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ_vec_extabi,
-                               options::OPT_mabi_EQ_vec_default)) {
-    if (!Triple.isOSAIX())
-      D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << RawTriple.str();
-    if (A->getOption().getID() == options::OPT_mabi_EQ_vec_extabi)
-      CmdArgs.push_back("-mabi=vec-extabi");
-    else
-      CmdArgs.push_back("-mabi=vec-default");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ_quadword_atomics)) {
