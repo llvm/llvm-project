@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_support_unittests)
+add_custom_target(libc_support_unittests)
 
 add_libc_unittest(
   blockstore_test

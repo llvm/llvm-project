@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_fcntl_unittests)
+add_custom_target(libc_fcntl_unittests)
 
 add_subdirectory(testdata)
 

@@ -11,27 +11,10 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/UInt128.h"
-#include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
-#include <cassert>
 
 namespace __llvm_libc {
 namespace testing {
-
-// This need not be a class as all it has is a single read-write state variable.
-// But, we make it class as then its implementation can be hidden from the
-// header file.
-class RunContext {
-public:
-  enum RunResult { Result_Pass = 1, Result_Fail = 2 };
-
-  RunResult status() const { return Status; }
-
-  void markFail() { Status = Result_Fail; }
-
-private:
-  RunResult Status = Result_Pass;
-};
 
 namespace internal {
 
@@ -148,6 +131,12 @@ bool test(RunContext *Ctx, TestCondition Cond, ValType LHS, ValType RHS,
 
 Test *Test::Start = nullptr;
 Test *Test::End = nullptr;
+
+int argc = 0;
+char **argv = nullptr;
+char **envp = nullptr;
+
+using internal::RunContext;
 
 void Test::addTest(Test *T) {
   if (End == nullptr) {
@@ -326,90 +315,5 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
   return false;
 }
 
-#ifdef ENABLE_SUBPROCESS_TESTS
-
-bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
-                             const char *LHSStr, const char *RHSStr,
-                             const char *File, unsigned long Line) {
-  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 500);
-
-  if (const char *error = Result.get_error()) {
-    Ctx->markFail();
-    tlog << File << ":" << Line << ": FAILURE\n" << error << '\n';
-    return false;
-  }
-
-  if (Result.timed_out()) {
-    Ctx->markFail();
-    tlog << File << ":" << Line << ": FAILURE\n"
-         << "Process timed out after " << 500 << " milliseconds.\n";
-    return false;
-  }
-
-  if (Result.exited_normally()) {
-    Ctx->markFail();
-    tlog << File << ":" << Line << ": FAILURE\n"
-         << "Expected " << LHSStr
-         << " to be killed by a signal\nBut it exited normally!\n";
-    return false;
-  }
-
-  int KilledBy = Result.get_fatal_signal();
-  assert(KilledBy != 0 && "Not killed by any signal");
-  if (Signal == -1 || KilledBy == Signal)
-    return true;
-
-  using testutils::signal_as_string;
-  Ctx->markFail();
-  tlog << File << ":" << Line << ": FAILURE\n"
-       << "              Expected: " << LHSStr << '\n'
-       << "To be killed by signal: " << Signal << '\n'
-       << "              Which is: " << signal_as_string(Signal) << '\n'
-       << "  But it was killed by: " << KilledBy << '\n'
-       << "              Which is: " << signal_as_string(KilledBy) << '\n';
-  return false;
-}
-
-bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
-                            const char *LHSStr, const char *RHSStr,
-                            const char *File, unsigned long Line) {
-  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 500);
-
-  if (const char *error = Result.get_error()) {
-    Ctx->markFail();
-    tlog << File << ":" << Line << ": FAILURE\n" << error << '\n';
-    return false;
-  }
-
-  if (Result.timed_out()) {
-    Ctx->markFail();
-    tlog << File << ":" << Line << ": FAILURE\n"
-         << "Process timed out after " << 500 << " milliseconds.\n";
-    return false;
-  }
-
-  if (!Result.exited_normally()) {
-    Ctx->markFail();
-    tlog << File << ":" << Line << ": FAILURE\n"
-         << "Expected " << LHSStr << '\n'
-         << "to exit with exit code " << ExitCode << '\n'
-         << "But it exited abnormally!\n";
-    return false;
-  }
-
-  int ActualExit = Result.get_exit_code();
-  if (ActualExit == ExitCode)
-    return true;
-
-  Ctx->markFail();
-  tlog << File << ":" << Line << ": FAILURE\n"
-       << "Expected exit code of: " << LHSStr << '\n'
-       << "             Which is: " << ActualExit << '\n'
-       << "       To be equal to: " << RHSStr << '\n'
-       << "             Which is: " << ExitCode << '\n';
-  return false;
-}
-
-#endif // ENABLE_SUBPROCESS_TESTS
 } // namespace testing
 } // namespace __llvm_libc

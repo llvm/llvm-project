@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_string_unittests)
+add_custom_target(libc_string_unittests)
 
 add_subdirectory(memory_utils)
 

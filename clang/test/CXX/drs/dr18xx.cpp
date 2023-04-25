@@ -51,6 +51,22 @@ namespace dr1815 { // dr1815: no
 #endif
 }
 
+namespace dr1821 { // dr1821: yes
+struct A {
+  template <typename> struct B {
+    void f();
+  };
+  template <typename T> void B<T>::f(){};
+  // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+
+  struct C {
+    void f();
+  };
+  void C::f() {}
+  // expected-error@-1 {{non-friend class member 'f' cannot have a qualified name}}
+};
+} // namespace dr1821
+
 namespace dr1822 { // dr1822: yes
 #if __cplusplus >= 201103L
   int a;
