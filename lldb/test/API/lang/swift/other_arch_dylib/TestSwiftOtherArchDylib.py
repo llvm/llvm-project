@@ -16,6 +16,7 @@ class TestSwiftOtherArchDylib(TestBase):
     @swiftTest
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
+    @skipIf(archs=no_match(["arm64"]))
     @expectedFailure("the swift.org toolchain cannot produce arm64e binaries")
     def test(self):
         """Test module import from dylibs with an architecture
