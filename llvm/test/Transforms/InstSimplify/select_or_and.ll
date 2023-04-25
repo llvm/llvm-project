@@ -191,3 +191,86 @@ define i32 @select_and_not_3(i32 %x, i32 %y) {
   %ret = select i1 %cmp, i32 %y, i32 %and
   ret i32 %ret
 }
+
+; TODO: https://alive2.llvm.org/ce/z/1ILbih
+define i32 @select_icmp_and_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_and_eq(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], -1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[A]], i32 -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %and = and i32 %a, %b
+  %tobool = icmp eq i32 %and, -1
+  %cond = select i1 %tobool, i32 %a, i32 -1
+  ret i32 %cond
+}
+
+; https://alive2.llvm.org/ce/z/hSyCuR
+define i32 @select_icmp_or_eq(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_or_eq(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[OR]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[A]], i32 0
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %or = or i32 %a, %b
+  %tobool = icmp eq i32 %or, 0
+  %cond = select i1 %tobool, i32 %a, i32 0
+  ret i32 %cond
+}
+
+define i32 @select_icmp_or_eq_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_or_eq_commuted(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[OR]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[B]], i32 0
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %or = or i32 %a, %b
+  %tobool = icmp eq i32 %or, 0
+  %cond = select i1 %tobool, i32 %b, i32 0
+  ret i32 %cond
+}
+
+; https://alive2.llvm.org/ce/z/S_pQek
+define <2 x i16> @select_icmp_or_eq_vec(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: @select_icmp_or_eq_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq <2 x i16> [[OR]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL]], <2 x i16> [[A]], <2 x i16> zeroinitializer
+; CHECK-NEXT:    ret <2 x i16> [[COND]]
+;
+  %or = or <2 x i16> %a, %b
+  %tobool = icmp eq <2 x i16> %or, <i16 0, i16 0>
+  %cond = select <2 x i1> %tobool, <2 x i16> %a, <2 x i16> zeroinitializer
+  ret <2 x i16> %cond
+}
+
+; The ne will also be matched
+define i32 @select_icmp_or_ne(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_or_ne(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[OR]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[A]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %or = or i32 %a, %b
+  %tobool = icmp ne i32 %or, 0
+  %cond = select i1 %tobool, i32 0, i32 %a
+  ret i32 %cond
+}
+
+; Negative test: Incorrect const value for icmp
+define i32 @select_icmp_or_eq_incorrect_const(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_or_eq_incorrect_const(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[OR]], -1
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[A]], i32 0
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %or = or i32 %a, %b
+  %tobool = icmp eq i32 %or, -1
+  %cond = select i1 %tobool, i32 %a, i32 0
+  ret i32 %cond
+}
