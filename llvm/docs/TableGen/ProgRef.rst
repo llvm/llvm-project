@@ -225,9 +225,9 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !gt          !head        !if          !interleave  !isa
                : !le          !listconcat  !listremove  !listsplat   !logtwo
                : !lt          !mul         !ne          !not         !or
-               : !setdagop    !shl         !size        !sra         !srl
-               : !strconcat   !sub         !subst       !substr      !tail
-               : !tolower     !toupper     !xor
+               : !range       !setdagop    !shl         !size        !sra
+               : !srl         !strconcat   !sub         !subst       !substr
+               : !tail        !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1776,6 +1776,15 @@ and non-0 as true.
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
+
+``!range([``\ *a*\ ``,``] *b*\ ``)``
+    This operator produces half-open range sequence ``[a : b)`` as ``list<int>``.
+    *a* is ``0`` by default. ``!range(4)`` is equivalent to ``!range(0, 4)``.
+    The result is `[0, 1, 2, 3]`.
+    If *a* ``>=`` *b*, then the result is `[]<list<int>>`.
+
+``!range([``\ *list*\ ``)``
+    Equivalent to ``!range(0, !size(list))``.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its

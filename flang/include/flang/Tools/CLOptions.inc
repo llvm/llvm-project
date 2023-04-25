@@ -238,8 +238,10 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 ///   passes pipeline
 inline void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, llvm::OptimizationLevel optLevel = defaultOptLevel) {
-  if (optLevel.isOptimizingForSpeed())
+  if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
+    pm.addPass(hlfir::createSimplifyHLFIRIntrinsicsPass());
+  }
   pm.addPass(hlfir::createLowerHLFIRIntrinsicsPass());
   pm.addPass(hlfir::createBufferizeHLFIRPass());
   pm.addPass(hlfir::createConvertHLFIRtoFIRPass());
