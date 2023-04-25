@@ -190,7 +190,7 @@ private:
   SmallString<128> CompilationDir;
 
   /// Prefix replacement map for source file information.
-  std::map<std::string, const std::string, std::greater<>> DebugPrefixMap;
+  SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
   /// The main file name if passed in explicitly.
   std::string MainFileName;
