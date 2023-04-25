@@ -178,6 +178,31 @@ namespace FunctionReturnType {
   static_assert(s.fp == nullptr, ""); // zero-initialized function pointer.
 }
 
+namespace Comparison {
+  void f(), g();
+  constexpr void (*pf)() = &f, (*pg)() = &g;
+
+  constexpr bool u13 = pf < pg; // ref-warning {{ordered comparison of function pointers}} \
+                                // ref-error {{must be initialized by a constant expression}} \
+                                // ref-note {{comparison between '&f' and '&g' has unspecified value}} \
+                                // expected-warning {{ordered comparison of function pointers}} \
+                                // expected-error {{must be initialized by a constant expression}} \
+                                // expected-note {{comparison between '&f' and '&g' has unspecified value}}
+
+  constexpr bool u14 = pf < (void(*)())nullptr; // ref-warning {{ordered comparison of function pointers}} \
+                                                // ref-error {{must be initialized by a constant expression}} \
+                                                // ref-note {{comparison between '&f' and 'nullptr' has unspecified value}} \
+                                                // expected-warning {{ordered comparison of function pointers}} \
+                                                // expected-error {{must be initialized by a constant expression}} \
+                                                // expected-note {{comparison between '&f' and 'nullptr' has unspecified value}}
+
+
+
+  static_assert(pf != pg, "");
+  static_assert(pf == &f, "");
+  static_assert(pg == &g, "");
+}
+
 }
 
 struct F {
