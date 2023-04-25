@@ -18,7 +18,7 @@ define void @foo(ptr nocapture %a) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVAR_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]], !dbg [[DBG15]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata [[META3:![0-9]+]], metadata [[META11]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata !{}, metadata [[META11]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG18:![0-9]+]]
 ;
 entry:
