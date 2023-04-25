@@ -4138,7 +4138,8 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       case FCmpInst::FCMP_UGT:
       case FCmpInst::FCMP_UNE:
         // (X >= 0) implies (X > C) when (C < 0)
-        if (CannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI))
+        if (cannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI, 0,
+                                        Q.AC, Q.CxtI, Q.DT))
           return getTrue(RetTy);
         break;
       case FCmpInst::FCMP_OEQ:
