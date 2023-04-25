@@ -1247,8 +1247,10 @@ genIntrinsicRefCore(PreparedActualArguments &loweredActuals,
   hlfir::EntityWithAttributes resultEntity = extendedValueToHlfirEntity(
       loc, builder, resultExv, ".tmp.intrinsic_result");
   // Move result into memory into an hlfir.expr since they are immutable from
-  // that point, and the result storage is some temp.
-  if (resultEntity.isVariable()) {
+  // that point, and the result storage is some temp. "Null" is special: it
+  // returns a null pointer variable that should not be transformed into a value
+  // (what matters is the memory address).
+  if (resultEntity.isVariable() && intrinsicName != "null") {
     hlfir::AsExprOp asExpr;
     // Character/Derived MERGE lowering returns one of its argument address
     // (this is the only intrinsic implemented in that way so far). The
