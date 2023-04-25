@@ -18,6 +18,7 @@
 #include <map>
 #include <optional>
 #include <utility>
+#include <iostream>
 
 namespace mlir {
 #define GEN_PASS_DEF_VIEWOPGRAPH
@@ -250,9 +251,32 @@ private:
   /// Process a block. Emit a cluster and one node per block argument and
   /// operation inside the cluster.
   void processBlock(Block &block) {
+    //std::cout << "Emit cluster process block" << std::endl;
     emitClusterStmt([&]() {
       for (BlockArgument &blockArg : block.getArguments())
         valueToNode[blockArg] = emitNodeStmt(getLabel(blockArg));
+
+      // for (Operation &op : block) {
+      //   //if (op.getNumRegions() > 0) continue;
+      //   //std::string label = getLabel(&op);
+      //   Node node = emitNodeStmt(getLabel(&op));
+      //   for (Value result : op.getResults())
+      //     valueToNode[result] = node;
+        
+      //   for (Value result : op.getOperands())
+      //     valueToNode[result] = node;
+      //   //std::cout << "Creating node " << node.id << std::endl;
+      //   opToNode[&op] = node;
+      // }
+      
+      // for (Operation &op : block) {
+      //   Node node = emitNodeStmt(getLabel(&op));
+      //   for (Value result : op.getResults())
+      //     valueToNode[result] = node;
+        
+      //   for (Value result : op.getOperands())
+      //     valueToNode[result] = node;
+      // }
 
       // Emit a node for each operation.
       std::optional<Node> prevNode;
@@ -279,16 +303,31 @@ private:
           },
           getLabel(op));
     } else {
-      node = emitNodeStmt(getLabel(op));
+      //if (opToNode.count(op) == 1) {
+      //node = opToNode[op];
+      //} else {
+      node = emitNodeStmt(opToName[op]);
+      //std::cout << "Using node " << node.id << std::endl;
     }
 
     // Insert data flow edges originating from each operand.
     if (printDataFlowEdges) {
       unsigned numOperands = op->getNumOperands();
-      for (unsigned i = 0; i < numOperands; i++)
-        emitEdgeStmt(valueToNode[op->getOperand(i)], node,
+      for (unsigned i = 0; i < numOperands; i++) {
+        Value operand = op->getOperand(i);
+        Node operandNode;
+        if (valueToNode.count(operand) == 0) {
+          // no Node created, created one according to pre-specified name
+          Operation* definingOp = operand.getDefiningOp();
+          operandNode = emitNodeStmt(opToName[definingOp]);
+          valueToNode[operand] = operandNode;
+        } else {
+          operandNode = valueToNode[operand];
+        }
+        emitEdgeStmt(operandNode, node,
                      /*label=*/numOperands == 1 ? "" : std::to_string(i),
                      kLineStyleDataFlow);
+      }
     }
 
     for (Value result : op->getResults())
@@ -299,6 +338,27 @@ private:
 
   /// Process a region.
   void processRegion(Region &region) {
+    // for (Block &block : region.getBlocks()) {
+    //   for (Operation &op : block) {
+    //     if (op.getNumRegions() > 0) continue;
+    //     //std::string label = getLabel(&op);
+    //     Node node = emitNodeStmt(getLabel(&op));
+    //     for (Value result : op.getResults())
+    //       valueToNode[result] = node;
+        
+    //     for (Value result : op.getOperands())
+    //       valueToNode[result] = node;
+    //     std::cout << "Creating node " << node.id << std::endl;
+    //     opToNode[&op] = node;
+    //   }
+    // }
+
+    for (Block &block : region.getBlocks()) {
+      for (Operation &op : block) {
+        opToName[&op] = getLabel(&op);
+      }
+    }
+
     for (Block &block : region.getBlocks())
       processBlock(block);
   }
@@ -317,6 +377,9 @@ private:
   std::vector<std::string> edges;
   /// Mapping of SSA values to Graphviz nodes/clusters.
   DenseMap<Value, Node> valueToNode;
+  DenseMap<Operation *, Node> opToNode;
+  DenseMap<Operation *, std::string> opToName;
+  //DenseMap<std::string, Node> nameToNode;
   /// Counter for generating unique node/subgraph identifiers.
   int counter = 0;
 };
