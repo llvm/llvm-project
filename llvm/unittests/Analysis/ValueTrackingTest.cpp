@@ -1493,7 +1493,7 @@ TEST_F(ComputeKnownFPClassTest, CopySignNNanSrc0) {
       "  %A = call float @llvm.copysign.f32(float %fabs, float %arg1)"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcPositive, std::nullopt);
+  expectKnownFPClass(~fcNan, std::nullopt);
 }
 
 TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {
@@ -1505,7 +1505,7 @@ TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {
       "  %A = call float @llvm.copysign.f32(float %ninf, float -1.0)"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcNegFinite, true);
+  expectKnownFPClass(fcNegFinite | fcNan, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
@@ -1517,7 +1517,7 @@ TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
       "  %A = call float @llvm.copysign.f32(float %ninf, float 1.0)"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcPosFinite, false);
+  expectKnownFPClass(fcPosFinite | fcNan, false);
 }
 
 TEST_F(ComputeKnownFPClassTest, UIToFP) {
