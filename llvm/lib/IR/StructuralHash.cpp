@@ -19,19 +19,19 @@ namespace {
 // llvm/lib/Transforms/Utils/FunctionComparator.cpp
 
 class StructuralHashImpl {
-  uint64_t Hash = 0x6acaa36bef8325c5ULL;
+  hash_code Hash;
 
-  void update(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
+  template <typename T> void hash(const T &V) { Hash = hash_combine(Hash, V); }
 
 public:
-  StructuralHashImpl() = default;
+  StructuralHashImpl() : Hash(4) {}
 
   void update(const Function &F) {
     if (F.empty())
       return;
 
-    update(F.isVarArg());
-    update(F.arg_size());
+    hash(F.isVarArg());
+    hash(F.arg_size());
 
     SmallVector<const BasicBlock *, 8> BBs;
     SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
@@ -40,9 +40,9 @@ public:
     VisitedBBs.insert(BBs[0]);
     while (!BBs.empty()) {
       const BasicBlock *BB = BBs.pop_back_val();
-      update(45798); // Block header
+      hash(45798); // Block header
       for (auto &Inst : *BB)
-        update(Inst.getOpcode());
+        hash(Inst.getOpcode());
 
       const Instruction *Term = BB->getTerminator();
       for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
