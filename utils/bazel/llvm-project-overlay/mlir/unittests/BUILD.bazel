@@ -21,7 +21,6 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//mlir:BreakpointManagers",
         "//mlir:Debug",
         "//mlir:IR",
         "//mlir:Support",

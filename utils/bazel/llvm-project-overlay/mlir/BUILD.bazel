@@ -3717,43 +3717,21 @@ cc_library(
     srcs = glob([
         "lib/Debug/*.cpp",
         "lib/Debug/*.h",
-    ]),
-    hdrs = glob([
-        "include/mlir/Debug/*.h",
-]),
-    includes = ["include"],
-    deps = [
-        ":IR",
-        ":Support",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "Observers",
-    srcs = glob([
+        "lib/Debug/BreakpointManagers/*.cpp",
+        "lib/Debug/BreakpointManagers/*.h",
         "lib/Debug/Observers/*.cpp",
         "lib/Debug/Observers/*.h",
     ]),
-    hdrs = glob(["include/mlir/Debug/Observers/*.h"]),
+    hdrs = glob([
+        "include/mlir/Debug/*.h",
+        "include/mlir/Debug/BreakpointManagers/*.h",
+        "include/mlir/Debug/Observers/*.h",
+    ]),
     includes = ["include"],
     deps = [
-        ":Debug",
+        ":CAPIIR",
         ":IR",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "BreakpointManagers",
-    srcs = glob([
-        "lib/Debug/BreakpointManagers/*.cpp",
-        "lib/Debug/BreakpointManagers/*.h",
-    ]),
-    hdrs = glob(["include/mlir/Debug/BreakpointManagers/*.h"]),
-    deps = [
-        ":Debug",
-        ":IR",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -7188,13 +7166,11 @@ cc_library(
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
     includes = ["include"],
     deps = [
-        ":BreakpointManagers",
         ":BytecodeReader",
         ":BytecodeWriter",
         ":Debug",
         ":IR",
         ":IRDLDialect",
-        ":Observers",
         ":Parser",
         ":Pass",
         ":PluginsLib",
