@@ -18,7 +18,7 @@ define void @foo(i32 %x) {
 ; null, the ValueAsMetadata instance gets replaced by metadata !{}, or
 ; MDNode::get({}).
   call void @llvm.foo(metadata ptr @G, metadata i32 %x)
-; CHECK: call void @llvm.foo(metadata !{}, metadata i32 %x)
+; CHECK: call void @llvm.foo(metadata ![[EMPTY:[0-9]+]], metadata i32 %x)
   ret void
 }
 
@@ -29,3 +29,4 @@ declare void @llvm.foo(metadata, metadata) nounwind readnone
 
 !0 = !{ptr @G}
 ; CHECK-DAG: ![[NULL]] = distinct !{null}
+; CHECK-DAG: ![[EMPTY]] = !{}

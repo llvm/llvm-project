@@ -390,20 +390,18 @@ TEST_F(MDNodeTest, PrintFromMetadataAsValue) {
 
   EXPECT_PRINTER_EQ("!0 = distinct !{}", MAV0->print(OS));
   EXPECT_PRINTER_EQ("!1 = distinct !{}", MAV1->print(OS));
-  EXPECT_PRINTER_EQ("distinct !{}", MAV0->printAsOperand(OS, false));
-  EXPECT_PRINTER_EQ("distinct !{}", MAV1->printAsOperand(OS, false));
-  EXPECT_PRINTER_EQ("metadata distinct !{}", MAV0->printAsOperand(OS, true));
-  EXPECT_PRINTER_EQ("metadata distinct !{}", MAV1->printAsOperand(OS, true));
+  EXPECT_PRINTER_EQ("!0", MAV0->printAsOperand(OS, false));
+  EXPECT_PRINTER_EQ("!1", MAV1->printAsOperand(OS, false));
+  EXPECT_PRINTER_EQ("metadata !0", MAV0->printAsOperand(OS, true));
+  EXPECT_PRINTER_EQ("metadata !1", MAV1->printAsOperand(OS, true));
 
   ModuleSlotTracker MST(&M);
   EXPECT_PRINTER_EQ("!0 = distinct !{}", MAV0->print(OS, MST));
   EXPECT_PRINTER_EQ("!1 = distinct !{}", MAV1->print(OS, MST));
-  EXPECT_PRINTER_EQ("distinct !{}", MAV0->printAsOperand(OS, false, MST));
-  EXPECT_PRINTER_EQ("distinct !{}", MAV1->printAsOperand(OS, false, MST));
-  EXPECT_PRINTER_EQ("metadata distinct !{}",
-                    MAV0->printAsOperand(OS, true, MST));
-  EXPECT_PRINTER_EQ("metadata distinct !{}",
-                    MAV1->printAsOperand(OS, true, MST));
+  EXPECT_PRINTER_EQ("!0", MAV0->printAsOperand(OS, false, MST));
+  EXPECT_PRINTER_EQ("!1", MAV1->printAsOperand(OS, false, MST));
+  EXPECT_PRINTER_EQ("metadata !0", MAV0->printAsOperand(OS, true, MST));
+  EXPECT_PRINTER_EQ("metadata !1", MAV1->printAsOperand(OS, true, MST));
 }
 
 TEST_F(MDNodeTest, PrintWithDroppedCallOperand) {
