@@ -39,6 +39,11 @@ if(MSVC)
     -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames
     )
 endif()
+if(MINGW)
+  list(APPEND INTERCEPTION_TEST_LINK_FLAGS_COMMON
+    -Wl,--large-address-aware
+    )
+endif()
 list(APPEND INTERCEPTION_TEST_LINK_FLAGS_COMMON -g)
 
 if(NOT MSVC)

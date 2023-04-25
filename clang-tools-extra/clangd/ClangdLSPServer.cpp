@@ -45,6 +45,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -93,6 +94,26 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
   Args.selection = Selection;
   CA.command->argument = std::move(Args);
   return CA;
+}
+
+/// Convert from Fix to LSP CodeAction.
+CodeAction toCodeAction(const Fix &F, const URIForFile &File,
+                        const std::optional<int64_t> &Version,
+                        bool SupportsDocumentChanges) {
+  CodeAction Action;
+  Action.title = F.Message;
+  Action.kind = std::string(CodeAction::QUICKFIX_KIND);
+  Action.edit.emplace();
+  if (!SupportsDocumentChanges) {
+    Action.edit->changes.emplace();
+    (*Action.edit->changes)[File.uri()] = {F.Edits.begin(), F.Edits.end()};
+  } else {
+    Action.edit->documentChanges.emplace();
+    TextDocumentEdit& Edit = Action.edit->documentChanges->emplace_back();
+    Edit.textDocument = VersionedTextDocumentIdentifier{{File}, Version};
+    Edit.edits = {F.Edits.begin(), F.Edits.end()};
+  }
+  return Action;
 }
 
 void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
@@ -487,6 +508,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       Params.capabilities.HierarchicalDocumentSymbol;
   SupportsReferenceContainer = Params.capabilities.ReferenceContainer;
   SupportFileStatus = Params.initializationOptions.FileStatus;
+  SupportsDocumentChanges = Params.capabilities.DocumentChanges;
   HoverContentFormat = Params.capabilities.HoverContentFormat;
   Opts.LineFoldingOnly = Params.capabilities.LineFoldingOnly;
   SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
@@ -761,8 +783,10 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
       return Reply(std::move(Err));
 
     WorkspaceEdit WE;
+    // FIXME: use documentChanges when SupportDocumentChanges is true.
+    WE.changes.emplace();
     for (const auto &It : R->ApplyEdits) {
-      WE.changes[URI::createFile(It.first()).toString()] =
+      (*WE.changes)[URI::createFile(It.first()).toString()] =
           It.second.asTextEdits();
     }
     // ApplyEdit will take care of calling Reply().
@@ -833,8 +857,12 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
                    if (auto Err = validateEdits(*Server, R->GlobalChanges))
                      return Reply(std::move(Err));
                    WorkspaceEdit Result;
+                   // FIXME: use documentChanges if SupportDocumentChanges is
+                   // true.
+                   Result.changes.emplace();
                    for (const auto &Rep : R->GlobalChanges) {
-                     Result.changes[URI::createFile(Rep.first()).toString()] =
+                     (*Result
+                           .changes)[URI::createFile(Rep.first()).toString()] =
                          Rep.second.asTextEdits();
                    }
                    Reply(Result);
@@ -984,8 +1012,8 @@ void ClangdLSPServer::onCodeAction(const CodeActionParams &Params,
   std::vector<CodeAction> FixIts;
   if (KindAllowed(CodeAction::QUICKFIX_KIND)) {
     for (const Diagnostic &D : Params.context.diagnostics) {
-      for (auto &F : getFixes(File.file(), D)) {
-        FixIts.push_back(toCodeAction(F, Params.textDocument.uri));
+      for (auto &CA : getFixes(File.file(), D)) {
+        FixIts.push_back(CA);
         FixIts.back().diagnostics = {D};
       }
     }
@@ -1663,8 +1691,8 @@ void ClangdLSPServer::profile(MemoryTree &MT) const {
     Server->profile(MT.child("clangd_server"));
 }
 
-std::vector<Fix> ClangdLSPServer::getFixes(llvm::StringRef File,
-                                           const clangd::Diagnostic &D) {
+std::vector<CodeAction> ClangdLSPServer::getFixes(llvm::StringRef File,
+                                                  const clangd::Diagnostic &D) {
   std::lock_guard<std::mutex> Lock(FixItsMutex);
   auto DiagToFixItsIter = FixItsMap.find(File);
   if (DiagToFixItsIter == FixItsMap.end())
@@ -1710,8 +1738,18 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
   for (auto &Diag : Diagnostics) {
     toLSPDiags(Diag, Notification.uri, DiagOpts,
                [&](clangd::Diagnostic Diag, llvm::ArrayRef<Fix> Fixes) {
-                 auto &FixItsForDiagnostic = LocalFixIts[Diag];
-                 llvm::copy(Fixes, std::back_inserter(FixItsForDiagnostic));
+                 std::vector<CodeAction> CodeActions;
+                 for (const auto &Fix : Fixes)
+                   CodeActions.push_back(toCodeAction(Fix, Notification.uri,
+                                                      Notification.version,
+                                                      SupportsDocumentChanges));
+
+                 if (DiagOpts.EmbedFixesInDiagnostics) {
+                   Diag.codeActions.emplace(CodeActions);
+                   if (Diag.codeActions->size() == 1)
+                     Diag.codeActions->front().isPreferred = true;
+                 }
+                 LocalFixIts[Diag] = std::move(CodeActions);
                  Notification.diagnostics.push_back(std::move(Diag));
                });
   }
