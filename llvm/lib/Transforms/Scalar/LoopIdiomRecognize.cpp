@@ -983,33 +983,6 @@ static const SCEV *getStartForNegStride(const SCEV *Start, const SCEV *BECount,
   return SE->getMinusSCEV(Start, Index);
 }
 
-/// Compute trip count from the backedge taken count.
-static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
-                                Loop *CurLoop, const DataLayout *DL,
-                                ScalarEvolution *SE) {
-  const SCEV *TripCountS = nullptr;
-  // The # stored bytes is (BECount+1).  Expand the trip count out to
-  // pointer size if it isn't already.
-  //
-  // If we're going to need to zero extend the BE count, check if we can add
-  // one to it prior to zero extending without overflow. Provided this is safe,
-  // it allows better simplification of the +1.
-  if (DL->getTypeSizeInBits(BECount->getType()) <
-          DL->getTypeSizeInBits(IntPtr) &&
-      SE->isLoopEntryGuardedByCond(
-          CurLoop, ICmpInst::ICMP_NE, BECount,
-          SE->getMinusOne(BECount->getType()))) {
-    TripCountS = SE->getZeroExtendExpr(
-        SE->getAddExpr(BECount, SE->getOne(BECount->getType())),
-        IntPtr);
-  } else {
-    TripCountS = SE->getAddExpr(SE->getTruncateOrZeroExtend(BECount, IntPtr),
-                                SE->getOne(IntPtr));
-  }
-
-  return TripCountS;
-}
-
 /// Compute the number of bytes as a SCEV from the backedge taken count.
 ///
 /// This also maps the SCEV into the provided type and tries to handle the
@@ -1017,8 +990,8 @@ static const SCEV *getTripCount(const SCEV *BECount, Type *IntPtr,
 static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                                const SCEV *StoreSizeSCEV, Loop *CurLoop,
                                const DataLayout *DL, ScalarEvolution *SE) {
-  const SCEV *TripCountSCEV = getTripCount(BECount, IntPtr, CurLoop, DL, SE);
-
+  const SCEV *TripCountSCEV =
+      SE->getTripCountFromExitCount(BECount, IntPtr, CurLoop);
   return SE->getMulExpr(TripCountSCEV,
                         SE->getTruncateOrZeroExtend(StoreSizeSCEV, IntPtr),
                         SCEV::FlagNUW);

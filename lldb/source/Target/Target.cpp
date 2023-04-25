@@ -293,6 +293,7 @@ void Target::Destroy() {
   m_stop_hooks.clear();
   m_stop_hook_next_id = 0;
   m_suppress_stop_hooks = false;
+  m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
 }

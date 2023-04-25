@@ -141,6 +141,7 @@ define i32 @select_clz_to_ctz_wrong_sub(i32 %a) {
   ret i32 %cond
 }
 
+; TODO: https://alive2.llvm.org/ce/z/X6QjcB
 define i64 @select_clz_to_ctz_i64_wrong_xor(i64 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_i64_wrong_xor(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
