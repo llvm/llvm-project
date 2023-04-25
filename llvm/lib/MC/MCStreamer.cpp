@@ -219,7 +219,8 @@ void MCStreamer::emitGPRel32Value(const MCExpr *Value) {
 /// Emit NumBytes bytes worth of the value specified by FillValue.
 /// This implements directives such as '.space'.
 void MCStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
-  emitFill(*MCConstantExpr::create(NumBytes, getContext()), FillValue);
+  if (NumBytes)
+    emitFill(*MCConstantExpr::create(NumBytes, getContext()), FillValue);
 }
 
 void llvm::MCStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLen,
