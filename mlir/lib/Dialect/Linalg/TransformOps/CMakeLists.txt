@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRLinalgTransformOps
+  DialectExtension.cpp
   LinalgMatchOps.cpp
   LinalgTransformOps.cpp
 
