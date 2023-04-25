@@ -29,6 +29,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
+  option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
 
   # The native target may not be enabled when cross compiling, raise an error.
@@ -52,6 +53,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
   MLIR_RUN_X86VECTOR_TESTS
   MLIR_RUN_ARM_SVE_TESTS
+  MLIR_RUN_ARM_SME_TESTS
   MLIR_RUN_CUDA_SM80_TESTS
   )
 

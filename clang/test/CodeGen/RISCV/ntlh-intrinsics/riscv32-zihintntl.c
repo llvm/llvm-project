@@ -1,3 +1,4 @@
+// REQUIRES: riscv-registered-target
 // RUN: %clang_cc1  -triple riscv32 -target-feature +v -target-feature +experimental-zihintntl -emit-llvm %s -o - \
 // RUN:     | FileCheck %s
 
