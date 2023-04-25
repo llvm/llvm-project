@@ -1195,6 +1195,7 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
+  PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
   IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);

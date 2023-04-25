@@ -27,6 +27,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Allocator.h"
@@ -641,8 +642,6 @@ bool DependencyScanningWorker::computeDependencies(
     auto InMemoryFS =
         llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-    OverlayFS->pushOverlay(InMemoryFS);
-    ModifiedFS = OverlayFS;
 
     SmallString<128> FakeInputPath;
     // TODO: We should retry the creation if the path already exists.
@@ -651,6 +650,16 @@ bool DependencyScanningWorker::computeDependencies(
                                     /*MakeAbsolute=*/false);
     InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
 
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay =
+        InMemoryFS;
+    // If we are using a CAS but not dependency CASFS, we need to provide the
+    // fake input file in a CASProvidingFS for include-tree.
+    if (CAS && !DepCASFS)
+      InMemoryOverlay =
+          llvm::cas::createCASProvidingFileSystem(CAS, std::move(InMemoryFS));
+
+    OverlayFS->pushOverlay(InMemoryOverlay);
+    ModifiedFS = OverlayFS;
     ModifiedCommandLine = CommandLine;
     ModifiedCommandLine->emplace_back(FakeInputPath);
   }
