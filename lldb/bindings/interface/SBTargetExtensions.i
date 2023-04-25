@@ -88,7 +88,7 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
 
         def get_modules_access_object(self):
             '''An accessor function that returns a modules_access() object which allows lazy module access from a lldb.SBTarget object.'''
-            return self.modules_access (self)
+            return self.modules_access(self)
 
         def get_modules_array(self):
             '''An accessor function that returns a list() that contains all modules in a lldb.SBTarget object.'''
@@ -107,10 +107,68 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
             object.'''
             return lldb_iter(self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
 
+        class bkpts_access(object):
+            '''A helper object that will lazily hand out bkpts for a target when supplied an index.'''
+            def __init__(self, sbtarget):
+                self.sbtarget = sbtarget
+
+            def __len__(self):
+                if self.sbtarget:
+                    return int(self.sbtarget.GetNumBreakpoints())
+                return 0
+
+            def __getitem__(self, key):
+                if isinstance(key, int):
+                    count = len(self)
+                    if -count <= key < count:
+                        key %= count
+                        return self.sbtarget.GetBreakpointAtIndex(key)
+                return None
+
+        def get_bkpts_access_object(self):
+            '''An accessor function that returns a bkpts_access() object which allows lazy bkpt access from a lldb.SBtarget object.'''
+            return self.bkpts_access(self)
+
+        def get_target_bkpts(self):
+            '''An accessor function that returns a list() that contains all bkpts in a lldb.SBtarget object.'''
+            bkpts = []
+            for idx in range(self.GetNumBreakpoints()):
+                bkpts.append(self.GetBreakpointAtIndex(idx))
+            return bkpts
+
         def watchpoint_iter(self):
             '''Returns an iterator over all watchpoints in a lldb.SBTarget
             object.'''
             return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
+
+        class watchpoints_access(object):
+            '''A helper object that will lazily hand out watchpoints for a target when supplied an index.'''
+            def __init__(self, sbtarget):
+                self.sbtarget = sbtarget
+
+            def __len__(self):
+                if self.sbtarget:
+                    return int(self.sbtarget.GetNumWatchpoints())
+                return 0
+
+            def __getitem__(self, key):
+                if isinstance(key, int):
+                    count = len(self)
+                    if -count <= key < count:
+                        key %= count
+                        return self.sbtarget.GetWatchpointAtIndex(key)
+                return None
+
+        def get_watchpoints_access_object(self):
+            '''An accessor function that returns a watchpoints_access() object which allows lazy watchpoint access from a lldb.SBtarget object.'''
+            return self.watchpoints_access(self)
+
+        def get_target_watchpoints(self):
+            '''An accessor function that returns a list() that contains all watchpoints in a lldb.SBtarget object.'''
+            watchpoints = []
+            for idx in range(self.GetNumWatchpoints()):
+                bkpts.append(self.GetWatchpointAtIndex(idx))
+            return watchpoints
 
         modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
         module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
@@ -118,7 +176,11 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
         debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
         num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
+        breakpoints = property(get_target_bkpts, None, doc='''A read only property that returns a list() of lldb.SBBreakpoint objects for all breakpoints in this target.''')
+        breakpoint = property(get_bkpts_access_object, None, doc='''A read only property that returns an object that can be used to access breakpoints as an array ("bkpt_12 = lldb.target.bkpt[12]").''')
         num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
+        watchpoints = property(get_target_watchpoints, None, doc='''A read only property that returns a list() of lldb.SBwatchpoint objects for all watchpoints in this target.''')
+        watchpoint = property(get_watchpoints_access_object, None, doc='''A read only property that returns an object that can be used to access watchpoints as an array ("watchpoint_12 = lldb.target.watchpoint[12]").''')
         broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
         byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
