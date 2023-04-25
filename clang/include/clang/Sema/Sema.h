@@ -2588,13 +2588,11 @@ public:
   //
 
   struct SkipBodyInfo {
-    SkipBodyInfo()
-        : ShouldSkip(false), CheckSameAsPrevious(false), Previous(nullptr),
-          New(nullptr) {}
-    bool ShouldSkip;
-    bool CheckSameAsPrevious;
-    NamedDecl *Previous;
-    NamedDecl *New;
+    SkipBodyInfo() = default;
+    bool ShouldSkip = false;
+    bool CheckSameAsPrevious = false;
+    NamedDecl *Previous = nullptr;
+    NamedDecl *New = nullptr;
   };
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);

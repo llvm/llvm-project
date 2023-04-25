@@ -368,9 +368,6 @@ public:
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
 
-  /// Set of files defining the rules for the symbol rewriting.
-  std::vector<std::string> RewriteMapFiles;
-
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be
   /// continued when possible).
   SanitizerSet SanitizeRecover;

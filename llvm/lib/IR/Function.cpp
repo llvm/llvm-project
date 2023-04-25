@@ -1023,70 +1023,11 @@ std::string Intrinsic::getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys) {
 /// IIT_Info - These are enumerators that describe the entries returned by the
 /// getIntrinsicInfoTableEntries function.
 ///
-/// NOTE: This must be kept in synch with the copy in TblGen/IntrinsicEmitter!
+/// Defined in Intrinsics.td.
 enum IIT_Info {
-  // Common values should be encoded with 0-15.
-  IIT_Done = 0,
-  IIT_I1 = 1,
-  IIT_I8 = 2,
-  IIT_I16 = 3,
-  IIT_I32 = 4,
-  IIT_I64 = 5,
-  IIT_F16 = 6,
-  IIT_F32 = 7,
-  IIT_F64 = 8,
-  IIT_V2 = 9,
-  IIT_V4 = 10,
-  IIT_V8 = 11,
-  IIT_V16 = 12,
-  IIT_V32 = 13,
-  IIT_PTR = 14,
-  IIT_ARG = 15,
-
-  // Values from 16+ are only encodable with the inefficient encoding.
-  IIT_V64 = 16,
-  IIT_MMX = 17,
-  IIT_TOKEN = 18,
-  IIT_METADATA = 19,
-  IIT_EMPTYSTRUCT = 20,
-  IIT_STRUCT2 = 21,
-  IIT_STRUCT3 = 22,
-  IIT_STRUCT4 = 23,
-  IIT_STRUCT5 = 24,
-  IIT_EXTEND_ARG = 25,
-  IIT_TRUNC_ARG = 26,
-  IIT_ANYPTR = 27,
-  IIT_V1 = 28,
-  IIT_VARARG = 29,
-  IIT_HALF_VEC_ARG = 30,
-  IIT_SAME_VEC_WIDTH_ARG = 31,
-  IIT_PTR_TO_ARG = 32,
-  IIT_PTR_TO_ELT = 33,
-  IIT_VEC_OF_ANYPTRS_TO_ELT = 34,
-  IIT_I128 = 35,
-  IIT_V512 = 36,
-  IIT_V1024 = 37,
-  IIT_STRUCT6 = 38,
-  IIT_STRUCT7 = 39,
-  IIT_STRUCT8 = 40,
-  IIT_F128 = 41,
-  IIT_VEC_ELEMENT = 42,
-  IIT_SCALABLE_VEC = 43,
-  IIT_SUBDIVIDE2_ARG = 44,
-  IIT_SUBDIVIDE4_ARG = 45,
-  IIT_VEC_OF_BITCASTS_TO_INT = 46,
-  IIT_V128 = 47,
-  IIT_BF16 = 48,
-  IIT_STRUCT9 = 49,
-  IIT_V256 = 50,
-  IIT_AMX = 51,
-  IIT_PPCF128 = 52,
-  IIT_V3 = 53,
-  IIT_EXTERNREF = 54,
-  IIT_FUNCREF = 55,
-  IIT_ANYPTR_TO_ELT = 56,
-  IIT_I2 = 57,
-  IIT_I4 = 58,
+#define GET_INTRINSIC_IITINFO
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_IITINFO
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,

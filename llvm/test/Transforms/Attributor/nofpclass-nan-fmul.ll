@@ -164,6 +164,36 @@ define float @ret_fmul_daz_nonan_nozero_nosub__nonan_nozero(float nofpclass(nan 
   ret float %fmul
 }
 
+define float @ret_fmul_square(float %arg) #0 {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square
+; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_square_nnan(float nofpclass(nan) %arg) #0 {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_fmul_square_nnan
+; CHECK-SAME: (float nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_square_nnan_nzero(float nofpclass(nan zero) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_nnan_nzero
+; CHECK-SAME: (float nofpclass(nan zero) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %fmul = fmul float %arg, %arg
+  ret float %fmul
+}
+
 attributes #0 = { "denormal-fp-math"="ieee,ieee" }
 attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
 attributes #2 = { "denormal-fp-math"="ieee,positive-zero" }

@@ -183,12 +183,98 @@ def ArgKind {
 }
 
 //===----------------------------------------------------------------------===//
+// IIT_Info
+//===----------------------------------------------------------------------===//
+
+class IIT_Base<int num> {
+  int Number = num;
+  list<ValueType> VTs = ?;
+}
+
+class IIT_VT<ValueType vt, int num> : IIT_Base<num> {
+  let VTs = [vt];
+}
+
+class IIT_Int<int size, int num> : IIT_Base<num> {
+  let VTs = !filter(vti, ValueTypes,
+    !and(vti.isInteger, !eq(vti.Size, size)));
+}
+
+class IIT_Vec<int nelem, int num> : IIT_Base<num> {
+  let VTs = !filter(vti, ValueTypes,
+    !and(vti.isVector, !eq(vti.nElem, nelem)));
+}
+
+defset list<IIT_Base> IIT_all = {
+def IIT_Done : IIT_Base<    0>;
+def IIT_I1   : IIT_Int<1,   1>;
+def IIT_I8   : IIT_Int<8,   2>;
+def IIT_I16  : IIT_Int<16,  3>;
+def IIT_I32  : IIT_Int<32,  4>;
+def IIT_I64  : IIT_Int<64,  5>;
+def IIT_F16  : IIT_VT<f16,  6>;
+def IIT_F32  : IIT_VT<f32,  7>;
+def IIT_F64  : IIT_VT<f64,  8>;
+def IIT_V2   : IIT_Vec<2,   9>;
+def IIT_V4   : IIT_Vec<4,  10>;
+def IIT_V8   : IIT_Vec<8,  11>;
+def IIT_V16  : IIT_Vec<16, 12>;
+def IIT_V32  : IIT_Vec<32, 13>;
+def IIT_PTR  : IIT_Base<   14>;
+def IIT_ARG  : IIT_Base<   15>;
+
+def IIT_V64 : IIT_Vec<64, 16>;
+def IIT_MMX : IIT_VT<x86mmx, 17>;
+def IIT_TOKEN : IIT_VT<token, 18>;
+def IIT_METADATA : IIT_VT<MetadataVT, 19>;
+def IIT_EMPTYSTRUCT : IIT_VT<OtherVT, 20>;
+def IIT_STRUCT2 : IIT_Base<21>;
+def IIT_STRUCT3 : IIT_Base<22>;
+def IIT_STRUCT4 : IIT_Base<23>;
+def IIT_STRUCT5 : IIT_Base<24>;
+def IIT_EXTEND_ARG : IIT_Base<25>;
+def IIT_TRUNC_ARG : IIT_Base<26>;
+def IIT_ANYPTR : IIT_Base<27>;
+def IIT_V1 : IIT_Vec<1, 28>;
+def IIT_VARARG : IIT_VT<isVoid, 29>;
+def IIT_HALF_VEC_ARG : IIT_Base<30>;
+def IIT_SAME_VEC_WIDTH_ARG : IIT_Base<31>;
+def IIT_PTR_TO_ARG : IIT_Base<32>;
+def IIT_PTR_TO_ELT : IIT_Base<33>;
+def IIT_VEC_OF_ANYPTRS_TO_ELT : IIT_Base<34>;
+def IIT_I128 : IIT_Int<128, 35>;
+def IIT_V512 : IIT_Vec<512, 36>;
+def IIT_V1024 : IIT_Vec<1024, 37>;
+def IIT_STRUCT6 : IIT_Base<38>;
+def IIT_STRUCT7 : IIT_Base<39>;
+def IIT_STRUCT8 : IIT_Base<40>;
+def IIT_F128 : IIT_VT<f128, 41>;
+def IIT_VEC_ELEMENT : IIT_Base<42>;
+def IIT_SCALABLE_VEC : IIT_Base<43>;
+def IIT_SUBDIVIDE2_ARG : IIT_Base<44>;
+def IIT_SUBDIVIDE4_ARG : IIT_Base<45>;
+def IIT_VEC_OF_BITCASTS_TO_INT : IIT_Base<46>;
+def IIT_V128 : IIT_Vec<128, 47>;
+def IIT_BF16 : IIT_VT<bf16, 48>;
+def IIT_STRUCT9 : IIT_Base<49>;
+def IIT_V256 : IIT_Vec<256, 50>;
+def IIT_AMX : IIT_VT<x86amx, 51>;
+def IIT_PPCF128 : IIT_VT<ppcf128, 52>;
+def IIT_V3 : IIT_Vec<3, 53>;
+def IIT_EXTERNREF : IIT_VT<externref, 54>;
+def IIT_FUNCREF : IIT_VT<funcref, 55>;
+def IIT_ANYPTR_TO_ELT : IIT_Base<56>;
+def IIT_I2 : IIT_Int<2, 57>;
+def IIT_I4 : IIT_Int<4, 58>;
+}
+
+//===----------------------------------------------------------------------===//
 // Types used by intrinsics.
 //===----------------------------------------------------------------------===//
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
-  int isAny = false;
+  int isAny = vt.isOverloaded;
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
@@ -204,7 +290,7 @@ class LLVMAnyPointerType<LLVMType elty>
   : LLVMType<iPTRAny>{
   LLVMType ElTy = elty;
 
-  let isAny = true;
+  assert isAny, "iPTRAny should have isOverloaded";
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -254,12 +340,12 @@ class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
 class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-let isAny = true in {
-  def llvm_any_ty        : LLVMType<Any>;
-  def llvm_anyint_ty     : LLVMType<iAny>;
-  def llvm_anyfloat_ty   : LLVMType<fAny>;
-  def llvm_anyvector_ty  : LLVMType<vAny>;
-}
+
+def llvm_any_ty        : LLVMType<Any>;
+def llvm_anyint_ty     : LLVMType<iAny>;
+def llvm_anyfloat_ty   : LLVMType<fAny>;
+def llvm_anyvector_ty  : LLVMType<vAny>;
+
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
 def llvm_i16_ty        : LLVMType<i16>;

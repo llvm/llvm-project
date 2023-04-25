@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -63,26 +62,41 @@ void VTEmitter::run(raw_ostream &OS) {
     }
   };
 
-  OS << "#ifdef GET_VT_ATTR // (Ty, n, sz)\n";
+  OS << "#ifdef GET_VT_ATTR // (Ty, n, sz, Any, Int, FP, Vec, Sc)\n";
   for (const auto *VT : VTsByNumber) {
     if (!VT)
       continue;
-    auto Name = VT->getName();
-    Name = StringSwitch<StringRef>(Name)
-               .Case("OtherVT", "Other")
-               .Case("FlagVT", "Glue")
-               .Case("untyped", "Untyped")
-               .Case("MetadataVT", "Metadata")
-               .Default(Name);
+    auto Name = VT->getValueAsString("LLVMName");
     auto Value = VT->getValueAsInt("Value");
+    bool IsInteger = VT->getValueAsInt("isInteger");
+    bool IsFP = VT->getValueAsInt("isFP");
+    bool IsVector = VT->getValueAsInt("isVector");
+    bool IsScalable = VT->getValueAsInt("isScalable");
 
+    UpdateVTRange("INTEGER_FIXEDLEN_VECTOR_VALUETYPE", Name,
+                  IsInteger && IsVector && !IsScalable);
+    UpdateVTRange("INTEGER_SCALABLE_VECTOR_VALUETYPE", Name,
+                  IsInteger && IsScalable);
+    UpdateVTRange("FP_FIXEDLEN_VECTOR_VALUETYPE", Name,
+                  IsFP && IsVector && !IsScalable);
+    UpdateVTRange("FP_SCALABLE_VECTOR_VALUETYPE", Name, IsFP && IsScalable);
+    UpdateVTRange("FIXEDLEN_VECTOR_VALUETYPE", Name, IsVector && !IsScalable);
+    UpdateVTRange("SCALABLE_VECTOR_VALUETYPE", Name, IsScalable);
+    UpdateVTRange("VECTOR_VALUETYPE", Name, IsVector);
+    UpdateVTRange("INTEGER_VALUETYPE", Name, IsInteger && !IsVector);
+    UpdateVTRange("FP_VALUETYPE", Name, IsFP && !IsVector);
     UpdateVTRange("VALUETYPE", Name, Value < 224);
 
     // clang-format off
     OS << "  GET_VT_ATTR("
        << Name << ", "
        << Value << ", "
-       << VT->getValueAsInt("Size") << ")\n";
+       << VT->getValueAsInt("Size") << ", "
+       << VT->getValueAsInt("isOverloaded") << ", "
+       << (IsInteger ? Name[0] == 'i' ? 3 : 1 : 0) << ", "
+       << (IsFP ? Name[0] == 'f' ? 3 : 1 : 0) << ", "
+       << IsVector << ", "
+       << IsScalable << ")\n";
     // clang-format on
   }
   OS << "#endif\n\n";
@@ -92,6 +106,23 @@ void VTEmitter::run(raw_ostream &OS) {
     assert(KV.second.Closed);
     OS << "  FIRST_" << KV.first << " = " << KV.second.First << ",\n"
        << "  LAST_" << KV.first << " = " << KV.second.Last << ",\n";
+  }
+  OS << "#endif\n\n";
+
+  OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, nElem, ElTy, ElSz)\n";
+  for (const auto *VT : VTsByNumber) {
+    if (!VT || !VT->getValueAsInt("isVector"))
+      continue;
+    const auto *ElTy = VT->getValueAsDef("ElementType");
+    assert(ElTy);
+    // clang-format off
+    OS << "  GET_VT_VECATTR("
+       << VT->getValueAsString("LLVMName") << ", "
+       << VT->getValueAsInt("isScalable") << ", "
+       << VT->getValueAsInt("nElem") << ", "
+       << ElTy->getName() << ", "
+       << ElTy->getValueAsInt("Size") << ")\n";
+    // clang-format on
   }
   OS << "#endif\n\n";
 }

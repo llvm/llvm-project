@@ -216,6 +216,7 @@ copy("Headers") {
     "raointintrin.h",
     "rdpruintrin.h",
     "rdseedintrin.h",
+    "riscv_ntlh.h",
     "rtmintrin.h",
     "s390intrin.h",
     "serializeintrin.h",

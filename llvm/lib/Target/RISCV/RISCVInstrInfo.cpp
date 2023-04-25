@@ -2628,6 +2628,14 @@ void RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
   }
 }
 
+ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
+RISCVInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
+  static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
+      {{MONontemporalBit0, "riscv-nontemporal-domain-bit-0"},
+       {MONontemporalBit1, "riscv-nontemporal-domain-bit-1"}};
+  return ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>(TargetFlags);
+}
+
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
 bool RISCV::isSEXT_W(const MachineInstr &MI) {
   return MI.getOpcode() == RISCV::ADDIW && MI.getOperand(1).isReg() &&

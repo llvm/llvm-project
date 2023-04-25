@@ -10,6 +10,7 @@ add_object_library(
 
 add_fp_unittest(
   sqrtf_test
+  NO_RUN_POSTBUILD
   NEED_MPFR
   SUITE
     libc_math_exhaustive_tests
