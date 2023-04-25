@@ -5116,20 +5116,13 @@ SDValue RISCVTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   return Addr;
 }
 
-SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
-  SDValue CondV = Op.getOperand(0);
-  SDValue TrueV = Op.getOperand(1);
-  SDValue FalseV = Op.getOperand(2);
-  SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
-  MVT XLenVT = Subtarget.getXLenVT();
-
-  // Lower vector SELECTs to VSELECTs by splatting the condition.
-  if (VT.isVector()) {
-    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
-    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
-    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
-  }
+static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  SDValue CondV = N->getOperand(0);
+  SDValue TrueV = N->getOperand(1);
+  SDValue FalseV = N->getOperand(2);
+  MVT VT = N->getSimpleValueType(0);
+  SDLoc DL(N);
 
   if (!Subtarget.hasShortForwardBranchOpt()) {
     // (select c, -1, y) -> -c | y
@@ -5156,6 +5149,27 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
     }
   }
+
+  return SDValue();
+}
+
+SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
+  SDValue CondV = Op.getOperand(0);
+  SDValue TrueV = Op.getOperand(1);
+  SDValue FalseV = Op.getOperand(2);
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // Lower vector SELECTs to VSELECTs by splatting the condition.
+  if (VT.isVector()) {
+    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
+    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
+    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
+  }
+
+  if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
+    return V;
 
   // If the condition is not an integer SETCC which operates on XLenVT, we need
   // to emit a RISCVISD::SELECT_CC comparing the condition to zero. i.e.:
