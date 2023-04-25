@@ -706,11 +706,11 @@ void InitializeAsanInterceptors() {
 #endif
   // Indirectly intercept std::rethrow_exception.
 #if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION
-  INTERCEPT_FUNCTION(_Unwind_RaiseException);
+  ASAN_INTERCEPT_FUNC(_Unwind_RaiseException);
 #endif
   // Indirectly intercept std::rethrow_exception.
 #if ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION
-  INTERCEPT_FUNCTION(_Unwind_SjLj_RaiseException);
+  ASAN_INTERCEPT_FUNC(_Unwind_SjLj_RaiseException);
 #endif
 
   // Intercept threading-related functions
