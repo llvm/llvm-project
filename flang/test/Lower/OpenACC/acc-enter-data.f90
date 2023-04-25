@@ -41,11 +41,10 @@ subroutine acc_enter_data
 !CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {dataClause = 8 : i64, name = "c", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>){{$}}
 
-  !$acc enter data copyin(a) create(b) attach(d)
+  !$acc enter data copyin(a) create(b)
 !CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
-!CHECK: %[[ATTACH_D:.*]] = acc.attach varPtr(%[[D]] : !fir.ref<!fir.box<!fir.ptr<f32>>>)   -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "d", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[COPYIN_A]], %[[CREATE_B]], %[[ATTACH_D]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>){{$}}
+!CHECK: acc.enter_data dataOperands(%[[COPYIN_A]], %[[CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data create(a) async
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
@@ -219,3 +218,133 @@ subroutine acc_enter_data_non_default_lb()
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xi32>>)
 
 end subroutine
+
+! Test lowering of assumed size arrays.
+subroutine acc_enter_data_assumed(a, b, n, m)
+  integer :: n, m
+  real :: a(:)
+  real :: b(10:)
+
+!CHECK-LABEL: func.func @_QPacc_enter_data_assumed(
+!CHECK-SAME: %[[A:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}, %[[N:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}, %[[M:.*]]: !fir.ref<i32> {fir.bindc_name = "m"}) {
+
+!CHECK: %[[LB_C10:.*]] = arith.constant 10 : i64
+!CHECK: %[[LB_C10_IDX:.*]] = fir.convert %[[LB_C10]] : (i64) -> index
+
+  !$acc enter data create(a)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[DIMS]]#1 : index) stride(%[[DIMS]]#2 : index) startIdx(%[[C1]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(:))
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[DIMS1]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(:)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(2:))
+!CHECK: %[[SIDX:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[LB:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[EXT:.*]] = arith.subi %[[DIMS1]]#1, %[[LB]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[SIDX]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(2:)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(:4))
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[UB:.*]] = arith.constant 3 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds upperbound(%[[UB]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(:4)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(6:10))
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[LB:.*]] = arith.constant 5 : index
+!CHECK: %[[UB:.*]] = arith.constant 9 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(6:10)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(n:))
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[LOAD_N:.*]] = fir.load %[[N]] : !fir.ref<i32>
+!CHECK: %[[CONVERT_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> index
+!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT_N]], %[[ONE]] : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[EXT:.*]] = arith.subi %[[DIMS]]#1, %[[LB]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(n:)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(:m))
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[LOAD_M:.*]] = fir.load %[[M]] : !fir.ref<i32>
+!CHECK: %[[CONVERT_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT_M]], %[[ONE]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds upperbound(%[[UB]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(:m)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(a(n:m))
+!CHECK: %[[ONE:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[A]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[LOAD_N:.*]] = fir.load %[[N]] : !fir.ref<i32>
+!CHECK: %[[CONVERT_N:.*]] = fir.convert %[[LOAD_N]] : (i32) -> index
+!CHECK: %[[LB:.*]] = arith.subi %[[CONVERT_N]], %[[ONE]] : index
+!CHECK: %[[LOAD_M:.*]] = fir.load %[[M]] : !fir.ref<i32>
+!CHECK: %[[CONVERT_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT_M]], %[[ONE]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[ONE]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "a(n:m)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(b(:m))
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[B]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[LOAD_M:.*]] = fir.load %[[M]] : !fir.ref<i32>
+!CHECK: %[[CONVERT_M:.*]] = fir.convert %[[LOAD_M]] : (i32) -> index
+!CHECK: %[[UB:.*]] = arith.subi %[[CONVERT_M]], %[[LB_C10_IDX]] : index
+!CHECK: %[[BOUND:.*]] = acc.bounds upperbound(%[[UB]] : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[LB_C10_IDX]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "b(:m)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+  !$acc enter data create(b)
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[B]], %[[C0]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+!CHECK: %[[BOUND:.*]] = acc.bounds   extent(%[[DIMS0]]#1 : index) stride(%[[DIMS0]]#2 : index) startIdx(%[[LB_C10_IDX]] : index) {strideInBytes = true}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "b", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
+
+end subroutine
+

@@ -2642,6 +2642,11 @@ static Value *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
   if (!S)
     return nullptr;
 
+  // If the pointer is invariant then there is no stride and it makes no
+  // sense to add it here.
+  if (Lp != S->getLoop())
+    return nullptr;
+
   V = S->getStepRecurrence(*SE);
   if (!V)
     return nullptr;
