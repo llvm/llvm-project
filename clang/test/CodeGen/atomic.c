@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s
 
+// CHECK: @[[GLOB_POINTER:.+]] = internal global ptr null
+// CHECK: @[[GLOB_INT:.+]] = internal global i32 0
+// CHECK: @[[GLOB_FLT:.+]] = internal global float {{[0e\+-\.]+}}, align
+
 int atomic(void) {
   // non-sensical test for sync functions
   int old;
@@ -117,4 +121,20 @@ void addrspace(int  __attribute__((address_space(256))) * P) {
 
   __sync_xor_and_fetch(P, 123);
   // CHECK: atomicrmw xor ptr addrspace(256){{.*}}, i32 123 seq_cst, align 4
+}
+
+// Ensure that global initialization of atomics is correct.
+static _Atomic(int *) glob_pointer = (void *)0;
+static _Atomic int glob_int = 0;
+static _Atomic float glob_flt = 0.0f;
+
+void force_global_uses(void) {
+  (void)glob_pointer;
+  // CHECK: %[[LOCAL_INT:.+]] = load atomic i32, ptr @[[GLOB_POINTER]] seq_cst
+  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT]] to ptr
+  (void)glob_int;
+  // CHECK: load atomic i32, ptr @[[GLOB_INT]] seq_cst
+  (void)glob_flt;
+  // CHECK: %[[LOCAL_FLT:.+]] = load atomic i32, ptr @[[GLOB_FLT]] seq_cst
+  // CHECK-NEXT: bitcast i32 %[[LOCAL_FLT]] to float
 }
