@@ -101,6 +101,19 @@ constexpr int gimme(int k) {
 }
 static_assert(gimme(5) == 5, "");
 
+namespace PointerToBool {
+
+  constexpr void *N = nullptr;
+  constexpr bool B = N;
+  static_assert(!B, "");
+  static_assert(!N, "");
+
+  constexpr float F = 1.0;
+  constexpr const float *FP = &F;
+  static_assert(FP, "");
+  static_assert(!!FP, "");
+}
+
 namespace SizeOf {
   constexpr int soint = sizeof(int);
   constexpr int souint = sizeof(unsigned int);
