@@ -1828,6 +1828,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                64),
         OMPX_KernelBusyWait("LIBOMPTARGET_AMDGPU_KERNEL_BUSYWAIT", 0),
         OMPX_DataBusyWait("LIBOMPTARGET_AMDGPU_DATA_BUSYWAIT", 0),
+        OMPX_ForceSyncRegions("OMPX_FORCE_SYNC_REGIONS", 0),
         AMDGPUStreamManager(*this), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice),
         Queues() {}
@@ -2238,8 +2239,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    // isSynchronous is disbled for now, causes perf issue in 534.hpgmg
-    if (OmptEnabled || AsyncInfoWrapper.isSynchronous() ||
+    if (OmptEnabled || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -2300,8 +2300,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    // isSynchronous is disbled for now, causes perf issue in 534.hpgmg
-    if (OmptEnabled || AsyncInfoWrapper.isSynchronous() ||
+    if (OmptEnabled || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -2593,6 +2592,10 @@ private:
   /// switching to blocked state. The default 0 goes directly to blocked state.
   UInt32Envar OMPX_KernelBusyWait;
   UInt32Envar OMPX_DataBusyWait;
+
+  /// Envar to force synchronous target regions. The default 0 uses an
+  /// asynchronous implementation.
+  UInt32Envar OMPX_ForceSyncRegions;
 
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;

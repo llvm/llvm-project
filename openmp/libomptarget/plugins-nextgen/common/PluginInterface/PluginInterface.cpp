@@ -254,10 +254,11 @@ AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
 void AsyncInfoWrapperTy::finalize(Error &Err) {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
 
-  // If we used a local async info object we want synchronous behavior. In that
-  // case, and assuming the current status code is correct, we will synchronize
-  // explicitly when the object is deleted. Update the error with the result of
-  // the synchronize operation.
+  // If we used a local async info object we want synchronous behavior. (No need
+  // to check the env-var OMPX_FORCE_SYNC_REGIONS since that was done by
+  // libomptarget.) In that case, and assuming the current status code is
+  // correct, we will synchronize explicitly when the object is deleted. Update
+  // the error with the result of the synchronize operation.
   if (AsyncInfoPtr == &LocalAsyncInfo && LocalAsyncInfo.Queue && !Err)
     Err = Device.synchronize(&LocalAsyncInfo);
 
