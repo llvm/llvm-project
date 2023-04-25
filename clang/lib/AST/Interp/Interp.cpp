@@ -213,8 +213,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckBaseDerived(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                      CheckSubobjectKind CSK) {
+bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                    CheckSubobjectKind CSK) {
   if (!Ptr.isOnePastEnd())
     return true;
 
