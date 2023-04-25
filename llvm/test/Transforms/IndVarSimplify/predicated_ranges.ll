@@ -19,7 +19,7 @@ define void @test_predicated_simple_unsigned(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -68,7 +68,7 @@ define void @test_predicated_simple_signed(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -477,7 +477,7 @@ define void @test_can_predicate_simple_unsigned(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -528,7 +528,7 @@ define void @test_can_predicate_simple_unsigned_inverted(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[FAIL:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -578,7 +578,7 @@ define void @test_can_predicate_simple_signed(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp slt i32 [[IV_NEXT]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
@@ -631,7 +631,7 @@ define void @test_can_predicate_trunc_unsigned(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i64 [[IV]]
@@ -685,7 +685,7 @@ define void @test_can_predicate_trunc_unsigned_inverted(ptr %p, ptr %arr) {
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[FAIL:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[ARR:%.*]], i64 [[IV]]
@@ -736,7 +736,7 @@ define void @test_can_predicate_trunc_unsigned_different_start_and_len(ptr %p, i
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[NARROW:%.*]] = trunc i64 [[IV_NEXT]] to i32
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[NARROW]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[FAIL:%.*]]
@@ -788,7 +788,7 @@ define void @test_can_predicate_trunc_unsigned_different_start_and_len_inverted(
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[NARROW:%.*]] = trunc i64 [[IV_NEXT]] to i32
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp uge i32 [[NARROW]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[FAIL:%.*]], label [[BACKEDGE]]
@@ -842,7 +842,7 @@ define void @test_can_predicate_simple_unsigned_different_start(i32 %start, ptr 
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -893,7 +893,7 @@ define void @test_can_predicate_simple_unsigned_inverted_different_start(i32 %st
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[FAIL:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
@@ -943,7 +943,7 @@ define void @test_can_predicate_simple_signed_different_start(i32 %start, ptr %p
 ; CHECK-NEXT:    [[ZERO_COND:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = sub nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp slt i32 [[IV_NEXT]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
