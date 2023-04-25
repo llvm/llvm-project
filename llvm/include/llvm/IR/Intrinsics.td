@@ -188,7 +188,7 @@ def ArgKind {
 
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
-  int isAny = false;
+  int isAny = vt.isOverloaded;
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
@@ -204,7 +204,7 @@ class LLVMAnyPointerType<LLVMType elty>
   : LLVMType<iPTRAny>{
   LLVMType ElTy = elty;
 
-  let isAny = true;
+  assert isAny, "iPTRAny should have isOverloaded";
 }
 
 // Match the type of another intrinsic parameter.  Number is an index into the
@@ -254,12 +254,12 @@ class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
 class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
-let isAny = true in {
-  def llvm_any_ty        : LLVMType<Any>;
-  def llvm_anyint_ty     : LLVMType<iAny>;
-  def llvm_anyfloat_ty   : LLVMType<fAny>;
-  def llvm_anyvector_ty  : LLVMType<vAny>;
-}
+
+def llvm_any_ty        : LLVMType<Any>;
+def llvm_anyint_ty     : LLVMType<iAny>;
+def llvm_anyfloat_ty   : LLVMType<fAny>;
+def llvm_anyvector_ty  : LLVMType<vAny>;
+
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
 def llvm_i16_ty        : LLVMType<i16>;
