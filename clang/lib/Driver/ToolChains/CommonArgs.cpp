@@ -683,9 +683,16 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + "-strict-dwarf=true"));
 
-    if (Args.getLastArg(options::OPT_mabi_EQ_vec_extabi))
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + "-vec-extabi"));
+    for (const Arg *A : Args.filtered_reverse(options::OPT_mabi_EQ)) {
+      StringRef V = A->getValue();
+      if (V == "vec-default")
+        break;
+      if (V == "vec-extabi") {
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine(PluginOptPrefix) + "-vec-extabi"));
+        break;
+      }
+    }
   }
 
   bool UseSeparateSections =
