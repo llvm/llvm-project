@@ -251,8 +251,16 @@ public:
   }
   bool hasArgList() const { return isa<DIArgList>(getRawLocation()); }
   bool isKillLocation(const DIExpression *Expression) const {
-    return (getNumVariableLocationOps() == 0 && !Expression->isComplex()) ||
-           any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
+    // Check for "kill" sentinel values.
+    // Non-variadic: empty metadata.
+    if (!hasArgList() && isa<MDNode>(getRawLocation()))
+      return true;
+    // Variadic: empty DIArgList with empty expression.
+    if (getNumVariableLocationOps() == 0 && !Expression->isComplex())
+      return true;
+    // Variadic and non-variadic: Interpret expressions using undef or poison
+    // values as kills.
+    return any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
   }
 
   friend bool operator==(const RawLocationWrapper &A,
