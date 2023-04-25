@@ -1890,6 +1890,80 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
   EXPECT_EQ(fcNone, UgtClass);
 }
 
+TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
+  parseAssembly(
+      "declare float @llvm.sqrt.f32(float)\n"
+      "define float @test(float %arg, float nofpclass(nan) %arg.nnan) {\n"
+      "  %A = call float @llvm.sqrt.f32(float %arg)\n"
+      "  %A2 = call nsz float @llvm.sqrt.f32(float %arg)\n"
+      "  %A3 = call float @llvm.sqrt.f32(float %arg.nnan)\n"
+      "  %A4 = call nsz float @llvm.sqrt.f32(float %arg.nnan)\n"
+      "  ret float %A\n"
+      "}\n");
+
+  const FPClassTest SqrtMask = fcPositive | fcNegZero | fcNan;
+  const FPClassTest NszSqrtMask = fcPositive | fcNan;
+
+  {
+    KnownFPClass UseInstrInfo =
+        computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(SqrtMask, UseInstrInfo.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, UseInstrInfo.SignBit);
+
+    KnownFPClass NoUseInstrInfo =
+        computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(SqrtMask, NoUseInstrInfo.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfo.SignBit);
+  }
+
+  {
+    KnownFPClass UseInstrInfoNSZ =
+        computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.SignBit);
+
+    KnownFPClass NoUseInstrInfoNSZ =
+        computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(SqrtMask, NoUseInstrInfoNSZ.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.SignBit);
+  }
+
+  {
+    KnownFPClass UseInstrInfoNoNan =
+        computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+              UseInstrInfoNoNan.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.SignBit);
+
+    KnownFPClass NoUseInstrInfoNoNan =
+        computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+              NoUseInstrInfoNoNan.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.SignBit);
+  }
+
+  {
+    KnownFPClass UseInstrInfoNSZNoNan =
+        computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(fcPositive | fcQNan, UseInstrInfoNSZNoNan.KnownFPClasses);
+    EXPECT_EQ(false, UseInstrInfoNSZNoNan.SignBit);
+
+    KnownFPClass NoUseInstrInfoNSZNoNan =
+        computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+              NoUseInstrInfoNSZNoNan.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
+  }
+}
+
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   parseAssembly(R"(
     define i1 @test(i8 %n, i8 %r) {
