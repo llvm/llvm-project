@@ -23,8 +23,9 @@
 
 // Return explicit extents. If the base is a fir.box, this won't read it to
 // return the extents and will instead return an empty vector.
-static llvm::SmallVector<mlir::Value>
-getExplicitExtentsFromShape(mlir::Value shape, fir::FirOpBuilder &builder) {
+llvm::SmallVector<mlir::Value>
+hlfir::getExplicitExtentsFromShape(mlir::Value shape,
+                                   fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Value> result;
   auto *shapeOp = shape.getDefiningOp();
   if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
@@ -62,7 +63,7 @@ static llvm::SmallVector<mlir::Value>
 getExplicitExtents(fir::FortranVariableOpInterface var,
                    fir::FirOpBuilder &builder) {
   if (mlir::Value shape = var.getShape())
-    return getExplicitExtentsFromShape(var.getShape(), builder);
+    return hlfir::getExplicitExtentsFromShape(var.getShape(), builder);
   return {};
 }
 
@@ -404,7 +405,7 @@ hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
   assert((shape.getType().isa<fir::ShapeShiftType>() ||
           shape.getType().isa<fir::ShapeType>()) &&
          "shape must contain extents");
-  auto extents = getExplicitExtentsFromShape(shape, builder);
+  auto extents = hlfir::getExplicitExtentsFromShape(shape, builder);
   auto lowers = getExplicitLboundsFromShape(shape);
   assert(lowers.empty() || lowers.size() == extents.size());
   mlir::Type idxTy = builder.getIndexType();
@@ -527,7 +528,7 @@ llvm::SmallVector<mlir::Value>
 hlfir::getIndexExtents(mlir::Location loc, fir::FirOpBuilder &builder,
                        mlir::Value shape) {
   llvm::SmallVector<mlir::Value> extents =
-      getExplicitExtentsFromShape(shape, builder);
+      hlfir::getExplicitExtentsFromShape(shape, builder);
   mlir::Type indexType = builder.getIndexType();
   for (auto &extent : extents)
     extent = builder.createConvert(loc, indexType, extent);
@@ -538,7 +539,7 @@ mlir::Value hlfir::genExtent(mlir::Location loc, fir::FirOpBuilder &builder,
                              hlfir::Entity entity, unsigned dim) {
   entity = followShapeInducingSource(entity);
   if (auto shape = tryRetrievingShapeOrShift(entity)) {
-    auto extents = getExplicitExtentsFromShape(shape, builder);
+    auto extents = hlfir::getExplicitExtentsFromShape(shape, builder);
     if (!extents.empty()) {
       assert(extents.size() > dim && "bad inquiry");
       return extents[dim];

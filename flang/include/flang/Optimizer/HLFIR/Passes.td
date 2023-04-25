@@ -25,4 +25,9 @@ def LowerHLFIRIntrinsics : Pass<"lower-hlfir-intrinsics", "::mlir::ModuleOp"> {
   let constructor = "hlfir::createLowerHLFIRIntrinsicsPass()";
 }
 
+def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics", "::mlir::func::FuncOp"> {
+  let summary = "Simplify HLFIR intrinsic operations that don't need to result in runtime calls";
+  let constructor = "hlfir::createSimplifyHLFIRIntrinsicsPass()";
+}
+
 #endif //FORTRAN_DIALECT_HLFIR_PASSES
