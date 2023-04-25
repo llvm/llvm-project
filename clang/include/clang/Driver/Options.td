@@ -3218,7 +3218,8 @@ def fdebug_default_version: Joined<["-"], "fdebug-default-version=">, Group<f_Gr
 def fdebug_prefix_map_EQ
   : Joined<["-"], "fdebug-prefix-map=">, Group<f_Group>,
     Flags<[CC1Option,CC1AsOption]>,
-    HelpText<"remap file source paths in debug info">;
+    MetaVarName<"<old>=<new>">,
+    HelpText<"For paths in debug info, remap directory <old> to <new>. If multiple options match a path, the last option wins">;
 def fcoverage_prefix_map_EQ
   : Joined<["-"], "fcoverage-prefix-map=">, Group<f_Group>,
     Flags<[CC1Option]>,
