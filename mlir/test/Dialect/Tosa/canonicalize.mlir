@@ -358,10 +358,27 @@ func.func @reshape_canonicalize_const_spat() -> (tensor<10xi32>, tensor<1x10xi32
 
 // CHECK-LABEL: @reshape_canonicalize_const_sparse
 func.func @reshape_canonicalize_const_sparse() -> (tensor<3xi32>, tensor<1x3xi32>) {
-  //CHECK: "tosa.reshape"
+  // CHECK: "tosa.reshape"
   %0 = "tosa.const"() {value = dense<[1, 2, 3]> : tensor<3xi32>} : ()-> tensor<3xi32>
   %1 = "tosa.reshape"(%0) {new_shape = array<i64: 1, 3>} : (tensor<3xi32>) -> tensor<1x3xi32>
   return %0 , %1 : tensor<3xi32>, tensor<1x3xi32>
+}
+
+// CHECK-LABEL: @reshape_canonicalize_quant
+func.func @reshape_canonicalize_quant() -> (tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>) {
+  // CHECK{literal}: "tosa.const"() {value = dense<[[1, 2, 3]]> : tensor<1x3xi8>} : () -> tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>> 
+  %0 = "tosa.const"() {value = dense<[1, 2, 3]> : tensor<3xi8>} : ()-> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
+  %1 = "tosa.reshape"(%0) {new_shape = array<i64: 1, 3>} : (tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>) -> tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  return %1 :  tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+}
+
+// CHECK-LABEL: @transpose_canonicalize_strip_quant
+func.func @transpose_canonicalize_strip_quant() -> (tensor<2x1x3xi8>) {
+  // CHECK: "tosa.const"() {value = dense<0> : tensor<2x1x3xi8>} : () -> tensor<2x1x3xi8>
+  %perms = "tosa.const"() {value = dense<[1, 0, 2]> : tensor<3xi32>} : () -> tensor<3xi32>
+  %0 = "tosa.const"() {value = dense<0> : tensor<1x2x3xi8>} : ()-> tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  %1 = "tosa.transpose"(%0, %perms) : (tensor<1x2x3x!quant.uniform<i8:f32, 1.000000e+00>>, tensor<3xi32>) -> tensor<2x1x3xi8>
+  return %1 :  tensor<2x1x3xi8>
 }
 
 // CHECK-LABEL: @slice_fold
