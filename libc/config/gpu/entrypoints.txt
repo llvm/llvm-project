@@ -56,6 +56,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h entrypoints
     libc.src.stdlib.atoi
+
+    # errno.h entrypoints
+    libc.src.errno.errno
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
