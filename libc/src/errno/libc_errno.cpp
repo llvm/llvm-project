@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/macros/properties/architectures.h"
-#include "libc_errno.h"
 
 namespace __llvm_libc {
+
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+struct ErrnoConsumer {
+  void operator=(int) {}
+};
+#endif
 
 extern "C" {
 #ifdef LIBC_COPT_PUBLIC_PACKAGING
