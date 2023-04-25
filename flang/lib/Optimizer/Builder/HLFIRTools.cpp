@@ -36,11 +36,22 @@ getExplicitExtentsFromShape(mlir::Value shape, fir::FirOpBuilder &builder) {
   } else if (mlir::dyn_cast_or_null<fir::ShiftOp>(shapeOp)) {
     return {};
   } else if (auto s = mlir::dyn_cast_or_null<hlfir::ShapeOfOp>(shapeOp)) {
+    hlfir::ExprType expr = s.getExpr().getType().cast<hlfir::ExprType>();
+    llvm::ArrayRef<int64_t> exprShape = expr.getShape();
+    mlir::Type indexTy = builder.getIndexType();
     fir::ShapeType shapeTy = shape.getType().cast<fir::ShapeType>();
     result.reserve(shapeTy.getRank());
     for (unsigned i = 0; i < shapeTy.getRank(); ++i) {
-      auto op = builder.create<hlfir::GetExtentOp>(shape.getLoc(), shape, i);
-      result.emplace_back(op.getResult());
+      int64_t extent = exprShape[i];
+      mlir::Value extentVal;
+      if (extent == expr.getUnknownExtent()) {
+        auto op = builder.create<hlfir::GetExtentOp>(shape.getLoc(), shape, i);
+        extentVal = op.getResult();
+      } else {
+        extentVal =
+            builder.createIntegerConstant(shape.getLoc(), indexTy, extent);
+      }
+      result.emplace_back(extentVal);
     }
   } else {
     TODO(shape.getLoc(), "read fir.shape to get extents");
