@@ -46,6 +46,11 @@ public:
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
+  virtual bool CreateBreakpoint(lldb::addr_t addr, Status &error) {
+    error.SetErrorString("ScriptedProcess don't support creating breakpoints.");
+    return {};
+  }
+
   virtual lldb::DataExtractorSP
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {
     return {};

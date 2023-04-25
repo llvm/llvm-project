@@ -110,6 +110,22 @@ StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
   return dict;
 }
 
+bool ScriptedProcessPythonInterface::CreateBreakpoint(lldb::addr_t addr,
+                                                      Status &error) {
+  Status py_error;
+  StructuredData::ObjectSP obj =
+      Dispatch("create_breakpoint", py_error, addr, error);
+
+  // If there was an error on the python call, surface it to the user.
+  if (py_error.Fail())
+    error = py_error;
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+    return {};
+
+  return obj->GetBooleanValue();
+}
+
 lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
     lldb::addr_t address, size_t size, Status &error) {
   Status py_error;

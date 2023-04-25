@@ -107,7 +107,7 @@ class TestInteractiveScriptedProcess(TestBase):
             self.assertEqual(real_pc, mux_pc, f"PC's equal for {id}")
 
         lldbutil.run_break_set_by_source_regexp(self, "also break here")
-        self.assertEqual(mux_target.GetNumBreakpoints(), 1)
+        self.assertEqual(mux_target.GetNumBreakpoints(), 2)
         error = mux_process.Continue()
         self.assertSuccess(error, "Resuming multiplexer scripted process")
         self.assertTrue(mux_process.IsValid(), "Got a valid process")
