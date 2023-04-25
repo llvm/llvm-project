@@ -45,6 +45,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
@@ -435,6 +436,115 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   return {std::move(UnusedIncludes), std::move(MissingIncludes)};
 }
 
+Fix removeAllUnusedIncludes(llvm::ArrayRef<Diag> UnusedIncludes) {
+  assert(!UnusedIncludes.empty());
+
+  Fix RemoveAll;
+  RemoveAll.Message = "remove all unused includes";
+  for (const auto &Diag : UnusedIncludes) {
+    assert(Diag.Fixes.size() == 1 && "Expected exactly one fix.");
+    RemoveAll.Edits.insert(RemoveAll.Edits.end(),
+         Diag.Fixes.front().Edits.begin(),
+         Diag.Fixes.front().Edits.end());
+  }
+
+  // TODO(hokein): emit a suitable text for the label.
+  ChangeAnnotation Annotation = {/*label=*/"",
+                                 /*needsConfirmation=*/true,
+                                 /*description=*/""};
+  static const ChangeAnnotationIdentifier RemoveAllUnusedID =
+      "RemoveAllUnusedIncludes";
+  for (unsigned I = 0; I < RemoveAll.Edits.size(); ++I) {
+    ChangeAnnotationIdentifier ID = RemoveAllUnusedID + std::to_string(I);
+    RemoveAll.Edits[I].annotationId = ID;
+    RemoveAll.Annotations.push_back({ID, Annotation});
+  }
+  return RemoveAll;
+}
+Fix addAllMissingIncludes(llvm::ArrayRef<Diag> MissingIncludeDiags) {
+  assert(!MissingIncludeDiags.empty());
+
+  Fix AddAllMissing;
+  AddAllMissing.Message = "add all missing includes";
+  // A map to deduplicate the edits with the same new text.
+  // newText (#include "my_missing_header.h") -> TextEdit.
+  llvm::StringMap<TextEdit> Edits;
+  for (const auto &Diag : MissingIncludeDiags) {
+    assert(Diag.Fixes.size() == 1 && "Expected exactly one fix.");
+    for (const auto& Edit : Diag.Fixes.front().Edits) {
+      Edits.try_emplace(Edit.newText, Edit);
+    }
+  }
+  // FIXME(hokein): emit used symbol reference in the annotation.
+  ChangeAnnotation Annotation = {/*label=*/"",
+                                 /*needsConfirmation=*/true,
+                                 /*description=*/""};
+  static const ChangeAnnotationIdentifier AddAllMissingID =
+      "AddAllMissingIncludes";
+  unsigned I = 0;
+  for (auto &It : Edits) {
+    ChangeAnnotationIdentifier ID = AddAllMissingID + std::to_string(I++);
+    AddAllMissing.Edits.push_back(std::move(It.getValue()));
+    AddAllMissing.Edits.back().annotationId = ID;
+
+    AddAllMissing.Annotations.push_back({ID, Annotation});
+  }
+  return AddAllMissing;
+}
+Fix fixAll(const Fix& RemoveAllUnused, const Fix& AddAllMissing) {
+  Fix FixAll;
+  FixAll.Message = "fix all includes";
+
+  for (const auto &F : RemoveAllUnused.Edits)
+    FixAll.Edits.push_back(F);
+  for (const auto &F : AddAllMissing.Edits)
+    FixAll.Edits.push_back(F);
+
+  for (const auto& A : RemoveAllUnused.Annotations)
+    FixAll.Annotations.push_back(A);
+  for (const auto& A : AddAllMissing.Annotations)
+    FixAll.Annotations.push_back(A);
+  return FixAll;
+}
+
+std::vector<Diag> generateIncludeCleanerDiagnostic(
+    ParsedAST &AST, const IncludeCleanerFindings &Findings,
+    llvm::StringRef Code) {
+  std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
+      AST.tuPath(), Findings.UnusedIncludes, Code);
+  std::optional<Fix> RemoveAllUnused;;
+  if (UnusedIncludes.size() > 1)
+    RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
+
+  std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
+      AST, Findings.MissingIncludes, Code);
+  std::optional<Fix> AddAllMissing;
+  if (MissingIncludeDiags.size() > 1)
+    AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
+
+  std::optional<Fix> FixAll;
+  if (RemoveAllUnused && AddAllMissing)
+    FixAll = fixAll(*RemoveAllUnused, *AddAllMissing);
+
+  auto AddBatchFix = [](const std::optional<Fix> &F, clang::clangd::Diag *Out) {
+    if (!F) return;
+    Out->Fixes.push_back(*F);
+  };
+  for (auto &Diag : MissingIncludeDiags) {
+    AddBatchFix(AddAllMissing, &Diag);
+    AddBatchFix(FixAll, &Diag);
+  }
+  for (auto &Diag : UnusedIncludes) {
+    AddBatchFix(RemoveAllUnused, &Diag);
+    AddBatchFix(FixAll, &Diag);
+  }
+
+  auto Result = std::move(MissingIncludeDiags);
+  llvm::move(UnusedIncludes,
+             std::back_inserter(Result));
+  return Result;
+}
+
 std::vector<Diag> issueIncludeCleanerDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code) {
   // Interaction is only polished for C/CPP.
@@ -450,13 +560,7 @@ std::vector<Diag> issueIncludeCleanerDiagnostics(ParsedAST &AST,
     // will need include-cleaner results, call it once
     Findings = computeIncludeCleanerFindings(AST);
   }
-
-  std::vector<Diag> Result = generateUnusedIncludeDiagnostics(
-      AST.tuPath(), Findings.UnusedIncludes, Code);
-  llvm::move(
-      generateMissingIncludeDiagnostics(AST, Findings.MissingIncludes, Code),
-      std::back_inserter(Result));
-  return Result;
+  return generateIncludeCleanerDiagnostic(AST, Findings, Code);
 }
 
 std::optional<include_cleaner::Header>
