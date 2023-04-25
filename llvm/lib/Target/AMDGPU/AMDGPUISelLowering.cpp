@@ -16,7 +16,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUMachineFunction.h"
-#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -4905,22 +4904,6 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IID = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
     switch (IID) {
-    case Intrinsic::amdgcn_mbcnt_lo:
-    case Intrinsic::amdgcn_mbcnt_hi: {
-      const GCNSubtarget &ST =
-          DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-      // These return at most the (wavefront size - 1) + src1
-      // As long as src1 is an immediate we can calc known bits
-      KnownBits Src1Known = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
-      unsigned Src1ValBits = Src1Known.countMaxActiveBits();
-      unsigned MaxActiveBits = std::max(Src1ValBits, ST.getWavefrontSizeLog2());
-      // Cater for potential carry
-      MaxActiveBits += Src1ValBits ? 1 : 0;
-      unsigned Size = Op.getValueType().getSizeInBits();
-      if (MaxActiveBits < Size)
-        Known.Zero.setHighBits(Size - MaxActiveBits);
-      break;
-    }
     case Intrinsic::amdgcn_workitem_id_x:
     case Intrinsic::amdgcn_workitem_id_y:
     case Intrinsic::amdgcn_workitem_id_z: {
