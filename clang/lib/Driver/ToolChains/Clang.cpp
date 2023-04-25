@@ -4033,6 +4033,13 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Opt));
   }
 
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fdiagnostics_misexpect_tolerance_EQ)) {
+    std::string Opt =
+        std::string("-fdiagnostics-misexpect-tolerance=") + A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(Opt));
+  }
+
   if (const Arg *A = Args.getLastArg(options::OPT_fdiagnostics_format_EQ)) {
     CmdArgs.push_back("-fdiagnostics-format");
     CmdArgs.push_back(A->getValue());
