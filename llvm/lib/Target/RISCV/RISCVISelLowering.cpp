@@ -6612,7 +6612,7 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   return DAG.getNode(BaseOpc, DL, XLenVT, SetCC, Op.getOperand(0));
 }
 
-static bool hasNonZeroAVL(SDValue AVL) {
+static bool isNonZeroAVL(SDValue AVL) {
   auto *RegisterAVL = dyn_cast<RegisterSDNode>(AVL);
   auto *ImmAVL = dyn_cast<ConstantSDNode>(AVL);
   return (RegisterAVL && RegisterAVL->getReg() == RISCV::X0) ||
@@ -6628,7 +6628,7 @@ static SDValue lowerReductionSeq(unsigned RVVOpcode, MVT ResVT,
   const MVT VecVT = Vec.getSimpleValueType();
   const MVT M1VT = getLMUL1VT(VecVT);
   const MVT XLenVT = Subtarget.getXLenVT();
-  const bool NonZeroAVL = hasNonZeroAVL(VL);
+  const bool NonZeroAVL = isNonZeroAVL(VL);
 
   // The reduction needs an LMUL1 input; do the splat at either LMUL1
   // or the original VT if fractional.
@@ -9158,7 +9158,7 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
       ScalarV.getOpcode() != RISCVISD::VMV_V_X_VL)
     return SDValue();
 
-  if (!hasNonZeroAVL(ScalarV.getOperand(2)))
+  if (!isNonZeroAVL(ScalarV.getOperand(2)))
     return SDValue();
 
   // Check the scalar of ScalarV is neutral element
