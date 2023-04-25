@@ -2036,11 +2036,6 @@ defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
   PosFlag<SetFalse, [], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[CoreOption]>>;
 
-def frewrite_map_file_EQ : Joined<["-"], "frewrite-map-file=">,
-                           Group<f_Group>,
-                           Flags<[NoXarchOption, CC1Option]>,
-                           MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
-
 defm use_line_directives : BoolFOption<"use-line-directives",
   PreprocessorOutputOpts<"UseLineDirectives">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use #line in preprocessed output">, NegFlag<SetFalse>>;
