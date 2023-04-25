@@ -74,6 +74,7 @@ void AMDGPUArgumentUsageInfo::print(raw_ostream &OS, const Module *M) const {
        << "  WorkGroupIDY: " << FI.second.WorkGroupIDY
        << "  WorkGroupIDZ: " << FI.second.WorkGroupIDZ
        << "  WorkGroupInfo: " << FI.second.WorkGroupInfo
+       << "  WaveID: " << FI.second.WaveID
        << "  LDSKernelId: " << FI.second.LDSKernelId
        << "  PrivateSegmentWaveByteOffset: "
           << FI.second.PrivateSegmentWaveByteOffset
@@ -107,6 +108,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
   case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
     return std::tuple(WorkGroupIDZ ? &WorkGroupIDZ : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::WAVE_ID:
+    return std::tuple(WaveID ? &WaveID : nullptr, &AMDGPU::SGPR_32RegClass,
+                      LLT::scalar(32));
   case AMDGPUFunctionArgInfo::LDS_KERNEL_ID:
     return std::tuple(LDSKernelId ? &LDSKernelId : nullptr,
                       &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
