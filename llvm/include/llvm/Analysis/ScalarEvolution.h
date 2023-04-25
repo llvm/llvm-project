@@ -791,16 +791,19 @@ public:
   bool isLoopBackedgeGuardedByCond(const Loop *L, ICmpInst::Predicate Pred,
                                    const SCEV *LHS, const SCEV *RHS);
 
+  /// A version of getTripCountFromExitCount below which always picks an
+  /// evaluation type which can not result in overflow.
+  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount);
+
   /// Convert from an "exit count" (i.e. "backedge taken count") to a "trip
   /// count".  A "trip count" is the number of times the header of the loop
   /// will execute if an exit is taken after the specified number of backedges
   /// have been taken.  (e.g. TripCount = ExitCount + 1).  Note that the
-  /// expression can overflow if ExitCount = UINT_MAX.  \p Extend controls
-  /// how potential overflow is handled.  If true, a wider result type is
-  /// returned. ex: EC = 255 (i8), TC = 256 (i9).  If false, result unsigned
-  /// wraps with 2s-complement semantics.  ex: EC = 255 (i8), TC = 0 (i8)
-  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount,
-                                        bool Extend = true);
+  /// expression can overflow if ExitCount = UINT_MAX.  If EvalTy is not wide
+  /// enough to hold the result without overflow, result unsigned wraps with
+  /// 2s-complement semantics.  ex: EC = 255 (i8), TC = 0 (i8)
+  const SCEV *getTripCountFromExitCount(const SCEV *ExitCount, Type *EvalTy,
+                                        const Loop *L);
 
   /// Returns the exact trip count of the loop if we can compute it, and
   /// the result is a small constant.  '0' is used to represent an unknown
