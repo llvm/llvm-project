@@ -531,6 +531,29 @@ namespace DeclRefs {
   //static_assert(b.a.f == 100, "");
 }
 
+namespace PointerArith {
+  struct A {};
+  struct B : A { int n; };
+
+  B b = {};
+  constexpr A *a1 = &b;
+  constexpr B *b1 = &b + 1;
+  constexpr B *b2 = &b + 0;
+
+#if 0
+  constexpr A *a2 = &b + 1; // expected-error {{must be initialized by a constant expression}} \
+                            // expected-note {{cannot access base class of pointer past the end of object}} \
+                            // ref-error {{must be initialized by a constant expression}} \
+                            // ref-note {{cannot access base class of pointer past the end of object}}
+
+#endif
+  constexpr const int *pn = &(&b + 1)->n; // expected-error {{must be initialized by a constant expression}} \
+                                          // expected-note {{cannot access field of pointer past the end of object}} \
+                                          // ref-error {{must be initialized by a constant expression}} \
+                                          // ref-note {{cannot access field of pointer past the end of object}}
+
+}
+
 #if __cplusplus >= 202002L
 namespace VirtualCalls {
 namespace Obvious {
