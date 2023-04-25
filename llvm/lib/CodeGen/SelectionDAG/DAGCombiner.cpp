@@ -19412,6 +19412,8 @@ void DAGCombiner::getStoreMergeCandidates(
     // Don't mix temporal stores with non-temporal stores.
     if (St->isNonTemporal() != Other->isNonTemporal())
       return false;
+    if (!TLI.areTwoSDNodeTargetMMOFlagsMergeable(*St, *Other))
+      return false;
     SDValue OtherBC = peekThroughBitcasts(Other->getValue());
     // Allow merging constants of different types as integers.
     bool NoTypeMatch = (MemVT.isInteger()) ? !MemVT.bitsEq(Other->getMemoryVT())
@@ -19436,6 +19438,9 @@ void DAGCombiner::getStoreMergeCandidates(
         return false;
       // Don't mix temporal loads with non-temporal loads.
       if (cast<LoadSDNode>(Val)->isNonTemporal() != OtherLd->isNonTemporal())
+        return false;
+      if (!TLI.areTwoSDNodeTargetMMOFlagsMergeable(*cast<LoadSDNode>(Val),
+                                                   *OtherLd))
         return false;
       if (!(LBasePtr.equalBaseIndex(LPtr, DAG)))
         return false;
@@ -20061,9 +20066,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     if (IsNonTemporalLoad)
       LdMMOFlags |= MachineMemOperand::MONonTemporal;
 
+    LdMMOFlags |= TLI.getTargetMMOFlags(*FirstLoad);
+
     MachineMemOperand::Flags StMMOFlags = IsNonTemporalStore
                                               ? MachineMemOperand::MONonTemporal
                                               : MachineMemOperand::MONone;
+
+    StMMOFlags |= TLI.getTargetMMOFlags(*StoreNodes[0].MemNode);
 
     SDValue NewLoad, NewStore;
     if (UseVectorTy || !DoIntegerTruncate) {

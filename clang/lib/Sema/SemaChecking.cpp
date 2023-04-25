@@ -4652,6 +4652,65 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   // Check if rnum is in [0, 10]
   case RISCV::BI__builtin_riscv_aes64ks1i_64:
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 10);
+  case RISCV::BI__builtin_riscv_ntl_load:
+  case RISCV::BI__builtin_riscv_ntl_store:
+    DeclRefExpr *DRE =
+        cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
+    assert((BuiltinID == RISCV::BI__builtin_riscv_ntl_store ||
+            BuiltinID == RISCV::BI__builtin_riscv_ntl_load) &&
+           "Unexpected RISC-V nontemporal load/store builtin!");
+    bool IsStore = BuiltinID == RISCV::BI__builtin_riscv_ntl_store;
+    unsigned NumArgs = IsStore ? 3 : 2;
+
+    if (checkArgCount(*this, TheCall, NumArgs))
+      return true;
+
+    // Domain value should be compile-time constant.
+    // 2 <= domain <= 5
+    if (SemaBuiltinConstantArgRange(TheCall, NumArgs - 1, 2, 5))
+      return true;
+
+    Expr *PointerArg = TheCall->getArg(0);
+    ExprResult PointerArgResult =
+        DefaultFunctionArrayLvalueConversion(PointerArg);
+
+    if (PointerArgResult.isInvalid())
+      return true;
+    PointerArg = PointerArgResult.get();
+
+    const PointerType *PtrType = PointerArg->getType()->getAs<PointerType>();
+    if (!PtrType) {
+      Diag(DRE->getBeginLoc(), diag::err_nontemporal_builtin_must_be_pointer)
+          << PointerArg->getType() << PointerArg->getSourceRange();
+      return true;
+    }
+
+    QualType ValType = PtrType->getPointeeType();
+    ValType = ValType.getUnqualifiedType();
+    if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
+        !ValType->isBlockPointerType() && !ValType->isFloatingType() &&
+        !ValType->isVectorType() && !ValType->isRVVType()) {
+      Diag(DRE->getBeginLoc(),
+           diag::err_nontemporal_builtin_must_be_pointer_intfltptr_or_vector)
+          << PointerArg->getType() << PointerArg->getSourceRange();
+      return true;
+    }
+
+    if (!IsStore) {
+      TheCall->setType(ValType);
+      return false;
+    }
+
+    ExprResult ValArg = TheCall->getArg(1);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, ValType, /*consume*/ false);
+    ValArg = PerformCopyInitialization(Entity, SourceLocation(), ValArg);
+    if (ValArg.isInvalid())
+      return true;
+
+    TheCall->setArg(1, ValArg.get());
+    TheCall->setType(Context.VoidTy);
+    return false;
   }
 
   return false;

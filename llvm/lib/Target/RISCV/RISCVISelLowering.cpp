@@ -15736,6 +15736,57 @@ RISCVTargetLowering::getRegisterByName(const char *RegName, LLT VT,
   return Reg;
 }
 
+MachineMemOperand::Flags
+RISCVTargetLowering::getTargetMMOFlags(const Instruction &I) const {
+  const MDNode *NontemporalInfo = I.getMetadata(LLVMContext::MD_nontemporal);
+
+  if (NontemporalInfo == nullptr)
+    return MachineMemOperand::MONone;
+
+  // 1 for default value work as __RISCV_NTLH_ALL
+  // 2 -> __RISCV_NTLH_INNERMOST_PRIVATE
+  // 3 -> __RISCV_NTLH_ALL_PRIVATE
+  // 4 -> __RISCV_NTLH_INNERMOST_SHARED
+  // 5 -> __RISCV_NTLH_ALL
+  int NontemporalLevel = 5;
+  const MDNode *RISCVNontemporalInfo =
+      I.getMetadata("riscv-nontemporal-domain");
+  if (RISCVNontemporalInfo != nullptr)
+    NontemporalLevel =
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(RISCVNontemporalInfo->getOperand(0))
+                ->getValue())
+            ->getZExtValue();
+
+  assert((1 <= NontemporalLevel && NontemporalLevel <= 5) &&
+         "RISC-V target doesn't support this non-temporal domain.");
+
+  NontemporalLevel -= 2;
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
+  if (NontemporalLevel & 0b1)
+    Flags |= MONontemporalBit0;
+  if (NontemporalLevel & 0b10)
+    Flags |= MONontemporalBit1;
+
+  return Flags;
+}
+
+MachineMemOperand::Flags
+RISCVTargetLowering::getTargetMMOFlags(const MemSDNode &Node) const {
+
+  MachineMemOperand::Flags NodeFlags = Node.getMemOperand()->getFlags();
+  MachineMemOperand::Flags TargetFlags = MachineMemOperand::MONone;
+  TargetFlags |= (NodeFlags & MONontemporalBit0);
+  TargetFlags |= (NodeFlags & MONontemporalBit1);
+
+  return TargetFlags;
+}
+
+bool RISCVTargetLowering::areTwoSDNodeTargetMMOFlagsMergeable(
+    const MemSDNode &NodeX, const MemSDNode &NodeY) const {
+  return getTargetMMOFlags(NodeX) == getTargetMMOFlags(NodeY);
+}
+
 namespace llvm::RISCVVIntrinsicsTable {
 
 #define GET_RISCVVIntrinsicsTable_IMPL
