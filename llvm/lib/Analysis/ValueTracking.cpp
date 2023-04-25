@@ -2705,12 +2705,25 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
     break;
-  case Instruction::Sub:
+  case Instruction::Sub: {
     if (auto *C = dyn_cast<Constant>(I->getOperand(0)))
       if (C->isNullValue() &&
           isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q))
         return true;
-    break;
+
+    KnownBits XKnown =
+        computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
+    if (!XKnown.isUnknown()) {
+      KnownBits YKnown =
+          computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+      // If X != Y then X - Y is non zero.
+      std::optional<bool> ne = KnownBits::ne(XKnown, YKnown);
+      // If we are unable to compute if X != Y, we won't be able to do anything
+      // computing the knownbits of the sub expression so just return here.
+      return ne && *ne;
+    }
+    return false;
+  }
   case Instruction::Or:
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||

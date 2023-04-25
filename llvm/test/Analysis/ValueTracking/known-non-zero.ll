@@ -442,12 +442,7 @@ define i1 @shl_nonzero_and_shift_out_zeros_fail(i32 %ccnt, i32 %y) {
 
 define i1 @sub_nonzero_ops_ne(i8 %xx, i8 %yy, i8 %z) {
 ; CHECK-LABEL: @sub_nonzero_ops_ne(
-; CHECK-NEXT:    [[X:%.*]] = and i8 [[XX:%.*]], -65
-; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], 64
-; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[EXP:%.*]] = or i8 [[Z:%.*]], [[S]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = and i8 %xx, 191
   %y = or i8 %yy, 64
