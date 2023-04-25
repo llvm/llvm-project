@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_termios_unittests)
+add_custom_target(libc_termios_unittests)
 
 add_libc_unittest(
   termios_test

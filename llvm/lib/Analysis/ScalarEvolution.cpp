@@ -2340,25 +2340,42 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
-  // We can prove that add(x, constant) doesn't wrap if isKnownPredicateAt can
-  // guarantee that x <= max_int - constant at the given context.
-  // TODO: Support other operations.
-  if (BinOp != Instruction::Add)
+  // TODO: Support mul.
+  if (BinOp == Instruction::Mul)
     return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
   if (!RHSC)
     return false;
   APInt C = RHSC->getAPInt();
-  // TODO: Also lift this limitation.
-  if (Signed && C.isNegative())
-    return false;
   unsigned NumBits = C.getBitWidth();
-  APInt Max =
-      Signed ? APInt::getSignedMaxValue(NumBits) : APInt::getMaxValue(NumBits);
-  APInt Limit = Max - C;
+  bool IsSub = (BinOp == Instruction::Sub);
+  bool IsNegativeConst = (Signed && C.isNegative());
+  // Compute the direction and magnitude by which we need to check overflow.
+  bool OverflowDown = IsSub ^ IsNegativeConst;
+  APInt Magnitude = C;
+  if (IsNegativeConst) {
+    if (C == APInt::getSignedMinValue(NumBits))
+      // TODO: SINT_MIN on inversion gives the same negative value, we don't
+      // want to deal with that.
+      return false;
+    Magnitude = -C;
+  }
+
   ICmpInst::Predicate Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-  return isKnownPredicateAt(Pred, LHS, getConstant(Limit), CtxI);
+  if (OverflowDown) {
+    // To avoid overflow down, we need to make sure that MIN + Magnitude <= LHS.
+    APInt Min = Signed ? APInt::getSignedMinValue(NumBits)
+                       : APInt::getMinValue(NumBits);
+    APInt Limit = Min + Magnitude;
+    return isKnownPredicateAt(Pred, getConstant(Limit), LHS, CtxI);
+  } else {
+    // To avoid overflow up, we need to make sure that LHS <= MAX - Magnitude.
+    APInt Max = Signed ? APInt::getSignedMaxValue(NumBits)
+                       : APInt::getMaxValue(NumBits);
+    APInt Limit = Max - Magnitude;
+    return isKnownPredicateAt(Pred, LHS, getConstant(Limit), CtxI);
+  }
 }
 
 std::optional<SCEV::NoWrapFlags>

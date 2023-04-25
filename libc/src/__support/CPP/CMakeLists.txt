@@ -60,6 +60,7 @@ add_header_library(
   HDRS
     string.h
   DEPENDS
+    libc.include.stdlib
     .string_view
     libc.src.__support.common
     libc.src.__support.integer_to_string

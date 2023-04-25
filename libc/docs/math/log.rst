@@ -70,7 +70,7 @@ d. add step a and step c results.
 How to derive `r`
 -----------------
 
-For an efficient implementation, we would like to use the first `M` signficicant
+For an efficient implementation, we would like to use the first `M` significant
 bits of `m_x` to look up for `r`.  In particular, we would like to find a value
 of `r` that works for all `m_x` satisfying:
 

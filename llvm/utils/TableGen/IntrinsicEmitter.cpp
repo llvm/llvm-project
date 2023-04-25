@@ -28,6 +28,7 @@
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <map>
 #include <optional>
@@ -54,6 +55,7 @@ public:
 
   void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitArgKind(raw_ostream &OS);
+  void EmitIITInfo(raw_ostream &OS);
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
@@ -82,6 +84,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit ArgKind for Intrinsics.h.
     EmitArgKind(OS);
   } else {
+    // Emit IIT_Info constants.
+    EmitIITInfo(OS);
+
     // Emit the target metadata.
     EmitTargetInfo(Ints, OS);
 
@@ -176,6 +181,27 @@ void IntrinsicEmitter::EmitArgKind(raw_ostream &OS) {
       OS << "    AK_" << RV.getName() << " = " << *RV.getValue() << ",\n";
   } else {
     OS << "#error \"ArgKind is not defined\"\n";
+  }
+  OS << "#endif\n\n";
+}
+
+void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
+  OS << "#ifdef GET_INTRINSIC_IITINFO\n";
+  std::array<StringRef, 256> RecsByNumber;
+  auto IIT_Base = Records.getAllDerivedDefinitionsIfDefined("IIT_Base");
+  for (auto Rec : IIT_Base) {
+    auto Number = Rec->getValueAsInt("Number");
+    assert(0 <= Number && Number < (int)RecsByNumber.size() &&
+           "IIT_Info.Number should be uint8_t");
+    assert(RecsByNumber[Number].empty() && "Duplicate IIT_Info.Number");
+    RecsByNumber[Number] = Rec->getName();
+  }
+  if (IIT_Base.size() > 0) {
+    for (unsigned I = 0, E = RecsByNumber.size(); I < E; ++I)
+      if (!RecsByNumber[I].empty())
+        OS << "  " << RecsByNumber[I] << " = " << I << ",\n";
+  } else {
+    OS << "#error \"class IIT_Base is not defined\"\n";
   }
   OS << "#endif\n\n";
 }

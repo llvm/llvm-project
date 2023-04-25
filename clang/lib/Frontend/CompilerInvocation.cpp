@@ -1935,16 +1935,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     }
   }
 
-  if (Arg *A =
-          Args.getLastArg(OPT_mabi_EQ_vec_default, OPT_mabi_EQ_vec_extabi)) {
-    if (!T.isOSAIX())
-      Diags.Report(diag::err_drv_unsupported_opt_for_target)
-          << A->getSpelling() << T.str();
-
-    const Option &O = A->getOption();
-    Opts.EnableAIXExtendedAltivecABI = O.matches(OPT_mabi_EQ_vec_extabi);
-  }
-
   if (Arg *A = Args.getLastArg(OPT_mabi_EQ_quadword_atomics)) {
     if (!T.isOSAIX() || T.isPPC32())
       Diags.Report(diag::err_drv_unsupported_opt_for_target)
