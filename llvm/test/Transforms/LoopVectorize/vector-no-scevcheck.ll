@@ -5,8 +5,7 @@
 
 define void @foo(ptr %pout, ptr %pin, i64 %val0, i64 %val1, i64 %val2) {
 ; CHECK-LABEL: @foo(
-; FIXME: CHECK below needs to be changed to CHECK-NOT to confirm the change.
-; CHECK: vector.scevcheck
+; CHECK-NOT: vector.scevcheck
 ; CHECK: vector.body
 entry:
   %0 = getelementptr double, ptr %pin, i64 %val0
@@ -45,8 +44,7 @@ exit:                                             ; preds = %loop1.latch
 
 define void @bar(ptr %pout, ptr %pin, i64 %val0, i64 %val1, i64 %val2) {
 ; CHECK-LABEL: @bar(
-; FIXME: CHECK below needs to be changed to CHECK-NOT to confirm the change.
-; CHECK: vector.scevcheck
+; CHECK-NOT: vector.scevcheck
 ; CHECK: vector.body
 entry:
   %0 = getelementptr double, ptr %pin, i64 %val0
