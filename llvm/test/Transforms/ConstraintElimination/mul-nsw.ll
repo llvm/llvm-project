@@ -14,16 +14,16 @@ define void @slt_mul_nsw_3_known_positive_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_1:%.*]] = mul nsw i8 [[START]], 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_2:%.*]] = mul nsw i8 [[START]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp slt i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = mul nsw i8 [[START]], 3
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = mul nsw i8 [[START]], 4
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
@@ -336,16 +336,16 @@ define void @slt_mul_nsw_neg_3_known_negative_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_1:%.*]] = mul nsw i8 [[START]], -1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_2:%.*]] = mul nsw i8 [[START]], -2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp slt i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = mul nsw i8 [[START]], -3
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = mul nsw i8 [[START]], -4
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
@@ -455,10 +455,10 @@ define void @slt_mul_nsw_3_known_negative_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    [[START_3:%.*]] = mul nsw i8 [[START]], 3
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = mul nsw i8 [[START]], 4
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
 ; CHECK-NEXT:    ret void
@@ -565,10 +565,10 @@ define void @slt_mul_nsw_neg_3_known_positive_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @use(i1 [[C_5]])
 ; CHECK-NEXT:    [[START_3:%.*]] = mul nsw i8 [[START]], -3
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = mul nsw i8 [[START]], -4
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_4]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
 ; CHECK-NEXT:    ret void
@@ -666,16 +666,16 @@ define void @slt_mul_nsw_3_known_nonnegative_1(i8 %start, i8 %high) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_1:%.*]] = mul nsw i8 [[START]], 1
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_1]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_2:%.*]] = mul nsw i8 [[START]], 2
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp slt i8 [[START_2]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = mul nsw i8 [[START]], 3
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[START_3]], [[HIGH]]
-; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = mul nsw i8 [[START]], 4
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[C_3]])
