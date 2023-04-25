@@ -1811,9 +1811,6 @@ void Driver::generateCompilationDiagnostics(
     }
   }
 
-  for (const auto &A : C.getArgs().filtered(options::OPT_frewrite_map_file_EQ))
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << A->getValue();
-
   Diag(clang::diag::note_drv_command_failed_diag_msg)
       << "\n\n********************";
 }
