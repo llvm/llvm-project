@@ -9120,7 +9120,7 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
   SDValue Extract = N->getOperand(ReduceIdx);
   SDValue Reduce = Extract.getOperand(0);
-  if (!Reduce.hasOneUse())
+  if (!Extract.hasOneUse() || !Reduce.hasOneUse())
     return SDValue();
 
   SDValue ScalarV = Reduce.getOperand(2);
