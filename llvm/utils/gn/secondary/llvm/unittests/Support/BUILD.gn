@@ -34,6 +34,7 @@ unittest("SupportTests") {
     "Chrono.cpp",
     "CommandLineTest.cpp",
     "CompressionTest.cpp",
+    "ConvertEBCDICTest.cpp",
     "ConvertUTFTest.cpp",
     "CrashRecoveryTest.cpp",
     "DJBTest.cpp",

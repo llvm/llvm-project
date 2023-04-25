@@ -146,6 +146,7 @@ add_llvm_component_library(LLVMSupport
   Compression.cpp
   CRC.cpp
   ConvertUTF.cpp
+  ConvertEBCDIC.cpp
   ConvertUTFWrapper.cpp
   CrashRecoveryContext.cpp
   CSKYAttributes.cpp
