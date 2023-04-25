@@ -43,4 +43,9 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics", "::mlir::func::F
   let constructor = "hlfir::createSimplifyHLFIRIntrinsicsPass()";
 }
 
+def InlineElementals : Pass<"inline-elementals", "::mlir::func::FuncOp"> {
+  let summary = "Inline chained hlfir.elemental operations";
+  let constructor = "hlfir::createInlineElementalsPass()";
+}
+
 #endif //FORTRAN_DIALECT_HLFIR_PASSES
