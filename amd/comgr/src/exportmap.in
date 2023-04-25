@@ -74,3 +74,8 @@ global: amd_comgr_create_symbolizer_info;
 global: amd_comgr_populate_mangled_names;
         amd_comgr_get_mangled_name;
 } @amd_comgr_NAME@_2.4;
+
+@amd_comgr_NAME@_2.6 {
+global: amd_comgr_populate_name_expression_map;
+        amd_comgr_map_name_expression_to_symbol_name;
+} @amd_comgr_NAME@_2.5;

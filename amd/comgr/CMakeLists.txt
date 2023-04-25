@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project(amd_comgr VERSION "2.5.0" LANGUAGES C CXX)
+project(amd_comgr VERSION "2.6.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
 # Get git branch and commit hash to add to log for easier debugging.

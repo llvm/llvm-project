@@ -50,6 +50,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/IR/Constants.h"
 #include <fstream>
 #include <mutex>
 #include <string>
@@ -1899,6 +1900,276 @@ amd_comgr_get_mangled_name(amd_comgr_data_t Data,
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
+
+amd_comgr_status_t AMD_COMGR_API
+// NOLINTNEXTLINE(readability-identifier-naming)
+amd_comgr_populate_name_expression_map(amd_comgr_data_t Data,
+                                       size_t *Count) {
+
+  DataObject *DataP = DataObject::convert(Data);
+  if (!DataP || !DataP->Data || (DataP->DataKind != AMD_COMGR_DATA_KIND_BC &&
+      DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  DataP->NameExpressionMap.clear();
+  LLVMContext Context;
+
+  // For bitcodes, the name expression and function pointer can be found by
+  // creating a bitcode module data structure, and searching through the
+  // initalizers of global variables
+  if (DataP->DataKind == AMD_COMGR_DATA_KIND_BC) {
+
+    MemoryBufferRef BcMemBufRef =
+      MemoryBufferRef(StringRef(DataP->Data, DataP->Size),
+                      StringRef(DataP->Name));
+
+    auto BcModVecOrErr = getBitcodeModuleList(BcMemBufRef);
+    if (!BcModVecOrErr) {
+      llvm::logAllUnhandledErrors(BcModVecOrErr.takeError(),
+                                  llvm::errs(), "Bitcode Contents error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    std::vector<BitcodeModule> BcModVec = BcModVecOrErr.get();
+    for (BitcodeModule BcMod : BcModVec) {
+
+      Expected<std::unique_ptr<Module>> ModOrError =
+        BcMod.getLazyModule(Context, true, true);
+      if (!ModOrError) {
+        llvm::logAllUnhandledErrors(ModOrError.takeError(),
+                                    llvm::errs(), "Bitcode Contents error: ");
+        return AMD_COMGR_STATUS_ERROR;
+      }
+
+      // Collect initial values of all global variables starting with
+      // `__amdgcn_name_expr_`.
+      std::unique_ptr<Module> M = std::move(ModOrError.get());
+      for (llvm::GlobalVariable &global_var : M->globals()) {
+        if (global_var.getName().contains("__amdgcn_name_expr_")) {
+
+          std::string map_key, map_val;
+
+          // 1. use getInitalizer() to get a pointer to [2xi8*]
+          auto initalizer = global_var.getInitializer();
+
+          // 2. Get NameExpression map value from second operand name
+          map_val = initalizer->getOperand(1)->getName().str();
+
+          // 3 Get NameExpression map key from first operand
+          llvm::Value *V = initalizer->getOperand(0);
+
+          // Cast initalizer operand 0 to ConstantExpr
+          if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
+            // Cast ConstantExpr operand 0 to GlobalVaribale
+            if (llvm::GlobalVariable *GV =
+                dyn_cast<llvm::GlobalVariable>(CE->getOperand(0))) {
+              // Cast GlobalVariable initializer to ConstantDataSequential
+              if (ConstantDataSequential *CDS =
+                  dyn_cast<ConstantDataSequential>(GV->getInitializer())) {
+
+                map_key = CDS->getAsString().str();
+              }
+            }
+          }
+
+          map_key.erase(std::find(map_key.begin(), map_key.end(), '\0'),
+                        map_key.end());
+          map_val.erase(std::find(map_val.begin(), map_val.end(), '\0'),
+                        map_val.end());
+          if (env::shouldEmitVerboseLogs()) {
+            llvm::errs() << "   Comgr NameExpressionMap[" << map_key
+              << "] = " << map_val << "\n";
+          }
+          DataP->NameExpressionMap[map_key] = map_val;
+        }
+      } // end M->globals() loop
+    } // end BcModVec loop
+  } // end AMD_COMGR_DATA_KIND_BC conditional
+
+  // For code objects, we can get the needed information by creating an ELF
+  // object and traversing the .dynsym, .rela.dyn, and .rodata sections.
+  if (DataP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
+    auto ELFFileOrError = llvm::object::ELF64LEFile::create(
+      StringRef(DataP->Data, DataP->Size));
+    if (!ELFFileOrError) {
+      llvm::logAllUnhandledErrors(ELFFileOrError.takeError(),
+                                  llvm::errs(), "ELFObj creation error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    auto ELFFile = std::move(ELFFileOrError.get());
+
+    std::vector<struct NameExpressionData *> nameExpDataVec;
+    std::map<int, StringRef> dynsymMap;
+
+    // Collect references for .dynsym, .rela.dyn, and .rodata sections
+    auto SectionsOrError = ELFFile.sections();
+    if (!SectionsOrError) {
+      llvm::logAllUnhandledErrors(SectionsOrError.takeError(),
+                                  llvm::errs(), "Sections creation error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    auto Sections = std::move(SectionsOrError.get());
+
+    Elf_Shdr_Impl<ELF64LE> dynsymShdr, relaShdr, rodataShdr;
+    for (auto Shdr : Sections) {
+      if (Shdr.sh_type == llvm::ELF::SHT_DYNSYM)
+        dynsymShdr = Shdr;
+
+      if (Shdr.sh_type == ELF::SHT_RELA)
+        relaShdr = Shdr;
+
+      if ((Shdr.sh_type == ELF::SHT_PROGBITS) &&
+          !(Shdr.sh_flags & ELF::SHF_WRITE) &&
+          !(Shdr.sh_flags & ELF::SHF_EXECINSTR) &&
+          !(Shdr.sh_flags & ELF::SHF_MASKPROC) )
+        rodataShdr = Shdr;
+    }
+
+    // .dynsym - Find name expressions with amdgcn_name_expr and store their
+    // Value fields
+    Expected<StringRef> StrTabOrError =
+      ELFFile.getStringTableForSymtab(dynsymShdr);
+    if (!StrTabOrError) {
+      llvm::logAllUnhandledErrors(StrTabOrError.takeError(),
+                                  llvm::errs(), "StrTab creation error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    StringRef StrTab = std::move(StrTabOrError.get());
+
+    // Check each .dynsym entry
+    for (unsigned int i = 0; i < dynsymShdr.getEntityCount(); ++i) {
+
+      // Get symbol from entry
+      auto SymbolOrError = ELFFile.getSymbol(&dynsymShdr, i);
+      if (!SymbolOrError) {
+        llvm::logAllUnhandledErrors(SymbolOrError.takeError(),
+                                    llvm::errs(), "Symbol creation error: ");
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      auto Symbol = std::move(SymbolOrError.get());
+
+      // Get symbol name from symbol
+      Expected<StringRef> SymbolNameOrError = Symbol->getName(StrTab);
+      if (!SymbolNameOrError) {
+        llvm::logAllUnhandledErrors(SymbolNameOrError.takeError(),
+                                    llvm::errs(), "SymbolName creation error: ");
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      StringRef SymbolName = std::move(SymbolNameOrError.get());
+
+      // Process symbol names containing amdgcn_name_expr
+      if (SymbolName.contains(StringRef("__amdgcn_name_expr_"))) {
+        struct NameExpressionData *expData = new NameExpressionData();
+        expData->StubName = SymbolName;
+        expData->StubValue = Symbol->getValue();
+        nameExpDataVec.push_back(expData);
+      }
+
+      // Store all symbols to later quickly find mangled name
+      dynsymMap[Symbol->getValue()] = SymbolName;
+    } // end entry loop
+
+    // .rela.dyn - Use Values collected from .dynsym
+    //   Offset == Value: Store 'Symbol's Name + Addend'
+    //      - needed to get unmangled name from .rodata
+    //   Offset == Value + 8: Store 'Symbol's Name + Addend'
+    //      - needed to get mangled name from .dynsym
+    auto RelaRangeOrError = ELFFile.relas(relaShdr);
+    if (!RelaRangeOrError) {
+      llvm::logAllUnhandledErrors(RelaRangeOrError.takeError(),
+                                  llvm::errs(), "RelaRange creation error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    auto RelaRange = std::move(RelaRangeOrError.get());
+
+    for (auto Rela : RelaRange) {
+      for (auto expData : nameExpDataVec) {
+        if (Rela.r_offset == expData->StubValue)
+          expData->RodataOffset = Rela.r_addend;
+
+        if (Rela.r_offset == expData->StubValue + 8)
+          expData->MangledValue = Rela.r_addend;
+      }
+    }
+
+    // rodata - Use the difference between the .rela.dyn Names and .rodata
+    // offset to collect unmangled strings
+    auto RodataOrError = ELFFile.getSectionContents(rodataShdr);
+    if (!RodataOrError) {
+      llvm::logAllUnhandledErrors(RodataOrError.takeError(),
+                                  llvm::errs(), "Rodata creation error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+    auto Rodata = std::move(RodataOrError.get());
+
+    // Collect an unmangled name for each name expression
+    for (auto expData : nameExpDataVec) {
+      // TODO: If/when an accessor API becomes availble to get the starting
+      // address for the section, switch to that
+      int offset = expData->RodataOffset - rodataShdr.sh_offset;
+
+      // Store from the offset up until the first '\0'
+      const char *unmangled =
+        reinterpret_cast<const char *>(&Rodata[offset]);
+      expData->UnmangledName = StringRef(unmangled);
+    }
+
+    // Populate mangled names now that mangled values are set
+    for (auto expData : nameExpDataVec)
+      expData->MangledName = dynsymMap[expData->MangledValue];
+
+    // Populate map
+    for (auto expData : nameExpDataVec) {
+      DataP->NameExpressionMap[expData->UnmangledName.str()] =
+        expData->MangledName.str();
+
+      if (env::shouldEmitVerboseLogs()) {
+        llvm::errs() << "   Comgr NameExpressionMap[" << expData->UnmangledName
+                     << "] = " << expData->MangledName << "\n";
+      }
+    }
+
+  } // end AMD_COMGR_DATA_KIND_EXECUTABLE conditional
+
+  *Count = DataP->NameExpressionMap.size();
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+// NOLINTNEXTLINE(readability-identifier-naming)
+amd_comgr_map_name_expression_to_symbol_name(amd_comgr_data_t Data,
+                                             size_t *Size,
+                                             char *NameExpression,
+                                             char *SymbolName) {
+  DataObject *DataP = DataObject::convert(Data);
+  if (!DataP || !DataP->Data || (DataP->DataKind != AMD_COMGR_DATA_KIND_BC &&
+      DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  // Check if the provided NameExpression is in the map
+  std::string nameExpStr(NameExpression);
+  if (DataP->NameExpressionMap.find(nameExpStr) ==
+      DataP->NameExpressionMap.end()) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  // First return the size of the SymbolName
+  if (SymbolName == NULL)
+    *Size = DataP->NameExpressionMap[NameExpression].size() + 1;
+
+  // Now that the calling API has had a chance to allocate memory, copy the
+  // symbol name associated with the provided name expression to the provided
+  // buffer.
+  else
+    memcpy(SymbolName, DataP->NameExpressionMap[NameExpression].c_str(),
+           *Size);
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)

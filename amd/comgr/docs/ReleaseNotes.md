@@ -65,6 +65,15 @@ New APIs
     - Support bitcode and executable name lowering. The first call populates a
     list of mangled names for a given data object, while the second fetches a
     name from a given object and index.
+- amd\_comgr\_populate\_name\_expression\_map() (v2.6)
+- amd\_comgr\_map\_name\_expression\_to\_symbol\_name() (v2.6)
+    - Support bitcode and code object name expression mapping. The first call
+    populates a map of name expressions for a given comgr data object, using
+    LLVM APIs to traverse the bitcode or code object. The second call returns
+    a value (mangled symbol name) from the map for a given key (unmangled
+    name expression). These calls assume that names of interest have been
+    enclosed the HIP runtime using a stub attribute containg the following
+    string in the name: "__amdgcn_name_expr".
 
 Deprecated APIs
 ---------------

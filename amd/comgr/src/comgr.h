@@ -130,6 +130,7 @@ struct DataObject {
   int RefCount;
   DataSymbol *DataSym;
   std::vector<std::string> MangledNames;
+  std::map<std::string, std::string> NameExpressionMap;
 
 private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
@@ -304,6 +305,18 @@ struct DataSymbol {
   }
 
   SymbolContext *DataSym;
+};
+
+// Store relevant data used when mapping name expressiosn to symbol names for
+// for code objects
+struct NameExpressionData {
+public:
+  llvm::StringRef StubName;
+  llvm::StringRef UnmangledName;
+  llvm::StringRef MangledName;
+  long unsigned int StubValue;
+  long unsigned int MangledValue;
+  long unsigned int RodataOffset;
 };
 
 } // namespace COMGR
