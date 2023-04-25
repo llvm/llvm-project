@@ -1,7 +1,5 @@
 ; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
-; RUN:   -mcpu=neoverse-v1 < %s | FileCheck %s --check-prefix=CHECK-EPILOG
-; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
-; RUN:   -mcpu=neoverse-v1 < %s | FileCheck %s --check-prefix=CHECK-EPILOG
+; RUN:   -mcpu=neoverse-v1 -sve-tail-folding=disabled < %s | FileCheck %s --check-prefix=CHECK-EPILOG
 ; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
 ; RUN:   -mcpu=neoverse-v2 < %s | FileCheck %s --check-prefix=CHECK-NO-EPILOG
 ; RUN: opt -S -passes=loop-vectorize,instsimplify -force-vector-interleave=1 \
