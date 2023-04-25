@@ -145,6 +145,13 @@ APValue Pointer::toAPValue() const {
   return APValue(Base, Offset, Path, IsOnePastEnd, IsNullPtr);
 }
 
+std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
+  if (!Pointee)
+    return "nullptr";
+
+  return toAPValue().getAsString(Ctx, getType());
+}
+
 bool Pointer::isInitialized() const {
   assert(Pointee && "Cannot check if null pointer was initialized");
   const Descriptor *Desc = getFieldDesc();
