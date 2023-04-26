@@ -277,17 +277,21 @@ protected:
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(ValueObject &in_value,
                                 CompilerType dynamic_type,
+                                Value::ValueType static_value_type,
                                 bool is_indirect_enum_case);
   bool GetDynamicTypeAndAddress_Pack(ValueObject &in_value,
                                      CompilerType pack_type,
                                      lldb::DynamicValueType use_dynamic,
                                      TypeAndOrName &class_type_or_name,
-                                     Address &address);
+                                     Address &address,
+                                     Value::ValueType &value_type);
+
   bool GetDynamicTypeAndAddress_Class(ValueObject &in_value,
                                       CompilerType class_type,
                                       lldb::DynamicValueType use_dynamic,
                                       TypeAndOrName &class_type_or_name,
-                                      Address &address);
+                                      Address &address,
+                                      Value::ValueType &value_type);
 
   bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
                                          CompilerType protocol_type,
@@ -299,11 +303,13 @@ protected:
                                       CompilerType &bound_type,
                                       lldb::DynamicValueType use_dynamic,
                                       TypeAndOrName &class_type_or_name,
-                                      Address &address);
+                                      Address &address,
+                                      Value::ValueType &value_type);
 
   bool GetDynamicTypeAndAddress_IndirectEnumCase(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-      TypeAndOrName &class_type_or_name, Address &address);
+      TypeAndOrName &class_type_or_name, Address &address,
+      Value::ValueType &value_type);
 
   bool GetDynamicTypeAndAddress_ClangType(ValueObject &in_value,
                                           lldb::DynamicValueType use_dynamic,
