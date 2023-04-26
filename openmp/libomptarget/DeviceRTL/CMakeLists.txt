@@ -105,6 +105,7 @@ set(include_files
   ${include_directory}/Types.h
   ${include_directory}/Utils.h
   ${include_directory}/Xteamr.h
+  ${include_directory}/Xteams.h
 )
 
 set(src_files
@@ -124,6 +125,7 @@ set(src_files
   ${source_directory}/ExtraMapping.cpp
   ${source_directory}/Xteamr.cpp
   ${source_directory}/Memory.cpp
+  ${source_directory}/Xteams.cpp
 )
 
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
