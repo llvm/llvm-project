@@ -204,10 +204,10 @@ foreach(archname ${HOSTRPC_ARCHS})
       if (${archname} STREQUAL "nvptx")
          add_dependencies(nvptx_hostexec_services ${libhostexec-bc})
       endif()
-      install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${libhostexec-bc} DESTINATION ${DEVEL_PACKAGE}lib/libdevice)
+      install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${libhostexec-bc} DESTINATION ${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR}/libdevice)
    endforeach() # end for each mcpu
 
 endforeach() # end foreach archs
 set(_version_dir 17.0.0)
 install(FILES ${h_file} DESTINATION lib/clang/${_version_dir}/include)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/disable_dynamic_devmem.ll" DESTINATION ${DEVEL_PACKAGE}lib)
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/disable_dynamic_devmem.ll" DESTINATION ${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR})
