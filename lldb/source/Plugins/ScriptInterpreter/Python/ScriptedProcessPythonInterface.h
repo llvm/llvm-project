@@ -43,6 +43,8 @@ public:
 
   StructuredData::DictionarySP GetThreadsInfo() override;
 
+  bool CreateBreakpoint(lldb::addr_t addr, Status &error) override;
+
   lldb::DataExtractorSP ReadMemoryAtAddress(lldb::addr_t address, size_t size,
                                             Status &error) override;
 

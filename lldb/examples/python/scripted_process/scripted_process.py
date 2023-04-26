@@ -209,6 +209,23 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return self.metadata
 
+    def create_breakpoint(self, addr, error):
+        """ Create a breakpoint in the scripted process from an address.
+            This is mainly used with interactive scripted process debugging.
+
+        Args:
+            addr (int): Address at which the breakpoint should be set.
+            error (lldb.SBError): Error object.
+
+        Returns:
+            SBBreakpoint: A valid breakpoint object that was created a the specified
+                          address. None if the breakpoint creation failed.
+        """
+        error.SetErrorString("%s doesn't support creating breakpoints."
+                             % self.__class__.__name__)
+        return False
+
+
 class ScriptedThread(metaclass=ABCMeta):
 
     """

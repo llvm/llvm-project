@@ -71,6 +71,22 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
 }
 
 template <>
+lldb::BreakpointSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBBreakpoint *sb_breakpoint = reinterpret_cast<lldb::SBBreakpoint *>(
+      LLDBSWIGPython_CastPyObjectToSBBreakpoint(p.get()));
+
+  if (!sb_breakpoint) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBBreakpoint to lldb::BreakpointSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBBreakpoint(*sb_breakpoint);
+}
+
+template <>
 lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
     lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error) {
   lldb::SBAttachInfo *sb_attach_info = reinterpret_cast<lldb::SBAttachInfo *>(

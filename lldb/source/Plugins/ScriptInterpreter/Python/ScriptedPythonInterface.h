@@ -229,6 +229,11 @@ Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error);
 
 template <>
+lldb::BreakpointSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
 lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
     lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error);
 
