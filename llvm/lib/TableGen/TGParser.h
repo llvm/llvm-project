@@ -265,6 +265,8 @@ private:  // Parser methods.
       Record *CurRec);
   bool ParseOptionalRangeList(SmallVectorImpl<unsigned> &Ranges);
   bool ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges);
+  TypedInit *ParseSliceElement(Record *CurRec);
+  TypedInit *ParseSliceElements(Record *CurRec, bool Single = false);
   void ParseRangeList(SmallVectorImpl<unsigned> &Result);
   bool ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
                        TypedInit *FirstItem = nullptr);
