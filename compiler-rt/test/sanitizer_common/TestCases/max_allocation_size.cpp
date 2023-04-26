@@ -43,6 +43,9 @@
 // win32 is disabled due to failing errno tests.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
+// FIXME: Implement.
+// XFAIL: hwasan
+
 #include <assert.h>
 #include <errno.h>
 #include <limits>
