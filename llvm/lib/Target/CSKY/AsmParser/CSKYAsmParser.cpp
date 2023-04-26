@@ -61,7 +61,8 @@ class CSKYAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
-                                  int64_t Lower, int64_t Upper, Twine Msg);
+                                  int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
@@ -650,7 +651,7 @@ static std::string CSKYMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
 
 bool CSKYAsmParser::generateImmOutOfRangeError(
     OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
-    Twine Msg = "immediate must be an integer in the range") {
+    const Twine &Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((CSKYOperand &)*Operands[ErrorInfo]).getStartLoc();
   return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
