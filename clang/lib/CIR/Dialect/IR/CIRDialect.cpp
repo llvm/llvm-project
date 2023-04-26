@@ -1738,11 +1738,6 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
 void ConstArrayAttr::print(::mlir::AsmPrinter &printer) const {
   printer << "<";
   printer.printStrippedAttrOrType(getValue());
-  if (getValue().isa<ArrayAttr>()) {
-    printer << ' ' << ":";
-    printer << ' ';
-    printer.printStrippedAttrOrType(getType());
-  }
   printer << ">";
 }
 

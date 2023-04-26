@@ -32,7 +32,7 @@ module {
 }
 
 // CHECK: cir.global external @a = 3 : i32
-// CHECK: cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
+// CHECK: cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3>
 // CHECK: cir.global external @b = #cir.const_array<"example\00" : !cir.array<i8 x 8>>
 // CHECK: cir.global "private" constant internal @".str" : !cir.array<i8 x 8> {alignment = 1 : i64}
 // CHECK: cir.global "private" internal @c : i32

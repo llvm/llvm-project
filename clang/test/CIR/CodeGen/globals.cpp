@@ -36,8 +36,8 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global external @y = 3.400000e+00 : f32
 // CHECK-NEXT: cir.global external @w = 4.300000e+00 : f64
 // CHECK-NEXT: cir.global external @x = 51 : i8
-// CHECK-NEXT: cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>>
-// CHECK-NEXT: cir.global external @alpha = #cir.const_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8] : !cir.array<i8 x 4>>
+// CHECK-NEXT: cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3>
+// CHECK-NEXT: cir.global external @alpha = #cir.const_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8]> : !cir.array<i8 x 4>
 
 // CHECK-NEXT: cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
 // CHECK-NEXT: cir.global external @s = @".str": !cir.ptr<i8>
@@ -79,15 +79,15 @@ int use_func() { return func<int>(); }
 
 
 char string[] = "whatnow";
-// CHECK: cir.global external @string = #cir.const_array<[119 : i8, 104 : i8, 97 : i8, 116 : i8, 110 : i8, 111 : i8, 119 : i8, 0 : i8] : !cir.array<i8 x 8>> : !cir.array<i8 x 8>
+// CHECK: cir.global external @string = #cir.const_array<[119 : i8, 104 : i8, 97 : i8, 116 : i8, 110 : i8, 111 : i8, 119 : i8, 0 : i8]> : !cir.array<i8 x 8>
 unsigned uint[] = {255};
-// CHECK: cir.global external @uint = #cir.const_array<[255 : i32] : !cir.array<i32 x 1>> : !cir.array<i32 x 1>
+// CHECK: cir.global external @uint = #cir.const_array<[255 : i32]> : !cir.array<i32 x 1>
 short sshort[] = {11111, 22222};
-// CHECK: cir.global external @sshort = #cir.const_array<[11111 : i16, 22222 : i16] : !cir.array<i16 x 2>> : !cir.array<i16 x 2>
+// CHECK: cir.global external @sshort = #cir.const_array<[11111 : i16, 22222 : i16]> : !cir.array<i16 x 2>
 int sint[] = {123, 456, 789};
-// CHECK: cir.global external @sint = #cir.const_array<[123 : i32, 456 : i32, 789 : i32] : !cir.array<i32 x 3>> : !cir.array<i32 x 3>
+// CHECK: cir.global external @sint = #cir.const_array<[123 : i32, 456 : i32, 789 : i32]> : !cir.array<i32 x 3>
 long long ll[] = {999999999, 0, 0, 0};
-// CHECK: cir.global external @ll = #cir.const_array<[999999999, 0, 0, 0] : !cir.array<i64 x 4>> : !cir.array<i64 x 4>
+// CHECK: cir.global external @ll = #cir.const_array<[999999999, 0, 0, 0]> : !cir.array<i64 x 4>
 
 void get_globals() {
   // CHECK: cir.func @_Z11get_globalsv()
