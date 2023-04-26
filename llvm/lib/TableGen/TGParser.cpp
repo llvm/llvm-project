@@ -2635,7 +2635,8 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       Lex.Lex(); // eat the '['
       SmallVector<unsigned, 16> Ranges;
       ParseRangeList(Ranges);
-      if (Ranges.empty()) return nullptr;
+      if (Ranges.empty())
+        return nullptr;
 
       Result = Result->convertInitListSlice(Ranges);
       if (!Result) {

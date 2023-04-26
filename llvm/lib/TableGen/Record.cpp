@@ -677,7 +677,7 @@ Init *ListInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
     return getElement(Elements[0]);
   }
 
-  SmallVector<Init*, 8> Vals;
+  SmallVector<Init *, 8> Vals;
   Vals.reserve(Elements.size());
   for (unsigned Element : Elements) {
     if (Element >= size())
@@ -1910,19 +1910,19 @@ Init *TypedInit::getCastTo(RecTy *Ty) const {
 
 Init *TypedInit::convertInitListSlice(ArrayRef<unsigned> Elements) const {
   ListRecTy *T = dyn_cast<ListRecTy>(getType());
-  if (!T) return nullptr;  // Cannot subscript a non-list variable.
+  if (!T)
+    return nullptr; // Cannot subscript a non-list variable.
 
   if (Elements.size() == 1)
     return VarListElementInit::get(const_cast<TypedInit *>(this), Elements[0]);
 
-  SmallVector<Init*, 8> ListInits;
+  SmallVector<Init *, 8> ListInits;
   ListInits.reserve(Elements.size());
   for (unsigned Element : Elements)
-    ListInits.push_back(VarListElementInit::get(const_cast<TypedInit *>(this),
-                                                Element));
+    ListInits.push_back(
+        VarListElementInit::get(const_cast<TypedInit *>(this), Element));
   return ListInit::get(ListInits, T->getElementType());
 }
-
 
 VarInit *VarInit::get(StringRef VN, RecTy *T) {
   Init *Value = StringInit::get(T->getRecordKeeper(), VN);
@@ -2001,12 +2001,11 @@ Init *VarListElementInit::resolveReferences(Resolver &R) const {
 
 Init *VarListElementInit::getBit(unsigned Bit) const {
   if (getType() == BitRecTy::get(getRecordKeeper()))
-    return const_cast<VarListElementInit*>(this);
-  return VarBitInit::get(const_cast<VarListElementInit*>(this), Bit);
+    return const_cast<VarListElementInit *>(this);
+  return VarBitInit::get(const_cast<VarListElementInit *>(this), Bit);
 }
 
-DefInit::DefInit(Record *D)
-    : TypedInit(IK_DefInit, D->getType()), Def(D) {}
+DefInit::DefInit(Record *D) : TypedInit(IK_DefInit, D->getType()), Def(D) {}
 
 DefInit *DefInit::get(Record *R) {
   return R->getDefInit();
