@@ -1044,13 +1044,9 @@ unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
 }
 
 Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *OldTag) {
-  if (TargetTriple.getArch() == Triple::x86_64) {
-    Constant *TagMask = ConstantInt::get(IntptrTy, TagMaskByte);
-    Value *NewTag = IRB.CreateAnd(OldTag, TagMask);
-    return NewTag;
-  }
-  // aarch64 uses 8-bit tags, so no mask is needed.
-  return OldTag;
+  if (TagMaskByte == 0xFF)
+    return OldTag; // No need to clear the tag byte.
+  return IRB.CreateAnd(OldTag, ConstantInt::get(IntptrTy, TagMaskByte));
 }
 
 Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
