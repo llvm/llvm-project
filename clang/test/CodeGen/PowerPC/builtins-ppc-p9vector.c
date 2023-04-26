@@ -1177,19 +1177,19 @@ void test113(void) {
   return vec_xst_len_r(vuca,uc,0);
 }
 vector float test114(void) {
-// CHECK-BE: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 undef, i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3>
+// CHECK-BE: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 poison, i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3>
 // CHECK-BE: @llvm.ppc.vsx.xvcvhpsp(<8 x i16> {{.+}})
 // CHECK-BE-NEXT: ret <4 x float>
-// CHECK: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 0, i32 undef, i32 1, i32 undef, i32 2, i32 undef, i32 3, i32 undef>
+// CHECK: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison>
 // CHECK: @llvm.ppc.vsx.xvcvhpsp(<8 x i16> {{.+}})
 // CHECK-NEXT: ret <4 x float>
   return vec_extract_fp32_from_shorth(vusa);
 }
 vector float test115(void) {
-// CHECK-BE: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 undef, i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7>
+// CHECK-BE: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7>
 // CHECK-BE: @llvm.ppc.vsx.xvcvhpsp(<8 x i16> {{.+}})
 // CHECK-BE-NEXT: ret <4 x float>
-// CHECK: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 4, i32 undef, i32 5, i32 undef, i32 6, i32 undef, i32 7, i32 undef>
+// CHECK: shufflevector <8 x i16> {{.+}}, <8 x i16> {{.+}}, <8 x i32> <i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7, i32 poison>
 // CHECK: @llvm.ppc.vsx.xvcvhpsp(<8 x i16> {{.+}})
 // CHECK-NEXT: ret <4 x float>
   return vec_extract_fp32_from_shortl(vusa);

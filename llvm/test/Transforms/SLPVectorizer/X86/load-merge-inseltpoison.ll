@@ -55,7 +55,7 @@ define <4 x float> @PR16739_byref(ptr nocapture readonly dereferenceable(16) %x)
 ; AVX2-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, ptr [[X:%.*]], i64 0, i64 2
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
 ; AVX2-NEXT:    [[X2:%.*]] = load float, ptr [[GEP2]], align 4
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; AVX2-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[TMP2]], float [[X2]], i32 2
 ; AVX2-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[X2]], i32 3
 ; AVX2-NEXT:    ret <4 x float> [[I3]]
@@ -65,8 +65,8 @@ define <4 x float> @PR16739_byref(ptr nocapture readonly dereferenceable(16) %x)
 ; AVX512-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
 ; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP1]], align 4
 ; AVX512-NEXT:    [[I0:%.*]] = insertelement <4 x float> poison, float [[X0]], i32 0
-; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; AVX512-NEXT:    [[I21:%.*]] = shufflevector <4 x float> [[I0]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
+; AVX512-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; AVX512-NEXT:    [[I21:%.*]] = shufflevector <4 x float> [[I0]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
 ; AVX512-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[I21]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 5>
 ; AVX512-NEXT:    ret <4 x float> [[TMP3]]
 ;
