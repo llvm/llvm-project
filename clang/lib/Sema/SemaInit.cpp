@@ -5449,8 +5449,9 @@ static void TryOrBuildParenListInitialization(
   } else if (auto *RT = Entity.getType()->getAs<RecordType>()) {
     const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
 
-    auto BaseRange = map_range(RD->bases(), [&S](auto &base) {
-      return InitializedEntity::InitializeBase(S.getASTContext(), &base, false);
+    auto BaseRange = map_range(RD->bases(), [&](auto &base) {
+      return InitializedEntity::InitializeBase(S.getASTContext(), &base, false,
+                                               &Entity);
     });
     auto FieldRange = map_range(RD->fields(), [](auto *field) {
       return InitializedEntity::InitializeMember(field);

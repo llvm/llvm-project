@@ -200,3 +200,26 @@ void bar() {
   // expected-error@-1 {{call to implicitly-deleted copy constructor of 'V'}}
 }
 }
+
+namespace gh62296 {
+struct L {
+protected:
+  L(int);
+  // expected-note@-1 2{{declared protected here}}
+};
+
+struct M : L {};
+
+struct N {
+  L l;
+};
+
+M m(42);
+// expected-error@-1 {{base class 'L' has protected constructor}}
+// beforecxx20-warning@-2 {{aggregate initialization of type 'M' from a parenthesized list of values is a C++20 extension}}
+
+N n(43);
+// expected-error@-1 {{field of type 'L' has protected constructor}}
+// beforecxx20-warning@-2 {{aggregate initialization of type 'N' from a parenthesized list of values is a C++20 extension}}
+
+}
