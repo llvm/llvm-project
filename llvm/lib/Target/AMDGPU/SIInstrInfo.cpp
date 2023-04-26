@@ -329,8 +329,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       const MachineOperand *Offset1Op =
           getNamedOperand(LdSt, AMDGPU::OpName::offset1);
 
-      unsigned Offset0 = Offset0Op->getImm();
-      unsigned Offset1 = Offset1Op->getImm();
+      unsigned Offset0 = Offset0Op->getImm() & 0xff;
+      unsigned Offset1 = Offset1Op->getImm() & 0xff;
       if (Offset0 + 1 != Offset1)
         return false;
 
