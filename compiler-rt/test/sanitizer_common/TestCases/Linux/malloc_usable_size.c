@@ -4,7 +4,7 @@
 // XFAIL: ubsan
 
 // FIXME: Implement.
-// XFAIL: hwasan
+// XFAIL: hwasan-aliasing
 
 #include <assert.h>
 #include <malloc.h>
