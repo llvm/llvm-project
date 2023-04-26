@@ -173,10 +173,10 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
     for (auto Sym : TaintedSymbols) {
       BR.markInteresting(Sym);
     }
-    for (auto Arg : TaintedArgs) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Taint Propagated from argument " << Arg + 1 << "\n");
-    }
+    LLVM_DEBUG(for (auto Arg
+                    : TaintedArgs) {
+      llvm::dbgs() << "Taint Propagated from argument " << Arg + 1 << "\n";
+    });
     return "";
   });
 }
