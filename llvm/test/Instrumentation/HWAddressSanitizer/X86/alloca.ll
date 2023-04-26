@@ -38,7 +38,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; INLINE-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk {
 ; INLINE-NEXT:  entry:
 ; INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP0]], 3
 ; INLINE-NEXT:    [[TMP3:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; INLINE-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
@@ -65,7 +65,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; INLINE-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP19]] to ptr
 ; INLINE-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP16]] to i8
 ; INLINE-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[X]] to i64
-; INLINE-NEXT:    [[TMP22:%.*]] = and i64 [[TMP21]], 144115188075855871
+; INLINE-NEXT:    [[TMP22:%.*]] = and i64 [[TMP21]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 4
 ; INLINE-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP23]]
 ; INLINE-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP24]], i32 0
@@ -75,7 +75,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; INLINE-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
 ; INLINE-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; INLINE-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[X]] to i64
-; INLINE-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], 144115188075855871
+; INLINE-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP30:%.*]] = lshr i64 [[TMP29]], 4
 ; INLINE-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP30]]
 ; INLINE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 1, i1 false)
@@ -119,7 +119,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0]] personality ptr @__hwasan_personality_thunk {
 ; INLINE-NEXT:  entry:
 ; INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP2:%.*]] = ashr i64 [[TMP0]], 3
 ; INLINE-NEXT:    [[TMP3:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; INLINE-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[TMP3]] to i64
@@ -146,7 +146,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[BUF_SROA_0_HWASAN:%.*]] = inttoptr i64 [[TMP19]] to ptr
 ; INLINE-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP16]] to i8
 ; INLINE-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[BUF_SROA_0]] to i64
-; INLINE-NEXT:    [[TMP22:%.*]] = and i64 [[TMP21]], 144115188075855871
+; INLINE-NEXT:    [[TMP22:%.*]] = and i64 [[TMP21]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 4
 ; INLINE-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP23]]
 ; INLINE-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP24]], i32 0
@@ -156,7 +156,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP27:%.*]] = ptrtoint ptr [[BUF_SROA_0_HWASAN]] to i64
 ; INLINE-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 57
 ; INLINE-NEXT:    [[TMP29:%.*]] = trunc i64 [[TMP28]] to i8
-; INLINE-NEXT:    [[TMP30:%.*]] = and i64 [[TMP27]], 144115188075855871
+; INLINE-NEXT:    [[TMP30:%.*]] = and i64 [[TMP27]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP31:%.*]] = lshr i64 [[TMP30]], 4
 ; INLINE-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP31]]
 ; INLINE-NEXT:    [[TMP33:%.*]] = load i8, ptr [[TMP32]], align 1
@@ -186,7 +186,7 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    store volatile i8 0, ptr [[BUF_SROA_0_HWASAN]], align 4
 ; INLINE-NEXT:    [[TMP50:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
 ; INLINE-NEXT:    [[TMP51:%.*]] = ptrtoint ptr [[BUF_SROA_0]] to i64
-; INLINE-NEXT:    [[TMP52:%.*]] = and i64 [[TMP51]], 144115188075855871
+; INLINE-NEXT:    [[TMP52:%.*]] = and i64 [[TMP51]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP53:%.*]] = lshr i64 [[TMP52]], 4
 ; INLINE-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP53]]
 ; INLINE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP54]], i8 [[TMP50]], i64 1, i1 false)
