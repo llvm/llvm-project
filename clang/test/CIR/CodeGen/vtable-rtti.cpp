@@ -18,15 +18,14 @@ public:
     virtual ~B() noexcept {}
 };
 
-// Aliased for typeinfo and vtable.
-// CHECK: ![[AnonVTableType:ty_.*]] = !cir.struct<"", !cir.array<!cir.ptr<i8> x 5>>
-// CHECK: ![[AnonTypeInfo:ty_.*]] = !cir.struct<"", !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>>
+// vtable for A type
+// CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<"", !cir.array<!cir.ptr<i8> x 5>>
+
+// Type info B.
+// CHECK: ![[TypeInfoB:ty_.*]] = !cir.struct<"", !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>>
 
 // Class A
 // CHECK: ![[ClassA:ty_.*]] = !cir.struct<"class.A", !cir.ptr<!cir.ptr<() -> i32>>, #cir.recdecl.ast>
-
-// vtable for A type
-// CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<"vtable", !cir.array<!cir.ptr<i8> x 5>>
 
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>
@@ -77,7 +76,7 @@ public:
 // CHECK:  }
 
 // vtable for B
-// CHECK: cir.global linkonce_odr @_ZTV1B = #cir.const_struct<[#cir.const_array<[#cir.null : !cir.ptr<i8>, #cir.global_view<@_ZTI1B> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>, #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 5>> : !cir.array<!cir.ptr<i8> x 5>]> : ![[AnonVTableType]] {alignment = 8 : i64}
+// CHECK: cir.global linkonce_odr @_ZTV1B = #cir.const_struct<[#cir.const_array<[#cir.null : !cir.ptr<i8>, #cir.global_view<@_ZTI1B> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>, #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 5>> : !cir.array<!cir.ptr<i8> x 5>]> : ![[VTableTypeA]] {alignment = 8 : i64}
 
 // vtable for __cxxabiv1::__si_class_type_info
 // CHECK:   cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!cir.ptr<i8>>
@@ -89,7 +88,7 @@ public:
 // CHECK:   cir.global "private" constant external @_ZTI1A : !cir.ptr<i8>
 
 // typeinfo for B
-// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<[#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>, #cir.global_view<@_ZTS1B> : !cir.ptr<i8>, #cir.global_view<@_ZTI1A> : !cir.ptr<i8>] : ![[AnonTypeInfo]]> : ![[AnonTypeInfo]] {alignment = 8 : i64}
+// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<[#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>, #cir.global_view<@_ZTS1B> : !cir.ptr<i8>, #cir.global_view<@_ZTI1A> : !cir.ptr<i8>] : ![[TypeInfoB]]> : ![[TypeInfoB]] {alignment = 8 : i64}
 
 // Checks for dtors in dtors.cpp
 
