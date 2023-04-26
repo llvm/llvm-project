@@ -42,3 +42,11 @@ void arr() {
   int (*_Atomic atomic_ptr_to_int);
   *atomic_ptr_to_int = 42;
 }
+
+namespace function_with_trailing {
+struct Foo {
+  Foo(int);
+};
+template <typename T> void bar()
+  { Foo _(T::method()->mem()); }
+}

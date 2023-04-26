@@ -2523,9 +2523,9 @@ private:
   enum TentativeCXXTypeIdContext {
     TypeIdInParens,
     TypeIdUnambiguous,
-    TypeIdAsTemplateArgument
+    TypeIdAsTemplateArgument,
+    TypeIdInTrailingReturnType,
   };
-
 
   /// isTypeIdInParens - Assumes that a '(' was parsed and now we want to know
   /// whether the parens contain an expression or a type-id.
@@ -2654,14 +2654,16 @@ private:
   TPResult TryParseProtocolQualifiers();
   TPResult TryParsePtrOperatorSeq();
   TPResult TryParseOperatorId();
-  TPResult TryParseInitDeclaratorList();
+  TPResult TryParseInitDeclaratorList(bool MayHaveTrailingReturnType = false);
   TPResult TryParseDeclarator(bool mayBeAbstract, bool mayHaveIdentifier = true,
-                              bool mayHaveDirectInit = false);
+                              bool mayHaveDirectInit = false,
+                              bool mayHaveTrailingReturnType = false);
   TPResult TryParseParameterDeclarationClause(
       bool *InvalidAsDeclaration = nullptr, bool VersusTemplateArg = false,
       ImplicitTypenameContext AllowImplicitTypename =
           ImplicitTypenameContext::No);
-  TPResult TryParseFunctionDeclarator();
+  TPResult TryParseFunctionDeclarator(bool MayHaveTrailingReturnType = false);
+  bool NameAfterArrowIsNonType();
   TPResult TryParseBracketDeclarator();
   TPResult TryConsumeDeclarationSpecifier();
 
