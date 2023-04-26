@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
 #include "mlir/AsmParser/AsmParser.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -3113,46 +3114,7 @@ DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
   return diag;
 }
 
-//===----------------------------------------------------------------------===//
-// Transform op registration
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Registers new ops and declares PDL as dependent dialect since the
-/// additional ops are using PDL types for operands and results.
-class LinalgTransformDialectExtension
-    : public transform::TransformDialectExtension<
-          LinalgTransformDialectExtension> {
-public:
-  using Base::Base;
-
-  void init() {
-    declareDependentDialect<pdl::PDLDialect>();
-    declareDependentDialect<LinalgDialect>();
-    declareGeneratedDialect<affine::AffineDialect>();
-    declareGeneratedDialect<arith::ArithDialect>();
-    declareGeneratedDialect<scf::SCFDialect>();
-    declareGeneratedDialect<vector::VectorDialect>();
-    declareGeneratedDialect<gpu::GPUDialect>();
-
-    registerTransformOps<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp.inc"
-        >();
-    registerTransformOps<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/TransformOps/LinalgMatchOps.cpp.inc"
-        >();
-  }
-};
-} // namespace
-
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.cpp.inc"
-
-void mlir::linalg::registerTransformDialectExtension(
-    DialectRegistry &registry) {
-  registry.addExtensions<LinalgTransformDialectExtension>();
-}
