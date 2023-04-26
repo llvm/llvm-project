@@ -206,7 +206,7 @@ public:
   /// if non-empty.
   std::string RecordCommandLine;
 
-  std::map<std::string, std::string> DebugPrefixMap;
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
   std::map<std::string, std::string> CoveragePrefixMap;
 
   /// The ABI to use for passing floating point arguments.

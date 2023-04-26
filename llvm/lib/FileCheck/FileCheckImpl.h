@@ -269,7 +269,7 @@ private:
   std::optional<ExpressionValue> Value;
 
   /// The input buffer's string from which Value was parsed, or std::nullopt.
-  /// See comments on getStringValue for a discussion of the None case.
+  /// See comments on getStringValue for a discussion of the std::nullopt case.
   std::optional<StringRef> StrValue;
 
   /// Line number where this variable is defined, or std::nullopt if defined
@@ -280,7 +280,7 @@ private:
 public:
   /// Constructor for a variable \p Name with implicit format \p ImplicitFormat
   /// defined at line \p DefLineNumber or defined before input is parsed if
-  /// \p DefLineNumber is None.
+  /// \p DefLineNumber is std::nullopt.
   explicit NumericVariable(StringRef Name, ExpressionFormat ImplicitFormat,
                            std::optional<size_t> DefLineNumber = std::nullopt)
       : Name(Name), ImplicitFormat(ImplicitFormat),
@@ -304,7 +304,7 @@ public:
 
   /// Sets value of this numeric variable to \p NewValue, and sets the input
   /// buffer string from which it was parsed to \p NewStrValue.  See comments on
-  /// getStringValue for a discussion of when the latter can be None.
+  /// getStringValue for a discussion of when the latter can be std::nullopt.
   void setValue(ExpressionValue NewValue,
                 std::optional<StringRef> NewStrValue = std::nullopt) {
     Value = NewValue;

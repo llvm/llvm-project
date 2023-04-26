@@ -252,6 +252,8 @@ def : Pat<(any_fsqrt FPR16:$rs1), (FSQRT_H FPR16:$rs1, FRM_DYN)>;
 def : Pat<(fneg FPR16:$rs1), (FSGNJN_H $rs1, $rs1)>;
 def : Pat<(fabs FPR16:$rs1), (FSGNJX_H $rs1, $rs1)>;
 
+def : Pat<(riscv_fpclass FPR16:$rs1), (FCLASS_H $rs1)>;
+
 def : PatFprFpr<fcopysign, FSGNJ_H, FPR16>;
 def : Pat<(fcopysign FPR16:$rs1, (fneg FPR16:$rs2)), (FSGNJN_H $rs1, $rs2)>;
 def : Pat<(fcopysign FPR16:$rs1, FPR32:$rs2),

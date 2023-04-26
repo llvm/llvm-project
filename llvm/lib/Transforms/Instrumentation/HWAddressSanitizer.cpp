@@ -1,4 +1,4 @@
-//===- HWAddressSanitizer.cpp - detector of uninitialized reads -------===//
+//===- HWAddressSanitizer.cpp - memory access error detector --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1036,21 +1036,17 @@ unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
   // mask allocated (temporally) nearby. The program that generated this list
   // can be found at:
   // https://github.com/google/sanitizers/blob/master/hwaddress-sanitizer/sort_masks.py
-  static unsigned FastMasks[] = {0,  128, 64,  192, 32,  96,  224, 112, 240,
-                                 48, 16,  120, 248, 56,  24,  8,   124, 252,
-                                 60, 28,  12,  4,   126, 254, 62,  30,  14,
-                                 6,  2,   127, 63,  31,  15,  7,   3,   1};
+  static const unsigned FastMasks[] = {
+      0,   128, 64, 192, 32,  96,  224, 112, 240, 48, 16,  120,
+      248, 56,  24, 8,   124, 252, 60,  28,  12,  4,  126, 254,
+      62,  30,  14, 6,   2,   127, 63,  31,  15,  7,  3,   1};
   return FastMasks[AllocaNo % std::size(FastMasks)];
 }
 
 Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *OldTag) {
-  if (TargetTriple.getArch() == Triple::x86_64) {
-    Constant *TagMask = ConstantInt::get(IntptrTy, TagMaskByte);
-    Value *NewTag = IRB.CreateAnd(OldTag, TagMask);
-    return NewTag;
-  }
-  // aarch64 uses 8-bit tags, so no mask is needed.
-  return OldTag;
+  if (TagMaskByte == 0xFF)
+    return OldTag; // No need to clear the tag byte.
+  return IRB.CreateAnd(OldTag, ConstantInt::get(IntptrTy, TagMaskByte));
 }
 
 Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {

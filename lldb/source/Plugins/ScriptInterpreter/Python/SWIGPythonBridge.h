@@ -92,6 +92,7 @@ python::ScopedPythonObject<lldb::SBEvent> ToSWIGWrapper(Event *event);
 } // namespace python
 
 void *LLDBSWIGPython_CastPyObjectToSBData(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);

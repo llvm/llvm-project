@@ -1928,3 +1928,53 @@ define half @roundeven_f16(half %a) nounwind {
   %1 = call half @llvm.roundeven.f16(half %a)
   ret half %1
 }
+
+declare i1 @llvm.is.fpclass.f16(half, i32)
+define i1 @isnan_d_fpclass(half %x) {
+; CHECKIZFH-LABEL: isnan_d_fpclass:
+; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fclass.h a0, fa0
+; CHECKIZFH-NEXT:    andi a0, a0, 768
+; CHECKIZFH-NEXT:    snez a0, a0
+; CHECKIZFH-NEXT:    ret
+;
+; RV32I-LABEL: isnan_d_fpclass:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 17
+; RV32I-NEXT:    srli a0, a0, 17
+; RV32I-NEXT:    li a1, 31
+; RV32I-NEXT:    slli a1, a1, 10
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: isnan_d_fpclass:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srli a0, a0, 49
+; RV64I-NEXT:    li a1, 31
+; RV64I-NEXT:    slli a1, a1, 10
+; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV32IZFHMIN-LABEL: isnan_d_fpclass:
+; RV32IZFHMIN:       # %bb.0:
+; RV32IZFHMIN-NEXT:    fmv.x.h a0, fa0
+; RV32IZFHMIN-NEXT:    slli a0, a0, 17
+; RV32IZFHMIN-NEXT:    srli a0, a0, 17
+; RV32IZFHMIN-NEXT:    li a1, 31
+; RV32IZFHMIN-NEXT:    slli a1, a1, 10
+; RV32IZFHMIN-NEXT:    slt a0, a1, a0
+; RV32IZFHMIN-NEXT:    ret
+;
+; RV64IZFHMIN-LABEL: isnan_d_fpclass:
+; RV64IZFHMIN:       # %bb.0:
+; RV64IZFHMIN-NEXT:    fmv.x.h a0, fa0
+; RV64IZFHMIN-NEXT:    slli a0, a0, 49
+; RV64IZFHMIN-NEXT:    srli a0, a0, 49
+; RV64IZFHMIN-NEXT:    li a1, 31
+; RV64IZFHMIN-NEXT:    slli a1, a1, 10
+; RV64IZFHMIN-NEXT:    slt a0, a1, a0
+; RV64IZFHMIN-NEXT:    ret
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
+  ret i1 %1
+}

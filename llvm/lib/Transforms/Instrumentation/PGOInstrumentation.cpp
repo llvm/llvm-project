@@ -2092,7 +2092,10 @@ PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
   // The variable in a comdat may be discarded by LTO. Ensure the declaration
   // will be retained.
   appendToCompilerUsed(M, createIRLevelProfileFlagVar(M, /*IsCS=*/true));
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 PreservedAnalyses PGOInstrumentationGen::run(Module &M,

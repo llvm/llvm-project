@@ -35,7 +35,7 @@ public:
 
   /// Implement target specific printing for machine operand immediate value, so
   /// that we can have more meaningful mnemonic than a 64-bit integer. Passing
-  /// None to OpIdx means the index is unknown.
+  /// std::nullopt to OpIdx means the index is unknown.
   virtual void printImm(raw_ostream &OS, const MachineInstr &MI,
                         std::optional<unsigned> OpIdx, int64_t Imm) const {
     OS << Imm;

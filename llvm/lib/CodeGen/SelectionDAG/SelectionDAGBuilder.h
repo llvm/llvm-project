@@ -376,6 +376,10 @@ public:
                         DIExpression *Expr, DebugLoc DbgLoc, unsigned Order,
                         bool IsVariadic);
 
+  /// Create a record for a kill location debug intrinsic.
+  void handleKillDebugValue(DILocalVariable *Var, DIExpression *Expr,
+                            DebugLoc DbgLoc, unsigned Order);
+
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
 
