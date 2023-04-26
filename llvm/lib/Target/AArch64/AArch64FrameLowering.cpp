@@ -3442,7 +3442,8 @@ class TagStoreEdit {
   Register FrameReg;
   StackOffset FrameRegOffset;
   int64_t Size;
-  // If not None, move FrameReg to (FrameReg + FrameRegUpdate) at the end.
+  // If not std::nullopt, move FrameReg to (FrameReg + FrameRegUpdate) at the
+  // end.
   std::optional<int64_t> FrameRegUpdate;
   // MIFlags for any FrameReg updating instructions.
   unsigned FrameRegUpdateFlags;

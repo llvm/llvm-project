@@ -127,7 +127,7 @@ struct IRInstructionData
 
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
-  /// to a less than form.  It is None otherwise.
+  /// to a less than form.  It is std::nullopt otherwise.
   std::optional<CmpInst::Predicate> RevisedPredicate;
 
   /// This is only relevant if we are wrapping a CallInst. If we are requiring
