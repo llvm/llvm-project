@@ -1,4 +1,4 @@
-// REQUIRES: host-supports-jit, system-linux
+// REQUIRES: host-supports-jit, x86_64-linux
 
 // To generate libdynamic-library-test.so :
 // clang -xc++ -o libdynamic-library-test.so -fPIC -shared
