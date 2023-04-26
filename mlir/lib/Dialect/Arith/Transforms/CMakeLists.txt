@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRArithTransforms
   Bufferize.cpp
   EmulateWideInt.cpp
   ExpandOps.cpp
+  IntNarrowing.cpp
   IntRangeOptimizations.cpp
   ReifyValueBounds.cpp
   UnsignedWhenEquivalent.cpp
