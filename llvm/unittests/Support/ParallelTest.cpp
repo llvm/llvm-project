@@ -92,4 +92,14 @@ TEST(Parallel, ForEachError) {
   EXPECT_EQ(errText, std::string("asdf\nasdf\nasdf"));
 }
 
+TEST(Parallel, TaskGroupSequentialFor) {
+  size_t Count = 0;
+  {
+    parallel::TaskGroup tg;
+    for (size_t Idx = 0; Idx < 500; Idx++)
+      tg.spawn([&Count, Idx]() { EXPECT_EQ(Count++, Idx); }, true);
+  }
+  EXPECT_EQ(Count, 500ul);
+}
+
 #endif
