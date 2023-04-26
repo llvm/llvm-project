@@ -776,8 +776,12 @@ public:
     Elts.reserve(NumElements);
 
     // Emit array filler, if there is one.
-    if (Expr *filler = ILE->getArrayFiller()) {
-      llvm_unreachable("NYI");
+    mlir::Attribute Filler;
+    if (ILE->hasArrayFiller()) {
+      auto *aux = ILE->getArrayFiller();
+      Filler = Emitter.tryEmitAbstractForMemory(aux, CAT->getElementType());
+      if (!Filler)
+        return {};
     }
 
     // Emit initializer elements as MLIR attributes and check for common type.
@@ -802,8 +806,11 @@ public:
     }
 
     auto desiredType = CGM.getTypes().ConvertType(T);
+    auto typedFiller = llvm::dyn_cast_or_null<mlir::TypedAttr>(Filler);
+    if (Filler && !typedFiller)
+      llvm_unreachable("We shouldn't be receiving untyped attrs here");
     return buildArrayConstant(CGM, desiredType, CommonElementType, NumElements,
-                              Elts, mlir::TypedAttr());
+                              Elts, typedFiller);
   }
 
   mlir::Attribute EmitRecordInitialization(InitListExpr *ILE, QualType T) {
@@ -1259,11 +1266,25 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   return (C ? emitForMemory(C, destType) : nullptr);
 }
 
+mlir::Attribute ConstantEmitter::tryEmitAbstract(const Expr *E,
+                                                 QualType destType) {
+  auto state = pushAbstract();
+  auto C = tryEmitPrivate(E, destType);
+  return validateAndPopAbstract(C, state);
+}
+
 mlir::Attribute ConstantEmitter::tryEmitAbstract(const APValue &value,
                                                  QualType destType) {
   auto state = pushAbstract();
   auto C = tryEmitPrivate(value, destType);
   return validateAndPopAbstract(C, state);
+}
+
+mlir::Attribute ConstantEmitter::tryEmitAbstractForMemory(const Expr *E,
+                                                          QualType destType) {
+  auto nonMemoryDestType = getNonMemoryType(CGM, destType);
+  auto C = tryEmitAbstract(E, nonMemoryDestType);
+  return (C ? emitForMemory(C, destType) : nullptr);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitAbstractForMemory(const APValue &value,
