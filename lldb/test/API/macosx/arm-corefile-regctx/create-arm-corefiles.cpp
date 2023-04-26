@@ -1,9 +1,24 @@
 #include <mach-o/loader.h>
-#include <mach/thread_status.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <vector>
+
+
+// Normally these are picked up by including <mach/thread_status.h>
+// but that does a compile time check for the build host arch and
+// only defines the ARM register context constants when building on
+// an arm system.  We're creating fake corefiles, and might be
+// creating them on an intel system.
+#define ARM_THREAD_STATE 1
+#define ARM_THREAD_STATE_COUNT 17
+#define ARM_EXCEPTION_STATE 3
+#define ARM_EXCEPTION_STATE_COUNT 3
+#define ARM_THREAD_STATE64 6
+#define ARM_THREAD_STATE64_COUNT 68
+#define ARM_EXCEPTION_STATE64 7
+#define ARM_EXCEPTION_STATE64_COUNT 4
+
 
 union uint32_buf {
   uint8_t bytebuf[4];
