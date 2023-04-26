@@ -15,24 +15,35 @@ endif()
 
 add_library(
   LibcUnitTest
+  EXCLUDE_FROM_ALL
   ${libc_test_srcs_common}
   ${libc_death_test_srcs}
 )
 
 add_library(
   LibcHermeticTest
+  EXCLUDE_FROM_ALL
   ${libc_test_srcs_common}
   HermeticTestUtils.cpp
 )
 
-foreach(lib LibcUnitTest LibcHermeticTest)
+add_library(
+  LibcUnitTestMain
+  EXCLUDE_FROM_ALL
+  LibcTestMain.cpp
+)
+add_dependencies(LibcUnitTestMain LibcUnitTest)
+
+add_library(
+  LibcHermeticTestMain
+  EXCLUDE_FROM_ALL
+  LibcTestMain.cpp
+)
+add_dependencies(LibcHermeticTestMain LibcHermeticTest)
+
+foreach(lib LibcUnitTest LibcUnitTestMain LibcHermeticTest LibcHermeticTestMain)
   target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
-  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
-    # If we are in full build mode, then we should use our own public headers.
-    target_include_directories(${lib} PRIVATE ${LIBC_BUILD_DIR}/include)
-  endif()
-  target_compile_options(${lib} PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS}
-                         -fno-exceptions -fno-rtti)
+  target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
   add_dependencies(${lib}
     libc.src.__support.c_string
     libc.src.__support.CPP.string
@@ -43,20 +54,11 @@ foreach(lib LibcUnitTest LibcHermeticTest)
   )
 endforeach()
 
-target_compile_options(LibcHermeticTest PRIVATE -ffreestanding -nostdlib -nostdlib++)
-
-add_library(
-  LibcTestMain
-  LibcTestMain.cpp
-)
-
-target_include_directories(LibcTestMain PUBLIC ${LIBC_SOURCE_DIR})
-target_compile_options(LibcTestMain PRIVATE -fno-exceptions -fno-rtti)
-if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
-  target_include_directories(LibcTestMain PRIVATE ${LIBC_BUILD_DIR}/include)
-  target_compile_options(LibcTestMain PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS})
-endif()
-add_dependencies(LibcTestMain LibcUnitTest)
+foreach(lib LibcHermeticTest LibcHermeticTestMain)
+  target_include_directories(${lib} PRIVATE ${LIBC_BUILD_DIR}/include)
+  target_compile_options(${lib}
+      PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdlib -nostdlib++)
+endforeach()
 
 add_header_library(
   string_utils
