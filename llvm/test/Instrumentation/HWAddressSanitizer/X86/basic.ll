@@ -34,14 +34,14 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; ABORT-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ABORT-INLINE-NEXT:  entry:
 ; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; ABORT-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; ABORT-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
 ; ABORT-INLINE-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-INLINE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 57
 ; ABORT-INLINE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; ABORT-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
 ; ABORT-INLINE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; ABORT-INLINE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
@@ -75,14 +75,14 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; RECOVER-INLINE-NEXT:  entry:
 ; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; RECOVER-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; RECOVER-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
 ; RECOVER-INLINE-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-INLINE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 57
 ; RECOVER-INLINE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; RECOVER-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
 ; RECOVER-INLINE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; RECOVER-INLINE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
@@ -143,7 +143,7 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; ABORT-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; ABORT-INLINE-NEXT:  entry:
 ; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; ABORT-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; ABORT-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
@@ -156,7 +156,7 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; RECOVER-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; RECOVER-INLINE-NEXT:  entry:
 ; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; RECOVER-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; RECOVER-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
@@ -196,14 +196,14 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; ABORT-INLINE-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-INLINE-NEXT:  entry:
 ; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; ABORT-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; ABORT-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
 ; ABORT-INLINE-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; ABORT-INLINE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 57
 ; ABORT-INLINE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; ABORT-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
 ; ABORT-INLINE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; ABORT-INLINE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
@@ -237,14 +237,14 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-INLINE-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-INLINE-NEXT:  entry:
 ; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; RECOVER-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; RECOVER-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
 ; RECOVER-INLINE-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
 ; RECOVER-INLINE-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP4]], 57
 ; RECOVER-INLINE-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
-; RECOVER-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP7:%.*]] = and i64 [[TMP4]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
 ; RECOVER-INLINE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP8]]
 ; RECOVER-INLINE-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
@@ -305,7 +305,7 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; ABORT-INLINE-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-INLINE-NEXT:  entry:
 ; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; ABORT-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; ABORT-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
@@ -318,7 +318,7 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; RECOVER-INLINE-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-INLINE-NEXT:  entry:
 ; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; RECOVER-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; RECOVER-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
@@ -358,7 +358,7 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; ABORT-INLINE-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; ABORT-INLINE-NEXT:  entry:
 ; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; ABORT-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; ABORT-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; ABORT-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; ABORT-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
@@ -371,7 +371,7 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-INLINE-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; RECOVER-INLINE-NEXT:  entry:
 ; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = load i64, ptr @__hwasan_tls, align 8
-; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 144115188075855871
+; RECOVER-INLINE-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], -9079256848778919937
 ; RECOVER-INLINE-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4294967295
 ; RECOVER-INLINE-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP2]], 1
 ; RECOVER-INLINE-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
