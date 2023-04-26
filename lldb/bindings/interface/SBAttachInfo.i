@@ -113,6 +113,12 @@ public:
     void
     SetListener (lldb::SBListener &listener);
 
+    SBListener
+    GetShadowListener();
+
+    void
+    SetShadowListener(SBListener &listener);
+
     const char *
     GetScriptedProcessClassName() const;
 
