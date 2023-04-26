@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-lower-to-llvm | \
 // RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli --march=aarch64 --mattr="+sve,+sme" \
+// RUN: %lli_aarch64_cmd --march=aarch64 --mattr="+sve,+sme" \
 // RUN:      -force-streaming-compatible-sve \
 // RUN:      --entry-function=entry \
 // RUN:      --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \

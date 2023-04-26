@@ -8787,9 +8787,9 @@ cc_library(
     srcs = glob([
         "lib/Dialect/Linalg/TransformOps/*.cpp",
     ]),
-    hdrs = [
-        "include/mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h",
-    ],
+    hdrs = glob([
+        "include/mlir/Dialect/Linalg/TransformOps/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -8807,6 +8807,7 @@ cc_library(
         ":LinalgTransforms",
         ":LinalgUtils",
         ":PDLDialect",
+        ":SCFDialect",
         ":SCFTransforms",
         ":Support",
         ":TensorDialect",
@@ -8815,6 +8816,7 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectUtils",
         ":TransformUtils",
+        ":VectorDialect",
         ":VectorTransforms",
         "//llvm:Support",
     ],

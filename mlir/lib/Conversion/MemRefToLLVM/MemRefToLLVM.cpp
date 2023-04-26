@@ -332,6 +332,8 @@ struct AssumeAlignmentOpLowering
     : public ConvertOpToLLVMPattern<memref::AssumeAlignmentOp> {
   using ConvertOpToLLVMPattern<
       memref::AssumeAlignmentOp>::ConvertOpToLLVMPattern;
+  explicit AssumeAlignmentOpLowering(LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<memref::AssumeAlignmentOp>(converter) {}
 
   LogicalResult
   matchAndRewrite(memref::AssumeAlignmentOp op, OpAdaptor adaptor,
@@ -340,17 +342,16 @@ struct AssumeAlignmentOpLowering
     unsigned alignment = op.getAlignment();
     auto loc = op.getLoc();
 
-    MemRefDescriptor memRefDescriptor(memref);
-    Value ptr = memRefDescriptor.alignedPtr(rewriter, memref.getLoc());
+    auto srcMemRefType = op.getMemref().getType().cast<MemRefType>();
+    Value ptr = getStridedElementPtr(loc, srcMemRefType, memref, /*indices=*/{},
+                                     rewriter);
 
-    // Emit llvm.assume(memref.alignedPtr & (alignment - 1) == 0). Notice that
-    // the asserted memref.alignedPtr isn't used anywhere else, as the real
-    // users like load/store/views always re-extract memref.alignedPtr as they
-    // get lowered.
+    // Emit llvm.assume(memref & (alignment - 1) == 0).
     //
     // This relies on LLVM's CSE optimization (potentially after SROA), since
-    // after CSE all memref.alignedPtr instances get de-duplicated into the same
+    // after CSE all memref instances should get de-duplicated into the same
     // pointer SSA value.
+    MemRefDescriptor memRefDescriptor(memref);
     auto intPtrType =
         getIntPtrType(memRefDescriptor.getElementPtrType().getAddressSpace());
     Value zero = createIndexAttrConstant(rewriter, loc, intPtrType, 0);

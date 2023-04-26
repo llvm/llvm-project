@@ -556,9 +556,8 @@ define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ; SSE2-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; SSE2-32:       # %bb.0:
 ; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE2-32-NEXT:    xorpd %xmm1, %xmm1
-; SSE2-32-NEXT:    movsd {{.*#+}} xmm1 = xmm1[0,1]
 ; SSE2-32-NEXT:    paddd %xmm0, %xmm0
+; SSE2-32-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-32-NEXT:    psubd %xmm0, %xmm1
 ; SSE2-32-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-32-NEXT:    psrad $31, %xmm0
@@ -569,9 +568,8 @@ define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
 ;
 ; SSE2-64-LABEL: pr60168_buildvector_of_zeros_and_undef:
 ; SSE2-64:       # %bb.0:
-; SSE2-64-NEXT:    xorpd %xmm1, %xmm1
-; SSE2-64-NEXT:    movsd {{.*#+}} xmm1 = xmm1[0,1]
 ; SSE2-64-NEXT:    paddd %xmm0, %xmm0
+; SSE2-64-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-64-NEXT:    psubd %xmm0, %xmm1
 ; SSE2-64-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-64-NEXT:    psrad $31, %xmm0

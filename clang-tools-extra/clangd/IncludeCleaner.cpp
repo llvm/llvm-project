@@ -40,6 +40,7 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -415,6 +416,20 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
             Ref.Target, TouchingTokens.back().range(SM), Providers};
         MissingIncludes.push_back(std::move(DiagInfo));
       });
+  // Put possibly equal diagnostics together for deduplication.
+  // The duplicates might be from macro arguments that get expanded multiple
+  // times.
+  llvm::stable_sort(MissingIncludes, [](const MissingIncludeDiagInfo &LHS,
+                                        const MissingIncludeDiagInfo &RHS) {
+    if (LHS.Symbol == RHS.Symbol) {
+      // We can get away just by comparing the offsets as all the ranges are in
+      // main file.
+      return LHS.SymRefRange.beginOffset() < RHS.SymRefRange.beginOffset();
+    }
+    // If symbols are different we don't care about the ordering.
+    return true;
+  });
+  MissingIncludes.erase(llvm::unique(MissingIncludes), MissingIncludes.end());
   std::vector<const Inclusion *> UnusedIncludes =
       getUnused(AST, Used, /*ReferencedPublicHeaders*/ {});
   return {std::move(UnusedIncludes), std::move(MissingIncludes)};

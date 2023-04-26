@@ -687,8 +687,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   Exts = Exts.drop_front(ConsumeLength);
   Exts.consume_front("_");
 
-  // TODO: Use version number when setting target features
-
   auto StdExtsItr = StdExts.begin();
   auto StdExtsEnd = StdExts.end();
   auto GoToNextExt = [](StringRef::iterator &I, unsigned ConsumeLength) {
@@ -736,7 +734,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     }
 
     // The order is OK, then push it into features.
-    // TODO: Use version number when setting target features
     // Currently LLVM supports only "mafdcvh".
     if (!isSupportedExtension(StringRef(&C, 1))) {
       if (IgnoreUnknown) {
