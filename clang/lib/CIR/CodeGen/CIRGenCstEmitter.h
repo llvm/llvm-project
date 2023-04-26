@@ -109,6 +109,9 @@ public:
   mlir::Attribute tryEmitPrivate(const APValue &value, QualType T);
   mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType T);
 
+  mlir::Attribute tryEmitAbstract(const Expr *E, QualType destType);
+  mlir::Attribute tryEmitAbstractForMemory(const Expr *E, QualType destType);
+
   mlir::Attribute tryEmitAbstract(const APValue &value, QualType destType);
   mlir::Attribute tryEmitAbstractForMemory(const APValue &value,
                                            QualType destType);
