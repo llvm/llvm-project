@@ -4620,8 +4620,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
       case Intrinsic::trunc: {
         KnownFPClass KnownSrc;
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+
+        FPClassTest InterestedSrcs = InterestedClasses;
+        if (InterestedClasses & fcZero)
+          InterestedClasses |= fcNormal | fcSubnormal;
+
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Depth + 1, Q, TLI);
 
         // Integer results cannot be subnormal.
         Known.knownNot(fcSubnormal);
@@ -4635,6 +4640,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Non-constrained intrinsics do not guarantee signaling nan quieting.
         if (KnownSrc.isKnownNeverNaN())
           Known.knownNot(fcNan);
+
+        if (KnownSrc.isKnownNever(fcPosNormal))
+          Known.knownNot(fcPosNormal);
+
+        if (KnownSrc.isKnownNever(fcNegNormal))
+          Known.knownNot(fcNegNormal);
+
+        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal | fcPosNormal))
+          Known.knownNot(fcPosZero);
+
+        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal | fcNegNormal))
+          Known.knownNot(fcNegZero);
+
+        // Sign should be preserved
+        Known.SignBit = KnownSrc.SignBit;
         break;
       }
       case Intrinsic::exp:
@@ -4675,7 +4695,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((InterestedClasses & fcNegInf) != fcNone)
           InterestedSrcs |= fcZero | fcSubnormal;
         if ((InterestedClasses & fcNan) != fcNone)
-          InterestedSrcs |= fcNan | KnownFPClass::OrderedLessThanZeroMask;
+          InterestedSrcs |= fcNan | (fcNegative & ~fcNan);
 
         KnownFPClass KnownSrc;
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
