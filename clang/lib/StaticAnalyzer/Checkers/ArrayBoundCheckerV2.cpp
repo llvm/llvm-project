@@ -33,11 +33,14 @@ namespace {
 class ArrayBoundCheckerV2 :
     public Checker<check::Location> {
   mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> TaintBT;
 
-  enum OOB_Kind { OOB_Precedes, OOB_Excedes, OOB_Tainted };
+  enum OOB_Kind { OOB_Precedes, OOB_Excedes };
 
-  void reportOOB(CheckerContext &C, ProgramStateRef errorState, OOB_Kind kind,
-                 std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
+  void reportOOB(CheckerContext &C, ProgramStateRef errorState,
+                 OOB_Kind kind) const;
+  void reportTaintOOB(CheckerContext &C, ProgramStateRef errorState,
+                      SVal TaintedSVal) const;
 
 public:
   void checkLocation(SVal l, bool isLoad, const Stmt*S,
@@ -207,8 +210,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     if (state_exceedsUpperBound && state_withinUpperBound) {
       SVal ByteOffset = rawOffset.getByteOffset();
       if (isTainted(state, ByteOffset)) {
-        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted,
-                  std::make_unique<TaintBugVisitor>(ByteOffset));
+        reportTaintOOB(checkerContext, state_exceedsUpperBound, ByteOffset);
         return;
       }
     } else if (state_exceedsUpperBound) {
@@ -226,10 +228,34 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
 
   checkerContext.addTransition(state);
 }
+void ArrayBoundCheckerV2::reportTaintOOB(CheckerContext &checkerContext,
+                                         ProgramStateRef errorState,
+                                         SVal TaintedSVal) const {
+  ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
+  if (!errorNode)
+    return;
 
-void ArrayBoundCheckerV2::reportOOB(
-    CheckerContext &checkerContext, ProgramStateRef errorState, OOB_Kind kind,
-    std::unique_ptr<BugReporterVisitor> Visitor) const {
+  if (!TaintBT)
+    TaintBT.reset(
+        new BugType(this, "Out-of-bound access", categories::TaintedData));
+
+  SmallString<256> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Out of bound memory access (index is tainted)";
+  auto BR =
+      std::make_unique<PathSensitiveBugReport>(*TaintBT, os.str(), errorNode);
+
+  // Track back the propagation of taintedness.
+  for (SymbolRef Sym : getTaintedSymbols(errorState, TaintedSVal)) {
+    BR->markInteresting(Sym);
+  }
+
+  checkerContext.emitReport(std::move(BR));
+}
+
+void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
+                                    ProgramStateRef errorState,
+                                    OOB_Kind kind) const {
 
   ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
   if (!errorNode)
@@ -251,13 +277,8 @@ void ArrayBoundCheckerV2::reportOOB(
   case OOB_Excedes:
     os << "(access exceeds upper limit of memory block)";
     break;
-  case OOB_Tainted:
-    os << "(index is tainted)";
-    break;
   }
-
   auto BR = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), errorNode);
-  BR->addVisitor(std::move(Visitor));
   checkerContext.emitReport(std::move(BR));
 }
 
