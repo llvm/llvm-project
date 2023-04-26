@@ -428,6 +428,12 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
   if (isa<DbgVariableIntrinsic>(I))
     return false;
 
+  if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
+    if (DLI->getLabel())
+      return false;
+    return true;
+  }
+
   if (auto *CB = dyn_cast<CallBase>(I))
     if (isRemovableAlloc(CB, TLI))
       return true;
