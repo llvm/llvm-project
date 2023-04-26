@@ -1783,7 +1783,7 @@ and non-0 as true.
     The result is `[0, 1, 2, 3]`.
     If *a* ``>=`` *b*, then the result is `[]<list<int>>`.
 
-``!range([``\ *list*\ ``)``
+``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
