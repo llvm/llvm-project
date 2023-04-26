@@ -13,17 +13,22 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 57
+; CHECK-NEXT:    [[HWASAN_UAR_TAG:%.*]] = and i64 [[TMP2]], 63
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @__hwasan_generate_tag()
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 57
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP1]] to i8
-; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[TMP5]], i64 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @__hwasan_generate_tag()
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP4]], 57
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to ptr
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i8
+; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[TMP8]], i64 16)
 ; CHECK-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
-; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 0, i64 16)
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[TMP9]], i64 16)
 ; CHECK-NEXT:    ret void
 ;
 
