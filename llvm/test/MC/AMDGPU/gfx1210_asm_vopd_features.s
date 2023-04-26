@@ -99,3 +99,11 @@ v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, v1
 
 v_dual_mov_b32      v2, v5                       ::  v_dual_mov_b32       v3, v1
 // GFX12: encoding: [0x05,0x01,0x10,0xca,0x01,0x01,0x02,0x02]
+
+//===----------------------------------------------------------------------===//
+// SRCX0 and SRCY0 may use the same bank if they are using the same VGPR; same for
+// VSRCX1 and VSRCY1.
+//===----------------------------------------------------------------------===//
+
+v_dual_add_f32 v2, v2, v5 :: v_dual_mul_f32 v3, v2, v5
+// GFX12: encoding: [0x02,0x0b,0x06,0xc9,0x02,0x0b,0x02,0x02]

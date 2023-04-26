@@ -651,7 +651,7 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-    const MCRegisterInfo &MRI, bool SkipSrc) const {
+    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
@@ -669,7 +669,9 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;
 
-    if (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum)
+    if (OpXRegs[CompOprIdx] % BanksNum == OpYRegs[CompOprIdx] % BanksNum &&
+        (!AllowSameVGPR || CompOprIdx < Component::DST_NUM ||
+         OpXRegs[CompOprIdx] != OpYRegs[CompOprIdx]))
       return CompOprIdx;
   }
 

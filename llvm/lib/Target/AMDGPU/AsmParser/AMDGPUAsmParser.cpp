@@ -3721,10 +3721,12 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
   // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
   bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1210;
+  bool AllowSameVGPR = isGFX12_10();
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
-      InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc);
+      InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
+                                          AllowSameVGPR);
   if (!InvalidCompOprIdx)
     return true;
 

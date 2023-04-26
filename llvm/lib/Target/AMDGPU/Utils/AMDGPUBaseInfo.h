@@ -760,20 +760,27 @@ public:
   // if the operand is not a register or not a VGPR.
   // If \p SkipSrc is set to true then constraints for source operands are not
   // checked.
+  // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
+  // even though it violates requirement to be from different banks.
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
                          const MCRegisterInfo &MRI,
-                         bool SkipSrc = false) const {
-    return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc).has_value();
+                         bool SkipSrc = false,
+                         bool AllowSameVGPR = false) const {
+    return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR)
+               .has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
   // If \p SkipSrc is set to true then constraints for source operands are not
   // checked except for being from the same halves of VGPR file on gfx1210.
+  // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
+  // even though it violates requirement to be from different banks.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI,
-      bool SkipSrc = false) const;
+      bool SkipSrc = false,
+      bool AllowSameVGPR = false) const;
 
 private:
   RegIndices
