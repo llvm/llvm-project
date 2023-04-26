@@ -97,6 +97,19 @@ public:
     m_scripted_metadata_sp = metadata_sp;
   }
 
+  // Get and set the actual listener that will be used for the process events
+  lldb::ListenerSP GetListener() const { return m_listener_sp; }
+
+  void SetListener(const lldb::ListenerSP &listener_sp) {
+    m_listener_sp = listener_sp;
+  }
+
+  lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
+
+  void SetHijackListener(const lldb::ListenerSP &listener_sp) {
+    m_hijack_listener_sp = listener_sp;
+  }
+
 protected:
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
@@ -109,6 +122,8 @@ protected:
   ArchSpec m_arch;
   lldb::pid_t m_pid = LLDB_INVALID_PROCESS_ID;
   lldb::ScriptedMetadataSP m_scripted_metadata_sp = nullptr;
+  lldb::ListenerSP m_listener_sp = nullptr;
+  lldb::ListenerSP m_hijack_listener_sp = nullptr;
 };
 
 // ProcessInstanceInfo
