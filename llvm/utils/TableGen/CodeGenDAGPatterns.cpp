@@ -2530,8 +2530,8 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       MadeChange |= getChild(i+1)->ApplyTypeConstraints(TP, NotRegisters);
 
       MVT::SimpleValueType OpVT = Int->IS.ParamVTs[i];
-      assert(getChild(i+1)->getNumTypes() == 1 && "Unhandled case");
-      MadeChange |= getChild(i+1)->UpdateNodeType(0, OpVT, TP);
+      assert(getChild(i + 1)->getNumTypes() == 1 && "Unhandled case");
+      MadeChange |= getChild(i + 1)->UpdateNodeType(0, OpVT, TP);
     }
     return MadeChange;
   }

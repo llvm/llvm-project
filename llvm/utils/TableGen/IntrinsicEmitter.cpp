@@ -252,7 +252,6 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
   OS << "#endif\n\n";
 }
 
-
 // NOTE: This must be kept in synch with the copy in lib/IR/Function.cpp!
 enum IIT_Info {
   // Common values should be encoded with 0-15.
@@ -362,7 +361,7 @@ static void EncodeFixedValueType(MVT::SimpleValueType VT,
 }
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#pragma optimize("",off) // MSVC 2015 optimizer can't deal with this function.
+#pragma optimize("", off) // MSVC 2015 optimizer can't deal with this function.
 #endif
 
 static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
@@ -385,8 +384,7 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
       MVT::SimpleValueType VT = getValueType(R->getValueAsDef("ElTy"));
       EncodeFixedValueType(VT, Sig);
       return;
-    }
-    else if (R->isSubClassOf("LLVMPointerTo"))
+    } else if (R->isSubClassOf("LLVMPointerTo"))
       Sig.push_back(IIT_PTR_TO_ARG);
     else if (R->isSubClassOf("LLVMVectorOfAnyPointersToElt")) {
       Sig.push_back(IIT_VEC_OF_ANYPTRS_TO_ELT);
@@ -499,7 +497,8 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
 
   unsigned Tmp = 0;
   switch (getValueType(R->getValueAsDef("VT"))) {
-  default: break;
+  default:
+    break;
   case MVT::iPTR:
     UpdateArgCodes(R->getValueAsDef("ElTy"), ArgCodes, NumInserted, Mapping);
     break;
@@ -518,7 +517,7 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
   case MVT::Any:
     unsigned OriginalIdx = ArgCodes.size() - NumInserted;
     assert(OriginalIdx >= Mapping.size());
-    Mapping.resize(OriginalIdx+1);
+    Mapping.resize(OriginalIdx + 1);
     Mapping[OriginalIdx] = ArgCodes.size();
     ArgCodes.push_back(Tmp);
     break;
@@ -526,7 +525,7 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
 }
 
 #if defined(_MSC_VER) && !defined(__clang__)
-#pragma optimize("",on)
+#pragma optimize("", on)
 #endif
 
 /// ComputeFixedEncoding - If we can encode the type signature for this
@@ -548,8 +547,7 @@ static void ComputeFixedEncoding(const CodeGenIntrinsic &Int,
   unsigned NextArgCode = 0;
   if (Int.IS.RetVTs.empty())
     TypeSig.push_back(IIT_Done);
-  else if (Int.IS.RetVTs.size() == 1 &&
-           Int.IS.RetVTs[0] == MVT::isVoid)
+  else if (Int.IS.RetVTs.size() == 1 && Int.IS.RetVTs[0] == MVT::isVoid)
     TypeSig.push_back(IIT_Done);
   else {
     switch (Int.IS.RetVTs.size()) {
