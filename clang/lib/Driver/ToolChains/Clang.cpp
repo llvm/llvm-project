@@ -740,6 +740,12 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     PGOGenerateArg = nullptr;
   }
 
+  if (TC.getTriple().isOSAIX()) {
+    if (Arg *ProfileSampleUseArg = getLastProfileSampleUseArg(Args))
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ProfileSampleUseArg->getSpelling() << TC.getTriple().str();
+  }
+
   if (ProfileGenerateArg) {
     if (ProfileGenerateArg->getOption().matches(
             options::OPT_fprofile_instr_generate_EQ))
