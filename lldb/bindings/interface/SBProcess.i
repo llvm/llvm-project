@@ -241,6 +241,9 @@ public:
     void
     SendAsyncInterrupt();
 
+    void
+    ForceScriptedState(StateType new_state);
+
     %feature("autodoc", "
     Reads memory from the current process's address space and removes any
     traps that may have been inserted into the memory. It returns the byte
@@ -340,6 +343,9 @@ public:
 
     lldb::SBBroadcaster
     GetBroadcaster () const;
+
+    static const char *
+    GetBroadcasterClass();
 
     bool
     GetDescription (lldb::SBStream &description);

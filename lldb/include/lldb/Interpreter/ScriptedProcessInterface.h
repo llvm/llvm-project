@@ -37,10 +37,6 @@ public:
 
   virtual Status Resume() { return Status("ScriptedProcess did not resume"); }
 
-  virtual bool ShouldStop() { return true; }
-
-  virtual Status Stop() { return Status("ScriptedProcess did not stop"); }
-
   virtual llvm::Optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
     error.SetErrorString("ScriptedProcess have no memory region.");
@@ -48,6 +44,11 @@ public:
   }
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
+
+  virtual bool CreateBreakpoint(lldb::addr_t addr, Status &error) {
+    error.SetErrorString("ScriptedProcess don't support creating breakpoints.");
+    return {};
+  }
 
   virtual lldb::DataExtractorSP
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {

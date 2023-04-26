@@ -49,6 +49,12 @@ public:
     void
     SetListener (lldb::SBListener &listener);
 
+    SBListener
+    GetShadowListener();
+
+    void
+    SetShadowListener(SBListener &listener);
+
     uint32_t
     GetNumArguments ();
 
