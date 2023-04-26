@@ -824,8 +824,7 @@ public:
 
   mlir::Attribute VisitStringLiteral(StringLiteral *E, QualType T) {
     // This is a string literal initializing an array in an initializer.
-    assert(0 && "not implemented");
-    return {};
+    return CGM.getConstantArrayFromStringLiteral(E);
   }
 
   mlir::Attribute VisitObjCEncodeExpr(ObjCEncodeExpr *E, QualType T) {
@@ -1208,8 +1207,17 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   if (destType->isReferenceType())
     return {};
 
-  assert(0 && "not implemented");
-  return {};
+  // Evaluation failed and not a reference type: ensure initializer exists.
+  const Expr *E = D.getInit();
+  assert(E && "No initializer to emit");
+
+  // Initializer exists: emit it "manually" through visitors.
+  auto nonMemoryDestType = getNonMemoryType(CGM, destType);
+  auto C =
+      ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), nonMemoryDestType);
+
+  // Return either the initializer attribute or a null attribute on failure.
+  return (C ? emitForMemory(C, destType) : nullptr);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitAbstract(const APValue &value,
