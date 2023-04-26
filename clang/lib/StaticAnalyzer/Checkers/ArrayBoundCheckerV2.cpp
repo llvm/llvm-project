@@ -33,11 +33,14 @@ namespace {
 class ArrayBoundCheckerV2 :
     public Checker<check::Location> {
   mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> TaintBT;
 
-  enum OOB_Kind { OOB_Precedes, OOB_Excedes, OOB_Tainted };
+  enum OOB_Kind { OOB_Precedes, OOB_Excedes };
 
-  void reportOOB(CheckerContext &C, ProgramStateRef errorState, OOB_Kind kind,
-                 std::unique_ptr<BugReporterVisitor> Visitor = nullptr) const;
+  void reportOOB(CheckerContext &C, ProgramStateRef errorState,
+                 OOB_Kind kind) const;
+  void reportTaintOOB(CheckerContext &C, ProgramStateRef errorState,
+                      SVal TaintedSVal) const;
 
 public:
   void checkLocation(SVal l, bool isLoad, const Stmt*S,
@@ -54,8 +57,8 @@ private:
     : baseRegion(nullptr), byteOffset(UnknownVal()) {}
 
 public:
-  RegionRawOffsetV2(const SubRegion* base, SVal offset)
-    : baseRegion(base), byteOffset(offset) {}
+  RegionRawOffsetV2(const SubRegion *base, NonLoc offset)
+      : baseRegion(base), byteOffset(offset) { assert(base); }
 
   NonLoc getByteOffset() const { return byteOffset.castAs<NonLoc>(); }
   const SubRegion *getRegion() const { return baseRegion; }
@@ -69,19 +72,12 @@ public:
 };
 }
 
-static SVal computeExtentBegin(SValBuilder &svalBuilder,
-                               const MemRegion *region) {
-  const MemSpaceRegion *SR = region->getMemorySpace();
-  if (SR->getKind() == MemRegion::UnknownSpaceRegionKind)
-    return UnknownVal();
-  else
-    return svalBuilder.makeZeroArrayIndex();
-}
-
 // TODO: once the constraint manager is smart enough to handle non simplified
 // symbolic expressions remove this function. Note that this can not be used in
 // the constraint manager as is, since this does not handle overflows. It is
 // safe to assume, however, that memory offsets will not overflow.
+// NOTE: callers of this function need to be aware of the effects of overflows
+// and signed<->unsigned conversions!
 static std::pair<NonLoc, nonloc::ConcreteInt>
 getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
                      SValBuilder &svalBuilder) {
@@ -114,6 +110,38 @@ getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
   return std::pair<NonLoc, nonloc::ConcreteInt>(offset, extent);
 }
 
+// Evaluate the comparison Value < Threshold with the help of the custom
+// simplification algorithm defined for this checker. Return a pair of states,
+// where the first one corresponds to "value below threshold" and the second
+// corresponds to "value at or above threshold". Returns {nullptr, nullptr} in
+// the case when the evaluation fails.
+static std::pair<ProgramStateRef, ProgramStateRef>
+compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
+                        SValBuilder &SVB) {
+  if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
+    std::tie(Value, Threshold) = getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
+  }
+  if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
+    QualType T = Value.getType(SVB.getContext());
+    if (T->isUnsignedIntegerType() && ConcreteThreshold->getValue().isNegative()) {
+      // In this case we reduced the bound check to a comparison of the form
+      //   (symbol or value with unsigned type) < (negative number)
+      // which is always false. We are handling these cases separately because
+      // evalBinOpNN can perform a signed->unsigned conversion that turns the
+      // negative number into a huge positive value and leads to wildly
+      // inaccurate conclusions.
+      return {nullptr, State};
+    }
+  }
+  auto BelowThreshold =
+      SVB.evalBinOpNN(State, BO_LT, Value, Threshold, SVB.getConditionType()).getAs<NonLoc>();
+
+  if (BelowThreshold)
+    return State->assume(*BelowThreshold);
+
+  return {nullptr, nullptr};
+}
+
 void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
                                         const Stmt* LoadS,
                                         CheckerContext &checkerContext) const {
@@ -136,100 +164,83 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   if (!rawOffset.getRegion())
     return;
 
-  NonLoc rawOffsetVal = rawOffset.getByteOffset();
+  NonLoc ByteOffset = rawOffset.getByteOffset();
 
-  // CHECK LOWER BOUND: Is byteOffset < extent begin?
-  //  If so, we are doing a load/store
-  //  before the first valid offset in the memory region.
+  // CHECK LOWER BOUND
+  const MemSpaceRegion *SR = rawOffset.getRegion()->getMemorySpace();
+  if (!llvm::isa<UnknownSpaceRegion>(SR)) {
+    // A pointer to UnknownSpaceRegion may point to the middle of
+    // an allocated region.
 
-  SVal extentBegin = computeExtentBegin(svalBuilder, rawOffset.getRegion());
+    auto [state_precedesLowerBound, state_withinLowerBound] =
+        compareValueToThreshold(state, ByteOffset,
+                                svalBuilder.makeZeroArrayIndex(), svalBuilder);
 
-  if (std::optional<NonLoc> NV = extentBegin.getAs<NonLoc>()) {
-    if (auto ConcreteNV = NV->getAs<nonloc::ConcreteInt>()) {
-      std::pair<NonLoc, nonloc::ConcreteInt> simplifiedOffsets =
-          getSimplifiedOffsets(rawOffset.getByteOffset(), *ConcreteNV,
-                               svalBuilder);
-      rawOffsetVal = simplifiedOffsets.first;
-      *NV = simplifiedOffsets.second;
-    }
-
-    SVal lowerBound = svalBuilder.evalBinOpNN(state, BO_LT, rawOffsetVal, *NV,
-                                              svalBuilder.getConditionType());
-
-    std::optional<NonLoc> lowerBoundToCheck = lowerBound.getAs<NonLoc>();
-    if (!lowerBoundToCheck)
-      return;
-
-    ProgramStateRef state_precedesLowerBound, state_withinLowerBound;
-    std::tie(state_precedesLowerBound, state_withinLowerBound) =
-      state->assume(*lowerBoundToCheck);
-
-    // Are we constrained enough to definitely precede the lower bound?
     if (state_precedesLowerBound && !state_withinLowerBound) {
+      // We know that the index definitely precedes the lower bound.
       reportOOB(checkerContext, state_precedesLowerBound, OOB_Precedes);
       return;
     }
 
-    // Otherwise, assume the constraint of the lower bound.
-    assert(state_withinLowerBound);
-    state = state_withinLowerBound;
+    if (state_withinLowerBound)
+      state = state_withinLowerBound;
   }
 
-  do {
-    // CHECK UPPER BOUND: Is byteOffset >= size(baseRegion)?  If so,
-    // we are doing a load/store after the last valid offset.
-    const MemRegion *MR = rawOffset.getRegion();
-    DefinedOrUnknownSVal Size = getDynamicExtent(state, MR, svalBuilder);
-    if (!isa<NonLoc>(Size))
-      break;
+  // CHECK UPPER BOUND
+  DefinedOrUnknownSVal Size =
+      getDynamicExtent(state, rawOffset.getRegion(), svalBuilder);
+  if (auto KnownSize = Size.getAs<NonLoc>()) {
+    auto [state_withinUpperBound, state_exceedsUpperBound] =
+        compareValueToThreshold(state, ByteOffset, *KnownSize, svalBuilder);
 
-    if (auto ConcreteSize = Size.getAs<nonloc::ConcreteInt>()) {
-      std::pair<NonLoc, nonloc::ConcreteInt> simplifiedOffsets =
-          getSimplifiedOffsets(rawOffset.getByteOffset(), *ConcreteSize,
-                               svalBuilder);
-      rawOffsetVal = simplifiedOffsets.first;
-      Size = simplifiedOffsets.second;
-    }
-
-    SVal upperbound = svalBuilder.evalBinOpNN(state, BO_GE, rawOffsetVal,
-                                              Size.castAs<NonLoc>(),
-                                              svalBuilder.getConditionType());
-
-    std::optional<NonLoc> upperboundToCheck = upperbound.getAs<NonLoc>();
-    if (!upperboundToCheck)
-      break;
-
-    ProgramStateRef state_exceedsUpperBound, state_withinUpperBound;
-    std::tie(state_exceedsUpperBound, state_withinUpperBound) =
-      state->assume(*upperboundToCheck);
-
-    // If we are under constrained and the index variables are tainted, report.
-    if (state_exceedsUpperBound && state_withinUpperBound) {
-      SVal ByteOffset = rawOffset.getByteOffset();
-      if (isTainted(state, ByteOffset)) {
-        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Tainted,
-                  std::make_unique<TaintBugVisitor>(ByteOffset));
+    if (state_exceedsUpperBound) {
+      if (!state_withinUpperBound) {
+        // We know that the index definitely exceeds the upper bound.
+        reportOOB(checkerContext, state_exceedsUpperBound, OOB_Excedes);
         return;
       }
-    } else if (state_exceedsUpperBound) {
-      // If we are constrained enough to definitely exceed the upper bound,
-      // report.
-      assert(!state_withinUpperBound);
-      reportOOB(checkerContext, state_exceedsUpperBound, OOB_Excedes);
-      return;
+      if (isTainted(state, ByteOffset)) {
+        // Both cases are possible, but the index is tainted, so report.
+        reportTaintOOB(checkerContext, state_exceedsUpperBound, ByteOffset);
+        return;
+      }
     }
 
-    assert(state_withinUpperBound);
-    state = state_withinUpperBound;
+    if (state_withinUpperBound)
+      state = state_withinUpperBound;
   }
-  while (false);
 
   checkerContext.addTransition(state);
 }
 
-void ArrayBoundCheckerV2::reportOOB(
-    CheckerContext &checkerContext, ProgramStateRef errorState, OOB_Kind kind,
-    std::unique_ptr<BugReporterVisitor> Visitor) const {
+void ArrayBoundCheckerV2::reportTaintOOB(CheckerContext &checkerContext,
+                                         ProgramStateRef errorState,
+                                         SVal TaintedSVal) const {
+  ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
+  if (!errorNode)
+    return;
+
+  if (!TaintBT)
+    TaintBT.reset(
+        new BugType(this, "Out-of-bound access", categories::TaintedData));
+
+  SmallString<256> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Out of bound memory access (index is tainted)";
+  auto BR =
+      std::make_unique<PathSensitiveBugReport>(*TaintBT, os.str(), errorNode);
+
+  // Track back the propagation of taintedness.
+  for (SymbolRef Sym : getTaintedSymbols(errorState, TaintedSVal)) {
+    BR->markInteresting(Sym);
+  }
+
+  checkerContext.emitReport(std::move(BR));
+}
+
+void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
+                                    ProgramStateRef errorState,
+                                    OOB_Kind kind) const {
 
   ExplodedNode *errorNode = checkerContext.generateErrorNode(errorState);
   if (!errorNode)
@@ -251,13 +262,8 @@ void ArrayBoundCheckerV2::reportOOB(
   case OOB_Excedes:
     os << "(access exceeds upper limit of memory block)";
     break;
-  case OOB_Tainted:
-    os << "(index is tainted)";
-    break;
   }
-
   auto BR = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), errorNode);
-  BR->addVisitor(std::move(Visitor));
   checkerContext.emitReport(std::move(BR));
 }
 
@@ -315,9 +321,8 @@ RegionRawOffsetV2 RegionRawOffsetV2::computeOffset(ProgramStateRef state,
     switch (region->getKind()) {
       default: {
         if (const SubRegion *subReg = dyn_cast<SubRegion>(region)) {
-          offset = getValue(offset, svalBuilder);
-          if (!offset.isUnknownOrUndef())
-            return RegionRawOffsetV2(subReg, offset);
+          if (auto Offset = getValue(offset, svalBuilder).getAs<NonLoc>())
+            return RegionRawOffsetV2(subReg, *Offset);
         }
         return RegionRawOffsetV2();
       }
