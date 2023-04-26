@@ -1,7 +1,7 @@
-// RUN: %clang -fclangir -fclangir-direct-lowering -o %t %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -fclangir -fclangir-direct-lowering -o %t %s
 // RUN: %t | FileCheck %s
-// XFAIL: *
-
+// REQUIRES: system-linux
+// REQUIRES: target-linux
 int printf(const char *format);
 
 int main (void) {

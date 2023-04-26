@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fclangir -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
 
 int literals(void) {
     char a = 'a'; // char literals are int in C
