@@ -359,6 +359,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(FPRndMode, MVT::f16,
                          Subtarget.hasStdExtZfa() ? Legal : Custom);
       setOperationAction(ISD::SELECT, MVT::f16, Custom);
+      setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
     } else {
       static const unsigned ZfhminPromoteOps[] = {
           ISD::FMINNUM,      ISD::FMAXNUM,       ISD::FADD,
@@ -417,6 +418,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(FPOpToExpand, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+    setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
 
     if (Subtarget.hasStdExtZfa())
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
@@ -450,6 +452,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(FPOpToExpand, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+    setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
   }
 
   if (Subtarget.is64Bit()) {
@@ -4168,6 +4171,42 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+static SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG,
+                               const RISCVSubtarget &Subtarget) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto CNode = cast<ConstantSDNode>(Op.getOperand(1));
+  unsigned Check = CNode->getZExtValue();
+  unsigned TDCMask = 0;
+  if (Check & fcSNan)
+    TDCMask |= RISCV::FPMASK_Signaling_NaN;
+  if (Check & fcQNan)
+    TDCMask |= RISCV::FPMASK_Quiet_NaN;
+  if (Check & fcPosInf)
+    TDCMask |= RISCV::FPMASK_Positive_Infinity;
+  if (Check & fcNegInf)
+    TDCMask |= RISCV::FPMASK_Negative_Infinity;
+  if (Check & fcPosNormal)
+    TDCMask |= RISCV::FPMASK_Positive_Normal;
+  if (Check & fcNegNormal)
+    TDCMask |= RISCV::FPMASK_Negative_Normal;
+  if (Check & fcPosSubnormal)
+    TDCMask |= RISCV::FPMASK_Positive_Subnormal;
+  if (Check & fcNegSubnormal)
+    TDCMask |= RISCV::FPMASK_Negative_Subnormal;
+  if (Check & fcPosZero)
+    TDCMask |= RISCV::FPMASK_Positive_Zero;
+  if (Check & fcNegZero)
+    TDCMask |= RISCV::FPMASK_Negative_Zero;
+
+  SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, XLenVT);
+  SDValue FPCLASS = DAG.getNode(RISCVISD::FPCLASS, DL, VT, Op.getOperand(0));
+  SDValue AND = DAG.getNode(ISD::AND, DL, VT, FPCLASS, TDCMaskV);
+  return DAG.getSetCC(DL, VT, AND, DAG.getConstant(0, DL, XLenVT),
+                      ISD::CondCode::SETNE);
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -4279,6 +4318,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return LowerINTRINSIC_VOID(Op, DAG);
+  case ISD::IS_FPCLASS:
+    return LowerIS_FPCLASS(Op, DAG, Subtarget);
   case ISD::BITREVERSE: {
     MVT VT = Op.getSimpleValueType();
     SDLoc DL(Op);
@@ -14609,6 +14650,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
   NODE_NAME_CASE(FROUND)
+  NODE_NAME_CASE(FPCLASS)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
   NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(ORC_B)
