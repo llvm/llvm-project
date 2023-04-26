@@ -6502,8 +6502,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     // that it's an initializer instead.
     if (D.mayOmitIdentifier() && D.mayBeFollowedByCXXDirectInit()) {
       RevertingTentativeParsingAction PA(*this);
-      if (TryParseDeclarator(true, D.mayHaveIdentifier(), true) ==
-              TPResult::False) {
+      if (TryParseDeclarator(true, D.mayHaveIdentifier(), true,
+                             D.getDeclSpec().getTypeSpecType() == TST_auto) ==
+          TPResult::False) {
         D.SetIdentifier(nullptr, Tok.getLocation());
         goto PastIdentifier;
       }
