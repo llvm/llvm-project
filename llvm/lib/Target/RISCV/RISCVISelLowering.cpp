@@ -9639,7 +9639,7 @@ public:
   }
 
   // Creates infos about comparison operations CmpOp0 and CmpOp1.
-  // If there is no common operand returns None. Otherwise, returns
+  // If there is no common operand returns std::nullopt. Otherwise, returns
   // correspondence info about comparison operations.
   static std::optional<std::pair<CmpOpInfo, CmpOpInfo>>
   getInfoAbout(SDValue const &CmpOp0, SDValue const &CmpOp1) {
@@ -10007,7 +10007,7 @@ struct NodeExtensionHelper {
   }
 
   /// Get or create a value that can feed \p Root with the given extension \p
-  /// SExt. If \p SExt is None, this returns the source of this operand.
+  /// SExt. If \p SExt is std::nullopt, this returns the source of this operand.
   /// \see ::getSource().
   SDValue getOrCreateExtendedOp(const SDNode *Root, SelectionDAG &DAG,
                                 std::optional<bool> SExt) const {
