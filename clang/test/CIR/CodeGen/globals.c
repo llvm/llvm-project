@@ -8,3 +8,5 @@
 
 char string[] = "whatnow";
 // CHECK: cir.global external @string = #cir.const_array<"whatnow\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8>
+int sint[] = {123, 456, 789};
+// CHECK: cir.global external @sint = #cir.const_array<[123 : i32, 456 : i32, 789 : i32] : !cir.array<i32 x 3>> : !cir.array<i32 x 3>
