@@ -103,8 +103,8 @@ public:
   // functions and classes.
 
   mlir::Attribute tryEmitPrivateForVarInit(const VarDecl &D);
-  mlir::TypedAttr tryEmitPrivate(const Expr *E, QualType T);
-  mlir::TypedAttr tryEmitPrivateForMemory(const Expr *E, QualType T);
+  mlir::Attribute tryEmitPrivate(const Expr *E, QualType T);
+  mlir::Attribute tryEmitPrivateForMemory(const Expr *E, QualType T);
 
   mlir::Attribute tryEmitPrivate(const APValue &value, QualType T);
   mlir::Attribute tryEmitPrivateForMemory(const APValue &value, QualType T);
