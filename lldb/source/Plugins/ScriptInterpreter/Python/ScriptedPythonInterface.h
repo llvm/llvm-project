@@ -146,7 +146,7 @@ protected:
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
   }
 
-  template <>
+
   void ReverseTransform(bool &original_arg,
                         python::PythonObject transformed_arg, Status &error) {
     python::PythonBoolean boolean_arg = python::PythonBoolean(
