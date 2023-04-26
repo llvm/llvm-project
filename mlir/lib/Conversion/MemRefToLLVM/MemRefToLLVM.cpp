@@ -332,6 +332,8 @@ struct AssumeAlignmentOpLowering
     : public ConvertOpToLLVMPattern<memref::AssumeAlignmentOp> {
   using ConvertOpToLLVMPattern<
       memref::AssumeAlignmentOp>::ConvertOpToLLVMPattern;
+  explicit AssumeAlignmentOpLowering(LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<memref::AssumeAlignmentOp>(converter) {}
 
   LogicalResult
   matchAndRewrite(memref::AssumeAlignmentOp op, OpAdaptor adaptor,
@@ -341,28 +343,15 @@ struct AssumeAlignmentOpLowering
     auto loc = op.getLoc();
 
     auto srcMemRefType = op.getMemref().getType().cast<MemRefType>();
-    // When we convert to LLVM, the input memref must have been normalized
-    // beforehand. Hence, this call is guaranteed to work.
-    auto [strides, offset] = getStridesAndOffset(srcMemRefType);
-
-    MemRefDescriptor memRefDescriptor(memref);
-    Value ptr = memRefDescriptor.alignedPtr(rewriter, memref.getLoc());
-    // Skip if offset is zero.
-    if (offset != 0) {
-      Value offsetVal = ShapedType::isDynamic(offset)
-                            ? memRefDescriptor.offset(rewriter, loc)
-                            : createIndexConstant(rewriter, loc, offset);
-      Type elementType =
-          typeConverter->convertType(srcMemRefType.getElementType());
-      ptr = rewriter.create<LLVM::GEPOp>(loc, ptr.getType(), elementType, ptr,
-                                         offsetVal);
-    }
+    Value ptr = getStridedElementPtr(loc, srcMemRefType, memref, /*indices=*/{},
+                                     rewriter);
 
     // Emit llvm.assume(memref & (alignment - 1) == 0).
     //
     // This relies on LLVM's CSE optimization (potentially after SROA), since
     // after CSE all memref instances should get de-duplicated into the same
     // pointer SSA value.
+    MemRefDescriptor memRefDescriptor(memref);
     auto intPtrType =
         getIntPtrType(memRefDescriptor.getElementPtrType().getAddressSpace());
     Value zero = createIndexAttrConstant(rewriter, loc, intPtrType, 0);
