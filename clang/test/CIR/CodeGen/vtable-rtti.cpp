@@ -74,7 +74,7 @@ public:
 // CHECK:  }
 
 // vtable for B
-// CHECK: cir.global linkonce_odr @_ZTV1B = #cir.const_struct<[#cir.const_array<[#cir.null : !cir.ptr<i8>, #cir.global_view<@_ZTI1B> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>, #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 5>> : !cir.array<!cir.ptr<i8> x 5>]> : ![[VTableTypeA]] {alignment = 8 : i64}
+// CHECK: cir.global linkonce_odr @_ZTV1B = #cir.vtable<<[#cir.const_array<[#cir.null : !cir.ptr<i8>, #cir.global_view<@_ZTI1B> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>, #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>, #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>] : !cir.array<!cir.ptr<i8> x 5>> : !cir.array<!cir.ptr<i8> x 5>]>> : ![[VTableTypeA]]
 
 // vtable for __cxxabiv1::__si_class_type_info
 // CHECK:   cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!cir.ptr<i8>>

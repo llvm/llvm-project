@@ -1467,7 +1467,7 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
 
   CGVT.createVTableInitializer(components, VTLayout, RTTI,
                                mlir::cir::isLocalLinkage(Linkage));
-  components.finishAndSetAsInitializer(VTable);
+  components.finishAndSetAsInitializer(VTable, /*forVtable=*/true);
 
   // Set the correct linkage.
   VTable.setLinkage(Linkage);

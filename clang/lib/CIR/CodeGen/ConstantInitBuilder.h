@@ -398,10 +398,17 @@ public:
   /// Given that this builder was created by beginning an array or struct
   /// directly on a ConstantInitBuilder, finish the array/struct and
   /// set it as the initializer of the given global variable.
-  void finishAndSetAsInitializer(mlir::cir::GlobalOp global) {
+  void finishAndSetAsInitializer(mlir::cir::GlobalOp global,
+                                 bool forVTable = false) {
     assert(!this->Parent && "finishing non-root builder");
+    mlir::Attribute init = asImpl().finishImpl(global.getContext());
+    auto initCSA = init.dyn_cast<mlir::cir::ConstStructAttr>();
+    assert(initCSA &&
+           "expected #cir.const_struct attribute to represent vtable data");
     return this->Builder.setGlobalInitializer(
-        global, asImpl().finishImpl(global.getContext()));
+        global, forVTable
+                    ? mlir::cir::VTableAttr::get(initCSA.getType(), initCSA)
+                    : init);
   }
 
   /// Given that this builder was created by beginning an array or struct
