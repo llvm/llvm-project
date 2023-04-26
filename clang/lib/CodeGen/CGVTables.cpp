@@ -1223,7 +1223,8 @@ void CodeGenModule::EmitDeferredVTables() {
 }
 
 bool CodeGenModule::AlwaysHasLTOVisibilityPublic(const CXXRecordDecl *RD) {
-  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>())
+  if (RD->hasAttr<LTOVisibilityPublicAttr>() || RD->hasAttr<UuidAttr>() ||
+      RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
     return true;
 
   if (!getCodeGenOpts().LTOVisibilityPublicStd)
@@ -1250,13 +1251,9 @@ bool CodeGenModule::HasHiddenLTOVisibility(const CXXRecordDecl *RD) {
   if (!isExternallyVisible(LV.getLinkage()))
     return true;
 
-  if (getTriple().isOSBinFormatCOFF()) {
-    if (RD->hasAttr<DLLExportAttr>() || RD->hasAttr<DLLImportAttr>())
-      return false;
-  } else {
-    if (LV.getVisibility() != HiddenVisibility)
-      return false;
-  }
+  if (!getTriple().isOSBinFormatCOFF() &&
+      LV.getVisibility() != HiddenVisibility)
+    return false;
 
   return !AlwaysHasLTOVisibilityPublic(RD);
 }
