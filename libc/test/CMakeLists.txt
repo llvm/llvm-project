@@ -6,9 +6,7 @@ add_dependencies(check-libc libc-unit-tests libc-hermetic-tests)
 add_custom_target(exhaustive-check-libc)
 add_custom_target(libc-long-running-tests)
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  add_subdirectory(UnitTest)
-endif()
+add_subdirectory(UnitTest)
 
 add_header_library(
   errno_setter_matcher
