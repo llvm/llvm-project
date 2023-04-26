@@ -310,3 +310,65 @@ func.func @non_constant_launches(%arg0 : index) {
 }
 
 // CHECK-DL-LABEL: gpu.module @non_constant_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+
+// CHECK: module attributes {gpu.container_module}
+
+// -----
+
+// This test checks memory attributions for gpu.launch, using both workgroup and private attributions.
+// CHECK-LABEL: func @launch_memory_attributions_0()
+func.func @launch_memory_attributions_0() {
+  %1 = "op"() : () -> (memref<?xf32, 1>)
+  %128 = arith.constant 128 : index
+
+  // CHECK: gpu.launch_func @launch_memory_attributions_0_kernel::@launch_memory_attributions_0_kernel
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %128, %grid_y = %128,
+                                       %grid_z = %128)
+             threads(%tx, %ty, %tz) in (%block_x = %128, %block_y = %128,
+                                        %block_z = %128)
+             workgroup(%shared: memref<42xf32, 3>)
+             private(%priv0: memref<2xf32, 5>, %priv1: memref<1xf32, 5>) {
+    "some_op"(%bx, %block_x) : (index, index) -> ()
+    %42 = memref.load %1[%tx] : memref<?xf32, 1>
+    %43 = memref.load %shared[%tx] : memref<42xf32, 3>
+    %44 = memref.load %priv1[%tx] : memref<1xf32, 5>
+    gpu.terminator
+  }
+  return
+}
+
+// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_0_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
+
+// CHECK-LABEL: gpu.module @launch_memory_attributions_0_kernel
+// CHECK-NEXT: gpu.func @launch_memory_attributions_0_kernel
+// CHECK-SAME: workgroup(%[[KERNEL_ARG1:.*]] : memref<42xf32, 3>)
+// CHECK-SAME: private(%[[KERNEL_ARG2:.*]] : memref<2xf32, 5>, %[[KERNEL_ARG3:.*]] : memref<1xf32, 5>)
+// CHECK: %[[TID:.*]] = gpu.thread_id x
+// CHECK: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<42xf32, 3>
+// CHECK-NEXT: = memref.load %[[KERNEL_ARG3]][%[[TID]]] : memref<1xf32, 5>
+
+// -----
+
+// This test checks correctness of private attributions in the absence of workgroup attributions.
+// CHECK-LABEL: @launch_memory_attributions_1
+func.func @launch_memory_attributions_1(%arg0 : memref<*xf32>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %d = memref.dim %arg0, %c2 : memref<*xf32>
+  // CHECK: gpu.func {{.*}}  private(%[[KERNEL_ARG:.*]] : memref<3xf32, 5>) {{.*}} {
+  // CHECK:   %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: = memref.load %[[KERNEL_ARG]][%[[C2]]] : memref<3xf32, 5>
+  // CHECK:   gpu.return
+  // CHECK: }
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
+                                       %grid_z = %c1)
+             threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1,
+                                        %block_z = %c1)
+             private(%priv0: memref<3xf32, 5>) {
+    %42 = memref.load %priv0[%c2] : memref<3xf32, 5>
+    gpu.terminator
+  }
+  return
+}
+
+// CHECK-DL-LABEL: gpu.module @launch_memory_attributions_1_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}
