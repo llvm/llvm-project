@@ -23,8 +23,6 @@
 #endif
 #include <unistd.h>
 
-char *s; // getpass leaks.
-
 int main(int argc, char **argv) {
   int m;
   int pid = forkpty(&m, NULL, NULL, NULL);
@@ -40,7 +38,7 @@ int main(int argc, char **argv) {
     while ((res = read(m, buf, sizeof(buf))) > 0)
       write(1, buf, res);
   } else {
-    s = getpass("prompt");
+    char *s = getpass("prompt");
     assert(strcmp(s, "password") == 0);
     write(1, "done\n", 5);
   }
