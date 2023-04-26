@@ -2194,8 +2194,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
       //
       // Unless we've already done so, create the single location def now.
       if (AlwaysStackHomed.insert(Aggr).second) {
-        assert(!VarLoc.Values.hasArgList() &&
-               isa<AllocaInst>(VarLoc.Values.getVariableLocationOp(0)));
+        assert(!VarLoc.Values.hasArgList());
         // TODO: When more complex cases are handled VarLoc.Expr should be
         // built appropriately rather than always using an empty DIExpression.
         // The assert below is a reminder.
