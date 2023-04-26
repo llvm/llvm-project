@@ -344,6 +344,9 @@ public:
     lldb::SBBroadcaster
     GetBroadcaster () const;
 
+    static const char *
+    GetBroadcasterClass();
+
     bool
     GetDescription (lldb::SBStream &description);
 
