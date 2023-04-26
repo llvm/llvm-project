@@ -5,6 +5,8 @@
 ;
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -S | FileCheck %s  --check-prefixes=ABORT
 ; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -S | FileCheck %s  --check-prefixes=RECOVER
+; RUN: opt < %s -passes=hwasan -hwasan-recover=0 -hwasan-instrument-with-calls=0 -S | FileCheck %s  --check-prefixes=ABORT-INLINE
+; RUN: opt < %s -passes=hwasan -hwasan-recover=1 -hwasan-instrument-with-calls=0 -S | FileCheck %s  --check-prefixes=RECOVER-INLINE
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -27,6 +29,24 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; RECOVER-NEXT:    call void @__hwasan_load1_noabort(i64 [[TMP0]])
 ; RECOVER-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; RECOVER-NEXT:    ret i8 [[B]]
+;
+; ABORT-INLINE-LABEL: define i8 @test_load8
+; ABORT-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; ABORT-INLINE-NEXT:  entry:
+; ABORT-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; ABORT-INLINE-NEXT:    call void @__hwasan_load1(i64 [[TMP0]])
+; ABORT-INLINE-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
+; ABORT-INLINE-NEXT:    ret i8 [[B]]
+;
+; RECOVER-INLINE-LABEL: define i8 @test_load8
+; RECOVER-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+; RECOVER-INLINE-NEXT:  entry:
+; RECOVER-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; RECOVER-INLINE-NEXT:    call void @__hwasan_load1_noabort(i64 [[TMP0]])
+; RECOVER-INLINE-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
+; RECOVER-INLINE-NEXT:    ret i8 [[B]]
 ;
 
 
@@ -55,6 +75,24 @@ define i40 @test_load40(ptr %a) sanitize_hwaddress {
 ; RECOVER-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
 ; RECOVER-NEXT:    ret i40 [[B]]
 ;
+; ABORT-INLINE-LABEL: define i40 @test_load40
+; ABORT-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
+; ABORT-INLINE-NEXT:  entry:
+; ABORT-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; ABORT-INLINE-NEXT:    call void @__hwasan_loadN(i64 [[TMP0]], i64 5)
+; ABORT-INLINE-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
+; ABORT-INLINE-NEXT:    ret i40 [[B]]
+;
+; RECOVER-INLINE-LABEL: define i40 @test_load40
+; RECOVER-INLINE-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
+; RECOVER-INLINE-NEXT:  entry:
+; RECOVER-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; RECOVER-INLINE-NEXT:    call void @__hwasan_loadN_noabort(i64 [[TMP0]], i64 5)
+; RECOVER-INLINE-NEXT:    [[B:%.*]] = load i40, ptr [[A]], align 4
+; RECOVER-INLINE-NEXT:    ret i40 [[B]]
+;
 
 
 
@@ -81,6 +119,24 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; RECOVER-NEXT:    call void @__hwasan_store1_noabort(i64 [[TMP0]])
 ; RECOVER-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; RECOVER-NEXT:    ret void
+;
+; ABORT-INLINE-LABEL: define void @test_store8
+; ABORT-INLINE-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; ABORT-INLINE-NEXT:  entry:
+; ABORT-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; ABORT-INLINE-NEXT:    call void @__hwasan_store1(i64 [[TMP0]])
+; ABORT-INLINE-NEXT:    store i8 [[B]], ptr [[A]], align 4
+; ABORT-INLINE-NEXT:    ret void
+;
+; RECOVER-INLINE-LABEL: define void @test_store8
+; RECOVER-INLINE-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; RECOVER-INLINE-NEXT:  entry:
+; RECOVER-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; RECOVER-INLINE-NEXT:    call void @__hwasan_store1_noabort(i64 [[TMP0]])
+; RECOVER-INLINE-NEXT:    store i8 [[B]], ptr [[A]], align 4
+; RECOVER-INLINE-NEXT:    ret void
 ;
 
 
@@ -109,6 +165,24 @@ define void @test_store40(ptr %a, i40 %b) sanitize_hwaddress {
 ; RECOVER-NEXT:    store i40 [[B]], ptr [[A]], align 4
 ; RECOVER-NEXT:    ret void
 ;
+; ABORT-INLINE-LABEL: define void @test_store40
+; ABORT-INLINE-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
+; ABORT-INLINE-NEXT:  entry:
+; ABORT-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; ABORT-INLINE-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 5)
+; ABORT-INLINE-NEXT:    store i40 [[B]], ptr [[A]], align 4
+; ABORT-INLINE-NEXT:    ret void
+;
+; RECOVER-INLINE-LABEL: define void @test_store40
+; RECOVER-INLINE-SAME: (ptr [[A:%.*]], i40 [[B:%.*]]) #[[ATTR0]] {
+; RECOVER-INLINE-NEXT:  entry:
+; RECOVER-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; RECOVER-INLINE-NEXT:    call void @__hwasan_storeN_noabort(i64 [[TMP0]], i64 5)
+; RECOVER-INLINE-NEXT:    store i40 [[B]], ptr [[A]], align 4
+; RECOVER-INLINE-NEXT:    ret void
+;
 
 
 
@@ -135,6 +209,24 @@ define void @test_store_unaligned(ptr %a, i64 %b) sanitize_hwaddress {
 ; RECOVER-NEXT:    call void @__hwasan_storeN_noabort(i64 [[TMP0]], i64 8)
 ; RECOVER-NEXT:    store i64 [[B]], ptr [[A]], align 4
 ; RECOVER-NEXT:    ret void
+;
+; ABORT-INLINE-LABEL: define void @test_store_unaligned
+; ABORT-INLINE-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
+; ABORT-INLINE-NEXT:  entry:
+; ABORT-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; ABORT-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; ABORT-INLINE-NEXT:    call void @__hwasan_storeN(i64 [[TMP0]], i64 8)
+; ABORT-INLINE-NEXT:    store i64 [[B]], ptr [[A]], align 4
+; ABORT-INLINE-NEXT:    ret void
+;
+; RECOVER-INLINE-LABEL: define void @test_store_unaligned
+; RECOVER-INLINE-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
+; RECOVER-INLINE-NEXT:  entry:
+; RECOVER-INLINE-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RECOVER-INLINE-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
+; RECOVER-INLINE-NEXT:    call void @__hwasan_storeN_noabort(i64 [[TMP0]], i64 8)
+; RECOVER-INLINE-NEXT:    store i64 [[B]], ptr [[A]], align 4
+; RECOVER-INLINE-NEXT:    ret void
 ;
 
 
