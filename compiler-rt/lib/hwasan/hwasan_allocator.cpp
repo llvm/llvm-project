@@ -683,3 +683,5 @@ const void *__sanitizer_get_allocated_begin(const void *p) {
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }
+
+void __sanitizer_purge_allocator() { allocator.ForceReleaseToOS(); }
