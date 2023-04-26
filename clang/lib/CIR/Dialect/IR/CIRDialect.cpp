@@ -1186,13 +1186,19 @@ VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (!isa<GlobalOp>(op))
     return emitOpError("'")
            << getName() << "' does not reference a valid cir.global";
+  return success();
+}
 
-  mlir::Type symTy = op.getSymType();
-  auto resultType = getAddr().getType().dyn_cast<PointerType>();
-  if (!resultType || symTy != resultType.getPointee())
-    return emitOpError("result type pointee type '")
-           << resultType.getPointee() << "' does not match type " << symTy
-           << " of the global @" << getName();
+LogicalResult cir::VTableAddrPointOp::verify() {
+  auto resultType = getAddr().getType();
+  auto fnTy = mlir::FunctionType::get(
+      getContext(), {}, {mlir::IntegerType::get(getContext(), 32)});
+  auto resTy = mlir::cir::PointerType::get(
+      getContext(), mlir::cir::PointerType::get(getContext(), fnTy));
+
+  if (resultType != resTy)
+    return emitOpError("result type must be '")
+           << resTy << "', but provided result type is '" << resultType << "'";
   return success();
 }
 

@@ -1186,19 +1186,22 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
     [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Get the vtable (global variable) address point";
   let description = [{
-     The `vtable.address_point` operation retrieves the "effective" address
-     (address point) of a C++ virtual table. An object internal `__vptr`
-     gets initializated on top of the value returned by this operation.
+    The `vtable.address_point` operation retrieves the "effective" address
+    (address point) of a C++ virtual table. An object internal `__vptr`
+    gets initializated on top of the value returned by this operation.
 
-     `vtable_index` provides the appropriate vtable within the vtable group
-     (as specified by Itanium ABI), and `addr_point_index` the actual address
-     point within that vtable.
+    `vtable_index` provides the appropriate vtable within the vtable group
+    (as specified by Itanium ABI), and `addr_point_index` the actual address
+    point within that vtable.
 
-     Example:
+    The return type is always a `!cir.ptr<!cir.ptr<() -> i32>>`.
 
-     ```mlir
-     %x = cir.vtable.address_point(@vtable, 2, 3) : !cir.ptr<!cir.ptr<i32>>
-     ```
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B, vtable_index = 0, address_point_index = 2) : cir.ptr <!cir.ptr<() -> i32>>
+    ```
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$name,
@@ -1216,8 +1219,7 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
     `:` `cir.ptr` type($addr) attr-dict
   }];
 
-  // `VTableAddrPointOp` is fully verified by its traits.
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

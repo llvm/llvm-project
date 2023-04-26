@@ -666,20 +666,13 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   }
 
   // Finally, store the address point. Use the same CIR types as the field.
-
-  // unsigned GlobalsAS = CGM.getDataLayout().getDefaultGlobalsAddressSpace();
-  // unsigned ProgAS = CGM.getDataLayout().getProgramAddressSpace();
+  //
+  // vtable field is derived from `this` pointer, therefore they should be in
+  // the same addr space.
   assert(!UnimplementedFeature::addressSpace());
-  auto VTablePtrTy = builder.getVirtualFnPtrType(/*isVarArg=*/true);
-
-  // // vtable field is derived from `this` pointer, therefore they should be in
-  // // the same addr space. Note that this might not be LLVM address space 0.
-  VTableField = builder.createElementBitCast(loc, VTableField, VTablePtrTy);
-  VTableAddressPoint =
-      builder.createBitcast(loc, VTableAddressPoint, VTablePtrTy);
+  VTableField = builder.createElementBitCast(loc, VTableField,
+                                             VTableAddressPoint.getType());
   builder.createStore(loc, VTableAddressPoint, VTableField);
-
-  // TODO(cir): handle anything TBAA related?
   assert(!UnimplementedFeature::tbaa());
 }
 
