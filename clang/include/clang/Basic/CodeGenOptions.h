@@ -207,7 +207,10 @@ public:
   std::string RecordCommandLine;
 
   llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
-  std::map<std::string, std::string> CoveragePrefixMap;
+
+  /// Prefix replacement map for source-based code coverage to remap source
+  /// file paths in coverage mapping.
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> CoveragePrefixMap;
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
