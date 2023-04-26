@@ -142,17 +142,17 @@ private:
       auto r2_as1 = r2.GetAs<CompilerType>();
       auto r2_as2 = r2.GetAs<swift::Decl *>();
 
-      if (r1_as1.hasValue() && r2_as1.hasValue())
-        return r1_as1.getValue() < r2_as1.getValue();
+      if (r1_as1.has_value() && r2_as1.has_value())
+        return r1_as1.value() < r2_as1.value();
 
-      if (r1_as2.hasValue() && r2_as2.hasValue())
-        return r1_as2.getValue() < r2_as2.getValue();
+      if (r1_as2.has_value() && r2_as2.has_value())
+        return r1_as2.value() < r2_as2.value();
 
-      if (r1_as1.hasValue() && r2_as2.hasValue())
-        return (void *)r1_as1->GetOpaqueQualType() < (void *)r2_as2.getValue();
+      if (r1_as1.has_value() && r2_as2.has_value())
+        return (void *)r1_as1->GetOpaqueQualType() < (void *)r2_as2.value();
 
-      if (r1_as2.hasValue() && r2_as1.hasValue())
-        return (void *)r1_as2.getValue() < (void *)r2_as1->GetOpaqueQualType();
+      if (r1_as2.has_value() && r2_as1.has_value())
+        return (void *)r1_as2.value() < (void *)r2_as1->GetOpaqueQualType();
 
       return false;
     }
