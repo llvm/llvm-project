@@ -569,6 +569,8 @@ public:
     /// Don't allow loop unrolling to simulate more than this number of
     /// iterations when checking full unroll profitability
     unsigned MaxIterationsCountToAnalyze;
+    /// Don't disable runtime unroll for the loops which were vectorized.
+    bool UnrollVectorizedLoop = false;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
