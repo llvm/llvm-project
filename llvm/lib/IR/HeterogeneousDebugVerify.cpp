@@ -50,7 +50,51 @@ struct DiagnosticInfoRemovingIncompatibleHeterogeneousDebug
   const Module &M;
 };
 
-constexpr unsigned RetainedNodesOpIdx = 7;
+static DICompileUnit *getCUForScope(DIScope *S) {
+  if (!S)
+    return nullptr;
+  if (auto *CU = dyn_cast<DICompileUnit>(S))
+    return CU;
+  if (auto *SP = dyn_cast<DISubprogram>(S))
+    return SP->getUnit();
+
+  // If it's a namespace stop. namespaces are not associated to any compilation
+  // unit.
+  if (isa<DINamespace>(S))
+    return nullptr;
+  return getCUForScope(S->getScope());
+}
+
+static void moveGlobalLifetimesIntoGlobalExpressions(Module &M) {
+  NamedMDNode *NMD = M.getNamedMetadata("llvm.dbg.retainedNodes");
+  if (!NMD)
+    return;
+
+  LLVMContext &Context = M.getContext();
+
+  SmallPtrSet<DIGlobalVariable *, 16> Visited;
+  DenseMap<DICompileUnit *, SmallVector<Metadata *>> GVExprForCU;
+  GVExprForCU.reserve(NMD->getNumOperands());
+
+  for (auto *L : NMD->operands()) {
+    auto *Lifetime = cast<DILifetime>(L);
+    DIGlobalVariable *GV = cast<DIGlobalVariable>(Lifetime->getObject());
+    if (!Visited.insert(GV).second)
+      continue;
+    DICompileUnit *CU = getCUForScope(GV->getScope());
+    if (!CU)
+      continue;
+    DIExpression *EmptyExpr = DIExpression::get(Context, {});
+    GVExprForCU[CU].push_back(
+        DIGlobalVariableExpression::get(Context, GV, EmptyExpr));
+  }
+
+  for (auto &CUGV : GVExprForCU) {
+    CUGV.first->replaceGlobalVariables(MDTuple::get(Context, CUGV.second));
+  }
+
+  M.eraseNamedMetadata(NMD);
+}
 
 static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
                        bool IsNPM = false) {
@@ -60,14 +104,11 @@ static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
     return false;
   M.getContext().diagnose(
       DiagnosticInfoRemovingIncompatibleHeterogeneousDebug(M));
-  if (NamedMDNode *NMD = M.getNamedMetadata("llvm.dbg.retainedNodes"))
-    M.eraseNamedMetadata(NMD);
+  moveGlobalLifetimesIntoGlobalExpressions(M);
+
   for (Function &F : M) {
-    if (DISubprogram *S = F.getSubprogram())
-      S->replaceOperandWith(RetainedNodesOpIdx,
-                            MDTuple::get(F.getContext(), {}));
     for (BasicBlock &BB : F)
-      for (Instruction &I : llvm::make_early_inc_range(BB))
+      for (Instruction &I : make_early_inc_range(BB))
         if (isa<DbgDefKillIntrinsic>(&I))
           I.eraseFromParent();
   }

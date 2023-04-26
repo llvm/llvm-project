@@ -55,14 +55,17 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 
 ; PRE-ISEL-RETAINED: ![[#GLOBAL_FRAGMENT:]] = distinct !DIFragment()
 ; PRE-ISEL-STRIPPED-NOT: ![[#]] = distinct !DIFragment()
+; PRE-ISEL-COMMON: distinct !DICompileUnit
+; PRE-ISEL-STRIPPED-SAME: globals: ![[#GLOBAL_EXPR_ARRAY:]]
+; PRE-ISEL-STRIPPED-DAG: ![[#GLOBAL_EXPR_ARRAY]] = !{![[#GLOBAL_EXPR:]]}
+; PRE-ISEL-STRIPPED-DAG: ![[#GLOBAL_EXPR]] = !DIGlobalVariableExpression(var: ![[#GLOBAL_VARIABLE:]], expr: !DIExpression())
 !0 = distinct !DIFragment()
 !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 !2 = !DIFile(filename: "-", directory: "/")
 ; PRE-ISEL-RETAINED: ![[#]] = distinct !DILifetime(object: ![[#GLOBAL_VARIABLE:]], location: !DIExpr(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)), argObjects: {![[#GLOBAL_FRAGMENT]]})
 ; PRE-ISEL-STRIPPED-NOT: ![[#]] = distinct !DILifetime{{.*}}
 !3 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)), argObjects: {!0})
-; PRE-ISEL-RETAINED: ![[#GLOBAL_VARIABLE]] = distinct !DIGlobalVariable(name: "global",
-; PRE-ISEL-STRIPPED-NOT: ![[#]] = distinct !DIGlobalVariable(name: "global",
+; PRE-ISEL-COMMON: ![[#GLOBAL_VARIABLE]] = distinct !DIGlobalVariable(name: "global",
 !4 = distinct !DIGlobalVariable(name: "global", scope: !1, file: !5, line: 1, type: !6, isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
 !5 = !DIFile(filename: "<stdin>", directory: "/")
 !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
@@ -79,11 +82,9 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !14 = distinct !DISubprogram(name: "kernel", linkageName: "_Z6kernelv", scope: !5, file: !5, line: 1, type: !15, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !17)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null}
-; PRE-ISEL-RETAINED: ![[#RETAINED_NODES]] = !{![[#]]}
-; PRE-ISEL-STRIPPED: ![[#RETAINED_NODES]] = !{}
+; PRE-ISEL-COMMON: ![[#RETAINED_NODES]] = !{![[#]]}
 !17 = !{!18}
-; PRE-ISEL-RETAINED: ![[#LOCAL_VARIABLE:]] = !DILocalVariable(name: "local",
-; PRE-ISEL-STRIPPED-NOT: ![[#]] = !DILocalVariable(name: "local",
+; PRE-ISEL-COMMON: ![[#LOCAL_VARIABLE:]] = !DILocalVariable(name: "local",
 !18 = !DILocalVariable(name: "local", scope: !14, file: !5, line: 1, type: !6)
 ; PRE-ISEL-RETAINED: ![[#]] = distinct !DILifetime(object: ![[#LOCAL_VARIABLE:]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(i32)))
 ; PRE-ISEL-STRIPPED-NOT: ![[#]] = distinct !DILifetime{{.*}}
@@ -94,16 +95,16 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; PRE-ISEL-COMMON: ![[#RET_LOC]] = !DILocation(line: 1, column: 88,
 !21 = !DILocation(line: 1, column: 88, scope: !14)
 
-
-; DWARFDUMP-RETAINED: 0x[[#%x,]]: DW_TAG_variable
-; DWARFDUMP-RETAINED:   DW_AT_name      ("global")
-; DWARFDUMP-RETAINED:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_global)
+; DWARFDUMP-COMMON: 0x[[#%x,]]: DW_TAG_variable
+; DWARFDUMP-COMMON:   DW_AT_name      ("global")
+; DWARFDUMP-COMMON:   DW_AT_LLVM_memory_space (DW_MSPACE_LLVM_global)
 ; DWARFDUMP-RETAINED:   DW_AT_location  ({{.+}})
-; DWARFDUMP-RETAINED: 0x[[#%x,]]: DW_TAG_variable
-; DWARFDUMP-RETAINED:   DW_AT_location ({{.+}})
-; DWARFDUMP-RETAINED:   DW_AT_name ("local")
-; DWARFDUMP-STRIPPED-NOT: 0x[[#%x,]]: DW_TAG_variable
-; DWARFDUMP-STRIPPED-NOT:   DW_AT_location
+; DWARFDUMP-STRIPPED-NOT:   DW_AT_location  ({{.+}})
+
+; DWARFDUMP-COMMON: 0x[[#%x,]]: DW_TAG_variable
+; DWARFDUMP-RETIANED:   DW_AT_location ({{.+}})
+; DWARFDUMP-STRIPPED-NOT:   DW_AT_location  ({{.+}})
+; DWARFDUMP-COMMON:   DW_AT_name ("local")
 
 ; DWARFDUMP-COMMON: .debug_line contents:
 ; DWARFDUMP-COMMON-NEXT: debug_line[0x00000000]
