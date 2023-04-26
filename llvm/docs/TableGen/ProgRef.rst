@@ -335,19 +335,25 @@ to an entity of type ``bits<4>``.
    Value: `SimpleValue` `ValueSuffix`*
         :| `Value` "#" [`Value`]
    ValueSuffix: "{" `RangeList` "}"
-              :| "[" `RangeList` "]"
+              :| "[" `SliceElements` "]"
               :| "." `TokIdentifier`
    RangeList: `RangePiece` ("," `RangePiece`)*
    RangePiece: `TokInteger`
              :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
              :| `TokInteger` `TokInteger`
+   SliceElements: (`SliceElement` ",")* `SliceElement` ","?
+   SliceElement: `Value`
+               :| `Value` "..." `Value`
+               :| `Value` "-" `Value`
+               :| `Value` `TokInteger`
 
 .. warning::
-  The peculiar last form of :token:`RangePiece` is due to the fact that the
-  "``-``" is included in the :token:`TokInteger`, hence ``1-5`` gets lexed as
-  two consecutive tokens, with values ``1`` and ``-5``, instead of "1", "-",
-  and "5". The use of hyphen as the range punctuation is deprecated.
+  The peculiar last form of :token:`RangePiece` and :token:`SliceElement` is
+  due to the fact that the "``-``" is included in the :token:`TokInteger`,
+  hence ``1-5`` gets lexed as two consecutive tokens, with values ``1`` and
+  ``-5``, instead of "1", "-", and "5".
+  The use of hyphen as the range punctuation is deprecated.
 
 Simple values
 -------------
@@ -505,16 +511,25 @@ primary value. Here are the possible suffixes for some primary *value*.
     The final value is bits 8--15 of the integer *value*. The order of the
     bits can be reversed by specifying ``{15...8}``.
 
-*value*\ ``[4]``
-    The final value is element 4 of the list *value* (note the brackets).
+*value*\ ``[i]``
+    The final value is element `i` of the list *value* (note the brackets).
     In other words, the brackets act as a subscripting operator on the list.
     This is the case only when a single element is specified.
+
+*value*\ ``[i,]``
+    The final value is a list that contains a single element `i` of the list.
+    In short, a list slice with a single element.
 
 *value*\ ``[4...7,17,2...3,4]``
     The final value is a new list that is a slice of the list *value*.
     The new list contains elements 4, 5, 6, 7, 17, 2, 3, and 4.
     Elements may be included multiple times and in any order. This is the result
     only when more than one element is specified.
+
+    *value*\ ``[i,m...n,j,ls]``
+        Each element may be an expression (variables, bang operators).
+        The type of `m` and `n` should be `int`.
+        The type of `i`, `j`, and `ls` should be either `int` or `list<int>`.
 
 *value*\ ``.``\ *field*
     The final value is the value of the specified *field* in the specified
@@ -1783,7 +1798,7 @@ and non-0 as true.
     The result is `[0, 1, 2, 3]`.
     If *a* ``>=`` *b*, then the result is `[]<list<int>>`.
 
-``!range([``\ *list*\ ``)``
+``!range(``\ *list*\ ``)``
     Equivalent to ``!range(0, !size(list))``.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``

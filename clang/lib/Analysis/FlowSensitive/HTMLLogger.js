@@ -73,6 +73,9 @@ function inflate(tmpl, data, parent, next) {
     }
     return parent.insertBefore(clone, next);
   }
+  // data-use="xyz": use <template id="xyz"> instead. (Allows recursion.)
+  if ('use' in tmpl.dataset)
+    return inflate(document.getElementById(tmpl.dataset.use), data, parent, next);
   // <template> tag handling. Base case: recursively inflate.
   function handle(data) {
     for (c of tmpl.content.childNodes)
