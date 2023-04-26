@@ -65,14 +65,6 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
     An CIR array attribute is an array of literals of the specified attr types.
   }];
 
-  // `$type` is the `self` type of the attribute (i.e. the type of the
-  // Attribute itself).
-  //
-  // `arrayAttr` is the actual attribute array with elements for this constant
-  // array, there's yet no need to own these elements.
-  //
-  // TODO: create a trait for ArrayAttrOrStringAttr value instead of relying
-  // on verifier.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
                         "Attribute":$value);
 
@@ -252,9 +244,8 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
        #cir.global_view<@_ZTI1B> : !cir.ptr<i8>,
        #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>,
        #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>,
-       #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]
-        : !cir.array<!cir.ptr<i8> x 5>>
-      : !cir.array<!cir.ptr<i8> x 5>]>>
+       #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]>
+       : !cir.array<!cir.ptr<i8> x 5>]>>
     : !cir.struct<"", !cir.array<!cir.ptr<i8> x 5>>
     ```
   }];
