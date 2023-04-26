@@ -532,7 +532,7 @@ list is:
 
 * Any location operand is ``poison`` (or ``undef``).
 * Any location operand is an empty metadata tuple (``!{}``) (which cannot
-  occur in ``!DIArgList``s).
+  occur in a ``!DIArgList``).
 * There are no location operands (empty ``DIArgList``) and the ``DIExpression``
   is empty.
 
