@@ -1165,6 +1165,12 @@ private:
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }
 
+  /// Handle Lowering flag assembly outputs.
+  SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
+                                      const SDLoc &DL,
+                                      const AsmOperandInfo &Constraint,
+                                      SelectionDAG &DAG) const override;
+
   bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const override;
   bool shouldRemoveExtendFromGSIndex(EVT IndexVT, EVT DataVT) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;

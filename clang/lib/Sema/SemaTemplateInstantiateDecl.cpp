@@ -4662,11 +4662,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   ActiveInstType &ActiveInst = SemaRef.CodeSynthesisContexts.back();
   if (ActiveInst.Kind == ActiveInstType::ExplicitTemplateArgumentSubstitution ||
       ActiveInst.Kind == ActiveInstType::DeducedTemplateArgumentSubstitution) {
-    if (FunctionTemplateDecl *FunTmpl
-          = dyn_cast<FunctionTemplateDecl>(ActiveInst.Entity)) {
-      assert(FunTmpl->getTemplatedDecl() == Tmpl &&
-             "Deduction from the wrong function template?");
-      (void) FunTmpl;
+    if (isa<FunctionTemplateDecl>(ActiveInst.Entity)) {
       SemaRef.InstantiatingSpecializations.erase(
           {ActiveInst.Entity->getCanonicalDecl(), ActiveInst.Kind});
       atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef, ActiveInst);

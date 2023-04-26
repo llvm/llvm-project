@@ -13,6 +13,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (LLVM_ENABLE_EH)
+  # To match with the flang guidelines we currently disable
+  # building with exception support in core LLVM.
+  message(FATAL_ERROR "Flang does not currently support building with \
+          LLVM exceptions enabled.  Please disable LLVM_ENABLE_EH when building \
+          flang.")
+endif()
+
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)

@@ -73,6 +73,11 @@ public:
     Properties.insert_or_assign(Name, &Val);
   }
 
+  llvm::iterator_range<llvm::StringMap<Value *>::const_iterator>
+  properties() const {
+    return {Properties.begin(), Properties.end()};
+  }
+
 private:
   Kind ValKind;
   llvm::StringMap<Value *> Properties;
@@ -306,6 +311,12 @@ public:
 
   /// Assigns `Val` as the child value for `D`.
   void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
+
+  llvm::iterator_range<
+      llvm::DenseMap<const ValueDecl *, Value *>::const_iterator>
+  children() const {
+    return {Children.begin(), Children.end()};
+  }
 
 private:
   llvm::DenseMap<const ValueDecl *, Value *> Children;

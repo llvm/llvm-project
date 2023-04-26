@@ -86,6 +86,16 @@ def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                                    AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                    "'Zifencei' (fence.i)">;
 
+def FeatureStdExtZicntr
+    : SubtargetFeature<"zicntr", "HasStdExtZicntr", "true",
+                       "'zicntr' (Base Counters and Timers)",
+                       [FeatureStdExtZicsr]>;
+
+def FeatureStdExtZihpm
+    : SubtargetFeature<"zihpm", "HasStdExtZihpm", "true",
+                       "'zihpm' (Hardware Performance Counters)",
+                       [FeatureStdExtZicsr]>;
+
 def FeatureStdExtZfhmin
     : SubtargetFeature<"zfhmin", "HasStdExtZfhmin", "true",
                        "'Zfhmin' (Half-Precision Floating-Point Minimal)",

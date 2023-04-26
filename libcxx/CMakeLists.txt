@@ -68,6 +68,7 @@ endif()
 option(LIBCXX_ENABLE_FILESYSTEM "Build filesystem as part of the main libc++ library"
     ${ENABLE_FILESYSTEM_DEFAULT})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
+option(LIBCXX_ENABLE_PARALLEL_ALGORITHMS "Enable the parallel algorithms library. This requires the PSTL to be available." OFF)
 option(LIBCXX_ENABLE_DEBUG_MODE
   "Whether to build libc++ with the debug mode enabled.
    By default, this is turned off. Turning it on results in a different ABI (additional

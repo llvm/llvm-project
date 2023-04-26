@@ -136,14 +136,6 @@ static cl::opt<bool>
                     cl::desc("detect use after scope within function"),
                     cl::Hidden, cl::init(false));
 
-static cl::opt<bool> ClUARRetagToZero(
-    "hwasan-uar-retag-to-zero",
-    cl::desc("Clear alloca tags before returning from the function to allow "
-             "non-instrumented and instrumented function calls mix. When set "
-             "to false, allocas are retagged before returning from the "
-             "function to detect use after return."),
-    cl::Hidden, cl::init(true));
-
 static cl::opt<bool> ClGenerateTagsWithCalls(
     "hwasan-generate-tags-with-calls",
     cl::desc("generate new tags with runtime library calls"), cl::Hidden,
@@ -313,7 +305,7 @@ public:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag,
+  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
@@ -322,7 +314,7 @@ public:
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, AllocaInst *AI,
                       unsigned AllocaNo);
-  Value *getUARTag(IRBuilder<> &IRB, Value *StackTag);
+  Value *getUARTag(IRBuilder<> &IRB);
 
   Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
   Value *applyTagMask(IRBuilder<> &IRB, Value *OldTag);
@@ -1055,7 +1047,7 @@ Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
 
 Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
   if (ClGenerateTagsWithCalls)
-    return getNextTagWithCall(IRB);
+    return nullptr;
   if (StackBaseTag)
     return StackBaseTag;
   // Extract some entropy from the stack pointer for the tags.
@@ -1077,12 +1069,8 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
                        ConstantInt::get(IntptrTy, retagMask(AllocaNo)));
 }
 
-Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
-  if (ClUARRetagToZero)
-    return ConstantInt::get(IntptrTy, 0);
-  if (ClGenerateTagsWithCalls)
-    return getNextTagWithCall(IRB);
-  return IRB.CreateXor(StackTag, ConstantInt::get(IntptrTy, TagMaskByte));
+Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
+  return ConstantInt::get(IntptrTy, 0);
 }
 
 // Add a tag to an address.
@@ -1288,7 +1276,7 @@ static bool isLifetimeIntrinsic(Value *V) {
 }
 
 bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
-                                         Value *StackTag,
+                                         Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
                                          const PostDominatorTree &PDT,
                                          const LoopInfo &LI) {
@@ -1354,7 +1342,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
-      Value *UARTag = getUARTag(IRB, StackTag);
       // When untagging, use the `AlignedSize` because we need to set the tags
       // for the entire alloca to zero. If we used `Size` here, we would
       // keep the last granule tagged, and store zero in the last byte of the
@@ -1458,9 +1445,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
     const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
-    Value *StackTag =
-        ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(SInfo, StackTag, DT, PDT, LI);
+    Value *StackTag = getStackBaseTag(EntryIRB);
+    Value *UARTag = getUARTag(EntryIRB);
+    instrumentStack(SInfo, StackTag, UARTag, DT, PDT, LI);
   }
 
   // If we split the entry block, move any allocas that were originally in the

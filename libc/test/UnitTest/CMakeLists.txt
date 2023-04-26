@@ -1,6 +1,7 @@
 set(libc_test_srcs_common
   Test.h
   LibcTest.cpp
+  CmakeFilePath.cpp
   LibcTest.h
   TestLogger.cpp
   TestLogger.h
@@ -26,9 +27,14 @@ add_library(
 
 foreach(lib LibcUnitTest LibcHermeticTest)
   target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
+  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    # If we are in full build mode, then we should use our own public headers.
+    target_include_directories(${lib} PRIVATE ${LIBC_BUILD_DIR}/include)
+  endif()
   target_compile_options(${lib} PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS}
                          -fno-exceptions -fno-rtti)
   add_dependencies(${lib}
+    libc.src.__support.c_string
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
@@ -46,6 +52,10 @@ add_library(
 
 target_include_directories(LibcTestMain PUBLIC ${LIBC_SOURCE_DIR})
 target_compile_options(LibcTestMain PRIVATE -fno-exceptions -fno-rtti)
+if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+  target_include_directories(LibcTestMain PRIVATE ${LIBC_BUILD_DIR}/include)
+  target_compile_options(LibcTestMain PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS})
+endif()
 add_dependencies(LibcTestMain LibcUnitTest)
 
 add_header_library(

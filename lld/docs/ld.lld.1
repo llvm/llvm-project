@@ -497,6 +497,21 @@ Restore the states saved by
 Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
 Create relocatable object file.
+.It Fl -remap-inputs Ns = Ns Ar from-glob=to-file
+Input files matching
+.Cm from-glob
+are mapped to
+.Cm to-file.
+Use
+.Cm /dev/null
+to ignore an input file.
+.It Fl -remap-inputs-file Ns = Ns Ar file
+Remap input files based on patterns in
+.Ar file .
+Each line in the remap file is of the format
+.Cm from-glob=to-file
+or a comment starting with
+.Cm # .
 .It Fl -reproduce Ns = Ns Ar path
 Write a tar file to
 .Ar path,

@@ -174,3 +174,4 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr<array<1024 x i32>>, %3 : !llv
 // CHECK:         ret void
 
 // -----
+

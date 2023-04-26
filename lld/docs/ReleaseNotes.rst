@@ -36,6 +36,8 @@ ELF Improvements
 * ``DT_RISCV_VARIANT_CC`` is now produced if at least one ``R_RISCV_JUMP_SLOT``
   relocation references a symbol with the ``STO_RISCV_VARIANT_CC`` bit.
   (`D107951 <https://reviews.llvm.org/D107951>`_)
+* ``--remap-inputs=`` and ``--remap-inputs-file=`` are added to remap input files.
+  (`D148859 <https://reviews.llvm.org/D148859>`_)
 
 Breaking changes
 ----------------
