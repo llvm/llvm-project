@@ -2666,7 +2666,7 @@ def err_invalid_constexpr : Error<
 def err_invalid_constexpr_member : Error<"non-static data member cannot be "
   "constexpr%select{; did you intend to make it %select{const|static}0?|}1">;
 def err_constexpr_tag : Error<
-  "%select{class|struct|interface|union|enum}0 "
+  "%select{class|struct|interface|union|enum|enum class|enum struct}0 "
   "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
   "destructor cannot be declared %sub{select_constexpr_spec_kind}0">;
@@ -3423,7 +3423,7 @@ def warn_type_attribute_deprecated_on_decl : Warning<
   InGroup<DeprecatedAttributes>;
 def warn_declspec_attribute_ignored : Warning<
   "attribute %0 is ignored, place it after "
-  "\"%select{class|struct|interface|union|enum}1\" to apply attribute to "
+  "\"%select{class|struct|interface|union|enum|enum class|enum struct}1\" to apply attribute to "
   "type declaration">, InGroup<IgnoredAttributes>;
 def warn_attribute_precede_definition : Warning<
   "attribute declaration must precede definition">,
@@ -6928,7 +6928,7 @@ def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
 def ext_standalone_specifier : ExtWarn<"'%0' is not permitted on a declaration "
   "of a type">, InGroup<MissingDeclarations>;
 def err_standalone_class_nested_name_specifier : Error<
-  "forward declaration of %select{class|struct|interface|union|enum}0 cannot "
+  "forward declaration of %select{class|struct|interface|union|enum|enum class|enum struct}0 cannot "
   "have a nested name specifier">;
 def err_typecheck_sclass_func : Error<"illegal storage class on function">;
 def err_static_block_func : Error<
