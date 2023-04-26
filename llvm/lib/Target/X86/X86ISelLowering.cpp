@@ -11231,6 +11231,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   APInt ZeroMask = APInt::getZero(NumElems);
   APInt NonZeroMask = APInt::getZero(NumElems);
   bool IsAllConstants = true;
+  bool OneUseFrozenUndefs = true;
   SmallSet<SDValue, 8> Values;
   unsigned NumConstants = NumElems;
   for (unsigned i = 0; i < NumElems; ++i) {
@@ -11239,7 +11240,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       UndefMask.setBit(i);
       continue;
     }
-    if (Elt.getOpcode() == ISD::FREEZE && Elt.getOperand(0).isUndef()) {
+    if (ISD::isFreezeUndef(Elt.getNode())) {
+      OneUseFrozenUndefs = OneUseFrozenUndefs && Elt->hasOneUse();
       FrozenUndefMask.setBit(i);
       continue;
     }
@@ -11259,9 +11261,13 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if (UndefMask.isAllOnes())
     return DAG.getUNDEF(VT);
 
-  // All undef/freeze(undef) vector. Return an FREEZE UNDEF.
-  if ((UndefMask | FrozenUndefMask).isAllOnes())
+  // All undef/freeze(undef) vector. Return a FREEZE UNDEF.
+  if (OneUseFrozenUndefs && (UndefMask | FrozenUndefMask).isAllOnes())
     return DAG.getFreeze(DAG.getUNDEF(VT));
+
+  // All undef/freeze(undef)/zero vector. Return a zero vector.
+  if ((UndefMask | FrozenUndefMask | ZeroMask).isAllOnes())
+    return getZeroVector(VT, Subtarget, DAG, dl);
 
   // If we have multiple FREEZE-UNDEF operands, we are likely going to end up
   // lowering into a suboptimal insertion sequence. Instead, thaw the UNDEF in
