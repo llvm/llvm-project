@@ -293,6 +293,7 @@ void Target::Destroy() {
   m_stop_hooks.clear();
   m_stop_hook_next_id = 0;
   m_suppress_stop_hooks = false;
+  m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
 }
@@ -3193,6 +3194,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     // Since we didn't have a platform launch the process, launch it here.
     if (m_process_sp) {
       m_process_sp->HijackProcessEvents(launch_info.GetHijackListener());
+      m_process_sp->SetShadowListener(launch_info.GetShadowListener());
       error = m_process_sp->Launch(launch_info);
     }
   }

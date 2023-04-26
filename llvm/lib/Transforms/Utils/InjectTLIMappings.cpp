@@ -142,38 +142,3 @@ PreservedAnalyses InjectTLIMappings::run(Function &F,
   // Even if the pass adds IR attributes, the analyses are preserved.
   return PreservedAnalyses::all();
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// Legacy PM Implementation.
-////////////////////////////////////////////////////////////////////////////////
-bool InjectTLIMappingsLegacy::runOnFunction(Function &F) {
-  const TargetLibraryInfo &TLI =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  return runImpl(TLI, F);
-}
-
-void InjectTLIMappingsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-  AU.addPreserved<TargetLibraryInfoWrapperPass>();
-  AU.addPreserved<ScalarEvolutionWrapperPass>();
-  AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<LoopAccessLegacyAnalysis>();
-  AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();
-  AU.addPreserved<GlobalsAAWrapperPass>();
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Legacy Pass manager initialization
-////////////////////////////////////////////////////////////////////////////////
-char InjectTLIMappingsLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(InjectTLIMappingsLegacy, DEBUG_TYPE,
-                      "Inject TLI Mappings", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(InjectTLIMappingsLegacy, DEBUG_TYPE, "Inject TLI Mappings",
-                    false, false)
-
-FunctionPass *llvm::createInjectTLIMappingsLegacyPass() {
-  return new InjectTLIMappingsLegacy();
-}

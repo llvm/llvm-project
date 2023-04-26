@@ -1202,7 +1202,12 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
 
 MCSection *TargetLoweringObjectFileMachO::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
-  report_fatal_error("@llvm.global_dtors should have been lowered already");
+  return StaticDtorSection;
+  // In userspace, we lower global destructors via atexit(), but kernel/kext
+  // environments do not provide this function so we still need to support the
+  // legacy way here.
+  // See the -disable-atexit-based-global-dtor-lowering CodeGen flag for more
+  // context.
 }
 
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,

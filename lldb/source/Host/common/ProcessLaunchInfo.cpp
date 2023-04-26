@@ -31,8 +31,8 @@ using namespace lldb_private;
 
 ProcessLaunchInfo::ProcessLaunchInfo()
     : ProcessInfo(), m_working_dir(), m_plugin_name(), m_flags(0),
-      m_file_actions(), m_pty(new PseudoTerminal), m_monitor_callback(nullptr),
-      m_listener_sp(), m_hijack_listener_sp() {}
+      m_file_actions(), m_pty(new PseudoTerminal), m_monitor_callback(nullptr) {
+}
 
 ProcessLaunchInfo::ProcessLaunchInfo(const FileSpec &stdin_file_spec,
                                      const FileSpec &stdout_file_spec,
