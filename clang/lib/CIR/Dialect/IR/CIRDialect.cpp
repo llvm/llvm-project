@@ -1822,30 +1822,13 @@ LogicalResult ASTRecordDeclAttr::verify(
 
 LogicalResult TypeInfoAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-    ::mlir::Type type, ArrayAttr info) {
-  auto sTy = type.dyn_cast_or_null<mlir::cir::StructType>();
-  if (!sTy) {
-    emitError() << "expected !cir.struct type";
+    ::mlir::Type type, ConstStructAttr info) {
+  for (auto &member : info.getMembers()) {
+    auto gview = member.dyn_cast_or_null<GlobalViewAttr>();
+    if (gview)
+      continue;
+    emitError() << "expected GlobalViewAttr attribute";
     return failure();
-  }
-
-  if (sTy.getMembers().size() != info.size()) {
-    emitError() << "number of typeinfo elements must match result type";
-    return failure();
-  }
-
-  unsigned attrIdx = 0;
-  for (auto &member : sTy.getMembers()) {
-    auto gview = info[attrIdx].dyn_cast_or_null<GlobalViewAttr>();
-    if (!gview) {
-      emitError() << "expected GlobalViewAttr attribute";
-      return failure();
-    }
-    if (member != gview.getType()) {
-      emitError() << "typeinfo element must match result element type";
-      return failure();
-    }
-    attrIdx++;
   }
 
   return success();

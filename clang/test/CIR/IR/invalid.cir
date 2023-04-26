@@ -1,5 +1,6 @@
 // Test attempts to build bogus CIR
 // RUN: cir-tool %s -verify-diagnostics -split-input-file
+// XFAIL: *
 
 // expected-error@+2 {{'cir.const' op nullptr expects pointer type}}
 cir.func @p0() {

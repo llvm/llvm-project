@@ -101,16 +101,23 @@ public:
     return mlir::cir::ConstArrayAttr::get(arrayTy, attrs);
   }
 
-  mlir::cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+  mlir::cir::ConstStructAttr getAnonConstStruct(mlir::ArrayAttr arrayAttr,
+                                                bool packed = false) {
+    assert(!packed && "NYI");
     llvm::SmallVector<mlir::Type, 4> members;
-    for (auto &f : fieldsAttr) {
-      auto gva = f.dyn_cast<mlir::cir::GlobalViewAttr>();
-      assert(gva && "expected #cir.global_view attribute for element");
-      members.push_back(gva.getType());
+    for (auto &f : arrayAttr) {
+      auto ta = f.dyn_cast<mlir::TypedAttr>();
+      assert(ta && "expected typed attribute member");
+      members.push_back(ta.getType());
     }
-    auto structType = mlir::cir::StructType::get(getContext(), members, "",
-                                                 /*body=*/true);
-    return mlir::cir::TypeInfoAttr::get(structType, fieldsAttr);
+    auto sTy = mlir::cir::StructType::get(arrayAttr.getContext(), members, "",
+                                          /*body=*/true);
+    return mlir::cir::ConstStructAttr::get(sTy, arrayAttr);
+  }
+
+  mlir::cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+    auto anonStruct = getAnonConstStruct(fieldsAttr);
+    return mlir::cir::TypeInfoAttr::get(anonStruct.getType(), anonStruct);
   }
 
   //
