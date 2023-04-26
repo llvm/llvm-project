@@ -9170,6 +9170,11 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
   if (!ScalarV.hasOneUse())
     return SDValue();
 
+  // If the AVL is zero, operand 0 will be returned. So it's not safe to fold.
+  // FIXME: We might be able to improve this if operand 0 is undef.
+  if (!isNonZeroAVL(Reduce.getOperand(5)))
+    return SDValue();
+
   SDValue NewStart = N->getOperand(1 - ReduceIdx);
 
   SDLoc DL(N);
