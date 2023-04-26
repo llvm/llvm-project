@@ -22,7 +22,6 @@ using namespace llvm;
 /// library.
 void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializeAddDiscriminatorsLegacyPassPass(Registry);
-  initializeAssumeSimplifyPassLegacyPassPass(Registry);
   initializeAssumeBuilderPassLegacyPassPass(Registry);
   initializeBreakCriticalEdgesPass(Registry);
   initializeCanonicalizeFreezeInLoopsPass(Registry);
@@ -37,7 +36,6 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializeMetaRenamerPass(Registry);
   initializeStripGCRelocatesLegacyPass(Registry);
   initializePredicateInfoPrinterLegacyPassPass(Registry);
-  initializeInjectTLIMappingsLegacyPass(Registry);
   initializeFixIrreduciblePass(Registry);
   initializeUnifyLoopExitsLegacyPassPass(Registry);
 }

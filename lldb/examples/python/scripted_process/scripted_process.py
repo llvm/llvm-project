@@ -161,30 +161,25 @@ class ScriptedProcess(metaclass=ABCMeta):
         """
         return lldb.SBError()
 
-    def resume(self):
+    def resume(self, should_stop=True):
         """ Simulate the scripted process resume.
 
-        Returns:
-            lldb.SBError: An `lldb.SBError` with error code 0.
-        """
-        return lldb.SBError()
-
-    @abstractmethod
-    def should_stop(self):
-        """ Check if the scripted process plugin should produce the stop event.
-
-        Returns:
-            bool: True if scripted process should broadcast a stop event.
-                  False otherwise.
-        """
-        pass
-
-    def stop(self):
-        """ Trigger the scripted process stop.
+        Args:
+            should_stop (bool): If True, resume will also force the process
+            state to stopped after running it.
 
         Returns:
             lldb.SBError: An `lldb.SBError` with error code 0.
         """
+        process = self.target.GetProcess()
+        if not process:
+            error = lldb.SBError()
+            error.SetErrorString("Invalid process.")
+            return error
+
+        process.ForceScriptedState(lldb.eStateRunning);
+        if (should_stop):
+            process.ForceScriptedState(lldb.eStateStopped);
         return lldb.SBError()
 
     @abstractmethod
@@ -213,6 +208,23 @@ class ScriptedProcess(metaclass=ABCMeta):
                   None if the process as no metadata.
         """
         return self.metadata
+
+    def create_breakpoint(self, addr, error):
+        """ Create a breakpoint in the scripted process from an address.
+            This is mainly used with interactive scripted process debugging.
+
+        Args:
+            addr (int): Address at which the breakpoint should be set.
+            error (lldb.SBError): Error object.
+
+        Returns:
+            SBBreakpoint: A valid breakpoint object that was created a the specified
+                          address. None if the breakpoint creation failed.
+        """
+        error.SetErrorString("%s doesn't support creating breakpoints."
+                             % self.__class__.__name__)
+        return False
+
 
 class ScriptedThread(metaclass=ABCMeta):
 

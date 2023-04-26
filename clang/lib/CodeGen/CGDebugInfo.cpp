@@ -73,8 +73,6 @@ CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
       DBuilder(CGM.getModule()) {
-  for (const auto &KV : CGM.getCodeGenOpts().DebugPrefixMap)
-    DebugPrefixMap[KV.first] = KV.second;
   CreateCompileUnit();
 }
 
@@ -470,12 +468,9 @@ llvm::DIFile *CGDebugInfo::createFile(
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
-  if (DebugPrefixMap.empty())
-    return Path.str();
-
   SmallString<256> P = Path;
-  for (const auto &Entry : DebugPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(P, Entry.first, Entry.second))
+  for (auto &[From, To] : llvm::reverse(CGM.getCodeGenOpts().DebugPrefixMap))
+    if (llvm::sys::path::replace_path_prefix(P, From, To))
       break;
   return P.str().str();
 }

@@ -44,7 +44,6 @@
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/Loads.h"
@@ -891,21 +890,6 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       continue;
 
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
-      // Try constant folding this instruction.  If all the operands are
-      // constants, it is technically hoistable, but it would be better to
-      // just fold it.
-      if (Constant *C = ConstantFoldInstruction(
-              &I, I.getModule()->getDataLayout(), TLI)) {
-        LLVM_DEBUG(dbgs() << "LICM folding inst: " << I << "  --> " << *C
-                          << '\n');
-        // FIXME MSSA: Such replacements may make accesses unoptimized (D51960).
-        I.replaceAllUsesWith(C);
-        if (isInstructionTriviallyDead(&I, TLI))
-          eraseInstruction(I, *SafetyInfo, MSSAU);
-        Changed = true;
-        continue;
-      }
-
       // Try hoisting the instruction out to the preheader.  We can only do
       // this if all of the operands of the instruction are loop invariant and
       // if it is safe to hoist the instruction. We also check block frequency

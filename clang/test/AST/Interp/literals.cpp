@@ -719,6 +719,23 @@ namespace IncDec {
              // ref-note {{cannot refer to element -1 of array of 3 elements}}
     return *p;
   }
+
+  /// This used to leave a 0 on the stack instead of the previous
+  /// value of a.
+  constexpr int bug1Inc() {
+    int a = 3;
+    int b = a++;
+    return b;
+  }
+  static_assert(bug1Inc() == 3);
+
+  constexpr int bug1Dec() {
+    int a = 3;
+    int b = a--;
+    return b;
+  }
+  static_assert(bug1Dec() == 3);
+
 };
 #endif
 

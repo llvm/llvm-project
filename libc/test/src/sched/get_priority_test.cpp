@@ -89,7 +89,7 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);
-    ASSERT_GE(max_priority, min_priority);
+    ASSERT_GT(max_priority, min_priority);
   }
 
   {
@@ -103,6 +103,6 @@ TEST(LlvmLibcSchedGetPriorityTest, SmokeTest) {
 
     ASSERT_LE(max_priority, 99);
     ASSERT_GE(min_priority, 0);
-    ASSERT_GE(max_priority, min_priority);
+    ASSERT_GT(max_priority, min_priority);
   }
 }

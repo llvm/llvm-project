@@ -115,14 +115,25 @@ public:
 
   template <typename InsnType>
   DecodeStatus tryDecodeInst(const uint8_t *Table, MCInst &MI, InsnType Inst,
-                             uint64_t Address) const {
+                             uint64_t Address, raw_ostream &Comments) const {
     assert(MI.getOpcode() == 0);
     assert(MI.getNumOperands() == 0);
     MCInst TmpInst;
     HasLiteral = false;
     const auto SavedBytes = Bytes;
-    if (decodeInstruction(Table, TmpInst, Inst, Address, this, STI)) {
+
+    SmallString<64> LocalComments;
+    raw_svector_ostream LocalCommentStream(LocalComments);
+    CommentStream = &LocalCommentStream;
+
+    DecodeStatus Res =
+        decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
+
+    CommentStream = nullptr;
+
+    if (Res != Fail) {
       MI = TmpInst;
+      Comments << LocalComments;
       return MCDisassembler::Success;
     }
     Bytes = SavedBytes;

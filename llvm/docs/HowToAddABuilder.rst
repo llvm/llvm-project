@@ -171,7 +171,7 @@ Here are the steps you can follow to do so:
    keep an unstable builder connected to staging indefinitely.
 
 #. (Optional) Once the builder is stable on the staging buildmaster with
-   several days of green history, you can chose to move it to the production
+   several days of green history, you can choose to move it to the production
    buildmaster to enable developer notifications.  Please email `Galina
    Kistanova <mailto:gkistanova@gmail.com>`_ for review and approval.
 

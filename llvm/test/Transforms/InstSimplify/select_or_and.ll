@@ -147,10 +147,7 @@ define i32 @select_and_4(i32 %x, i32 %y) {
 ; select(Y & X != -1, Y, Y & X)
 define i32 @select_and_not_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_and_not_1(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], -1
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 [[Y]]
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %and = and i32 %y, %x
   %cmp = icmp eq i32 %and, -1
@@ -161,10 +158,7 @@ define i32 @select_and_not_1(i32 %x, i32 %y) {
 ; select(Y & X != -1, Y, Y & X)
 define i32 @select_and_not_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_and_not_2(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], -1
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[AND]]
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %and = and i32 %y, %x
   %cmp = icmp ne i32 %and, -1
@@ -186,16 +180,59 @@ define i32 @select_and_not_3(i32 %x, i32 %y) {
   ret i32 %ret
 }
 
-; TODO: https://alive2.llvm.org/ce/z/1ILbih
+; https://alive2.llvm.org/ce/z/1ILbih
 define i32 @select_icmp_and_eq(i32 %a, i32 %b) {
 ; CHECK-LABEL: @select_icmp_and_eq(
+; CHECK-NEXT:    ret i32 -1
+;
+  %and = and i32 %a, %b
+  %tobool = icmp eq i32 %and, -1
+  %cond = select i1 %tobool, i32 %a, i32 -1
+  ret i32 %cond
+}
+
+define i32 @select_icmp_and_eq_commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_and_eq_commuted(
+; CHECK-NEXT:    ret i32 -1
+;
+  %and = and i32 %a, %b
+  %tobool = icmp eq i32 %and, -1
+  %cond = select i1 %tobool, i32 %b, i32 -1
+  ret i32 %cond
+}
+
+; https://alive2.llvm.org/ce/z/HfYXvx
+define <2 x i16> @select_icmp_and_eq_vec(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: @select_icmp_and_eq_vec(
+; CHECK-NEXT:    ret <2 x i16> <i16 -1, i16 -1>
+;
+  %and = and <2 x i16> %a, %b
+  %tobool = icmp eq <2 x i16> %and, <i16 -1, i16 -1>
+  %cond = select <2 x i1> %tobool, <2 x i16> %a, <2 x i16> <i16 -1, i16 -1>
+  ret <2 x i16> %cond
+}
+
+; The ne should also be macthed
+define i32 @select_icmp_and_ne(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_and_ne(
+; CHECK-NEXT:    ret i32 -1
+;
+  %and = and i32 %a, %b
+  %tobool = icmp ne i32 %and, -1
+  %cond = select i1 %tobool, i32 -1, i32 %a
+  ret i32 %cond
+}
+
+; Negative test: Incorrect const value for icmp
+define i32 @select_icmp_and_eq_incorrect_const(i32 %a, i32 %b) {
+; CHECK-LABEL: @select_icmp_and_eq_incorrect_const(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], -1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[A]], i32 -1
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %and = and i32 %a, %b
-  %tobool = icmp eq i32 %and, -1
+  %tobool = icmp eq i32 %and, 0  ; Incorrect const value
   %cond = select i1 %tobool, i32 %a, i32 -1
   ret i32 %cond
 }

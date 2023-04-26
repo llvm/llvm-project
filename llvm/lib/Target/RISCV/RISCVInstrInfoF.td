@@ -29,6 +29,11 @@ def SDT_RISCVFCVT_X
 def SDT_RISCVFROUND
     : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
                            SDTCisVT<3, XLenVT>]>;
+def SDT_RISCVFPCLASS
+    : SDTypeProfile<1, 1, [SDTCisVT<0, XLenVT>, SDTCisFP<1>]>;
+
+def riscv_fpclass
+    : SDNode<"RISCVISD::FPCLASS", SDT_RISCVFPCLASS>;
 
 def riscv_fround
     : SDNode<"RISCVISD::FROUND", SDT_RISCVFROUND>;
@@ -474,6 +479,8 @@ def : Pat<(any_fsqrt FPR32:$rs1), (FSQRT_S FPR32:$rs1, FRM_DYN)>;
 
 def : Pat<(fneg FPR32:$rs1), (FSGNJN_S $rs1, $rs1)>;
 def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
+
+def : Pat<(riscv_fpclass FPR32:$rs1), (FCLASS_S $rs1)>;
 
 def : PatFprFpr<fcopysign, FSGNJ_S, FPR32>;
 def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;

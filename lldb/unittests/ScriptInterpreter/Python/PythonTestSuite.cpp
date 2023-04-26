@@ -139,6 +139,10 @@ void *lldb_private::LLDBSWIGPython_CastPyObjectToSBData(PyObject *data) {
   return nullptr;
 }
 
+void *lldb_private::LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *data) {
+  return nullptr;
+}
+
 void *lldb_private::LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data) {
   return nullptr;
 }
