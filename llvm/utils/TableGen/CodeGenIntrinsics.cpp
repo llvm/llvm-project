@@ -120,6 +120,9 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
                                   TargetPrefix + ".'!");
   }
 
+#define OLD 1
+
+#if OLD
   ListInit *RetTypes = R->getValueAsListInit("RetTypes");
   ListInit *ParamTypes = R->getValueAsListInit("ParamTypes");
 
@@ -205,6 +208,35 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
 
     IS.ParamVTs.push_back(VT);
     IS.ParamTypeDefs.push_back(TyEl);
+  }
+#endif // OLD
+
+  if (auto *Types = R->getValue("Types")) {
+#if OLD
+    auto OrigRetVTs = std::move(IS.RetVTs);
+    auto OrigParamVTs = std::move(IS.ParamVTs);
+    auto OrigOverloaded = isOverloaded;
+    IS.RetVTs.clear();
+    IS.ParamVTs.clear();
+#endif // OLD
+
+    auto *TypeList = cast<ListInit>(Types->getValue());
+    isOverloaded = R->getValueAsBit("isOverloaded");
+
+    unsigned I = 0;
+    for (unsigned E = R->getValueAsListInit("RetTypes")->size(); I < E; ++I)
+      IS.RetVTs.push_back(
+          getValueType(TypeList->getElementAsRecord(I)->getValueAsDef("VT")));
+
+    for (unsigned E = TypeList->size(); I < E; ++I)
+      IS.ParamVTs.push_back(
+          getValueType(TypeList->getElementAsRecord(I)->getValueAsDef("VT")));
+
+#if OLD
+    assert(IS.RetVTs == OrigRetVTs);
+    assert(IS.ParamVTs == OrigParamVTs);
+    assert(OrigOverloaded == isOverloaded);
+#endif
   }
 
   // Parse the intrinsic properties.
