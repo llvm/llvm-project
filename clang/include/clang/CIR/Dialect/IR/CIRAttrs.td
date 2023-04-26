@@ -113,8 +113,7 @@ def ConstStructAttr : CIR_Attr<"ConstStruct", "const_struct",
     `>`
   }];
 
-  // let hasCustomAssemblyFormat = 1;
-  // let genVerifyDecl = 1;
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -208,14 +207,13 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
     ```
   }];
 
-  // FIXME: move from ArrayAttr to a ConstStructAttr once it lands?
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "ArrayAttr":$info);
+                        "ConstStructAttr":$typeinfo_data);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
-                                        "ArrayAttr":$info), [{
-      return $_get(type.getContext(), type, info);
+                                        "ConstStructAttr":$typeinfo_data), [{
+      return $_get(type.getContext(), type, typeinfo_data);
     }]>
   ];
 
@@ -224,7 +222,7 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
-    `<` $info `:` $type `>`
+    `<` $typeinfo_data `>`
   }];
 }
 
