@@ -6,6 +6,8 @@ declare void @llvm.experimental.guard(i1, ...)
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 0, 400
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP0]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header.loopexit:
 ; CHECK-NEXT:    br label [[HEADER]]
