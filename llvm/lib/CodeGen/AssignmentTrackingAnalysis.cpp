@@ -2011,16 +2011,17 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     }
   }
 
-  // Sort the fragment map for each DebugAggregate in non-descending
-  // order of fragment size. Assert no entries are duplicates.
+  // Sort the fragment map for each DebugAggregate in ascending
+  // order of fragment size - there should be no duplicates.
   for (auto &Pair : FragmentMap) {
     SmallVector<DebugVariable, 8> &Frags = Pair.second;
-    std::sort(
-        Frags.begin(), Frags.end(), [](DebugVariable Next, DebugVariable Elmt) {
-          assert(!(Elmt.getFragmentOrDefault() == Next.getFragmentOrDefault()));
-          return Elmt.getFragmentOrDefault().SizeInBits >
-                 Next.getFragmentOrDefault().SizeInBits;
-        });
+    std::sort(Frags.begin(), Frags.end(),
+              [](const DebugVariable &Next, const DebugVariable &Elmt) {
+                return Elmt.getFragmentOrDefault().SizeInBits >
+                       Next.getFragmentOrDefault().SizeInBits;
+              });
+    // Check for duplicates.
+    assert(std::adjacent_find(Frags.begin(), Frags.end()) == Frags.end());
   }
 
   // Build the map.
