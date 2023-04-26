@@ -237,6 +237,47 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAttr
+//===----------------------------------------------------------------------===//
+
+def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
+  let summary = "Represents a C++ vtable";
+  let description = [{
+    Wraps a #cir.const_struct containing vtable data.
+
+    Example:
+    ```
+    cir.global linkonce_odr @_ZTV1B = #cir.vtable<<
+      [#cir.const_array<[#cir.null : !cir.ptr<i8>,
+       #cir.global_view<@_ZTI1B> : !cir.ptr<i8>,
+       #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>,
+       #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>,
+       #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]
+        : !cir.array<!cir.ptr<i8> x 5>>
+      : !cir.array<!cir.ptr<i8> x 5>]>>
+    : !cir.struct<"", !cir.array<!cir.ptr<i8> x 5>>
+    ```
+  }];
+
+  // `info` must be a const struct with one element, containing an array of
+  // vtable information.
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "ConstStructAttr":$vtable_data);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "ConstStructAttr":$vtable_data), [{
+      return $_get(type.getContext(), type, vtable_data);
+    }]>
+  ];
+
+  // let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<` $vtable_data `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // AST Wrappers
 //===----------------------------------------------------------------------===//
 
