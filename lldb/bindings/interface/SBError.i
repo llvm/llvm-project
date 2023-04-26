@@ -59,6 +59,8 @@ class SBError {
 public:
     SBError ();
 
+    SBError(const char *message);
+
     SBError (const lldb::SBError &rhs);
 
     ~SBError();

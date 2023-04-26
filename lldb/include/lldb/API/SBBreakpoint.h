@@ -13,6 +13,10 @@
 
 class SBBreakpointListImpl;
 
+namespace lldb_private {
+class ScriptInterpreter;
+}
+
 namespace lldb {
 
 class LLDB_API SBBreakpoint {
@@ -150,6 +154,8 @@ private:
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
   friend class SBTarget;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb::BreakpointSP GetSP() const;
 

@@ -36,15 +36,13 @@ public:
 
   Status Resume() override;
 
-  bool ShouldStop() override;
-
-  Status Stop() override;
-
   llvm::Optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address,
                                    Status &error) override;
 
   StructuredData::DictionarySP GetThreadsInfo() override;
+
+  bool CreateBreakpoint(lldb::addr_t addr, Status &error) override;
 
   lldb::DataExtractorSP ReadMemoryAtAddress(lldb::addr_t address, size_t size,
                                             Status &error) override;

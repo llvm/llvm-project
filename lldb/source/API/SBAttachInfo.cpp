@@ -254,6 +254,27 @@ void SBAttachInfo::SetListener(SBListener &listener) {
   m_opaque_sp->SetListener(listener.GetSP());
 }
 
+SBListener SBAttachInfo::GetShadowListener() {
+  LLDB_INSTRUMENT_VA(this);
+
+  lldb::ListenerSP shadow_sp = m_opaque_sp->GetShadowListener();
+  if (!shadow_sp)
+    return SBListener();
+  return SBListener(shadow_sp);
+}
+
+void SBAttachInfo::SetShadowListener(SBListener &listener) {
+  LLDB_INSTRUMENT_VA(this, listener);
+
+  ListenerSP listener_sp = listener.GetSP();
+  if (listener_sp && listener.IsValid())
+    listener_sp->SetShadow(true);
+  else
+    listener_sp = nullptr;
+
+  m_opaque_sp->SetShadowListener(listener_sp);
+}
+
 const char *SBAttachInfo::GetScriptedProcessClassName() const {
   LLDB_INSTRUMENT_VA(this);
 
