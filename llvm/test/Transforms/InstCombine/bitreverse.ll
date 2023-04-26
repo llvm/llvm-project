@@ -286,7 +286,7 @@ define i4 @shuf_bitcast_twice_4bits(i4 %x) {
 ; CHECK-NEXT:    ret i4 [[CAST2]]
 ;
   %cast1 = bitcast i4 %x to <4 x i1>
-  %bitreverse = shufflevector <4 x i1> %cast1, <4 x i1> undef, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
+  %bitreverse = shufflevector <4 x i1> %cast1, <4 x i1> undef, <4 x i32> <i32 poison, i32 2, i32 1, i32 0>
   %cast2 = bitcast <4 x i1> %bitreverse to i4
   ret i4 %cast2
 }

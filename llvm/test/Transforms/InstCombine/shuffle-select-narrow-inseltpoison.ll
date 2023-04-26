@@ -35,8 +35,8 @@ define <2 x i8> @narrow_shuffle_of_select_overspecified_extend(<2 x i1> %cmp, <4
 
 define <3 x float> @narrow_shuffle_of_select_undefs(<3 x i1> %cmp, <4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_undefs(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[Y:%.*]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[CMP:%.*]], <3 x float> [[TMP1]], <3 x float> [[TMP2]]
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
@@ -53,7 +53,7 @@ declare void @use_cmp(<4 x i1>)
 
 define <2 x i8> @narrow_shuffle_of_select_use1(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_use1(
-; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[WIDESEL:%.*]] = select <4 x i1> [[WIDECMP]], <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(<4 x i8> [[WIDESEL]])
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[WIDESEL]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
@@ -70,7 +70,7 @@ define <2 x i8> @narrow_shuffle_of_select_use1(<2 x i1> %cmp, <4 x i8> %x, <4 x 
 
 define <2 x i8> @narrow_shuffle_of_select_use2(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_use2(
-; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    call void @use_cmp(<4 x i1> [[WIDECMP]])
 ; CHECK-NEXT:    [[WIDESEL:%.*]] = select <4 x i1> [[WIDECMP]], <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[WIDESEL]], <4 x i8> poison, <2 x i32> <i32 0, i32 1>
@@ -87,7 +87,7 @@ define <2 x i8> @narrow_shuffle_of_select_use2(<2 x i1> %cmp, <4 x i8> %x, <4 x 
 
 define <3 x i8> @narrow_shuffle_of_select_mismatch_types1(<2 x i1> %cmp, <4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_mismatch_types1(
-; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <2 x i1> [[CMP:%.*]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[WIDESEL:%.*]] = select <4 x i1> [[WIDECMP]], <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[WIDESEL]], <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
@@ -102,7 +102,7 @@ define <3 x i8> @narrow_shuffle_of_select_mismatch_types1(<2 x i1> %cmp, <4 x i8
 
 define <3 x i8> @narrow_shuffle_of_select_mismatch_types2(<4 x i1> %cmp, <6 x i8> %x, <6 x i8> %y) {
 ; CHECK-LABEL: @narrow_shuffle_of_select_mismatch_types2(
-; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[WIDECMP:%.*]] = shufflevector <4 x i1> [[CMP:%.*]], <4 x i1> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[WIDESEL:%.*]] = select <6 x i1> [[WIDECMP]], <6 x i8> [[X:%.*]], <6 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <6 x i8> [[WIDESEL]], <6 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]

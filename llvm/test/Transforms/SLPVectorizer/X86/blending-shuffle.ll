@@ -39,7 +39,7 @@ define <4 x i8> @h(<4 x i8> %x, <4 x i8> %y) {
 
 define <4 x i8> @h_undef(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @h_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 undef, i32 3, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 poison, i32 3, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
 ;

@@ -173,7 +173,7 @@ define void @load_store_factor3_i32(ptr %p) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[STRIDED_VEC2]], <i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP8]], i32 -2
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> [[TMP12]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <6 x i32> [[TMP13]], <6 x i32> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
 ; CHECK-NEXT:    store <6 x i32> [[INTERLEAVED_VEC]], ptr [[TMP10]], align 4

@@ -95,7 +95,7 @@ define void @same_opcode_on_one_side(i32 %a, i32 %b, i32 %c) {
 ; AVX-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
 ; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP2]], [[TMP4]]
-; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 undef, i32 4, i32 0>
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 poison, i32 4, i32 0>
 ; AVX-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[B:%.*]], i32 1
 ; AVX-NEXT:    [[TMP8:%.*]] = xor <4 x i32> [[TMP5]], [[TMP7]]
 ; AVX-NEXT:    store <4 x i32> [[TMP8]], ptr @cle32, align 16
