@@ -3088,6 +3088,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     assert(Equivalent(child_bitfield_bit_size, ast_child_bitfield_bit_size));
     assert(Equivalent(child_is_base_class, ast_child_is_base_class));
     assert(Equivalent(child_is_deref_of_parent, ast_child_is_deref_of_parent));
+    // There are cases where only the runtime correctly detects an indirect enum.
+    ast_language_flags |= language_flags & LanguageFlags::eIsIndirectEnumCase;
     assert(Equivalent(language_flags, ast_language_flags));
   });
 #endif
