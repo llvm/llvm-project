@@ -482,7 +482,6 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
     bool recurse) {
   static ConstString g_kext_suffix = ConstString(".kext");
   static ConstString g_dsym_suffix = ConstString(".dSYM");
-  static ConstString g_bundle_suffix = ConstString("Bundle");
 
   FileSpec file_spec(path);
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
@@ -567,8 +566,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
 
   // Don't recurse into dSYM/kext/bundle directories
   if (recurse && file_spec_extension != g_dsym_suffix &&
-      file_spec_extension != g_kext_suffix &&
-      file_spec_extension != g_bundle_suffix) {
+      file_spec_extension != g_kext_suffix) {
     LLDB_LOGV(log, "PlatformDarwinKernel descending into directory '{0}'",
               file_spec);
     return FileSystem::eEnumerateDirectoryResultEnter;
