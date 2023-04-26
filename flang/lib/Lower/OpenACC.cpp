@@ -131,7 +131,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              Fortran::lower::AbstractConverter &converter,
              Fortran::lower::StatementContext &stmtCtx,
              const std::list<Fortran::parser::SectionSubscript> &subscripts,
-             std::stringstream &asFortran, const Fortran::parser::Name &name) {
+             std::stringstream &asFortran, const Fortran::parser::Name &name,
+             mlir::Value baseAddr) {
   int dimension = 0;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<mlir::acc::DataBoundsType>();
@@ -146,17 +147,16 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       mlir::Value lbound, ubound, extent;
       std::optional<std::int64_t> lval, uval;
       mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      fir::ExtendedValue dataExv =
-          converter.getSymbolExtendedValue(*name.symbol);
       mlir::Value baseLb =
           fir::factory::readLowerBound(builder, loc, dataExv, dimension, one);
       bool defaultLb = baseLb == one;
       mlir::Value stride;
       bool strideInBytes = false;
-      if (fir::getBase(dataExv).getType().isa<fir::BaseBoxType>()) {
+
+      if (fir::unwrapRefType(baseAddr.getType()).isa<fir::BaseBoxType>()) {
         mlir::Value d = builder.createIntegerConstant(loc, idxTy, dimension);
         auto dimInfo = builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
-                                                      fir::getBase(dataExv), d);
+                                                      baseAddr, d);
         stride = dimInfo.getByteStride();
         strideInBytes = true;
       }
@@ -255,24 +255,33 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     if (!symAddr)
       llvm::report_fatal_error("could not retrieve symbol address");
 
-    mlir::Type symTy = symAddr.getType();
-    if (auto refTy = symTy.dyn_cast<fir::ReferenceType>())
-      symTy = refTy.getEleTy();
+    if (auto boxTy = fir::unwrapRefType(symAddr.getType())
+                         .dyn_cast<fir::BaseBoxType>()) {
+      if (boxTy.getEleTy().isa<fir::RecordType>())
+        TODO(loc, "derived type");
 
-    if (auto boxTy =
-            fir::unwrapRefType(symAddr.getType()).dyn_cast<fir::BaseBoxType>())
-      if (boxTy.getEleTy()
-              .isa<fir::PointerType, fir::HeapType, fir::RecordType>())
-        TODO(loc, "pointer, allocatable and derived type box");
-
+      // Load the box when baseAddr is a `fir.ref<fir.box<T>>` or a
+      // `fir.ref<fir.class<T>>` type.
+      if (symAddr.getType().isa<fir::ReferenceType>())
+        return builder.create<fir::LoadOp>(loc, symAddr);
+    }
     return symAddr;
   };
 
   auto createOpAndAddOperand = [&](mlir::Value baseAddr, llvm::StringRef name,
                                    mlir::Location loc,
                                    llvm::SmallVector<mlir::Value> &bounds) {
-    if (baseAddr.getType().isa<fir::BaseBoxType>())
-      baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
+    if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
+      // Get the actual data address when the descriptor is an allocatable or
+      // a pointer.
+      if (boxTy.getEleTy().isa<fir::HeapType, fir::PointerType>()) {
+        mlir::Value boxAddr = builder.create<fir::BoxAddrOp>(
+            loc, fir::ReferenceType::get(boxTy.getEleTy()), baseAddr);
+        baseAddr = builder.create<fir::LoadOp>(loc, boxAddr);
+      } else { // Get the address of the boxed value.
+        baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
+      }
+    }
 
     Op op = builder.create<Op>(loc, baseAddr.getType(), baseAddr);
     op.setNameAttr(builder.getStringAttr(name));
@@ -308,15 +317,15 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                       Fortran::parser::GetLastName(*dataRef);
                   std::stringstream asFortran;
                   asFortran << name.ToString();
+                  mlir::Value baseAddr =
+                      getDataOperandBaseAddr(*name.symbol, operandLocation);
                   if (!arrayElement->subscripts.empty()) {
                     asFortran << '(';
                     bounds = genBoundsOps(builder, operandLocation, converter,
                                           stmtCtx, arrayElement->subscripts,
-                                          asFortran, name);
+                                          asFortran, name, baseAddr);
                   }
                   asFortran << ')';
-                  mlir::Value baseAddr =
-                      getDataOperandBaseAddr(*name.symbol, operandLocation);
                   createOpAndAddOperand(baseAddr, asFortran.str(),
                                         operandLocation, bounds);
                 } else if (Fortran::parser::Unwrap<
@@ -332,7 +341,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                     mlir::Value baseAddr =
                         getDataOperandBaseAddr(*name.symbol, operandLocation);
                     llvm::SmallVector<mlir::Value> bounds;
-                    if (baseAddr.getType().isa<fir::BaseBoxType>())
+                    if (fir::unwrapRefType(baseAddr.getType())
+                            .isa<fir::BaseBoxType>())
                       bounds = genBoundsOpsFromBox(builder, operandLocation,
                                                    converter, *name.symbol,
                                                    baseAddr, (*expr).Rank());

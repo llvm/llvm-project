@@ -1,13 +1,25 @@
-// REQUIRES: host-supports-jit, system-linux
-// UNSUPPORTED: target={{.*-(ps4|ps5)}}
+// REQUIRES: host-supports-jit, x86_64-linux
 
-// RUN: %clang -xc++ -o %T/libdynamic-library-test.so -fPIC -shared -DLIBRARY %S/Inputs/dynamic-library-test.cpp
-// RUN: cat %s | env LD_LIBRARY_PATH=%T:$LD_LIBRARY_PATH clang-repl | FileCheck %s
+// To generate libdynamic-library-test.so :
+// clang -xc++ -o libdynamic-library-test.so -fPIC -shared
+//
+// extern "C" {
+//
+// int ultimate_answer = 0;
+// 
+// int calculate_answer() {
+//   ultimate_answer = 42;
+//   return 5;
+// }
+//
+// }
 
-#include <cstdio>
+// RUN: cat %s | env LD_LIBRARY_PATH=%S/Inputs:$LD_LIBRARY_PATH clang-repl | FileCheck %s
 
-extern int ultimate_answer;
-int calculate_answer();
+extern "C" int printf(const char* format, ...);
+
+extern "C" int ultimate_answer;
+extern "C" int calculate_answer();
 
 %lib libdynamic-library-test.so
 

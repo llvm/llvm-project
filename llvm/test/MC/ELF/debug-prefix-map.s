@@ -51,5 +51,5 @@ f:
 # MAPABS_V5:      DW_AT_decl_file [DW_FORM_data4] ("/src_root{{(/|\\)+}}src.s")
 # MAPABS_V5:      include_directories[ 0] = .debug_line_str[0x00000000] = "/src_root"
 
-# MAPABS_V5_A:    DW_AT_comp_dir [DW_FORM_string] ("{{(/|\\)+}}src_root/bar")
+# MAPABS_V5_A:    DW_AT_comp_dir [DW_FORM_string] ("{{(/|\\)+}}src_root{{(/|\\)+}}bar")
 # MAPABS_V5_A:    DW_AT_decl_file [DW_FORM_data4] ("/src_root{{(/|\\)+}}bar{{(/|\\)+}}src.s")
