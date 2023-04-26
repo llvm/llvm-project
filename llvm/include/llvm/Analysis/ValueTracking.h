@@ -238,6 +238,10 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
+  /// Return true if it's known this can never be one of the mask entries.
+  bool isKnownNever(FPClassTest Mask) const {
+    return (KnownFPClasses & Mask) == fcNone;
+  }
 
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
@@ -245,33 +249,43 @@ struct KnownFPClass {
 
   /// Return true if it's known this can never be a nan.
   bool isKnownNeverNaN() const {
-    return (KnownFPClasses & fcNan) == fcNone;
+    return isKnownNever(fcNan);
   }
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const {
-    return (KnownFPClasses & fcInf) == fcNone;
+    return isKnownNever(fcInf);
   }
 
   /// Return true if it's known this can never be +infinity.
   bool isKnownNeverPosInfinity() const {
-    return (KnownFPClasses & fcPosInf) == fcNone;
+    return isKnownNever(fcPosInf);
   }
 
   /// Return true if it's known this can never be -infinity.
   bool isKnownNeverNegInfinity() const {
-    return (KnownFPClasses & fcNegInf) == fcNone;
+    return isKnownNever(fcNegInf);
   }
 
   /// Return true if it's known this can never be a subnormal
   bool isKnownNeverSubnormal() const {
-    return (KnownFPClasses & fcSubnormal) == fcNone;
+    return isKnownNever(fcSubnormal);
+  }
+
+  /// Return true if it's known this can never be a negativesubnormal
+  bool isKnownNeverNegSubnormal() const {
+    return isKnownNever(fcNegSubnormal);
   }
 
   /// Return true if it's known this can never be a zero. This means a literal
   /// [+-]0, and does not include denormal inputs implicitly treated as [+-]0.
   bool isKnownNeverZero() const {
-    return (KnownFPClasses & fcZero) == fcNone;
+    return isKnownNever(fcZero);
+  }
+
+  /// Return true if it's known this can never be a literal negative zero.
+  bool isKnownNeverNegZero() const {
+    return isKnownNever(fcNegZero);
   }
 
   /// Return true if it's know this can never be interpreted as a zero. This

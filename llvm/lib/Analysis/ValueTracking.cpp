@@ -4620,8 +4620,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
       case Intrinsic::trunc: {
         KnownFPClass KnownSrc;
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, KnownSrc, Depth + 1, Q, TLI);
+
+        FPClassTest InterestedSrcs = InterestedClasses;
+        if (InterestedClasses & fcZero)
+          InterestedClasses |= fcNormal | fcSubnormal;
+
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Depth + 1, Q, TLI);
 
         // Integer results cannot be subnormal.
         Known.knownNot(fcSubnormal);
@@ -4635,6 +4640,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // Non-constrained intrinsics do not guarantee signaling nan quieting.
         if (KnownSrc.isKnownNeverNaN())
           Known.knownNot(fcNan);
+
+        if (KnownSrc.isKnownNever(fcPosNormal))
+          Known.knownNot(fcPosNormal);
+
+        if (KnownSrc.isKnownNever(fcNegNormal))
+          Known.knownNot(fcNegNormal);
+
+        if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal | fcPosNormal))
+          Known.knownNot(fcPosZero);
+
+        if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal | fcNegNormal))
+          Known.knownNot(fcNegZero);
+
+        // Sign should be preserved
+        Known.SignBit = KnownSrc.SignBit;
         break;
       }
       case Intrinsic::exp:
@@ -4656,6 +4676,71 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       case Intrinsic::fptrunc_round: {
         computeKnownFPClassForFPTrunc(Op, DemandedElts, InterestedClasses,
                                       Known, Depth, Q, TLI);
+        break;
+      }
+      case Intrinsic::log:
+      case Intrinsic::log10:
+      case Intrinsic::log2:
+      case Intrinsic::experimental_constrained_log:
+      case Intrinsic::experimental_constrained_log10:
+      case Intrinsic::experimental_constrained_log2: {
+        // log(+inf) -> +inf
+        // log([+-]0.0) -> -inf
+        // log(-inf) -> nan
+        // log(-x) -> nan
+        if ((InterestedClasses & (fcNan | fcInf)) == fcNone)
+          break;
+
+        FPClassTest InterestedSrcs = InterestedClasses;
+        if ((InterestedClasses & fcNegInf) != fcNone)
+          InterestedSrcs |= fcZero | fcSubnormal;
+        if ((InterestedClasses & fcNan) != fcNone)
+          InterestedSrcs |= fcNan | (fcNegative & ~fcNan);
+
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
+                            KnownSrc, Depth + 1, Q, TLI);
+
+        if (KnownSrc.isKnownNeverPosInfinity())
+          Known.knownNot(fcPosInf);
+
+        if (KnownSrc.isKnownNeverNaN() &&
+            KnownSrc.cannotBeOrderedLessThanZero())
+          Known.knownNot(fcNan);
+
+        if (KnownSrc.isKnownNeverLogicalZero(*II->getFunction(), II->getType()))
+          Known.knownNot(fcNegInf);
+
+        break;
+      }
+      case Intrinsic::powi: {
+        if ((InterestedClasses & fcNegative) == fcNone)
+          break;
+
+        const Value *Exp = II->getArgOperand(1);
+        unsigned BitWidth =
+            Exp->getType()->getScalarType()->getIntegerBitWidth();
+        KnownBits ExponentKnownBits(BitWidth);
+        computeKnownBits(Exp, DemandedElts, ExponentKnownBits, Depth + 1, Q);
+
+        if (ExponentKnownBits.Zero[0]) { // Is even
+          Known.knownNot(fcNegative);
+          break;
+        }
+
+        // Given that exp is an integer, here are the
+        // ways that pow can return a negative value:
+        //
+        //   pow(-x, exp)   --> negative if exp is odd and x is negative.
+        //   pow(-0, exp)   --> -inf if exp is negative odd.
+        //   pow(-0, exp)   --> -0 if exp is positive odd.
+        //   pow(-inf, exp) --> -0 if exp is negative odd.
+        //   pow(-inf, exp) --> -inf if exp is positive odd.
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
+                            KnownSrc, Depth + 1, Q, TLI);
+        if (KnownSrc.isKnownNever(fcNegative))
+          Known.knownNot(fcNegative);
         break;
       }
       case Intrinsic::arithmetic_fence: {

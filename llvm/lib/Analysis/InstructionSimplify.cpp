@@ -4549,12 +4549,12 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                             Q, MaxRecurse))
       return V;
 
-    // select(X | Y == 0 ?  X : 0) --> 0 (commuted 2 ways)
     Value *X;
     Value *Y;
+    // select((X | Y) == 0 ?  X : 0) --> 0 (commuted 2 ways)
     if (match(CmpLHS, m_Or(m_Value(X), m_Value(Y))) &&
         match(CmpRHS, m_Zero())) {
-      // X | Y == 0 implies X == 0 and Y == 0.
+      // (X | Y) == 0 implies X == 0 and Y == 0.
       if (Value *V = simplifySelectWithICmpEq(X, CmpRHS, TrueVal, FalseVal, Q,
                                               MaxRecurse))
         return V;
@@ -4562,16 +4562,18 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                               MaxRecurse))
         return V;
     }
-  }
 
-  if (Pred == ICmpInst::Predicate::ICMP_EQ) {
-    Value *X;
-    Value *Y;
-    // select(X & Y == -1, X or Y, X & Y) -> X & Y
-    if (match(CondVal, m_ICmp(Pred, m_Specific(FalseVal), m_AllOnes())) &&
-        match(FalseVal, m_And(m_Value(X), m_Value(Y))) &&
-        (TrueVal == X || TrueVal == Y))
-      return FalseVal;
+    // select((X & Y) == -1 ?  X : -1) --> -1 (commuted 2 ways)
+    if (match(CmpLHS, m_And(m_Value(X), m_Value(Y))) &&
+        match(CmpRHS, m_AllOnes())) {
+      // (X & Y) == -1 implies X == -1 and Y == -1.
+      if (Value *V = simplifySelectWithICmpEq(X, CmpRHS, TrueVal, FalseVal, Q,
+                                              MaxRecurse))
+        return V;
+      if (Value *V = simplifySelectWithICmpEq(Y, CmpRHS, TrueVal, FalseVal, Q,
+                                              MaxRecurse))
+        return V;
+    }
   }
 
   return nullptr;
