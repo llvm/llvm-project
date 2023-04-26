@@ -5179,6 +5179,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       }
 
       // The sign for frem is the same as the first operand.
+      if (KnownLHS.cannotBeOrderedLessThanZero())
+        Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+      if (KnownLHS.cannotBeOrderedGreaterThanZero())
+        Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
+      // See if we can be more aggressive about the sign of 0.
       if (KnownLHS.isKnownNever(fcNegative))
         Known.knownNot(fcNegative);
       if (KnownLHS.isKnownNever(fcPositive))
