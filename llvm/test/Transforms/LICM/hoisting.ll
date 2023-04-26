@@ -83,16 +83,17 @@ Out:
 }
 
 
-; This loop invariant instruction should be constant folded, not hoisted.
+; Don't bother constant folding the add, just hoist it.
 define i32 @test3(i1 %c) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr @X, align 4
+; CHECK-NEXT:    [[B:%.*]] = add i32 4, 2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    call void @foo2(i32 6)
+; CHECK-NEXT:    call void @foo2(i32 [[B]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[OUT:%.*]]
 ; CHECK:       Out:
-; CHECK-NEXT:    [[B_LCSSA:%.*]] = phi i32 [ 6, [[LOOP]] ]
+; CHECK-NEXT:    [[B_LCSSA:%.*]] = phi i32 [ [[B]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C:%.*]] = sub i32 [[A]], [[B_LCSSA]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;

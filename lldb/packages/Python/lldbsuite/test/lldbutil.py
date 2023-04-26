@@ -1202,18 +1202,25 @@ def start_listening_from(broadcaster, event_mask):
     broadcaster.AddListener(listener, event_mask)
     return listener
 
-def fetch_next_event(test, listener, broadcaster, timeout=10):
+def fetch_next_event(test, listener, broadcaster, match_class=False, timeout=10):
     """Fetch one event from the listener and return it if it matches the provided broadcaster.
+    If `match_class` is set to True, this will match an event with an entire broadcaster class.
     Fails otherwise."""
 
     event = lldb.SBEvent()
 
     if listener.WaitForEvent(timeout, event):
-        if event.BroadcasterMatchesRef(broadcaster):
-            return event
+        if match_class:
+            if event.GetBroadcasterClass() == broadcaster:
+                return event
+        else:
+            if event.BroadcasterMatchesRef(broadcaster):
+                return event
 
+        stream = lldb.SBStream()
+        event.GetDescription(stream)
         test.fail("received event '%s' from unexpected broadcaster '%s'." %
-                  (event.GetDescription(), event.GetBroadcaster().GetName()))
+                  (stream.GetData(), event.GetBroadcaster().GetName()))
 
     test.fail("couldn't fetch an event before reaching the timeout.")
 
