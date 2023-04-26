@@ -800,6 +800,91 @@ struct BubbleUpBitCastForStridedSliceInsert
   }
 };
 
+// Breaks down vector.bitcast op
+//
+// This transforms IR like:
+//   %1 = vector.bitcast %0: vector<8xf16> to vector<4xf32>
+// Into:
+//   %cst = vector.splat %c0_f32 : vector<4xf32>
+//   %1 = vector.extract_strided_slice %0 {
+//          offsets = [0], sizes = [4], strides = [1]
+//        } : vector<8xf16> to vector<4xf16>
+//   %2 = vector.bitcast %1 : vector<4xf16> to vector<2xf32>
+//   %4 = vector.insert_strided_slice %2, %cst {
+//          offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
+//   %5 = vector.extract_strided_slice %0 {
+//          offsets = [4], sizes = [4], strides = [1]
+//        } : vector<8xf16> to vector<4xf16>
+//   %6 = vector.bitcast %5 : vector<4xf16> to vector<2xf32>
+//   %7 = vector.insert_strided_slice %6, %cst {
+//          offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
+struct BreakDownVectorBitCast : public OpRewritePattern<vector::BitCastOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+public:
+  BreakDownVectorBitCast(MLIRContext *context,
+                         std::function<bool(vector::BitCastOp)> controlFn,
+                         PatternBenefit benefit)
+      : OpRewritePattern(context, benefit), controlFn(std::move(controlFn)) {}
+
+  LogicalResult matchAndRewrite(vector::BitCastOp bitcastOp,
+                                PatternRewriter &rewriter) const override {
+
+    if (controlFn && !controlFn(bitcastOp))
+      return failure();
+
+    VectorType castSrcType = bitcastOp.getSourceVectorType();
+    VectorType castDstType = bitcastOp.getResultVectorType();
+    assert(castSrcType.getRank() == castDstType.getRank());
+
+    // Only support rank 1 case for now.
+    if (castSrcType.getRank() != 1)
+      return failure();
+
+    int64_t castSrcLastDim = castSrcType.getShape().back();
+    int64_t castDstLastDim = castDstType.getShape().back();
+    // Require casting to less elements for now; other cases to be implemented.
+    if (castSrcLastDim < castDstLastDim)
+      return failure();
+
+    assert(castSrcLastDim % castDstLastDim == 0);
+    int64_t shrinkRatio = castSrcLastDim / castDstLastDim;
+    // Nothing to do if it is already bitcasting to a single element.
+    if (castSrcLastDim == shrinkRatio)
+      return failure();
+
+    Location loc = bitcastOp.getLoc();
+    Type elemType = castDstType.getElementType();
+    assert(elemType.isSignlessIntOrIndexOrFloat());
+
+    Value zero = rewriter.create<arith::ConstantOp>(
+        loc, elemType, rewriter.getZeroAttr(elemType));
+    Value res = rewriter.create<SplatOp>(loc, castDstType, zero);
+
+    SmallVector<int64_t> sliceShape{castDstLastDim};
+    SmallVector<int64_t> strides{1};
+    VectorType newCastDstType =
+        VectorType::get(SmallVector<int64_t>{castDstLastDim / shrinkRatio},
+                        castDstType.getElementType());
+
+    for (int i = 0, e = shrinkRatio; i < e; ++i) {
+      Value extracted = rewriter.create<ExtractStridedSliceOp>(
+          loc, bitcastOp.getSource(), ArrayRef<int64_t>{i * castDstLastDim},
+          sliceShape, strides);
+      Value bitcast =
+          rewriter.create<BitCastOp>(loc, newCastDstType, extracted);
+      res = rewriter.create<InsertStridedSliceOp>(
+          loc, bitcast, res,
+          ArrayRef<int64_t>{i * castDstLastDim / shrinkRatio}, strides);
+    }
+    rewriter.replaceOp(bitcastOp, res);
+    return success();
+  }
+
+private:
+  std::function<bool(BitCastOp)> controlFn;
+};
+
 // Helper that returns a vector comparison that constructs a mask:
 //     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
 //
@@ -1149,6 +1234,13 @@ void mlir::vector::populateBubbleVectorBitCastOpPatterns(
                BubbleDownBitCastForStridedSliceExtract,
                BubbleUpBitCastForStridedSliceInsert>(patterns.getContext(),
                                                      benefit);
+}
+
+void mlir::vector::populateBreakDownVectorBitCastOpPatterns(
+    RewritePatternSet &patterns,
+    std::function<bool(vector::BitCastOp)> controlFn, PatternBenefit benefit) {
+  patterns.add<BreakDownVectorBitCast>(patterns.getContext(),
+                                       std::move(controlFn), benefit);
 }
 
 void mlir::vector::populateVectorContractCanonicalizeMatmulToMMT(
