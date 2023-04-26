@@ -241,6 +241,30 @@ test_ld64_gotlo12_external:
         ldr   x0, [x0, :got_lo12:external_data]
         .size test_ld64_gotlo12_external, .-test_ld64_gotlo12_external
 
+# Check R_AARCH64_CONDBR19 for compare and branch instructions
+#
+# jitlink-check: decode_operand(test_condbr19_cbz, 1) = \
+# jitlink-check:     (test_condbr19_cbz_target - test_condbr19_cbz)[21:2]
+        .globl test_condbr19_cbz, test_condbr19_cbz_target
+        .p2align 2
+test_condbr19_cbz:
+        cbz x0, test_condbr19_cbz_target
+        .skip (1 << 19)
+test_condbr19_cbz_target:
+        .size test_condbr19_cbz, .-test_condbr19_cbz
+
+# Check R_AARCH64_CONDBR19 for conditional branch instructions
+#
+# jitlink-check: decode_operand(test_condbr19_bc, 1) = \
+# jitlink-check:     (test_condbr19_bc_target - test_condbr19_bc)[21:2]
+        .globl test_condbr19_bc, test_condbr19_bc_target
+        .p2align 2
+test_condbr19_bc:
+        b.eq test_condbr19_bc_target
+        .skip (1 << 19)
+test_condbr19_bc_target:
+        .size test_condbr19_bc, .-test_condbr19_bc
+
         .globl  named_data
         .p2align  4
         .type   named_data,@object

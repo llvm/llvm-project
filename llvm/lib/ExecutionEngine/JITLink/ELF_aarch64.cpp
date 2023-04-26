@@ -58,6 +58,7 @@ private:
     ELFMovwAbsG1,
     ELFMovwAbsG2,
     ELFMovwAbsG3,
+    ELFCondBr19,
     ELFAbs32,
     ELFAbs64,
     ELFPrel32,
@@ -99,6 +100,8 @@ private:
       return ELFMovwAbsG2;
     case ELF::R_AARCH64_MOVW_UABS_G3:
       return ELFMovwAbsG3;
+    case ELF::R_AARCH64_CONDBR19:
+      return ELFCondBr19;
     case ELF::R_AARCH64_ABS32:
       return ELFAbs32;
     case ELF::R_AARCH64_ABS64:
@@ -285,6 +288,16 @@ private:
             "MOVK/MOVZ (imm16, LSL #48) instruction");
 
       Kind = aarch64::MoveWide16;
+      break;
+    }
+    case ELFCondBr19: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isCondBranchImm19(Instr) &&
+          !aarch64::isCompAndBranchImm19(Instr))
+        return make_error<JITLinkError>("R_AARCH64_CONDBR19 target is not a "
+                                        "conditional branch instruction");
+
+      Kind = aarch64::CondBranch19PCRel;
       break;
     }
     case ELFAbs32: {
