@@ -987,35 +987,7 @@ const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
   assert(!isa<SCEVCouldNotCompute>(BackedgeTakenCount) && "Invalid loop count");
 
   ScalarEvolution &SE = *PSE.getSE();
-
-  unsigned BackEdgeSize = SE.getTypeSizeInBits(BackedgeTakenCount->getType());
-  unsigned IdxSize = IdxTy->getPrimitiveSizeInBits();
-
-  // If we need to need to zero extend the backedge count, check if we can
-  // add one to it prior to zero extending without overflow. Provided this is
-  // safe, it allows better simplification of the +1.
-  if (OrigLoop && BackEdgeSize < IdxSize &&
-      SE.isLoopEntryGuardedByCond(
-          OrigLoop, ICmpInst::ICMP_NE, BackedgeTakenCount,
-          SE.getMinusOne(BackedgeTakenCount->getType()))) {
-    return SE.getZeroExtendExpr(
-        SE.getAddExpr(BackedgeTakenCount,
-                      SE.getOne(BackedgeTakenCount->getType())),
-        IdxTy);
-  }
-
-  // The exit count might have the type of i64 while the phi is i32. This can
-  // happen if we have an induction variable that is sign extended before the
-  // compare. The only way that we get a backedge taken count is that the
-  // induction variable was signed and as such will not overflow. In such a case
-  // truncation is legal.
-  if (BackEdgeSize > IdxSize)
-    BackedgeTakenCount = SE.getTruncateOrNoop(BackedgeTakenCount, IdxTy);
-  BackedgeTakenCount = SE.getNoopOrZeroExtend(BackedgeTakenCount, IdxTy);
-
-  // Get the total trip count from the count by adding 1.
-  return SE.getAddExpr(BackedgeTakenCount,
-                       SE.getOne(BackedgeTakenCount->getType()));
+  return SE.getTripCountFromExitCount(BackedgeTakenCount, IdxTy, OrigLoop);
 }
 
 static Value *getRuntimeVFAsFloat(IRBuilderBase &B, Type *FTy,

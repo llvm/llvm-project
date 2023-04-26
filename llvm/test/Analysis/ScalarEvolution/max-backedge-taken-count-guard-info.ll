@@ -150,7 +150,7 @@ define void @test_guard_eq_12(ptr nocapture %a, i64 %N) {
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is %N
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is %N
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK:       Loop %loop: Trip multiple is 13
 ;
 entry:
   %c.1 = icmp eq i64 %N, 12

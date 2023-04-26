@@ -54,7 +54,7 @@
 ! RUN:   | FileCheck %s --check-prefix=OPENMP-OFFLOAD-ARGS
 ! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}}.f90"
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fopenmp" {{.*}} "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-device" {{.*}}.f90"
-! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}clang-offload-packager" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}clang-offload-packager{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}} "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
 
 ! Test -fopenmp with offload for RTL Flag Options
