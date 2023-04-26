@@ -546,10 +546,12 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
           .getAddressPoint(Base);
 
   auto &builder = CGM.getBuilder();
-  auto ptrTy = builder.getPointerTo(vtable.getSymType());
+  auto vtablePtrTy = builder.getVirtualFnPtrType(/*isVarArg=*/true);
+
   return builder.create<mlir::cir::VTableAddrPointOp>(
-      CGM.getLoc(VTableClass->getSourceRange()), ptrTy, vtable.getSymName(),
-      AddressPoint.VTableIndex, AddressPoint.AddressPointIndex);
+      CGM.getLoc(VTableClass->getSourceRange()), vtablePtrTy,
+      vtable.getSymName(), AddressPoint.VTableIndex,
+      AddressPoint.AddressPointIndex);
 }
 
 mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
