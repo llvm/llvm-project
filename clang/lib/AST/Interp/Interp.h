@@ -436,7 +436,7 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   T Result;
 
   if constexpr (DoPush == PushVal::Yes)
-    S.Stk.push<T>(Result);
+    S.Stk.push<T>(Value);
 
   if constexpr (Op == IncDecOp::Inc) {
     if (!T::increment(Value, &Result)) {

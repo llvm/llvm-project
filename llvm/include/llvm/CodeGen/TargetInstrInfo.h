@@ -1966,7 +1966,7 @@ public:
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
-  /// information for a set of outlining candidates. Returns None if the
+  /// information for a set of outlining candidates. Returns std::nullopt if the
   /// candidates are not suitable for outlining.
   virtual std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
