@@ -869,7 +869,9 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   const uint64_t MaxEdgeCount = getInstrMaxCountValue();
 
   instrprof_error Result;
-  auto Err = [&](Error E) { Result = InstrProfError::take(std::move(E)); };
+  auto Err = [&](Error E) {
+    Result = std::get<0>(InstrProfError::take(std::move(E)));
+  };
   Result = instrprof_error::success;
   Writer.addRecord({"foo", 0x1234, {1}}, Err);
   ASSERT_EQ(Result, instrprof_error::success);
