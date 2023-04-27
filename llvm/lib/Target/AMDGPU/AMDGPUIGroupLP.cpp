@@ -254,6 +254,9 @@ class PipelineSolver {
   // How many branches we have explored
   uint64_t BranchesExplored = 0;
 
+  // The direction in which we process the candidate SchedGroups per SU
+  bool IsBottomUp = 1;
+
   // Update indices to fit next conflicting instruction
   void advancePosition();
   // Recede indices to attempt to find better fit for previous conflicting
@@ -264,19 +267,35 @@ class PipelineSolver {
   bool solveExact();
   // The polynomial time algorithm which attempts to find a good fit
   bool solveGreedy();
+  // Find the best SchedGroup for the current SU using the heuristic given all
+  // current information. One step in the greedy algorithm. Templated against
+  // the SchedGroup iterator (either reverse or forward).
+  template <typename T>
+  void greedyFind(std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I,
+                  T E);
   // Whether or not the current solution is optimal
   bool checkOptimal();
   // Populate the ready list, prioiritizing fewest missed edges first
-  void populateReadyList(SUToCandSGsPair &CurrSU,
-                         SmallVectorImpl<std::pair<int, int>> &ReadyList,
-                         SmallVectorImpl<SchedGroup> &SyncPipeline);
+  // Templated against the SchedGroup iterator (either reverse or forward).
+  template <typename T>
+  void populateReadyList(SmallVectorImpl<std::pair<int, int>> &ReadyList, T I,
+                         T E);
   // Add edges corresponding to the SchedGroups as assigned by solver
   void makePipeline();
+  // Link the SchedGroups in the best found pipeline.
+  // Tmplated against the SchedGroup iterator (either reverse or forward).
+  template <typename T> void linkSchedGroups(T I, T E);
   // Add the edges from the SU to the other SchedGroups in pipeline, and
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
                std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
-  // Remove the edges passed via AddedEdges
+  // Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
+  // returns the cost (in terms of missed pipeline edges), and tracks the edges
+  // added in \p AddedEdges
+  template <typename T>
+  int linkSUnit(SUnit *SU, int SGID,
+                std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
+  // Remove the edges passed via \p AddedEdges
   void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Convert the passed in maps to arrays for bidirectional iterators
   void convertSyncMapsToArrays();
@@ -290,9 +309,9 @@ public:
 
   PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
                  DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-                 ScheduleDAGMI *DAG)
+                 ScheduleDAGMI *DAG, bool IsBottomUp = 1)
       : DAG(DAG), SyncedInstrs(SyncedInstrs),
-        SyncedSchedGroups(SyncedSchedGroups) {
+        SyncedSchedGroups(SyncedSchedGroups), IsBottomUp(IsBottomUp) {
 
     for (auto &PipelineInstrs : SyncedInstrs) {
       if (PipelineInstrs.second.size() > 0) {
@@ -363,14 +382,27 @@ void PipelineSolver::convertSyncMapsToArrays() {
   }
 }
 
+template <typename T> void PipelineSolver::linkSchedGroups(T I, T E) {
+  for (; I != E; ++I) {
+    auto &GroupA = *I;
+    for (auto J = std::next(I); J != E; ++J) {
+      auto &GroupB = *J;
+      GroupA.link(GroupB);
+    }
+  }
+}
+
 void PipelineSolver::makePipeline() {
   // Preserve the order of barrier for subsequent SchedGroupBarrier mutations
   for (auto &SyncPipeline : BestPipeline) {
     for (auto &SG : SyncPipeline) {
+      LLVM_DEBUG(dbgs() << "Printing SchedGroups\nSchedGroup with SGID "
+                        << SG.getSGID() << " has: \n");
       SUnit *SGBarr = nullptr;
       for (auto &SU : SG.Collection) {
         if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
           SGBarr = SU;
+        LLVM_DEBUG(dbgs() << "SU(" << SU->NodeNum << ")\n");
       }
       // Command line requested IGroupLP doesn't have SGBarr
       if (!SGBarr)
@@ -381,41 +413,45 @@ void PipelineSolver::makePipeline() {
   }
 
   for (auto &SyncPipeline : BestPipeline) {
-    auto I = SyncPipeline.rbegin();
-    auto E = SyncPipeline.rend();
-    for (; I != E; ++I) {
-      auto &GroupA = *I;
-      for (auto J = std::next(I); J != E; ++J) {
-        auto &GroupB = *J;
-        GroupA.link(GroupB);
-      }
-    }
+    IsBottomUp ? linkSchedGroups(SyncPipeline.rbegin(), SyncPipeline.rend())
+               : linkSchedGroups(SyncPipeline.begin(), SyncPipeline.end());
   }
+}
+
+template <typename T>
+int PipelineSolver::linkSUnit(
+    SUnit *SU, int SGID, std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges,
+    T I, T E) {
+  bool MakePred = false;
+  int AddedCost = 0;
+  for (; I < E; ++I) {
+    if (I->getSGID() == SGID) {
+      MakePred = true;
+      continue;
+    }
+    auto Group = *I;
+    AddedCost += Group.link(*SU, MakePred, AddedEdges);
+    assert(AddedCost >= 0);
+  }
+  return AddedCost;
 }
 
 int PipelineSolver::addEdges(
     SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
-  int AddedCost = 0;
-  bool MakePred = false;
 
-  // The groups in the pipeline are in reverse order. Thus,
-  // by traversing them from last to first, we are traversing
-  // them in the order as they were introduced in the code. After we
-  // pass the group the SU is being assigned to, it should be
-  // linked as a predecessor of the subsequent SchedGroups
-  auto GroupNo = (int)SyncPipeline.size() - 1;
-  for (; GroupNo >= 0; GroupNo--) {
-    if (SyncPipeline[GroupNo].getSGID() == SGID) {
-      MakePred = true;
-      continue;
-    }
-    auto Group = &SyncPipeline[GroupNo];
-    AddedCost += Group->link(*SU, MakePred, AddedEdges);
-    assert(AddedCost >= 0);
-  }
-
-  return AddedCost;
+  // For IsBottomUp, the first SchedGroup in SyncPipeline contains the
+  // instructions that are the ultimate successors in the resultant mutation.
+  // Therefore, in such a configuration, the SchedGroups occurring before the
+  // candidate SGID are successors of the candidate SchedGroup, thus the current
+  // SU should be linked as a predecessor to SUs in those SchedGroups. The
+  // opposite is true if !IsBottomUp. IsBottomUp occurs in the case of multiple
+  // SCHED_GROUP_BARRIERS, or if a user specifies IGLP_OPT SchedGroups using
+  // IsBottomUp (in reverse).
+  return IsBottomUp ? linkSUnit(SU, SGID, AddedEdges, SyncPipeline.rbegin(),
+                                SyncPipeline.rend())
+                    : linkSUnit(SU, SGID, AddedEdges, SyncPipeline.begin(),
+                                SyncPipeline.end());
 }
 
 void PipelineSolver::removeEdges(
@@ -490,12 +526,13 @@ bool PipelineSolver::checkOptimal() {
   return (DoneExploring || BestCost == 0);
 }
 
+template <typename T>
 void PipelineSolver::populateReadyList(
-    SUToCandSGsPair &CurrSU, SmallVectorImpl<std::pair<int, int>> &ReadyList,
-    SmallVectorImpl<SchedGroup> &SyncPipeline) {
+    SmallVectorImpl<std::pair<int, int>> &ReadyList, T I, T E) {
+  SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
+  auto SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   assert(CurrSU.second.size() >= 1);
-  auto I = CurrSU.second.rbegin();
-  auto E = CurrSU.second.rend();
+
   for (; I != E; ++I) {
     std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
@@ -545,7 +582,10 @@ bool PipelineSolver::solveExact() {
   // SchedGroup -> Cost pairs
   SmallVector<std::pair<int, int>, 4> ReadyList;
   // Prioritize the candidate sched groups in terms of lowest cost first
-  populateReadyList(CurrSU, ReadyList, CurrPipeline[CurrSyncGroupIdx]);
+  IsBottomUp ? populateReadyList(ReadyList, CurrSU.second.rbegin(),
+                                 CurrSU.second.rend())
+             : populateReadyList(ReadyList, CurrSU.second.begin(),
+                                 CurrSU.second.end());
 
   auto I = ReadyList.begin();
   auto E = ReadyList.end();
@@ -620,64 +660,71 @@ bool PipelineSolver::solveExact() {
   return FinishedExploring;
 }
 
+template <typename T>
+void PipelineSolver::greedyFind(
+    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
+  SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
+  int BestNodeCost = -1;
+  int TempCost;
+  SchedGroup *BestGroup = nullptr;
+  int BestGroupID = -1;
+  auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
+  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
+                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+
+  // Since we have added the potential SchedGroups from bottom up, but
+  // traversed the DAG from top down, parse over the groups from last to
+  // first. If we fail to do this for the greedy algorithm, the solution will
+  // likely not be good in more complex cases.
+  for (; I != E; ++I) {
+    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    int CandSGID = *I;
+    SchedGroup *Match;
+    for (auto &SG : SyncPipeline) {
+      if (SG.getSGID() == CandSGID)
+        Match = &SG;
+    }
+
+    LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
+                      << (int)Match->getMask() << "\n");
+
+    if (Match->isFull()) {
+      LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " is full\n");
+      continue;
+    }
+    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+    LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
+    if (TempCost < BestNodeCost || BestNodeCost == -1) {
+      BestGroup = Match;
+      BestNodeCost = TempCost;
+      BestGroupID = CandSGID;
+    }
+    removeEdges(AddedEdges);
+    if (BestNodeCost == 0)
+      break;
+  }
+
+  if (BestGroupID != -1) {
+    BestGroup->add(*CurrSU.first);
+    addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
+    LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
+                      << (int)BestGroup->getMask() << "\n");
+    BestCost += TempCost;
+  } else
+    BestCost += MissPenalty;
+
+  CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
+}
+
 bool PipelineSolver::solveGreedy() {
   BestCost = 0;
   std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
 
   while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size()) {
     SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
-    int BestNodeCost = -1;
-    int TempCost;
-    SchedGroup *BestGroup = nullptr;
-    int BestGroupID = -1;
-    auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-    LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
-                      << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
-
-    // Since we have added the potential SchedGroups from bottom up, but
-    // traversed the DAG from top down, parse over the groups from last to
-    // first. If we fail to do this for the greedy algorithm, the solution will
-    // likely not be good in more complex cases.
-    auto I = CurrSU.second.rbegin();
-    auto E = CurrSU.second.rend();
-    for (; I != E; ++I) {
-      std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
-      int CandSGID = *I;
-      SchedGroup *Match;
-      for (auto &SG : SyncPipeline) {
-        if (SG.getSGID() == CandSGID)
-          Match = &SG;
-      }
-
-      LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
-                        << (int)Match->getMask() << "\n");
-
-      if (Match->isFull()) {
-        LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " is full\n");
-        continue;
-      }
-      TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
-      LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
-      if (TempCost < BestNodeCost || BestNodeCost == -1) {
-        BestGroup = Match;
-        BestNodeCost = TempCost;
-        BestGroupID = CandSGID;
-      }
-      removeEdges(AddedEdges);
-      if (BestNodeCost == 0)
-        break;
-    }
-
-    if (BestGroupID != -1) {
-      BestGroup->add(*CurrSU.first);
-      addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
-      LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
-                        << (int)BestGroup->getMask() << "\n");
-      BestCost += TempCost;
-    } else
-      BestCost += MissPenalty;
-
-    CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
+    IsBottomUp
+        ? greedyFind(AddedEdges, CurrSU.second.rbegin(), CurrSU.second.rend())
+        : greedyFind(AddedEdges, CurrSU.second.begin(), CurrSU.second.end());
     advancePosition();
   }
   BestPipeline = CurrPipeline;
@@ -721,9 +768,11 @@ void PipelineSolver::solve() {
   }
 
   makePipeline();
+  LLVM_DEBUG(dbgs() << "After applying mutation\n");
+  LLVM_DEBUG(DAG->dump());
 }
 
-enum IGLPStrategyID : int { MFMASmallGemmOptID = 0 };
+enum IGLPStrategyID : int { MFMASmallGemmOptID = 0, DemoOptID = 1 };
 
 // Implement a IGLP scheduling strategy.
 class IGLPStrategy {
@@ -741,6 +790,8 @@ public:
   // Returns true if this strategy should be applied to a ScheduleDAG.
   virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) = 0;
 
+  bool IsBottomUp = 1;
+
   IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : DAG(DAG), TII(TII) {}
 
@@ -748,6 +799,7 @@ public:
 };
 
 class MFMASmallGemmOpt final : public IGLPStrategy {
+private:
 public:
   void applyIGLPStrategy(
       DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
@@ -756,7 +808,9 @@ public:
   bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
 
   MFMASmallGemmOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : IGLPStrategy(DAG, TII) {}
+      : IGLPStrategy(DAG, TII) {
+    IsBottomUp = 1;
+  }
 };
 
 void MFMASmallGemmOpt::applyIGLPStrategy(
@@ -781,11 +835,50 @@ void MFMASmallGemmOpt::applyIGLPStrategy(
   }
 }
 
+class DemoOpt final : public IGLPStrategy {
+private:
+public:
+  void applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) override;
+
+  bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
+
+  DemoOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : IGLPStrategy(DAG, TII) {
+    IsBottomUp = 0;
+  }
+};
+
+void DemoOpt::applyIGLPStrategy(
+    DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
+  // Count the number of MFMA instructions.
+  unsigned MFMACount = 0;
+  for (const MachineInstr &I : *DAG)
+    if (TII->isMFMAorWMMA(I))
+      ++MFMACount;
+
+  const unsigned PipelineSyncID = 0;
+  SchedGroup *SG = nullptr;
+  for (unsigned I = 0; I < MFMACount * 3; ++I) {
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::DS, 2, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  }
+}
+
 static std::unique_ptr<IGLPStrategy>
 createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
                    const SIInstrInfo *TII) {
   switch (ID) {
   case MFMASmallGemmOptID:
+    return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
+  case DemoOptID:
     return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
   }
 
@@ -828,6 +921,13 @@ private:
 
 public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
+
+  // The order in which the PipelineSolver should process the candidate
+  // SchedGroup for a PipelineInstr. BOTTOM_UP will try to add SUs to the last
+  // created SchedGroup first, and will consider that as the ultimate
+  // predecessor group when linking. TOP_DOWN instead links and processes the
+  // first created SchedGroup first.
+  bool IsBottomUp = 1;
 
   IGroupLPDAGMutation() = default;
 };
@@ -908,6 +1008,7 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
 
     if (DAG->IsReachable(B, A))
       continue;
+
     // tryAddEdge returns false if there is a dependency that makes adding
     // the A->B edge impossible, otherwise it returns true;
     bool Added = tryAddEdge(A, B);
@@ -1034,7 +1135,7 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   }
 
   if (foundSB || foundIGLP) {
-    PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG);
+    PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG, IsBottomUp);
     // PipelineSolver performs the mutation by adding the edges it
     // determined as the best
     PS.solve();
@@ -1114,8 +1215,10 @@ void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
   IGLPStrategyID StrategyID =
       (IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
   auto S = createIGLPStrategy(StrategyID, DAG, TII);
-  if (S->shouldApplyStrategy(DAG))
+  if (S->shouldApplyStrategy(DAG)) {
+    IsBottomUp = S->IsBottomUp;
     S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups);
+  }
 }
 
 } // namespace
