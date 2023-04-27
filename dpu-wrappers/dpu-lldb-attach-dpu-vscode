@@ -1,0 +1,3 @@
+#!/bin/bash
+DPU_LLDB_DIR="$(dirname "$0")"
+"${DPU_LLDB_DIR}/lldb-vscode" --source-quietly --source-before-file "${DPU_LLDB_DIR}/../share/upmem/lldb/lldb_init_dpu_commands" --source "${DPU_LLDB_DIR}/../share/upmem/lldb/lldb_init_attach_dpu" -- "${DPU_LLDB_DIR}/../share/upmem/lldb/host-lldb-attach-dpu" "$@"
