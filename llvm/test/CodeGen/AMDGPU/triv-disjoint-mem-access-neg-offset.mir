@@ -1,0 +1,37 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-misched --debug-only=machine-scheduler -run-pass=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Make sure handling of unsigned immediate values interpreted as negative values
+# still works for SIInstrInfo::areMemAccessesTriviallyDisjoint.
+
+# LABEL: {{^}}no_reorder_flat_load_local_store_local_load:
+# CHECK:      SU(5):   %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+# CHECK:      SU(6):   DS_WRITE_B128_gfx9 %5:vgpr_32, %4:vreg_128, 512, 0, implicit $exec
+# CHECK:      SU(7):   %6:vreg_64 = DS_READ2_B32_gfx9 %5:vgpr_32, -127, -126, 0, implicit $exec
+# CHECK:      Predecessors:
+# CHECK-NEXT: SU(6): Ord
+# CHECK-NEXT: SU(5): Data
+---
+name:            no_reorder_flat_load_local_store_local_load
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    %1:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %4:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %1(p4), 36, 0
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %1(p4), 44, 0
+    %7:vreg_64 = COPY %5
+    %6:vreg_128 = FLAT_LOAD_DWORDX4 killed %7, 0, 0, implicit $exec, implicit $flat_scr
+    %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    DS_WRITE_B128_gfx9 %8, killed %6, 512, 0, implicit $exec
+    %9:vreg_64 = DS_READ2_B32_gfx9 %8, -127, -126, 0, implicit $exec
+    %10:sreg_32 = COPY %9.sub1
+    %11:sreg_32 = COPY %9.sub0
+    %12:vgpr_32 = COPY %4
+    %13:vgpr_32 = COPY %11
+    %14:vgpr_32 = COPY %10
+    DS_WRITE2_B32_gfx9 killed %12, killed %13, killed %14, 0, 1, 0, implicit $exec
+    S_ENDPGM 0
+
+...

@@ -103,3 +103,38 @@ bb1:
   ; CHECK: llvm.resume %[[lp]] : i32
   resume i32 %resume
 }
+
+declare void @f0(ptr)
+declare void @f1(i32)
+declare void @f2({ptr, i32})
+
+; CHECK-LABEL: @landingpad_dominance
+define void @landingpad_dominance() personality ptr @__gxx_personality_v0 {
+entry:
+  ; CHECK:    %[[null:.*]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:    %[[c1:.*]] = llvm.mlir.constant(0 : i32) : i32
+  ; CHECK:    %[[undef:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i32)>
+  ; CHECK:    %[[tmpstruct:.*]] = llvm.insertvalue %[[null]], %[[undef]][0] : !llvm.struct<(ptr, i32)>
+  ; CHECK:    %[[struct:.*]] = llvm.insertvalue %[[c1]], %[[tmpstruct]][1] : !llvm.struct<(ptr, i32)>
+  ; CHECK:    llvm.call @f0(%[[null]]) : (!llvm.ptr) -> ()
+  call void @f0(ptr null)
+  ; CHECK:    llvm.call @f1(%[[c1]]) : (i32) -> ()
+  call void @f1(i32 0)
+  ; CHECK:    llvm.invoke @f0(%[[null]]) to ^[[block2:.*]] unwind ^[[block1:.*]] : (!llvm.ptr) -> ()
+  invoke void @f0(ptr null)
+      to label %exit unwind label %catch
+
+; CHECK:  ^[[block1]]:
+catch:
+  ; CHECK:    %[[lp:.*]] = llvm.landingpad (catch %[[null]] : !llvm.ptr) : !llvm.struct<(ptr, i32)>
+  %lp = landingpad { ptr, i32 } catch ptr null
+  ; CHECK:    llvm.call @f2(%[[struct]]) : (!llvm.struct<(ptr, i32)>) -> ()
+  call void @f2({ptr, i32} {ptr null, i32 0})
+  ; CHECK:    llvm.resume %[[lp]] : !llvm.struct<(ptr, i32)>
+  resume {ptr, i32} %lp
+
+; CHECK:  ^[[block2]]:
+exit:
+  ; CHECK:    llvm.return
+  ret void
+}

@@ -209,8 +209,8 @@ public:
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const;
 
-  bool canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
-                                 InstCombiner &IC) const;
+  bool canSimplifyLegacyMulToMul(const Instruction &I, const Value *Op0,
+                                 const Value *Op1, InstCombiner &IC) const;
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                     IntrinsicInst &II) const;
   std::optional<Value *> simplifyDemandedVectorEltsIntrinsic(

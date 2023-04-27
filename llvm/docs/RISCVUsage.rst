@@ -109,9 +109,11 @@ on support follow.
      ``Zicbom``       Assembly Support
      ``Zicbop``       Assembly Support
      ``Zicboz``       Assembly Support
+     ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
      ``Zifencei``     (`See Note <#riscv-i2p1-note>`__)
      ``Zihintpause``  Assembly Support
+     ``Zihpm``        (`See Note <#riscv-i2p1-note>`__)
      ``Zkn``          Supported
      ``Zknd``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
      ``Zkne``         Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -165,8 +167,8 @@ Supported
 
 .. _riscv-i2p1-note:
 
-``zicsr``, ``zifencei``
-  Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is described in "Preface to Document Version 20190608-Base-Ratified" from the specification document.  LLVM currently implements version 2.1 of the base specification. To maintain compatibility, instructions from these extensions are accepted without being in the ``-march`` string.  LLVM also allows the explicit specification of the extensions in an ``-march`` string.
+``zicntr``, ``zicsr``, ``zifencei``, ``zihpm``
+  Between versions 2.0 and 2.1 of the base I specification, a backwards incompatible change was made to remove selected instructions and CSRs from the base ISA.  These instructions were grouped into a set of new extensions, but were no longer required by the base ISA.  This change is partially described in "Preface to Document Version 20190608-Base-Ratified" from the specification document (the ``zicntr`` and ``zihpm`` bits are not mentioned).  LLVM currently implements version 2.1 of the base specification. To maintain compatibility, instructions from these extensions are accepted without being in the ``-march`` string.  LLVM also allows the explicit specification of the extensions in an ``-march`` string.
 
 Experimental Extensions
 =======================
