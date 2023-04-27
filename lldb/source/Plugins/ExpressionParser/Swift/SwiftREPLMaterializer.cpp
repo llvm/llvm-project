@@ -155,7 +155,7 @@ public:
     ret->ValueUpdated();
 
     if (variable) {
-      const size_t pvar_byte_size = ret->GetByteSize().getValueOr(0);
+      const size_t pvar_byte_size = ret->GetByteSize().value_or(0);
       uint8_t *pvar_data = ret->GetValueBytes();
 
       Status read_error;
@@ -409,7 +409,7 @@ public:
         // FIXME: This may not work if the value is not bitwise-takable.
         execution_unit->ReadMemory(
             m_persistent_variable_sp->GetValueBytes(), var_addr,
-            m_persistent_variable_sp->GetByteSize().getValueOr(0), read_error);
+            m_persistent_variable_sp->GetByteSize().value_or(0), read_error);
 
         if (!read_error.Success()) {
           err.SetErrorStringWithFormat(
