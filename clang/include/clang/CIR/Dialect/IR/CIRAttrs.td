@@ -66,14 +66,14 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "Attribute":$value);
+                        "Attribute":$elts);
 
   // Define a custom builder for the type; that removes the need to pass
   // in an MLIRContext instance, as it can be infered from the `type`.
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::cir::ArrayType":$type,
-                                        "Attribute":$value), [{
-      return $_get(type.getContext(), type, value);
+                                        "Attribute":$elts), [{
+      return $_get(type.getContext(), type, elts);
     }]>
   ];
 
@@ -95,6 +95,13 @@ def ConstStructAttr : CIR_Attr<"ConstStruct", "const_struct",
     Effectively supports "struct-like" constants. It's must be built from
     an `mlir::ArrayAttr `instance where each elements is a typed attribute
     (`mlir::TypedAttribute`).
+
+    Example:
+    ```
+    cir.global external @rgb2 = #cir.const_struct<{0 : i8,
+                                                   5 : i64, #cir.null : !cir.ptr<i8>
+                                                  }> : !cir.struct<"", i8, i64, !cir.ptr<i8>>
+    ```
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
@@ -200,10 +207,11 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
     Example:
 
     ```
-    cir.global "private" constant external @type_info_A : !cir.ptr<i8>
-    cir.global external @type_info_B = #cir.typeinfo< 
-      [#cir.global_view<@type_info_A> : !cir.ptr<i8>] : !cir.struct<"", !cir.ptr<i8>>
-    >
+    cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<i32>
+
+    cir.global external @type_info_B = #cir.typeinfo<<
+      {#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>}
+    >> : !cir.struct<"", !cir.ptr<i8>>
     ```
   }];
 
@@ -220,7 +228,6 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
   // Checks struct element types should match the array for every equivalent
   // element type.
   let genVerifyDecl = 1;
-
   let assemblyFormat = [{
     `<` $typeinfo_data `>`
   }];
@@ -238,17 +245,17 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
     Example:
     ```
     cir.global linkonce_odr @_ZTV1B = #cir.vtable<<
-      [#cir.const_array<[#cir.null : !cir.ptr<i8>,
-       #cir.global_view<@_ZTI1B> : !cir.ptr<i8>,
-       #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>,
-       #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>,
-       #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]>
-       : !cir.array<!cir.ptr<i8> x 5>]>>
-    : !cir.struct<"", !cir.array<!cir.ptr<i8> x 5>>
+        {#cir.const_array<[#cir.null : !cir.ptr<i8>,
+         #cir.global_view<@_ZTI1B> : !cir.ptr<i8>,
+         #cir.global_view<@_ZN1BD1Ev> : !cir.ptr<i8>,
+         #cir.global_view<@_ZN1BD0Ev> : !cir.ptr<i8>,
+         #cir.global_view<@_ZNK1A5quackEv> : !cir.ptr<i8>]>
+         : !cir.array<!cir.ptr<i8> x 5>}>>
+      : !cir.struct<"", !cir.array<!cir.ptr<i8> x 5>>
     ```
   }];
 
-  // `info` must be a const struct with one element, containing an array of
+  // `vtable_data` is const struct with one element, containing an array of
   // vtable information.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
                         "ConstStructAttr":$vtable_data);
@@ -260,7 +267,7 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
     }]>
   ];
 
-  // let genVerifyDecl = 1;
+  let genVerifyDecl = 1;
   let assemblyFormat = [{
     `<` $vtable_data `>`
   }];
