@@ -16,6 +16,7 @@
 
 #include "hwasan_flags.h"
 #include "hwasan_interface_internal.h"
+#include "hwasan_mapping.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
@@ -77,6 +78,16 @@ const unsigned kRecordAddrBaseTagShift = 3;
 const unsigned kRecordFPShift = 48;
 const unsigned kRecordFPLShift = 4;
 const unsigned kRecordFPModulus = 1 << (64 - kRecordFPShift + kRecordFPLShift);
+
+static inline bool InTaggableRegion(uptr addr) {
+#if defined(HWASAN_ALIASING_MODE)
+  // Aliases are mapped next to shadow so that the upper bits match the shadow
+  // base.
+  return (addr >> kTaggableRegionCheckShift) ==
+         (__hwasan::GetShadowOffset() >> kTaggableRegionCheckShift);
+#endif
+  return true;
+}
 
 static inline tag_t GetTagFromPointer(uptr p) {
   return (p >> kAddressTagShift) & kTagMask;

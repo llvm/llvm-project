@@ -418,8 +418,8 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
 FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
-  static ConstString g_sdk_suffix = ConstString(".sdk");
-  static ConstString g_kdk_suffix = ConstString(".kdk");
+  static constexpr llvm::StringLiteral g_sdk_suffix = ".sdk";
+  static constexpr llvm::StringLiteral g_kdk_suffix = ".kdk";
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
   FileSpec file_spec(path);
@@ -480,11 +480,11 @@ FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path,
     bool recurse) {
-  static ConstString g_kext_suffix = ConstString(".kext");
-  static ConstString g_dsym_suffix = ConstString(".dSYM");
+  static constexpr llvm::StringLiteral g_kext_suffix = ".kext";
+  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
 
   FileSpec file_spec(path);
-  ConstString file_spec_extension = file_spec.GetFileNameExtension();
+  llvm::StringRef file_spec_extension = file_spec.GetFileNameExtension();
 
   Log *log = GetLog(LLDBLog::Platform);
 
@@ -664,7 +664,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
 //    /dir/dir/mach.development.t7004
 bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
     const FileSpec &kernel_dsym) {
-  static ConstString g_dsym_suffix = ConstString(".dSYM");
+  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
   std::string possible_path = kernel_dsym.GetPath();
   if (kernel_dsym.GetFileNameExtension() != g_dsym_suffix)
     return false;
@@ -694,7 +694,7 @@ bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
 std::vector<FileSpec>
 PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(FileSpec dsym_bundle) {
   std::vector<FileSpec> results;
-  static ConstString g_dsym_suffix = ConstString(".dSYM");
+  static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
   if (dsym_bundle.GetFileNameExtension() != g_dsym_suffix) {
     return results;
   }

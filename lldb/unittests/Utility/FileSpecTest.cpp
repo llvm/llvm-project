@@ -456,7 +456,7 @@ TEST(FileSpecTest, TestFileNameExtensions) {
   FileSpec just_dot = PosixSpec("/tmp/bar.");
 
   EXPECT_TRUE(dylib.GetFileNameExtension() == ".dylib");
-  EXPECT_TRUE(exe.GetFileNameExtension() == ConstString(nullptr));
+  EXPECT_TRUE(exe.GetFileNameExtension() == llvm::StringRef());
   EXPECT_TRUE(dSYM.GetFileNameExtension() == ".dSYM");
   EXPECT_TRUE(just_dot.GetFileNameExtension() == ".");
 
@@ -464,7 +464,7 @@ TEST(FileSpecTest, TestFileNameExtensions) {
   FileSpec win_noext = WindowsSpec("C:\\tmp\\foo");
 
   EXPECT_TRUE(dll.GetFileNameExtension() == ".dll");
-  EXPECT_TRUE(win_noext.GetFileNameExtension() == ConstString(nullptr));
+  EXPECT_TRUE(win_noext.GetFileNameExtension() == llvm::StringRef());
 }
 
 TEST(FileSpecTest, TestFileNameStrippingExtension) {

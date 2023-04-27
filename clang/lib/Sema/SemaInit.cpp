@@ -6885,7 +6885,7 @@ PerformConstructorInitialization(Sema &S,
 
   if (isExplicitTemporary(Entity, Kind, NumArgs)) {
     // An explicitly-constructed temporary, e.g., X(1, 2).
-    if (S.DiagnoseUseOfDecl(Constructor, Loc))
+    if (S.DiagnoseUseOfDecl(Step.Function.FoundDecl, Loc))
       return ExprError();
 
     TypeSourceInfo *TSInfo = Entity.getTypeSourceInfo();
@@ -6900,8 +6900,6 @@ PerformConstructorInitialization(Sema &S,
     if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(
             Step.Function.FoundDecl.getDecl())) {
       CalleeDecl = S.findInheritingConstructor(Loc, Constructor, Shadow);
-      if (S.DiagnoseUseOfDecl(CalleeDecl, Loc))
-        return ExprError();
     }
     S.MarkFunctionReferenced(Loc, CalleeDecl);
 
@@ -10608,7 +10606,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
     // Make sure we didn't select an unusable deduction guide, and mark it
     // as referenced.
-    DiagnoseUseOfDecl(Best->Function, Kind.getLocation());
+    DiagnoseUseOfDecl(Best->FoundDecl, Kind.getLocation());
     MarkFunctionReferenced(Kind.getLocation(), Best->Function);
     break;
   }

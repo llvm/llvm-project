@@ -57,8 +57,6 @@ def riscv_call      : SDNode<"RISCVISD::CALL", SDT_RISCVCall,
                               SDNPVariadic]>;
 def riscv_ret_glue  : SDNode<"RISCVISD::RET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def riscv_uret_glue : SDNode<"RISCVISD::URET_GLUE", SDTNone,
-                             [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
@@ -822,12 +820,6 @@ def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
 //===----------------------------------------------------------------------===//
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in {
-def URET : Priv<"uret", 0b0000000>, Sched<[]> {
-  let rd = 0;
-  let rs1 = 0;
-  let rs2 = 0b00010;
-}
-
 def SRET : Priv<"sret", 0b0001000>, Sched<[]> {
   let rd = 0;
   let rs1 = 0;
@@ -1562,7 +1554,6 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []>,
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
-def : Pat<(riscv_uret_glue), (URET X0, X0)>;
 def : Pat<(riscv_sret_glue), (SRET X0, X0)>;
 def : Pat<(riscv_mret_glue), (MRET X0, X0)>;
 
