@@ -7748,8 +7748,7 @@ static void write_protoent(void *ctx, struct __sanitizer_protoent *p) {
   for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, internal_strlen(*pp) + 1);
 
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
-                                  pp_size * sizeof(char **));
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases, pp_size * sizeof(char *));
 }
 
 INTERCEPTOR(struct __sanitizer_protoent *, getprotoent) {
@@ -7855,8 +7854,7 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetent) {
     for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, internal_strlen(*nn) + 1);
 
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
-                                   nn_size * sizeof(char **));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases, nn_size * sizeof(char *));
   }
   return n;
 }
@@ -7877,8 +7875,7 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetbyname, const char *name) {
     for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, internal_strlen(*nn) + 1);
 
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
-                                   nn_size * sizeof(char **));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases, nn_size * sizeof(char *));
   }
   return n;
 }
@@ -7897,8 +7894,7 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetbyaddr, u32 net, int type) {
     for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, internal_strlen(*nn) + 1);
 
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
-                                   nn_size * sizeof(char **));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases, nn_size * sizeof(char *));
   }
   return n;
 }
