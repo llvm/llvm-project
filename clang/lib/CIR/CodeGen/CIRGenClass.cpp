@@ -1145,3 +1145,80 @@ mlir::Value CIRGenFunction::GetVTTParameter(GlobalDecl GD, bool ForVirtualBase,
     llvm_unreachable("NYI");
   }
 }
+
+Address
+CIRGenFunction::getAddressOfBaseClass(Address Value,
+                                      const CXXRecordDecl *Derived,
+                                      CastExpr::path_const_iterator PathBegin,
+                                      CastExpr::path_const_iterator PathEnd,
+                                      bool NullCheckValue, SourceLocation Loc) {
+  assert(PathBegin != PathEnd && "Base path should not be empty!");
+
+  CastExpr::path_const_iterator Start = PathBegin;
+  const CXXRecordDecl *VBase = nullptr;
+
+  // Sema has done some convenient canonicalization here: if the
+  // access path involved any virtual steps, the conversion path will
+  // *start* with a step down to the correct virtual base subobject,
+  // and hence will not require any further steps.
+  if ((*Start)->isVirtual()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Compute the static offset of the ultimate destination within its
+  // allocating subobject (the virtual base, if there is one, or else
+  // the "complete" object that we see).
+  CharUnits NonVirtualOffset = CGM.computeNonVirtualBaseClassOffset(
+      VBase ? VBase : Derived, Start, PathEnd);
+
+  // If there's a virtual step, we can sometimes "devirtualize" it.
+  // For now, that's limited to when the derived type is final.
+  // TODO: "devirtualize" this for accesses to known-complete objects.
+  if (VBase && Derived->hasAttr<FinalAttr>()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Get the base pointer type.
+  auto BaseValueTy = convertType((PathEnd[-1])->getType());
+  assert(!UnimplementedFeature::addressSpace());
+  // auto BasePtrTy = builder.getPointerTo(BaseValueTy);
+  // QualType DerivedTy = getContext().getRecordType(Derived);
+  // CharUnits DerivedAlign = CGM.getClassPointerAlignment(Derived);
+
+  // If the static offset is zero and we don't have a virtual step,
+  // just do a bitcast; null checks are unnecessary.
+  if (NonVirtualOffset.isZero() && !VBase) {
+    llvm_unreachable("NYI");
+  }
+
+  // Skip over the offset (and the vtable load) if we're supposed to
+  // null-check the pointer.
+  if (NullCheckValue) {
+    llvm_unreachable("NYI");
+  }
+
+  if (sanitizePerformTypeCheck()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Compute the virtual offset.
+  mlir::Value VirtualOffset{};
+  if (VBase) {
+    llvm_unreachable("NYI");
+  }
+
+  // Apply both offsets.
+  Value = ApplyNonVirtualAndVirtualOffset(*this, Value, NonVirtualOffset,
+                                          VirtualOffset, Derived, VBase);
+  // Cast to the destination type.
+  Value = builder.createElementBitCast(Value.getPointer().getLoc(), Value,
+                                       BaseValueTy);
+
+  // Build a phi if we needed a null check.
+  if (NullCheckValue) {
+    llvm_unreachable("NYI");
+  }
+
+  llvm_unreachable("NYI");
+  return Value;
+}

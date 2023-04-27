@@ -48,7 +48,7 @@ class AggExprEmitter;
 
 namespace cir {
 
-// FIXME: for now we are reusing this from lib/Clang/CodeGenFunction.h, which
+// FIXME: for now we are reusing this from lib/Clang/CIRGenFunction.h, which
 // isn't available in the include dir. Same for getEvaluationKind below.
 enum TypeEvaluationKind { TEK_Scalar, TEK_Complex, TEK_Aggregate };
 struct CGCoroData;
@@ -732,6 +732,7 @@ public:
                                         ReturnValueSlot ReturnValue);
   void buildNullInitialization(mlir::Location loc, Address DestPtr,
                                QualType Ty);
+  bool shouldNullCheckClassCastValue(const CastExpr *CE);
 
   void buildCXXTemporary(const CXXTemporary *Temporary, QualType TempType,
                          Address Ptr);
@@ -1075,7 +1076,7 @@ public:
   /// Given an expression of pointer type, try to
   /// derive a more accurate bound on the alignment of the pointer.
   Address buildPointerWithAlignment(const clang::Expr *E,
-                                    LValueBaseInfo *BaseInfo);
+                                    LValueBaseInfo *BaseInfo = nullptr);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -1220,6 +1221,11 @@ public:
                                                 const CXXRecordDecl *Derived,
                                                 const CXXRecordDecl *Base,
                                                 bool BaseIsVirtual);
+
+  Address getAddressOfBaseClass(Address Value, const CXXRecordDecl *Derived,
+                                CastExpr::path_const_iterator PathBegin,
+                                CastExpr::path_const_iterator PathEnd,
+                                bool NullCheckValue, SourceLocation Loc);
 
   /// Emit code for the start of a function.
   /// \param Loc       The location to be associated with the function.
@@ -1580,6 +1586,42 @@ public:
         CreateMemTemp(T, Loc, Name, Alloca), T.getQualifiers(),
         AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
         AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+  }
+};
+
+/// A specialization of DominatingValue for RValue.
+template <> struct DominatingValue<RValue> {
+  typedef RValue type;
+  class saved_type {
+    enum Kind {
+      ScalarLiteral,
+      ScalarAddress,
+      AggregateLiteral,
+      AggregateAddress,
+      ComplexAddress
+    };
+
+    llvm::Value *Value;
+    llvm::Type *ElementType;
+    unsigned K : 3;
+    unsigned Align : 29;
+    saved_type(llvm::Value *v, llvm::Type *e, Kind k, unsigned a = 0)
+        : Value(v), ElementType(e), K(k), Align(a) {}
+
+  public:
+    static bool needsSaving(RValue value);
+    static saved_type save(CIRGenFunction &CGF, RValue value);
+    RValue restore(CIRGenFunction &CGF);
+
+    // implementations in CGCleanup.cpp
+  };
+
+  static bool needsSaving(type value) { return saved_type::needsSaving(value); }
+  static saved_type save(CIRGenFunction &CGF, type value) {
+    return saved_type::save(CGF, value);
+  }
+  static type restore(CIRGenFunction &CGF, saved_type value) {
+    return value.restore(CGF);
   }
 };
 

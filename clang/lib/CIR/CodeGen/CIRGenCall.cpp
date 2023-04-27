@@ -1103,3 +1103,13 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
 
   return arrangeFreeFunctionType(FTy.castAs<FunctionProtoType>());
 }
+
+RValue CallArg::getRValue(CIRGenFunction &CGF, mlir::Location loc) const {
+  if (!HasLV)
+    return RV;
+  LValue Copy = CGF.makeAddrLValue(CGF.CreateMemTemp(Ty, loc), Ty);
+  CGF.buildAggregateCopy(Copy, LV, Ty, AggValueSlot::DoesNotOverlap,
+                         LV.isVolatile());
+  IsUsed = true;
+  return RValue::getAggregate(Copy.getAddress());
+}

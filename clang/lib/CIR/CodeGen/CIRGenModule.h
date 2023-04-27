@@ -215,6 +215,11 @@ public:
   getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty = {},
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
+  CharUnits
+  computeNonVirtualBaseClassOffset(const CXXRecordDecl *DerivedClass,
+                                   CastExpr::path_const_iterator Start,
+                                   CastExpr::path_const_iterator End);
+
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
   /// will be created and all uses of the old variable will be replaced with a
