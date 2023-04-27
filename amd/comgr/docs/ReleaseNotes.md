@@ -19,6 +19,8 @@ code bases.
 legal comgr-objdump option. However registering this as an LLVM option by Comgr
 prevents other LLVM tools or instances from registering a -h option in the same
 process, which is an issue because -h is a common short form for -help.
+-  Updated default code object version used when linking code object specific
+device library from v4 to v5
 
 New Features
 ------------
