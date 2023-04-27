@@ -580,60 +580,6 @@ bool __pattern_equal(
 }
 
 //------------------------------------------------------------------------
-// find_if
-//------------------------------------------------------------------------
-template <class _ForwardIterator, class _Predicate>
-_ForwardIterator
-__brick_find_if(_ForwardIterator __first,
-                _ForwardIterator __last,
-                _Predicate __pred,
-                /*is_vector=*/std::false_type) noexcept {
-  return std::find_if(__first, __last, __pred);
-}
-
-template <class _RandomAccessIterator, class _Predicate>
-_RandomAccessIterator
-__brick_find_if(_RandomAccessIterator __first,
-                _RandomAccessIterator __last,
-                _Predicate __pred,
-                /*is_vector=*/std::true_type) noexcept {
-  typedef typename std::iterator_traits<_RandomAccessIterator>::difference_type _SizeType;
-  return __unseq_backend::__simd_first(
-      __first, _SizeType(0), __last - __first, [&__pred](_RandomAccessIterator __it, _SizeType __i) {
-        return __pred(__it[__i]);
-      });
-}
-
-template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-_ForwardIterator __pattern_find_if(
-    _Tag, _ExecutionPolicy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) noexcept {
-  return __internal::__brick_find_if(__first, __last, __pred, typename _Tag::__is_vector{});
-}
-
-template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Predicate>
-_RandomAccessIterator __pattern_find_if(
-    __parallel_tag<_IsVector> __tag,
-    _ExecutionPolicy&& __exec,
-    _RandomAccessIterator __first,
-    _RandomAccessIterator __last,
-    _Predicate __pred) {
-  using __backend_tag = typename decltype(__tag)::__backend_tag;
-
-  return __internal::__except_handler([&]() {
-    return __internal::__parallel_find(
-        __backend_tag{},
-        std::forward<_ExecutionPolicy>(__exec),
-        __first,
-        __last,
-        [__pred](_RandomAccessIterator __i, _RandomAccessIterator __j) {
-          return __internal::__brick_find_if(__i, __j, __pred, _IsVector{});
-        },
-        std::less<typename std::iterator_traits<_RandomAccessIterator>::difference_type>(),
-        /*is_first=*/true);
-  });
-}
-
-//------------------------------------------------------------------------
 // find_end
 //------------------------------------------------------------------------
 
