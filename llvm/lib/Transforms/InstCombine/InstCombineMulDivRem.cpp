@@ -1920,8 +1920,10 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
   // urem Op0, (sext i1 X) --> (Op0 == -1) ? 0 : Op0
   Value *X;
   if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
-    Value *Cmp = Builder.CreateICmpEQ(Op0, ConstantInt::getAllOnesValue(Ty));
-    return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), Op0);
+    Value *FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
+    Value *Cmp =
+        Builder.CreateICmpEQ(FrozenOp0, ConstantInt::getAllOnesValue(Ty));
+    return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
   }
 
   // For "(X + 1) % Op1" and if (X u< Op1) => (X + 1) == Op1 ? 0 : X + 1 .
