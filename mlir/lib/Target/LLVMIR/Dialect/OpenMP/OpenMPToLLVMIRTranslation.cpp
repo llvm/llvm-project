@@ -1523,8 +1523,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     // DataOp has only one region associated with it.
     auto &region = cast<omp::DataOp>(op).getRegion();
     builder.restoreIP(codeGenIP);
-    convertOmpOpRegions(region, "omp.data.region", builder, moduleTranslation,
-                        bodyGenStatus);
+    bodyGenStatus = inlineConvertOmpRegions(region, "omp.data.region", builder,
+                                            moduleTranslation);
   };
 
   if (isa<omp::DataOp>(op)) {
