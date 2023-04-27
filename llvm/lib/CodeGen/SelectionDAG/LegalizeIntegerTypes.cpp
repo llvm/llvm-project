@@ -286,6 +286,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::IS_FPCLASS:
     Res = PromoteIntRes_IS_FPCLASS(N);
     break;
+  case ISD::FFREXP:
+    Res = PromoteIntRes_FFREXP(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -1205,6 +1208,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_IS_FPCLASS(SDNode *N) {
   SDValue Test = N->getOperand(1);
   EVT NResVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   return DAG.getNode(ISD::IS_FPCLASS, DL, NResVT, Arg, Test);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_FFREXP(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(1));
+  EVT VT = N->getValueType(0);
+
+  SDLoc dl(N);
+  SDValue Res =
+      DAG.getNode(N->getOpcode(), dl, DAG.getVTList(VT, NVT), N->getOperand(0));
+
+  ReplaceValueWith(SDValue(N, 0), Res);
+  return Res.getValue(1);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_SHL(SDNode *N) {

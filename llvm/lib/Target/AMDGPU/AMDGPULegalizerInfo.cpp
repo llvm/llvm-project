@@ -918,6 +918,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .maxScalarIf(typeIs(0, S16), 1, S16)
       .clampScalar(1, S32, S32)
       .lower();
+
+    getActionDefinitionsBuilder(G_FFREXP)
+      .customFor({{S32, S32}, {S64, S32}, {S16, S16}, {S16, S32}})
+      .scalarize(0)
+      .lower();
   } else {
     getActionDefinitionsBuilder(G_FSQRT)
       .legalFor({S32, S64})
@@ -941,6 +946,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .legalFor({{S32, S32}, {S64, S32}})
       .scalarize(0)
       .clampScalar(0, S32, S64)
+      .clampScalar(1, S32, S32)
+      .lower();
+
+    getActionDefinitionsBuilder(G_FFREXP)
+      .customFor({{S32, S32}, {S64, S32}})
+      .scalarize(0)
+      .minScalar(0, S32)
       .clampScalar(1, S32, S32)
       .lower();
   }
@@ -1985,6 +1997,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFMad(MI, MRI, B);
   case TargetOpcode::G_FDIV:
     return legalizeFDIV(MI, MRI, B);
+  case TargetOpcode::G_FFREXP:
+    return legalizeFFREXP(MI, MRI, B);
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_UDIVREM:
@@ -4382,6 +4396,41 @@ bool AMDGPULegalizerInfo::legalizeFDIV64(MachineInstr &MI,
       .addUse(RHS)
       .addUse(LHS)
       .setMIFlags(Flags);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFFREXP(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  Register Res0 = MI.getOperand(0).getReg();
+  Register Res1 = MI.getOperand(1).getReg();
+  Register Val = MI.getOperand(2).getReg();
+  uint16_t Flags = MI.getFlags();
+
+  LLT Ty = MRI.getType(Res0);
+  LLT InstrExpTy = Ty == LLT::scalar(16) ? LLT::scalar(16) : LLT::scalar(32);
+
+  auto Mant = B.buildIntrinsic(Intrinsic::amdgcn_frexp_mant, {Ty}, false)
+                  .addUse(Val)
+                  .setMIFlags(Flags);
+  auto Exp = B.buildIntrinsic(Intrinsic::amdgcn_frexp_exp, {InstrExpTy}, false)
+                 .addUse(Val)
+                 .setMIFlags(Flags);
+
+  if (ST.hasFractBug()) {
+    auto Fabs = B.buildFAbs(Ty, Val);
+    auto Inf = B.buildFConstant(Ty, APFloat::getInf(getFltSemanticForLLT(Ty)));
+    auto IsFinite =
+        B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), Fabs, Inf, Flags);
+    auto Zero = B.buildConstant(InstrExpTy, 0);
+    Exp = B.buildSelect(InstrExpTy, IsFinite, Exp, Zero);
+    Mant = B.buildSelect(Ty, IsFinite, Mant, Val);
+  }
+
+  B.buildCopy(Res0, Mant);
+  B.buildSExtOrTrunc(Res1, Exp);
 
   MI.eraseFromParent();
   return true;
