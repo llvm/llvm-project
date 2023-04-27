@@ -1,6 +1,5 @@
 // Test attempts to build bogus CIR
 // RUN: cir-tool %s -verify-diagnostics -split-input-file
-// XFAIL: *
 
 // expected-error@+2 {{'cir.const' op nullptr expects pointer type}}
 cir.func @p0() {
@@ -272,8 +271,7 @@ module {
   // rid of this somehow in favor of clarity?
   cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<i32>
 
-  cir.global external @type_info_B = #cir.typeinfo< // expected-error {{typeinfo element must match result element type}} 
-    [#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i16>]
-    : !cir.struct<"", !cir.ptr<i8>>
-  >
+  cir.global external @type_info_B = #cir.typeinfo<<{ // expected-error {{element at index 0 has type '!cir.ptr<i8>' but return type for this element is '!cir.ptr<i32>'}}
+    #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>}>>
+    : !cir.struct<"", !cir.ptr<i32>>
 } // expected-error {{'cir.global' expected constant attribute to match type}}

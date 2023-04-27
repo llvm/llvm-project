@@ -63,7 +63,15 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 
 static void printConstStructMembers(mlir::AsmPrinter &p, mlir::Type type,
                                     mlir::ArrayAttr members) {
-  p << members;
+  p << "{";
+  unsigned i = 0, e = members.size();
+  while (i < e) {
+    p << members[i];
+    if (e > 0 && i < e - 1)
+      p << ",";
+    i++;
+  }
+  p << "}";
 }
 
 static ParseResult parseConstStructMembers(::mlir::AsmParser &parser,
@@ -118,7 +126,9 @@ LogicalResult ConstStructAttr::verify(
       return failure();
     }
     if (member != m.getType()) {
-      emitError() << "input element type must match result element type";
+      emitError() << "element at index " << attrIdx << " has type "
+                  << m.getType() << " but return type for this element is "
+                  << member;
       return failure();
     }
     attrIdx++;
