@@ -182,6 +182,56 @@ def ArgKind {
   int MatchType  = 7;
 }
 
+// Encode placeholder.
+// [15:8] is the ID used how to resolve ArgCode.
+
+// (ACIdx << 3) | ArgCode
+class EncAnyType<int ArgCode=0> {
+  int ID = 0x100;
+  int ret = !or(ID, ArgCode);
+}
+
+// (Mapping[Num] << 3) | AK.MatchType
+class EncMatchType<int Num=0> {
+  int ID = 0x200;
+  int ret = !or(ID, Num);
+}
+
+// (Mapping[Num] << 3) | ArgCodes[Mapping[Num]]
+class EncSameWidth<int Num=0> {
+  int ID = 0x300;
+  int ret = !or(ID, Num);
+}
+
+// ACIdx
+class EncNextArgA<int dummy=0> {
+  int ID = 0x400;
+  int ret = !or(ID, dummy);
+}
+
+// Mapping[Num]
+class EncNextArgN<int Num=0> {
+  int ID = 0x500;
+  int ret = !or(ID, Num);
+}
+
+class ResolveArgCode<
+    list<int> Mapping,
+    list<int> ArgCodes,
+    int ACIdx,
+    int ax> {
+  int ah = !and(ax, 0xFF00);
+  int al = !and(ax, 0x00FF);
+  int num = Mapping[al];
+  int ret = !cond(
+    !eq(ah, EncAnyType<>.ID)   : !or(!shl(ACIdx, 3), al),
+    !eq(ah, EncMatchType<>.ID) : !or(!shl(num, 3), ArgKind.MatchType),
+    !eq(ah, EncSameWidth<>.ID) : !or(!shl(num, 3), ArgCodes[num]),
+    !eq(ah, EncNextArgA<>.ID)  : ACIdx,
+    !eq(ah, EncNextArgN<>.ID)  : num,
+    true : al);
+}
+
 //===----------------------------------------------------------------------===//
 // IIT_Info
 //===----------------------------------------------------------------------===//
@@ -268,6 +318,25 @@ def IIT_I2 : IIT_Int<2, 57>;
 def IIT_I4 : IIT_Int<4, 58>;
 }
 
+defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
+  !or(!isa<IIT_VT>(iit), !isa<IIT_Int>(iit)));
+
+defvar IIT_all_VectorTypes = !filter(iit, IIT_all,
+  !isa<IIT_Vec>(iit));
+
+defvar IIT_RetNumbers = [
+  [IIT_Done.Number],
+  []<int>,
+  [IIT_STRUCT2.Number],
+  [IIT_STRUCT3.Number],
+  [IIT_STRUCT4.Number],
+  [IIT_STRUCT5.Number],
+  [IIT_STRUCT6.Number],
+  [IIT_STRUCT7.Number],
+  [IIT_STRUCT8.Number],
+  [IIT_STRUCT9.Number],
+];
+
 //===----------------------------------------------------------------------===//
 // Types used by intrinsics.
 //===----------------------------------------------------------------------===//
@@ -275,19 +344,69 @@ def IIT_I4 : IIT_Int<4, 58>;
 class LLVMType<ValueType vt> {
   ValueType VT = vt;
   int isAny = vt.isOverloaded;
+
+  int ArgCode = ?;
+  int Number = ?;
+
+  list<IIT_Base> IITs = !filter(iit, IIT_all_FixedTypes,
+    !not(!empty(!filter(iit_vt, iit.VTs,
+      !eq(iit_vt, !if(vt.isVector, vt.ElementType, vt))))));
+  assert !le(!size(IITs), 1), "Duplicate type";
+
+  list<IIT_Base> IIT_Vecs = !if(vt.isVector,
+    !filter(iit, IIT_all_VectorTypes,
+      !not(!empty(!filter(iit_vt, iit.VTs, !and(
+        !eq(iit_vt.ElementType, vt.ElementType),
+        !eq(iit_vt.nElem, vt.nElem)))))),
+    []);
+  assert !le(!size(IIT_Vecs), 1), "Duplicate type";
+
+  list<int> Sig = !listconcat(
+    !if(vt.isScalable, [IIT_SCALABLE_VEC.Number], []),
+    !foreach(iit, IIT_Vecs, iit.Number),
+    !foreach(iit, IITs,     iit.Number));
+}
+
+class LLVMAnyType<ValueType vt> : LLVMType<vt> {
+  let ArgCode = !cond(
+    !eq(vt, Any)     : ArgKind.Any,
+    !eq(vt, iAny)    : ArgKind.AnyInteger,
+    !eq(vt, fAny)    : ArgKind.AnyFloat,
+    !eq(vt, vAny)    : ArgKind.AnyVector,
+    !eq(vt, iPTRAny) : ArgKind.AnyPointer,
+  );
+  let Sig = [
+    IIT_ARG.Number,
+    EncAnyType<ArgCode>.ret,
+  ];
+
+  assert isAny, "LLVMAnyType.VT should have isOverloaded";
 }
 
 class LLVMQualPointerType<LLVMType elty, int addrspace>
   : LLVMType<iPTR>{
   LLVMType ElTy = elty;
-  int AddrSpace = addrspace;
+  assert !and(!le(0, addrspace), !le(addrspace, 255)),
+    "Address space exceeds 255";
+
+  // D63507: LLVMPointerType<llvm_any_ty>
+  let isAny = elty.isAny;
+
+  let Sig = !listconcat(
+    !if(addrspace, [
+      IIT_ANYPTR.Number,
+      addrspace,
+    ], [
+      IIT_PTR.Number,
+    ]),
+    ElTy.Sig);
 }
 
 class LLVMPointerType<LLVMType elty>
   : LLVMQualPointerType<elty, 0>;
 
 class LLVMAnyPointerType<LLVMType elty>
-  : LLVMType<iPTRAny>{
+  : LLVMAnyType<iPTRAny> {
   LLVMType ElTy = elty;
 
   assert isAny, "iPTRAny should have isOverloaded";
@@ -299,52 +418,74 @@ class LLVMAnyPointerType<LLVMType elty>
 //   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_anyfloat_ty, LLVMMatchType<0>]>
 // has two overloaded types, the 2nd and 3rd arguments.  LLVMMatchType<0>
 // refers to the first overloaded type, which is the 2nd argument.
-class LLVMMatchType<int num>
+class LLVMMatchType<int num, IIT_Base IIT_Info = IIT_ARG>
   : LLVMType<OtherVT>{
-  int Number = num;
+  let Number = num;
+  let Sig = [
+    IIT_Info.Number,
+    EncMatchType<num>.ret,
+  ];
+}
+
+class LLVMMatchTypeNextArg<int num, IIT_Base IIT_Info>
+  : LLVMMatchType<num, IIT_Info> {
+  let Sig = [
+    IIT_Info.Number,
+    EncNextArgA<>.ret,
+    EncNextArgN<num>.ret,
+  ];
 }
 
 // Match the type of another intrinsic parameter that is expected to be based on
 // an integral type (i.e. either iN or <N x iM>), but change the scalar size to
 // be twice as wide or half as wide as the other type.  This is only useful when
 // the intrinsic is overloaded, so the matched type should be declared as iAny.
-class LLVMExtendedType<int num> : LLVMMatchType<num>;
-class LLVMTruncatedType<int num> : LLVMMatchType<num>;
+class LLVMExtendedType<int num> : LLVMMatchType<num, IIT_EXTEND_ARG>;
+class LLVMTruncatedType<int num> : LLVMMatchType<num, IIT_TRUNC_ARG>;
 
 // Match the scalar/vector of another intrinsic parameter but with a different
 // element type. Either both are scalars or both are vectors with the same
 // number of elements.
 class LLVMScalarOrSameVectorWidth<int idx, LLVMType elty>
-  : LLVMMatchType<idx> {
-  ValueType ElTy = elty.VT;
+  : LLVMMatchType<idx, IIT_SAME_VEC_WIDTH_ARG> {
+  let Sig = !listconcat([
+    IIT_SAME_VEC_WIDTH_ARG.Number,
+    EncSameWidth<idx>.ret,
+  ], elty.Sig);
 }
 
-class LLVMPointerTo<int num> : LLVMMatchType<num>;
-class LLVMPointerToElt<int num> : LLVMMatchType<num>;
-class LLVMAnyPointerToElt<int num> : LLVMMatchType<num>;
-class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;
-class LLVMVectorElementType<int num> : LLVMMatchType<num>;
+class LLVMPointerTo<int num> : LLVMMatchType<num, IIT_PTR_TO_ARG>;
+class LLVMPointerToElt<int num> : LLVMMatchType<num, IIT_PTR_TO_ELT>;
+class LLVMAnyPointerToElt<int num>
+  : LLVMMatchTypeNextArg<num, IIT_ANYPTR_TO_ELT>;
+class LLVMVectorOfAnyPointersToElt<int num>
+  : LLVMMatchTypeNextArg<num, IIT_VEC_OF_ANYPTRS_TO_ELT>;
+class LLVMVectorElementType<int num> : LLVMMatchType<num, IIT_VEC_ELEMENT>;
 
 // Match the type of another intrinsic parameter that is expected to be a
 // vector type, but change the element count to be half as many.
-class LLVMHalfElementsVectorType<int num> : LLVMMatchType<num>;
+class LLVMHalfElementsVectorType<int num>
+  : LLVMMatchType<num, IIT_HALF_VEC_ARG>;
 
 // Match the type of another intrinsic parameter that is expected to be a
 // vector type (i.e. <N x iM>) but with each element subdivided to
 // form a vector with more elements that are smaller than the original.
-class LLVMSubdivide2VectorType<int num> : LLVMMatchType<num>;
-class LLVMSubdivide4VectorType<int num> : LLVMMatchType<num>;
+class LLVMSubdivide2VectorType<int num>
+  : LLVMMatchType<num, IIT_SUBDIVIDE2_ARG>;
+class LLVMSubdivide4VectorType<int num>
+  : LLVMMatchType<num, IIT_SUBDIVIDE4_ARG>;
 
 // Match the element count and bit width of another intrinsic parameter, but
 // change the element type to an integer.
-class LLVMVectorOfBitcastsToInt<int num> : LLVMMatchType<num>;
+class LLVMVectorOfBitcastsToInt<int num>
+  : LLVMMatchType<num, IIT_VEC_OF_BITCASTS_TO_INT>;
 
 def llvm_void_ty       : LLVMType<isVoid>;
 
-def llvm_any_ty        : LLVMType<Any>;
-def llvm_anyint_ty     : LLVMType<iAny>;
-def llvm_anyfloat_ty   : LLVMType<fAny>;
-def llvm_anyvector_ty  : LLVMType<vAny>;
+def llvm_any_ty        : LLVMAnyType<Any>;
+def llvm_anyint_ty     : LLVMAnyType<iAny>;
+def llvm_anyfloat_ty   : LLVMAnyType<fAny>;
+def llvm_anyvector_ty  : LLVMAnyType<vAny>;
 
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;
@@ -450,6 +591,60 @@ def llvm_externref_ty  : LLVMType<externref>;
 def llvm_funcref_ty    : LLVMType<funcref>;
 
 //===----------------------------------------------------------------------===//
+
+class MakeIdx<list<int> Set> {
+  list<int> IdxsR = !foreach(i, !range(Set),
+    !if(Set[i],
+      !foldl(0, !range(0, i), m, j, !add(m, Set[j])),
+      -1));
+
+  list<int> RIdxsR = !foreach(i, !range(Set),
+    !foldl(-1, !range(Set), m, j,
+      !if(!and(Set[j], !eq(IdxsR[j], i)), j, m)));
+
+  list<int> Idxs  = !foreach(a, IdxsR,  !if(!ge(a, 0), a, ?));
+  list<int> RIdxs = !foreach(a, RIdxsR, !if(!ge(a, 0), a, ?));
+}
+
+class TypeInfoGen<
+    list<LLVMType> RetTypes,
+    list<LLVMType> ParamTypes> {
+  list<LLVMType> AllTypes = !listconcat(RetTypes, ParamTypes);
+
+  // ArgCodes for NextArg -- isAny or MatchTypeNextArg
+  list<int> ACIdxs = MakeIdx<
+    !foreach(ty, AllTypes,
+      !or(ty.isAny, !isa<LLVMMatchTypeNextArg>(ty)))>.Idxs;
+
+  // ArgCodes (only for isAny or MatchTypeNextArg)
+  list<LLVMType> ACTys = !filter(ty, AllTypes,
+    !or(ty.isAny, !isa<LLVMMatchTypeNextArg>(ty)));
+
+  list<int> ArgCodes = !foreach(ty, ACTys, ty.ArgCode);
+
+  // Mappings MatchTypeIdx to ACTys
+  list<int> MappingRIdxs = MakeIdx<
+    !foreach(ty, ACTys, ty.isAny)>.RIdxs;
+
+  // D63507: Exclude LLVMPointerType<llvm_any_ty>
+  bit isOverloaded = !not(!empty(!filter(ty, AllTypes,
+    !isa<LLVMAnyType>(ty))));
+
+  list<LLVMType> Types = !foreach(ty, AllTypes,
+    !if(!isa<LLVMMatchType>(ty), ACTys[MappingRIdxs[ty.Number]], ty));
+
+  list<list<int>> TypeSig = !listconcat(
+    [IIT_RetNumbers[!size(RetTypes)]],
+    !foreach(i, !range(AllTypes),
+      !foreach(a, AllTypes[i].Sig,
+        ResolveArgCode<
+          MappingRIdxs,
+          ArgCodes,
+          ACIdxs[i],
+          a>.ret)));
+}
+
+//===----------------------------------------------------------------------===//
 // Intrinsic Definitions.
 //===----------------------------------------------------------------------===//
 
@@ -482,6 +677,11 @@ class Intrinsic<list<LLVMType> ret_types,
   bit DisableDefaultAttributes = disable_default_attributes;
 
   bit isTarget = false;
+
+  TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
+  bit isOverloaded = TypeInfo.isOverloaded;
+  list<LLVMType> Types = TypeInfo.Types;
+  list<list<int>> TypeSig = TypeInfo.TypeSig;
 }
 
 // Intrinsic with default attributes (disable_default_attributes = false).

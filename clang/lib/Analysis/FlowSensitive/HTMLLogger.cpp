@@ -67,6 +67,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 // Defines assets: HTMLLogger_{html_js,css}
 #include "HTMLLogger.inc"
@@ -78,6 +79,96 @@ namespace {
 llvm::Expected<std::string> renderSVG(llvm::StringRef DotGraph);
 
 using StreamFactory = std::function<std::unique_ptr<llvm::raw_ostream>()>;
+
+// Recursively dumps Values/StorageLocations as JSON
+class ModelDumper {
+public:
+  ModelDumper(llvm::json::OStream &JOS, const Environment &Env)
+      : JOS(JOS), Env(Env) {}
+
+  void dump(Value &V) {
+    JOS.attribute("value_id", llvm::to_string(&V));
+    if (!Visited.insert(&V).second)
+      return;
+
+    JOS.attribute("kind", debugString(V.getKind()));
+
+    switch (V.getKind()) {
+    case Value::Kind::Integer:
+    case Value::Kind::TopBool:
+    case Value::Kind::AtomicBool:
+      break;
+    case Value::Kind::Reference:
+      JOS.attributeObject(
+          "referent", [&] { dump(cast<ReferenceValue>(V).getReferentLoc()); });
+      break;
+    case Value::Kind::Pointer:
+      JOS.attributeObject(
+          "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
+      break;
+    case Value::Kind::Struct:
+      for (const auto &Child : cast<StructValue>(V).children())
+        JOS.attributeObject("f:" + Child.first->getNameAsString(),
+                            [&] { dump(*Child.second); });
+      break;
+    case Value::Kind::Disjunction: {
+      auto &VV = cast<DisjunctionValue>(V);
+      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    case Value::Kind::Conjunction: {
+      auto &VV = cast<ConjunctionValue>(V);
+      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    case Value::Kind::Negation: {
+      auto &VV = cast<NegationValue>(V);
+      JOS.attributeObject("not", [&] { dump(VV.getSubVal()); });
+      break;
+    }
+    case Value::Kind::Implication: {
+      auto &VV = cast<ImplicationValue>(V);
+      JOS.attributeObject("if", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("then", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    case Value::Kind::Biconditional: {
+      auto &VV = cast<BiconditionalValue>(V);
+      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    }
+
+    for (const auto& Prop : V.properties())
+      JOS.attributeObject(("p:" + Prop.first()).str(),
+                          [&] { dump(*Prop.second); });
+
+    // Running the SAT solver is expensive, but knowing which booleans are
+    // guaranteed true/false here is valuable and hard to determine by hand.
+    if (auto *B = llvm::dyn_cast<BoolValue>(&V)) {
+      JOS.attribute("truth", Env.flowConditionImplies(*B) ? "true"
+                             : Env.flowConditionImplies(Env.makeNot(*B))
+                                 ? "false"
+                                 : "unknown");
+    }
+  }
+  void dump(const StorageLocation &L) {
+    JOS.attribute("location", llvm::to_string(&L));
+    if (!Visited.insert(&L).second)
+      return;
+
+    JOS.attribute("type", L.getType().getAsString());
+    if (auto *V = Env.getValue(L))
+      dump(*V);
+  }
+
+  llvm::DenseSet<const void*> Visited;
+  llvm::json::OStream &JOS;
+  const Environment &Env;
+};
 
 class HTMLLogger : public Logger {
   StreamFactory Streams;
@@ -184,6 +275,16 @@ public:
       JOS->attribute("block", blockID(Block));
       JOS->attribute("iter", Iter);
       JOS->attribute("element", ElementIndex);
+
+      // If this state immediately follows an Expr, show its built-in model.
+      if (ElementIndex > 0) {
+        auto S =
+            Iters.back().first->Elements[ElementIndex - 1].getAs<CFGStmt>();
+        if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr)
+          if (auto *Loc = State.Env.getStorageLocation(*E, SkipPast::None))
+            JOS->attributeObject(
+                "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
+      }
       if (!ContextLogs.empty()) {
         JOS->attribute("logs", ContextLogs);
         ContextLogs.clear();

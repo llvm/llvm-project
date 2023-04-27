@@ -1273,7 +1273,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     SmallVector<Value> operands;
     operands.reserve(lpInst->getNumClauses());
     for (auto i : llvm::seq<unsigned>(0, lpInst->getNumClauses())) {
-      FailureOr<Value> operand = convertConstantExpr(lpInst->getClause(i));
+      FailureOr<Value> operand = convertValue(lpInst->getClause(i));
       if (failed(operand))
         return failure();
       operands.push_back(*operand);

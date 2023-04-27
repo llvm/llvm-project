@@ -83,4 +83,28 @@ define float @test_finite(i32 %x, i32 %y, float %z) {
   ret float %call
 }
 
+; Combine to fma because neither argument can be infinity or NaN based on assumptions
+define float @test_finite_assumed(float %x, float %y, float %z) {
+; CHECK-LABEL: @test_finite_assumed(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FABS_Y:%.*]] = call float @llvm.fabs.f32(float [[Y:%.*]])
+; CHECK-NEXT:    [[IS_FINITE_Y:%.*]] = fcmp one float [[FABS_Y]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_X]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_Y]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.fma.f32(float [[X]], float [[Y]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.finite.x = fcmp one float %fabs.x, 0x7FF0000000000000
+  %fabs.y = call float @llvm.fabs.f32(float %y)
+  %is.finite.y = fcmp one float %fabs.y, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.finite.x)
+  call void @llvm.assume(i1 %is.finite.y)
+  %call = call float @llvm.amdgcn.fma.legacy(float %x, float %y, float %z)
+  ret float %call
+}
+
 declare float @llvm.amdgcn.fma.legacy(float, float, float)
+declare float @llvm.fabs.f32(float)
+declare void @llvm.assume(i1 noundef)

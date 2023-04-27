@@ -3449,6 +3449,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "GSYMUtilOptionsTableGen",
+    strip_include_prefix = "tools/llvm-gsymutil",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-gsymutil/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-gsymutil/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-gsymutil",
     srcs = glob([
@@ -3462,8 +3474,10 @@ cc_binary(
         ":DebugInfo",
         ":DebugInfoDWARF",
         ":DebugInfoGSYM",
+        ":GSYMUtilOptionsTableGen",
         ":MC",
         ":Object",
+        ":Option",
         ":Support",
         ":Target",
         ":TargetParser",

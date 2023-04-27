@@ -341,15 +341,25 @@ struct KnownFPClass {
   }
 
   void copysign(const KnownFPClass &Sign) {
-    // Start assuming nothing about the sign.
-    SignBit = Sign.SignBit;
-    if (!SignBit)
-      return;
+    // Don't know anything about the sign of the source. Expand the possible set
+    // to its opposite sign pair.
+    if (KnownFPClasses & fcZero)
+      KnownFPClasses |= fcZero;
+    if (KnownFPClasses & fcSubnormal)
+      KnownFPClasses |= fcSubnormal;
+    if (KnownFPClasses & fcNormal)
+      KnownFPClasses |= fcNormal;
+    if (KnownFPClasses & fcInf)
+      KnownFPClasses |= fcInf;
 
-    if (*SignBit)
-      KnownFPClasses = KnownFPClasses & fcNegative;
-    else
-      KnownFPClasses = KnownFPClasses & fcPositive;
+    // Sign bit is exactly preserved even for nans.
+    SignBit = Sign.SignBit;
+
+    // Clear sign bits based on the input sign mask.
+    if (Sign.isKnownNever(fcPositive | fcNan) || (SignBit && *SignBit))
+      KnownFPClasses &= (fcNegative | fcNan);
+    if (Sign.isKnownNever(fcNegative | fcNan) || (SignBit && !*SignBit))
+      KnownFPClasses &= (fcPositive | fcNan);
   }
 
   void resetAll() { *this = KnownFPClass(); }
@@ -409,6 +419,17 @@ bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI);
 /// could ever be infinity.
 bool isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
                           unsigned Depth = 0);
+
+/// Return true if the floating-point value can never contain a NaN or infinity.
+inline bool isKnownNeverInfOrNaN(
+    const Value *V, const DataLayout &DL, const TargetLibraryInfo *TLI,
+    unsigned Depth = 0, AssumptionCache *AC = nullptr,
+    const Instruction *CtxI = nullptr, const DominatorTree *DT = nullptr,
+    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf | fcNan, Depth, TLI, AC,
+                                           CtxI, DT, ORE, UseInstrInfo);
+  return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity();
+}
 
 /// Return true if the floating-point scalar value is not a NaN or if the
 /// floating-point vector value has no NaN elements. Return false if a value

@@ -1559,6 +1559,11 @@ public:
     Attrs = Attrs.removeFnAttribute(getContext(), Kind);
   }
 
+  /// Removes the attribute from the function
+  void removeFnAttr(StringRef Kind) {
+    Attrs = Attrs.removeFnAttribute(getContext(), Kind);
+  }
+
   /// Removes the attribute from the return value
   void removeRetAttr(Attribute::AttrKind Kind) {
     Attrs = Attrs.removeRetAttribute(getContext(), Kind);
