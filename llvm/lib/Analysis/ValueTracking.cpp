@@ -2766,9 +2766,24 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
+    // X / Y
     // div exact can only produce a zero if the dividend is zero.
     if (cast<PossiblyExactOperator>(I)->isExact())
       return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
+    if (I->getOpcode() == Instruction::UDiv) {
+      std::optional<bool> XUgeY;
+      KnownBits XKnown =
+          computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
+      if (!XKnown.isUnknown()) {
+        KnownBits YKnown =
+            computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+        // If X u>= Y then div is non zero (0/0 is UB).
+        XUgeY = KnownBits::uge(XKnown, YKnown);
+      }
+      // If X is total unknown or X u< Y we won't be able to prove non-zero
+      // with compute known bits so just return early.
+      return XUgeY && *XUgeY;
+    }
     break;
   case Instruction::Add: {
     // X + Y.
