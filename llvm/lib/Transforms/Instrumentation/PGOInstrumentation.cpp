@@ -48,7 +48,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
-#include "CFGMST.h"
 #include "ValueProfileCollector.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -114,6 +113,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
+#include "llvm/Transforms/Instrumentation/CFGMST.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
