@@ -499,12 +499,7 @@ define i1 @add_nonzero_nsw_fail(i8 %x, i8 %y) {
 
 define i1 @udiv_y_le_x(i8 %xx, i8 %yy, i8 %z) {
 ; CHECK-LABEL: @udiv_y_le_x(
-; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 7
-; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY:%.*]], 7
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[D]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[O]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = or i8 %xx, 7
   %y = and i8 %yy, 7
