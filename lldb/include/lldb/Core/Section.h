@@ -102,9 +102,9 @@ protected:
 
 struct JSONSection {
   std::string name;
-  std::optional<lldb::SectionType> type;
-  std::optional<uint64_t> address;
-  std::optional<uint64_t> size;
+  llvm::Optional<lldb::SectionType> type;
+  llvm::Optional<uint64_t> address;
+  llvm::Optional<uint64_t> size;
 };
 
 class Section : public std::enable_shared_from_this<Section>,

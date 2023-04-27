@@ -92,7 +92,7 @@ public:
   struct Header {
     std::string triple;
     std::string uuid;
-    std::optional<ObjectFile::Type> type;
+    llvm::Optional<ObjectFile::Type> type;
   };
 
   struct Body {
@@ -104,7 +104,7 @@ private:
   ArchSpec m_arch;
   UUID m_uuid;
   ObjectFile::Type m_type;
-  std::optional<uint64_t> m_size;
+  llvm::Optional<uint64_t> m_size;
   std::vector<JSONSymbol> m_symbols;
   std::vector<JSONSection> m_sections;
 
