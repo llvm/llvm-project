@@ -46,8 +46,6 @@ static cl::opt<bool>
     InteractiveIncludeDefault("inliner-interactive-include-default", cl::Hidden,
                               cl::desc(InclDefaultMsg));
 
-const std::vector<int64_t> ScalarShape = {1};
-
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
