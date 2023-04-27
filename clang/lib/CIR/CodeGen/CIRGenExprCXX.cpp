@@ -29,6 +29,11 @@ struct MemberCallInfo {
 };
 } // namespace
 
+static RValue buildNewDeleteCall(CIRGenFunction &CGF,
+                                 const FunctionDecl *CalleeDecl,
+                                 const FunctionProtoType *CalleeType,
+                                 const CallArgList &Args);
+
 static MemberCallInfo
 commonBuildCXXMemberOrOperatorCall(CIRGenFunction &CGF, const CXXMethodDecl *MD,
                                    mlir::Value This, mlir::Value ImplicitParam,
@@ -322,38 +327,6 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
   buildCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
 }
 
-mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
-  assert(0 && "not implemented");
-}
-
-RValue CIRGenFunction::buildCXXDestructorCall(GlobalDecl Dtor,
-                                              const CIRGenCallee &Callee,
-                                              mlir::Value This, QualType ThisTy,
-                                              mlir::Value ImplicitParam,
-                                              QualType ImplicitParamTy,
-                                              const CallExpr *CE) {
-  const CXXMethodDecl *DtorDecl = cast<CXXMethodDecl>(Dtor.getDecl());
-
-  assert(!ThisTy.isNull());
-  assert(ThisTy->getAsCXXRecordDecl() == DtorDecl->getParent() &&
-         "Pointer/Object mixup");
-
-  LangAS SrcAS = ThisTy.getAddressSpace();
-  LangAS DstAS = DtorDecl->getMethodQualifiers().getAddressSpace();
-  if (SrcAS != DstAS) {
-    llvm_unreachable("NYI");
-  }
-
-  CallArgList Args;
-  commonBuildCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
-                                     ImplicitParamTy, CE, Args, nullptr);
-  assert((CE || Dtor.getDecl()) && "expected source location provider");
-  return buildCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                   ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
-                   CE ? getLoc(CE->getExprLoc())
-                      : getLoc(Dtor.getDecl()->getSourceRange()));
-}
-
 namespace {
 /// The parameters to pass to a usual operator delete.
 struct UsualDeleteParams {
@@ -393,6 +366,319 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
 
   assert(AI == AE && "unexpected usual deallocation function parameter");
   return Params;
+}
+
+static mlir::Value buildCXXNewAllocSize(CIRGenFunction &CGF,
+                                        const CXXNewExpr *e,
+                                        unsigned minElements,
+                                        mlir::Value &numElements,
+                                        mlir::Value &sizeWithoutCookie) {
+  QualType type = e->getAllocatedType();
+
+  if (!e->isArray()) {
+    CharUnits typeSize = CGF.getContext().getTypeSizeInChars(type);
+    sizeWithoutCookie = CGF.getBuilder().create<mlir::cir::ConstantOp>(
+        CGF.getLoc(e->getSourceRange()), CGF.SizeTy,
+        mlir::IntegerAttr::get(CGF.SizeTy, typeSize.getQuantity()));
+    return sizeWithoutCookie;
+  }
+
+  llvm_unreachable("NYI");
+}
+
+namespace {
+/// A cleanup to call the given 'operator delete' function upon abnormal
+/// exit from a new expression. Templated on a traits type that deals with
+/// ensuring that the arguments dominate the cleanup if necessary.
+template <typename Traits>
+class CallDeleteDuringNew final : public EHScopeStack::Cleanup {
+  /// Type used to hold llvm::Value*s.
+  typedef typename Traits::ValueTy ValueTy;
+  /// Type used to hold RValues.
+  typedef typename Traits::RValueTy RValueTy;
+  struct PlacementArg {
+    RValueTy ArgValue;
+    QualType ArgType;
+  };
+
+  unsigned NumPlacementArgs : 31;
+  unsigned PassAlignmentToPlacementDelete : 1;
+  const FunctionDecl *OperatorDelete;
+  ValueTy Ptr;
+  ValueTy AllocSize;
+  CharUnits AllocAlign;
+
+  PlacementArg *getPlacementArgs() {
+    return reinterpret_cast<PlacementArg *>(this + 1);
+  }
+
+public:
+  static size_t getExtraSize(size_t NumPlacementArgs) {
+    return NumPlacementArgs * sizeof(PlacementArg);
+  }
+
+  CallDeleteDuringNew(size_t NumPlacementArgs,
+                      const FunctionDecl *OperatorDelete, ValueTy Ptr,
+                      ValueTy AllocSize, bool PassAlignmentToPlacementDelete,
+                      CharUnits AllocAlign)
+      : NumPlacementArgs(NumPlacementArgs),
+        PassAlignmentToPlacementDelete(PassAlignmentToPlacementDelete),
+        OperatorDelete(OperatorDelete), Ptr(Ptr), AllocSize(AllocSize),
+        AllocAlign(AllocAlign) {}
+
+  void setPlacementArg(unsigned I, RValueTy Arg, QualType Type) {
+    assert(I < NumPlacementArgs && "index out of range");
+    getPlacementArgs()[I] = {Arg, Type};
+  }
+
+  void Emit(CIRGenFunction &CGF, Flags flags) override {
+    const auto *FPT = OperatorDelete->getType()->castAs<FunctionProtoType>();
+    CallArgList DeleteArgs;
+
+    // The first argument is always a void* (or C* for a destroying operator
+    // delete for class type C).
+    DeleteArgs.add(Traits::get(CGF, Ptr), FPT->getParamType(0));
+
+    // Figure out what other parameters we should be implicitly passing.
+    UsualDeleteParams Params;
+    if (NumPlacementArgs) {
+      // A placement deallocation function is implicitly passed an alignment
+      // if the placement allocation function was, but is never passed a size.
+      Params.Alignment = PassAlignmentToPlacementDelete;
+    } else {
+      // For a non-placement new-expression, 'operator delete' can take a
+      // size and/or an alignment if it has the right parameters.
+      Params = getUsualDeleteParams(OperatorDelete);
+    }
+
+    assert(!Params.DestroyingDelete &&
+           "should not call destroying delete in a new-expression");
+
+    // The second argument can be a std::size_t (for non-placement delete).
+    if (Params.Size)
+      DeleteArgs.add(Traits::get(CGF, AllocSize),
+                     CGF.getContext().getSizeType());
+
+    // The next (second or third) argument can be a std::align_val_t, which
+    // is an enum whose underlying type is std::size_t.
+    // FIXME: Use the right type as the parameter type. Note that in a call
+    // to operator delete(size_t, ...), we may not have it available.
+    if (Params.Alignment) {
+      llvm_unreachable("NYI");
+    }
+
+    // Pass the rest of the arguments, which must match exactly.
+    for (unsigned I = 0; I != NumPlacementArgs; ++I) {
+      auto Arg = getPlacementArgs()[I];
+      DeleteArgs.add(Traits::get(CGF, Arg.ArgValue), Arg.ArgType);
+    }
+
+    // Call 'operator delete'.
+    buildNewDeleteCall(CGF, OperatorDelete, FPT, DeleteArgs);
+  }
+};
+} // namespace
+
+/// Enter a cleanup to call 'operator delete' if the initializer in a
+/// new-expression throws.
+static void EnterNewDeleteCleanup(CIRGenFunction &CGF, const CXXNewExpr *E,
+                                  Address NewPtr, mlir::Value AllocSize,
+                                  CharUnits AllocAlign,
+                                  const CallArgList &NewArgs) {
+  unsigned NumNonPlacementArgs = E->passAlignment() ? 2 : 1;
+
+  // If we're not inside a conditional branch, then the cleanup will
+  // dominate and we can do the easier (and more efficient) thing.
+  if (!CGF.isInConditionalBranch()) {
+    struct DirectCleanupTraits {
+      typedef mlir::Value ValueTy;
+      typedef RValue RValueTy;
+      static RValue get(CIRGenFunction &, ValueTy V) { return RValue::get(V); }
+      static RValue get(CIRGenFunction &, RValueTy V) { return V; }
+    };
+
+    typedef CallDeleteDuringNew<DirectCleanupTraits> DirectCleanup;
+
+    DirectCleanup *Cleanup = CGF.EHStack.pushCleanupWithExtra<DirectCleanup>(
+        EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
+        NewPtr.getPointer(), AllocSize, E->passAlignment(), AllocAlign);
+    for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
+      auto &Arg = NewArgs[I + NumNonPlacementArgs];
+      Cleanup->setPlacementArg(
+          I, Arg.getRValue(CGF, CGF.getLoc(E->getSourceRange())), Arg.Ty);
+    }
+
+    return;
+  }
+
+  // Otherwise, we need to save all this stuff.
+  DominatingValue<RValue>::saved_type SavedNewPtr =
+      DominatingValue<RValue>::save(CGF, RValue::get(NewPtr.getPointer()));
+  DominatingValue<RValue>::saved_type SavedAllocSize =
+      DominatingValue<RValue>::save(CGF, RValue::get(AllocSize));
+
+  struct ConditionalCleanupTraits {
+    typedef DominatingValue<RValue>::saved_type ValueTy;
+    typedef DominatingValue<RValue>::saved_type RValueTy;
+    static RValue get(CIRGenFunction &CGF, ValueTy V) { return V.restore(CGF); }
+  };
+  typedef CallDeleteDuringNew<ConditionalCleanupTraits> ConditionalCleanup;
+
+  ConditionalCleanup *Cleanup =
+      CGF.EHStack.pushCleanupWithExtra<ConditionalCleanup>(
+          EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
+          SavedNewPtr, SavedAllocSize, E->passAlignment(), AllocAlign);
+  for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
+    auto &Arg = NewArgs[I + NumNonPlacementArgs];
+    Cleanup->setPlacementArg(
+        I,
+        DominatingValue<RValue>::save(
+            CGF, Arg.getRValue(CGF, CGF.getLoc(E->getSourceRange()))),
+        Arg.Ty);
+  }
+
+  CGF.initFullExprCleanup();
+}
+
+mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
+  // The element type being allocated.
+  QualType allocType = getContext().getBaseElementType(E->getAllocatedType());
+
+  // 1. Build a call to the allocation function.
+  FunctionDecl *allocator = E->getOperatorNew();
+
+  // If there is a brace-initializer, cannot allocate fewer elements than inits.
+  unsigned minElements = 0;
+  if (E->isArray() && E->hasInitializer()) {
+    const InitListExpr *ILE = dyn_cast<InitListExpr>(E->getInitializer());
+    if (ILE && ILE->isStringLiteralInit())
+      minElements =
+          cast<ConstantArrayType>(ILE->getType()->getAsArrayTypeUnsafe())
+              ->getSize()
+              .getZExtValue();
+    else if (ILE)
+      minElements = ILE->getNumInits();
+  }
+
+  mlir::Value numElements = nullptr;
+  mlir::Value allocSizeWithoutCookie = nullptr;
+  mlir::Value allocSize = buildCXXNewAllocSize(
+      *this, E, minElements, numElements, allocSizeWithoutCookie);
+  CharUnits allocAlign = getContext().getTypeAlignInChars(allocType);
+
+  // Emit the allocation call.
+  Address allocation = Address::invalid();
+  CallArgList allocatorArgs;
+  if (allocator->isReservedGlobalPlacementOperator()) {
+    // In LLVM codegen: If the allocator is a global placement operator, just
+    // "inline" it directly.
+    llvm_unreachable("NYI");
+  } else {
+    const FunctionProtoType *allocatorType =
+        allocator->getType()->castAs<FunctionProtoType>();
+    unsigned ParamsToSkip = 0;
+
+    // The allocation size is the first argument.
+    QualType sizeType = getContext().getSizeType();
+    allocatorArgs.add(RValue::get(allocSize), sizeType);
+    ++ParamsToSkip;
+
+    if (allocSize != allocSizeWithoutCookie) {
+      llvm_unreachable("NYI");
+    }
+
+    // The allocation alignment may be passed as the second argument.
+    if (E->passAlignment()) {
+      llvm_unreachable("NYI");
+    }
+
+    // FIXME: Why do we not pass a CalleeDecl here?
+    buildCallArgs(allocatorArgs, allocatorType, E->placement_arguments(),
+                  /*AC*/
+                  AbstractCallee(),
+                  /*ParamsToSkip*/
+                  ParamsToSkip);
+    RValue RV =
+        buildNewDeleteCall(*this, allocator, allocatorType, allocatorArgs);
+
+    // Set !heapallocsite metadata on the call to operator new.
+    assert(!UnimplementedFeature::generateDebugInfo());
+
+    // If this was a call to a global replaceable allocation function that does
+    // not take an alignment argument, the allocator is known to produce storage
+    // that's suitably aligned for any object that fits, up to a known
+    // threshold. Otherwise assume it's suitably aligned for the allocated type.
+    CharUnits allocationAlign = allocAlign;
+    if (!E->passAlignment() &&
+        allocator->isReplaceableGlobalAllocationFunction()) {
+      auto &Target = CGM.getASTContext().getTargetInfo();
+      unsigned AllocatorAlign = llvm::bit_floor(std::min<uint64_t>(
+          Target.getNewAlign(), getContext().getTypeSize(allocType)));
+      allocationAlign = std::max(
+          allocationAlign, getContext().toCharUnitsFromBits(AllocatorAlign));
+    }
+
+    allocation = Address(RV.getScalarVal(), Int8Ty, allocationAlign);
+  }
+
+  // Emit a null check on the allocation result if the allocation
+  // function is allowed to return null (because it has a non-throwing
+  // exception spec or is the reserved placement new) and we have an
+  // interesting initializer will be running sanitizers on the initialization.
+  bool nullCheck = E->shouldNullCheckAllocation() &&
+                   (!allocType.isPODType(getContext()) || E->hasInitializer() ||
+                    sanitizePerformTypeCheck());
+
+  // The null-check means that the initializer is conditionally
+  // evaluated.
+  ConditionalEvaluation conditional(*this);
+
+  if (nullCheck) {
+    llvm_unreachable("NYI");
+  }
+
+  // If there's an operator delete, enter a cleanup to call it if an
+  // exception is thrown.
+  EHScopeStack::stable_iterator operatorDeleteCleanup;
+  // llvm::Instruction *cleanupDominator = nullptr;
+  if (E->getOperatorDelete() &&
+      !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+    llvm_unreachable("NYI");
+    EnterNewDeleteCleanup(*this, E, allocation, allocSize, allocAlign,
+                          allocatorArgs);
+    operatorDeleteCleanup = EHStack.stable_begin();
+    llvm_unreachable("NYI");
+    // cleanupDominator = Builder.CreateUnreachable();
+  }
+  llvm_unreachable("NYI");
+}
+
+RValue CIRGenFunction::buildCXXDestructorCall(GlobalDecl Dtor,
+                                              const CIRGenCallee &Callee,
+                                              mlir::Value This, QualType ThisTy,
+                                              mlir::Value ImplicitParam,
+                                              QualType ImplicitParamTy,
+                                              const CallExpr *CE) {
+  const CXXMethodDecl *DtorDecl = cast<CXXMethodDecl>(Dtor.getDecl());
+
+  assert(!ThisTy.isNull());
+  assert(ThisTy->getAsCXXRecordDecl() == DtorDecl->getParent() &&
+         "Pointer/Object mixup");
+
+  LangAS SrcAS = ThisTy.getAddressSpace();
+  LangAS DstAS = DtorDecl->getMethodQualifiers().getAddressSpace();
+  if (SrcAS != DstAS) {
+    llvm_unreachable("NYI");
+  }
+
+  CallArgList Args;
+  commonBuildCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
+                                     ImplicitParamTy, CE, Args, nullptr);
+  assert((CE || Dtor.getDecl()) && "expected source location provider");
+  return buildCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
+                   ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
+                   CE ? getLoc(CE->getExprLoc())
+                      : getLoc(Dtor.getDecl()->getSourceRange()));
 }
 
 /// Emit a call to an operator new or operator delete function, as implicitly

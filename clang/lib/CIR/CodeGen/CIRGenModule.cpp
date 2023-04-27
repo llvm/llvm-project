@@ -2224,3 +2224,30 @@ mlir::cir::GlobalOp CIRGenModule::getOrInsertGlobal(mlir::Location loc,
   });
 }
 
+// TODO(cir): this can be shared with LLVM codegen.
+CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
+    const CXXRecordDecl *DerivedClass, CastExpr::path_const_iterator Start,
+    CastExpr::path_const_iterator End) {
+  CharUnits Offset = CharUnits::Zero();
+
+  const ASTContext &Context = getASTContext();
+  const CXXRecordDecl *RD = DerivedClass;
+
+  for (CastExpr::path_const_iterator I = Start; I != End; ++I) {
+    const CXXBaseSpecifier *Base = *I;
+    assert(!Base->isVirtual() && "Should not see virtual bases here!");
+
+    // Get the layout.
+    const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+
+    const auto *BaseDecl =
+        cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
+
+    // Add the offset.
+    Offset += Layout.getBaseClassOffset(BaseDecl);
+
+    RD = BaseDecl;
+  }
+
+  return Offset;
+}

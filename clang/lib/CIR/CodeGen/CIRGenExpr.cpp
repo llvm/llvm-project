@@ -602,6 +602,18 @@ Address CIRGenFunction::buildPointerWithAlignment(const Expr *E,
     // Nothing to do here...
     case CK_LValueToRValue:
       break;
+
+    case CK_DerivedToBase: {
+      // TODO: Support accesses to members of base classes in TBAA. For now, we
+      // conservatively pretend that the complete object is of the base class
+      // type.
+      assert(!UnimplementedFeature::tbaa());
+      Address Addr = buildPointerWithAlignment(CE->getSubExpr(), BaseInfo);
+      auto Derived = CE->getSubExpr()->getType()->getPointeeCXXRecordDecl();
+      return getAddressOfBaseClass(
+          Addr, Derived, CE->path_begin(), CE->path_end(),
+          shouldNullCheckClassCastValue(CE), CE->getExprLoc());
+    }
     }
   }
 

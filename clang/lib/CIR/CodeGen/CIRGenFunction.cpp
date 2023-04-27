@@ -1204,3 +1204,24 @@ CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
   CGF.builder.setDefaultConstrainedExcept(OldExcept);
   CGF.builder.setDefaultConstrainedRounding(OldRounding);
 }
+
+// TODO(cir): should be shared with LLVM codegen.
+bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *CE) {
+  const Expr *E = CE->getSubExpr();
+
+  if (CE->getCastKind() == CK_UncheckedDerivedToBase)
+    return false;
+
+  if (isa<CXXThisExpr>(E->IgnoreParens())) {
+    // We always assume that 'this' is never null.
+    return false;
+  }
+
+  if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
+    // And that glvalue casts are never null.
+    if (ICE->isGLValue())
+      return false;
+  }
+
+  return true;
+}

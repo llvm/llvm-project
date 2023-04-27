@@ -980,8 +980,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_BaseToDerived:
     llvm_unreachable("NYI");
-  case CK_DerivedToBase:
-    llvm_unreachable("NYI");
+  case CK_DerivedToBase: {
+    // The EmitPointerWithAlignment path does this fine; just discard
+    // the alignment.
+    return CGF.buildPointerWithAlignment(CE).getPointer();
+  }
   case CK_Dynamic:
     llvm_unreachable("NYI");
   case CK_ArrayToPointerDecay:

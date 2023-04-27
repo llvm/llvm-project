@@ -174,6 +174,11 @@ public:
       : RV(rv), HasLV(false), IsUsed(false), Ty(ty) {
     (void)IsUsed;
   }
+
+  /// \returns an independent RValue. If the CallArg contains an LValue,
+  /// a temporary copy is returned.
+  RValue getRValue(CIRGenFunction &CGF, mlir::Location loc) const;
+
   bool hasLValue() const { return HasLV; }
 
   LValue getKnownLValue() const {
