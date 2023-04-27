@@ -5377,14 +5377,16 @@ static void TryOrBuildParenListInitialization(
           //   The remaining elements are initialized with their default member
           //   initializers, if any
           auto *FD = cast<FieldDecl>(SubEntity.getDecl());
-          if (Expr *ICE = FD->getInClassInitializer(); ICE && !VerifyOnly) {
-            ExprResult DIE = S.BuildCXXDefaultInitExpr(FD->getLocation(), FD);
-            if (DIE.isInvalid())
-              return false;
-            S.checkInitializerLifetime(SubEntity, DIE.get());
-            InitExprs.push_back(DIE.get());
+          if (FD->hasInClassInitializer()) {
+            if (!VerifyOnly) {
+              ExprResult DIE = S.BuildCXXDefaultInitExpr(FD->getLocation(), FD);
+              if (DIE.isInvalid())
+                return false;
+              S.checkInitializerLifetime(SubEntity, DIE.get());
+              InitExprs.push_back(DIE.get());
+            }
             continue;
-          };
+          }
         }
         // Remaining class elements without default member initializers and
         // array elements are value initialized:
