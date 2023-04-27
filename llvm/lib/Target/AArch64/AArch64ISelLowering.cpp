@@ -14744,9 +14744,9 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   auto Mask = SVI->getShuffleMask();
 
   // Sanity check if all the indices are NOT in range.
-  // If mask is `undef` or `poison`, `Mask` may be a vector of -1s.
-  // If all of them are `undef`, OOB read will happen later.
-  if (llvm::all_of(Mask, [](int Idx) { return Idx == UndefMaskElem; })) {
+  // If mask is `poison`, `Mask` may be a vector of -1s.
+  // If all of them are `poison`, OOB read will happen later.
+  if (llvm::all_of(Mask, [](int Idx) { return Idx == PoisonMaskElem; })) {
     return false;
   }
   // A 64bit st2 which does not start at element 0 will involved adding extra
