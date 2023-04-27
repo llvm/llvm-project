@@ -1635,7 +1635,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     ISD::FCOS,    ISD::FPOW,    ISD::FLOG,    ISD::FLOG2,
     ISD::FLOG10,  ISD::FEXP,    ISD::FEXP2,   ISD::FCEIL,   ISD::FTRUNC,
     ISD::FRINT,   ISD::FNEARBYINT,            ISD::FROUND,  ISD::FFLOOR,
-    ISD::FMINNUM, ISD::FMAXNUM, ISD::FSINCOS,
+    ISD::FMINNUM, ISD::FMAXNUM, ISD::FSINCOS, ISD::FLDEXP,
     // Misc:
     ISD::BR_CC,   ISD::SELECT_CC,             ISD::ConstantPool,
     // Vector:

@@ -849,6 +849,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FCEIL,  VT, Expand);
       setOperationAction(ISD::FTRUNC, VT, Expand);
       setOperationAction(ISD::FRINT,  VT, Expand);
+      setOperationAction(ISD::FLDEXP, VT, Expand);
       setOperationAction(ISD::FNEARBYINT, VT, Expand);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Expand);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Expand);
