@@ -1374,11 +1374,12 @@ bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
   return false;
 }
 
-bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd) {
+bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd, bool force) {
   auto pos = m_command_dict.find(std::string(cmd));
   if (pos != m_command_dict.end()) {
-    if (pos->second->IsRemovable()) {
-      // Only regular expression objects or python commands are removable
+    if (force || pos->second->IsRemovable()) {
+      // Only regular expression objects or python commands are removable under
+      // normal circumstances.
       m_command_dict.erase(pos);
       return true;
     }
