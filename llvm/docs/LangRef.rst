@@ -14718,7 +14718,7 @@ When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
 '``llvm.ldexp.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24352,7 +24352,7 @@ unspecified sequence of rounding operations.
 
 
 '``llvm.experimental.constrained.ldexp``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""

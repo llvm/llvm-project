@@ -586,6 +586,42 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::GC_TRANSITION_START, MVT::Other, Custom);
   setOperationAction(ISD::GC_TRANSITION_END, MVT::Other, Custom);
 
+  setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
+
+  auto setF16Action = [&] (MVT VT, LegalizeAction Action) {
+    setOperationAction(ISD::FABS, VT, Action);
+    setOperationAction(ISD::FNEG, VT, Action);
+    setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+    setOperationAction(ISD::FREM, VT, Action);
+    setOperationAction(ISD::FMA, VT, Action);
+    setOperationAction(ISD::FMINNUM, VT, Action);
+    setOperationAction(ISD::FMAXNUM, VT, Action);
+    setOperationAction(ISD::FMINIMUM, VT, Action);
+    setOperationAction(ISD::FMAXIMUM, VT, Action);
+    setOperationAction(ISD::FSIN, VT, Action);
+    setOperationAction(ISD::FCOS, VT, Action);
+    setOperationAction(ISD::FSINCOS, VT, Action);
+    setOperationAction(ISD::FSQRT, VT, Action);
+    setOperationAction(ISD::FPOW, VT, Action);
+    setOperationAction(ISD::FLOG, VT, Action);
+    setOperationAction(ISD::FLOG2, VT, Action);
+    setOperationAction(ISD::FLOG10, VT, Action);
+    setOperationAction(ISD::FEXP, VT, Action);
+    setOperationAction(ISD::FEXP2, VT, Action);
+    setOperationAction(ISD::FCEIL, VT, Action);
+    setOperationAction(ISD::FFLOOR, VT, Action);
+    setOperationAction(ISD::FNEARBYINT, VT, Action);
+    setOperationAction(ISD::FRINT, VT, Action);
+    setOperationAction(ISD::BR_CC, VT, Action);
+    setOperationAction(ISD::SETCC, VT, Action);
+    setOperationAction(ISD::SELECT, VT, Custom);
+    setOperationAction(ISD::SELECT_CC, VT, Action);
+    setOperationAction(ISD::FROUND, VT, Action);
+    setOperationAction(ISD::FROUNDEVEN, VT, Action);
+    setOperationAction(ISD::FTRUNC, VT, Action);
+    setOperationAction(ISD::FLDEXP, VT, Action);
+  };
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
     // f32 and f64 use SSE.
     // Set up the FP register classes.
@@ -643,6 +679,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMAXIMUM, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FPOW, MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_FLDEXP, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FLOG, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FLOG2, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FLOG10, MVT::f16, Promote);
