@@ -821,6 +821,10 @@ Bug Fixes to C++ Support
 - Do not hide templated base members introduced via using-decl in derived class
   (useful specially for constrained members). (`#50886 <https://github.com/llvm/llvm-project/issues/50886>`_)
 
+- Fix default member initializers sometimes being ignored when performing
+  parenthesized aggregate initialization of templated types.
+  (`#62266 <https://github.com/llvm/llvm-project/issues/62266>`_)
+
 Concepts Specific Fixes:
 
 - Class member variables are now in scope when parsing a ``requires`` clause.
