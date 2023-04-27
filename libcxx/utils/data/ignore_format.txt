@@ -398,14 +398,8 @@ libcxx/include/__functional/unary_negate.h
 libcxx/include/__functional/unwrap_ref.h
 libcxx/include/__functional/weak_result_type.h
 libcxx/include/future
-libcxx/include/__fwd/fstream.h
 libcxx/include/__fwd/get.h
-libcxx/include/__fwd/ios.h
-libcxx/include/__fwd/istream.h
-libcxx/include/__fwd/ostream.h
 libcxx/include/__fwd/span.h
-libcxx/include/__fwd/sstream.h
-libcxx/include/__fwd/streambuf.h
 libcxx/include/__fwd/string_view.h
 libcxx/include/__fwd/subrange.h
 libcxx/include/__hash_table
