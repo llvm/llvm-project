@@ -1418,16 +1418,16 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
 static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
   auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(sdk);
   if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
+    Debugger::ReportError("Error while searching for SDK: " +
                           toString(sdk_path_or_err.takeError()));
-    HEALTH_LOG_PRINTF("Error while searching for Xcode SDK %s.",
+    HEALTH_LOG_PRINTF("Error while searching for SDK (XcodeSDK: %s)",
                       sdk.GetString().str().c_str());
     return {};
   }
 
   std::string sdk_path = sdk_path_or_err->str();
-  LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path for sdk %s is %s.",
-             sdk.GetString().str().c_str(), sdk_path.c_str());
+  LOG_PRINTF(GetLog(LLDBLog::Types), "Host SDK path: `%s` (XcodeSDK: %s)",
+             sdk_path.c_str(), sdk.GetString().str().c_str());
   return sdk_path;
 }
 
