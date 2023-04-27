@@ -448,6 +448,11 @@ generic-abi-unstable)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
     check-runtimes
 ;;
+with-pstl)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/With-pstl.cmake"
+    check-runtimes
+;;
 apple-system)
     clean
 

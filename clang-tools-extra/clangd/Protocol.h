@@ -238,6 +238,8 @@ struct ReferenceLocation : Location {
 llvm::json::Value toJSON(const ReferenceLocation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ReferenceLocation &);
 
+using ChangeAnnotationIdentifier = std::string;
+// A combination of a LSP standard TextEdit and AnnotatedTextEdit.
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -246,13 +248,34 @@ struct TextEdit {
   /// The string to be inserted. For delete operations use an
   /// empty string.
   std::string newText;
+
+  /// The actual annotation identifier (optional)
+  /// If empty, then this field is nullopt.
+  ChangeAnnotationIdentifier annotationId = "";
 };
 inline bool operator==(const TextEdit &L, const TextEdit &R) {
-  return std::tie(L.newText, L.range) == std::tie(R.newText, R.range);
+  return std::tie(L.newText, L.range, L.annotationId) ==
+         std::tie(R.newText, R.range, L.annotationId);
 }
 bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
+
+struct ChangeAnnotation {
+  /// A human-readable string describing the actual change. The string
+  /// is rendered prominent in the user interface.
+  std::string label;
+
+  /// A flag which indicates that user confirmation is needed
+  /// before applying the change.
+  std::optional<bool> needsConfirmation;
+
+  /// A human-readable string which is rendered less prominent in
+  /// the user interface.
+  std::string description;
+};
+bool fromJSON(const llvm::json::Value &, ChangeAnnotation &, llvm::json::Path);
+llvm::json::Value toJSON(const ChangeAnnotation &);
 
 struct TextDocumentEdit {
   /// The text document to change.
@@ -530,6 +553,9 @@ struct ClientCapabilities {
 
   /// The client supports versioned document changes for WorkspaceEdit.
   bool DocumentChanges = false;
+  
+  /// The client supports change annotations on text edits,
+  bool ChangeAnnotation = false;
 
   /// Whether the client supports the textDocument/inactiveRegions
   /// notification. This is a clangd extension.
@@ -996,6 +1022,10 @@ struct WorkspaceEdit {
 	/// `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
 	/// using the `changes` property are supported.
   std::optional<std::vector<TextDocumentEdit>> documentChanges;
+  
+  /// A map of change annotations that can be referenced in
+	/// AnnotatedTextEdit.
+  std::map<std::string, ChangeAnnotation> changeAnnotations;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const WorkspaceEdit &WE);

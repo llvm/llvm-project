@@ -8,7 +8,7 @@ define void @test(i16 %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i16> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 undef, i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>, <4 x i32> [[TMP5]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    br label [[FOR_BODY92:%.*]]
 ; CHECK:       for.body92:

@@ -2377,10 +2377,10 @@ define <3 x i8> @smax_unary_shuffle_ops(<3 x i8> %x, <3 x i8> %y) {
 
 define <3 x i8> @smin_unary_shuffle_ops_use_poison_mask_elt(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @smin_unary_shuffle_ops_use_poison_mask_elt(
-; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 undef, i32 0, i32 2>
+; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> poison, <3 x i32> <i32 poison, i32 0, i32 2>
 ; CHECK-NEXT:    call void @use_vec(<3 x i8> [[SX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smin.v3i8(<3 x i8> [[X]], <3 x i8> [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[TMP1]], <3 x i8> poison, <3 x i32> <i32 undef, i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i8> [[TMP1]], <3 x i8> poison, <3 x i32> <i32 poison, i32 0, i32 2>
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %sx = shufflevector <3 x i8> %x, <3 x i8> poison, <3 x i32> <i32 poison, i32 0, i32 2>

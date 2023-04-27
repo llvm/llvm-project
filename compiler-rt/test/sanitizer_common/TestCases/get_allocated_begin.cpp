@@ -1,7 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 
-// UBSan does not have its own allocator
-// UNSUPPORTED: ubsan
+// Must not be implemented, no other reason to install interceptors.
+// XFAIL: ubsan
 
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>

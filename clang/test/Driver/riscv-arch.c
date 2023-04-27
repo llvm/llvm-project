@@ -355,11 +355,19 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv32i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
+// RUN: %clang --target=riscv32-unknown-elf -mcpu=generic-rv32 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
+// RUN: %clang --target=riscv64-unknown-elf -mcpu=generic-rv32 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-TARGET %s
 // RV32-TARGET: "-triple" "riscv32-unknown-unknown-elf"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv64i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64i -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
+// RUN: %clang --target=riscv32-unknown-elf -mcpu=generic-rv64 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
+// RUN: %clang --target=riscv64-unknown-elf -mcpu=generic-rv64 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
 // RV64-TARGET: "-triple" "riscv64-unknown-unknown-elf"
 

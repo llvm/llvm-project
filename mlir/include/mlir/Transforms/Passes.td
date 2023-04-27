@@ -172,6 +172,25 @@ def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
   let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
+def Mem2Reg : Pass<"mem2reg"> {
+  let summary = "Promotes memory slots into values.";
+  let description = [{
+    This pass removes loads out of and stores into a memory slot, and turns
+    them into direct uses of SSA values. This is done generically using the
+    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
+    `PromoteMemOpInterface` interfaces.
+
+    This pass will attempt to compute which definitions of the content of
+    the memory slot reach operations that use the memory slot pointer. It
+    will rewire or remove operations that use the slot pointer so they no
+    longer use it. If any of this is not possible, the IR will be left
+    without mutation.
+
+    This pass only supports unstructured control-flow. Promotion of operations
+    within subregions will not happen.
+  }];
+}
+
 def PrintOpStats : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";

@@ -10,6 +10,12 @@ collect_stack_traces = ""
 if config.tool_name == "asan":
   tool_cflags = ["-fsanitize=address"]
   tool_options = "ASAN_OPTIONS"
+elif config.tool_name == "hwasan":
+  tool_cflags = ["-fsanitize=hwaddress", "-fuse-ld=lld"]
+  if config.target_arch == "x86_64":
+    tool_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
+    config.available_features.add("hwasan-aliasing")
+  tool_options = "HWASAN_OPTIONS"
 elif config.tool_name == "tsan":
   tool_cflags = ["-fsanitize=thread"]
   tool_options = "TSAN_OPTIONS"

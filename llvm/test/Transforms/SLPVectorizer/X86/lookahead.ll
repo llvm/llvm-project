@@ -529,7 +529,7 @@ define i1 @foo(float %a, float %b, float %c, <4 x float> %vec, i64 %idx2) {
 ; CHECK-NEXT:    [[SUB14_I167:%.*]] = fsub float undef, [[VECEXT_I291_I166]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 undef, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[VEC]], <4 x float> poison, <2 x i32> <i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[SUB14_I167]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> <float poison, float 3.000000e+01>, float [[B:%.*]], i32 0

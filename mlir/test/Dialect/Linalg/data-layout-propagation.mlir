@@ -726,9 +726,6 @@ func.func @reduction_pack_transpose_inner_dims(%arg0: tensor<128x256x32xi32>, %d
 // CHECK:      func.func @reduction_pack_transpose_inner_dims
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
-// CHECK:        %[[ORIG_INIT:.+]] = tensor.empty() : tensor<128x256xi32>
-// CHECK:        %[[INIT_EMPTY:.+]] = tensor.empty() : tensor<4x16x16x32xi32>
-// CHECK:        %[[PACK_INIT:.+]] = tensor.pack %[[ORIG_INIT]]
 // CHECK:        %[[ARG0_EMPTY:.+]] = tensor.empty() : tensor<4x16x32x16x32xi32>
 // CHECK:        %[[PACK_ARG0:.+]] = tensor.pack %[[ARG0]]
 // CHECK-SAME:     inner_dims_pos = [1, 0] inner_tiles = [16, 32]
@@ -737,7 +734,7 @@ func.func @reduction_pack_transpose_inner_dims(%arg0: tensor<128x256x32xi32>, %d
 // CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
 // CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction", "parallel", "parallel"]
 // CHECK-SAME:     ins(%[[PACK_ARG0]]
-// CHECK-SAME:     outs(%[[PACK_INIT]]
+// CHECK-SAME:     outs(%[[DEST]]
 // CHECK:        return %[[RED]] : tensor<4x16x16x32xi32>
 
 // -----
@@ -776,11 +773,7 @@ func.func @reduction_pack_with_outer_dims(%arg0: tensor<100x128x200x256xi32>, %a
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9]+]]
 // CHECK-SAME:   %[[ARG2:[a-zA-Z0-9]+]]
-// CHECK: %[[INIT:.+]] = tensor.empty() : tensor<100x128x256xi32>
 // CHECK: %[[INIT_EMPTY:.+]] = tensor.empty() : tensor<4x16x100x16x32xi32>
-// CHECK: %[[PACKED_INIT:.+]] = tensor.pack %[[INIT]]
-// CHECK-SAME:  outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [16, 32]
-// CHECK-SAME:  into %[[INIT_EMPTY]]
 // CHECK: %[[ARG0_EMPTY:.+]] = tensor.empty() : tensor<4x16x200x100x16x32xi32>
 // CHECK: %[[PACKED_ARG0:.+]] = tensor.pack %[[ARG0]]
 // CHECK-SAME:  outer_dims_perm = [1, 3, 2, 0] inner_dims_pos = [3, 1] inner_tiles = [16, 32]
@@ -792,7 +785,7 @@ func.func @reduction_pack_with_outer_dims(%arg0: tensor<100x128x200x256xi32>, %a
 // CHECK: %[[RES:.+]] = linalg.generic
 // CHECK-SAME:  indexing_maps = [#[[MAP]], #[[MAP1]], #[[MAP2]], #[[MAP3]]]
 // CHECK-SAME:  ins(%[[PACKED_ARG0]], %[[ARG1]], %[[PACKED_ARG2]]
-// CHECK-SAME:  outs(%[[PACKED_INIT]]
+// CHECK-SAME:  outs(%[[INIT_EMPTY]]
 
 // -----
 

@@ -3,6 +3,9 @@
 // Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46860
 // XFAIL: !compiler-rt-optimized && tsan
 
+// FIXME: Implement.
+// XFAIL: hwasan
+
 // RUN: %clangxx -O0 %s -o %t
 
 // RUN: %env_tool_opts=handle_segv=0 not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK0

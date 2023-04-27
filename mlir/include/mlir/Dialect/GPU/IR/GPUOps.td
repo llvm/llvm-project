@@ -536,12 +536,14 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     to the amount of dynamic shared memory a kernel's workgroup should be
     allocated; when this operand is not present, a zero size is assumed.
 
-    The body region has _twelve_ arguments, grouped as follows:
+    The body region has at least _twelve_ arguments, grouped as follows:
 
     -   three arguments that contain block identifiers along x,y,z dimensions;
     -   three arguments that contain thread identifiers along x,y,z dimensions;
     -   operands of the `gpu.launch` operation as is (i.e. the operands for
         grid and block sizes).
+    -   a variadic number of Workgroup memory attributions.
+    -   a variadic number of Private memory attributions.
 
     Syntax:
 
@@ -550,8 +552,11 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                              `block` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
+                             memory-attribution
                              region attr-dict?
     ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
+    memory-attribution ::= (`workgroup` `(` ssa-id-and-type-list `)`)?
+                           (`private` `(` ssa-id-and-type-list `)`)?
     ```
 
     Example:
@@ -582,6 +587,18 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       "some_op"(%bx, %tx) : (index, index) -> ()
       %3 = "memref.load"(%val1, %bx) : (memref<?xf32, 1>, index) -> f32
     }
+
+    // Launch with memory attributions.
+    gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %0, %sz_by = %1, %sz_bz = %2)
+               threads(%tx, %ty, %tz) in (%sz_tx = %3, %sz_ty = %4, %sz_tz = %5)
+               workgroup(%workgroup: memref<32xf32, 3>)
+               private(%private: memref<1xf32, 5>) {
+      // Block and thread identifiers, as well as block/grid sizes are
+      // immediately usable inside body region.
+      "some_op"(%bx, %tx) : (index, index) -> ()
+      // Assuming %val1 is defined outside the gpu.launch region.
+      %42 = load %workgroup[%bx] : memref<32xf32, 3>
+    }
     ```
 
     Rationale: using operation/block arguments gives analyses a clear way of
@@ -601,7 +618,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       "Value":$blockSizeZ,
       CArg<"Value", "nullptr">:$dynamicSharedMemorySize,
       CArg<"Type", "nullptr">:$asyncTokenType,
-      CArg<"ValueRange", "{}">:$asyncDependencies)>
+      CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"TypeRange", "{}">:$workgroupAttributions,
+      CArg<"TypeRange", "{}">:$privateAttributions)>
   ];
 
   let extraClassDeclaration = [{
@@ -632,6 +651,57 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     /// The number of region attributes containing the launch configuration,
     /// placed in the leading positions of the argument list.
     static constexpr unsigned kNumConfigRegionAttributes = 12;
+
+    /// Returns the keywords used in the custom syntax for this Op.
+    static StringRef getWorkgroupKeyword() { return "workgroup"; }
+    static StringRef getPrivateKeyword() { return "private"; }
+
+    /// Returns the number of buffers located in the workgroup memory.
+    unsigned getNumWorkgroupAttributions() {
+      auto attr = (*this)->getAttrOfType<IntegerAttr>(
+          getNumWorkgroupAttributionsAttrName());
+      return attr ? attr.getInt() : 0;
+    }
+
+    /// Returns a list of block arguments that correspond to buffers located in
+    /// the workgroup memory
+    ArrayRef<BlockArgument> getWorkgroupAttributions() {
+      auto begin =
+          std::next(getBody().args_begin(), kNumConfigRegionAttributes);
+      auto end = std::next(begin, getNumWorkgroupAttributions());
+      return {begin, end};
+    }
+
+    /// Adds a new block argument that corresponds to buffers located in
+    /// workgroup memory.
+    BlockArgument addWorkgroupAttribution(Type type, Location loc);
+
+    /// Returns the number of buffers located in the private memory.
+    unsigned getNumPrivateAttributions() {
+      return getBody().getNumArguments() - kNumConfigRegionAttributes -
+          getNumWorkgroupAttributions();
+    }
+
+    /// Returns a list of block arguments that correspond to buffers located in
+    /// the private memory.
+    ArrayRef<BlockArgument> getPrivateAttributions() {
+      // Buffers on the private memory always come after buffers on the workgroup
+      // memory.
+      auto begin =
+          std::next(getBody().args_begin(),
+                    kNumConfigRegionAttributes + getNumWorkgroupAttributions());
+      return {begin, getBody().args_end()};
+    }
+
+    /// Adds a new block argument that corresponds to buffers located in
+    /// private memory.
+    BlockArgument addPrivateAttribution(Type type, Location loc);
+
+    /// Returns the name of the attribute containing the number of buffers
+    /// located in the workgroup memory.
+    static StringRef getNumWorkgroupAttributionsAttrName() {
+      return "workgroup_attributions";
+    }
   }];
 
   let hasCanonicalizer = 1;
