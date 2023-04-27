@@ -89,4 +89,3 @@ namespace GH62362 {
     Test<void>();
   }
 }
-}
