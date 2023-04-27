@@ -100,7 +100,7 @@ static bool LookupAddressesFromStdin;
 static bool UseMergedFunctions = false;
 static bool LoadDwarfCallSites = false;
 static std::string CallSiteYamlPath;
-static std::vector<std::string> MergedFunctionsFilters;
+static std::string SymbolTableFilename;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -119,8 +119,9 @@ static void parseArgs(int argc, char **argv) {
         "information in each GSYM file.\n"
         "Specify a single GSYM file along with one or more --lookup options to "
         "lookup addresses within that GSYM file.\n"
-        "Use the --convert option to specify a file with option --out-file "
-        "option to convert to GSYM format.\n";
+        "Use the --convert option to specify a file (with --symtab-file if "
+        "needed) "
+        "with option --out-file option to convert to GSYM format.\n";
 
     Tbl.printHelp(llvm::outs(), "llvm-gsymutil [options] <input GSYM files>",
                   Overview);
@@ -195,23 +196,8 @@ static void parseArgs(int argc, char **argv) {
 
   LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
 
-  for (const llvm::opt::Arg *A :
-       Args.filtered(OPT_merged_functions_filter_EQ)) {
-    MergedFunctionsFilters.push_back(A->getValue());
-    // Validate the filter is only used with correct flags
-    if (LookupAddresses.empty() && !LookupAddressesFromStdin) {
-      llvm::errs() << ToolName
-                   << ": --merged-functions-filter can only be used with "
-                      "--address/--addresses-from-stdin\n";
-      std::exit(1);
-    }
-    if (!UseMergedFunctions) {
-      llvm::errs()
-          << ToolName
-          << ": --merged-functions-filter requires --merged-functions\n";
-      std::exit(1);
-    }
-  }
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_symtab_file_EQ))
+    SymbolTableFilename = A->getValue();
 }
 
 /// @}
@@ -374,12 +360,11 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
   // Make sure there is DWARF to convert first.
   std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(
       Obj,
-      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process,
-      nullptr,
+      /*RelocAction=*/DWARFContext::ProcessDebugRelocations::Process, nullptr,
       /*DWPName=*/"",
       /*RecoverableErrorHandler=*/WithColor::defaultErrorHandler,
       /*WarningHandler=*/WithColor::defaultWarningHandler,
-      /*ThreadSafe*/true);
+      /*ThreadSafe*/ true);
   if (!DICtx)
     return createStringError(std::errc::invalid_argument,
                              "unable to create DWARF context");
@@ -402,7 +387,38 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, const std::string &OutFile,
     Gsym.prepareMergedFunctions(Out);
 
   // Get the UUID and convert symbol table to GSYM.
-  if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
+  // Use a separate file for symbol table if specified
+  std::string SymtabFile = SymbolTableFilename;
+  ErrorOr<std::unique_ptr<MemoryBuffer>> SymtabBuffOrErr = nullptr;
+  std::unique_ptr<MemoryBuffer> SymtabBuffer = nullptr;
+  if (!SymtabFile.empty()) {
+    outs() << "Using symbol table file: " << SymbolTableFilename << "\n";
+    SymtabBuffOrErr = MemoryBuffer::getFileOrSTDIN(SymtabFile);
+    error(SymtabFile, SymtabBuffOrErr.getError());
+    SymtabBuffer = std::move(SymtabBuffOrErr.get());
+    Expected<std::unique_ptr<Binary>> SymtabBinOrErr =
+        object::createBinary(*SymtabBuffer);
+    error(SymtabFile, errorToErrorCode(SymtabBinOrErr.takeError()));
+    if (auto Symtab = dyn_cast<ObjectFile>(SymtabBinOrErr->get())) {
+      Triple ObjTriple(Obj.makeTriple());
+      Triple SymtabTriple(Symtab->makeTriple());
+      if (ObjTriple.getArchName() != SymtabTriple.getArchName())
+        return createStringError(std::errc::invalid_argument,
+                                 "Cannot use symbol table file %s in %s for "
+                                 "binary in %s architecture.",
+                                 SymtabFile.c_str(),
+                                 ObjTriple.getArchName().data(),
+                                 SymtabTriple.getArchName().data());
+      if (auto Err = ObjectFileTransformer::convert(*Symtab, Out, Gsym))
+        return Err;
+    } else
+      return createStringError(std::errc::invalid_argument,
+                               "Input symbol table file %s is not a "
+                               "valid object file.\n"
+                               "Supported files are ELF and mach-o "
+                               "(exclude universal binary) files.",
+                               SymtabFile.c_str());
+  } else if (auto Err = ObjectFileTransformer::convert(Obj, Out, Gsym))
     return Err;
 
   // If any call site YAML files were specified, load them now.
@@ -450,6 +466,12 @@ static llvm::Error handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
     if (auto Err = handleObjectFile(*Obj, OutFile, Out))
       return Err;
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
+    // Symbol table file is not accepted with universal binary
+    std::string SymtabFile = SymbolTableFilename;
+    if (!SymtabFile.empty())
+      return createStringError(std::errc::invalid_argument,
+                               "--symtab-file is not accepted for "
+                               "universal binary conversion");
     // Iterate over all contained architectures and filter out any that were
     // not specified with the "--arch <arch>" option. If the --arch option was
     // not specified on the command line, we will process all architectures.
@@ -528,43 +550,9 @@ static llvm::Error convertFileToGSYM(OutputAggregator &Out) {
 static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
   if (UseMergedFunctions) {
     if (auto Results = Gsym.lookupAll(Addr)) {
-      // If we have filters, count matching results first
-      size_t NumMatching = Results->size();
-      if (!MergedFunctionsFilters.empty()) {
-        NumMatching = 0;
-        for (const auto &Result : *Results) {
-          bool Matches = false;
-          for (const auto &Filter : MergedFunctionsFilters) {
-            Regex Pattern(Filter);
-            if (Pattern.match(Result.FuncName)) {
-              Matches = true;
-              break;
-            }
-          }
-          if (Matches)
-            NumMatching++;
-        }
-      }
-
-      OS << "Found " << NumMatching << " function"
-         << (NumMatching != 1 ? "s" : "") << " at address " << HEX64(Addr)
-         << ":\n";
-
+      OS << "Found " << Results->size() << " functions at address "
+         << HEX64(Addr) << ":\n";
       for (size_t i = 0; i < Results->size(); ++i) {
-        // Skip if doesn't match any filter
-        if (!MergedFunctionsFilters.empty()) {
-          bool Matches = false;
-          for (const auto &Filter : MergedFunctionsFilters) {
-            Regex Pattern(Filter);
-            if (Pattern.match(Results->at(i).FuncName)) {
-              Matches = true;
-              break;
-            }
-          }
-          if (!Matches)
-            continue;
-        }
-
         OS << "   " << Results->at(i);
 
         if (i != Results->size() - 1)
@@ -581,8 +569,6 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
           OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
         }
       }
-      // Don't print call site info if --merged-functions is not specified.
-      Result->CallSiteFuncRegex.clear();
       OS << Result.get();
     } else {
       if (Verbose)

@@ -46,8 +46,6 @@ def addresses_from_stdin :
 defm json_summary_file :
   Eq<"json-summary-file",
      "Output a categorized summary of errors into the JSON file specified.">;
-defm merged_functions_filter : 
-  Eq<"merged-functions-filter", 
-     "When used with --address/--addresses-from-stdin and --merged-functions,\n"
-     "filters the merged functions output to only show functions matching any of the specified regex patterns.\n"
-     "Can be specified multiple times.">;
+defm symtab_file :
+  Eq<"symtab-file",
+     "Specify a separate file for symbol table to GSYM conversion.\nIn case the symbol table and debug info are not in the same binary. Does not support universal binary.">;
