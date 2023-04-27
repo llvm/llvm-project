@@ -5880,6 +5880,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LoopLikeInterface",
+        ":Mem2RegInterfaces",
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",
