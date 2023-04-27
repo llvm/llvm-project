@@ -1424,7 +1424,6 @@ static LogicalResult
 convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
   unsigned numMapOperands;
-  bool mapperFunc = false;
   llvm::Value *ifCond = nullptr;
   int64_t deviceID = llvm::omp::OMP_DEVICEID_UNDEF;
   SmallVector<Value> mapOperands;
@@ -1471,7 +1470,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             numMapOperands = enterDataOp.getMapOperands().size();
             mapOperands = enterDataOp.getMapOperands();
             mapTypes = enterDataOp.getMapTypes();
-            mapperFunc = true;
             return success();
           })
           .Case([&](omp::ExitDataOp exitDataOp) {
@@ -1532,11 +1530,11 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   if (isa<omp::DataOp>(op)) {
     builder.restoreIP(ompBuilder->createTargetData(
         ompLoc, builder.saveIP(), mapTypeFlags, mapNames, mapperAllocas,
-        mapperFunc, deviceID, ifCond, processMapOpCB, bodyCB));
+        /*IsBegin=*/false, deviceID, ifCond, processMapOpCB, bodyCB));
   } else {
     builder.restoreIP(ompBuilder->createTargetData(
         ompLoc, builder.saveIP(), mapTypeFlags, mapNames, mapperAllocas,
-        mapperFunc, deviceID, ifCond, processMapOpCB));
+        isa<omp::EnterDataOp>(op), deviceID, ifCond, processMapOpCB));
   }
 
   if (failed(processMapOpStatus))
