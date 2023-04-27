@@ -994,7 +994,8 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
   } else {
     size_t ShadowSize = Size >> Mapping.Scale;
-    Value *ShadowPtr = memToShadow(IRB.CreatePointerCast(AI, IntptrTy), IRB);
+    Value *AddrLong = untagPointer(IRB, IRB.CreatePointerCast(AI, IntptrTy));
+    Value *ShadowPtr = memToShadow(AddrLong, IRB);
     // If this memset is not inlined, it will be intercepted in the hwasan
     // runtime library. That's OK, because the interceptor skips the checks if
     // the address is in the shadow region.
@@ -1070,7 +1071,12 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
-  return ConstantInt::get(IntptrTy, 0);
+  Value *StackPointerLong = getSP(IRB);
+  Value *UARTag =
+      applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
+
+  UARTag->setName("hwasan.uar.tag");
+  return UARTag;
 }
 
 // Add a tag to an address.
