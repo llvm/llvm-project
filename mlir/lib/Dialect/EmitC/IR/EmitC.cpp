@@ -125,6 +125,11 @@ LogicalResult emitc::ConstantOp::verify() {
   if (getValueAttr().isa<emitc::OpaqueAttr>())
     return success();
 
+  // Value must not be empty
+  StringAttr strAttr = getValueAttr().dyn_cast<StringAttr>();
+  if (strAttr && strAttr.getValue().empty())
+    return emitOpError() << "value must not be empty";
+
   auto value = cast<TypedAttr>(getValueAttr());
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
