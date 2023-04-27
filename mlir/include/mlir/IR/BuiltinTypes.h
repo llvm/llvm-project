@@ -91,7 +91,7 @@ public:
   ArrayRef<int64_t> getShape() const;
 
   /// Clone this type with the given shape and element type. If the
-  /// provided shape is `None`, the current shape of the type is used.
+  /// provided shape is `std::nullopt`, the current shape of the type is used.
   TensorType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                        Type elementType) const;
 
@@ -127,7 +127,7 @@ public:
   ArrayRef<int64_t> getShape() const;
 
   /// Clone this type with the given shape and element type. If the
-  /// provided shape is `None`, the current shape of the type is used.
+  /// provided shape is `std::nullopt`, the current shape of the type is used.
   BaseMemRefType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                            Type elementType) const;
 
