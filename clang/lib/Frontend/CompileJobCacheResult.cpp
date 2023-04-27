@@ -41,7 +41,7 @@ Error CompileJobCacheResult::forEachLoadedOutput(
   size_t Count = getNumOutputs();
   for (size_t I = 0; I < Count; ++I) {
     ObjectRef Ref = getOutputObject(I);
-    FutureOutputs.push_back(getCAS().getProxyAsync(Ref));
+    FutureOutputs.push_back(getCAS().getProxyFuture(Ref));
   }
 
   // Make sure all the outputs have materialized.

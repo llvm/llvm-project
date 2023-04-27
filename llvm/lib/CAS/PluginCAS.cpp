@@ -370,8 +370,14 @@ class PluginActionCache : public ActionCache {
 public:
   Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
                                          bool Globally) const final;
+  void getImplAsync(
+      ArrayRef<uint8_t> ResolvedKey, bool Globally,
+      unique_function<void(Expected<Optional<CASID>>)> Callback) const final;
+
   Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                 bool Globally) final;
+  void putImplAsync(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
+                    bool Globally, unique_function<void(Error)> Callback) final;
 
   PluginActionCache(std::shared_ptr<PluginCASContext>);
 
@@ -401,6 +407,43 @@ PluginActionCache::getImpl(ArrayRef<uint8_t> ResolvedKey, bool Globally) const {
   }
 }
 
+void PluginActionCache::getImplAsync(
+    ArrayRef<uint8_t> ResolvedKey, bool Globally,
+    unique_function<void(Expected<Optional<CASID>>)> Callback) const {
+
+  struct CacheGetCtx {
+    std::shared_ptr<PluginCASContext> CASCtx;
+    unique_function<void(Expected<Optional<CASID>>)> Callback;
+  };
+  auto CacheGetCB = [](void *c_ctx, llcas_lookup_result_t c_result,
+                       llcas_objectid_t c_value, char *c_err) {
+    auto getValueAndDispose =
+        [&](CacheGetCtx *Ctx) -> Expected<Optional<CASID>> {
+      auto _ = make_scope_exit([Ctx]() { delete Ctx; });
+      switch (c_result) {
+      case LLCAS_LOOKUP_RESULT_SUCCESS: {
+        llcas_digest_t c_digest = Ctx->CASCtx->Functions.objectid_get_digest(
+            Ctx->CASCtx->c_cas, c_value);
+        return CASID::create(Ctx->CASCtx.get(), toStringRef(c_digest));
+      }
+      case LLCAS_LOOKUP_RESULT_NOTFOUND:
+        return std::nullopt;
+      case LLCAS_LOOKUP_RESULT_ERROR:
+        return Ctx->CASCtx->errorAndDispose(c_err);
+      }
+    };
+
+    CacheGetCtx *Ctx = static_cast<CacheGetCtx *>(c_ctx);
+    auto Callback = std::move(Ctx->Callback);
+    Callback(getValueAndDispose(Ctx));
+  };
+
+  CacheGetCtx *CallCtx = new CacheGetCtx{this->Ctx, std::move(Callback)};
+  Ctx->Functions.actioncache_get_for_digest_async(
+      Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
+      Globally, CallCtx, CacheGetCB);
+}
+
 Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
                                  const CASID &Result, bool Globally) {
   ArrayRef<uint8_t> Hash = Result.getHash();
@@ -409,7 +452,7 @@ Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
   if (Ctx->Functions.cas_get_objectid(Ctx->c_cas,
                                       llcas_digest_t{Hash.data(), Hash.size()},
                                       &c_value, &c_err))
-    report_fatal_error(Ctx->errorAndDispose(c_err));
+    return Ctx->errorAndDispose(c_err);
 
   if (Ctx->Functions.actioncache_put_for_digest(
           Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
@@ -417,6 +460,40 @@ Error PluginActionCache::putImpl(ArrayRef<uint8_t> ResolvedKey,
     return Ctx->errorAndDispose(c_err);
 
   return Error::success();
+}
+
+void PluginActionCache::putImplAsync(ArrayRef<uint8_t> ResolvedKey,
+                                     const CASID &Result, bool Globally,
+                                     unique_function<void(Error)> Callback) {
+  ArrayRef<uint8_t> Hash = Result.getHash();
+  llcas_objectid_t c_value;
+  char *c_err = nullptr;
+  if (Ctx->Functions.cas_get_objectid(Ctx->c_cas,
+                                      llcas_digest_t{Hash.data(), Hash.size()},
+                                      &c_value, &c_err))
+    return Callback(Ctx->errorAndDispose(c_err));
+
+  struct CachePutCtx {
+    std::shared_ptr<PluginCASContext> CASCtx;
+    unique_function<void(Error)> Callback;
+  };
+  auto CachePutCB = [](void *c_ctx, bool failed, char *c_err) {
+    auto checkForErrorAndDispose = [&](CachePutCtx *Ctx) -> Error {
+      auto _ = make_scope_exit([Ctx]() { delete Ctx; });
+      if (failed)
+        return Ctx->CASCtx->errorAndDispose(c_err);
+      return Error::success();
+    };
+
+    CachePutCtx *Ctx = static_cast<CachePutCtx *>(c_ctx);
+    auto Callback = std::move(Ctx->Callback);
+    Callback(checkForErrorAndDispose(Ctx));
+  };
+
+  CachePutCtx *CallCtx = new CachePutCtx{this->Ctx, std::move(Callback)};
+  Ctx->Functions.actioncache_put_for_digest_async(
+      Ctx->c_cas, llcas_digest_t{ResolvedKey.data(), ResolvedKey.size()},
+      c_value, Globally, CallCtx, CachePutCB);
 }
 
 PluginActionCache::PluginActionCache(std::shared_ptr<PluginCASContext> CASCtx)

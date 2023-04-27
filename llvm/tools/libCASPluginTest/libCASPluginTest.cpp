@@ -490,6 +490,19 @@ llcas_actioncache_get_for_digest(llcas_cas_t c_cas, llcas_digest_t c_key,
   return LLCAS_LOOKUP_RESULT_SUCCESS;
 }
 
+void llcas_actioncache_get_for_digest_async(llcas_cas_t c_cas,
+                                            llcas_digest_t c_key, bool globally,
+                                            void *ctx_cb,
+                                            llcas_actioncache_get_cb cb) {
+  unwrap(c_cas)->Pool.async([=] {
+    llcas_objectid_t c_value;
+    char *c_err;
+    llcas_lookup_result_t result = llcas_actioncache_get_for_digest(
+        c_cas, c_key, &c_value, globally, &c_err);
+    cb(ctx_cb, result, c_value, c_err);
+  });
+}
+
 bool llcas_actioncache_put_for_digest(llcas_cas_t c_cas, llcas_digest_t c_key,
                                       llcas_objectid_t c_value, bool globally,
                                       char **error) {
@@ -511,4 +524,17 @@ bool llcas_actioncache_put_for_digest(llcas_cas_t c_cas, llcas_digest_t c_key,
   }
 
   return false;
+}
+
+void llcas_actioncache_put_for_digest_async(llcas_cas_t c_cas,
+                                            llcas_digest_t c_key,
+                                            llcas_objectid_t c_value,
+                                            bool globally, void *ctx_cb,
+                                            llcas_actioncache_put_cb cb) {
+  unwrap(c_cas)->Pool.async([=] {
+    char *c_err;
+    bool failed = llcas_actioncache_put_for_digest(c_cas, c_key, c_value,
+                                                   globally, &c_err);
+    cb(ctx_cb, failed, c_err);
+  });
 }

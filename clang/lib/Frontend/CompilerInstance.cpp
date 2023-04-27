@@ -2415,7 +2415,7 @@ static bool addCachedModuleFileToInMemoryCache(
     llvm::report_fatal_error("missing main output");
   // FIXME: We wait to materialize each module file before proceeding, which
   // introduces latency for a network CAS. Instead we should collect all the
-  // module keys and materialize them concurrently using \c getProxyAsync, for
+  // module keys and materialize them concurrently using \c getProxyFuture, for
   // better network utilization.
   auto OutputProxy = CAS.getProxy(Output->Object);
   if (!OutputProxy) {

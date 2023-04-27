@@ -189,7 +189,6 @@ LLCAS_PUBLIC llcas_lookup_result_t llcas_cas_load_object(
  * Whether the call is asynchronous or not depends on the implementation.
  *
  * \param ctx_cb pointer to pass to the callback function.
- *
  */
 LLCAS_PUBLIC void llcas_cas_load_object_async(llcas_cas_t, llcas_objectid_t,
                                               void *ctx_cb,
@@ -258,6 +257,18 @@ LLCAS_PUBLIC llcas_lookup_result_t llcas_actioncache_get_for_digest(
     char **error);
 
 /**
+ * Like \c llcas_actioncache_get_for_digest but result is provided to a callback
+ * function. Whether the call is asynchronous or not depends on the
+ * implementation.
+ *
+ * \param ctx_cb pointer to pass to the callback function.
+ */
+LLCAS_PUBLIC void
+llcas_actioncache_get_for_digest_async(llcas_cas_t, llcas_digest_t key,
+                                       bool globally, void *ctx_cb,
+                                       llcas_actioncache_get_cb);
+
+/**
  * Associates a \c llcas_objectid_t \p value with a \p key. It is invalid to set
  * a different \p value to the same \p key.
  *
@@ -273,6 +284,18 @@ LLCAS_PUBLIC bool llcas_actioncache_put_for_digest(llcas_cas_t,
                                                    llcas_digest_t key,
                                                    llcas_objectid_t value,
                                                    bool globally, char **error);
+
+/**
+ * Like \c llcas_actioncache_put_for_digest but result is provided to a callback
+ * function. Whether the call is asynchronous or not depends on the
+ * implementation.
+ *
+ * \param ctx_cb pointer to pass to the callback function.
+ */
+LLCAS_PUBLIC void
+llcas_actioncache_put_for_digest_async(llcas_cas_t, llcas_digest_t key,
+                                       llcas_objectid_t value, bool globally,
+                                       void *ctx_cb, llcas_actioncache_put_cb);
 
 LLVM_C_EXTERN_C_END
 
