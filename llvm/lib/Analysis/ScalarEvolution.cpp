@@ -6013,11 +6013,6 @@ const SCEV *ScalarEvolution::createNodeFromSelectLikePHI(PHINode *PN) {
   if (PN->getNumIncomingValues() == 2 && all_of(PN->blocks(), IsReachable)) {
     const Loop *L = LI.getLoopFor(PN->getParent());
 
-    // We don't want to break LCSSA, even in a SCEV expression tree.
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      if (LI.getLoopFor(PN->getIncomingBlock(i)) != L)
-        return nullptr;
-
     // Try to match
     //
     //  br %cond, label %left, label %right
