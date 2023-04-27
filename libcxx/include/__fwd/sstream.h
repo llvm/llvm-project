@@ -18,40 +18,39 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _CharT, class _Traits = char_traits<_CharT>,
-          class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_stringbuf;
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT> >
+class _LIBCPP_TEMPLATE_VIS basic_stringbuf;
 
-template <class _CharT, class _Traits = char_traits<_CharT>,
-          class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_istringstream;
-template <class _CharT, class _Traits = char_traits<_CharT>,
-          class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_ostringstream;
-template <class _CharT, class _Traits = char_traits<_CharT>,
-          class _Allocator = allocator<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_stringstream;
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT> >
+class _LIBCPP_TEMPLATE_VIS basic_istringstream;
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT> >
+class _LIBCPP_TEMPLATE_VIS basic_ostringstream;
+template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT> >
+class _LIBCPP_TEMPLATE_VIS basic_stringstream;
 
-typedef basic_stringbuf<char>        stringbuf;
-typedef basic_istringstream<char>    istringstream;
-typedef basic_ostringstream<char>    ostringstream;
-typedef basic_stringstream<char>     stringstream;
+typedef basic_stringbuf<char> stringbuf;
+typedef basic_istringstream<char> istringstream;
+typedef basic_ostringstream<char> ostringstream;
+typedef basic_stringstream<char> stringstream;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_stringbuf<wchar_t>     wstringbuf;
+typedef basic_stringbuf<wchar_t> wstringbuf;
 typedef basic_istringstream<wchar_t> wistringstream;
 typedef basic_ostringstream<wchar_t> wostringstream;
-typedef basic_stringstream<wchar_t>  wstringstream;
+typedef basic_stringstream<wchar_t> wstringstream;
 #endif
 
 template <class _CharT, class _Traits, class _Allocator>
-    class _LIBCPP_PREFERRED_NAME(stringbuf) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstringbuf)) basic_stringbuf;
+class _LIBCPP_PREFERRED_NAME(stringbuf) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstringbuf)) basic_stringbuf;
 template <class _CharT, class _Traits, class _Allocator>
-    class _LIBCPP_PREFERRED_NAME(istringstream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wistringstream)) basic_istringstream;
+class _LIBCPP_PREFERRED_NAME(istringstream)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wistringstream)) basic_istringstream;
 template <class _CharT, class _Traits, class _Allocator>
-    class _LIBCPP_PREFERRED_NAME(ostringstream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wostringstream)) basic_ostringstream;
+class _LIBCPP_PREFERRED_NAME(ostringstream)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wostringstream)) basic_ostringstream;
 template <class _CharT, class _Traits, class _Allocator>
-    class _LIBCPP_PREFERRED_NAME(stringstream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstringstream)) basic_stringstream;
+class _LIBCPP_PREFERRED_NAME(stringstream)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstringstream)) basic_stringstream;
 
 _LIBCPP_END_NAMESPACE_STD
 
