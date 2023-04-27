@@ -134,7 +134,8 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Dest);
     OutMI.addOperand(Src);
     return;
-  } else if (Opcode == AMDGPU::SI_TCRETURN) {
+  } else if (Opcode == AMDGPU::SI_TCRETURN ||
+             Opcode == AMDGPU::SI_TCRETURN_GFX) {
     // TODO: How to use branch immediate and avoid register+add?
     Opcode = AMDGPU::S_SETPC_B64;
   }
