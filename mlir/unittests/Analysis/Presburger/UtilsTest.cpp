@@ -36,7 +36,7 @@ static void checkEqual(DivisionRepr &a, DivisionRepr &b) {
 }
 
 TEST(UtilsTest, ParseAndCompareDivisionReprTest) {
-  auto merge = [this](unsigned i, unsigned j) -> bool { return true; };
+  auto merge = [](unsigned i, unsigned j) -> bool { return true; };
   DivisionRepr a = parseDivisionRepr(1, 1, {{MPInt(1), MPInt(2)}}, {MPInt(2)}),
                b = parseDivisionRepr(1, 1, {{MPInt(1), MPInt(2)}}, {MPInt(2)}),
                c = parseDivisionRepr(2, 2,
@@ -49,7 +49,7 @@ TEST(UtilsTest, ParseAndCompareDivisionReprTest) {
 }
 
 TEST(UtilsTest, DivisionReprNormalizeTest) {
-  auto merge = [this](unsigned i, unsigned j) -> bool { return true; };
+  auto merge = [](unsigned i, unsigned j) -> bool { return true; };
   DivisionRepr a = parseDivisionRepr(2, 1, {{MPInt(1), MPInt(2), MPInt(-1)}},
                                      {MPInt(2)}),
                b = parseDivisionRepr(2, 1, {{MPInt(16), MPInt(32), MPInt(-16)}},
