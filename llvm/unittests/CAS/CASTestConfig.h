@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_UNITTESTS_CASTESTCONFIG_H
+#define LLVM_UNITTESTS_CASTESTCONFIG_H
+
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/FileSystem.h"
@@ -13,9 +16,6 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <memory>
-
-#ifndef LLVM_UNITTESTS_CASTESTCONFIG_H
-#define LLVM_UNITTESTS_CASTESTCONFIG_H
 
 namespace llvm::unittest::cas {
 class MockEnv {

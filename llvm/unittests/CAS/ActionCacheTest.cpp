@@ -106,3 +106,45 @@ TEST(OnDiskActionCache, ActionCacheResultInvalid) {
   // Write a different value will cause error.
   ASSERT_THAT_ERROR(Cache2->put(*ID3, *ID3), Failed());
 }
+
+TEST_P(CASTest, ActionCacheAsync) {
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ActionCache> Cache = createActionCache();
+
+  {
+    std::optional<ObjectProxy> ID;
+    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID),
+                      Succeeded());
+    auto PutFuture = Cache->putFuture(*ID, *ID);
+    ASSERT_THAT_ERROR(PutFuture.get().take(), Succeeded());
+    auto GetFuture = Cache->getFuture(*ID);
+    std::optional<CASID> ResultID;
+    ASSERT_THAT_ERROR(GetFuture.get().take().moveInto(ResultID), Succeeded());
+    ASSERT_TRUE(ResultID);
+  }
+
+  std::optional<ObjectProxy> ID2;
+  ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
+                    Succeeded());
+  {
+    std::promise<AsyncErrorValue> Promise;
+    auto Future = Promise.get_future();
+    Cache->putAsync(*ID2, *ID2, false,
+                    [Promise = std::move(Promise)](Error E) mutable {
+                      Promise.set_value(std::move(E));
+                    });
+    ASSERT_THAT_ERROR(Future.get().take(), Succeeded());
+  }
+  {
+    std::promise<AsyncCASIDValue> Promise;
+    auto Future = Promise.get_future();
+    Cache->getAsync(*ID2, false,
+                    [Promise = std::move(Promise)](
+                        Expected<Optional<CASID>> Value) mutable {
+                      Promise.set_value(std::move(Value));
+                    });
+    std::optional<CASID> ResultID;
+    ASSERT_THAT_ERROR(Future.get().take().moveInto(ResultID), Succeeded());
+    ASSERT_TRUE(ResultID);
+  }
+}

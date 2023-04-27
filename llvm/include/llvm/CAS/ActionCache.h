@@ -9,11 +9,13 @@
 #ifndef LLVM_CAS_CASACTIONCACHE_H
 #define LLVM_CAS_CASACTIONCACHE_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/Support/Error.h"
+#include <future>
 
 namespace llvm::cas {
 
@@ -40,6 +42,20 @@ private:
   std::string Key;
 };
 
+using AsyncCASIDValue = AsyncValue<CASID>;
+
+/// This is used to workaround the issue of MSVC needing default-constructible
+/// types for \c std::promise/future.
+struct AsyncErrorValue {
+  Error take() { return std::move(Value); }
+
+  AsyncErrorValue() : Value(Error::success()) {}
+  AsyncErrorValue(Error &&E) : Value(std::move(E)) {}
+
+private:
+  Error Value;
+};
+
 /// A cache from a key describing an action to the result of doing it.
 ///
 /// Actions are expected to be pure (collision is an error).
@@ -57,6 +73,18 @@ public:
     return getImpl(arrayRefFromStringRef(ActionKey.getKey()), Globally);
   }
 
+  /// Asynchronous version of \c get.
+  std::future<AsyncCASIDValue> getFuture(const CacheKey &ActionKey,
+                                         bool Globally = false) const;
+
+  /// Asynchronous version of \c get.
+  void getAsync(
+      const CacheKey &ActionKey, bool Globally,
+      unique_function<void(Expected<std::optional<CASID>>)> Callback) const {
+    return getImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Globally,
+                        std::move(Callback));
+  }
+
   /// Cache \p Result for the \p ActionKey computation.
   ///
   /// \param Globally if true it is a hint to the underlying implementation that
@@ -70,13 +98,35 @@ public:
     return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result, Globally);
   }
 
+  /// Asynchronous version of \c put.
+  std::future<AsyncErrorValue> putFuture(const CacheKey &ActionKey,
+                                         const CASID &Result,
+                                         bool Globally = false);
+
+  /// Asynchronous version of \c put.
+  void putAsync(const CacheKey &ActionKey, const CASID &Result, bool Globally,
+                unique_function<void(Error)> Callback) {
+    assert(Result.getContext().getHashSchemaIdentifier() ==
+               getContext().getHashSchemaIdentifier() &&
+           "Hash schema mismatch");
+    return putImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Result,
+                        Globally, std::move(Callback));
+  }
+
   virtual ~ActionCache() = default;
 
 protected:
   virtual Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
                                             bool Globally) const = 0;
+  virtual void getImplAsync(
+      ArrayRef<uint8_t> ResolvedKey, bool Globally,
+      unique_function<void(Expected<std::optional<CASID>>)> Callback) const;
+
   virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                         bool Globally) = 0;
+  virtual void putImplAsync(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
+                            bool Globally,
+                            unique_function<void(Error)> Callback);
 
   ActionCache(const CASContext &Context) : Context(Context) {}
 
