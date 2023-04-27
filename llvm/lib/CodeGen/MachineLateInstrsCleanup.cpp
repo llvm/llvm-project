@@ -175,7 +175,8 @@ bool MachineLateInstrsCleanup::processBlock(MachineBasicBlock *MBB) {
   Reg2DefMap &MBBDefs = RegDefs[MBB->getNumber()];
 
   // Find reusable definitions in the predecessor(s).
-  if (!MBB->pred_empty() && !MBB->isEHPad()) {
+  if (!MBB->pred_empty() && !MBB->isEHPad() &&
+      !MBB->isInlineAsmBrIndirectTarget()) {
     MachineBasicBlock *FirstPred = *MBB->pred_begin();
     for (auto [Reg, DefMI] : RegDefs[FirstPred->getNumber()])
       if (llvm::all_of(
