@@ -10075,7 +10075,7 @@ Arguments:
 The first two operands of a '``shufflevector``' instruction are vectors
 with the same type. The third argument is a shuffle mask vector constant
 whose element type is ``i32``. The mask vector elements must be constant
-integers or ``undef`` values. The result of the instruction is a vector
+integers or ``poison`` values. The result of the instruction is a vector
 whose length is the same as the shuffle mask and whose element type is the
 same as the element type of the first two operands.
 
@@ -10088,15 +10088,15 @@ shuffle mask selects an element from one of the input vectors to copy
 to the result. Non-negative elements in the mask represent an index
 into the concatenated pair of input vectors.
 
-If the shuffle mask is undefined, the result vector is undefined. If
-the shuffle mask selects an undefined element from one of the input
-vectors, the resulting element is undefined. An undefined element
-in the mask vector specifies that the resulting element is undefined.
-An undefined element in the mask vector prevents a poisoned vector
-element from propagating.
+A ``poison`` element in the mask vector specifies that the resulting element
+is ``poison``.
+For backwards-compatibility reasons, LLVM temporarily also accepts ``undef``
+mask elements, which will be interpreted the same way as ``poison`` elements.
+If the shuffle mask selects an ``undef`` element from one of the input
+vectors, the resulting element is ``undef``.
 
 For scalable vectors, the only valid mask values at present are
-``zeroinitializer`` and ``undef``, since we cannot write all indices as
+``zeroinitializer``, ``undef`` and ``poison``, since we cannot write all indices as
 literals for a vector with a length unknown at compile time.
 
 Example:
@@ -10106,9 +10106,9 @@ Example:
 
       <result> = shufflevector <4 x i32> %v1, <4 x i32> %v2,
                               <4 x i32> <i32 0, i32 4, i32 1, i32 5>  ; yields <4 x i32>
-      <result> = shufflevector <4 x i32> %v1, <4 x i32> undef,
+      <result> = shufflevector <4 x i32> %v1, <4 x i32> poison,
                               <4 x i32> <i32 0, i32 1, i32 2, i32 3>  ; yields <4 x i32> - Identity shuffle.
-      <result> = shufflevector <8 x i32> %v1, <8 x i32> undef,
+      <result> = shufflevector <8 x i32> %v1, <8 x i32> poison,
                               <4 x i32> <i32 0, i32 1, i32 2, i32 3>  ; yields <4 x i32>
       <result> = shufflevector <4 x i32> %v1, <4 x i32> %v2,
                               <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7 >  ; yields <8 x i32>
