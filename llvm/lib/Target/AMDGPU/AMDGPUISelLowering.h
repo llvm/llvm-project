@@ -438,7 +438,6 @@ enum NodeType : unsigned {
   RCP_IFLAG,
   FMUL_LEGACY,
   RSQ_CLAMP,
-  LDEXP,
   FP_CLASS,
   DOT4,
   CARRY,
