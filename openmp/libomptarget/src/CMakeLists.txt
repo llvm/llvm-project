@@ -20,7 +20,7 @@ add_llvm_library(omptarget
   interface.cpp
   interop.cpp
   omptarget.cpp
-  ompt_callback.cpp
+  OmptCallback.cpp
   rtl.cpp
   LegacyAPI.cpp
 

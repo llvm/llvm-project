@@ -36,6 +36,7 @@ add_llvm_library(omptarget.rtl.cuda.nextgen SHARED
   LINK_LIBS PRIVATE
   elf_common
   MemoryManager
+  OMPT
   PluginInterface
   ${OPENMP_PTHREAD_LIB}
 
