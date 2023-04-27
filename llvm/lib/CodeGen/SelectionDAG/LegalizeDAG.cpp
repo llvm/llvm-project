@@ -133,8 +133,11 @@ private:
                                      SDValue N1, SDValue N2,
                                      ArrayRef<int> Mask) const;
 
+  SDValue ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
+                        TargetLowering::ArgListTy &&Args, bool isSigned);
   SDValue ExpandLibCall(RTLIB::Libcall LC, SDNode *Node, bool isSigned);
 
+  void ExpandFrexpLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandFPLibCall(SDNode *Node, RTLIB::Libcall LC,
                        SmallVectorImpl<SDValue> &Results);
   void ExpandFPLibCall(SDNode *Node, RTLIB::Libcall Call_F32,
@@ -173,6 +176,7 @@ private:
   SDValue ExpandFABS(SDNode *Node) const;
   SDValue ExpandFNEG(SDNode *Node) const;
   SDValue expandLdexp(SDNode *Node) const;
+  SDValue expandFrexp(SDNode *Node) const;
 
   SDValue ExpandLegalINT_TO_FP(SDNode *Node, SDValue &Chain);
   void PromoteLegalINT_TO_FP(SDNode *N, const SDLoc &dl,
@@ -2028,18 +2032,8 @@ SDValue SelectionDAGLegalize::ExpandSPLAT_VECTOR(SDNode *Node) {
 // by-reg argument.  If it does fit into a single register, return the result
 // and leave the Hi part unset.
 SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
+                                            TargetLowering::ArgListTy &&Args,
                                             bool isSigned) {
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  for (const SDValue &Op : Node->op_values()) {
-    EVT ArgVT = Op.getValueType();
-    Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
-    Entry.Node = Op;
-    Entry.Ty = ArgTy;
-    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, isSigned);
-    Entry.IsZExt = !TLI.shouldSignExtendTypeInLibCall(ArgVT, isSigned);
-    Args.push_back(Entry);
-  }
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
                                          TLI.getPointerTy(DAG.getDataLayout()));
 
@@ -2083,6 +2077,62 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
 
   LLVM_DEBUG(dbgs() << "Created libcall: "; CallInfo.first.dump(&DAG));
   return CallInfo.first;
+}
+
+SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
+                                            bool isSigned) {
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  for (const SDValue &Op : Node->op_values()) {
+    EVT ArgVT = Op.getValueType();
+    Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
+    Entry.Node = Op;
+    Entry.Ty = ArgTy;
+    Entry.IsSExt = TLI.shouldSignExtendTypeInLibCall(ArgVT, isSigned);
+    Entry.IsZExt = !Entry.IsSExt;
+    Args.push_back(Entry);
+  }
+
+  return ExpandLibCall(LC, Node, std::move(Args), isSigned);
+}
+
+void SelectionDAGLegalize::ExpandFrexpLibCall(
+    SDNode *Node, SmallVectorImpl<SDValue> &Results) {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  EVT ExpVT = Node->getValueType(1);
+
+  SDValue FPOp = Node->getOperand(0);
+
+  EVT ArgVT = FPOp.getValueType();
+  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
+
+  TargetLowering::ArgListEntry FPArgEntry;
+  FPArgEntry.Node = FPOp;
+  FPArgEntry.Ty = ArgTy;
+
+  SDValue StackSlot = DAG.CreateStackTemporary(ExpVT);
+  TargetLowering::ArgListEntry PtrArgEntry;
+  PtrArgEntry.Node = StackSlot;
+  PtrArgEntry.Ty = PointerType::get(*DAG.getContext(),
+                                    DAG.getDataLayout().getAllocaAddrSpace());
+
+  TargetLowering::ArgListTy Args = {FPArgEntry, PtrArgEntry};
+
+  RTLIB::Libcall LC = RTLIB::getFREXP(VT);
+  SDValue Call = ExpandLibCall(LC, Node, std::move(Args), false);
+
+  Results.push_back(Call);
+
+  // FIXME: Get type of int for libcall declaration and cast
+
+  int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
+  auto PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
+
+  SDValue LoadExp =
+      DAG.getLoad(ExpVT, dl, Call.getValue(1), StackSlot, PtrInfo);
+  Results.push_back(LoadExp);
 }
 
 void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
@@ -2427,6 +2477,125 @@ SDValue SelectionDAGLegalize::expandLdexp(SDNode *Node) const {
                               ExponentShiftAmt, NUW_NSW);
   SDValue AsFP = DAG.getNode(ISD::BITCAST, dl, VT, AsInt);
   return DAG.getNode(ISD::FMUL, dl, VT, NewX, AsFP);
+}
+
+SDValue SelectionDAGLegalize::expandFrexp(SDNode *Node) const {
+  SDLoc dl(Node);
+  SDValue Val = Node->getOperand(0);
+  EVT VT = Val.getValueType();
+  EVT ExpVT = Node->getValueType(1);
+  EVT AsIntVT = VT.changeTypeToInteger();
+  if (AsIntVT == EVT()) // TODO: How to handle f80?
+    return SDValue();
+
+  const fltSemantics &FltSem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
+  const unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  const unsigned BitSize = VT.getScalarSizeInBits();
+
+  // TODO: Could introduce control flow and skip over the denormal handling.
+
+  // scale_up = fmul value, scalbn(1.0, precision + 1)
+  // extracted_exp = (bitcast value to uint) >> precision - 1
+  // biased_exp = extracted_exp + min_exp
+  // extracted_fract = (bitcast value to uint) & (fract_mask | sign_mask)
+  //
+  // is_denormal = val < smallest_normalized
+  // computed_fract = is_denormal ? scale_up : extracted_fract
+  // computed_exp = is_denormal ? biased_exp + (-precision - 1) : biased_exp
+  //
+  // result_0 =  (!isfinite(val) || iszero(val)) ? val : computed_fract
+  // result_1 =  (!isfinite(val) || iszero(val)) ? 0 : computed_exp
+
+  SDValue NegSmallestNormalizedInt = DAG.getConstant(
+      APFloat::getSmallestNormalized(FltSem, true).bitcastToAPInt(), dl,
+      AsIntVT);
+
+  SDValue SmallestNormalizedInt = DAG.getConstant(
+      APFloat::getSmallestNormalized(FltSem, false).bitcastToAPInt(), dl,
+      AsIntVT);
+
+  // Masks out the exponent bits.
+  SDValue ExpMask =
+      DAG.getConstant(APFloat::getInf(FltSem).bitcastToAPInt(), dl, AsIntVT);
+
+  // Mask out the exponent part of the value.
+  //
+  // e.g, for f32 FractSignMaskVal = 0x807fffff
+  APInt FractSignMaskVal = APInt::getBitsSet(BitSize, 0, Precision - 1);
+  FractSignMaskVal.setBit(BitSize - 1); // Set the sign bit
+
+  APInt SignMaskVal = APInt::getSignedMaxValue(BitSize);
+  SDValue SignMask = DAG.getConstant(SignMaskVal, dl, AsIntVT);
+
+  SDValue FractSignMask = DAG.getConstant(FractSignMaskVal, dl, AsIntVT);
+
+  const APFloat One(FltSem, "1.0");
+  // Scale a possible denormal input.
+  // e.g., for f64, 0x1p+54
+  APFloat ScaleUpKVal =
+      scalbn(One, Precision + 1, APFloat::rmNearestTiesToEven);
+
+  SDValue ScaleUpK = DAG.getConstantFP(ScaleUpKVal, dl, VT);
+  SDValue ScaleUp = DAG.getNode(ISD::FMUL, dl, VT, Val, ScaleUpK);
+
+  EVT SetCCVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  SDValue AsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, Val);
+
+  SDValue Abs = DAG.getNode(ISD::AND, dl, AsIntVT, AsInt, SignMask);
+
+  SDValue AddNegSmallestNormal =
+      DAG.getNode(ISD::ADD, dl, AsIntVT, Abs, NegSmallestNormalizedInt);
+  SDValue DenormOrZero = DAG.getSetCC(dl, SetCCVT, AddNegSmallestNormal,
+                                      NegSmallestNormalizedInt, ISD::SETULE);
+
+  SDValue IsDenormal =
+      DAG.getSetCC(dl, SetCCVT, Abs, SmallestNormalizedInt, ISD::SETULT);
+
+  SDValue MinExp = DAG.getConstant(MinExpVal, dl, ExpVT);
+  SDValue Zero = DAG.getConstant(0, dl, ExpVT);
+
+  SDValue ScaledAsInt = DAG.getNode(ISD::BITCAST, dl, AsIntVT, ScaleUp);
+  SDValue ScaledSelect =
+      DAG.getNode(ISD::SELECT, dl, AsIntVT, IsDenormal, ScaledAsInt, AsInt);
+
+  SDValue ExpMaskScaled =
+      DAG.getNode(ISD::AND, dl, AsIntVT, ScaledAsInt, ExpMask);
+
+  SDValue ScaledValue =
+      DAG.getNode(ISD::SELECT, dl, AsIntVT, IsDenormal, ExpMaskScaled, Abs);
+
+  // Extract the exponent bits.
+  SDValue ExponentShiftAmt =
+      DAG.getShiftAmountConstant(Precision - 1, AsIntVT, dl);
+  SDValue ShiftedExp =
+      DAG.getNode(ISD::SRL, dl, AsIntVT, ScaledValue, ExponentShiftAmt);
+  SDValue Exp = DAG.getSExtOrTrunc(ShiftedExp, dl, ExpVT);
+
+  SDValue NormalBiasedExp = DAG.getNode(ISD::ADD, dl, ExpVT, Exp, MinExp);
+  SDValue DenormalOffset = DAG.getConstant(-Precision - 1, dl, ExpVT);
+  SDValue DenormalExpBias =
+      DAG.getNode(ISD::SELECT, dl, ExpVT, IsDenormal, DenormalOffset, Zero);
+
+  SDValue MaskedFractAsInt =
+      DAG.getNode(ISD::AND, dl, AsIntVT, ScaledSelect, FractSignMask);
+  const APFloat Half(FltSem, "0.5");
+  SDValue FPHalf = DAG.getConstant(Half.bitcastToAPInt(), dl, AsIntVT);
+  SDValue Or = DAG.getNode(ISD::OR, dl, AsIntVT, MaskedFractAsInt, FPHalf);
+  SDValue MaskedFract = DAG.getNode(ISD::BITCAST, dl, VT, Or);
+
+  SDValue ComputedExp =
+      DAG.getNode(ISD::ADD, dl, ExpVT, NormalBiasedExp, DenormalExpBias);
+
+  SDValue Result0 =
+      DAG.getNode(ISD::SELECT, dl, VT, DenormOrZero, Val, MaskedFract);
+
+  SDValue Result1 =
+      DAG.getNode(ISD::SELECT, dl, ExpVT, DenormOrZero, Zero, ComputedExp);
+
+  return DAG.getMergeValues({Result0, Result1}, dl);
 }
 
 /// This function is responsible for legalizing a
@@ -3383,6 +3552,19 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     break;
   }
+  case ISD::FFREXP: {
+    RTLIB::Libcall LC = RTLIB::getFREXP(Node->getValueType(0));
+    // Use the LibCall instead, it is very likely faster
+    // FIXME: Use separate LibCall action.
+    if (TLI.getLibcallName(LC))
+      break;
+
+    if (SDValue Expanded = expandFrexp(Node)) {
+      Results.push_back(Expanded);
+      Results.push_back(Expanded.getValue(1));
+    }
+    break;
+  }
   case ISD::FMAD:
     llvm_unreachable("Illegal fmad should never be formed");
 
@@ -4285,6 +4467,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::LDEXP_F32, RTLIB::LDEXP_F64, RTLIB::LDEXP_F80,
                     RTLIB::LDEXP_F128, RTLIB::LDEXP_PPCF128, Results);
     break;
+  case ISD::FFREXP: {
+    ExpandFrexpLibCall(Node, Results);
+    break;
+  }
   case ISD::FPOWI:
   case ISD::STRICT_FPOWI: {
     RTLIB::Libcall LC = RTLIB::getPOWI(Node->getSimpleValueType(0));
@@ -5043,6 +5229,17 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp3);
     Results.push_back(Tmp3.getValue(1));
     break;
+  case ISD::FFREXP: {
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::FFREXP, dl, {NVT, Node->getValueType(1)}, Tmp1);
+
+    Results.push_back(
+        DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
+
+    Results.push_back(Tmp2.getValue(1));
+    break;
+  }
   case ISD::FFLOOR:
   case ISD::FCEIL:
   case ISD::FRINT:
