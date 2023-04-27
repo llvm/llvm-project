@@ -14,8 +14,10 @@ cmake -DCMAKE_INSTALL_PREFIX=${INST_DIR} \
     -DLLVM_ENABLE_ASSERTIONS=On \
     -DLLVM_ENABLE_PROJECTS="lld;clang" \
     -DCLANG_DEFAULT_PIE_ON_LINUX=OFF \
+    -GNinja \
     ../llvm
-make -j `nproc` install
+cmake --build .
+cmake --install .
 
 # clang-format any new files that we've introduced ourselves.
 cd ..
@@ -28,9 +30,7 @@ git diff --exit-code
 # https://llvm.org/docs/TestingGuide.html
 #
 # This runs unit and integration tests.
-cd build
-make -j `nproc` check-all
-cd ..
+cmake --build build --target check-all
 
 # FIXME The commented code below should run the `test-suite` tests, as
 # described at https://llvm.org/docs/TestSuiteGuide.html.
