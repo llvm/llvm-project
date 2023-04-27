@@ -298,8 +298,8 @@ bool SIInstrInfo::getMemOperandsWithOffsetWidth(
       const MachineOperand *Offset1Op =
           getNamedOperand(LdSt, AMDGPU::OpName::offset1);
 
-      unsigned Offset0 = Offset0Op->getImm();
-      unsigned Offset1 = Offset1Op->getImm();
+      unsigned Offset0 = Offset0Op->getImm() & 0xff;
+      unsigned Offset1 = Offset1Op->getImm() & 0xff;
       if (Offset0 + 1 != Offset1)
         return false;
 
@@ -8370,12 +8370,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
-
-  // TODO-GFX12: Remove this.
-  // Hack to allow some GFX12 codegen tests to run before all the encodings are
-  // implemented.
-  if (MCOp == (uint16_t)-1 && Gen == SIEncodingFamily::GFX12)
-    MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX11);
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
