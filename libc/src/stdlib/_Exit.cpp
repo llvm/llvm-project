@@ -1,4 +1,4 @@
-//===------------------- Linux Implementation of _Exit --------------------===//
+//===------------------- Implementation of _Exit --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/sys/syscall.h"          // For syscall numbers.
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/quick_exit.h"
 #include "src/__support/common.h"
 
 #include "src/stdlib/_Exit.h"
@@ -15,10 +14,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void, _Exit, (int status)) {
-  for (;;) {
-    __llvm_libc::syscall_impl(SYS_exit_group, status);
-    __llvm_libc::syscall_impl(SYS_exit, status);
-  }
+  quick_exit(status);
+  __builtin_unreachable();
 }
 
 } // namespace __llvm_libc
