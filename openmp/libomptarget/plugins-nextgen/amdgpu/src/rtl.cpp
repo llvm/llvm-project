@@ -535,6 +535,9 @@ private:
   /// The exectuable loaded on the agent.
   hsa_executable_t Executable;
   hsa_code_object_t CodeObject;
+#if SANITIZER_AMDGPU
+  hsa_code_object_reader_t CodeObjectReader;
+#endif
   StringMap<utils::KernelMetaDataTy> KernelInfoMap;
   uint16_t ELFABIVersion;
 };
@@ -3091,11 +3094,25 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
           Plugin::check(Status, "Error in hsa_executable_create_alt: %s"))
     return Err;
 
+#if SANITIZER_AMDGPU
+  Status = hsa_code_object_reader_create_from_memory(getStart(), getSize(),
+                                                     &CodeObjectReader);
+  if (auto Err = Plugin::check(
+          Status, "Error in hsa_code_object_reader_from_memory: %s"))
+    return Err;
+
+  Status = hsa_executable_load_agent_code_object(Executable, Device.getAgent(),
+                                                 CodeObjectReader, "", nullptr);
+  if (auto Err =
+          Plugin::check(Status, "Error in hsa_executable_load_code_object: %s"))
+    return Err;
+#else
   Status = hsa_executable_load_code_object(Executable, Device.getAgent(),
                                            CodeObject, "");
   if (auto Err =
           Plugin::check(Status, "Error in hsa_executable_load_code_object: %s"))
     return Err;
+#endif
 
   Status = hsa_executable_freeze(Executable, "");
   if (auto Err = Plugin::check(Status, "Error in hsa_executable_freeze: %s"))
