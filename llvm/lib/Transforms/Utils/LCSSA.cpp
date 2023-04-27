@@ -150,11 +150,6 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SSAUpdater SSAUpdate(&InsertedPHIs);
     SSAUpdate.Initialize(I->getType(), I->getName());
 
-    // Force re-computation of I, as some users now need to use the new PHI
-    // node.
-    if (SE)
-      SE->forgetValue(I);
-
     // Insert the LCSSA phi's into all of the exit blocks dominated by the
     // value, and add them to the Phi's map.
     for (BasicBlock *ExitBB : ExitBlocks) {
