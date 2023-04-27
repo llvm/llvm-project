@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hwasan.h"
+#include "hwasan_checks.h"
 #include "hwasan_thread.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_linux.h"
@@ -39,6 +40,22 @@ static void *HwasanThreadStartFunc(void *arg) {
   UnmapOrDie(arg, GetPageSizeCached());
   return A.callback(A.param);
 }
+
+#    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) __hwasan_loadN((uptr)p, (uptr)s)
+#    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) \
+      __hwasan_storeN((uptr)p, (uptr)s)
+#    define COMMON_SYSCALL_POST_READ_RANGE(p, s) \
+      do {                                       \
+        (void)(p);                               \
+        (void)(s);                               \
+      } while (false)
+#    define COMMON_SYSCALL_POST_WRITE_RANGE(p, s) \
+      do {                                        \
+        (void)(p);                                \
+        (void)(s);                                \
+      } while (false)
+#    include "sanitizer_common/sanitizer_common_syscalls.inc"
+#    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
             void * param) {
