@@ -235,3 +235,96 @@ func.func @extui_over_extract_strided_slice_2d(%a: vector<2x3xi16>) -> vector<1x
    {offsets = [1, 1], sizes = [1, 2], strides = [1, 1]} : vector<2x3xi32> to vector<1x2xi32>
   return %c : vector<1x2xi32>
 }
+
+// CHECK-LABEL: func.func @extsi_over_insert_3xi16
+// CHECK-SAME:    (%[[ARG0:.+]]: vector<3xi16>, %[[ARG1:.+]]: i16)
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert %[[ARG1]], %[[ARG0]] [1] : i16 into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extsi %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insert_3xi16(%a: vector<3xi16>, %b: i16) -> vector<3xi32> {
+  %c = arith.extsi %a : vector<3xi16> to vector<3xi32>
+  %d = arith.extsi %b : i16 to i32
+  %e = vector.insert %d, %c [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insert_3xi16
+// CHECK-SAME:    (%[[ARG0:.+]]: vector<3xi16>, %[[ARG1:.+]]: i16)
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert %[[ARG1]], %[[ARG0]] [1] : i16 into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extui %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extui_over_insert_3xi16(%a: vector<3xi16>, %b: i16) -> vector<3xi32> {
+  %c = arith.extui %a : vector<3xi16> to vector<3xi32>
+  %d = arith.extui %b : i16 to i32
+  %e = vector.insert %d, %c [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_insert_3xi16_cst_0
+// CHECK-SAME:    (%[[ARG:.+]]: i16)
+// CHECK-NEXT:    %[[CST:.+]] = arith.constant dense<0> : vector<3xi16>
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert %[[ARG]], %[[CST]] [1] : i16 into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extsi %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insert_3xi16_cst_0(%a: i16) -> vector<3xi32> {
+  %cst = arith.constant dense<0> : vector<3xi32>
+  %d = arith.extsi %a : i16 to i32
+  %e = vector.insert %d, %cst [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_insert_3xi8_cst
+// CHECK-SAME:    (%[[ARG:.+]]: i8)
+// CHECK-NEXT:    %[[CST:.+]] = arith.constant dense<[-1, 127, -128]> : vector<3xi8>
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert %[[ARG]], %[[CST]] [1] : i8 into vector<3xi8>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extsi %[[INS]] : vector<3xi8> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insert_3xi8_cst(%a: i8) -> vector<3xi32> {
+  %cst = arith.constant dense<[-1, 127, -128]> : vector<3xi32>
+  %d = arith.extsi %a : i8 to i32
+  %e = vector.insert %d, %cst [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insert_3xi8_cst
+// CHECK-SAME:    (%[[ARG:.+]]: i8)
+// CHECK-NEXT:    %[[CST:.+]] = arith.constant dense<[1, 127, -1]> : vector<3xi8>
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert %[[ARG]], %[[CST]] [1] : i8 into vector<3xi8>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extui %[[INS]] : vector<3xi8> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extui_over_insert_3xi8_cst(%a: i8) -> vector<3xi32> {
+  %cst = arith.constant dense<[1, 127, 255]> : vector<3xi32>
+  %d = arith.extui %a : i8 to i32
+  %e = vector.insert %d, %cst [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_insert_3xi16_cst_i16
+// CHECK-SAME:    (%[[ARG:.+]]: i8)
+// CHECK-NEXT:    %[[CST:.+]]  = arith.constant dense<[-1, 128, 0]> : vector<3xi16>
+// CHECK-NEXT:    %[[SRCE:.+]] = arith.extsi %[[ARG]] : i8 to i32
+// CHECK-NEXT:    %[[SRCT:.+]] = arith.trunci %[[SRCE]] : i32 to i16
+// CHECK-NEXT:    %[[INS:.+]]  = vector.insert %[[SRCT]], %[[CST]] [1] : i16 into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insert_3xi16_cst_i16(%a: i8) -> vector<3xi32> {
+  %cst = arith.constant dense<[-1, 128, 0]> : vector<3xi32>
+  %d = arith.extsi %a : i8 to i32
+  %e = vector.insert %d, %cst [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insert_3xi16_cst_i16
+// CHECK-SAME:    (%[[ARG:.+]]: i8)
+// CHECK-NEXT:    %[[CST:.+]]  = arith.constant dense<[1, 256, 0]> : vector<3xi16>
+// CHECK-NEXT:    %[[SRCE:.+]] = arith.extui %[[ARG]] : i8 to i32
+// CHECK-NEXT:    %[[SRCT:.+]] = arith.trunci %[[SRCE]] : i32 to i16
+// CHECK-NEXT:    %[[INS:.+]]  = vector.insert %[[SRCT]], %[[CST]] [1] : i16 into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extui_over_insert_3xi16_cst_i16(%a: i8) -> vector<3xi32> {
+  %cst = arith.constant dense<[1, 256, 0]> : vector<3xi32>
+  %d = arith.extui %a : i8 to i32
+  %e = vector.insert %d, %cst [1] : i32 into vector<3xi32>
+  return %e : vector<3xi32>
+}
