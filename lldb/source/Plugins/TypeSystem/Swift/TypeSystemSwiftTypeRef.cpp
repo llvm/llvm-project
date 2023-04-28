@@ -2775,7 +2775,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
           (ReconstructType(type), omit_empty_base_classes, exe_ctx),
           (ReconstructType(type), omit_empty_base_classes, exe_ctx));
     }()
-                        .getValueOr(0);
+                        .value_or(0);
 
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "Using SwiftASTContext::GetNumChildren fallback for type %s",
@@ -2831,7 +2831,7 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                           (ReconstructType(type), exe_ctx),
                           (ReconstructType(type), exe_ctx));
     }()
-                        .getValueOr(0);
+                        .value_or(0);
   }
 
   LLDB_LOGF(GetLog(LLDBLog::Types),
@@ -2926,7 +2926,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     if (auto *swift_ast_context = GetSwiftASTContext())
       ast_num_children = swift_ast_context->GetNumChildren(
           ReconstructType(type), omit_empty_base_classes, exe_ctx);
-    return ast_num_children.getValueOr(0);
+    return ast_num_children.value_or(0);
   };
   auto impl = [&]() -> CompilerType {
     ExecutionContextScope *exe_scope = nullptr;
@@ -2974,7 +2974,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
             child_name = "rawValue";
             auto bit_size = raw_value.GetBitSize(
                 exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
-            child_byte_size = bit_size.getValueOr(0) / 8;
+            child_byte_size = bit_size.value_or(0) / 8;
             child_byte_offset = 0;
             child_bitfield_bit_size = 0;
             child_bitfield_bit_offset = 0;
@@ -3057,7 +3057,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   if (ModuleList::GetGlobalModuleListProperties().GetSwiftValidateTypeSystem())
     if (get_ast_num_children() <
         runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
-            .getValueOr(0))
+            .value_or(0))
       return impl();
   if (ShouldSkipValidation(type))
     return impl();
@@ -3125,7 +3125,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
           GetCanonicalType(type), name, exe_ctx, omit_empty_base_classes,
           child_indexes);
       if (found_numidx.first) {
-        size_t index_size = found_numidx.second.getValueOr(0);
+        size_t index_size = found_numidx.second.value_or(0);
 #ifndef NDEBUG
         // This block is a custom VALIDATE_AND_RETURN implementation to support
         // checking the return value, plus the by-ref `child_indexes`.

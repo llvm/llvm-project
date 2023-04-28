@@ -1368,7 +1368,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     os << '.' << idx;
     child_byte_size =
         GetBitSize(pack_element_type, exe_ctx.GetBestExecutionContextScope())
-            .getValueOr(0);
+            .value_or(0);
     int stack_dir = -1;
     child_byte_offset = ts->GetPointerByteSize() * idx * stack_dir;
     child_bitfield_bit_size = 0;
@@ -2120,7 +2120,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
       return {};
     if (use_local_buffer)
       PushLocalBuffer(existential_address,
-                      in_value.GetByteSize().getValueOr(0));
+                      in_value.GetByteSize().value_or(0));
 
     auto result = remote_ast.getDynamicTypeAndAddressForExistential(
         remote_existential, swift_type);
@@ -2186,7 +2186,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
 
 
   if (use_local_buffer)
-    PushLocalBuffer(existential_address, in_value.GetByteSize().getValueOr(0));
+    PushLocalBuffer(existential_address, in_value.GetByteSize().value_or(0));
 
   swift::remote::RemoteAddress remote_existential(existential_address);
 
@@ -2850,7 +2850,7 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
 
       if (use_local_buffer)
         PushLocalBuffer(existential_address,
-                        in_value.GetByteSize().getValueOr(0));
+                        in_value.GetByteSize().value_or(0));
 
       // Read the value witness table and check if the data is inlined in
       // the existential container or not.
