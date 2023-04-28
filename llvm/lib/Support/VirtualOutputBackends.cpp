@@ -213,6 +213,7 @@ public:
 
   Error initializeFD(Optional<int> &FD);
   Error initializeStream();
+  Error reset();
 
   OnDiskOutputFile(StringRef OutputPath, Optional<OutputConfig> Config,
                    const OnDiskOutputBackend::OutputSettings &Settings)
@@ -337,10 +338,23 @@ Error OnDiskOutputFile::initializeStream() {
   return Error::success();
 }
 
-Error OnDiskOutputFile::keep() {
+Error OnDiskOutputFile::reset() {
   // Destroy the streams to flush them.
   BufferOS.reset();
+  if (!FileOS)
+    return Error::success();
+
+  // Remember the error in raw_fd_ostream to be reported later.
+  std::error_code EC = FileOS->error();
+  // Clear the error to avoid fatal error when reset.
+  FileOS->clear_error();
   FileOS.reset();
+  return errorCodeToError(EC);
+}
+
+Error OnDiskOutputFile::keep() {
+  if (auto E = reset())
+    return E;
 
   // Close the file descriptor and remove crash cleanup before exit.
   auto RemoveDiscardOnSignal = make_scope_exit([&]() {
@@ -381,8 +395,8 @@ Error OnDiskOutputFile::keep() {
 
 Error OnDiskOutputFile::discard() {
   // Destroy the streams to flush them.
-  BufferOS.reset();
-  FileOS.reset();
+  if (auto E = reset())
+    return E;
 
   // Nothing on the filesystem to remove for stdout.
   if (OutputPath == "-")
