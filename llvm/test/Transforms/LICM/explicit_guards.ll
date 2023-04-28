@@ -3,6 +3,8 @@
 
 declare void @llvm.experimental.guard(i1,...)
 declare void @maythrow()
+declare void @llvm.experimental.deoptimize.isVoid(...)
+declare i1 @llvm.experimental.widenable.condition()
 
 ; Make sure that we do not hoist widenable_cond out of loop.
 ; Widenable conditions don't actually alias anything or throw, however
@@ -121,6 +123,112 @@ loop:
   %loop_cond = icmp slt i32 %iv, %M
   %iv.next = add i32 %iv, 1
   br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; TODO: Hoist widenable condition out of loop since it's the only
+; non-invariant operand of its user. If we hoist wc here, we can hoist
+; `and` as well, otherwise it prevents us from doing that.
+define void @hoist_widenable_cond_1(ptr %p, i32 %x) {
+; CHECK-LABEL: @hoist_widenable_cond_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i32, ptr [[P:%.*]] unordered, align 8
+; CHECK-NEXT:    [[ICMP7:%.*]] = icmp ult i32 0, [[LOAD]]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[IV]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP_BODY:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.body:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[ICMP7]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]]
+; CHECK:       deopt:
+; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) [ "deopt"() ]
+; CHECK-NEXT:    ret void
+; CHECK:       guarded:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %load = load atomic i32, ptr %p unordered, align 8
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ %iv.next, %guarded ], [ 0, %entry ]
+  %icmp = icmp ult i32 %iv, %x
+  br i1 %icmp, label %loop.body, label %exit
+
+loop.body:
+  %icmp7 = icmp ult i32 0, %load
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %exiplicit_guard_cond = and i1 %icmp7, %widenable_cond
+  br i1 %exiplicit_guard_cond, label %guarded, label %deopt
+
+deopt:
+  call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) [ "deopt"() ]
+  ret void
+
+guarded:
+  %iv.next = add nuw nsw i32 %iv, 1
+  br label %loop.header
+
+exit:
+  ret void
+}
+
+; Same as hoist_widenable_cond_1 test, but widenable condition goes before
+; icmp - the second operand of wc's user.
+; TODO: Hoist widenable condition out of loop.
+define void @hoist_widenable_cond_2(ptr %p, i32 %x) {
+; CHECK-LABEL: @hoist_widenable_cond_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i32, ptr [[P:%.*]] unordered, align 8
+; CHECK-NEXT:    [[ICMP7:%.*]] = icmp ult i32 0, [[LOAD]]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[IV]], [[X:%.*]]
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP_BODY:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.body:
+; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[EXIPLICIT_GUARD_COND:%.*]] = and i1 [[ICMP7]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[EXIPLICIT_GUARD_COND]], label [[GUARDED]], label [[DEOPT:%.*]]
+; CHECK:       deopt:
+; CHECK-NEXT:    call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) [ "deopt"() ]
+; CHECK-NEXT:    ret void
+; CHECK:       guarded:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %load = load atomic i32, ptr %p unordered, align 8
+  br label %loop.header
+
+loop.header:
+  %iv = phi i32 [ %iv.next, %guarded ], [ 0, %entry ]
+  %icmp = icmp ult i32 %iv, %x
+  br i1 %icmp, label %loop.body, label %exit
+
+loop.body:
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %icmp7 = icmp ult i32 0, %load
+  %exiplicit_guard_cond = and i1 %icmp7, %widenable_cond
+  br i1 %exiplicit_guard_cond, label %guarded, label %deopt
+
+deopt:
+  call void (...) @llvm.experimental.deoptimize.isVoid(i32 13) [ "deopt"() ]
+  ret void
+
+guarded:
+  %iv.next = add nuw nsw i32 %iv, 1
+  br label %loop.header
 
 exit:
   ret void

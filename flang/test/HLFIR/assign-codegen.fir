@@ -206,3 +206,42 @@ func.func @test_alloc_assign_polymorphic(%lhs: !fir.ref<!fir.class<!fir.heap<!fi
 // CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<t>>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_1]] : (!fir.class<!fir.array<?x!fir.type<t>>>) -> !fir.box<none>
 // CHECK:  %[[VAL_10:.*]] = fir.call @_FortranAAssignPolymorphic(%[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
+func.func @assing_scalar_int_to_polymorphic(%arg0: !fir.ref<!fir.class<!fir.heap<none>>>) {
+  %c123_i32 = arith.constant 123 : i32
+  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "x"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+  hlfir.assign %c123_i32 to %0#0 realloc : i32, !fir.ref<!fir.class<!fir.heap<none>>>
+  return
+}
+
+// CHECK-LABEL:   func.func @assing_scalar_int_to_polymorphic(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 123 : i32
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "x"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.class<!fir.heap<none>>>
+// CHECK:           %[[VAL_3:.*]] = fir.alloca i32
+// CHECK:           fir.store %[[VAL_1]] to %[[VAL_3]] : !fir.ref<i32>
+// CHECK:           %[[VAL_4:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<i32>) -> !fir.box<i32>
+// CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_4]] : (!fir.box<i32>) -> !fir.box<none>
+// CHECK:           %[[VAL_11:.*]] = fir.call @_FortranAAssignPolymorphic(%[[VAL_8]], %[[VAL_9]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+
+func.func @assign_i1_to_polymorphic(%arg0: !fir.ref<!fir.class<!fir.heap<none>>>) {
+  %false = arith.constant false
+  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "x"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> (!fir.ref<!fir.class<!fir.heap<none>>>, !fir.ref<!fir.class<!fir.heap<none>>>)
+  %1 = hlfir.no_reassoc %false : i1
+  hlfir.assign %1 to %0#0 realloc : i1, !fir.ref<!fir.class<!fir.heap<none>>>
+  return
+}
+
+// CHECK-LABEL:   func.func @assign_i1_to_polymorphic(
+// CHECK-SAME:                                        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant false
+// CHECK:           %[[VAL_2:.*]] = fir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "x"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.class<!fir.heap<none>>>
+// CHECK:           %[[VAL_3:.*]] = fir.no_reassoc %[[VAL_1]] : i1
+// CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (i1) -> !fir.logical<4>
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.logical<4>
+// CHECK:           fir.store %[[VAL_4]] to %[[VAL_5]] : !fir.ref<!fir.logical<4>>
+// CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
+// CHECK:           %[[VAL_13:.*]] = fir.call @_FortranAAssignPolymorphic(%[[VAL_10]], %[[VAL_11]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none

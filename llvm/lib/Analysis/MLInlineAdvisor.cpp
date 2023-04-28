@@ -93,13 +93,11 @@ static cl::opt<bool> KeepFPICache(
 
 // clang-format off
 const std::vector<TensorSpec> llvm::FeatureMap{
-#define POPULATE_NAMES(_, NAME) TensorSpec::createSpec<int64_t>(NAME, {1} ),
+#define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
 // InlineCost features - these must come first
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
-#undef POPULATE_NAMES
 
 // Non-cost features
-#define POPULATE_NAMES(_, NAME, __) TensorSpec::createSpec<int64_t>(NAME, {1} ),
   INLINE_FEATURE_ITERATOR(POPULATE_NAMES)
 #undef POPULATE_NAMES
 };
@@ -383,26 +381,27 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &CallerBefore = getCachedFPI(Caller);
   auto &CalleeBefore = getCachedFPI(Callee);
 
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::CalleeBasicBlockCount) =
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_basic_block_count) =
       CalleeBefore.BasicBlockCount;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::CallSiteHeight) =
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::callsite_height) =
       getInitialFunctionLevel(Caller);
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::NodeCount) = NodeCount;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::NrCtantParams) = NrCtantParams;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::EdgeCount) = EdgeCount;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::CallerUsers) =
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::node_count) = NodeCount;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::nr_ctant_params) =
+      NrCtantParams;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::edge_count) = EdgeCount;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_users) =
       CallerBefore.Uses;
   *ModelRunner->getTensor<int64_t>(
-      FeatureIndex::CallerConditionallyExecutedBlocks) =
+      FeatureIndex::caller_conditionally_executed_blocks) =
       CallerBefore.BlocksReachedFromConditionalInstruction;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::CallerBasicBlockCount) =
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_basic_block_count) =
       CallerBefore.BasicBlockCount;
   *ModelRunner->getTensor<int64_t>(
-      FeatureIndex::CalleeConditionallyExecutedBlocks) =
+      FeatureIndex::callee_conditionally_executed_blocks) =
       CalleeBefore.BlocksReachedFromConditionalInstruction;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::CalleeUsers) =
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::callee_users) =
       CalleeBefore.Uses;
-  *ModelRunner->getTensor<int64_t>(FeatureIndex::CostEstimate) = CostEstimate;
+  *ModelRunner->getTensor<int64_t>(FeatureIndex::cost_estimate) = CostEstimate;
 
   // Add the cost features
   for (size_t I = 0;

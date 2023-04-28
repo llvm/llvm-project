@@ -84,14 +84,15 @@ struct pair
     explicit(see-below) constexpr pair();
     explicit(see-below) pair(const T1& x, const T2& y);                          // constexpr in C++14
     template <class U = T1, class V = T2> explicit(see-below) pair(U&&, V&&);    // constexpr in C++14
-    template <class U, class V> constexpr explicit(see below) pair(pair<U, V>&); // since C++23
+    template <class U, class V> constexpr explicit(see-below) pair(pair<U, V>&); // since C++23
     template <class U, class V> explicit(see-below) pair(const pair<U, V>& p);   // constexpr in C++14
     template <class U, class V> explicit(see-below) pair(pair<U, V>&& p);        // constexpr in C++14
     template <class U, class V>
-    constexpr explicit(see below) pair(const pair<U, V>&&);                      // since C++23
+    constexpr explicit(see-below) pair(const pair<U, V>&&);                      // since C++23
+    template <pair-like P> constexpr explicit(see-below) pair(P&&);              // since C++23
     template <class... Args1, class... Args2>
-        pair(piecewise_construct_t, tuple<Args1...> first_args,
-             tuple<Args2...> second_args);                                       // constexpr in C++20
+        pair(piecewise_construct_t, tuple<Args1...> first_args,                  // constexpr in C++20
+                                    tuple<Args2...> second_args);
 
     constexpr const pair& operator=(const pair& p) const;                        // since C++23
     template <class U, class V> pair& operator=(const pair<U, V>& p);            // constexpr in C++20
@@ -103,6 +104,8 @@ struct pair
     template <class U, class V> pair& operator=(pair<U, V>&& p);                 // constexpr in C++20
     template <class U, class V>
     constexpr const pair& operator=(pair<U, V>&& p) const;                       // since C++23
+    template <pair-like P> constexpr pair& operator=(P&&);                       // since C++23
+    template <pair-like P> constexpr const pair& operator=(P&&) const;           // since C++23
 
     void swap(pair& p) noexcept(is_nothrow_swappable_v<T1> &&
                                 is_nothrow_swappable_v<T2>);                     // constexpr in C++20

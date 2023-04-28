@@ -418,16 +418,57 @@ define i4 @convert_to_bitmask_float(<4 x float> %vec) {
   ret i4 %bitmask
 }
 
-; TODO(lawben): Change this in follow-up patch to #D145301, as truncating stores fix this.
-; Larger vector types don't map directly.
-define i8 @no_convert_large_vector(<8 x i32> %vec) {
+; Larger vector types don't map directly, but the can be split/truncated and then converted.
+; After the comparison against 0, this is truncated to <8 x i16>, which is valid again.
+define i8 @convert_large_vector(<8 x i32> %vec) {
+; CHECK-LABEL: lCPI15_0:
+; CHECK-NEXT:  .short	1
+; CHECK-NEXT:  .short	2
+; CHECK-NEXT:  .short	4
+; CHECK-NEXT:  .short	8
+; CHECK-NEXT:  .short	16
+; CHECK-NEXT:  .short	32
+; CHECK-NEXT:  .short	64
+; CHECK-NEXT:  .short	128
+
 ; CHECK-LABEL: convert_large_vector:
-; CHECK:       cmeq.4s	v1, v1, #0
-; CHECK-NOT:   addv
+; CHECK:      Lloh30:
+; CHECK-NEXT:  adrp	x8, lCPI15_0@PAGE
+; CHECK-NEXT:  cmeq.4s	v1, v1, #0
+; CHECK-NEXT:  cmeq.4s	v0, v0, #0
+; CHECK-NEXT:  uzp1.8h	v0, v0, v1
+; CHECK-NEXT: Lloh31:
+; CHECK-NEXT:  ldr	q1, [x8, lCPI15_0@PAGEOFF]
+; CHECK-NEXT:  bic.16b	v0, v1, v0
+; CHECK-NEXT:  addv.8h	h0, v0
+; CHECK-NEXT:  fmov	w8, s0
+; CHECK-NEXT:  and	w0, w8, #0xff
+; CHECK-NEXT:  add	sp, sp, #16
+; CHECK-NEXT:  ret
 
    %cmp_result = icmp ne <8 x i32> %vec, zeroinitializer
    %bitmask = bitcast <8 x i1> %cmp_result to i8
    ret i8 %bitmask
+}
+
+define i4 @convert_legalized_illegal_element_size(<4 x i22> %vec) {
+; CHECK-LABEL: convert_legalized_illegal_element_size
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:  movi.4s  v1, #63, msl #16
+; CHECK-NEXT:  Lloh32:
+; CHECK-NEXT:  adrp	    x8, lCPI16_0@PAGE
+; CHECK-NEXT:  cmtst.4s v0, v0, v1
+; CHECK-NEXT:  Lloh33:
+; CHECK-NEXT:  ldr	    d1, [x8, lCPI16_0@PAGEOFF]
+; CHECK-NEXT:  xtn.4h   v0, v0
+; CHECK-NEXT:  and.8b   v0, v0, v1
+; CHECK-NEXT:  addv.4h  h0, v0
+; CHECK-NEXT:  fmov     w0, s0
+; CHECK-NEXT:  ret
+
+  %cmp_result = icmp ne <4 x i22> %vec, zeroinitializer
+  %bitmask = bitcast <4 x i1> %cmp_result to i4
+  ret i4 %bitmask
 }
 
 ; This may still be converted as a v8i8 after the vector concat (but not as v4iX).
@@ -449,4 +490,13 @@ define <8 x i1> @no_convert_without_direct_bitcast(<8 x i16> %vec) {
 
    %cmp_result = icmp ne <8 x i16> %vec, zeroinitializer
    ret <8 x i1> %cmp_result
+}
+
+define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
+; CHECK-LABEL: no_combine_illegal_num_elements
+; CHECK-NOT: addv
+
+  %cmp_result = icmp ne <6 x i32> %vec, zeroinitializer
+  %bitmask = bitcast <6 x i1> %cmp_result to i6
+  ret i6 %bitmask
 }
