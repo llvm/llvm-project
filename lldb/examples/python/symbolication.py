@@ -401,6 +401,11 @@ class Image:
                     with open(tf.name, 'w') as f:
                         f.write(json.dumps(data, indent=4))
                     self.module = target.AddModule(tf.name, None, uuid_str)
+                    if self.module:
+                        # If we were able to add the module with inlined
+                        # symbols, we should mark it as available so load_module
+                        # does not exit early.
+                        self.unavailable = False
             if not self.module and not self.unavailable:
                 return 'error: unable to get module for (%s) "%s"' % (
                     self.arch, self.get_resolved_path())
