@@ -233,6 +233,8 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` now recognizes ``%lb`` for the ``printf``/``scanf`` family of
   functions.
   (`#62247: <https://github.com/llvm/llvm-project/issues/62247>`_).
+- Clang now diagnoses shadowing of lambda's template parameter by a capture.
+  (`#61105: <https://github.com/llvm/llvm-project/issues/61105>`_).
 
 Bug Fixes in This Version
 -------------------------
