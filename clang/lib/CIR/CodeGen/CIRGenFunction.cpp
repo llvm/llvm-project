@@ -28,8 +28,9 @@ using namespace mlir::cir;
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
-    : CGM{CGM}, builder(builder), SanOpts(CGM.getLangOpts().Sanitize),
-      CurFPFeatures(CGM.getLangOpts()), ShouldEmitLifetimeMarkers(false) {
+    : CIRGenTypeCache(CGM), CGM{CGM}, builder(builder),
+      SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
+      ShouldEmitLifetimeMarkers(false) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
   EHStack.setCGF(this);
@@ -1134,9 +1135,7 @@ void CIRGenFunction::buildNullInitialization(mlir::Location loc,
   }
 
   // Cast the dest ptr to the appropriate i8 pointer type.
-  // FIXME: add a CodeGenTypeCache thing for CIR.
-  auto intTy = DestPtr.getElementType().dyn_cast<mlir::IntegerType>();
-  if (intTy && intTy.getWidth() == 8) {
+  if (DestPtr.getElementType() == Int8Ty) {
     llvm_unreachable("NYI");
   }
 

@@ -341,7 +341,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       llvm_unreachable("NYI");
     case BuiltinType::Void:
       // TODO(cir): how should we model this?
-      ResultType = ::mlir::IntegerType::get(Builder.getContext(), 8);
+      ResultType = CGM.VoidTy;
       break;
 
     case BuiltinType::ObjCId:
@@ -416,10 +416,10 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       ResultType = Builder.getBF16Type();
       break;
     case BuiltinType::Float:
-      ResultType = Builder.getF32Type();
+      ResultType = CGM.FloatTy;
       break;
     case BuiltinType::Double:
-      ResultType = Builder.getF64Type();
+      ResultType = CGM.DoubleTy;
       break;
     case BuiltinType::LongDouble:
     case BuiltinType::Float128:
