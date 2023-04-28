@@ -20,8 +20,6 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/ThreadPool.h"
-#include <mutex>
 #include <unordered_map>
 
 using namespace llvm;
@@ -260,38 +258,31 @@ bool isYAML(const StringRef Filename) {
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
-  std::mutex BoltedCollectionMutex;
-  typedef StringMap<uint64_t> ProfileTy;
-
-  auto ParseProfile = [&](const std::string &Filename, auto &Profiles) {
-    const llvm::thread::id tid = llvm::this_thread::get_id();
-
+  StringMap<uint64_t> Entries;
+  for (const std::string &Filename : Filenames) {
     if (isYAML(Filename))
       report_error(Filename, "cannot mix YAML and legacy formats");
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileOrSTDIN(Filename);
     if (std::error_code EC = MB.getError())
       report_error(Filename, EC);
+    errs() << "Merging data from " << Filename << "...\n";
 
     StringRef Buf = MB.get()->getBuffer();
-
-    {
-      std::lock_guard<std::mutex> Lock(BoltedCollectionMutex);
-      // Check if the string "boltedcollection" is in the first line
-      if (Buf.startswith("boltedcollection\n")) {
-        if (!BoltedCollection.value_or(true))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = true;
-        Buf = Buf.drop_front(17);
-      } else {
-        if (BoltedCollection.value_or(false))
-          report_error(
-              Filename,
-              "cannot mix profile collected in BOLT and non-BOLT deployments");
-        BoltedCollection = false;
-      }
+    // Check if the string "boltedcollection" is in the first line
+    if (Buf.startswith("boltedcollection\n")) {
+      if (!BoltedCollection.value_or(true))
+        report_error(
+            Filename,
+            "cannot mix profile collected in BOLT and non-BOLT deployments");
+      BoltedCollection = true;
+      Buf = Buf.drop_front(17);
+    } else {
+      if (BoltedCollection.value_or(false))
+        report_error(
+            Filename,
+            "cannot mix profile collected in BOLT and non-BOLT deployments");
+      BoltedCollection = false;
     }
 
     SmallVector<StringRef> Lines;
@@ -304,31 +295,15 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       uint64_t Count;
       if (Line.substr(Pos + 1, Line.size() - Pos).getAsInteger(10, Count))
         report_error(Filename, "Malformed / corrupted profile counter");
-      Count += Profiles[tid].lookup(Signature);
-      Profiles[tid].insert_or_assign(Signature, Count);
+      Count += Entries.lookup(Signature);
+      Entries.insert_or_assign(Signature, Count);
     }
-  };
-
-  // The final reduction has non-trivial cost, make sure each thread has at
-  // least 4 tasks.
-  ThreadPoolStrategy S = optimal_concurrency(Filenames.size() / 4);
-  ThreadPool Pool(S);
-  DenseMap<llvm::thread::id, ProfileTy> ParsedProfiles(Pool.getThreadCount());
-  for (const auto &Filename : Filenames)
-    Pool.async(ParseProfile, std::cref(Filename), std::ref(ParsedProfiles));
-  Pool.wait();
-
-  ProfileTy MergedProfile;
-  for (const auto &[Thread, Profile] : ParsedProfiles)
-    for (const auto &[Key, Value] : Profile) {
-      uint64_t Count = MergedProfile.lookup(Key) + Value;
-      MergedProfile.insert_or_assign(Key, Count);
-    }
+  }
 
   if (BoltedCollection)
     output() << "boltedcollection\n";
-  for (const auto &[Key, Value] : MergedProfile)
-    output() << Key << " " << Value << "\n";
+  for (const auto &Entry : Entries)
+    output() << Entry.getKey() << " " << Entry.getValue() << "\n";
 
   errs() << "Profile from " << Filenames.size() << " files merged.\n";
 }

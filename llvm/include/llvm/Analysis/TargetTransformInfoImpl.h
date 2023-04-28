@@ -1269,7 +1269,7 @@ public:
           APInt DemandedDstElts =
               APInt::getZero(Shuffle->getShuffleMask().size());
           for (auto I : enumerate(Shuffle->getShuffleMask())) {
-            if (I.value() != UndefMaskElem)
+            if (I.value() != PoisonMaskElem)
               DemandedDstElts.setBit(I.index());
           }
           return TargetTTI->getReplicationShuffleCost(

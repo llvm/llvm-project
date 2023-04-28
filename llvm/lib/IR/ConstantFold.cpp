@@ -711,7 +711,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   Type *EltTy = V1VTy->getElementType();
 
   // Undefined shuffle mask -> undefined value.
-  if (all_of(Mask, [](int Elt) { return Elt == UndefMaskElem; })) {
+  if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
     return UndefValue::get(VectorType::get(EltTy, MaskEltCount));
   }
 

@@ -84,6 +84,7 @@ Changes to the AArch64 Backend
 
 * Added Assembly Support for the 2022 A-profile extensions FEAT_GCS (Guarded
   Control Stacks), FEAT_CHK (Check Feature Status), and FEAT_ATS1A.
+* Support for preserve_all calling convention is added.
 
 Changes to the AMDGPU Backend
 -----------------------------

@@ -2209,13 +2209,14 @@ public:
 /// to produce efficient output IR, including which branches, basic-blocks and
 /// output IR instructions to generate, and their cost. VPlan holds a
 /// Hierarchical-CFG of VPBasicBlocks and VPRegionBlocks rooted at an Entry
-/// VPBlock.
+/// VPBasicBlock.
 class VPlan {
   friend class VPlanPrinter;
   friend class VPSlotTracker;
 
-  /// Hold the single entry to the Hierarchical CFG of the VPlan.
-  VPBlockBase *Entry;
+  /// Hold the single entry to the Hierarchical CFG of the VPlan, i.e. the
+  /// preheader of the vector loop.
+  VPBasicBlock *Entry;
 
   /// Holds the VFs applicable to this VPlan.
   SmallSetVector<ElementCount, 2> VFs;
@@ -2254,7 +2255,7 @@ class VPlan {
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
 public:
-  VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {
+  VPlan(VPBasicBlock *Entry = nullptr) : Entry(Entry) {
     if (Entry)
       Entry->setPlan(this);
   }
@@ -2269,10 +2270,10 @@ public:
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
 
-  VPBlockBase *getEntry() { return Entry; }
-  const VPBlockBase *getEntry() const { return Entry; }
+  VPBasicBlock *getEntry() { return Entry; }
+  const VPBasicBlock *getEntry() const { return Entry; }
 
-  VPBlockBase *setEntry(VPBlockBase *Block) {
+  VPBasicBlock *setEntry(VPBasicBlock *Block) {
     Entry = Block;
     Block->setPlan(this);
     return Entry;

@@ -1484,6 +1484,12 @@ bool InductionDescriptor::isInductionPHI(
     return false;
   }
 
+  // This function assumes that InductionPhi is called only on Phi nodes
+  // present inside loop headers. Check for the same, and throw an assert if
+  // the current Phi is not present inside the loop header.
+  assert(Phi->getParent() == AR->getLoop()->getHeader()
+    && "Invalid Phi node, not present in loop header");
+
   Value *StartValue =
       Phi->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
 

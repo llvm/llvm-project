@@ -1001,6 +1001,7 @@ out:
 declare void @use.i32(i32)
 declare void @use.i64(i64)
 
+; Don't duplicate freeze just because it's free.
 define i32 @duplicate_freeze(i1 %c, i32 %x) {
 ; CHECK-LABEL: @duplicate_freeze(
 ; CHECK-NEXT:  entry:
@@ -1010,8 +1011,8 @@ define i32 @duplicate_freeze(i1 %c, i32 %x) {
 ; CHECK-NEXT:    call void @use.i32(i32 [[FR]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[FR_LE:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    ret i32 [[FR_LE]]
+; CHECK-NEXT:    [[FR_LCSSA:%.*]] = phi i32 [ [[FR]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[FR_LCSSA]]
 ;
 entry:
   br label %loop
@@ -1025,6 +1026,7 @@ exit:
   ret i32 %fr
 }
 
+; Don't duplicate ptrtoint just because it's free.
 define i64 @duplicate_ptrtoint(i1 %c, ptr %p) {
 ; CHECK-LABEL: @duplicate_ptrtoint(
 ; CHECK-NEXT:  entry:
@@ -1034,8 +1036,8 @@ define i64 @duplicate_ptrtoint(i1 %c, ptr %p) {
 ; CHECK-NEXT:    call void @use.i64(i64 [[PI]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PI_LE:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    ret i64 [[PI_LE]]
+; CHECK-NEXT:    [[PI_LCSSA:%.*]] = phi i64 [ [[PI]], [[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[PI_LCSSA]]
 ;
 entry:
   br label %loop

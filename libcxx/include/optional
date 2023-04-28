@@ -638,7 +638,7 @@ struct __is_std_optional : false_type {};
 template <class _Tp> struct __is_std_optional<optional<_Tp>> : true_type {};
 
 template <class _Tp>
-class optional
+class _LIBCPP_DECLSPEC_EMPTY_BASES optional
     : private __optional_move_assign_base<_Tp>
     , private __optional_sfinae_ctor_base_t<_Tp>
     , private __optional_sfinae_assign_base_t<_Tp>

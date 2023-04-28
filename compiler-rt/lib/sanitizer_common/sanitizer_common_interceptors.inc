@@ -7748,8 +7748,7 @@ static void write_protoent(void *ctx, struct __sanitizer_protoent *p) {
   for (char **pp = p->p_aliases; *pp; ++pp, ++pp_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *pp, internal_strlen(*pp) + 1);
 
-  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases,
-                                  pp_size * sizeof(char **));
+  COMMON_INTERCEPTOR_WRITE_RANGE(ctx, p->p_aliases, pp_size * sizeof(char *));
 }
 
 INTERCEPTOR(struct __sanitizer_protoent *, getprotoent) {
@@ -7855,8 +7854,7 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetent) {
     for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, internal_strlen(*nn) + 1);
 
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
-                                   nn_size * sizeof(char **));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases, nn_size * sizeof(char *));
   }
   return n;
 }
@@ -7877,8 +7875,7 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetbyname, const char *name) {
     for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, internal_strlen(*nn) + 1);
 
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
-                                   nn_size * sizeof(char **));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases, nn_size * sizeof(char *));
   }
   return n;
 }
@@ -7897,8 +7894,7 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetbyaddr, u32 net, int type) {
     for (char **nn = n->n_aliases; *nn; ++nn, ++nn_size)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *nn, internal_strlen(*nn) + 1);
 
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases,
-                                   nn_size * sizeof(char **));
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, n->n_aliases, nn_size * sizeof(char *));
   }
   return n;
 }
@@ -10090,41 +10086,6 @@ INTERCEPTOR(SSIZE_T, getrandom, void *buf, SIZE_T buflen, unsigned int flags) {
 #define INIT_GETRANDOM
 #endif
 
-#if SANITIZER_INTERCEPT_CRYPT
-INTERCEPTOR(char *, crypt, char *key, char *salt) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, crypt, key, salt);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, key, internal_strlen(key) + 1);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, salt, internal_strlen(salt) + 1);
-  char *res = REAL(crypt)(key, salt);
-  if (res != nullptr)
-    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, internal_strlen(res) + 1);
-  return res;
-}
-#define INIT_CRYPT COMMON_INTERCEPT_FUNCTION(crypt);
-#else
-#define INIT_CRYPT
-#endif
-
-#if SANITIZER_INTERCEPT_CRYPT_R
-INTERCEPTOR(char *, crypt_r, char *key, char *salt, void *data) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, crypt_r, key, salt, data);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, key, internal_strlen(key) + 1);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, salt, internal_strlen(salt) + 1);
-  char *res = REAL(crypt_r)(key, salt, data);
-  if (res != nullptr) {
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, data,
-                                   __sanitizer::struct_crypt_data_sz);
-    COMMON_INTERCEPTOR_INITIALIZE_RANGE(res, internal_strlen(res) + 1);
-  }
-  return res;
-}
-#define INIT_CRYPT_R COMMON_INTERCEPT_FUNCTION(crypt_r);
-#else
-#define INIT_CRYPT_R
-#endif
-
 #if SANITIZER_INTERCEPT_GETENTROPY
 INTERCEPTOR(int, getentropy, void *buf, SIZE_T buflen) {
   void *ctx;
@@ -10702,8 +10663,6 @@ static void InitializeCommonInterceptors() {
   INIT_GETUSERSHELL;
   INIT_SL_INIT;
   INIT_GETRANDOM;
-  INIT_CRYPT;
-  INIT_CRYPT_R;
   INIT_GETENTROPY;
   INIT_QSORT;
   INIT_QSORT_R;

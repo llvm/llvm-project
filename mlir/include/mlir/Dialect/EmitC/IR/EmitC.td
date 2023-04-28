@@ -45,7 +45,6 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 
     ```
   }];
-  // TODO: Disallow to apply the operator & (address of) to emitc.constant operations.
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
     AnyType:$operand
@@ -143,7 +142,6 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
   let results = (outs AnyType);
 
   let hasFolder = 1;
-  // TODO: Disallow empty constants.
   let hasVerifier = 1;
 }
 

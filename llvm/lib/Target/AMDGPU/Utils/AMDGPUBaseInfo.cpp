@@ -590,8 +590,9 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
-int getVOPDFull(unsigned OpX, unsigned OpY, int Subtarget) {
-  const VOPDInfo *Info = getVOPDInfoFromComponentOpcodes(OpX, OpY, Subtarget);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
+  const VOPDInfo *Info =
+      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily);
   return Info ? Info->Opcode : -1;
 }
 

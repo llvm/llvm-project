@@ -535,7 +535,7 @@ LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc);
 
 LLVM_READONLY
-int getVOPDFull(unsigned OpX, unsigned OpY, int Subtarget);
+int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);

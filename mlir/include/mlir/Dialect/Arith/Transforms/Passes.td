@@ -90,6 +90,7 @@ def ArithIntNarrowing : Pass<"arith-int-narrowing"> {
     prefers the narrowest available integer bitwidths that are guaranteed to
     produce the same results.
   }];
+  let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"bitwidthsSupported", "int-bitwidths-supported", "unsigned",
                "Integer bitwidths supported">,
