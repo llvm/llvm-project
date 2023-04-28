@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -8285,6 +8286,67 @@ static void HandleArmMveStrictPolymorphismAttr(TypeProcessingState &State,
                               CurType, CurType);
 }
 
+/// HandleRISCVRVVVectorBitsTypeAttr - The "riscv_rvv_vector_bits" attribute is
+/// used to create fixed-length versions of sizeless RVV types such as
+/// vint8m1_t_t.
+static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
+                                             ParsedAttr &Attr, Sema &S) {
+  // Target must have vector extension.
+  if (!S.Context.getTargetInfo().hasFeature("zve32x")) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'zve32x'";
+    Attr.setInvalid();
+    return;
+  }
+
+  auto VScale = S.Context.getTargetInfo().getVScaleRange(S.getLangOpts());
+  if (!VScale || !VScale->first || VScale->first != VScale->second) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
+        << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Check the attribute arguments.
+  if (Attr.getNumArgs() != 1) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // The vector size must be an integer constant expression.
+  llvm::APSInt RVVVectorSizeInBits(32);
+  if (!verifyValidIntegerConstantExpr(S, Attr, RVVVectorSizeInBits))
+    return;
+
+  unsigned VecSize = static_cast<unsigned>(RVVVectorSizeInBits.getZExtValue());
+
+  // The attribute vector size must match -mrvv-vector-bits.
+  // FIXME: Add support for types with LMUL!=1. Need to make sure size passed
+  // to attribute is equal to LMUL*VScaleMin*RVVBitsPerBlock.
+  if (VecSize != VScale->first * llvm::RISCV::RVVBitsPerBlock) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
+        << VecSize << VScale->first * llvm::RISCV::RVVBitsPerBlock;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Attribute can only be attached to a single RVV vector type.
+  if (!CurType->isRVVVLSBuiltinType()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_invalid_rvv_type)
+        << Attr << CurType;
+    Attr.setInvalid();
+    return;
+  }
+
+  QualType EltType = CurType->getRVVEltType(S.Context);
+  unsigned TypeSize = S.Context.getTypeSize(EltType);
+  VectorType::VectorKind VecKind = VectorType::RVVFixedLengthDataVector;
+  VecSize /= TypeSize;
+  CurType = S.Context.getVectorType(EltType, VecSize, VecKind);
+}
+
 /// Handle OpenCL Access Qualifier Attribute.
 static void HandleOpenCLAccessAttr(QualType &CurType, const ParsedAttr &Attr,
                                    Sema &S) {
@@ -8531,6 +8593,10 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     }
+    case ParsedAttr::AT_RISCVRVVVectorBits:
+      HandleRISCVRVVVectorBitsTypeAttr(type, attr, state.getSema());
+      attr.setUsedAsTypeAttr();
+      break;
     case ParsedAttr::AT_OpenCLAccess:
       HandleOpenCLAccessAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
