@@ -17,10 +17,18 @@
 #include "Server.h"
 
 #include "cuda.h"
+
+#include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFObjectFile.h"
+
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <vector>
+
+using namespace llvm;
+using namespace object;
 
 /// The arguments to the '_start' kernel.
 struct kernel_args_t {
@@ -51,11 +59,122 @@ static void handle_error(const char *msg) {
   exit(EXIT_FAILURE);
 }
 
-int load(int argc, char **argv, char **envp, void *image, size_t size,
-         const LaunchParameters &params) {
-  if (CUresult err = cuInit(0))
+// Gets the names of all the globals that contain functions to initialize or
+// deinitialize. We need to do this manually because the NVPTX toolchain does
+// not contain the necessary binary manipulation tools.
+template <typename Alloc>
+Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
+                                     Alloc allocator, CUmodule binary) {
+  auto mem_buffer = MemoryBuffer::getMemBuffer(
+      StringRef(reinterpret_cast<const char *>(image), size), "image",
+      /*RequiresNullTerminator=*/false);
+  Expected<ELF64LEObjectFile> elf_or_err =
+      ELF64LEObjectFile::create(*mem_buffer);
+  if (!elf_or_err)
+    handle_error(toString(elf_or_err.takeError()).c_str());
+
+  std::vector<std::pair<const char *, uint16_t>> ctors;
+  std::vector<std::pair<const char *, uint16_t>> dtors;
+  // CUDA has no way to iterate over all the symbols so we need to inspect the
+  // ELF directly using the LLVM libraries.
+  for (const auto &symbol : elf_or_err->symbols()) {
+    auto name_or_err = symbol.getName();
+    if (!name_or_err)
+      handle_error(toString(name_or_err.takeError()).c_str());
+
+    // Search for all symbols that contain a constructor or destructor.
+    if (!name_or_err->starts_with("__init_array_object_") &&
+        !name_or_err->starts_with("__fini_array_object_"))
+      continue;
+
+    uint16_t priority;
+    if (name_or_err->rsplit('_').second.getAsInteger(10, priority))
+      handle_error("Invalid priority for constructor or destructor");
+
+    if (name_or_err->starts_with("__init"))
+      ctors.emplace_back(std::make_pair(name_or_err->data(), priority));
+    else
+      dtors.emplace_back(std::make_pair(name_or_err->data(), priority));
+  }
+  // Lower priority constructors are run before higher ones. The reverse is true
+  // for destructors.
+  llvm::sort(ctors, [](auto x, auto y) { return x.second < y.second; });
+  llvm::sort(dtors, [](auto x, auto y) { return x.second < y.second; });
+  llvm::reverse(dtors);
+
+  // Allocate host pinned memory to make these arrays visible to the GPU.
+  CUdeviceptr *dev_memory = reinterpret_cast<CUdeviceptr *>(allocator(
+      ctors.size() * sizeof(CUdeviceptr) + dtors.size() * sizeof(CUdeviceptr)));
+  uint64_t global_size = 0;
+
+  // Get the address of the global and then store the address of the constructor
+  // function to call in the constructor array.
+  CUdeviceptr *dev_ctors_start = dev_memory;
+  CUdeviceptr *dev_ctors_end = dev_ctors_start + ctors.size();
+  for (uint64_t i = 0; i < ctors.size(); ++i) {
+    CUdeviceptr dev_ptr;
+    if (CUresult err =
+            cuModuleGetGlobal(&dev_ptr, &global_size, binary, ctors[i].first))
+      handle_error(err);
+    if (CUresult err =
+            cuMemcpyDtoH(&dev_ctors_start[i], dev_ptr, sizeof(uintptr_t)))
+      handle_error(err);
+  }
+
+  // Get the address of the global and then store the address of the destructor
+  // function to call in the destructor array.
+  CUdeviceptr *dev_dtors_start = dev_ctors_end;
+  CUdeviceptr *dev_dtors_end = dev_dtors_start + dtors.size();
+  for (uint64_t i = 0; i < dtors.size(); ++i) {
+    CUdeviceptr dev_ptr;
+    if (CUresult err =
+            cuModuleGetGlobal(&dev_ptr, &global_size, binary, dtors[i].first))
+      handle_error(err);
+    if (CUresult err =
+            cuMemcpyDtoH(&dev_dtors_start[i], dev_ptr, sizeof(uintptr_t)))
+      handle_error(err);
+  }
+
+  // Obtain the address of the pointers the startup implementation uses to
+  // iterate the constructors and destructors.
+  CUdeviceptr init_start;
+  if (CUresult err = cuModuleGetGlobal(&init_start, &global_size, binary,
+                                       "__init_array_start"))
+    handle_error(err);
+  CUdeviceptr init_end;
+  if (CUresult err = cuModuleGetGlobal(&init_end, &global_size, binary,
+                                       "__init_array_end"))
+    handle_error(err);
+  CUdeviceptr fini_start;
+  if (CUresult err = cuModuleGetGlobal(&fini_start, &global_size, binary,
+                                       "__fini_array_start"))
+    handle_error(err);
+  CUdeviceptr fini_end;
+  if (CUresult err = cuModuleGetGlobal(&fini_end, &global_size, binary,
+                                       "__fini_array_end"))
     handle_error(err);
 
+  // Copy the pointers to the newly written array to the symbols so the startup
+  // implementation can iterate them.
+  if (CUresult err =
+          cuMemcpyHtoD(init_start, &dev_ctors_start, sizeof(uintptr_t)))
+    handle_error(err);
+  if (CUresult err = cuMemcpyHtoD(init_end, &dev_ctors_end, sizeof(uintptr_t)))
+    handle_error(err);
+  if (CUresult err =
+          cuMemcpyHtoD(fini_start, &dev_dtors_start, sizeof(uintptr_t)))
+    handle_error(err);
+  if (CUresult err = cuMemcpyHtoD(fini_end, &dev_dtors_end, sizeof(uintptr_t)))
+    handle_error(err);
+
+  return dev_memory;
+}
+
+int load(int argc, char **argv, char **envp, void *image, size_t size,
+         const LaunchParameters &params) {
+
+  if (CUresult err = cuInit(0))
+    handle_error(err);
   // Obtain the first device found on the system.
   CUdevice device;
   if (CUresult err = cuDeviceGet(&device, 0))
@@ -91,6 +210,11 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
       handle_error(err);
     return dev_ptr;
   };
+
+  auto memory_or_err = get_ctor_dtor_array(image, size, allocator, binary);
+  if (!memory_or_err)
+    handle_error(toString(memory_or_err.takeError()).c_str());
+
   void *dev_argv = copy_argument_vector(argc, argv, allocator);
   if (!dev_argv)
     handle_error("Failed to allocate device argv");
@@ -153,6 +277,8 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   // Free the memory allocated for the device.
+  if (CUresult err = cuMemFreeHost(*memory_or_err))
+    handle_error(err);
   if (CUresult err = cuMemFree(dev_ret))
     handle_error(err);
   if (CUresult err = cuMemFreeHost(dev_argv))
