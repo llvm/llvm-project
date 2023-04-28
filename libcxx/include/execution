@@ -53,7 +53,7 @@ struct __disable_user_instantiations_tag {
 };
 
 struct sequenced_policy {
-  constexpr explicit sequenced_policy(__disable_user_instantiations_tag) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit sequenced_policy(__disable_user_instantiations_tag) {}
   sequenced_policy(const sequenced_policy&)            = delete;
   sequenced_policy& operator=(const sequenced_policy&) = delete;
 };
@@ -61,7 +61,7 @@ struct sequenced_policy {
 inline constexpr sequenced_policy seq{__disable_user_instantiations_tag{}};
 
 struct parallel_policy {
-  constexpr explicit parallel_policy(__disable_user_instantiations_tag) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit parallel_policy(__disable_user_instantiations_tag) {}
   parallel_policy(const parallel_policy&)            = delete;
   parallel_policy& operator=(const parallel_policy&) = delete;
 };
@@ -69,7 +69,7 @@ struct parallel_policy {
 inline constexpr parallel_policy par{__disable_user_instantiations_tag{}};
 
 struct parallel_unsequenced_policy {
-  constexpr explicit parallel_unsequenced_policy(__disable_user_instantiations_tag) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit parallel_unsequenced_policy(__disable_user_instantiations_tag) {}
   parallel_unsequenced_policy(const parallel_unsequenced_policy&)            = delete;
   parallel_unsequenced_policy& operator=(const parallel_unsequenced_policy&) = delete;
 };
@@ -77,7 +77,7 @@ struct parallel_unsequenced_policy {
 inline constexpr parallel_unsequenced_policy par_unseq{__disable_user_instantiations_tag{}};
 
 struct __unsequenced_policy {
-  constexpr explicit __unsequenced_policy(__disable_user_instantiations_tag) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __unsequenced_policy(__disable_user_instantiations_tag) {}
   __unsequenced_policy(const __unsequenced_policy&)            = delete;
   __unsequenced_policy& operator=(const __unsequenced_policy&) = delete;
 };
