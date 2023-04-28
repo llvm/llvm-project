@@ -190,11 +190,12 @@ public:
     if (isa<FixedVectorType>(DataType) && !ST->useRVVForFixedLengthVectors())
       return false;
 
-    if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
+    auto *ElemType = DataType->getScalarType();
+    if (!ST->enableUnalignedVectorMem() &&
+        Alignment < DL.getTypeStoreSize(ElemType).getFixedValue())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
@@ -212,11 +213,12 @@ public:
     if (isa<FixedVectorType>(DataType) && !ST->useRVVForFixedLengthVectors())
       return false;
 
-    if (Alignment <
-        DL.getTypeStoreSize(DataType->getScalarType()).getFixedValue())
+    auto *ElemType = DataType->getScalarType();
+    if (!ST->enableUnalignedVectorMem() &&
+        Alignment < DL.getTypeStoreSize(ElemType).getFixedValue())
       return false;
 
-    return TLI->isLegalElementTypeForRVV(DataType->getScalarType());
+    return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) {

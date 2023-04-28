@@ -2383,7 +2383,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     EVT EltVT = NewVT.getVectorElementType();
     SmallVector<SDValue> Ops(NewElts, DAG.getUNDEF(EltVT));
     for (unsigned I = 0; I < NewElts; ++I) {
-      if (Mask[I] == UndefMaskElem)
+      if (Mask[I] == PoisonMaskElem)
         continue;
       unsigned Idx = Mask[I];
       if (Idx >= NewElts)
@@ -2423,11 +2423,11 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       // Use shuffles operands instead of shuffles themselves.
       // 1. Adjust mask.
       for (int &Idx : Mask) {
-        if (Idx == UndefMaskElem)
+        if (Idx == PoisonMaskElem)
           continue;
         unsigned SrcRegIdx = Idx / NewElts;
         if (Inputs[SrcRegIdx].isUndef()) {
-          Idx = UndefMaskElem;
+          Idx = PoisonMaskElem;
           continue;
         }
         auto *Shuffle =
@@ -2435,8 +2435,8 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
         if (!Shuffle || !is_contained(P.second, SrcRegIdx))
           continue;
         int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
-        if (MaskElt == UndefMaskElem) {
-          Idx = UndefMaskElem;
+        if (MaskElt == PoisonMaskElem) {
+          Idx = PoisonMaskElem;
           continue;
         }
         Idx = MaskElt % NewElts +
@@ -2455,11 +2455,11 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     // Check if any concat_vectors can be simplified.
     SmallBitVector UsedSubVector(2 * std::size(Inputs));
     for (int &Idx : Mask) {
-      if (Idx == UndefMaskElem)
+      if (Idx == PoisonMaskElem)
         continue;
       unsigned SrcRegIdx = Idx / NewElts;
       if (Inputs[SrcRegIdx].isUndef()) {
-        Idx = UndefMaskElem;
+        Idx = PoisonMaskElem;
         continue;
       }
       TargetLowering::LegalizeTypeAction TypeAction =
@@ -2489,7 +2489,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       if (!Pairs.empty() && Pairs.front().size() > 1) {
         // Adjust mask.
         for (int &Idx : Mask) {
-          if (Idx == UndefMaskElem)
+          if (Idx == PoisonMaskElem)
             continue;
           unsigned SrcRegIdx = Idx / NewElts;
           auto *It = find_if(
@@ -2531,14 +2531,14 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
                    !Shuffle->getOperand(1).isUndef()) {
           // Find the only used operand, if possible.
           for (int &Idx : Mask) {
-            if (Idx == UndefMaskElem)
+            if (Idx == PoisonMaskElem)
               continue;
             unsigned SrcRegIdx = Idx / NewElts;
             if (SrcRegIdx != I)
               continue;
             int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
-            if (MaskElt == UndefMaskElem) {
-              Idx = UndefMaskElem;
+            if (MaskElt == PoisonMaskElem) {
+              Idx = PoisonMaskElem;
               continue;
             }
             int OpIdx = MaskElt / NewElts;
@@ -2564,14 +2564,14 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
             // Found that operand is used already.
             // 1. Fix the mask for the reused operand.
             for (int &Idx : Mask) {
-              if (Idx == UndefMaskElem)
+              if (Idx == PoisonMaskElem)
                 continue;
               unsigned SrcRegIdx = Idx / NewElts;
               if (SrcRegIdx != I)
                 continue;
               int MaskElt = Shuffle->getMaskElt(Idx % NewElts);
-              if (MaskElt == UndefMaskElem) {
-                Idx = UndefMaskElem;
+              if (MaskElt == PoisonMaskElem) {
+                Idx = PoisonMaskElem;
                 continue;
               }
               int MaskIdx = MaskElt / NewElts;
@@ -2588,7 +2588,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
           Inputs[I] = Shuffle->getOperand(Op);
           // Adjust mask.
           for (int &Idx : Mask) {
-            if (Idx == UndefMaskElem)
+            if (Idx == PoisonMaskElem)
               continue;
             unsigned SrcRegIdx = Idx / NewElts;
             if (SrcRegIdx != I)
@@ -2622,11 +2622,11 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       auto &&UniqueConstantVec = UniqueConstantInputs.takeVector();
       unsigned ConstNum = UniqueConstantVec.size();
       for (int &Idx : Mask) {
-        if (Idx == UndefMaskElem)
+        if (Idx == PoisonMaskElem)
           continue;
         unsigned SrcRegIdx = Idx / NewElts;
         if (Inputs[SrcRegIdx].isUndef()) {
-          Idx = UndefMaskElem;
+          Idx = PoisonMaskElem;
           continue;
         }
         const auto It = find(UniqueConstantVec, Inputs[SrcRegIdx]);
@@ -2655,7 +2655,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
     // Build a shuffle mask for the output, discovering on the fly which
     // input vectors to use as shuffle operands.
     unsigned FirstMaskIdx = High * NewElts;
-    SmallVector<int> Mask(NewElts * std::size(Inputs), UndefMaskElem);
+    SmallVector<int> Mask(NewElts * std::size(Inputs), PoisonMaskElem);
     copy(ArrayRef(OrigMask).slice(FirstMaskIdx, NewElts), Mask.begin());
     assert(!Output && "Expected default initialized initial value.");
     TryPeekThroughShufflesInputs(Mask);

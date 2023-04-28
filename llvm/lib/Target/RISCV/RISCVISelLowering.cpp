@@ -11426,6 +11426,11 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(WideVecVT))
     return SDValue();
 
+  // Check that the operation is legal
+  Type *WideVecTy = EVT(WideVecVT).getTypeForEVT(*DAG.getContext());
+  if (!TLI.isLegalStridedLoadStore(DAG.getDataLayout(), WideVecTy, Align))
+    return SDValue();
+
   MVT ContainerVT = TLI.getContainerForFixedLengthVector(WideVecVT);
   SDValue VL =
       getDefaultVLOps(WideVecVT, ContainerVT, DL, DAG, Subtarget).second;
@@ -11452,12 +11457,6 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(), MemSize,
       Align);
-
-  // Can't do the combine if the common alignment isn't naturally aligned with
-  // the new element type
-  if (!TLI.allowsMemoryAccessForAlignment(*DAG.getContext(),
-                                          DAG.getDataLayout(), WideVecVT, *MMO))
-    return SDValue();
 
   SDValue StridedLoad = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
                                                 Ops, WideVecVT, MMO);
@@ -15637,7 +15636,13 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     return true;
   }
 
-  return false;
+  // Note: We lower an unmasked unaligned vector access to an equally sized
+  // e8 element type access.  Given this, we effectively support all unmasked
+  // misaligned accesses.  TODO: Work through the codegen implications of
+  // allowing such accesses to be formed, and considered fast.
+  if (Fast)
+    *Fast = 0;
+  return Subtarget.enableUnalignedVectorMem();
 }
 
 bool RISCVTargetLowering::splitValueIntoRegisterParts(
@@ -15796,6 +15801,27 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
   if (Fractional)
     return true;
   return Factor * LMUL <= 8;
+}
+
+bool RISCVTargetLowering::isLegalStridedLoadStore(const DataLayout &DL,
+                                                  Type *DataType,
+                                                  Align Alignment) const {
+  if (!Subtarget.hasVInstructions())
+    return false;
+
+  // Only support fixed vectors if we know the minimum vector size.
+  if (isa<FixedVectorType>(DataType) && !Subtarget.useRVVForFixedLengthVectors())
+    return false;
+
+  Type *ScalarType = DataType->getScalarType();
+  if (!isLegalElementTypeForRVV(ScalarType))
+    return false;
+
+  if (!Subtarget.enableUnalignedVectorMem() &&
+      Alignment < DL.getTypeStoreSize(ScalarType).getFixedValue())
+    return false;
+
+  return true;
 }
 
 /// Lower an interleaved load into a vlsegN intrinsic.

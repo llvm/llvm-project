@@ -906,6 +906,35 @@ class Foo final {})cpp";
          HI.CalleeArgInfo->Type = "int &";
          HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
        }},
+      {// make_unique-like function call
+       R"cpp(
+          struct Foo {
+            explicit Foo(int arg_a) {}
+          };
+          template<class T, class... Args>
+          T make(Args&&... args)
+          {
+              return T(args...);
+          }
+
+          void code() {
+            int a = 1;
+            auto foo = make<Foo>([[^a]]);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "int a = 1";
+         HI.LocalScope = "code::";
+         HI.Value = "1";
+         HI.Type = "int";
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_a";
+         HI.CalleeArgInfo->Type = "int";
+         HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
+       }},
       {
           R"cpp(
           void foobar(const float &arg);

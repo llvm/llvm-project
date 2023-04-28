@@ -125,8 +125,8 @@ __attribute__((always_inline)) static void SigTrap(uptr p, uptr size) {
   // __builtin_unreachable();
 }
 
-__attribute__((always_inline, nodebug)) static bool PossiblyShortTagMatches(
-    tag_t mem_tag, uptr ptr, uptr sz) {
+__attribute__((always_inline, nodebug)) static inline bool
+PossiblyShortTagMatches(tag_t mem_tag, uptr ptr, uptr sz) {
   tag_t ptr_tag = GetTagFromPointer(ptr);
   if (ptr_tag == mem_tag)
     return true;
@@ -134,9 +134,6 @@ __attribute__((always_inline, nodebug)) static bool PossiblyShortTagMatches(
     return false;
   if ((ptr & (kShadowAlignment - 1)) + sz > mem_tag)
     return false;
-#if !defined(__aarch64__) && !(SANITIZER_RISCV64)
-  ptr = UntagAddr(ptr);
-#endif
   return *(u8 *)(ptr | (kShadowAlignment - 1)) == ptr_tag;
 }
 
@@ -169,7 +166,7 @@ __attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
         __builtin_unreachable();
     }
   uptr end = p + sz;
-  uptr tail_sz = end & 0xf;
+  uptr tail_sz = end & (kShadowAlignment - 1);
   if (UNLIKELY(tail_sz != 0 &&
                !PossiblyShortTagMatches(
                    *shadow_last, end & ~(kShadowAlignment - 1), tail_sz))) {

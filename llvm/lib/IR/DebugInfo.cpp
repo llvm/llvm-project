@@ -1919,7 +1919,9 @@ bool at::calculateFragmentIntersect(
 /// Return std::nullopt if any properties are not constants.
 static std::optional<AssignmentInfo>
 getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
-                      uint64_t SizeInBits) {
+                      TypeSize SizeInBits) {
+  if (SizeInBits.isScalable())
+    return std::nullopt;
   APInt GEPOffset(DL.getIndexTypeSizeInBits(StoreDest->getType()), 0);
   const Value *Base = StoreDest->stripAndAccumulateConstantOffsets(
       DL, GEPOffset, /*AllowNonInbounds*/ true);
@@ -1941,19 +1943,18 @@ std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
     // We can't use a non-const size, bail.
     return std::nullopt;
   uint64_t SizeInBits = 8 * ConstLengthInBytes->getZExtValue();
-  return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
+  return getAssignmentInfoImpl(DL, StoreDest, TypeSize::getFixed(SizeInBits));
 }
 
 std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
                                                     const StoreInst *SI) {
-  const Value *StoreDest = SI->getPointerOperand();
-  uint64_t SizeInBits = DL.getTypeSizeInBits(SI->getValueOperand()->getType());
-  return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
+  TypeSize SizeInBits = DL.getTypeSizeInBits(SI->getValueOperand()->getType());
+  return getAssignmentInfoImpl(DL, SI->getPointerOperand(), SizeInBits);
 }
 
 std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
                                                     const AllocaInst *AI) {
-  uint64_t SizeInBits = DL.getTypeSizeInBits(AI->getAllocatedType());
+  TypeSize SizeInBits = DL.getTypeSizeInBits(AI->getAllocatedType());
   return getAssignmentInfoImpl(DL, AI, SizeInBits);
 }
 

@@ -1344,7 +1344,7 @@ static Instruction *foldInsEltIntoIdentityShuffle(InsertElementInst &InsElt) {
       // (demanded elements analysis may unset it later).
       return nullptr;
     } else {
-      assert(OldMask[i] == UndefMaskElem &&
+      assert(OldMask[i] == PoisonMaskElem &&
              "Unexpected shuffle mask element for identity shuffle");
       NewMask[i] = IdxC;
     }
@@ -2145,7 +2145,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
                                 ConstantExpr::getShuffleVector(IdC, C, Mask);
 
   bool MightCreatePoisonOrUB =
-      is_contained(Mask, UndefMaskElem) &&
+      is_contained(Mask, PoisonMaskElem) &&
       (Instruction::isIntDivRem(BOpcode) || Instruction::isShift(BOpcode));
   if (MightCreatePoisonOrUB)
     NewC = InstCombiner::getSafeVectorConstantForBinop(BOpcode, NewC, true);
@@ -2159,7 +2159,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   // An undef shuffle mask element may propagate as an undef constant element in
   // the new binop. That would produce poison where the original code might not.
   // If we already made a safe constant, then there's no danger.
-  if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+  if (is_contained(Mask, PoisonMaskElem) && !MightCreatePoisonOrUB)
     NewBO->dropPoisonGeneratingFlags();
   return NewBO;
 }
@@ -2194,7 +2194,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
       cast<FixedVectorType>(Shuf.getType())->getNumElements();
   SmallVector<int, 16> NewMask(NumMaskElts, 0);
   for (unsigned i = 0; i != NumMaskElts; ++i)
-    if (Mask[i] == UndefMaskElem)
+    if (Mask[i] == PoisonMaskElem)
       NewMask[i] = Mask[i];
 
   return new ShuffleVectorInst(NewIns, NewMask);
@@ -2279,7 +2279,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   // mask element, the result is undefined, but it is not poison or undefined
   // behavior. That is not necessarily true for div/rem/shift.
   bool MightCreatePoisonOrUB =
-      is_contained(Mask, UndefMaskElem) &&
+      is_contained(Mask, PoisonMaskElem) &&
       (Instruction::isIntDivRem(BOpc) || Instruction::isShift(BOpc));
   if (MightCreatePoisonOrUB)
     NewC = InstCombiner::getSafeVectorConstantForBinop(BOpc, NewC,
@@ -2330,7 +2330,7 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
     NewI->andIRFlags(B1);
     if (DropNSW)
       NewI->setHasNoSignedWrap(false);
-    if (is_contained(Mask, UndefMaskElem) && !MightCreatePoisonOrUB)
+    if (is_contained(Mask, PoisonMaskElem) && !MightCreatePoisonOrUB)
       NewI->dropPoisonGeneratingFlags();
   }
   return replaceInstUsesWith(Shuf, NewBO);
@@ -2366,7 +2366,7 @@ static Instruction *foldTruncShuffle(ShuffleVectorInst &Shuf,
       SrcType->getScalarSizeInBits() / DestType->getScalarSizeInBits();
   ArrayRef<int> Mask = Shuf.getShuffleMask();
   for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
-    if (Mask[i] == UndefMaskElem)
+    if (Mask[i] == PoisonMaskElem)
       continue;
     uint64_t LSBIndex = IsBigEndian ? (i + 1) * TruncRatio - 1 : i * TruncRatio;
     assert(LSBIndex <= INT32_MAX && "Overflowed 32-bits");
@@ -2552,7 +2552,7 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   for (unsigned i = 0; i != NumElts; ++i) {
     int ExtractMaskElt = Shuf.getMaskValue(i);
     int MaskElt = Mask[i];
-    NewMask[i] = ExtractMaskElt == UndefMaskElem ? ExtractMaskElt : MaskElt;
+    NewMask[i] = ExtractMaskElt == PoisonMaskElem ? ExtractMaskElt : MaskElt;
   }
   return new ShuffleVectorInst(X, Y, NewMask);
 }

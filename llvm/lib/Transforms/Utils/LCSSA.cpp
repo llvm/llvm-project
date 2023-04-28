@@ -395,12 +395,6 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
   IRBuilder<> Builder(L.getHeader()->getContext());
   Changed = formLCSSAForInstructions(Worklist, DT, *LI, SE, Builder);
 
-  // If we modified the code, remove any caches about the loop from SCEV to
-  // avoid dangling entries.
-  // FIXME: This is a big hammer, can we clear the cache more selectively?
-  if (SE && Changed)
-    SE->forgetLoop(&L);
-
   assert(L.isLCSSAForm(DT));
 
   return Changed;

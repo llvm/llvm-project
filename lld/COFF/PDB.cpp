@@ -950,7 +950,7 @@ void DebugSHandler::finish() {
   // must also be rewritten to use the PDB string table.
   for (const UnrelocatedFpoData &subsec : frameDataSubsecs) {
     // Relocate the first four bytes of the subection and reinterpret them as a
-    // 32 bit integer.
+    // 32 bit little-endian integer.
     SectionChunk *debugChunk = subsec.debugChunk;
     ArrayRef<uint8_t> subsecData = subsec.subsecData;
     uint32_t relocIndex = subsec.relocIndex;
@@ -959,8 +959,9 @@ void DebugSHandler::finish() {
     debugChunk->writeAndRelocateSubsection(debugChunk->getContents(),
                                            unrelocatedRvaStart, relocIndex,
                                            &relocatedRvaStart[0]);
-    uint32_t rvaStart;
-    memcpy(&rvaStart, &relocatedRvaStart[0], sizeof(uint32_t));
+    // Use of memcpy here avoids violating type-based aliasing rules.
+    support::ulittle32_t rvaStart;
+    memcpy(&rvaStart, &relocatedRvaStart[0], sizeof(support::ulittle32_t));
 
     // Copy each frame data record, add in rvaStart, translate string table
     // indices, and add the record to the PDB.

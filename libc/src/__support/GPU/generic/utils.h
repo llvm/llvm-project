@@ -20,9 +20,11 @@ constexpr const uint64_t LANE_SIZE = 1;
 
 LIBC_INLINE uint32_t get_num_blocks_x() { return 1; }
 
-LIBC_INLINE uint32_t get_num_blocks_y() { return 0; }
+LIBC_INLINE uint32_t get_num_blocks_y() { return 1; }
 
-LIBC_INLINE uint32_t get_num_blocks_z() { return 0; }
+LIBC_INLINE uint32_t get_num_blocks_z() { return 1; }
+
+LIBC_INLINE uint64_t get_num_blocks() { return 1; }
 
 LIBC_INLINE uint32_t get_block_id_x() { return 0; }
 
@@ -34,9 +36,11 @@ LIBC_INLINE uint64_t get_block_id() { return 0; }
 
 LIBC_INLINE uint32_t get_num_threads_x() { return 1; }
 
-LIBC_INLINE uint32_t get_num_threads_y() { return 0; }
+LIBC_INLINE uint32_t get_num_threads_y() { return 1; }
 
-LIBC_INLINE uint32_t get_num_threads_z() { return 0; }
+LIBC_INLINE uint32_t get_num_threads_z() { return 1; }
+
+LIBC_INLINE uint64_t get_num_threads() { return 1; }
 
 LIBC_INLINE uint32_t get_thread_id_x() { return 0; }
 
