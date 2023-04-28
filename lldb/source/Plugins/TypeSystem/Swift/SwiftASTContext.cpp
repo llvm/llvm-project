@@ -1716,7 +1716,7 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
 }
 
 static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
-  auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(sdk);
+  auto sdk_path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for SDK: " +
                           toString(sdk_path_or_err.takeError()));
