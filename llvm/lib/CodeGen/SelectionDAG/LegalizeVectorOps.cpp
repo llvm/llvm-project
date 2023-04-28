@@ -1304,11 +1304,11 @@ SDValue VectorLegalizer::ExpandVP_SELECT(SDNode *Node) {
     return DAG.UnrollVectorOp(Node);
 
   SDValue Ones = DAG.getAllOnesConstant(DL, VT);
-  SDValue NotMask = DAG.getNode(ISD::VP_XOR, DL, VT, Mask, Ones, Mask, EVL);
+  SDValue NotMask = DAG.getNode(ISD::VP_XOR, DL, VT, Mask, Ones, Ones, EVL);
 
-  Op1 = DAG.getNode(ISD::VP_AND, DL, VT, Op1, Mask, Mask, EVL);
-  Op2 = DAG.getNode(ISD::VP_AND, DL, VT, Op2, NotMask, Mask, EVL);
-  return DAG.getNode(ISD::VP_OR, DL, VT, Op1, Op2, Mask, EVL);
+  Op1 = DAG.getNode(ISD::VP_AND, DL, VT, Op1, Mask, Ones, EVL);
+  Op2 = DAG.getNode(ISD::VP_AND, DL, VT, Op2, NotMask, Ones, EVL);
+  return DAG.getNode(ISD::VP_OR, DL, VT, Op1, Op2, Ones, EVL);
 }
 
 SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {

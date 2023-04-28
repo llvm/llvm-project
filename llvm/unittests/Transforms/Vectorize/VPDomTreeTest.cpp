@@ -15,6 +15,8 @@ namespace llvm {
 namespace {
 
 TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
+  //   VPBB0
+  //    |
   //   R1 {
   //     VPBB1
   //     /   \
@@ -22,6 +24,7 @@ TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
   //    \    /
   //    VPBB4
   //  }
+  VPBasicBlock *VPBB0 = new VPBasicBlock("VPBB0");
   VPBasicBlock *VPBB1 = new VPBasicBlock("VPBB1");
   VPBasicBlock *VPBB2 = new VPBasicBlock("VPBB2");
   VPBasicBlock *VPBB3 = new VPBasicBlock("VPBB3");
@@ -30,13 +33,14 @@ TEST(VPDominatorTreeTest, DominanceNoRegionsTest) {
   VPBB2->setParent(R1);
   VPBB3->setParent(R1);
 
+  VPBlockUtils::connectBlocks(VPBB0, R1);
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB4);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
   VPlan Plan;
-  Plan.setEntry(R1);
+  Plan.setEntry(VPBB0);
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -68,6 +72,8 @@ checkDomChildren(VPDominatorTree &VPDT, VPBlockBase *Src,
 TEST(VPDominatorTreeTest, DominanceRegionsTest) {
   {
     // 2 consecutive regions.
+    // VPBB0
+    //  |
     // R1 {
     //     \
     //     R1BB1     _
@@ -84,6 +90,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     //    R2BB2
     // }
     //
+    VPBasicBlock *VPBB0 = new VPBasicBlock("VPBB0");
     VPBasicBlock *R1BB1 = new VPBasicBlock();
     VPBasicBlock *R1BB2 = new VPBasicBlock();
     VPBasicBlock *R1BB3 = new VPBasicBlock();
@@ -91,6 +98,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB4, "R1");
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
+    VPBlockUtils::connectBlocks(VPBB0, R1);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB3);
     VPBlockUtils::connectBlocks(R1BB2, R1BB4);
@@ -105,7 +113,7 @@ TEST(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBlockUtils::connectBlocks(R1, R2);
 
     VPlan Plan;
-    Plan.setEntry(R1);
+    Plan.setEntry(VPBB0);
     VPDominatorTree VPDT;
     VPDT.recalculate(Plan);
 

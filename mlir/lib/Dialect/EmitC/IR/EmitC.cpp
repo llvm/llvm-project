@@ -59,6 +59,10 @@ LogicalResult ApplyOp::verify() {
   if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
     return emitOpError("applicable operator is illegal");
 
+  Operation *op = getOperand().getDefiningOp();
+  if (op && dyn_cast<ConstantOp>(op))
+    return emitOpError("cannot apply to constant");
+
   return success();
 }
 
@@ -120,6 +124,11 @@ LogicalResult emitc::CallOp::verify() {
 LogicalResult emitc::ConstantOp::verify() {
   if (getValueAttr().isa<emitc::OpaqueAttr>())
     return success();
+
+  // Value must not be empty
+  StringAttr strAttr = getValueAttr().dyn_cast<StringAttr>();
+  if (strAttr && strAttr.getValue().empty())
+    return emitOpError() << "value must not be empty";
 
   auto value = cast<TypedAttr>(getValueAttr());
   Type type = getType();

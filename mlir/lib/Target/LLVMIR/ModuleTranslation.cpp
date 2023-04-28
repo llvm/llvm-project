@@ -771,6 +771,10 @@ LogicalResult ModuleTranslation::convertGlobals() {
     }
   }
 
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>())
+    if (failed(convertDialectAttributes(op)))
+      return failure();
+
   return success();
 }
 

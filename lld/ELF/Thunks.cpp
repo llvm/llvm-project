@@ -292,6 +292,16 @@ public:
   void addSymbols(ThunkSection &isec) override;
 };
 
+// The AVR devices need thunks for R_AVR_LO8_LDI_GS/R_AVR_HI8_LDI_GS
+// when their destination is out of range [0, 0x1ffff].
+class AVRThunk : public Thunk {
+public:
+  AVRThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
+  uint32_t size() override { return 4; }
+  void writeTo(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
+};
+
 // MIPS LA25 thunk
 class MipsThunk final : public Thunk {
 public:
@@ -892,6 +902,17 @@ void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol("$d", STT_NOTYPE, 16, isec);
 }
 
+// Use the long jump which covers a range up to 8MiB.
+void AVRThunk::writeTo(uint8_t *buf) {
+  write32(buf, 0x940c); // jmp func
+  target->relocateNoSym(buf, R_AVR_CALL, destination.getVA());
+}
+
+void AVRThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver().save("__AVRThunk_" + destination.getName()), STT_FUNC, 0,
+            isec);
+}
+
 // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
 void MipsThunk::writeTo(uint8_t *buf) {
   uint64_t s = destination.getVA();
@@ -1314,6 +1335,16 @@ static Thunk *addThunkArm(RelType reloc, Symbol &s, int64_t a) {
   fatal("unrecognized relocation type");
 }
 
+static Thunk *addThunkAVR(RelType type, Symbol &s, int64_t a) {
+  switch (type) {
+  case R_AVR_LO8_LDI_GS:
+  case R_AVR_HI8_LDI_GS:
+    return make<AVRThunk>(s, a);
+  default:
+    fatal("unrecognized relocation type " + toString(type));
+  }
+}
+
 static Thunk *addThunkMips(RelType type, Symbol &s) {
   if ((s.stOther & STO_MIPS_MICROMIPS) && isMipsR6())
     return make<MicroMipsR6Thunk>(s);
@@ -1365,6 +1396,8 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
     return addThunkAArch64(rel.type, s, a);
   case EM_ARM:
     return addThunkArm(rel.type, s, a);
+  case EM_AVR:
+    return addThunkAVR(rel.type, s, a);
   case EM_MIPS:
     return addThunkMips(rel.type, s);
   case EM_PPC:
@@ -1372,6 +1405,6 @@ Thunk *elf::addThunk(const InputSection &isec, Relocation &rel) {
   case EM_PPC64:
     return addThunkPPC64(rel.type, s, a);
   default:
-    llvm_unreachable("add Thunk only supported for ARM, Mips and PowerPC");
+    llvm_unreachable("add Thunk only supported for ARM, AVR, Mips and PowerPC");
   }
 }

@@ -244,7 +244,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // still need a shuffle to change the vector size.
   auto *Ty = cast<FixedVectorType>(I.getType());
   unsigned OutputNumElts = Ty->getNumElements();
-  SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
+  SmallVector<int, 16> Mask(OutputNumElts, PoisonMaskElem);
   assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
   Mask[0] = OffsetEltIndex;
   if (OffsetEltIndex)
@@ -480,7 +480,7 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
   // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
   // ShufMask = { 2, undef, undef, undef }
   auto *VecTy = cast<FixedVectorType>(Vec->getType());
-  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), UndefMaskElem);
+  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), PoisonMaskElem);
   ShufMask[NewIndex] = OldIndex;
   return Builder.CreateShuffleVector(Vec, ShufMask, "shift");
 }
@@ -914,7 +914,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   auto *CmpTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(X->getType()));
   InstructionCost NewCost = TTI.getCmpSelInstrCost(
       CmpOpcode, X->getType(), CmpInst::makeCmpResultType(X->getType()), Pred);
-  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), UndefMaskElem);
+  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), PoisonMaskElem);
   ShufMask[CheapIndex] = ExpensiveIndex;
   NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy,
                                 ShufMask);
@@ -1593,12 +1593,12 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     V2B.push_back(GetBaseMaskValue(SVI1B, V2[I].first));
   }
   while (V1A.size() < NumElts) {
-    V1A.push_back(UndefMaskElem);
-    V1B.push_back(UndefMaskElem);
+    V1A.push_back(PoisonMaskElem);
+    V1B.push_back(PoisonMaskElem);
   }
   while (V2A.size() < NumElts) {
-    V2A.push_back(UndefMaskElem);
-    V2B.push_back(UndefMaskElem);
+    V2A.push_back(PoisonMaskElem);
+    V2B.push_back(PoisonMaskElem);
   }
 
   auto AddShuffleCost = [&](InstructionCost C, Instruction *I) {

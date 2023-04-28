@@ -155,94 +155,104 @@
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_BINARY_INT_VP is already defined!"
 #endif
-#define HELPER_REGISTER_BINARY_INT_VP(VPID, VPSD, IROPC)                       \
+#define HELPER_REGISTER_BINARY_INT_VP(VPID, VPSD, IROPC, SDOPC)                \
   BEGIN_REGISTER_VP(VPID, 2, 3, VPSD, -1)                                      \
   VP_PROPERTY_FUNCTIONAL_OPC(IROPC)                                            \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   VP_PROPERTY_BINARYOP                                                         \
   END_REGISTER_VP(VPID, VPSD)
 
 // llvm.vp.add(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_add, VP_ADD, Add)
+HELPER_REGISTER_BINARY_INT_VP(vp_add, VP_ADD, Add, ADD)
 
 // llvm.vp.and(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_and, VP_AND, And)
+HELPER_REGISTER_BINARY_INT_VP(vp_and, VP_AND, And, AND)
 
 // llvm.vp.ashr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_ASHR, AShr)
+HELPER_REGISTER_BINARY_INT_VP(vp_ashr, VP_ASHR, AShr, SRA)
 
 // llvm.vp.lshr(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_LSHR, LShr)
+HELPER_REGISTER_BINARY_INT_VP(vp_lshr, VP_LSHR, LShr, SRL)
 
 // llvm.vp.mul(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_mul, VP_MUL, Mul)
+HELPER_REGISTER_BINARY_INT_VP(vp_mul, VP_MUL, Mul, MUL)
 
 // llvm.vp.or(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_or, VP_OR, Or)
+HELPER_REGISTER_BINARY_INT_VP(vp_or, VP_OR, Or, OR)
 
 // llvm.vp.sdiv(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_sdiv, VP_SDIV, SDiv)
+HELPER_REGISTER_BINARY_INT_VP(vp_sdiv, VP_SDIV, SDiv, SDIV)
 
 // llvm.vp.shl(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_shl, VP_SHL, Shl)
+HELPER_REGISTER_BINARY_INT_VP(vp_shl, VP_SHL, Shl, SHL)
 
 // llvm.vp.srem(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_srem, VP_SREM, SRem)
+HELPER_REGISTER_BINARY_INT_VP(vp_srem, VP_SREM, SRem, SREM)
 
 // llvm.vp.sub(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_sub, VP_SUB, Sub)
+HELPER_REGISTER_BINARY_INT_VP(vp_sub, VP_SUB, Sub, SUB)
 
 // llvm.vp.udiv(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_udiv, VP_UDIV, UDiv)
+HELPER_REGISTER_BINARY_INT_VP(vp_udiv, VP_UDIV, UDiv, UDIV)
 
 // llvm.vp.urem(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_urem, VP_UREM, URem)
+HELPER_REGISTER_BINARY_INT_VP(vp_urem, VP_UREM, URem, UREM)
 
 // llvm.vp.xor(x,y,mask,vlen)
-HELPER_REGISTER_BINARY_INT_VP(vp_xor, VP_XOR, Xor)
+HELPER_REGISTER_BINARY_INT_VP(vp_xor, VP_XOR, Xor, XOR)
 
 #undef HELPER_REGISTER_BINARY_INT_VP
 
 // llvm.vp.smin(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_smin, 2, 3, VP_SMIN, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(SMIN)
 END_REGISTER_VP(vp_smin, VP_SMIN)
 
 // llvm.vp.smax(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_smax, 2, 3, VP_SMAX, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(SMAX)
 END_REGISTER_VP(vp_smax, VP_SMAX)
 
 // llvm.vp.umin(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_umin, 2, 3, VP_UMIN, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(UMIN)
 END_REGISTER_VP(vp_umin, VP_UMIN)
 
 // llvm.vp.umax(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_umax, 2, 3, VP_UMAX, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(UMAX)
 END_REGISTER_VP(vp_umax, VP_UMAX)
 
 // llvm.vp.abs(x,is_int_min_poison,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_abs, 2, 3)
 BEGIN_REGISTER_VP_SDNODE(VP_ABS, -1, vp_abs, 1, 2)
 HELPER_MAP_VPID_TO_VPSD(vp_abs, VP_ABS)
+VP_PROPERTY_FUNCTIONAL_SDOPC(ABS)
 END_REGISTER_VP(vp_abs, VP_ABS)
 
 // llvm.vp.bswap(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_bswap, 1, 2, VP_BSWAP, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(BSWAP)
 END_REGISTER_VP(vp_bswap, VP_BSWAP)
 
 // llvm.vp.bitreverse(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_bitreverse, 1, 2, VP_BITREVERSE, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(BITREVERSE)
 END_REGISTER_VP(vp_bitreverse, VP_BITREVERSE)
 
 // llvm.vp.ctpop(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_ctpop, 1, 2, VP_CTPOP, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(CTPOP)
 END_REGISTER_VP(vp_ctpop, VP_CTPOP)
 
 // llvm.vp.ctlz(x,is_zero_poison,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_ctlz, 2, 3)
 BEGIN_REGISTER_VP_SDNODE(VP_CTLZ, -1, vp_ctlz, 1, 2)
+VP_PROPERTY_FUNCTIONAL_SDOPC(CTLZ)
 END_REGISTER_VP_SDNODE(VP_CTLZ)
 BEGIN_REGISTER_VP_SDNODE(VP_CTLZ_ZERO_UNDEF, -1, vp_ctlz_zero_undef, 1, 2)
 END_REGISTER_VP_SDNODE(VP_CTLZ_ZERO_UNDEF)
@@ -251,6 +261,7 @@ END_REGISTER_VP_INTRINSIC(vp_ctlz)
 // llvm.vp.cttz(x,is_zero_poison,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_cttz, 2, 3)
 BEGIN_REGISTER_VP_SDNODE(VP_CTTZ, -1, vp_cttz, 1, 2)
+VP_PROPERTY_FUNCTIONAL_SDOPC(CTTZ)
 END_REGISTER_VP_SDNODE(VP_CTTZ)
 BEGIN_REGISTER_VP_SDNODE(VP_CTTZ_ZERO_UNDEF, -1, vp_cttz_zero_undef, 1, 2)
 END_REGISTER_VP_SDNODE(VP_CTTZ_ZERO_UNDEF)
@@ -258,10 +269,12 @@ END_REGISTER_VP_INTRINSIC(vp_cttz)
 
 // llvm.vp.fshl(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fshl, 3, 4, VP_FSHL, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FSHL)
 END_REGISTER_VP(vp_fshl, VP_FSHL)
 
 // llvm.vp.fshr(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fshr, 3, 4, VP_FSHR, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FSHR)
 END_REGISTER_VP(vp_fshr, VP_FSHR)
 ///// } Integer Arithmetic
 
@@ -301,14 +314,17 @@ HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem, FREM)
 // llvm.vp.fneg(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_fneg, 1, 2, VP_FNEG, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(FNeg)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FNEG)
 END_REGISTER_VP(vp_fneg, VP_FNEG)
 
 // llvm.vp.fabs(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_fabs, 1, 2, VP_FABS, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FABS)
 END_REGISTER_VP(vp_fabs, VP_FABS)
 
 // llvm.vp.sqrt(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_sqrt, 1, 2, VP_SQRT, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FSQRT)
 END_REGISTER_VP(vp_sqrt, VP_SQRT)
 
 // llvm.vp.fma(x,y,z,mask,vlen)
@@ -320,49 +336,60 @@ END_REGISTER_VP(vp_fma, VP_FMA)
 // llvm.vp.fmuladd(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fmuladd, 3, 4, VP_FMULADD, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fmuladd)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FMAD)
 END_REGISTER_VP(vp_fmuladd, VP_FMULADD)
 
 // llvm.vp.copysign(x,y,mask,vlen)
 BEGIN_REGISTER_VP(vp_copysign, 2, 3, VP_FCOPYSIGN, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(FCOPYSIGN)
 END_REGISTER_VP(vp_copysign, VP_FCOPYSIGN)
 
 // llvm.vp.minnum(x, y, mask,vlen)
 BEGIN_REGISTER_VP(vp_minnum, 2, 3, VP_FMINNUM, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(FMINNUM)
 END_REGISTER_VP(vp_minnum, VP_FMINNUM)
 
 // llvm.vp.maxnum(x, y, mask,vlen)
 BEGIN_REGISTER_VP(vp_maxnum, 2, 3, VP_FMAXNUM, -1)
 VP_PROPERTY_BINARYOP
+VP_PROPERTY_FUNCTIONAL_SDOPC(FMAXNUM)
 END_REGISTER_VP(vp_maxnum, VP_FMAXNUM)
 
 // llvm.vp.ceil(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_ceil, 1, 2, VP_FCEIL, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FCEIL)
 END_REGISTER_VP(vp_ceil, VP_FCEIL)
 
 // llvm.vp.floor(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_floor, 1, 2, VP_FFLOOR, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FFLOOR)
 END_REGISTER_VP(vp_floor, VP_FFLOOR)
 
 // llvm.vp.round(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_round, 1, 2, VP_FROUND, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FROUND)
 END_REGISTER_VP(vp_round, VP_FROUND)
 
 // llvm.vp.roundeven(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_roundeven, 1, 2, VP_FROUNDEVEN, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FROUNDEVEN)
 END_REGISTER_VP(vp_roundeven, VP_FROUNDEVEN)
 
 // llvm.vp.roundtozero(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_roundtozero, 1, 2, VP_FROUNDTOZERO, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FTRUNC)
 END_REGISTER_VP(vp_roundtozero, VP_FROUNDTOZERO)
 
 // llvm.vp.rint(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_rint, 1, 2, VP_FRINT, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FRINT)
 END_REGISTER_VP(vp_rint, VP_FRINT)
 
 // llvm.vp.nearbyint(x,mask,vlen)
 BEGIN_REGISTER_VP(vp_nearbyint, 1, 2, VP_FNEARBYINT, -1)
+VP_PROPERTY_FUNCTIONAL_SDOPC(FNEARBYINT)
 END_REGISTER_VP(vp_nearbyint, VP_FNEARBYINT)
 
 ///// } Floating-Point Arithmetic
@@ -374,30 +401,31 @@ END_REGISTER_VP(vp_nearbyint, VP_FNEARBYINT)
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_FP_CAST_VP is already defined!"
 #endif
-#define HELPER_REGISTER_FP_CAST_VP(OPSUFFIX, VPSD, IROPC, HASROUND)            \
+#define HELPER_REGISTER_FP_CAST_VP(OPSUFFIX, VPSD, IROPC, SDOPC, HASROUND)     \
   BEGIN_REGISTER_VP(vp_##OPSUFFIX, 1, 2, VPSD, -1)                             \
   VP_PROPERTY_FUNCTIONAL_OPC(IROPC)                                            \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   VP_PROPERTY_CONSTRAINEDFP(HASROUND, 1, experimental_constrained_##OPSUFFIX)  \
   VP_PROPERTY_CASTOP                                                           \
   END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
 
 // llvm.vp.fptoui(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(fptoui, VP_FP_TO_UINT, FPToUI, 0)
+HELPER_REGISTER_FP_CAST_VP(fptoui, VP_FP_TO_UINT, FPToUI, FP_TO_UINT, 0)
 
 // llvm.vp.fptosi(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(fptosi, VP_FP_TO_SINT, FPToSI, 0)
+HELPER_REGISTER_FP_CAST_VP(fptosi, VP_FP_TO_SINT, FPToSI, FP_TO_SINT, 0)
 
 // llvm.vp.uitofp(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(uitofp, VP_UINT_TO_FP, UIToFP, 1)
+HELPER_REGISTER_FP_CAST_VP(uitofp, VP_UINT_TO_FP, UIToFP, UINT_TO_FP, 1)
 
 // llvm.vp.sitofp(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(sitofp, VP_SINT_TO_FP, SIToFP, 1)
+HELPER_REGISTER_FP_CAST_VP(sitofp, VP_SINT_TO_FP, SIToFP, SINT_TO_FP, 1)
 
 // llvm.vp.fptrunc(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(fptrunc, VP_FP_ROUND, FPTrunc, 1)
+HELPER_REGISTER_FP_CAST_VP(fptrunc, VP_FP_ROUND, FPTrunc, FP_ROUND, 1)
 
 // llvm.vp.fpext(x,mask,vlen)
-HELPER_REGISTER_FP_CAST_VP(fpext, VP_FP_EXTEND, FPExt, 0)
+HELPER_REGISTER_FP_CAST_VP(fpext, VP_FP_EXTEND, FPExt, FP_EXTEND, 0)
 
 #undef HELPER_REGISTER_FP_CAST_VP
 
@@ -407,26 +435,33 @@ HELPER_REGISTER_FP_CAST_VP(fpext, VP_FP_EXTEND, FPExt, 0)
 #error                                                                         \
     "The internal helper macro HELPER_REGISTER_INT_CAST_VP is already defined!"
 #endif
-#define HELPER_REGISTER_INT_CAST_VP(OPSUFFIX, VPSD, IROPC)                     \
+#define HELPER_REGISTER_INT_CAST_VP(OPSUFFIX, VPSD, IROPC, SDOPC)              \
   BEGIN_REGISTER_VP(vp_##OPSUFFIX, 1, 2, VPSD, -1)                             \
   VP_PROPERTY_FUNCTIONAL_OPC(IROPC)                                            \
+  VP_PROPERTY_FUNCTIONAL_SDOPC(SDOPC)                                          \
   VP_PROPERTY_CASTOP                                                           \
   END_REGISTER_VP(vp_##OPSUFFIX, VPSD)
 
 // llvm.vp.trunc(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(trunc, VP_TRUNCATE, Trunc)
+HELPER_REGISTER_INT_CAST_VP(trunc, VP_TRUNCATE, Trunc, TRUNCATE)
 
 // llvm.vp.zext(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(zext, VP_ZERO_EXTEND, ZExt)
+HELPER_REGISTER_INT_CAST_VP(zext, VP_ZERO_EXTEND, ZExt, ZERO_EXTEND)
 
 // llvm.vp.sext(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(sext, VP_SIGN_EXTEND, SExt)
+HELPER_REGISTER_INT_CAST_VP(sext, VP_SIGN_EXTEND, SExt, SIGN_EXTEND)
 
 // llvm.vp.ptrtoint(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(ptrtoint, VP_PTRTOINT, PtrToInt)
+BEGIN_REGISTER_VP(vp_ptrtoint, 1, 2, VP_PTRTOINT, -1)
+VP_PROPERTY_FUNCTIONAL_OPC(PtrToInt)
+VP_PROPERTY_CASTOP
+END_REGISTER_VP(vp_ptrtoint, VP_PTRTOINT)
 
 // llvm.vp.inttoptr(x,mask,vlen)
-HELPER_REGISTER_INT_CAST_VP(inttoptr, VP_INTTOPTR, IntToPtr)
+BEGIN_REGISTER_VP(vp_inttoptr, 1, 2, VP_INTTOPTR, -1)
+VP_PROPERTY_FUNCTIONAL_OPC(IntToPtr)
+VP_PROPERTY_CASTOP
+END_REGISTER_VP(vp_inttoptr, VP_INTTOPTR)
 
 #undef HELPER_REGISTER_INT_CAST_VP
 
@@ -617,6 +652,7 @@ HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
 // llvm.vp.select(cond,on_true,on_false,vlen)
 BEGIN_REGISTER_VP(vp_select, std::nullopt, 3, VP_SELECT, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(Select)
+VP_PROPERTY_FUNCTIONAL_SDOPC(VSELECT)
 END_REGISTER_VP(vp_select, VP_SELECT)
 
 // llvm.vp.merge(cond,on_true,on_false,pivot)

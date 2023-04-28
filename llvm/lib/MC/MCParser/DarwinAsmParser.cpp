@@ -1130,7 +1130,7 @@ bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc,
   if (isSDKVersionToken(getLexer().getTok()) && parseSDKVersion(SDKVersion))
     return true;
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(Twine(" in '") + Directive + "' directive");
 
   Triple::OSType ExpectedOS = getOSTypeFromMCVM(Type);
@@ -1191,7 +1191,7 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   if (isSDKVersionToken(getLexer().getTok()) && parseSDKVersion(SDKVersion))
     return true;
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in '.build_version' directive");
 
   Triple::OSType ExpectedOS
