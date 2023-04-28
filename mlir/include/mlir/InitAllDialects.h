@@ -71,6 +71,7 @@
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h"
+#include "mlir/Dialect/Tensor/TransformOps/TensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -132,6 +133,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   linalg::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
+  tensor::registerTransformDialectExtension(registry);
   vector::registerTransformDialectExtension(registry);
 
   // Register all external models.
