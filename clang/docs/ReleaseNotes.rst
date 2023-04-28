@@ -432,6 +432,9 @@ Arm and AArch64 Support
      // int a = foo(); int* b = bar();
      asm("ands %w[a], %w[a], #3" : [a] "+r"(a), "=@cceq"(*b));
 
+- Fix a crash when ``preserve_all`` calling convention is used on AArch64.
+  `Issue 58145 <https://github.com/llvm/llvm-project/issues/58145>`_
+
 Windows Support
 ^^^^^^^^^^^^^^^
 
