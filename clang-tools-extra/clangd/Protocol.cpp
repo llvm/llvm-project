@@ -187,14 +187,34 @@ bool fromJSON(const llvm::json::Value &Params, TextDocumentItem &R,
 bool fromJSON(const llvm::json::Value &Params, TextEdit &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.map("range", R.range) && O.map("newText", R.newText);
+  return O && O.map("range", R.range) && O.map("newText", R.newText) &&
+         O.mapOptional("annotationId", R.annotationId);
 }
 
 llvm::json::Value toJSON(const TextEdit &P) {
-  return llvm::json::Object{
+  llvm::json::Object Result{
       {"range", P.range},
       {"newText", P.newText},
   };
+  if (!P.annotationId.empty())
+    Result["annotationId"] = P.annotationId;
+  return Result;
+}
+
+bool fromJSON(const llvm::json::Value &Params, ChangeAnnotation &R,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.map("label", R.label) &&
+         O.map("needsConfirmation", R.needsConfirmation) &&
+         O.mapOptional("description", R.description);
+}
+llvm::json::Value toJSON(const ChangeAnnotation & CA) {
+  llvm::json::Object Result{{"label", CA.label}};
+  if (CA.needsConfirmation)
+    Result["needsConfirmation"] = *CA.needsConfirmation;
+  if (!CA.description.empty())
+    Result["description"] = CA.description;
+  return Result;
 }
 
 bool fromJSON(const llvm::json::Value &Params, TextDocumentEdit &R,
@@ -458,6 +478,10 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
     if (auto *WorkspaceEdit = Workspace->getObject("workspaceEdit")) {
       if (auto DocumentChanges = WorkspaceEdit->getBoolean("documentChanges"))
         R.DocumentChanges = *DocumentChanges;
+      if (const auto& ChangeAnnotation =
+              WorkspaceEdit->getObject("changeAnnotationSupport")) {
+        R.ChangeAnnotation = true;
+      }
     }
   }
   if (auto *Window = O->getObject("window")) {
@@ -733,7 +757,8 @@ bool fromJSON(const llvm::json::Value &Params, WorkspaceEdit &R,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
   return O && O.map("changes", R.changes) &&
-         O.map("documentChanges", R.documentChanges);
+         O.map("documentChanges", R.documentChanges) &&
+         O.mapOptional("changeAnnotations", R.changeAnnotations);
 }
 
 bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
@@ -888,6 +913,12 @@ llvm::json::Value toJSON(const WorkspaceEdit &WE) {
   }
   if (WE.documentChanges)
     Result["documentChanges"] = *WE.documentChanges;
+  if (!WE.changeAnnotations.empty()) {
+    llvm::json::Object ChangeAnnotations;
+    for (auto &Annotation : WE.changeAnnotations)
+      ChangeAnnotations[Annotation.first] = Annotation.second;
+    Result["changeAnnotations"] = std::move(ChangeAnnotations);
+  }
   return Result;
 }
 

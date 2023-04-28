@@ -607,8 +607,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
                    llvm::StringRef path) {
   Status error;
 
-  static ConstString g_dylibext(".dylib");
-  static ConstString g_solibext(".so");
+  static constexpr llvm::StringLiteral g_dylibext(".dylib");
+  static constexpr llvm::StringLiteral g_solibext(".so");
 
   if (!baton)
     return FileSystem::eEnumerateDirectoryResultQuit;

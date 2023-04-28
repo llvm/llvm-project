@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TRANSFORMS_INSTRUMENTATION_CFGMST_H
-#define LLVM_LIB_TRANSFORMS_INSTRUMENTATION_CFGMST_H
+#ifndef LLVM_TRANSFORMS_INSTRUMENTATION_CFGMST_H
+#define LLVM_TRANSFORMS_INSTRUMENTATION_CFGMST_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -300,4 +300,4 @@ public:
 
 #undef DEBUG_TYPE // "cfgmst"
 
-#endif // LLVM_LIB_TRANSFORMS_INSTRUMENTATION_CFGMST_H
+#endif // LLVM_TRANSFORMS_INSTRUMENTATION_CFGMST_H

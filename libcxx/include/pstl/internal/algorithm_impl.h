@@ -536,7 +536,7 @@ __brick_find_if(_RandomAccessIterator __first, _RandomAccessIterator __last, _Pr
 
 template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 _ForwardIterator
-__pattern_find_if(_Tag __tag, _ExecutionPolicy&&, _ForwardIterator __first, _ForwardIterator __last,
+__pattern_find_if(_Tag, _ExecutionPolicy&&, _ForwardIterator __first, _ForwardIterator __last,
                   _Predicate __pred) noexcept
 {
     return __internal::__brick_find_if(__first, __last, __pred, typename _Tag::__is_vector{});

@@ -14,23 +14,16 @@
 ; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64-FD
 
 ;
-; Checking for special return instructions (uret, sret, mret).
+; Checking for special return instructions (sret, mret).
 ;
-define void @foo_user() #0 {
-; CHECK-LABEL: foo_user:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    uret
-  ret void
-}
-
-define void @foo_supervisor() #1 {
+define void @foo_supervisor() #0 {
 ; CHECK-LABEL: foo_supervisor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sret
   ret void
 }
 
-define void @foo_machine() #2 {
+define void @foo_machine() #1 {
 ; CHECK-LABEL: foo_machine:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mret
@@ -49,7 +42,7 @@ define void @foo_machine() #2 {
 ;
 
 declare i32 @otherfoo(...)
-define void @foo_with_call() #2 {
+define void @foo_with_call() #1 {
 ;
 ; CHECK-RV32-LABEL: foo_with_call:
 ; CHECK-RV32:       # %bb.0:
@@ -547,7 +540,7 @@ define void @foo_with_call() #2 {
 ;
 ; Additionally check frame pointer and return address are properly saved.
 ;
-define void @foo_fp_with_call() #3 {
+define void @foo_fp_with_call() #2 {
 ;
 ; CHECK-RV32-LABEL: foo_fp_with_call:
 ; CHECK-RV32:       # %bb.0:
@@ -1060,7 +1053,6 @@ define void @foo_fp_with_call() #3 {
   ret void
 }
 
-attributes #0 = { nounwind "interrupt"="user" }
-attributes #1 = { nounwind "interrupt"="supervisor" }
-attributes #2 = { nounwind  "interrupt"="machine" }
-attributes #3 = { nounwind "interrupt"="machine" "frame-pointer"="all" }
+attributes #0 = { nounwind "interrupt"="supervisor" }
+attributes #1 = { nounwind "interrupt"="machine" }
+attributes #2 = { nounwind "interrupt"="machine" "frame-pointer"="all" }

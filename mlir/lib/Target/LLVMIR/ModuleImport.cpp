@@ -1024,10 +1024,15 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
+  // Only call the function for constants that have not been translated before
+  // since it updates the constant insertion point assuming the converted
+  // constant has been introduced at the end of the constant section.
+  assert(!valueMapping.contains(constant) &&
+         "expected constant has not been converted before");
   assert(constantInsertionBlock &&
          "expected the constant insertion block to be non-null");
 
-  // Insert the constant after the last one or at the start or the entry block.
+  // Insert the constant after the last one or at the start of the entry block.
   OpBuilder::InsertionGuard guard(builder);
   if (!constantInsertionOp)
     builder.setInsertionPointToStart(constantInsertionBlock);

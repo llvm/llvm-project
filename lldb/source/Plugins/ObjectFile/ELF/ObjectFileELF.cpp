@@ -2029,7 +2029,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   // contain the note section specifying the environment to Android but the
   // custom extension and file name makes it highly unlikely that this will
   // collide with anything else.
-  ConstString file_extension = m_file.GetFileNameExtension();
+  llvm::StringRef file_extension = m_file.GetFileNameExtension();
   bool skip_oatdata_oatexec =
       file_extension == ".oat" || file_extension == ".odex";
 

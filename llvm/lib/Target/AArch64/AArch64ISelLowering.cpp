@@ -4534,8 +4534,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
   // If SVE is available then i64 vector multiplications can also be made legal.
-  bool OverrideNEON = VT == MVT::v2i64 || VT == MVT::v1i64 ||
-                      Subtarget->forceStreamingCompatibleSVE();
+  bool OverrideNEON =
+      VT == MVT::v1i64 || Subtarget->forceStreamingCompatibleSVE();
 
   if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
@@ -4551,10 +4551,14 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   unsigned NewOpc = selectUmullSmull(N0, N1, DAG, DL, isMLA);
 
   if (!NewOpc) {
-    if (VT == MVT::v2i64)
+    if (VT == MVT::v2i64) {
+      // If SVE is available then i64 vector multiplications can also be made
+      // legal.
+      if (Subtarget->hasSVE())
+        return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
       // Fall through to expand this.  It is not legal.
       return SDValue();
-    else
+    } else
       // Other vector multiplications are legal.
       return Op;
   }

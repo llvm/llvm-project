@@ -2705,12 +2705,25 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
     break;
-  case Instruction::Sub:
+  case Instruction::Sub: {
     if (auto *C = dyn_cast<Constant>(I->getOperand(0)))
       if (C->isNullValue() &&
           isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q))
         return true;
-    break;
+
+    KnownBits XKnown =
+        computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
+    if (!XKnown.isUnknown()) {
+      KnownBits YKnown =
+          computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+      // If X != Y then X - Y is non zero.
+      std::optional<bool> ne = KnownBits::ne(XKnown, YKnown);
+      // If we are unable to compute if X != Y, we won't be able to do anything
+      // computing the knownbits of the sub expression so just return here.
+      return ne && *ne;
+    }
+    return false;
+  }
   case Instruction::Or:
     // X | Y != 0 if X != 0 or Y != 0.
     return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
@@ -2759,6 +2772,14 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     break;
   case Instruction::Add: {
     // X + Y.
+
+    // If Add has nuw wrap flag, then if either X or Y is non-zero the result is
+    // non-zero.
+    auto *BO = cast<OverflowingBinaryOperator>(V);
+    if (Q.IIQ.hasNoUnsignedWrap(BO))
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
+             isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
+
     KnownBits XKnown =
         computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
     KnownBits YKnown =
@@ -6530,7 +6551,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
     return false;
 
   if (const auto *A = dyn_cast<Argument>(V)) {
-    if (A->hasAttribute(Attribute::NoUndef))
+    if (A->hasAttribute(Attribute::NoUndef) ||
+        A->hasAttribute(Attribute::Dereferenceable) ||
+        A->hasAttribute(Attribute::DereferenceableOrNull))
       return true;
   }
 
@@ -7733,6 +7756,12 @@ Intrinsic::ID llvm::getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID) {
   case Intrinsic::smin: return Intrinsic::smax;
   case Intrinsic::umax: return Intrinsic::umin;
   case Intrinsic::umin: return Intrinsic::umax;
+  // Please note that next four intrinsics may produce the same result for
+  // original and inverted case even if X != Y due to NaN is handled specially.
+  case Intrinsic::maximum: return Intrinsic::minimum;
+  case Intrinsic::minimum: return Intrinsic::maximum;
+  case Intrinsic::maxnum: return Intrinsic::minnum;
+  case Intrinsic::minnum: return Intrinsic::maxnum;
   default: llvm_unreachable("Unexpected intrinsic");
   }
 }

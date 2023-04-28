@@ -14,7 +14,7 @@ define i1 @test(ptr %arg, ptr %i233, i64 %i241, ptr %i235, ptr %i237, ptr %i227)
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x ptr> <ptr poison, ptr null, ptr poison, ptr null, ptr null, ptr null, ptr null, ptr null>, ptr [[I242]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x ptr> [[TMP2]], ptr [[I250]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <8 x ptr> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP3]], <8 x ptr> poison, <4 x i32> <i32 2, i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP3]], <8 x ptr> poison, <4 x i32> <i32 2, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> [[TMP5]], ptr [[I245]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[I248]], i32 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP7]], <4 x ptr> poison, <8 x i32> <i32 2, i32 0, i32 1, i32 3, i32 0, i32 1, i32 2, i32 3>

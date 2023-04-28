@@ -243,7 +243,7 @@ float floorf(float __x) { return __ocml_floor_f32(__x); }
 
 __DEVICE__
 float fmaf(float __x, float __y, float __z) {
-  return __ocml_fma_f32(__x, __y, __z);
+  return __builtin_fmaf(__x, __y, __z);
 }
 
 __DEVICE__
@@ -621,7 +621,7 @@ float __fmaf_rz(float __x, float __y, float __z) {
 #else
 __DEVICE__
 float __fmaf_rn(float __x, float __y, float __z) {
-  return __ocml_fma_f32(__x, __y, __z);
+  return __builtin_fmaf(__x, __y, __z);
 }
 #endif
 
@@ -799,7 +799,7 @@ double floor(double __x) { return __ocml_floor_f64(__x); }
 
 __DEVICE__
 double fma(double __x, double __y, double __z) {
-  return __ocml_fma_f64(__x, __y, __z);
+  return __builtin_fma(__x, __y, __z);
 }
 
 __DEVICE__
@@ -1258,7 +1258,7 @@ double __fma_rz(double __x, double __y, double __z) {
 #else
 __DEVICE__
 double __fma_rn(double __x, double __y, double __z) {
-  return __ocml_fma_f64(__x, __y, __z);
+  return __builtin_fma(__x, __y, __z);
 }
 #endif
 // END INTRINSICS

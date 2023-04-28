@@ -26,6 +26,9 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
+* ``--remap-inputs=`` and ``--remap-inputs-file=`` are added to remap input files.
+  (`D148859 <https://reviews.llvm.org/D148859>`_)
+
 Breaking changes
 ----------------
 

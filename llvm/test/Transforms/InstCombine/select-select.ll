@@ -115,7 +115,7 @@ define <4 x i8> @sel_shuf_use(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 
 define <4 x i8> @sel_shuf_undef(<4 x i8> %x, <4 x i8> %y, <4 x i1> %cmp) {
 ; CHECK-LABEL: @sel_shuf_undef(
-; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 undef>
+; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[CMP:%.*]], <4 x i8> [[BLEND]], <4 x i8> [[Y]]
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;

@@ -55,7 +55,7 @@ define noundef <4 x float> @ConvertVectors_ByVal(ptr noundef nonnull align 16 de
 ; SSE-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP1]], i64 1
 ; SSE-NEXT:    [[TMP4:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i32>
 ; SSE-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP4]] to <2 x float>
-; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; SSE-NEXT:    [[TMP7:%.*]] = trunc i64 [[V_VAL421]] to i32
 ; SSE-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP7]] to float
 ; SSE-NEXT:    [[VECINIT11:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
