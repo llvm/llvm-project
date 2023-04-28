@@ -356,7 +356,7 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
   return success();
 }
 
-LogicalResult ValueBoundsConstraintSet::computeBound(
+LogicalResult ValueBoundsConstraintSet::computeDependentBound(
     AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
     Value value, std::optional<int64_t> dim, ValueDimList dependencies,
     bool closedUB) {
@@ -365,6 +365,40 @@ LogicalResult ValueBoundsConstraintSet::computeBound(
       [&](Value v, std::optional<int64_t> d) {
         return llvm::is_contained(dependencies, std::make_pair(v, d));
       },
+      closedUB);
+}
+
+LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
+    AffineMap &resultMap, ValueDimList &mapOperands, presburger::BoundType type,
+    Value value, std::optional<int64_t> dim, ValueRange independencies,
+    bool closedUB) {
+  // Return "true" if the given value is independent of all values in
+  // `independencies`. I.e., neither the value itself nor any value in the
+  // backward slice (reverse use-def chain) is contained in `independencies`.
+  auto isIndependent = [&](Value v) {
+    SmallVector<Value> worklist;
+    DenseSet<Value> visited;
+    worklist.push_back(v);
+    while (!worklist.empty()) {
+      Value next = worklist.pop_back_val();
+      if (visited.contains(next))
+        continue;
+      visited.insert(next);
+      if (llvm::is_contained(independencies, next))
+        return false;
+      // TODO: DominanceInfo could be used to stop the traversal early.
+      Operation *op = next.getDefiningOp();
+      if (!op)
+        continue;
+      worklist.append(op->getOperands().begin(), op->getOperands().end());
+    }
+    return true;
+  };
+
+  // Reify bounds in terms of any independent values.
+  return computeBound(
+      resultMap, mapOperands, type, value, dim,
+      [&](Value v, std::optional<int64_t> d) { return isIndependent(v); },
       closedUB);
 }
 
