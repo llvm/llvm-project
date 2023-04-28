@@ -2081,6 +2081,8 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     return CC;
   case CallingConv::PreserveMost:
     return CallingConv::PreserveMost;
+  case CallingConv::PreserveAll:
+    return CallingConv::PreserveAll;
   case CallingConv::ARM_AAPCS_VFP:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
@@ -2138,6 +2140,8 @@ CCAssignFn *ARMTargetLowering::CCAssignFnForNode(CallingConv::ID CC,
   case CallingConv::GHC:
     return (Return ? RetCC_ARM_APCS : CC_ARM_APCS_GHC);
   case CallingConv::PreserveMost:
+    return (Return ? RetCC_ARM_AAPCS : CC_ARM_AAPCS);
+  case CallingConv::PreserveAll:
     return (Return ? RetCC_ARM_AAPCS : CC_ARM_AAPCS);
   case CallingConv::CFGuard_Check:
     return (Return ? RetCC_ARM_AAPCS : CC_ARM_Win32_CFGuard_Check);
