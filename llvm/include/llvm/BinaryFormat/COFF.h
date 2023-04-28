@@ -130,6 +130,10 @@ template <typename T> bool isAnyArm64(T Machine) {
   return Machine == IMAGE_FILE_MACHINE_ARM64 || isArm64EC(Machine);
 }
 
+template <typename T> bool is64Bit(T Machine) {
+  return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine);
+}
+
 enum Characteristics : unsigned {
   C_Invalid = 0,
 

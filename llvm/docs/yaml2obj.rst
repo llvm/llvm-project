@@ -34,6 +34,56 @@ Here's a sample COFF file.
       StructuredData:
         - Binary: {type: str}
         - UInt32: {type: int}
+        - LoadConfig:
+          Size: {type: int}
+          TimeDateStamp: {type: int}
+          MajorVersion: {type: int}
+          MinorVersion: {type: int}
+          GlobalFlagsClear: {type: int}
+          GlobalFlagsSet: {type: int}
+          CriticalSectionDefaultTimeout: {type: int}
+          DeCommitFreeBlockThreshold: {type: int}
+          DeCommitTotalFreeThreshold: {type: int}
+          LockPrefixTable: {type: int}
+          MaximumAllocationSize: {type: int}
+          VirtualMemoryThreshold: {type: int}
+          ProcessAffinityMask: {type: int}
+          ProcessHeapFlags: {type: int}
+          CSDVersion: {type: int}
+          DependentLoadFlags: {type: int}
+          EditList: {type: int}
+          SecurityCookie: {type: int}
+          SEHandlerTable: {type: int}
+          SEHandlerCount: {type: int}
+          GuardCFCheckFunction: {type: int}
+          GuardCFCheckDispatch: {type: int}
+          GuardCFFunctionTable: {type: int}
+          GuardCFFunctionCount: {type: int}
+          GuardFlags: {type: int}
+          CodeIntegrity:
+            Flags: {type: int}
+            Catalog: {type: int}
+            CatalogOffset: {type: int}
+          GuardAddressTakenIatEntryTable: {type: int}
+          GuardAddressTakenIatEntryCount: {type: int}
+          GuardLongJumpTargetTable: {type: int}
+          GuardLongJumpTargetCount: {type: int}
+          DynamicValueRelocTable: {type: int}
+          CHPEMetadataPointer: {type: int}
+          GuardRFFailureRoutine: {type: int}
+          GuardRFFailureRoutineFunctionPointer: {type: int}
+          DynamicValueRelocTableOffset: {type: int}
+          DynamicValueRelocTableSection: {type: int}
+          GuardRFVerifyStackPointerFunctionPointer: {type: int}
+          HotPatchTableOffset: {type: int}
+          EnclaveConfigurationPointer: {type: int}
+          VolatileMetadataPointer: {type: int}
+          GuardEHContinuationTable: {type: int}
+          GuardEHContinuationCount: {type: int}
+          GuardXFGCheckFunctionPointer: {type: int}
+          GuardXFGDispatchFunctionPointer: {type: int}
+          GuardXFGTableDispatchFunctionPointer: {type: int}
+          CastGuardOsDeterminedFailureMode: {type: int}
 
   symbols:
     - Name: .text
