@@ -49,6 +49,9 @@ declare_args() {
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
 
+  # Force enable statistics.
+  llvm_force_enable_stats = false
+
   # glibc is at least 2.33 which has mallinfo2.
   # TODO: remove this once nobody using the gn build is building against an old glibc.
   llvm_have_mallinfo2 = current_os == "linux"
@@ -321,7 +324,6 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
     "LLVM_ENABLE_ZSTD=",
-    "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TFLITE=",
@@ -402,6 +404,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_CURL=1" ]
   } else {
     values += [ "LLVM_ENABLE_CURL=" ]
+  }
+
+  if (llvm_force_enable_stats) {
+    values += [ "LLVM_FORCE_ENABLE_STATS=1" ]
+  } else {
+    values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
 }
 
