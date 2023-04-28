@@ -532,10 +532,7 @@ define i1 @fshr_non_zero(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @fshr_non_zero(
 ; CHECK-NEXT:    [[PRED0:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED0]])
-; CHECK-NEXT:    [[V:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[V]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pred0 = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %pred0)
@@ -570,10 +567,7 @@ define i1 @fshl_non_zero(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @fshl_non_zero(
 ; CHECK-NEXT:    [[PRED0:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED0]])
-; CHECK-NEXT:    [[V:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X]], i8 [[X]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[V]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[OR]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pred0 = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %pred0)
