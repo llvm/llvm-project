@@ -328,7 +328,8 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
       });
 }
 
-bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
+bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
+                                           const Value *Op0, const Value *Op1,
                                            InstCombiner &IC) const {
   // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
   // infinity, gives +0.0. If we can prove we don't have one of the special
@@ -340,9 +341,14 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
     // One operand is not zero or infinity or NaN.
     return true;
   }
+
   auto *TLI = &IC.getTargetLibraryInfo();
-  if (isKnownNeverInfinity(Op0, TLI) && isKnownNeverNaN(Op0, TLI) &&
-      isKnownNeverInfinity(Op1, TLI) && isKnownNeverNaN(Op1, TLI)) {
+  if (isKnownNeverInfOrNaN(Op0, IC.getDataLayout(), TLI, 0,
+                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
+                           &IC.getOptimizationRemarkEmitter()) &&
+      isKnownNeverInfOrNaN(Op1, IC.getDataLayout(), TLI, 0,
+                           &IC.getAssumptionCache(), &I, &IC.getDominatorTree(),
+                           &IC.getOptimizationRemarkEmitter())) {
     // Neither operand is infinity or NaN.
     return true;
   }
@@ -1005,7 +1011,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // If we can prove we don't have one of the special cases then we can use a
     // normal fmul instruction instead.
-    if (canSimplifyLegacyMulToMul(Op0, Op1, IC)) {
+    if (canSimplifyLegacyMulToMul(II, Op0, Op1, IC)) {
       auto *FMul = IC.Builder.CreateFMulFMF(Op0, Op1, &II);
       FMul->takeName(&II);
       return IC.replaceInstUsesWith(II, FMul);
@@ -1032,7 +1038,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // If we can prove we don't have one of the special cases then we can use a
     // normal fma instead.
-    if (canSimplifyLegacyMulToMul(Op0, Op1, IC)) {
+    if (canSimplifyLegacyMulToMul(II, Op0, Op1, IC)) {
       II.setCalledOperand(Intrinsic::getDeclaration(
           II.getModule(), Intrinsic::fma, II.getType()));
       return &II;
