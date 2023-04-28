@@ -872,8 +872,7 @@ define i1 @uadd_sat_ne_zero_fail_multiuse(i8 %x, i8 %y) {
 ; CHECK-LABEL: @uadd_sat_ne_zero_fail_multiuse(
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    call void @use8(i8 [[M]])
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[M]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
