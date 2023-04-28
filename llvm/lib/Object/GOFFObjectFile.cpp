@@ -196,7 +196,7 @@ Expected<StringRef> GOFFObjectFile::getSymbolName(DataRefImpl Symb) const {
     return std::move(Err);
 
   SmallString<256> SymbolNameConverted;
-  EC = ConverterEBCDIC::convertToUTF8(SymbolName, SymbolNameConverted);
+  ConverterEBCDIC::convertToUTF8(SymbolName, SymbolNameConverted);
 
   size_t Size = SymbolNameConverted.size();
   auto StrPtr = std::make_pair(Size, std::make_unique<char[]>(Size));
