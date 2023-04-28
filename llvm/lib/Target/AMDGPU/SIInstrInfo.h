@@ -1390,7 +1390,8 @@ namespace AMDGPU {
   LLVM_READONLY
   int getVCMPXOpFromVCMP(uint16_t Opcode);
 
-  /// \returns SIEncodingFamily for a \p ST.
+  /// \returns SIEncodingFamily used for VOPD encoding on a \p ST. This is a
+  /// helper to check if a VOPD opcode is supported by the \p ST.
   LLVM_READONLY
   unsigned getVOPDEncodingFamily(const GCNSubtarget &ST);
 
