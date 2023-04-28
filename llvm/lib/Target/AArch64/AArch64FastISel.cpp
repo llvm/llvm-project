@@ -272,7 +272,7 @@ private:
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC) const;
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
                        unsigned &NumBytes);
-  bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
+  bool finishCall(CallLoweringInfo &CLI, unsigned NumBytes);
 
 public:
   // Backend specific FastISel code.
@@ -3102,8 +3102,7 @@ bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
   return true;
 }
 
-bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
-                                 unsigned NumBytes) {
+bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, unsigned NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
 
   // Issue CALLSEQ_END
@@ -3111,32 +3110,30 @@ bool AArch64FastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(AdjStackUp))
     .addImm(NumBytes).addImm(0);
 
-  // Now the return value.
-  if (RetVT != MVT::isVoid) {
-    SmallVector<CCValAssign, 16> RVLocs;
-    CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC));
+  // Now the return values.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
+  CCInfo.AnalyzeCallResult(CLI.Ins, CCAssignFnForCall(CC));
 
-    // Only handle a single return value.
-    if (RVLocs.size() != 1)
-      return false;
-
-    // Copy all of the result registers out of their specified physreg.
-    MVT CopyVT = RVLocs[0].getValVT();
+  Register ResultReg = FuncInfo.CreateRegs(CLI.RetTy);
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    CCValAssign &VA = RVLocs[i];
+    MVT CopyVT = VA.getValVT();
+    unsigned CopyReg = ResultReg + i;
 
     // TODO: Handle big-endian results
     if (CopyVT.isVector() && !Subtarget->isLittleEndian())
       return false;
 
-    Register ResultReg = createResultReg(TLI.getRegClassFor(CopyVT));
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY), ResultReg)
-        .addReg(RVLocs[0].getLocReg());
-    CLI.InRegs.push_back(RVLocs[0].getLocReg());
-
-    CLI.ResultReg = ResultReg;
-    CLI.NumResultRegs = 1;
+    // Copy result out of their specified physreg.
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            CopyReg)
+        .addReg(VA.getLocReg());
+    CLI.InRegs.push_back(VA.getLocReg());
   }
+
+  CLI.ResultReg = ResultReg;
+  CLI.NumResultRegs = RVLocs.size();
 
   return true;
 }
@@ -3183,13 +3180,6 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Let SDISel handle vararg functions.
   if (IsVarArg)
-    return false;
-
-  // FIXME: Only handle *simple* calls for now.
-  MVT RetVT;
-  if (CLI.RetTy->isVoidTy())
-    RetVT = MVT::isVoid;
-  else if (!isTypeLegal(CLI.RetTy, RetVT))
     return false;
 
   for (auto Flag : CLI.OutFlags)
@@ -3287,7 +3277,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   CLI.Call = MIB;
 
   // Finish off the call including any return values.
-  return finishCall(CLI, RetVT, NumBytes);
+  return finishCall(CLI, NumBytes);
 }
 
 bool AArch64FastISel::isMemCpySmall(uint64_t Len, MaybeAlign Alignment) {

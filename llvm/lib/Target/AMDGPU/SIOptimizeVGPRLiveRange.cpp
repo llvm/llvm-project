@@ -522,8 +522,15 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
     auto *UseBlock = UseMI->getParent();
     // Replace uses in Endif block
     if (UseBlock == Endif) {
-      assert(UseMI->isPHI() && "Uses should be PHI in Endif block");
-      O.setReg(NewReg);
+      if (UseMI->isPHI()) {
+        O.setReg(NewReg);
+      } else {
+        // DetectDeadLanes may mark register uses as undef without removing
+        // them, in which case a non-phi instruction using the original register
+        // may exist in the Endif block even though the register is not live
+        // into it.
+        assert(!O.readsReg());
+      }
       continue;
     }
 

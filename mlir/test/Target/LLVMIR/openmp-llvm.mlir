@@ -2457,17 +2457,6 @@ llvm.func @omp_opaque_pointers(%arg0 : !llvm.ptr, %arg1: !llvm.ptr, %expr: i32) 
 
 // -----
 
-// CHECK-NOT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 1
-// CHECK-NOT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
-// CHECK-NOT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 1
-// CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
-// CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 1
-module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true, 
-                                          assume_threads_oversubscription = true, assume_no_thread_state = true, 
-                                          assume_no_nested_parallelism = true>} {}
-
-// -----
-
 // CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 1
@@ -2475,16 +2464,14 @@ module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubsc
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 1
 module attributes {omp.flags = #omp.flags<debug_kind = 1, assume_teams_oversubscription = true, 
                                           assume_threads_oversubscription = true, assume_no_thread_state = true, 
-                                          assume_no_nested_parallelism = true>, 
-                   omp.is_device = #omp.isdevice<is_device = true>} {}
-
+                                          assume_no_nested_parallelism = true>} {}
 // -----
 
-// CHECK-NOT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 module attributes {omp.flags = #omp.flags<>} {}
 
 // -----
@@ -2494,39 +2481,9 @@ module attributes {omp.flags = #omp.flags<>} {}
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<>, omp.is_device = #omp.isdevice<is_device = true>} {}
-
-// -----
-
-// CHECK-NOT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
 module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false, 
                                           assume_threads_oversubscription = false, assume_no_thread_state = false, 
                                           assume_no_nested_parallelism = false>} {}
-
-// -----
-
-// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
-// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
-// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
-// CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 0
-// CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<debug_kind = 0, assume_teams_oversubscription = false, 
-                                          assume_threads_oversubscription = false, assume_no_thread_state = false, 
-                                          assume_no_nested_parallelism = false>, 
-                   omp.is_device = #omp.isdevice<is_device = true>} {}
-
-// -----
-
-// CHECK-NOT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
-// CHECK-NOT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
-// CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
-// CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>} {}
 
 // -----
 
@@ -2535,5 +2492,4 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
 // CHECK: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
-module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>, 
-                   omp.is_device = #omp.isdevice<is_device = true>} {}
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true>} {}

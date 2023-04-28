@@ -6119,6 +6119,51 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
   return nullptr;
 }
 
+/// Given a min/max intrinsic, see if it can be removed based on having an
+/// operand that is another min/max intrinsic with shared operand(s). The caller
+/// is expected to swap the operand arguments to handle commutation.
+static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
+                                         Value *Op1) {
+  assert((IID == Intrinsic::maxnum || IID == Intrinsic::minnum ||
+          IID == Intrinsic::maximum || IID == Intrinsic::minimum) &&
+         "Unsupported intrinsic");
+
+  auto *M0 = dyn_cast<IntrinsicInst>(Op0);
+  // If Op0 is not the same intrinsic as IID, do not process.
+  // This is a difference with integer min/max handling. We do not process the
+  // case like max(min(X,Y),min(X,Y)) => min(X,Y). But it can be handled by GVN.
+  if (!M0 || M0->getIntrinsicID() != IID)
+    return nullptr;
+  Value *X0 = M0->getOperand(0);
+  Value *Y0 = M0->getOperand(1);
+  // Simple case, m(m(X,Y), X) => m(X, Y)
+  //              m(m(X,Y), Y) => m(X, Y)
+  // For minimum/maximum, X is NaN => m(NaN, Y) == NaN and m(NaN, NaN) == NaN.
+  // For minimum/maximum, Y is NaN => m(X, NaN) == NaN  and m(NaN, NaN) == NaN.
+  // For minnum/maxnum, X is NaN => m(NaN, Y) == Y and m(Y, Y) == Y.
+  // For minnum/maxnum, Y is NaN => m(X, NaN) == X and m(X, NaN) == X.
+  if (X0 == Op1 || Y0 == Op1)
+    return M0;
+
+  auto *M1 = dyn_cast<IntrinsicInst>(Op1);
+  if (!M1)
+    return nullptr;
+  Value *X1 = M1->getOperand(0);
+  Value *Y1 = M1->getOperand(1);
+  Intrinsic::ID IID1 = M1->getIntrinsicID();
+  // we have a case m(m(X,Y),m'(X,Y)) taking into account m' is commutative.
+  // if m' is m or inversion of m => m(m(X,Y),m'(X,Y)) == m(X,Y).
+  // For minimum/maximum, X is NaN => m(NaN,Y) == m'(NaN, Y) == NaN.
+  // For minimum/maximum, Y is NaN => m(X,NaN) == m'(X, NaN) == NaN.
+  // For minnum/maxnum, X is NaN => m(NaN,Y) == m'(NaN, Y) == Y.
+  // For minnum/maxnum, Y is NaN => m(X,NaN) == m'(X, NaN) == X.
+  if ((X0 == X1 && Y0 == Y1) || (X0 == Y1 && Y0 == X1))
+    if (IID1 == IID || getInverseMinMaxIntrinsic(IID1) == IID)
+      return M0;
+
+  return nullptr;
+}
+
 static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
                                       const SimplifyQuery &Q) {
   Intrinsic::ID IID = F->getIntrinsicID();
@@ -6358,14 +6403,10 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
 
     // Min/max of the same operation with common operand:
     // m(m(X, Y)), X --> m(X, Y) (4 commuted variants)
-    if (auto *M0 = dyn_cast<IntrinsicInst>(Op0))
-      if (M0->getIntrinsicID() == IID &&
-          (M0->getOperand(0) == Op1 || M0->getOperand(1) == Op1))
-        return Op0;
-    if (auto *M1 = dyn_cast<IntrinsicInst>(Op1))
-      if (M1->getIntrinsicID() == IID &&
-          (M1->getOperand(0) == Op0 || M1->getOperand(1) == Op0))
-        return Op1;
+    if (Value *V = foldMinimumMaximumSharedOp(IID, Op0, Op1))
+      return V;
+    if (Value *V = foldMinimumMaximumSharedOp(IID, Op1, Op0))
+      return V;
 
     break;
   }

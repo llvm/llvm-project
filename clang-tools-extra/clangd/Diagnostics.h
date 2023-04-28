@@ -83,6 +83,10 @@ struct Fix {
   std::string Message;
   /// TextEdits from clang's fix-its. Must be non-empty.
   llvm::SmallVector<TextEdit, 1> Edits;
+
+  /// Annotations for the Edits.
+  llvm::SmallVector<std::pair<ChangeAnnotationIdentifier, ChangeAnnotation>>
+      Annotations;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Fix &F);
 

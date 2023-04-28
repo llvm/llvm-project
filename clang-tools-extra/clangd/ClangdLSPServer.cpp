@@ -99,19 +99,29 @@ CodeAction toCodeAction(const ClangdServer::TweakRef &T, const URIForFile &File,
 /// Convert from Fix to LSP CodeAction.
 CodeAction toCodeAction(const Fix &F, const URIForFile &File,
                         const std::optional<int64_t> &Version,
-                        bool SupportsDocumentChanges) {
+                        bool SupportsDocumentChanges,
+                        bool SupportChangeAnnotation) {
   CodeAction Action;
   Action.title = F.Message;
   Action.kind = std::string(CodeAction::QUICKFIX_KIND);
   Action.edit.emplace();
   if (!SupportsDocumentChanges) {
     Action.edit->changes.emplace();
-    (*Action.edit->changes)[File.uri()] = {F.Edits.begin(), F.Edits.end()};
+    auto &Changes = (*Action.edit->changes)[File.uri()];
+    for (const auto &E : F.Edits)
+      Changes.push_back({E.range, E.newText, /*annotationId=*/""});
   } else {
     Action.edit->documentChanges.emplace();
-    TextDocumentEdit& Edit = Action.edit->documentChanges->emplace_back();
+    TextDocumentEdit &Edit = Action.edit->documentChanges->emplace_back();
     Edit.textDocument = VersionedTextDocumentIdentifier{{File}, Version};
-    Edit.edits = {F.Edits.begin(), F.Edits.end()};
+    for (const auto &E : F.Edits)
+      Edit.edits.push_back(
+          {E.range, E.newText,
+           SupportChangeAnnotation ? E.annotationId : ""});
+    if (SupportChangeAnnotation) {
+      for (const auto &[AID, Annotation]: F.Annotations)
+        Action.edit->changeAnnotations[AID] = Annotation;
+    }
   }
   return Action;
 }
@@ -509,6 +519,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportsReferenceContainer = Params.capabilities.ReferenceContainer;
   SupportFileStatus = Params.initializationOptions.FileStatus;
   SupportsDocumentChanges = Params.capabilities.DocumentChanges;
+  SupportsChangeAnnotation = Params.capabilities.ChangeAnnotation;
   HoverContentFormat = Params.capabilities.HoverContentFormat;
   Opts.LineFoldingOnly = Params.capabilities.LineFoldingOnly;
   SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
@@ -1742,7 +1753,8 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                  for (const auto &Fix : Fixes)
                    CodeActions.push_back(toCodeAction(Fix, Notification.uri,
                                                       Notification.version,
-                                                      SupportsDocumentChanges));
+                                                      SupportsDocumentChanges,
+                                                      SupportsChangeAnnotation));
 
                  if (DiagOpts.EmbedFixesInDiagnostics) {
                    Diag.codeActions.emplace(CodeActions);

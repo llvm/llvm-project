@@ -1713,12 +1713,13 @@ define void @ashr_out_of_range(ptr %A) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 -1, i64 -2
 ; CHECK-NEXT:    [[G11:%.*]] = getelementptr i177, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L7:%.*]] = load i177, ptr [[G11]], align 4
-; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7]], 0
-; CHECK-NEXT:    [[C17:%.*]] = select i1 [[TMP1]], i1 [[C171]], i1 false
+; CHECK-NEXT:    [[L7_FROZEN:%.*]] = freeze i177 [[L7]]
+; CHECK-NEXT:    [[C171:%.*]] = icmp slt i177 [[L7_FROZEN]], 0
+; CHECK-NEXT:    [[C17:%.*]] = and i1 [[TMP1]], [[C171]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C17]] to i64
 ; CHECK-NEXT:    [[G62:%.*]] = getelementptr i177, ptr [[G11]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7]], -1
-; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP4]], i177 0, i177 [[L7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i177 [[L7_FROZEN]], -1
+; CHECK-NEXT:    [[B28:%.*]] = select i1 [[TMP4]], i177 0, i177 [[L7_FROZEN]]
 ; CHECK-NEXT:    store i177 [[B28]], ptr [[G62]], align 4
 ; CHECK-NEXT:    ret void
 ;

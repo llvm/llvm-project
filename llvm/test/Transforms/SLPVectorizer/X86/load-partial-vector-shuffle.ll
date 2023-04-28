@@ -37,10 +37,10 @@ define <2 x i64> @load_00123456(ptr nocapture noundef readonly %data) {
 ; AVX-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[DATA]], align 2
 ; AVX-NEXT:    [[T2:%.*]] = load i16, ptr [[ARRAYIDX2]], align 2
 ; AVX-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[ARRAYIDX3]], align 2
-; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX-NEXT:    [[VECINIT2_I_I2:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[TMP3]], <8 x i32> <i32 0, i32 8, i32 9, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; AVX-NEXT:    [[VECINIT3_I_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I_I2]], i16 [[T2]], i64 3
-; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; AVX-NEXT:    [[VECINIT7_I_I1:%.*]] = shufflevector <8 x i16> [[VECINIT3_I_I]], <8 x i16> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; AVX-NEXT:    [[T7:%.*]] = bitcast <8 x i16> [[VECINIT7_I_I1]] to <2 x i64>
 ; AVX-NEXT:    ret <2 x i64> [[T7]]

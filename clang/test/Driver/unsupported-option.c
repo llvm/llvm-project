@@ -13,3 +13,7 @@
 // RUN: not %clang --target=powerpc64-ibm-aix %s -mlong-double-128 2>&1 | \
 // RUN: FileCheck %s --check-prefix=AIX64-LONGDOUBLE128-ERR
 // AIX64-LONGDOUBLE128-ERR: error: unsupported option '-mlong-double-128' for target 'powerpc64-ibm-aix'
+
+// RUN: not %clang -fprofile-sample-use=code.prof --target=powerpc-ibm-aix %s 2>&1 | \
+// RUN: FileCheck %s --check-prefix=AIX-PROFILE-SAMPLE
+// AIX-PROFILE-SAMPLE: error: unsupported option '-fprofile-sample-use=' for target
