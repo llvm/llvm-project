@@ -75,6 +75,14 @@ class TestingConfig(object):
                 'USERPROFILE',
             ]
             environment['PYTHONBUFFERED'] = '1'
+            # Avoid Windows heuristics which try to detect potential installer
+            # programs (which may need to run with elevated privileges) and ask
+            # if the user wants to run them in that way. This heuristic may
+            # match for executables containing the substrings "patch" (which is
+            # a substring of "dispatch"), "update", "setup", etc. Set this
+            # environment variable indicating that we want to execute them with
+            # the current user.
+            environment['__COMPAT_LAYER'] = 'RunAsInvoker'
 
         for var in pass_vars:
             val = os.environ.get(var, '')

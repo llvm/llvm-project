@@ -12,6 +12,7 @@
 
 #include <new>
 #include <iterator>
+#include <utility>
 
 _PSTL_HIDE_FROM_ABI_PUSH
 
@@ -24,9 +25,12 @@ template <typename _Fp>
 auto
 __except_handler(_Fp __f) -> decltype(__f())
 {
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
         return __f();
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     }
     catch (const std::bad_alloc&)
     {
@@ -36,6 +40,7 @@ __except_handler(_Fp __f) -> decltype(__f())
     {
         std::terminate(); // Good bye according to the standard [algorithms.parallel.exceptions]
     }
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 template <typename _Fp>

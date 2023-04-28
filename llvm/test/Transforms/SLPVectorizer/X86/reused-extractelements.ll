@@ -14,7 +14,7 @@
 
 define <2 x i32> @g(<2 x i32> %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i32> [[TMP2]], [[TMP3]]
