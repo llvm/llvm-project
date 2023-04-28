@@ -264,8 +264,7 @@ bool EmulationStateARM::LoadRegistersStateFromDictionary(
   for (int i = 0; i < num; ++i) {
     sstr.Clear();
     sstr.Printf("%c%d", kind, i);
-    OptionValueSP value_sp =
-        reg_dict->GetValueForKey(ConstString(sstr.GetString()));
+    OptionValueSP value_sp = reg_dict->GetValueForKey(sstr.GetString());
     if (value_sp.get() == nullptr)
       return false;
     uint64_t reg_value = value_sp->GetUInt64Value();
@@ -277,8 +276,8 @@ bool EmulationStateARM::LoadRegistersStateFromDictionary(
 
 bool EmulationStateARM::LoadStateFromDictionary(
     OptionValueDictionary *test_data) {
-  static ConstString memory_key("memory");
-  static ConstString registers_key("registers");
+  static constexpr llvm::StringLiteral memory_key("memory");
+  static constexpr llvm::StringLiteral registers_key("registers");
 
   if (!test_data)
     return false;
@@ -288,8 +287,8 @@ bool EmulationStateARM::LoadStateFromDictionary(
   // Load memory, if present.
 
   if (value_sp.get() != nullptr) {
-    static ConstString address_key("address");
-    static ConstString data_key("data");
+    static constexpr llvm::StringLiteral address_key("address");
+    static constexpr llvm::StringLiteral data_key("data");
     uint64_t start_address = 0;
 
     OptionValueDictionary *mem_dict = value_sp->GetAsDictionary();
@@ -327,7 +326,7 @@ bool EmulationStateARM::LoadStateFromDictionary(
   if (!LoadRegistersStateFromDictionary(reg_dict, 'r', dwarf_r0, 16))
     return false;
 
-  static ConstString cpsr_name("cpsr");
+  static constexpr llvm::StringLiteral cpsr_name("cpsr");
   value_sp = reg_dict->GetValueForKey(cpsr_name);
   if (value_sp.get() == nullptr)
     return false;
