@@ -12,7 +12,6 @@ set( LLVM_LINK_COMPONENTS
   MCParser
   ObjCARCOpts
   Option
-  RemoteCachingService
   ScalarOpts
   Support
   TargetParser
@@ -27,7 +26,6 @@ endif()
 
 add_clang_tool(clang
   driver.cpp
-  CachedDiagnostics.cpp
   CacheLauncherMode.cpp
   cc1_main.cpp
   cc1as_main.cpp
