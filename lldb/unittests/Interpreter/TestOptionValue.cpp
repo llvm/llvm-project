@@ -146,12 +146,12 @@ TEST(TestProperties, DeepCopy) {
   ASSERT_TRUE(dict_copy_ptr->OptionWasSet());
   ASSERT_EQ(dict_copy_ptr->GetNumValues(), 2U);
 
-  auto value_ptr = dict_copy_ptr->GetValueForKey(ConstString("A"));
+  auto value_ptr = dict_copy_ptr->GetValueForKey("A");
   ASSERT_TRUE(value_ptr);
   ASSERT_EQ(value_ptr->GetParent().get(), dict_copy_ptr);
   ASSERT_EQ(value_ptr->GetUInt64Value(), 1U);
 
-  value_ptr = dict_copy_ptr->GetValueForKey(ConstString("B"));
+  value_ptr = dict_copy_ptr->GetValueForKey("B");
   ASSERT_TRUE(value_ptr);
   ASSERT_EQ(value_ptr->GetParent().get(), dict_copy_ptr);
   ASSERT_EQ(value_ptr->GetUInt64Value(), 2U);

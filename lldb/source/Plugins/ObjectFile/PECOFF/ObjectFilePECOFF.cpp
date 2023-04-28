@@ -300,20 +300,18 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     if (!module_env_option) {
       // Step 2: Try with the file name in lowercase.
       auto name_lower = name.GetStringRef().lower();
-      module_env_option =
-          map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+      module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
     }
     if (!module_env_option) {
       // Step 3: Try with the file name with ".debug" suffix stripped.
       auto name_stripped = name.GetStringRef();
       if (name_stripped.consume_back_insensitive(".debug")) {
-        module_env_option = map->GetValueForKey(ConstString(name_stripped));
+        module_env_option = map->GetValueForKey(name_stripped);
         if (!module_env_option) {
           // Step 4: Try with the file name in lowercase with ".debug" suffix
           // stripped.
           auto name_lower = name_stripped.lower();
-          module_env_option =
-              map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+          module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
         }
       }
     }
