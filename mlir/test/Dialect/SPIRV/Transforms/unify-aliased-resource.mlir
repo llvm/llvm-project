@@ -506,3 +506,19 @@ spirv.module Logical GLSL450 {
 // CHECK:   %[[CC:.+]] = spirv.CompositeConstruct %[[BC0]], %[[BC1]] : (vector<2xf32>, vector<2xf32>) -> vector<4xf32>
 // CHECK:   spirv.ReturnValue %[[CC]]
 
+// -----
+
+// Make sure we do not crash on function arguments.
+
+spirv.module Logical GLSL450 {
+  spirv.func @main(%arg0: !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>) "None" {
+    %cst0_i32 = spirv.Constant 0 : i32
+    %0 = spirv.AccessChain %arg0[%cst0_i32, %cst0_i32] : !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>, i32, i32
+    spirv.Return
+  }
+}
+
+// CHECK-LABEL: spirv.module
+// CHECK-LABEL: spirv.func @main
+// CHECK-SAME:  (%{{.+}}: !spirv.ptr<!spirv.struct<(!spirv.rtarray<f32, stride=4> [0])>, StorageBuffer>) "None"
+// CHECK:       spirv.Return
