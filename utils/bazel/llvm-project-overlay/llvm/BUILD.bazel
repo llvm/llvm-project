@@ -3461,12 +3461,21 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "gsymutil_main",
+    out = "llvm-gsymutil-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "llvm_gsymutil",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "llvm-gsymutil",
     srcs = glob([
         "tools/llvm-gsymutil/*.cpp",
         "tools/llvm-gsymutil/*.h",
-    ]),
+    ]) + ["llvm-gsymutil-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
