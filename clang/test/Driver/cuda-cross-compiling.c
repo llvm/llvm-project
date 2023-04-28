@@ -68,3 +68,12 @@
 //      DEFAULT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_35" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
 // DEFAULT-NEXT: ptxas{{.*}}"-m64" "-O0" "--gpu-name" "sm_35" "--output-file" "[[CUBIN:.+]].cubin" "[[PTX]].s" "-c"
 // DEFAULT-NEXT: nvlink{{.*}}"-o" "a.out" "-arch" "sm_35" {{.*}} "[[CUBIN]].cubin"
+
+//
+// Test to ensure that we enable handling global constructors in a freestanding
+// Nvidia compilation.
+//
+// RUN: %clang -target nvptx64-nvidia-cuda -march=sm_70 %s -### 2>&1 \
+// RUN:   | FileCheck -check-prefix=LOWERING %s
+
+// LOWERING: -cc1" "-triple" "nvptx64-nvidia-cuda" {{.*}} "-mllvm" "--nvptx-lower-global-ctor-dtor"
