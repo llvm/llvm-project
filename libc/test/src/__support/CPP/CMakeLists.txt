@@ -61,16 +61,19 @@ add_libc_test(
     libc.src.__support.CPP.atomic
 )
 
-add_libc_test(
-  stringstream_test
-  SUITE
-    libc-cpp-utils-tests
-  SRCS
-    stringstream_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.span
-    libc.src.__support.CPP.stringstream
-)
+# This test fails with a segmentation fault on NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    stringstream_test
+    SUITE
+      libc-cpp-utils-tests
+    SRCS
+      stringstream_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.CPP.stringstream
+  )
+endif()
 
 add_libc_test(
   optional_test
