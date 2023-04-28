@@ -1661,7 +1661,7 @@ Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
 }
 
 // When enabled, replace operator new() calls marked with a hot or cold memprof
-// attribute with an operator new() call that takes a hot_cold_t parameter.
+// attribute with an operator new() call that takes a __hot_cold_t parameter.
 // Currently this is supported by the open source version of tcmalloc, see:
 // https://github.com/google/tcmalloc/blob/master/tcmalloc/new_extension.h
 Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
@@ -1680,34 +1680,34 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   switch (Func) {
   case LibFunc_Znwm:
     return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                          LibFunc_Znwm10hot_cold_t, HotCold);
+                          LibFunc_Znwm12__hot_cold_t, HotCold);
   case LibFunc_Znam:
     return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                          LibFunc_Znam10hot_cold_t, HotCold);
+                          LibFunc_Znam12__hot_cold_t, HotCold);
   case LibFunc_ZnwmRKSt9nothrow_t:
     return emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnwmRKSt9nothrow_t10hot_cold_t,
+                                 TLI, LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,
                                  HotCold);
   case LibFunc_ZnamRKSt9nothrow_t:
     return emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnamRKSt9nothrow_t10hot_cold_t,
+                                 TLI, LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,
                                  HotCold);
   case LibFunc_ZnwmSt11align_val_t:
     return emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnwmSt11align_val_t10hot_cold_t,
+                                 TLI, LibFunc_ZnwmSt11align_val_t12__hot_cold_t,
                                  HotCold);
   case LibFunc_ZnamSt11align_val_t:
     return emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnamSt11align_val_t10hot_cold_t,
+                                 TLI, LibFunc_ZnamSt11align_val_t12__hot_cold_t,
                                  HotCold);
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
     return emitHotColdNewAlignedNoThrow(
         CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t10hot_cold_t, HotCold);
+        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     return emitHotColdNewAlignedNoThrow(
         CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t10hot_cold_t, HotCold);
+        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
   default:
     return nullptr;
   }
