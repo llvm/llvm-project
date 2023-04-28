@@ -84,24 +84,11 @@ public:
   ~TaskGroup();
 
   // Spawn a task, but does not wait for it to finish.
-  void spawn(std::function<void()> f);
-
-  // Similar to spawn, but execute the task immediately when ThreadsRequested ==
-  // 1. The difference is to give the following pattern a more intuitive order
-  // when single threading is requested.
-  //
-  // for (size_t begin = 0, i = 0, taskSize = 0;;) {
-  //   taskSize += ...
-  //   bool done = ++i == end;
-  //   if (done || taskSize >= taskSizeLimit) {
-  //     tg.execute([=] { fn(begin, i); });
-  //     if (done)
-  //       break;
-  //     begin = i;
-  //     taskSize = 0;
-  //   }
-  // }
-  void execute(std::function<void()> f);
+  // Tasks marked with \p Sequential will be executed
+  // exactly in the order which they were spawned.
+  // Note: Sequential tasks may be executed on different
+  // threads, but strictly in sequential order.
+  void spawn(std::function<void()> f, bool Sequential = false);
 
   void sync() const { L.sync(); }
 };

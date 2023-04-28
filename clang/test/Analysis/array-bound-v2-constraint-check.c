@@ -8,12 +8,11 @@ typedef unsigned long long size_t;
 const char a[] = "abcd"; // extent: 5 bytes
 
 void symbolic_size_t_and_int0(size_t len) {
-  // FIXME: Should not warn for this.
-  (void)a[len + 1]; // expected-warning {{Out of bound memory access}}
+  (void)a[len + 1]; // no-warning
   // We infered that the 'len' must be in a specific range to make the previous indexing valid.
   // len: [0,3]
-  clang_analyzer_eval(len <= 3); // expected - warning {{TRUE}}
-  clang_analyzer_eval(len <= 2); // expected - warning {{UNKNOWN}}
+  clang_analyzer_eval(len <= 3); // expected-warning {{TRUE}}
+  clang_analyzer_eval(len <= 2); // expected-warning {{UNKNOWN}}
 }
 
 void symbolic_size_t_and_int1(size_t len) {

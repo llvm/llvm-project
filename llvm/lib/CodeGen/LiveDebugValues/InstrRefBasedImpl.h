@@ -1197,7 +1197,7 @@ private:
 
   /// For an instruction reference given by \p InstNo and \p OpNo in instruction
   /// \p MI returns the Value pointed to by that instruction reference if any
-  /// exists, otherwise returns None.
+  /// exists, otherwise returns std::nullopt.
   std::optional<ValueIDNum> getValueForInstrRef(unsigned InstNo, unsigned OpNo,
                                                 MachineInstr &MI,
                                                 const ValueTable *MLiveOuts,

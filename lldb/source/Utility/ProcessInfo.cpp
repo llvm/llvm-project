@@ -22,12 +22,14 @@ using namespace lldb;
 using namespace lldb_private;
 
 ProcessInfo::ProcessInfo()
-    : m_executable(), m_arguments(), m_environment(), m_arch() {}
+    : m_executable(), m_arguments(), m_environment(), m_arch(), m_listener_sp(),
+      m_hijack_listener_sp(), m_shadow_listener_sp() {}
 
 ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
                          lldb::pid_t pid)
     : m_executable(name), m_arguments(), m_environment(), m_arch(arch),
-      m_pid(pid) {}
+      m_pid(pid), m_listener_sp(), m_hijack_listener_sp(),
+      m_shadow_listener_sp() {}
 
 void ProcessInfo::Clear() {
   m_executable.Clear();

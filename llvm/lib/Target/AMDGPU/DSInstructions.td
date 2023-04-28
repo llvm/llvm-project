@@ -1183,7 +1183,8 @@ def : GCNPat <
 >;
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
-def : Pat <
+let OtherPredicates = [HasGDS] in
+def : GCNPat <
   (SIds_ordered_count i32:$value, i16:$offset),
   (DS_ORDERED_COUNT $value, (as_i16imm $offset))
 >;

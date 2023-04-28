@@ -238,6 +238,10 @@ struct KnownFPClass {
   /// definitely set or false if the sign bit is definitely unset.
   std::optional<bool> SignBit;
 
+  /// Return true if it's known this can never be one of the mask entries.
+  bool isKnownNever(FPClassTest Mask) const {
+    return (KnownFPClasses & Mask) == fcNone;
+  }
 
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
@@ -245,33 +249,43 @@ struct KnownFPClass {
 
   /// Return true if it's known this can never be a nan.
   bool isKnownNeverNaN() const {
-    return (KnownFPClasses & fcNan) == fcNone;
+    return isKnownNever(fcNan);
   }
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const {
-    return (KnownFPClasses & fcInf) == fcNone;
+    return isKnownNever(fcInf);
   }
 
   /// Return true if it's known this can never be +infinity.
   bool isKnownNeverPosInfinity() const {
-    return (KnownFPClasses & fcPosInf) == fcNone;
+    return isKnownNever(fcPosInf);
   }
 
   /// Return true if it's known this can never be -infinity.
   bool isKnownNeverNegInfinity() const {
-    return (KnownFPClasses & fcNegInf) == fcNone;
+    return isKnownNever(fcNegInf);
   }
 
   /// Return true if it's known this can never be a subnormal
   bool isKnownNeverSubnormal() const {
-    return (KnownFPClasses & fcSubnormal) == fcNone;
+    return isKnownNever(fcSubnormal);
+  }
+
+  /// Return true if it's known this can never be a negativesubnormal
+  bool isKnownNeverNegSubnormal() const {
+    return isKnownNever(fcNegSubnormal);
   }
 
   /// Return true if it's known this can never be a zero. This means a literal
   /// [+-]0, and does not include denormal inputs implicitly treated as [+-]0.
   bool isKnownNeverZero() const {
-    return (KnownFPClasses & fcZero) == fcNone;
+    return isKnownNever(fcZero);
+  }
+
+  /// Return true if it's known this can never be a literal negative zero.
+  bool isKnownNeverNegZero() const {
+    return isKnownNever(fcNegZero);
   }
 
   /// Return true if it's know this can never be interpreted as a zero. This
@@ -315,23 +329,37 @@ struct KnownFPClass {
     SignBit = false;
   }
 
+  /// Return true if the sign bit must be 0, ignoring the sign of nans.
+  bool signBitIsZeroOrNaN() const {
+    return isKnownNever(fcNegative);
+  }
+
   /// Assume the sign bit is zero.
-  void signBitIsZero() {
-    KnownFPClasses = (KnownFPClasses & fcPositive) |
-                     (KnownFPClasses & fcNan);
+  void signBitMustBeZero() {
+    KnownFPClasses &= (fcPositive | fcNan);
     SignBit = false;
   }
 
   void copysign(const KnownFPClass &Sign) {
-    // Start assuming nothing about the sign.
-    SignBit = Sign.SignBit;
-    if (!SignBit)
-      return;
+    // Don't know anything about the sign of the source. Expand the possible set
+    // to its opposite sign pair.
+    if (KnownFPClasses & fcZero)
+      KnownFPClasses |= fcZero;
+    if (KnownFPClasses & fcSubnormal)
+      KnownFPClasses |= fcSubnormal;
+    if (KnownFPClasses & fcNormal)
+      KnownFPClasses |= fcNormal;
+    if (KnownFPClasses & fcInf)
+      KnownFPClasses |= fcInf;
 
-    if (*SignBit)
-      KnownFPClasses = KnownFPClasses & fcNegative;
-    else
-      KnownFPClasses = KnownFPClasses & fcPositive;
+    // Sign bit is exactly preserved even for nans.
+    SignBit = Sign.SignBit;
+
+    // Clear sign bits based on the input sign mask.
+    if (Sign.isKnownNever(fcPositive | fcNan) || (SignBit && *SignBit))
+      KnownFPClasses &= (fcNegative | fcNan);
+    if (Sign.isKnownNever(fcNegative | fcNan) || (SignBit && !*SignBit))
+      KnownFPClasses &= (fcPositive | fcNan);
   }
 
   void resetAll() { *this = KnownFPClass(); }
@@ -391,6 +419,17 @@ bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI);
 /// could ever be infinity.
 bool isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
                           unsigned Depth = 0);
+
+/// Return true if the floating-point value can never contain a NaN or infinity.
+inline bool isKnownNeverInfOrNaN(
+    const Value *V, const DataLayout &DL, const TargetLibraryInfo *TLI,
+    unsigned Depth = 0, AssumptionCache *AC = nullptr,
+    const Instruction *CtxI = nullptr, const DominatorTree *DT = nullptr,
+    OptimizationRemarkEmitter *ORE = nullptr, bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcInf | fcNan, Depth, TLI, AC,
+                                           CtxI, DT, ORE, UseInstrInfo);
+  return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity();
+}
 
 /// Return true if the floating-point scalar value is not a NaN or if the
 /// floating-point vector value has no NaN elements. Return false if a value

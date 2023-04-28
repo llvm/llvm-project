@@ -391,10 +391,12 @@ bool InlineAsmLowering::lowerInlineAsm(
         Inst.addReg(SourceRegs[0]);
       } else {
         // Otherwise, this outputs to a register (directly for C_Register /
-        // C_RegisterClass. Find a register that we can use.
+        // C_RegisterClass/C_Other.
         assert(OpInfo.ConstraintType == TargetLowering::C_Register ||
-               OpInfo.ConstraintType == TargetLowering::C_RegisterClass);
+               OpInfo.ConstraintType == TargetLowering::C_RegisterClass ||
+               OpInfo.ConstraintType == TargetLowering::C_Other);
 
+        // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
           LLVM_DEBUG(dbgs()
                      << "Couldn't allocate output register for constraint\n");
