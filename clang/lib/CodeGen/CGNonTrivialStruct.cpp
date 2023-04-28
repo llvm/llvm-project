@@ -323,7 +323,7 @@ static const CGFunctionInfo &getFunctionInfo(CodeGenModule &CGM,
 template <size_t N, size_t... Ints>
 static std::array<Address, N> getParamAddrs(std::index_sequence<Ints...> IntSeq,
                                             std::array<CharUnits, N> Alignments,
-                                            FunctionArgList Args,
+                                            const FunctionArgList &Args,
                                             CodeGenFunction *CGF) {
   return std::array<Address, N>{
       {Address(CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[Ints])),
