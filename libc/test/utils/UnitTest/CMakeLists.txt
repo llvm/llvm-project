@@ -1,3 +1,7 @@
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  return()
+endif()
+
 add_custom_target(libc_unittest_tests)
 
 add_libc_unittest(

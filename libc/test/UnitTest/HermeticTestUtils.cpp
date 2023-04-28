@@ -17,6 +17,7 @@ int memcmp(const void *lhs, const void *rhs, size_t count);
 void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
+int atexit(void (*func)(void));
 
 } // namespace __llvm_libc
 
@@ -57,6 +58,9 @@ void *memset(void *ptr, int value, size_t count) {
   return __llvm_libc::memset(ptr, value, count);
 }
 
+// This is needed if the test was compiled with '-fno-use-cxa-atexit'.
+int atexit(void (*func)(void)) { return __llvm_libc::atexit(func); }
+
 void *malloc(size_t s) {
   void *mem = ptr;
   ptr += s;
@@ -78,7 +82,7 @@ void __cxa_pure_virtual() {
   __builtin_trap();
 }
 
-// Integration tests are linked with -nostdlib. BFD linker expects
+// Hermetic tests are linked with -nostdlib. BFD linker expects
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
