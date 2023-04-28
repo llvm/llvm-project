@@ -836,6 +836,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         {F->getReturnType()});
       return true;
     }
+    if (Name.startswith("amdgcn.ldexp")) {
+      // Target specific intrinsic became redundant
+      NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ldexp,
+          {F->getReturnType(), F->getArg(1)->getType()});
+      return true;
+    }
 
     break;
   }
