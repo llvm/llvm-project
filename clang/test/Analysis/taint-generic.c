@@ -156,6 +156,28 @@ void bufferGetchar(int x) {
   Buffer[m] = 1;  //expected-warning {{Out of bound memory access (index is tainted)}}
 }
 
+extern const unsigned short int **__ctype_b_loc (void);
+enum { _ISdigit = 2048 };
+# define isdigit(c) ((*__ctype_b_loc ())[(int) (c)] & (unsigned short int) _ISdigit)
+
+int isdigitImplFalsePositive(void) {
+  // If this code no longer produces a bug report, then consider removing the
+  // special case that disables buffer overflow reports coming from the isXXXXX
+  // macros in ctypes.h.
+  int c = getchar();
+  return ((*__ctype_b_loc ())[(int) (c)] & (unsigned short int) _ISdigit);
+  //expected-warning@-1 {{Out of bound memory access (index is tainted)}}
+}
+
+int isdigitSuppressed(void) {
+  // Same code as above, but reports are suppressed based on macro name:
+  int c = getchar();
+  return isdigit(c); //no-warning
+}
+
+// Some later tests use isdigit as a function, so we need to undef it:
+#undef isdigit
+
 void testUncontrolledFormatString(char **p) {
   char s[80];
   fscanf(stdin, "%s", s);
