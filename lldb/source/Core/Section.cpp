@@ -691,3 +691,36 @@ uint64_t SectionList::GetDebugInfoSize() const {
   }
   return debug_info_size;
 }
+
+namespace llvm {
+namespace json {
+
+bool fromJSON(const llvm::json::Value &value,
+              lldb_private::JSONSection &section, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("name", section.name) && o.map("type", section.type) &&
+         o.map("size", section.address) && o.map("size", section.size);
+}
+
+bool fromJSON(const llvm::json::Value &value, lldb::SectionType &type,
+              llvm::json::Path path) {
+  if (auto str = value.getAsString()) {
+    type = llvm::StringSwitch<lldb::SectionType>(*str)
+               .Case("code", eSectionTypeCode)
+               .Case("container", eSectionTypeContainer)
+               .Case("data", eSectionTypeData)
+               .Case("debug", eSectionTypeDebug)
+               .Default(eSectionTypeInvalid);
+
+    if (type == eSectionTypeInvalid) {
+      path.report("invalid section type");
+      return false;
+    }
+
+    return true;
+  }
+  path.report("expected string");
+  return false;
+}
+} // namespace json
+} // namespace llvm
