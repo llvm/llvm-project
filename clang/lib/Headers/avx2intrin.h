@@ -935,102 +935,810 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
   return (__m128i)__builtin_ia32_psrlv2di((__v2di)__X, (__v2di)__Y);
 }
 
+/// Conditionally gathers two 64-bit floating-point values, either from the
+///    128-bit vector of [2 x double] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i. The 128-bit vector
+///    of [2 x double] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*32
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128d _mm_mask_i32gather_pd(__m128d a, const double *m, __m128i i,
+///                               __m128d mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPD instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m. Only
+///    the first two elements are used.
+/// \param mask
+///    A 128-bit vector of [2 x double] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x double] containing the gathered values.
 #define _mm_mask_i32gather_pd(a, m, i, mask, s) \
   ((__m128d)__builtin_ia32_gatherd_pd((__v2df)(__m128i)(a), \
                                       (double const *)(m), \
                                       (__v4si)(__m128i)(i), \
                                       (__v2df)(__m128d)(mask), (s)))
 
+/// Conditionally gathers four 64-bit floating-point values, either from the
+///    256-bit vector of [4 x double] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i. The 256-bit vector
+///    of [4 x double] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*32
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256d _mm256_mask_i32gather_pd(__m256d a, const double *m, __m128i i,
+///                                  __m256d mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPD instruction.
+///
+/// \param a
+///    A 256-bit vector of [4 x double] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param mask
+///    A 256-bit vector of [4 x double] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x double] containing the gathered values.
 #define _mm256_mask_i32gather_pd(a, m, i, mask, s) \
   ((__m256d)__builtin_ia32_gatherd_pd256((__v4df)(__m256d)(a), \
                                          (double const *)(m), \
                                          (__v4si)(__m128i)(i), \
                                          (__v4df)(__m256d)(mask), (s)))
 
+/// Conditionally gathers two 64-bit floating-point values, either from the
+///    128-bit vector of [2 x double] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [2 x i64] in \a i. The 128-bit vector
+///    of [2 x double] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*64
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128d _mm_mask_i64gather_pd(__m128d a, const double *m, __m128i i,
+///                               __m128d mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPD instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [2 x double] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x double] containing the gathered values.
 #define _mm_mask_i64gather_pd(a, m, i, mask, s) \
   ((__m128d)__builtin_ia32_gatherq_pd((__v2df)(__m128d)(a), \
                                       (double const *)(m), \
                                       (__v2di)(__m128i)(i), \
                                       (__v2df)(__m128d)(mask), (s)))
 
+/// Conditionally gathers four 64-bit floating-point values, either from the
+///    256-bit vector of [4 x double] in \a a, or from memory \a m using scaled
+///    indexes from the 256-bit vector of [4 x i64] in \a i. The 256-bit vector
+///    of [4 x double] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*64
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256d _mm256_mask_i64gather_pd(__m256d a, const double *m, __m256i i,
+///                                  __m256d mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPD instruction.
+///
+/// \param a
+///    A 256-bit vector of [4 x double] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 256-bit vector of [4 x double] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x double] containing the gathered values.
 #define _mm256_mask_i64gather_pd(a, m, i, mask, s) \
   ((__m256d)__builtin_ia32_gatherq_pd256((__v4df)(__m256d)(a), \
                                          (double const *)(m), \
                                          (__v4di)(__m256i)(i), \
                                          (__v4df)(__m256d)(mask), (s)))
 
+/// Conditionally gathers four 32-bit floating-point values, either from the
+///    128-bit vector of [4 x float] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i. The 128-bit vector
+///    of [4 x float] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*32
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128 _mm_mask_i32gather_ps(__m128 a, const float *m, __m128i i,
+///                              __m128 mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPS instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [4 x float] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x float] containing the gathered values.
 #define _mm_mask_i32gather_ps(a, m, i, mask, s) \
   ((__m128)__builtin_ia32_gatherd_ps((__v4sf)(__m128)(a), \
                                      (float const *)(m), \
                                      (__v4si)(__m128i)(i), \
                                      (__v4sf)(__m128)(mask), (s)))
 
+/// Conditionally gathers eight 32-bit floating-point values, either from the
+///    256-bit vector of [8 x float] in \a a, or from memory \a m using scaled
+///    indexes from the 256-bit vector of [8 x i32] in \a i. The 256-bit vector
+///    of [8 x float] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 7
+///   j := element*32
+///   k := element*32
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256 _mm256_mask_i32gather_ps(__m256 a, const float *m, __m256i i,
+///                                 __m256 mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPS instruction.
+///
+/// \param a
+///    A 256-bit vector of [8 x float] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [8 x i32] containing signed indexes into \a m.
+/// \param mask
+///    A 256-bit vector of [8 x float] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [8 x float] containing the gathered values.
 #define _mm256_mask_i32gather_ps(a, m, i, mask, s) \
   ((__m256)__builtin_ia32_gatherd_ps256((__v8sf)(__m256)(a), \
                                         (float const *)(m), \
                                         (__v8si)(__m256i)(i), \
                                         (__v8sf)(__m256)(mask), (s)))
 
+/// Conditionally gathers two 32-bit floating-point values, either from the
+///    128-bit vector of [4 x float] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [2 x i64] in \a i. The 128-bit vector
+///    of [4 x float] in \a mask determines the source for the lower two
+///    elements. The upper two elements of the result are zeroed.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*32
+///   k := element*64
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// result[127:64] := 0
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128 _mm_mask_i64gather_ps(__m128 a, const float *m, __m128i i,
+///                              __m128 mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPS instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float] used as the source when a mask bit is
+///    zero. Only the first two elements are used.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [4 x float] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory. Only the first
+///    two elements are used.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x float] containing the gathered values.
 #define _mm_mask_i64gather_ps(a, m, i, mask, s) \
   ((__m128)__builtin_ia32_gatherq_ps((__v4sf)(__m128)(a), \
                                      (float const *)(m), \
                                      (__v2di)(__m128i)(i), \
                                      (__v4sf)(__m128)(mask), (s)))
 
+/// Conditionally gathers four 32-bit floating-point values, either from the
+///    128-bit vector of [4 x float] in \a a, or from memory \a m using scaled
+///    indexes from the 256-bit vector of [4 x i64] in \a i. The 128-bit vector
+///    of [4 x float] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*64
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128 _mm256_mask_i64gather_ps(__m128 a, const float *m, __m256i i,
+///                                 __m128 mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPS instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float] used as the source when a mask bit is
+///   zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [4 x float] containing the mask. The most
+///    significant bit of each element in the mask vector represents the mask
+///    bits. If a mask bit is zero, the corresponding value from vector \a a
+///    is gathered; otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x float] containing the gathered values.
 #define _mm256_mask_i64gather_ps(a, m, i, mask, s) \
   ((__m128)__builtin_ia32_gatherq_ps256((__v4sf)(__m128)(a), \
                                         (float const *)(m), \
                                         (__v4di)(__m256i)(i), \
                                         (__v4sf)(__m128)(mask), (s)))
 
+/// Conditionally gathers four 32-bit integer values, either from the
+///    128-bit vector of [4 x i32] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i. The 128-bit vector
+///    of [4 x i32] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*32
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_mask_i32gather_epi32(__m128i a, const int *m, __m128i i,
+///                                  __m128i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDD instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x i32] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [4 x i32] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x i32] containing the gathered values.
 #define _mm_mask_i32gather_epi32(a, m, i, mask, s) \
   ((__m128i)__builtin_ia32_gatherd_d((__v4si)(__m128i)(a), \
                                      (int const *)(m), \
                                      (__v4si)(__m128i)(i), \
                                      (__v4si)(__m128i)(mask), (s)))
 
+/// Conditionally gathers eight 32-bit integer values, either from the
+///    256-bit vector of [8 x i32] in \a a, or from memory \a m using scaled
+///    indexes from the 256-bit vector of [8 x i32] in \a i. The 256-bit vector
+///    of [8 x i32] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 7
+///   j := element*32
+///   k := element*32
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_mask_i32gather_epi32(__m256i a, const int *m, __m256i i,
+///                                     __m256i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDD instruction.
+///
+/// \param a
+///    A 256-bit vector of [8 x i32] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [8 x i32] containing signed indexes into \a m.
+/// \param mask
+///    A 256-bit vector of [8 x i32] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [8 x i32] containing the gathered values.
 #define _mm256_mask_i32gather_epi32(a, m, i, mask, s) \
   ((__m256i)__builtin_ia32_gatherd_d256((__v8si)(__m256i)(a), \
                                         (int const *)(m), \
                                         (__v8si)(__m256i)(i), \
                                         (__v8si)(__m256i)(mask), (s)))
 
+/// Conditionally gathers two 32-bit integer values, either from the
+///    128-bit vector of [4 x i32] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [2 x i64] in \a i. The 128-bit vector
+///    of [4 x i32] in \a mask determines the source for the lower two
+///    elements. The upper two elements of the result are zeroed.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*32
+///   k := element*64
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// result[127:64] := 0
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_mask_i64gather_epi32(__m128i a, const int *m, __m128i i,
+///                                  __m128i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQD instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x i32] used as the source when a mask bit is
+///   zero. Only the first two elements are used.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [4 x i32] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory. Only the first two elements
+///    are used.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x i32] containing the gathered values.
 #define _mm_mask_i64gather_epi32(a, m, i, mask, s) \
   ((__m128i)__builtin_ia32_gatherq_d((__v4si)(__m128i)(a), \
                                      (int const *)(m), \
                                      (__v2di)(__m128i)(i), \
                                      (__v4si)(__m128i)(mask), (s)))
 
+/// Conditionally gathers four 32-bit integer values, either from the
+///    128-bit vector of [4 x i32] in \a a, or from memory \a m using scaled
+///    indexes from the 256-bit vector of [4 x i64] in \a i. The 128-bit vector
+///    of [4 x i32] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*64
+///   IF mask[j+31] == 0
+///     result[j+31:j] := a[j+31:j]
+///   ELSE
+///     result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm256_mask_i64gather_epi32(__m128i a, const int *m, __m256i i,
+///                                     __m128i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQD instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x i32] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [4 x i32] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x i32] containing the gathered values.
 #define _mm256_mask_i64gather_epi32(a, m, i, mask, s) \
   ((__m128i)__builtin_ia32_gatherq_d256((__v4si)(__m128i)(a), \
                                         (int const *)(m), \
                                         (__v4di)(__m256i)(i), \
                                         (__v4si)(__m128i)(mask), (s)))
 
+/// Conditionally gathers two 64-bit integer values, either from the
+///    128-bit vector of [2 x i64] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i. The 128-bit vector
+///    of [2 x i64] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*32
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_mask_i32gather_epi64(__m128i a, const long long *m, __m128i i,
+///                                  __m128i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDQ instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x i64] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m. Only
+///    the first two elements are used.
+/// \param mask
+///    A 128-bit vector of [2 x i64] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x i64] containing the gathered values.
 #define _mm_mask_i32gather_epi64(a, m, i, mask, s) \
   ((__m128i)__builtin_ia32_gatherd_q((__v2di)(__m128i)(a), \
                                      (long long const *)(m), \
                                      (__v4si)(__m128i)(i), \
                                      (__v2di)(__m128i)(mask), (s)))
 
+/// Conditionally gathers four 64-bit integer values, either from the
+///    256-bit vector of [4 x i64] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i. The 256-bit vector
+///    of [4 x i64] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*32
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_mask_i32gather_epi64(__m256i a, const long long *m,
+///                                     __m128i i, __m256i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDQ instruction.
+///
+/// \param a
+///    A 256-bit vector of [4 x i64] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param mask
+///    A 256-bit vector of [4 x i64] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x i64] containing the gathered values.
 #define _mm256_mask_i32gather_epi64(a, m, i, mask, s) \
   ((__m256i)__builtin_ia32_gatherd_q256((__v4di)(__m256i)(a), \
                                         (long long const *)(m), \
                                         (__v4si)(__m128i)(i), \
                                         (__v4di)(__m256i)(mask), (s)))
 
+/// Conditionally gathers two 64-bit integer values, either from the
+///    128-bit vector of [2 x i64] in \a a, or from memory \a m using scaled
+///    indexes from the 128-bit vector of [2 x i64] in \a i. The 128-bit vector
+///    of [2 x i64] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*64
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_mask_i64gather_epi64(__m128i a, const long long *m, __m128i i,
+///                                  __m128i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQQ instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x i64] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 128-bit vector of [2 x i64] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x i64] containing the gathered values.
 #define _mm_mask_i64gather_epi64(a, m, i, mask, s) \
   ((__m128i)__builtin_ia32_gatherq_q((__v2di)(__m128i)(a), \
                                      (long long const *)(m), \
                                      (__v2di)(__m128i)(i), \
                                      (__v2di)(__m128i)(mask), (s)))
 
+/// Conditionally gathers four 64-bit integer values, either from the
+///    256-bit vector of [4 x i64] in \a a, or from memory \a m using scaled
+///    indexes from the 256-bit vector of [4 x i64] in \a i. The 256-bit vector
+///    of [4 x i64] in \a mask determines the source for each element.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*64
+///   IF mask[j+63] == 0
+///     result[j+63:j] := a[j+63:j]
+///   ELSE
+///     result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_mask_i64gather_epi64(__m256i a, const long long *m,
+///                                     __m256i i, __m256i mask, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQQ instruction.
+///
+/// \param a
+///    A 256-bit vector of [4 x i64] used as the source when a mask bit is
+///    zero.
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param mask
+///    A 256-bit vector of [4 x i64] containing the mask. The most significant
+///    bit of each element in the mask vector represents the mask bits. If a
+///    mask bit is zero, the corresponding value from vector \a a is gathered;
+///    otherwise the value is loaded from memory.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x i64] containing the gathered values.
 #define _mm256_mask_i64gather_epi64(a, m, i, mask, s) \
   ((__m256i)__builtin_ia32_gatherq_q256((__v4di)(__m256i)(a), \
                                         (long long const *)(m), \
                                         (__v4di)(__m256i)(i), \
                                         (__v4di)(__m256i)(mask), (s)))
 
+/// Gathers two 64-bit floating-point values from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*32
+///   result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128d _mm_i32gather_pd(const double *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m. Only
+///    the first two elements are used.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x double] containing the gathered values.
 #define _mm_i32gather_pd(m, i, s) \
   ((__m128d)__builtin_ia32_gatherd_pd((__v2df)_mm_undefined_pd(), \
                                       (double const *)(m), \
@@ -1039,6 +1747,33 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                            _mm_setzero_pd()), \
                                       (s)))
 
+/// Gathers four 64-bit floating-point values from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*32
+///   result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256d _mm256_i32gather_pd(const double *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x double] containing the gathered values.
 #define _mm256_i32gather_pd(m, i, s) \
   ((__m256d)__builtin_ia32_gatherd_pd256((__v4df)_mm256_undefined_pd(), \
                                          (double const *)(m), \
@@ -1048,6 +1783,33 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                                _CMP_EQ_OQ), \
                                          (s)))
 
+/// Gathers two 64-bit floating-point values from memory \a m using scaled
+///    indexes from the 128-bit vector of [2 x i64] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*64
+///   result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128d _mm_i64gather_pd(const double *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x double] containing the gathered values.
 #define _mm_i64gather_pd(m, i, s) \
   ((__m128d)__builtin_ia32_gatherq_pd((__v2df)_mm_undefined_pd(), \
                                       (double const *)(m), \
@@ -1056,6 +1818,33 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                            _mm_setzero_pd()), \
                                       (s)))
 
+/// Gathers four 64-bit floating-point values from memory \a m using scaled
+///    indexes from the 256-bit vector of [4 x i64] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*64
+///   result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256d _mm256_i64gather_pd(const double *m, __m256i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x double] containing the gathered values.
 #define _mm256_i64gather_pd(m, i, s) \
   ((__m256d)__builtin_ia32_gatherq_pd256((__v4df)_mm256_undefined_pd(), \
                                          (double const *)(m), \
@@ -1065,6 +1854,33 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                                _CMP_EQ_OQ), \
                                          (s)))
 
+/// Gathers four 32-bit floating-point values from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*32
+///   result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128 _mm_i32gather_ps(const float *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPS instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x float] containing the gathered values.
 #define _mm_i32gather_ps(m, i, s) \
   ((__m128)__builtin_ia32_gatherd_ps((__v4sf)_mm_undefined_ps(), \
                                      (float const *)(m), \
@@ -1073,6 +1889,33 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                           _mm_setzero_ps()), \
                                      (s)))
 
+/// Gathers eight 32-bit floating-point values from memory \a m using scaled
+///    indexes from the 256-bit vector of [8 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 7
+///   j := element*32
+///   k := element*32
+///   result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256 _mm256_i32gather_ps(const float *m, __m256i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERDPS instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [8 x i32] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [8 x float] containing the gathered values.
 #define _mm256_i32gather_ps(m, i, s) \
   ((__m256)__builtin_ia32_gatherd_ps256((__v8sf)_mm256_undefined_ps(), \
                                         (float const *)(m), \
@@ -1082,6 +1925,35 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                               _CMP_EQ_OQ), \
                                         (s)))
 
+/// Gathers two 32-bit floating-point values from memory \a m using scaled
+///    indexes from the 128-bit vector of [2 x i64] in \a i. The upper two
+///    elements of the result are zeroed.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*32
+///   k := element*64
+///   result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// result[127:64] := 0
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128 _mm_i64gather_ps(const float *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPS instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x float] containing the gathered values.
 #define _mm_i64gather_ps(m, i, s) \
   ((__m128)__builtin_ia32_gatherq_ps((__v4sf)_mm_undefined_ps(), \
                                      (float const *)(m), \
@@ -1090,6 +1962,33 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                           _mm_setzero_ps()), \
                                      (s)))
 
+/// Gathers four 32-bit floating-point values from memory \a m using scaled
+///    indexes from the 256-bit vector of [4 x i64] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*64
+///   result[j+31:j] := Load32(m + SignExtend(i[k+64:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128 _mm256_i64gather_ps(const float *m, __m256i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VGATHERQPS instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x float] containing the gathered values.
 #define _mm256_i64gather_ps(m, i, s) \
   ((__m128)__builtin_ia32_gatherq_ps256((__v4sf)_mm_undefined_ps(), \
                                         (float const *)(m), \
@@ -1098,44 +1997,263 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
                                                              _mm_setzero_ps()), \
                                         (s)))
 
+/// Gathers four 32-bit floating-point values from memory \a m using scaled
+///    indexes from the 128-bit vector of [4 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*32
+///   result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_i32gather_epi32(const int *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x i32] containing the gathered values.
 #define _mm_i32gather_epi32(m, i, s) \
   ((__m128i)__builtin_ia32_gatherd_d((__v4si)_mm_undefined_si128(), \
                                      (int const *)(m), (__v4si)(__m128i)(i), \
                                      (__v4si)_mm_set1_epi32(-1), (s)))
 
+/// Gathers eight 32-bit floating-point values from memory \a m using scaled
+///    indexes from the 256-bit vector of [8 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 7
+///   j := element*32
+///   k := element*32
+///   result[j+31:j] := Load32(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_i32gather_epi32(const int *m, __m256i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [8 x i32] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [8 x i32] containing the gathered values.
 #define _mm256_i32gather_epi32(m, i, s) \
   ((__m256i)__builtin_ia32_gatherd_d256((__v8si)_mm256_undefined_si256(), \
                                         (int const *)(m), (__v8si)(__m256i)(i), \
                                         (__v8si)_mm256_set1_epi32(-1), (s)))
 
+/// Gathers two 32-bit integer values from memory \a m using scaled indexes
+///    from the 128-bit vector of [2 x i64] in \a i. The upper two elements
+///    of the result are zeroed.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*32
+///   k := element*64
+///   result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// result[127:64] := 0
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_i64gather_epi32(const int *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x i32] containing the gathered values.
 #define _mm_i64gather_epi32(m, i, s) \
   ((__m128i)__builtin_ia32_gatherq_d((__v4si)_mm_undefined_si128(), \
                                      (int const *)(m), (__v2di)(__m128i)(i), \
                                      (__v4si)_mm_set1_epi32(-1), (s)))
 
+/// Gathers four 32-bit integer values from memory \a m using scaled indexes
+///    from the 256-bit vector of [4 x i64] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*32
+///   k := element*64
+///   result[j+31:j] := Load32(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm256_i64gather_epi32(const int *m, __m256i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQD instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [4 x i32] containing the gathered values.
 #define _mm256_i64gather_epi32(m, i, s) \
   ((__m128i)__builtin_ia32_gatherq_d256((__v4si)_mm_undefined_si128(), \
                                         (int const *)(m), (__v4di)(__m256i)(i), \
                                         (__v4si)_mm_set1_epi32(-1), (s)))
 
+/// Gathers two 64-bit integer values from memory \a m using scaled indexes
+///    from the 128-bit vector of [4 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*32
+///   result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_i32gather_epi64(const long long *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDQ instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m. Only
+///    the first two elements are used.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x i64] containing the gathered values.
 #define _mm_i32gather_epi64(m, i, s) \
   ((__m128i)__builtin_ia32_gatherd_q((__v2di)_mm_undefined_si128(), \
                                      (long long const *)(m), \
                                      (__v4si)(__m128i)(i), \
                                      (__v2di)_mm_set1_epi64x(-1), (s)))
 
+/// Gathers four 64-bit integer values from memory \a m using scaled indexes
+///    from the 128-bit vector of [4 x i32] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*32
+///   result[j+63:j] := Load64(m + SignExtend(i[k+31:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_i32gather_epi64(const long long *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERDQ instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [4 x i32] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x i64] containing the gathered values.
 #define _mm256_i32gather_epi64(m, i, s) \
   ((__m256i)__builtin_ia32_gatherd_q256((__v4di)_mm256_undefined_si256(), \
                                         (long long const *)(m), \
                                         (__v4si)(__m128i)(i), \
                                         (__v4di)_mm256_set1_epi64x(-1), (s)))
 
+/// Gathers two 64-bit integer values from memory \a m using scaled indexes
+///    from the 128-bit vector of [2 x i64] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 1
+///   j := element*64
+///   k := element*64
+///   result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m128i _mm_i64gather_epi64(const long long *m, __m128i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQQ instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 128-bit vector of [2 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 128-bit vector of [2 x i64] containing the gathered values.
 #define _mm_i64gather_epi64(m, i, s) \
   ((__m128i)__builtin_ia32_gatherq_q((__v2di)_mm_undefined_si128(), \
                                      (long long const *)(m), \
                                      (__v2di)(__m128i)(i), \
                                      (__v2di)_mm_set1_epi64x(-1), (s)))
 
+/// Gathers four 64-bit integer values from memory \a m using scaled indexes
+///    from the 256-bit vector of [4 x i64] in \a i.
+///
+/// \code{.operation}
+/// FOR element := 0 to 3
+///   j := element*64
+///   k := element*64
+///   result[j+63:j] := Load64(m + SignExtend(i[k+63:k])*s)
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_i64gather_epi64(const long long *m, __m256i i, const int s);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPGATHERQQ instruction.
+///
+/// \param m
+///    A pointer to the memory used for loading values.
+/// \param i
+///    A 256-bit vector of [4 x i64] containing signed indexes into \a m.
+/// \param s
+///    A literal constant scale factor for the indexes in \a i. Must be
+///    1, 2, 4, or 8.
+/// \returns A 256-bit vector of [4 x i64] containing the gathered values.
 #define _mm256_i64gather_epi64(m, i, s) \
   ((__m256i)__builtin_ia32_gatherq_q256((__v4di)_mm256_undefined_si256(), \
                                         (long long const *)(m), \
