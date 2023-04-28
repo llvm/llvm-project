@@ -8,6 +8,7 @@ subroutine acc_enter_data
   real, pointer :: d
   logical :: ifCondition = .TRUE.
 
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
 !CHECK: %[[EXTENT_C10:.*]] = arith.constant 10 : index
 !CHECK: %[[A:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Ea"}
 !CHECK: %[[B:.*]] = fir.alloca !fir.array<10x10xf32> {{{.*}}uniq_name = "{{.*}}Eb"}
@@ -15,35 +16,79 @@ subroutine acc_enter_data
 !CHECK: %[[D:.*]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = "d", uniq_name = "{{.*}}Ed"}
 
   !$acc enter data create(a)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%[[C10]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%[[EXTENT_C10]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data create(a) if(.true.)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: [[IF1:%.*]] = arith.constant true
 !CHECK: acc.enter_data if([[IF1]]) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data create(a) if(ifCondition)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: [[IFCOND:%.*]] = fir.load %{{.*}} : !fir.ref<!fir.logical<4>>
 !CHECK: [[IF2:%.*]] = fir.convert [[IFCOND]] : (!fir.logical<4>) -> i1
 !CHECK: acc.enter_data if([[IF2]]) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data create(a) create(b) create(c)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
-!CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
-!CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "c", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "c", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data create(a) create(b) create(zero: c)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
-!CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
-!CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {dataClause = 8 : i64, name = "c", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[C]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {dataClause = 8 : i64, name = "c", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>){{$}}
 
   !$acc enter data copyin(a) create(b) attach(d)
-!CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
-!CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]])  -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
 !CHECK: %[[BOX_D:.*]] = fir.load %[[D]] : !fir.ref<!fir.box<!fir.ptr<f32>>> 
 !CHECK: %[[BOX_ADDR_D:.*]] = fir.box_addr %[[BOX_D]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ref<!fir.ptr<f32>>
 !CHECK: %[[D_PTR:.*]] = fir.load %[[BOX_ADDR_D]] : !fir.ref<!fir.ptr<f32>> 
@@ -51,40 +96,72 @@ subroutine acc_enter_data
 !CHECK: acc.enter_data dataOperands(%[[COPYIN_A]], %[[CREATE_B]], %[[ATTACH_D]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ptr<f32>){{$}}
 
   !$acc enter data create(a) async
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async}
 
   !$acc enter data create(a) wait
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {wait}
 
   !$acc enter data create(a) async wait
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async, wait}
 
   !$acc enter data create(a) async(1)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: %[[ASYNC1:.*]] = arith.constant 1 : i32
 !CHECK: acc.enter_data async(%[[ASYNC1]] : i32) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async(async)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: %[[ASYNC2:.*]] = fir.load %{{.*}} : !fir.ref<i32>
 !CHECK: acc.enter_data async(%[[ASYNC2]] : i32) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) wait(1)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: %[[WAIT1:.*]] = arith.constant 1 : i32
 !CHECK: acc.enter_data wait(%[[WAIT1]] : i32) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) wait(queues: 1, 2)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: %[[WAIT2:.*]] = arith.constant 1 : i32
 !CHECK: %[[WAIT3:.*]] = arith.constant 2 : i32
 !CHECK: acc.enter_data wait(%[[WAIT2]], %[[WAIT3]] : i32, i32) dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) wait(devnum: 1: queues: 1, 2)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>)   -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND0:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
 !CHECK: %[[WAIT4:.*]] = arith.constant 1 : i32
 !CHECK: %[[WAIT5:.*]] = arith.constant 2 : i32
 !CHECK: %[[WAIT6:.*]] = arith.constant 1 : i32
@@ -137,6 +214,7 @@ subroutine acc_enter_data_dummy(a, b, n, m)
 !CHECK-LABEL: func.func @_QPacc_enter_data_dummy
 !CHECK-SAME:    %[[A:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "b"}, %[[N:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}, %[[M:.*]]: !fir.ref<i32> {fir.bindc_name = "m"}
 
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
 !CHECK: %[[LOAD_N:.*]] = fir.load %[[N]] : !fir.ref<i32>
 !CHECK: %[[N_I64:.*]] = fir.convert %[[LOAD_N]] : (i32) -> i64
 !CHECK: %[[N_IDX:.*]] = fir.convert %[[N_I64]] : (i64) -> index
@@ -149,6 +227,17 @@ subroutine acc_enter_data_dummy(a, b, n, m)
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[M_N_1]], %[[C0]] : index
 !CHECK: %[[EXT_B:.*]] = arith.select %[[CMP]], %[[M_N_1]], %[[C0]] : index
+
+  !$acc enter data create(a)
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+  !$acc enter data create(b)
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[EXT_B]] : index) startIdx(%[[N_IDX]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<?xf32>> {name = "b", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<?xf32>>)
 
   !$acc enter data create(a(5:10))
 !CHECK: %[[LB1:.*]] = arith.constant 4 : index
