@@ -12982,8 +12982,10 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SmallVector<TemplateArgument, 8> As;
     if (CD &&
         getCommonTemplateArguments(Ctx, As, AX->getTypeConstraintArguments(),
-                                   AY->getTypeConstraintArguments()))
+                                   AY->getTypeConstraintArguments())) {
       CD = nullptr; // The arguments differ, so make it unconstrained.
+      As.clear();
+    }
 
     // Both auto types can't be dependent, otherwise they wouldn't have been
     // sugar. This implies they can't contain unexpanded packs either.

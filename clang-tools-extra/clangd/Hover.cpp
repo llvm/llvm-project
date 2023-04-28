@@ -996,13 +996,15 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
 
   HoverInfo::PassType PassType;
 
+  auto Parameters = resolveForwardingParameters(FD);
+
   // Find argument index for N.
-  for (unsigned I = 0; I < CE->getNumArgs() && I < FD->getNumParams(); ++I) {
+  for (unsigned I = 0; I < CE->getNumArgs() && I < Parameters.size(); ++I) {
     if (CE->getArg(I) != OuterNode.ASTNode.get<Expr>())
       continue;
 
     // Extract matching argument from function declaration.
-    if (const ParmVarDecl *PVD = FD->getParamDecl(I)) {
+    if (const ParmVarDecl *PVD = Parameters[I]) {
       HI.CalleeArgInfo.emplace(toHoverInfoParam(PVD, PP));
       if (N == &OuterNode)
         PassType.PassBy = getPassMode(PVD->getType());

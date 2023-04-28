@@ -5182,6 +5182,9 @@ apply for values returned in callee-saved registers.
   R11. R11 can be used as a scratch register. Floating-point registers
   (XMMs/YMMs) are not preserved and need to be saved by the caller.
 
+- On AArch64 the callee preserve all general purpose registers, except X0-X8 and
+  X16-X18.
+
 The idea behind this convention is to support calls to runtime functions
 that have a hot path and a cold path. The hot path is usually a small piece
 of code that doesn't use many registers. The cold path might need to call out to
@@ -5221,6 +5224,10 @@ returned in callee-saved registers.
 - On X86-64 the callee preserves all general purpose registers, except for
   R11. R11 can be used as a scratch register. Furthermore it also preserves
   all floating-point registers (XMMs/YMMs).
+
+- On AArch64 the callee preserve all general purpose registers, except X0-X8 and
+  X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD - floating
+  point registers.
 
 The idea behind this convention is to support calls to runtime functions
 that don't need to call out to any other functions.

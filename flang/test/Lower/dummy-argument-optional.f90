@@ -52,8 +52,9 @@ end subroutine
 ! CHECK-SAME: %[[arg0:.*]]: !fir.boxchar<1> {fir.bindc_name = "x", fir.optional}) {
 subroutine character_scalar(x)
   ! CHECK: %[[unboxed:.*]]:2 = fir.unboxchar %[[arg0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[ref:.*]] = fir.convert %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
   character(10), optional :: x
-  ! CHECK: fir.is_present %[[unboxed]]#0 : (!fir.ref<!fir.char<1,?>>) -> i1
+  ! CHECK: fir.is_present %[[ref]] : (!fir.ref<!fir.char<1,10>>) -> i1
   print *, present(x)
 end subroutine
 ! CHECK-LABEL: func @_QMoptPcall_character_scalar()
