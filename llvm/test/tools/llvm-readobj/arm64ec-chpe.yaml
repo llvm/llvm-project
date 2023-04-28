@@ -44,6 +44,42 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     VirtualAddress:  0x5000
     VirtualSize:     144
-    SectionData:     '010000005050000003000000685000008050000000000000000000000000000000000000000000000000000000000000020000000200000000000000000000000000000000000000000000000000000001100000300000000020000040000000023000005000000000100000201000000010000020100000401000000020000000100000002000002010000030200000'
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0x5050  # CodeMap
+      - UInt32: 3       # CodeMapCount
+      - UInt32: 0x5068  # CodeRangesToEntryPoints
+      - UInt32: 0x5080  # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 2       # CodeRangesToEntryPointsCount
+      - UInt32: 2       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0x1001  # CodeMap[0]
+      - UInt32: 0x30
+      - UInt32: 0x2000  # CodeMap[1]
+      - UInt32: 0x40
+      - UInt32: 0x3002  # CodeMap[2]
+      - UInt32: 0x50
+      - UInt32: 0x1000  # CodeRangesToEntryPoints[0]
+      - UInt32: 0x1020
+      - UInt32: 0x1000
+      - UInt32: 0x1020  # CodeRangesToEntryPoints[1]
+      - UInt32: 0x1040
+      - UInt32: 0x2000
+      - UInt32: 0x1000  # RedirectionMetadata[0]
+      - UInt32: 0x2000
+      - UInt32: 0x1020  # RedirectionMetadata[1]
+      - UInt32: 0x2030
 symbols:         []
 ...
