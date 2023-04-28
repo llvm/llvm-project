@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   CAS
   Option
   ProfileData
+  RemoteCachingService
   Support
   TargetParser
   )
@@ -14,9 +15,11 @@ add_clang_library(clangFrontend
   ASTConsumers.cpp
   ASTMerge.cpp
   ASTUnit.cpp
+  CachedDiagnostics.cpp
   CASDependencyCollector.cpp
   ChainedDiagnosticConsumer.cpp
   ChainedIncludesSource.cpp
+  CompileJobCache.cpp
   CompileJobCacheKey.cpp
   CompileJobCacheResult.cpp
   CompilerInstance.cpp
