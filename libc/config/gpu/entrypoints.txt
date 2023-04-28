@@ -56,6 +56,13 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdlib.h entrypoints
     libc.src.stdlib.atoi
+    libc.src.stdlib.atexit
+
+    # Only implemented in the test suite
+    libc.src.stdlib.malloc
+    libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.realloc
+    libc.src.stdlib.free
 
     # errno.h entrypoints
     libc.src.errno.errno

@@ -325,12 +325,22 @@ Bug Fixes in This Version
   member pointer as an invalid expression.
 - Fix crash when member function contains invalid default argument.
   (`#62122 <https://github.com/llvm/llvm-project/issues/62122>`_)
+- Fix crash when handling undefined template partial specialization
+  (`#61356 <https://github.com/llvm/llvm-project/issues/61356>`_)
+- Fix a crash caused by incorrectly evaluating constraints on an inheriting
+  constructor declaration.
+  (`#62361 <https://github.com/llvm/llvm-project/issues/62361>`_)
+  (`#62362 <https://github.com/llvm/llvm-project/issues/62362>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a bug where attribute annotations on type specifiers (enums, classes,
+  structs, unions, and scoped enums) were not properly ignored, resulting in
+  misleading warning messages. Now, such attribute annotations are correctly
+  ignored. (`#61660 <https://github.com/llvm/llvm-project/issues/61660>`_)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^

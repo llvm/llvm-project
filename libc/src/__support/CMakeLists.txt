@@ -46,6 +46,15 @@ add_header_library(
 )
 
 add_header_library(
+  c_string
+  HDRS
+    c_string.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.string
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h

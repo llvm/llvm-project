@@ -175,6 +175,9 @@ enum class MachineCombinerPattern {
   FMADD_XA,
   FMSUB,
   FNMSUB,
+
+  // X86 VNNI
+  DPWSSD,
 };
 
 } // end namespace llvm

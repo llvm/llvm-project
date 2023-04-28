@@ -439,3 +439,94 @@ define i1 @shl_nonzero_and_shift_out_zeros_fail(i32 %ccnt, i32 %y) {
   %r = icmp eq i32 %shl, 0
   ret i1 %r
 }
+
+define i1 @sub_nonzero_ops_ne(i8 %xx, i8 %yy, i8 %z) {
+; CHECK-LABEL: @sub_nonzero_ops_ne(
+; CHECK-NEXT:    ret i1 false
+;
+  %x = and i8 %xx, 191
+  %y = or i8 %yy, 64
+  %s = sub i8 %x, %y
+  %exp = or i8 %z, %s
+  %r = icmp eq i8 %exp, 0
+  ret i1 %r
+}
+
+define i1 @sub_nonzero_ops_ne_fail(i8 %xx, i8 %yy, i8 %z) {
+; CHECK-LABEL: @sub_nonzero_ops_ne_fail(
+; CHECK-NEXT:    [[X:%.*]] = and i8 [[XX:%.*]], -64
+; CHECK-NEXT:    [[Y:%.*]] = or i8 [[YY:%.*]], 64
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[EXP:%.*]] = or i8 [[Z:%.*]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[EXP]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = and i8 %xx, 192
+  %y = or i8 %yy, 64
+  %s = sub i8 %x, %y
+  %exp = or i8 %z, %s
+  %r = icmp eq i8 %exp, 0
+  ret i1 %r
+}
+
+define i1 @add_nonzero_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_nonzero_nuw(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_nz = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %x_nz)
+  %a = add nuw i8 %x, %y
+  %r = icmp eq i8 %a, 0
+  ret i1 %r
+}
+
+define i1 @add_nonzero_nsw_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @add_nonzero_nsw_fail(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_nz = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %x_nz)
+  %a = add nsw i8 %x, %y
+  %r = icmp eq i8 %a, 0
+  ret i1 %r
+}
+
+define i1 @udiv_y_le_x(i8 %xx, i8 %yy, i8 %z) {
+; CHECK-LABEL: @udiv_y_le_x(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 7
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY:%.*]], 7
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[D]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[O]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, 7
+  %y = and i8 %yy, 7
+  %d = udiv i8 %x, %y
+  %o = or i8 %d, %z
+  %r = icmp eq i8 %o, 0
+  ret i1 %r
+}
+
+define i1 @udiv_y_le_x_fail(i8 %xx, i8 %yy, i8 %z) {
+; CHECK-LABEL: @udiv_y_le_x_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 6
+; CHECK-NEXT:    [[Y:%.*]] = and i8 [[YY:%.*]], 7
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[O:%.*]] = or i8 [[D]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[O]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, 6
+  %y = and i8 %yy, 7
+  %d = udiv i8 %x, %y
+  %o = or i8 %d, %z
+  %r = icmp eq i8 %o, 0
+  ret i1 %r
+}

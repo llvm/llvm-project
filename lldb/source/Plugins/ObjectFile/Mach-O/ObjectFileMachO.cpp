@@ -531,21 +531,18 @@ public:
       lldb::offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRAltRegSet:
-      case GPRRegSet:
-        // On ARM, the CPSR register is also included in the count but it is
-        // not included in gpr.r so loop until (count-1).
-
-        // Prevent static analysis warnings by explicitly contstraining 'count'
-        // to acceptable range. Handle possible underflow of count-1
-        if (count > 0 && count <= sizeof(gpr.r) / sizeof(gpr.r[0])) {
+      case GPRRegSet: {
+        // r0-r15, plus CPSR
+        uint32_t gpr_buf_count = (sizeof(gpr.r) / sizeof(gpr.r[0])) + 1;
+        if (count == gpr_buf_count) {
           for (uint32_t i = 0; i < (count - 1); ++i) {
             gpr.r[i] = data.GetU32(&offset);
           }
-        }
-        // Save cpsr explicitly.
-        gpr.cpsr = data.GetU32(&offset);
+          gpr.cpsr = data.GetU32(&offset);
 
-        SetError(GPRRegSet, Read, 0);
+          SetError(GPRRegSet, Read, 0);
+        }
+      }
         offset = next_thread_state;
         break;
 

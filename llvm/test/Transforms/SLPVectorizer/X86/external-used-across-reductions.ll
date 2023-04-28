@@ -9,7 +9,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i64>, ptr [[IDX2]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> [[TMP1]], i32 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr null, align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> <i32 undef, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> <i32 poison, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i64> [[TMP4]], i64 [[TMP3]], i32 0
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:

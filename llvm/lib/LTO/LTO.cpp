@@ -1404,11 +1404,10 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
 // Given the original \p Path to an output file, replace any path
 // prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 // resulting directory if it does not yet exist.
-std::string lto::getThinLTOOutputFile(const std::string &Path,
-                                      const std::string &OldPrefix,
-                                      const std::string &NewPrefix) {
+std::string lto::getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
+                                      StringRef NewPrefix) {
   if (OldPrefix.empty() && NewPrefix.empty())
-    return Path;
+    return std::string(Path);
   SmallString<128> NewPath(Path);
   llvm::sys::path::replace_path_prefix(NewPath, OldPrefix, NewPrefix);
   StringRef ParentPath = llvm::sys::path::parent_path(NewPath.str());
@@ -1447,13 +1446,13 @@ public:
       MapVector<StringRef, BitcodeModule> &ModuleMap) override {
     StringRef ModulePath = BM.getModuleIdentifier();
     std::string NewModulePath =
-        getThinLTOOutputFile(std::string(ModulePath), OldPrefix, NewPrefix);
+        getThinLTOOutputFile(ModulePath, OldPrefix, NewPrefix);
 
     if (LinkedObjectsFile) {
       std::string ObjectPrefix =
           NativeObjectPrefix.empty() ? NewPrefix : NativeObjectPrefix;
-      std::string LinkedObjectsFilePath = getThinLTOOutputFile(
-          std::string(ModulePath), OldPrefix, ObjectPrefix);
+      std::string LinkedObjectsFilePath =
+          getThinLTOOutputFile(ModulePath, OldPrefix, ObjectPrefix);
       *LinkedObjectsFile << LinkedObjectsFilePath << '\n';
     }
 

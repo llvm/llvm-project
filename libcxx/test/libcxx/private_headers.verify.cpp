@@ -427,11 +427,17 @@ END-SCRIPT
 #include <__functional/unwrap_ref.h> // expected-error@*:* {{use of private header from outside its module: '__functional/unwrap_ref.h'}}
 #include <__functional/weak_result_type.h> // expected-error@*:* {{use of private header from outside its module: '__functional/weak_result_type.h'}}
 #include <__fwd/array.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/array.h'}}
+#include <__fwd/fstream.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/fstream.h'}}
 #include <__fwd/get.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/get.h'}}
 #include <__fwd/hash.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/hash.h'}}
+#include <__fwd/ios.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/ios.h'}}
+#include <__fwd/istream.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/istream.h'}}
 #include <__fwd/memory_resource.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/memory_resource.h'}}
+#include <__fwd/ostream.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/ostream.h'}}
 #include <__fwd/pair.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/pair.h'}}
 #include <__fwd/span.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/span.h'}}
+#include <__fwd/sstream.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/sstream.h'}}
+#include <__fwd/streambuf.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/streambuf.h'}}
 #include <__fwd/string.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string.h'}}
 #include <__fwd/string_view.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/string_view.h'}}
 #include <__fwd/subrange.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/subrange.h'}}

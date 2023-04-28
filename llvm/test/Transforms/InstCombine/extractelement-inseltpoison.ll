@@ -315,8 +315,8 @@ define float @bitcasted_inselt_to_and_from_FP_uses2(double %x) {
 
 define <4 x double> @invalid_extractelement(<2 x double> %a, <4 x double> %b, ptr %p) {
 ; ANY-LABEL: @invalid_extractelement(
-; ANY-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
-; ANY-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> [[TMP1]], <4 x i32> <i32 undef, i32 1, i32 4, i32 3>
+; ANY-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; ANY-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> [[TMP1]], <4 x i32> <i32 poison, i32 1, i32 4, i32 3>
 ; ANY-NEXT:    [[E:%.*]] = extractelement <4 x double> [[B]], i64 1
 ; ANY-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; ANY-NEXT:    ret <4 x double> [[T4]]

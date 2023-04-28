@@ -252,7 +252,7 @@ define amdgpu_kernel void @nontrivial_insertelt_chain(<5 x double> %in, ptr %out
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[X_1:%.*]] = insertelement <5 x double> <double 3.140000e+00, double poison, double poison, double poison, double poison>, double [[X:%.*]], i32 [[IDX:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <5 x double> [[X_1]], <5 x double> <double poison, double poison, double poison, double 6.140000e+00, double 9.900000e+00>, <5 x i32> <i32 0, i32 1, i32 undef, i32 8, i32 9>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <5 x double> [[X_1]], <5 x double> <double poison, double poison, double poison, double 6.140000e+00, double 9.900000e+00>, <5 x i32> <i32 0, i32 1, i32 poison, i32 8, i32 9>
 ; CHECK-NEXT:    [[X_4:%.*]] = insertelement <5 x double> [[TMP0]], double [[X]], i64 2
 ; CHECK-NEXT:    br label [[FINALLY:%.*]]
 ; CHECK:       else:

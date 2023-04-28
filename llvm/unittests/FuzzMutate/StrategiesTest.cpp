@@ -665,4 +665,30 @@ TEST(ShuffleBlockStrategy, ShuffleLoop) {
     }";
   VerifyBlockShuffle(Source);
 }
+
+TEST(AllStrategies, SkipEHPad) {
+  StringRef Source = "\n\
+    define void @f(i32 %x) personality ptr @__CxxFrameHandler3 { \n\
+    entry: \n\
+      invoke void @g() to label %try.cont unwind label %catch.dispatch \n\
+    catch.dispatch: \n\
+      %0 = catchswitch within none [label %catch] unwind to caller \n\
+    catch: \n\
+      %1 = catchpad within %0 [ptr null, i32 64, ptr null] \n\
+      catchret from %1 to label %try.cont \n\
+    try.cont: \n\
+      ret void \n\
+    } \n\
+    declare void @g() \n\
+    declare i32 @__CxxFrameHandler3(...) \n\
+    ";
+
+  mutateAndVerifyModule<ShuffleBlockStrategy>(Source);
+  mutateAndVerifyModule<InsertPHIStrategy>(Source);
+  mutateAndVerifyModule<InsertFunctionStrategy>(Source);
+  mutateAndVerifyModule<InsertCFGStrategy>(Source);
+  mutateAndVerifyModule<SinkInstructionStrategy>(Source);
+  mutateAndVerifyModule<InjectorIRStrategy>(Source);
+  mutateAndVerifyModule<InstModificationIRStrategy>(Source);
+}
 } // namespace

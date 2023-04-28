@@ -67,25 +67,8 @@ def lookupSysRegByDeprecatedName : SearchIndex {
 }
 
 // The following CSR encodings match those given in Tables 2.2,
-// 2.3, 2.4 and  2.5 in the RISC-V Instruction Set Manual
+// 2.3, 2.4, 2.5 and 2.6 in the RISC-V Instruction Set Manual
 // Volume II: Privileged Architecture.
-
-//===----------------------------------------------------------------------===//
-// User Trap Setup
-//===----------------------------------------------------------------------===//
-def : SysReg<"ustatus", 0x000>;
-def : SysReg<"uie", 0x004>;
-def : SysReg<"utvec", 0x005>;
-
-//===----------------------------------------------------------------------===//
-// User Trap Handling
-//===----------------------------------------------------------------------===//
-def : SysReg<"uscratch", 0x040>;
-def : SysReg<"uepc", 0x041>;
-def : SysReg<"ucause", 0x042>;
-let DeprecatedName = "ubadaddr" in
-def : SysReg<"utval", 0x043>;
-def : SysReg<"uip", 0x044>;
 
 //===----------------------------------------------------------------------===//
 // User Floating-Point CSRs
@@ -120,8 +103,6 @@ foreach i = 3...31 in
 // Supervisor Trap Setup
 //===----------------------------------------------------------------------===//
 def : SysReg<"sstatus", 0x100>;
-def : SysReg<"sedeleg", 0x102>;
-def : SysReg<"sideleg", 0x103>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;

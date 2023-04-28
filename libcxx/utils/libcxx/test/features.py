@@ -209,6 +209,7 @@ macros = {
   '_LIBCPP_HAS_NO_WIDE_CHARACTERS': 'no-wide-characters',
   '_LIBCPP_HAS_NO_UNICODE': 'libcpp-has-no-unicode',
   '_LIBCPP_ENABLE_DEBUG_MODE': 'libcpp-has-debug-mode',
+  '_LIBCPP_HAS_PARALLEL_ALGORITHMS': 'with-pstl',
 }
 for macro, feature in macros.items():
   DEFAULT_FEATURES.append(

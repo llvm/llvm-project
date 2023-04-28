@@ -277,6 +277,9 @@ private:
   bool SupportsOffsetsInSignatureHelp = false;
   /// Whether the client supports the versioned document changes.
   bool SupportsDocumentChanges = false;
+  /// Whether the client supports change annotations on text edits.
+  bool SupportsChangeAnnotation = false;
+
   std::mutex BackgroundIndexProgressMutex;
   enum class BackgroundIndexProgress {
     // Client doesn't support reporting progress. No transitions possible.

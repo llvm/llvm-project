@@ -137,7 +137,7 @@ llvm::Error Lua::LoadModule(llvm::StringRef filename) {
                                                llvm::inconvertibleErrorCode());
   }
 
-  ConstString module_extension = file.GetFileNameExtension();
+  llvm::StringRef module_extension = file.GetFileNameExtension();
   if (module_extension != ".lua") {
     return llvm::make_error<llvm::StringError>("invalid extension",
                                                llvm::inconvertibleErrorCode());

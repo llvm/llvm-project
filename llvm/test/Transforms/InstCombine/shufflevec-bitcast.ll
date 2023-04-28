@@ -159,7 +159,7 @@ define <16 x i8> @shuf_bitcast_operand_cannot_widen_undef(<4 x i32> %x) {
 ; CHECK-LABEL: @shuf_bitcast_operand_cannot_widen_undef(
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[S1]] to <16 x i8>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[BC]], <16 x i8> undef, <16 x i32> <i32 12, i32 undef, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[BC]], <16 x i8> undef, <16 x i32> <i32 12, i32 poison, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <16 x i8> [[S2]]
 ;
   %s1 = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
