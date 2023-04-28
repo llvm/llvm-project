@@ -3301,8 +3301,8 @@ define void @rint_v8f16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI103_0)
-; CHECK-NEXT:    flh fa5, %lo(.LCPI103_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI131_0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI131_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -3345,8 +3345,8 @@ define void @rint_v2f64(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI105_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI105_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI133_0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI133_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -3367,8 +3367,8 @@ define void @nearbyint_v8f16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI106_0)
-; CHECK-NEXT:    flh fa5, %lo(.LCPI106_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI134_0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI134_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a1
@@ -3415,8 +3415,8 @@ define void @nearbyint_v2f64(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    lui a1, %hi(.LCPI108_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI108_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI136_0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI136_0)(a1)
 ; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    frflags a1
