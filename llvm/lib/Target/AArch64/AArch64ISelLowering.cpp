@@ -19775,20 +19775,25 @@ static EVT tryGetOriginalBoolVectorType(SDValue Op, int Depth = 0) {
 static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue ComparisonResult(N, 0);
-  EVT BoolVecVT = ComparisonResult.getValueType();
-  assert(BoolVecVT.isVector() && "Must be a vector type");
+  EVT VecVT = ComparisonResult.getValueType();
+  assert(VecVT.isVector() && "Must be a vector type");
 
-  unsigned NumElts = BoolVecVT.getVectorNumElements();
+  unsigned NumElts = VecVT.getVectorNumElements();
   if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+    return SDValue();
+
+  if (VecVT.getVectorElementType() != MVT::i1 &&
+      !DAG.getTargetLoweringInfo().isTypeLegal(VecVT))
     return SDValue();
 
   // If we can find the original types to work on instead of a vector of i1,
   // we can avoid extend/extract conversion instructions.
-  EVT VecVT = tryGetOriginalBoolVectorType(ComparisonResult);
-  if (!VecVT.isSimple()) {
-    unsigned BitsPerElement = std::max(64 / NumElts, 8u); // min. 64-bit vector
-    VecVT =
-        BoolVecVT.changeVectorElementType(MVT::getIntegerVT(BitsPerElement));
+  if (VecVT.getVectorElementType() == MVT::i1) {
+    VecVT = tryGetOriginalBoolVectorType(ComparisonResult);
+    if (!VecVT.isSimple()) {
+      unsigned BitsPerElement = std::max(64 / NumElts, 8u); // >= 64-bit vector
+      VecVT = MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement), NumElts);
+    }
   }
   VecVT = VecVT.changeVectorElementTypeToInteger();
 
@@ -19849,6 +19854,37 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, ResultVT, RepresentativeBits);
 }
 
+static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
+                                                 StoreSDNode *Store) {
+  if (!Store->isTruncatingStore())
+    return SDValue();
+
+  SDLoc DL(Store);
+  SDValue VecOp = Store->getValue();
+  EVT VT = VecOp.getValueType();
+  EVT MemVT = Store->getMemoryVT();
+
+  if (!MemVT.isVector() || !VT.isVector() ||
+      MemVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  // If we are storing a vector that we are currently building, let
+  // `scalarizeVectorStore()` handle this more efficiently.
+  if (VecOp.getOpcode() == ISD::BUILD_VECTOR)
+    return SDValue();
+
+  VecOp = DAG.getNode(ISD::TRUNCATE, DL, MemVT, VecOp);
+  SDValue VectorBits = vectorToScalarBitmask(VecOp.getNode(), DAG);
+  if (!VectorBits)
+    return SDValue();
+
+  EVT StoreVT =
+      EVT::getIntegerVT(*DAG.getContext(), MemVT.getStoreSizeInBits());
+  SDValue ExtendedBits = DAG.getZExtOrTrunc(VectorBits, DL, StoreVT);
+  return DAG.getStore(Store->getChain(), DL, ExtendedBits, Store->getBasePtr(),
+                      Store->getMemOperand());
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -19885,6 +19921,9 @@ static SDValue performSTORECombine(SDNode *N,
     return SDValue(N, 0);
 
   if (SDValue Store = foldTruncStoreOfExt(DAG, N))
+    return Store;
+
+  if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
 
   return SDValue();

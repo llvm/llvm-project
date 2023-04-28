@@ -114,12 +114,25 @@ public:
   /// Compute a bound in terms of the values/dimensions in `dependencies`. The
   /// computed bound consists of only constant terms and dependent values (or
   /// dimension sizes thereof).
-  static LogicalResult computeBound(AffineMap &resultMap,
-                                    ValueDimList &mapOperands,
-                                    presburger::BoundType type, Value value,
-                                    std::optional<int64_t> dim,
-                                    ValueDimList dependencies,
-                                    bool closedUB = false);
+  static LogicalResult
+  computeDependentBound(AffineMap &resultMap, ValueDimList &mapOperands,
+                        presburger::BoundType type, Value value,
+                        std::optional<int64_t> dim, ValueDimList dependencies,
+                        bool closedUB = false);
+
+  /// Compute a bound in that is independent of all values in `independencies`.
+  ///
+  /// Independencies are the opposite of dependencies. The computed bound does
+  /// not contain any SSA values that are part of `independencies`. E.g., this
+  /// function can be used to make ops hoistable from loops. To that end, ops
+  /// must be made independent of loop induction variables (in the case of "for"
+  /// loops). Loop induction variables are the independencies; they may not
+  /// appear in the computed bound.
+  static LogicalResult
+  computeIndependentBound(AffineMap &resultMap, ValueDimList &mapOperands,
+                          presburger::BoundType type, Value value,
+                          std::optional<int64_t> dim, ValueRange independencies,
+                          bool closedUB = false);
 
   /// Compute a constant bound for the given index-typed value or shape
   /// dimension size.

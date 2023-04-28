@@ -15,9 +15,11 @@
 #define MLIR_DIALECT_AFFINE_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
+class AffineMap;
 class Location;
 class OpBuilder;
 class OpFoldResult;
@@ -84,6 +86,18 @@ FailureOr<OpFoldResult> reifyShapedValueDimBound(
     int64_t dim,
     ValueBoundsConstraintSet::StopConditionFn stopCondition = nullptr,
     bool closedUB = false);
+
+/// Materialize an already computed bound with Affine dialect ops.
+///
+/// * `ValueBoundsOpInterface::computeBound` computes bounds but does not
+///   create IR. It is dialect independent.
+/// * `materializeComputedBound` materializes computed bounds with Affine
+///   dialect ops.
+/// * `reifyIndexValueBound`/`reifyShapedValueDimBound` are a combination of
+///   the two functions mentioned above.
+OpFoldResult materializeComputedBound(
+    OpBuilder &b, Location loc, AffineMap boundMap,
+    ArrayRef<std::pair<Value, std::optional<int64_t>>> mapOperands);
 
 } // namespace affine
 } // namespace mlir

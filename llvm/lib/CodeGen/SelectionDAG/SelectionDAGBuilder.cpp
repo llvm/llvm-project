@@ -5451,7 +5451,7 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
   // it's beneficial on the target, otherwise we end up lowering to a call to
   // __powidf2 (for example).
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    unsigned Val = RHSC->getSExtValue();
+    int Val = RHSC->getSExtValue();
 
     // powi(x, 0) -> 1.0
     if (Val == 0)
@@ -5460,7 +5460,7 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
     if (DAG.getTargetLoweringInfo().isBeneficialToExpandPowI(
             Val, DAG.shouldOptForSize())) {
       // Get the exponent as a positive value.
-      if ((int)Val < 0)
+      if (Val < 0)
         Val = -Val;
       // We use the simple binary decomposition method to generate the multiply
       // sequence.  There are more optimal ways to do this (for example,

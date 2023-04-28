@@ -8,6 +8,8 @@ declare i16 @llvm.bswap.i16(i16)
 declare i8 @llvm.ctpop.i8(i8)
 declare <2 x i8> @llvm.uadd.sat.2xi8(<2 x i8>, <2 x i8>)
 declare i8 @llvm.uadd.sat.i8(i8, i8)
+declare i8 @llvm.fshr.i8(i8, i8, i8)
+declare i8 @llvm.fshl.i8(i8, i8, i8)
 
 ;; Throughout use: X > Y || Y == 0 which folds to X > Y iff X known
 ;; non-zero. Do this because many of the expressions already have
@@ -523,5 +525,75 @@ define i1 @udiv_y_le_x_fail(i8 %xx, i8 %yy, i8 %z) {
   %d = udiv i8 %x, %y
   %o = or i8 %d, %z
   %r = icmp eq i8 %o, 0
+  ret i1 %r
+}
+
+define i1 @fshr_non_zero(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @fshr_non_zero(
+; CHECK-NEXT:    [[PRED0:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED0]])
+; CHECK-NEXT:    ret i1 false
+;
+  %pred0 = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %pred0)
+  %v = tail call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 %y)
+  %or = or i8 %v, %z
+  %r = icmp eq i8 %or, 0
+  ret i1 %r
+}
+
+define i1 @fshr_non_zero_fail(i8 %x, i8 %y, i8 %z, i8 %w) {
+; CHECK-LABEL: @fshr_non_zero_fail(
+; CHECK-NEXT:    [[PRED0:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED0]])
+; CHECK-NEXT:    [[PRED1:%.*]] = icmp ne i8 [[W:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED1]])
+; CHECK-NEXT:    [[V:%.*]] = tail call i8 @llvm.fshr.i8(i8 [[X]], i8 [[W]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[V]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %pred0 = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %pred0)
+  %pred1 = icmp ne i8 %w, 0
+  call void @llvm.assume(i1 %pred1)
+  %v = tail call i8 @llvm.fshr.i8(i8 %x, i8 %w, i8 %y)
+  %or = or i8 %v, %z
+  %r = icmp eq i8 %or, 0
+  ret i1 %r
+}
+
+define i1 @fshl_non_zero(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @fshl_non_zero(
+; CHECK-NEXT:    [[PRED0:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED0]])
+; CHECK-NEXT:    ret i1 false
+;
+  %pred0 = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %pred0)
+  %v = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %y)
+  %or = or i8 %v, %z
+  %r = icmp eq i8 %or, 0
+  ret i1 %r
+}
+
+define i1 @fshl_non_zero_fail(i8 %x, i8 %y, i8 %z, i8 %w) {
+; CHECK-LABEL: @fshl_non_zero_fail(
+; CHECK-NEXT:    [[PRED0:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED0]])
+; CHECK-NEXT:    [[PRED1:%.*]] = icmp ne i8 [[W:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRED1]])
+; CHECK-NEXT:    [[V:%.*]] = tail call i8 @llvm.fshl.i8(i8 [[X]], i8 [[W]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[V]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %pred0 = icmp ne i8 %x, 0
+  call void @llvm.assume(i1 %pred0)
+  %pred1 = icmp ne i8 %w, 0
+  call void @llvm.assume(i1 %pred1)
+  %v = tail call i8 @llvm.fshl.i8(i8 %x, i8 %w, i8 %y)
+  %or = or i8 %v, %z
+  %r = icmp eq i8 %or, 0
   ret i1 %r
 }

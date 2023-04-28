@@ -11957,7 +11957,7 @@ bool ARMAsmParser::parseDirectiveSetFP(SMLoc L) {
     Offset = CE->getValue();
   }
 
-  if (Parser.parseToken(AsmToken::EndOfStatement))
+  if (Parser.parseEOL())
     return true;
 
   getTargetStreamer().emitSetFP(static_cast<unsigned>(FPReg),
