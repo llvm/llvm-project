@@ -38,7 +38,7 @@
 #
 # WRONG_DETAIL: << TLI yes SDK no : '_ZdaPv' aka operator delete[](void*)
 # WRONG_DETAIL: >> TLI no  SDK yes: '_ZdaPvj' aka operator delete[](void*, unsigned int)
-# WRONG_DETAIL-COUNT-8: << TLI yes SDK no : {{.*}}hot_cold_t
+# WRONG_DETAIL-COUNT-8: << TLI yes SDK no : {{.*}}__hot_cold_t
 # WRONG_SUMMARY: << Total TLI yes SDK no:  9{{$}}
 # WRONG_SUMMARY: >> Total TLI no  SDK yes: 1{{$}}
 # WRONG_SUMMARY: == Total TLI yes SDK yes: 234
