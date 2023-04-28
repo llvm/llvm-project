@@ -1824,6 +1824,27 @@ public:
       Value *IfCond, BodyGenCallbackTy ProcessMapOpCB,
       BodyGenCallbackTy BodyGenCB = {});
 
+  using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+
+  /// Generator for '#omp target'
+  ///
+  /// \param Loc where the target data construct was encountered.
+  /// \param CodeGenIP The insertion point where the call to the outlined
+  /// function should be emitted.
+  /// \param EntryInfo The entry information about the function.
+  /// \param NumTeams Number of teams specified in the num_teams clause.
+  /// \param NumThreads Number of teams specified in the thread_limit clause.
+  /// \param Inputs The input values to the region that will be passed.
+  /// as arguments to the outlined function.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointTy createTarget(const LocationDescription &Loc,
+                             OpenMPIRBuilder::InsertPointTy CodeGenIP,
+                             TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
+                             int32_t NumThreads,
+                             SmallVectorImpl<Value *> &Inputs,
+                             TargetBodyGenCallbackTy BodyGenCB);
+
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
   /// generated below. Their names are defined and used in OpenMPKinds.def. Here
   /// we provide the declarations, the initializeTypes function will provide the
