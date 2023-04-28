@@ -2229,7 +2229,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
       if (ProfileAnchors != CalleeToCallsitesMap.end() &&
           !ProfileAnchors->second.empty()) {
         auto CI = ProfileAnchors->second.begin();
-        const auto &Candidate = *CI;
+        const auto Candidate = *CI;
         ProfileAnchors->second.erase(CI);
         InsertMatching(Loc, Candidate);
         LLVM_DEBUG(dbgs() << "Callsite with callee:" << CalleeName
