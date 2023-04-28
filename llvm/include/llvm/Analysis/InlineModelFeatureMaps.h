@@ -18,56 +18,51 @@
 
 namespace llvm {
 
-static const std::vector<int64_t> ScalarShape{1};
-
 // List of cost features. A "cost" feature is a summand of the heuristic-based
 // inline cost, and we define them separately to preserve the original heuristic
 // behavior.
 #define INLINE_COST_FEATURE_ITERATOR(M)                                        \
-  M(int64_t, ScalarShape, sroa_savings,                                        \
+  M(int64_t, {1}, sroa_savings,                                                \
     "Savings from SROA (scalar replacement of aggregates)")                    \
-  M(int64_t, ScalarShape, sroa_losses,                                         \
+  M(int64_t, {1}, sroa_losses,                                                 \
     "Losses from SROA (scalar replacement of aggregates)")                     \
-  M(int64_t, ScalarShape, load_elimination,                                    \
-    "Cost of load elimination in the call")                                    \
-  M(int64_t, ScalarShape, call_penalty,                                        \
+  M(int64_t, {1}, load_elimination, "Cost of load elimination in the call")    \
+  M(int64_t, {1}, call_penalty,                                                \
     "Accumulation of penalty applied to call sites when inlining")             \
-  M(int64_t, ScalarShape, call_argument_setup,                                 \
+  M(int64_t, {1}, call_argument_setup,                                         \
     "Accumulation of call argument setup costs")                               \
-  M(int64_t, ScalarShape, load_relative_intrinsic,                             \
+  M(int64_t, {1}, load_relative_intrinsic,                                     \
     "Accumulation of costs of loading relative intrinsics")                    \
-  M(int64_t, ScalarShape, lowered_call_arg_setup,                              \
+  M(int64_t, {1}, lowered_call_arg_setup,                                      \
     "Accumulation of cost of lowered call argument setups")                    \
-  M(int64_t, ScalarShape, indirect_call_penalty,                               \
+  M(int64_t, {1}, indirect_call_penalty,                                       \
     "Accumulation of costs for indirect calls")                                \
-  M(int64_t, ScalarShape, jump_table_penalty,                                  \
-    "Accumulation of costs for jump tables")                                   \
-  M(int64_t, ScalarShape, case_cluster_penalty,                                \
+  M(int64_t, {1}, jump_table_penalty, "Accumulation of costs for jump tables") \
+  M(int64_t, {1}, case_cluster_penalty,                                        \
     "Accumulation of costs for case clusters")                                 \
-  M(int64_t, ScalarShape, switch_penalty,                                      \
+  M(int64_t, {1}, switch_penalty,                                              \
     "Accumulation of costs for switch statements")                             \
-  M(int64_t, ScalarShape, unsimplified_common_instructions,                    \
+  M(int64_t, {1}, unsimplified_common_instructions,                            \
     "Costs from unsimplified common instructions")                             \
-  M(int64_t, ScalarShape, num_loops, "Number of loops in the caller")          \
-  M(int64_t, ScalarShape, dead_blocks, "Number of dead blocks in the caller")  \
-  M(int64_t, ScalarShape, simplified_instructions,                             \
+  M(int64_t, {1}, num_loops, "Number of loops in the caller")                  \
+  M(int64_t, {1}, dead_blocks, "Number of dead blocks in the caller")          \
+  M(int64_t, {1}, simplified_instructions,                                     \
     "Number of simplified instructions")                                       \
-  M(int64_t, ScalarShape, constant_args,                                       \
+  M(int64_t, {1}, constant_args,                                               \
     "Number of constant arguments in the call site")                           \
-  M(int64_t, ScalarShape, constant_offset_ptr_args,                            \
+  M(int64_t, {1}, constant_offset_ptr_args,                                    \
     "Number of constant offset pointer args in the call site")                 \
-  M(int64_t, ScalarShape, callsite_cost, "Estimated cost of the call site")    \
-  M(int64_t, ScalarShape, cold_cc_penalty,                                     \
-    "Penalty for a cold calling convention")                                   \
-  M(int64_t, ScalarShape, last_call_to_static_bonus,                           \
+  M(int64_t, {1}, callsite_cost, "Estimated cost of the call site")            \
+  M(int64_t, {1}, cold_cc_penalty, "Penalty for a cold calling convention")    \
+  M(int64_t, {1}, last_call_to_static_bonus,                                   \
     "Bonus for being the last call to static")                                 \
-  M(int64_t, ScalarShape, is_multiple_blocks,                                  \
+  M(int64_t, {1}, is_multiple_blocks,                                          \
     "Boolean; is the Callee multiple blocks")                                  \
-  M(int64_t, ScalarShape, nested_inlines,                                      \
+  M(int64_t, {1}, nested_inlines,                                              \
     "Would the default inliner perfom nested inlining")                        \
-  M(int64_t, ScalarShape, nested_inline_cost_estimate,                         \
+  M(int64_t, {1}, nested_inline_cost_estimate,                                 \
     "Estimate of the accumulated cost of nested inlines")                      \
-  M(int64_t, ScalarShape, threshold, "Threshold for the heuristic inliner")
+  M(int64_t, {1}, threshold, "Threshold for the heuristic inliner")
 
 // clang-format off
 enum class InlineCostFeatureIndex : size_t {
@@ -103,28 +98,27 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
 // programmatically, and serves as workaround to inability of inserting comments
 // in macros.
 #define INLINE_FEATURE_ITERATOR(M)                                             \
-  M(int64_t, ScalarShape, callee_basic_block_count,                            \
+  M(int64_t, {1}, callee_basic_block_count,                                    \
     "number of basic blocks of the callee")                                    \
-  M(int64_t, ScalarShape, callsite_height,                                     \
+  M(int64_t, {1}, callsite_height,                                             \
     "position of the call site in the original call graph - measured from "    \
     "the farthest SCC")                                                        \
-  M(int64_t, ScalarShape, node_count,                                          \
+  M(int64_t, {1}, node_count,                                                  \
     "total current number of defined functions in the module")                 \
-  M(int64_t, ScalarShape, nr_ctant_params,                                     \
+  M(int64_t, {1}, nr_ctant_params,                                             \
     "number of parameters in the call site that are constants")                \
-  M(int64_t, ScalarShape, cost_estimate,                                       \
-    "total cost estimate (threshold - free)")                                  \
-  M(int64_t, ScalarShape, edge_count, "total number of calls in the module")   \
-  M(int64_t, ScalarShape, caller_users,                                        \
+  M(int64_t, {1}, cost_estimate, "total cost estimate (threshold - free)")     \
+  M(int64_t, {1}, edge_count, "total number of calls in the module")           \
+  M(int64_t, {1}, caller_users,                                                \
     "number of module-internal users of the caller, +1 if the caller is "      \
     "exposed externally")                                                      \
-  M(int64_t, ScalarShape, caller_conditionally_executed_blocks,                \
+  M(int64_t, {1}, caller_conditionally_executed_blocks,                        \
     "number of blocks reached from a conditional instruction, in the caller")  \
-  M(int64_t, ScalarShape, caller_basic_block_count,                            \
+  M(int64_t, {1}, caller_basic_block_count,                                    \
     "number of basic blocks in the caller")                                    \
-  M(int64_t, ScalarShape, callee_conditionally_executed_blocks,                \
+  M(int64_t, {1}, callee_conditionally_executed_blocks,                        \
     "number of blocks reached from a conditional instruction, in the callee")  \
-  M(int64_t, ScalarShape, callee_users,                                        \
+  M(int64_t, {1}, callee_users,                                                \
     "number of module-internal users of the callee, +1 if the callee is "      \
     "exposed externally")
 
