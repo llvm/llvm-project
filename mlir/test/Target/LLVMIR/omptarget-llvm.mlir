@@ -18,26 +18,22 @@ llvm.func @_QPopenmp_target_data() {
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x i64], align 8
 // CHECK:         %[[VAL_3:.*]] = alloca i32, i64 1, align 4
 // CHECK:         br label %[[VAL_4:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_5:.*]]
-// CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:       [[VAL_4]]:
+// CHECK:         %[[VAL_5:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_5]], align 8
+// CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
 // CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_6]], align 8
-// CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_7]], align 8
-// CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
-// CHECK:         store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr %[[VAL_8]], align 4
-// CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr %[[VAL_11]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
-// CHECK:         br label %[[VAL_12:.*]]
-// CHECK:       omp.data.region:                                  ; preds = %[[VAL_4]]
+// CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
+// CHECK:         store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr %[[VAL_7]], align 4
+// CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_8]], ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         store i32 99, ptr %[[VAL_3]], align 4
-// CHECK:         br label %[[VAL_13:.*]]
-// CHECK:       omp.region.cont:                                  ; preds = %[[VAL_12]]
-// CHECK:         %[[VAL_14:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         %[[VAL_15:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         %[[VAL_16:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_14]], ptr %[[VAL_15]], ptr %[[VAL_16]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_11]], ptr %[[VAL_12]], ptr %[[VAL_13]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -62,27 +58,23 @@ llvm.func @_QPopenmp_target_data_region(%1 : !llvm.ptr<array<1024 x i32>>) {
 // CHECK:         %[[VAL_1:.*]] = alloca [1 x ptr], align 8
 // CHECK:         %[[VAL_2:.*]] = alloca [1 x i64], align 8
 // CHECK:         br label %[[VAL_3:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_4:.*]]
-// CHECK:         %[[VAL_5:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_6:.*]], ptr %[[VAL_5]], align 8
-// CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_6]], ptr %[[VAL_7]], align 8
-// CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
-// CHECK:         store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr %[[VAL_8]], align 4
-// CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr %[[VAL_11]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
-// CHECK:         br label %[[VAL_12:.*]]
-// CHECK:       omp.data.region:                                  ; preds = %[[VAL_3]]
-// CHECK:         %[[VAL_13:.*]] = getelementptr [1024 x i32], ptr %[[VAL_6]], i32 0, i64 0
-// CHECK:         store i32 99, ptr %[[VAL_13]], align 4
-// CHECK:         br label %[[VAL_14:.*]]
-// CHECK:       omp.region.cont:                                  ; preds = %[[VAL_12]]
-// CHECK:         %[[VAL_15:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         %[[VAL_16:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         %[[VAL_17:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_15]], ptr %[[VAL_16]], ptr %[[VAL_17]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:       [[VAL_3]]:
+// CHECK:         %[[VAL_4:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         store ptr %[[VAL_5:.*]], ptr %[[VAL_4]], align 8
+// CHECK:         %[[VAL_6:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         store ptr %[[VAL_5]], ptr %[[VAL_6]], align 8
+// CHECK:         %[[VAL_7:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
+// CHECK:         store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr %[[VAL_7]], align 4
+// CHECK:         %[[VAL_8:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_8]], ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         %[[VAL_11:.*]] = getelementptr [1024 x i32], ptr %[[VAL_5]], i32 0, i64 0
+// CHECK:         store i32 99, ptr %[[VAL_11]], align 4
+// CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
+// CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
+// CHECK:         %[[VAL_14:.*]] = getelementptr inbounds [1 x i64], ptr %[[VAL_2]], i32 0, i32 0
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr %[[VAL_14]], ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----

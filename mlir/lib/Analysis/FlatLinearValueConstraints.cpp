@@ -917,7 +917,7 @@ unsigned FlatLinearValueConstraints::insertVar(VarKind kind, unsigned pos,
   unsigned num = vals.size();
   unsigned absolutePos = IntegerPolyhedron::insertVar(kind, pos, num);
 
-  // If a Value is provided, insert it; otherwise use None.
+  // If a Value is provided, insert it; otherwise use std::nullopt.
   for (unsigned i = 0; i < num; ++i)
     values.insert(values.begin() + absolutePos + i,
                   vals[i] ? std::optional<Value>(vals[i]) : std::nullopt);

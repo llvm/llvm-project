@@ -658,7 +658,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL, CallInst *CI,
   if (isConstantIntVector(Mask)) {
     unsigned MemIndex = 0;
     VResult = PoisonValue::get(VecType);
-    SmallVector<int, 16> ShuffleMask(VectorWidth, UndefMaskElem);
+    SmallVector<int, 16> ShuffleMask(VectorWidth, PoisonMaskElem);
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       Value *InsertElt;
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue()) {

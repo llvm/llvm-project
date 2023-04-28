@@ -5,7 +5,7 @@ define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr undef, i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <3 x i32> <i32 0, i32 undef, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <3 x i32> <i32 0, i32 poison, i32 1>
 ; CHECK-NEXT:    store <3 x float> [[TMP3]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -219,9 +219,13 @@ def riscv_vfcvt_rm_x_f_vl : SDNode<"RISCVISD::VFCVT_RM_X_F_VL", SDT_RISCVFP2IOp_
 def riscv_vfcvt_rtz_xu_f_vl : SDNode<"RISCVISD::VFCVT_RTZ_XU_F_VL", SDT_RISCVFP2IOp_VL>;
 def riscv_vfcvt_rtz_x_f_vl  : SDNode<"RISCVISD::VFCVT_RTZ_X_F_VL",  SDT_RISCVFP2IOp_VL>;
 
+def riscv_strict_vfcvt_rm_x_f_vl : SDNode<"RISCVISD::STRICT_VFCVT_RM_X_F_VL", SDT_RISCVFP2IOp_RM_VL, [SDNPHasChain]>;
 def riscv_strict_vfcvt_rtz_xu_f_vl : SDNode<"RISCVISD::STRICT_VFCVT_RTZ_XU_F_VL", SDT_RISCVFP2IOp_VL, [SDNPHasChain]>;
 def riscv_strict_vfcvt_rtz_x_f_vl  : SDNode<"RISCVISD::STRICT_VFCVT_RTZ_X_F_VL",  SDT_RISCVFP2IOp_VL, [SDNPHasChain]>;
 
+def any_riscv_vfcvt_rm_x_f_vl : PatFrags<(ops node:$src, node:$mask, node:$vl, node:$rm),
+                            [(riscv_vfcvt_rm_x_f_vl node:$src, node:$mask, node:$vl, node:$rm),
+                             (riscv_strict_vfcvt_rm_x_f_vl node:$src, node:$mask, node:$vl, node:$rm)]>;
 def any_riscv_vfcvt_rtz_xu_f_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
                             [(riscv_vfcvt_rtz_xu_f_vl node:$src, node:$mask, node:$vl),
                              (riscv_strict_vfcvt_rtz_xu_f_vl node:$src, node:$mask, node:$vl)]>;
@@ -246,6 +250,11 @@ def any_riscv_uint_to_fp_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
                              (riscv_strict_uint_to_fp_vl node:$src, node:$mask, node:$vl)]>;
 
 def riscv_vfround_noexcept_vl: SDNode<"RISCVISD::VFROUND_NOEXCEPT_VL", SDT_RISCVFPUnOp_VL>;
+def riscv_strict_vfround_noexcept_vl: SDNode<"RISCVISD::STRICT_VFROUND_NOEXCEPT_VL", SDT_RISCVFPUnOp_VL, [SDNPHasChain]>;
+
+def any_riscv_vfround_noexcept_vl : PatFrags<(ops node:$src, node:$mask, node:$vl),
+                        [(riscv_vfround_noexcept_vl node:$src, node:$mask, node:$vl),
+                         (riscv_strict_vfround_noexcept_vl node:$src, node:$mask, node:$vl)]>;
 
 def riscv_setcc_vl : SDNode<"RISCVISD::SETCC_VL", SDT_RISCVSETCCOP_VL>;
 def riscv_strict_fsetcc_vl : SDNode<"RISCVISD::STRICT_FSETCC_VL", SDT_RISCVSETCCOP_VL, [SDNPHasChain]>;
@@ -986,7 +995,7 @@ multiclass VPatConvertFP2IVL_V<SDPatternOperator vop, string instruction_name> {
   }
 }
 
-multiclass VPatConvertFP2I_RM_VL_V<SDNode vop, string instruction_name> {
+multiclass VPatConvertFP2I_RM_VL_V<SDPatternOperator vop, string instruction_name> {
   foreach fvti = AllFloatVectors in {
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     def : Pat<(ivti.Vector (vop (fvti.Vector fvti.RegClass:$rs1),
@@ -1927,8 +1936,8 @@ foreach vti = AllFloatVectors in {
                  TAIL_AGNOSTIC)>;
 
   // Rounding without exception to implement nearbyint.
-  def : Pat<(riscv_vfround_noexcept_vl (vti.Vector vti.RegClass:$rs1),
-                                       (vti.Mask V0), VLOpFrag),
+  def : Pat<(any_riscv_vfround_noexcept_vl (vti.Vector vti.RegClass:$rs1),
+                                           (vti.Mask V0), VLOpFrag),
             (!cast<Instruction>("PseudoVFROUND_NOEXCEPT_V_" # vti.LMul.MX #"_MASK")
                   (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
@@ -2032,7 +2041,7 @@ foreach fvti = AllFloatVectors in {
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFCVT_XU_F_V">;
   defm : VPatConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
   defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFCVT_RM_XU_F_V">;
-  defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_x_f_vl, "PseudoVFCVT_RM_X_F_V">;
+  defm : VPatConvertFP2I_RM_VL_V<any_riscv_vfcvt_rm_x_f_vl, "PseudoVFCVT_RM_X_F_V">;
 
   defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFCVT_RTZ_XU_F_V">;
   defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFCVT_RTZ_X_F_V">;

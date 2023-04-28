@@ -958,10 +958,14 @@ getAssignFnsForCC(CallingConv::ID CC, const SITargetLowering &TLI) {
 }
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
-                              bool IsTailCall) {
+                              bool IsTailCall, CallingConv::ID CC) {
   assert(!(IsIndirect && IsTailCall) && "Indirect calls can't be tail calls, "
                                         "because the address can be divergent");
-  return IsTailCall ? AMDGPU::SI_TCRETURN : AMDGPU::G_SI_CALL;
+  if (!IsTailCall)
+    return AMDGPU::G_SI_CALL;
+
+  return CC == CallingConv::AMDGPU_Gfx ? AMDGPU::SI_TCRETURN_GFX :
+                                         AMDGPU::SI_TCRETURN;
 }
 
 // Add operands to call instruction to track the callee.
@@ -1186,7 +1190,7 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!IsSibCall)
     CallSeqStart = MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKUP);
 
-  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true);
+  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true, CalleeCC);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;
@@ -1350,7 +1354,7 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
-  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
+  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), false, Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.addDef(TRI->getReturnAddressReg(MF));

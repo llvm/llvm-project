@@ -68,3 +68,24 @@ namespace no_early_substitution {
     C();
   }
 }
+
+namespace GH62362 {
+  template<typename T>
+    concept C = true;
+  template <typename T> struct Test {
+    Test()
+      requires(C<T>);
+  };
+  struct Bar : public Test<int> {
+    using Test<int>::Test;
+  };
+  template <>
+    struct Test<void> : public Test<int> {
+      using Test<int>::Test;
+    };
+
+  void foo() {
+    Bar();
+    Test<void>();
+  }
+}

@@ -11,7 +11,7 @@
   target triple = "armv8-unknown-linux"
   
   ; Function Attrs: uwtable
-  define i32 @main() #0 !dbg !6 {
+  define i32 @main() !dbg !6 {
   entry:
     %c = alloca i32, align 4
     tail call void @llvm.dbg.value(metadata i32 13, metadata !11, metadata !DIExpression()), !dbg !13
@@ -24,14 +24,9 @@
     ret i32 %c.0.c.0., !dbg !16
   }
   
-  declare i32 @_Z4funcv() #1
+  declare i32 @_Z4funcv()
   
-  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-  declare void @llvm.dbg.value(metadata, metadata, metadata) #2
-  
-  attributes #0 = { uwtable "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #1 = { "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4}

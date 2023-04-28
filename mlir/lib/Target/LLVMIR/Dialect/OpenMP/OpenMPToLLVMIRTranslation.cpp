@@ -1424,7 +1424,6 @@ static LogicalResult
 convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
   unsigned numMapOperands;
-  bool mapperFunc = false;
   llvm::Value *ifCond = nullptr;
   int64_t deviceID = llvm::omp::OMP_DEVICEID_UNDEF;
   SmallVector<Value> mapOperands;
@@ -1471,7 +1470,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             numMapOperands = enterDataOp.getMapOperands().size();
             mapOperands = enterDataOp.getMapOperands();
             mapTypes = enterDataOp.getMapTypes();
-            mapperFunc = true;
             return success();
           })
           .Case([&](omp::ExitDataOp exitDataOp) {
@@ -1525,18 +1523,18 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     // DataOp has only one region associated with it.
     auto &region = cast<omp::DataOp>(op).getRegion();
     builder.restoreIP(codeGenIP);
-    convertOmpOpRegions(region, "omp.data.region", builder, moduleTranslation,
-                        bodyGenStatus);
+    bodyGenStatus = inlineConvertOmpRegions(region, "omp.data.region", builder,
+                                            moduleTranslation);
   };
 
   if (isa<omp::DataOp>(op)) {
     builder.restoreIP(ompBuilder->createTargetData(
         ompLoc, builder.saveIP(), mapTypeFlags, mapNames, mapperAllocas,
-        mapperFunc, deviceID, ifCond, processMapOpCB, bodyCB));
+        /*IsBegin=*/false, deviceID, ifCond, processMapOpCB, bodyCB));
   } else {
     builder.restoreIP(ompBuilder->createTargetData(
         ompLoc, builder.saveIP(), mapTypeFlags, mapNames, mapperAllocas,
-        mapperFunc, deviceID, ifCond, processMapOpCB));
+        isa<omp::EnterDataOp>(op), deviceID, ifCond, processMapOpCB));
   }
 
   if (failed(processMapOpStatus))
@@ -1549,6 +1547,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 /// be passed as flags to the frontend, otherwise they are set to default
 LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                                LLVM::ModuleTranslation &moduleTranslation) {
+  if (!cast<mlir::ModuleOp>(op))
+    return failure();
+  
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   ompBuilder->createGlobalFlag(

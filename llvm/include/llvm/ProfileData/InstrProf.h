@@ -330,7 +330,8 @@ enum class instrprof_error {
   compress_failed,
   uncompress_failed,
   empty_raw_profile,
-  zlib_unavailable
+  zlib_unavailable,
+  raw_profile_version_mismatch
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -362,15 +363,18 @@ public:
   instrprof_error get() const { return Err; }
   const std::string &getMessage() const { return Msg; }
 
-  /// Consume an Error and return the raw enum value contained within it. The
-  /// Error must either be a success value, or contain a single InstrProfError.
-  static instrprof_error take(Error E) {
+  /// Consume an Error and return the raw enum value contained within it, and
+  /// the optional error message. The Error must either be a success value, or
+  /// contain a single InstrProfError.
+  static std::pair<instrprof_error, std::string> take(Error E) {
     auto Err = instrprof_error::success;
-    handleAllErrors(std::move(E), [&Err](const InstrProfError &IPE) {
+    std::string Msg = "";
+    handleAllErrors(std::move(E), [&Err, &Msg](const InstrProfError &IPE) {
       assert(Err == instrprof_error::success && "Multiple errors encountered");
       Err = IPE.get();
+      Msg = IPE.getMessage();
     });
-    return Err;
+    return {Err, Msg};
   }
 
   static char ID;

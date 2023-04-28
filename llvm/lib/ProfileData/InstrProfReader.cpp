@@ -532,7 +532,13 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     const RawInstrProf::Header &Header) {
   Version = swap(Header.Version);
   if (GET_VERSION(Version) != RawInstrProf::Version)
-    return error(instrprof_error::unsupported_version);
+    return error(instrprof_error::raw_profile_version_mismatch,
+                 ("Profile uses raw profile format version = " +
+                  Twine(GET_VERSION(Version)) +
+                  "; expected version = " + Twine(RawInstrProf::Version) +
+                  "\nPLEASE update this tool to version in the raw profile, or "
+                  "regenerate raw profile with expected version.")
+                     .str());
   if (useDebugInfoCorrelate() && !Correlator)
     return error(instrprof_error::missing_debug_info_for_correlation);
   if (!useDebugInfoCorrelate() && Correlator)
@@ -1199,7 +1205,8 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
   if (Error E = Index->populateSymtab(*NewSymtab)) {
-    consumeError(error(InstrProfError::take(std::move(E))));
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    consumeError(error(ErrCode, Msg));
   }
 
   Symtab = std::move(NewSymtab);

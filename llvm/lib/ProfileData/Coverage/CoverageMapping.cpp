@@ -249,7 +249,7 @@ Error CoverageMapping::loadFunctionRecord(
   std::vector<uint64_t> Counts;
   if (Error E = ProfileReader.getFunctionCounts(Record.FunctionName,
                                                 Record.FunctionHash, Counts)) {
-    instrprof_error IPE = InstrProfError::take(std::move(E));
+    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
     if (IPE == instrprof_error::hash_mismatch) {
       FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
                                       Record.FunctionHash);
