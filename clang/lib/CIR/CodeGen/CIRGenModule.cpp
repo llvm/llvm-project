@@ -90,11 +90,39 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
-    : builder(context), astCtx(astctx), langOpts(astctx.getLangOpts()),
+    : builder(context, *this), astCtx(astctx), langOpts(astctx.getLangOpts()),
       codeGenOpts(CGO),
       theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
       target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
       VTables{*this} {
+
+  // Initialize the type cache.
+  VoidTy = ::mlir::IntegerType::get(builder.getContext(), 8);
+  Int8Ty = ::mlir::IntegerType::get(builder.getContext(), 8);
+  Int16Ty = ::mlir::IntegerType::get(builder.getContext(), 16);
+  Int32Ty = ::mlir::IntegerType::get(builder.getContext(), 32);
+  Int64Ty = ::mlir::IntegerType::get(builder.getContext(), 64);
+  // TODO: HalfTy
+  // TODO: BFloatTy
+  FloatTy = builder.getF32Type();
+  DoubleTy = builder.getF64Type();
+  // TODO: PointerWidthInBits
+  // TODO: PointerAlignInBytes
+  // TODO: SizeSizeInBytes
+  // TODO: IntAlignInBytes
+  CharTy = ::mlir::IntegerType::get(builder.getContext(),
+                                    astCtx.getTargetInfo().getCharWidth());
+  IntTy = ::mlir::IntegerType::get(builder.getContext(),
+                                   astCtx.getTargetInfo().getIntWidth());
+  IntPtrTy = ::mlir::IntegerType::get(
+      builder.getContext(), astCtx.getTargetInfo().getMaxPointerWidth());
+  Int8PtrTy = builder.getPointerTo(Int8Ty);
+  Int8PtrPtrTy = builder.getPointerTo(Int8PtrTy);
+  // TODO: AllocaInt8PtrTy
+  // TODO: GlobalsInt8PtrTy
+  // TODO: ConstGlobalsPtrTy
+  // TODO: ASTAllocaAddressSpace
+
   mlir::cir::sob::SignedOverflowBehavior sob;
   switch (langOpts.getSignedOverflowBehavior()) {
   case clang::LangOptions::SignedOverflowBehaviorTy::SOB_Defined:

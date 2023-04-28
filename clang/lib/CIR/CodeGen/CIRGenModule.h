@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenVTables.h"
 #include "CIRGenValue.h"
@@ -53,7 +54,7 @@ enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 /// This will emit operations that are specific to C(++)/ObjC(++) language,
 /// preserving the semantics of the language and (hopefully) allow to perform
 /// accurate analysis and transformation based on these high level semantics.
-class CIRGenModule {
+class CIRGenModule : public CIRGenTypeCache {
   CIRGenModule(CIRGenModule &) = delete;
   CIRGenModule &operator=(CIRGenModule &) = delete;
 

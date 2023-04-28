@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenModule.h"
+#include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
 #include "EHScopeStack.h"
 
@@ -52,7 +53,7 @@ namespace cir {
 enum TypeEvaluationKind { TEK_Scalar, TEK_Complex, TEK_Aggregate };
 struct CGCoroData;
 
-class CIRGenFunction {
+class CIRGenFunction : public CIRGenTypeCache {
 public:
   CIRGenModule &CGM;
 

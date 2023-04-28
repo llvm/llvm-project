@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRGenTypeCache.h"
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -23,12 +24,14 @@ namespace cir {
 class CIRGenFunction;
 
 class CIRGenBuilderTy : public mlir::OpBuilder {
+  const CIRGenTypeCache &typeCache;
   bool IsFPConstrained = false;
   fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
   llvm::RoundingMode DefaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
 public:
-  CIRGenBuilderTy(mlir::MLIRContext &C) : mlir::OpBuilder(&C) {}
+  CIRGenBuilderTy(mlir::MLIRContext &C, const CIRGenTypeCache &tc)
+      : mlir::OpBuilder(&C), typeCache(tc) {}
 
   //
   // Floating point specific helpers
@@ -124,9 +127,9 @@ public:
   // Type helpers
   // ------------
   //
-  mlir::Type getInt8Ty() { return mlir::IntegerType::get(getContext(), 8); }
-  mlir::Type getInt32Ty() { return mlir::IntegerType::get(getContext(), 32); }
-  mlir::Type getInt64Ty() { return mlir::IntegerType::get(getContext(), 64); }
+  mlir::Type getInt8Ty() { return typeCache.Int8Ty; }
+  mlir::Type getInt32Ty() { return typeCache.Int32Ty; }
+  mlir::Type getInt64Ty() { return typeCache.Int64Ty; }
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
@@ -140,10 +143,10 @@ public:
 
   // Fetch the type representing a pointer to integer values.
   mlir::cir::PointerType getInt8PtrTy(unsigned AddrSpace = 0) {
-    return mlir::cir::PointerType::get(getContext(), getInt8Ty());
+    return typeCache.Int8PtrTy;
   }
   mlir::cir::PointerType getInt32PtrTy(unsigned AddrSpace = 0) {
-    return mlir::cir::PointerType::get(getContext(), getInt32Ty());
+    return mlir::cir::PointerType::get(getContext(), typeCache.Int32Ty);
   }
   mlir::cir::PointerType getPointerTo(mlir::Type ty,
                                       unsigned addressSpace = 0) {
