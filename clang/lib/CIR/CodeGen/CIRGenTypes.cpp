@@ -667,7 +667,15 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
 
   case Type::Atomic: {
-    assert(0 && "not implemented");
+    QualType valueType = cast<AtomicType>(Ty)->getValueType();
+    ResultType = convertTypeForMem(valueType);
+
+    // Pad out to the inflated size if necessary.
+    uint64_t valueSize = Context.getTypeSize(valueType);
+    uint64_t atomicSize = Context.getTypeSize(Ty);
+    if (valueSize != atomicSize) {
+      llvm_unreachable("NYI");
+    }
     break;
   }
   case Type::Pipe: {
