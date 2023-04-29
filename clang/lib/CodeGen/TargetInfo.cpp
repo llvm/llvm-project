@@ -125,7 +125,7 @@ SwiftABIInfo::~SwiftABIInfo() = default;
 /// registers when expanded?
 ///
 /// This is intended to be the basis of a reasonable basic implementation
-/// of should{Pass,Return}IndirectlyForSwift.
+/// of should{Pass,Return}Indirectly.
 ///
 /// For most targets, a limit of four total registers is reasonable; this
 /// limits the amount of code required in order to move around the value
@@ -134,15 +134,14 @@ SwiftABIInfo::~SwiftABIInfo() = default;
 /// immediately within the callee.  But some targets may need to further
 /// limit the register count due to an inability to support that many
 /// return registers.
-static bool occupiesMoreThan(CodeGenTypes &cgt,
-                             ArrayRef<llvm::Type*> scalarTypes,
-                             unsigned maxAllRegisters) {
+bool SwiftABIInfo::occupiesMoreThan(ArrayRef<llvm::Type *> scalarTypes,
+                                    unsigned maxAllRegisters) const {
   unsigned intCount = 0, fpCount = 0;
   for (llvm::Type *type : scalarTypes) {
     if (type->isPointerTy()) {
       intCount++;
     } else if (auto intTy = dyn_cast<llvm::IntegerType>(type)) {
-      auto ptrWidth = cgt.getTarget().getPointerWidth(LangAS::Default);
+      auto ptrWidth = CGT.getTarget().getPointerWidth(LangAS::Default);
       intCount += (intTy->getBitWidth() + ptrWidth - 1) / ptrWidth;
     } else {
       assert(type->isVectorTy() || type->isFloatingPointTy());
@@ -155,7 +154,7 @@ static bool occupiesMoreThan(CodeGenTypes &cgt,
 
 bool SwiftABIInfo::shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
                                         bool AsReturnValue) const {
-  return occupiesMoreThan(CGT, ComponentTys, /*total=*/4);
+  return occupiesMoreThan(ComponentTys, /*total=*/4);
 }
 
 bool SwiftABIInfo::isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
@@ -1248,7 +1247,7 @@ public:
     // integer registers and three fp registers.  Oddly, it'll use up to
     // four vector registers for vectors, but those can overlap with the
     // scalar registers.
-    return occupiesMoreThan(CGT, ComponentTys, /*total=*/3);
+    return occupiesMoreThan(ComponentTys, /*total=*/3);
   }
 };
 
