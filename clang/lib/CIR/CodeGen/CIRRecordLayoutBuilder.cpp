@@ -51,6 +51,7 @@ struct CIRRecordLowering final {
                     bool isPacked);
   // Short helper routines.
   void lower(bool nonVirtualBaseType);
+  void lowerUnion();
 
   void computeVolatileBitfields();
   void accumulateBases();
@@ -82,6 +83,19 @@ struct CIRRecordLowering final {
 
   void calculateZeroInit();
 
+  CharUnits getSize(mlir::Type Ty) {
+    return CharUnits::fromQuantity(layout.getTypeSize(Ty));
+  }
+  CharUnits getAlignment(mlir::Type Ty) {
+    return CharUnits::fromQuantity(layout.getTypeABIAlignment(Ty));
+  }
+  bool isZeroInitializable(const FieldDecl *FD) {
+    return cirGenTypes.isZeroInitializable(FD->getType());
+  }
+  bool isZeroInitializable(const RecordDecl *RD) {
+    return cirGenTypes.isZeroInitializable(RD);
+  }
+
   mlir::Type getCharType() {
     return mlir::IntegerType::get(&cirGenTypes.getMLIRContext(),
                                   astContext.getCharWidth());
@@ -92,8 +106,8 @@ struct CIRRecordLowering final {
     mlir::Type type = getCharType();
     return numberOfChars == CharUnits::One()
                ? type
-               : mlir::RankedTensorType::get({0, numberOfChars.getQuantity()},
-                                             type);
+               : mlir::cir::ArrayType::get(type.getContext(), type,
+                                           numberOfChars.getQuantity());
   }
 
   // Gets the llvm Basesubobject type from a CXXRecordDecl.
@@ -141,6 +155,7 @@ struct CIRRecordLowering final {
   llvm::DenseMap<const FieldDecl *, int> bitFields;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> virtualBases;
+  mlir::DataLayout layout;
   bool IsZeroInitializable : 1;
   bool IsZeroInitializableAsBase : 1;
   bool isPacked : 1;
@@ -158,12 +173,14 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       astContext{cirGenTypes.getContext()}, recordDecl{recordDecl},
       cxxRecordDecl{llvm::dyn_cast<CXXRecordDecl>(recordDecl)},
       astRecordLayout{cirGenTypes.getContext().getASTRecordLayout(recordDecl)},
-      IsZeroInitializable(true), IsZeroInitializableAsBase(true),
-      isPacked{isPacked} {}
+      layout{cirGenTypes.getModule().getModule()}, IsZeroInitializable(true),
+      IsZeroInitializableAsBase(true), isPacked{isPacked} {}
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   if (recordDecl->isUnion()) {
-    llvm_unreachable("NYI");
+    lowerUnion();
+    computeVolatileBitfields();
+    return;
   }
 
   CharUnits Size = nonVirtualBaseType ? astRecordLayout.getNonVirtualSize()
@@ -196,6 +213,64 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   // TODO: support zeroInit
   fillOutputFields();
   computeVolatileBitfields();
+}
+
+void CIRRecordLowering::lowerUnion() {
+  CharUnits LayoutSize = astRecordLayout.getSize();
+  mlir::Type StorageType = nullptr;
+  bool SeenNamedMember = false;
+  // Iterate through the fields setting bitFieldInfo and the Fields array. Also
+  // locate the "most appropriate" storage type.  The heuristic for finding the
+  // storage type isn't necessary, the first (non-0-length-bitfield) field's
+  // type would work fine and be simpler but would be different than what we've
+  // been doing and cause lit tests to change.
+  for (const auto *Field : recordDecl->fields()) {
+    if (Field->isBitField()) {
+      if (Field->isZeroLengthBitField(astContext))
+        continue;
+      llvm_unreachable("NYI");
+    }
+    fields[Field->getCanonicalDecl()] = 0;
+    auto FieldType = getStorageType(Field);
+    // Compute zero-initializable status.
+    // This union might not be zero initialized: it may contain a pointer to
+    // data member which might have some exotic initialization sequence.
+    // If this is the case, then we aught not to try and come up with a "better"
+    // type, it might not be very easy to come up with a Constant which
+    // correctly initializes it.
+    if (!SeenNamedMember) {
+      SeenNamedMember = Field->getIdentifier();
+      if (!SeenNamedMember)
+        if (const auto *FieldRD = Field->getType()->getAsRecordDecl())
+          SeenNamedMember = FieldRD->findFirstNamedDataMember();
+      if (SeenNamedMember && !isZeroInitializable(Field)) {
+        IsZeroInitializable = IsZeroInitializableAsBase = false;
+        StorageType = FieldType;
+      }
+    }
+    // Because our union isn't zero initializable, we won't be getting a better
+    // storage type.
+    if (!IsZeroInitializable)
+      continue;
+
+    // Conditionally update our storage type if we've got a new "better" one.
+    if (!StorageType || getAlignment(FieldType) > getAlignment(StorageType) ||
+        (getAlignment(FieldType) == getAlignment(StorageType) &&
+         getSize(FieldType) > getSize(StorageType)))
+      StorageType = FieldType;
+  }
+  // If we have no storage type just pad to the appropriate size and return.
+  if (!StorageType)
+    return appendPaddingBytes(LayoutSize);
+  // If our storage size was bigger than our required size (can happen in the
+  // case of packed bitfields on Itanium) then just use an I8 array.
+  if (LayoutSize < getSize(StorageType))
+    StorageType = getByteArrayType(LayoutSize);
+  fieldTypes.push_back(StorageType);
+  appendPaddingBytes(LayoutSize - getSize(StorageType));
+  // Set packed if we need it.
+  if (LayoutSize % getAlignment(StorageType))
+    isPacked = true;
 }
 
 bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *Decl,
