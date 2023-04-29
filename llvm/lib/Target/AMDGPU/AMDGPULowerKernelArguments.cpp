@@ -86,7 +86,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
-  unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
   uint64_t ExplicitArgOffset = 0;
 
   for (Argument &Arg : F.args()) {
@@ -170,8 +169,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       AdjustedArgTy = V4Ty;
     }
 
-    ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
-                                   ArgPtr->getName() + ".cast");
     LoadInst *Load =
         Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
