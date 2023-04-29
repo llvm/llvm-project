@@ -156,7 +156,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   IRBuilder<> IRB(&LI);
   IRB.SetCurrentDebugLocation(LI.getDebugLoc());
 
-  unsigned LdBits = DL->getTypeStoreSize(LI.getType()) * 8;
+  unsigned LdBits = DL->getTypeStoreSizeInBits(LI.getType());
   auto IntNTy = Type::getIntNTy(LI.getContext(), LdBits);
 
   auto *NewPtr = IRB.CreateConstGEP1_64(
