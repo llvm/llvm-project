@@ -159,6 +159,8 @@ INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
 namespace __asan {
 
 void InitializePlatformInterceptors() {
+  __interception::SetErrorReportCallback(Report);
+
   // The interceptors were not designed to be removable, so we have to keep this
   // module alive for the life of the process.
   HMODULE pinned;
