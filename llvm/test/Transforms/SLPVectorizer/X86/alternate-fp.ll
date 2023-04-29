@@ -101,7 +101,7 @@ define <4 x float> @fmul_fdiv_v4f32_const(<4 x float> %a) {
 ; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; SLM-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.000000e+00, float 1.000000e+00>
 ; SLM-NEXT:    [[AB3:%.*]] = fmul float [[A3]], 2.000000e+00
-; SLM-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SLM-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; SLM-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[TMP3]], float [[A2]], i64 2
 ; SLM-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[AB3]], i64 3
 ; SLM-NEXT:    ret <4 x float> [[R3]]

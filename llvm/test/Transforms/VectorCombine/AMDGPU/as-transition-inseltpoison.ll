@@ -13,7 +13,7 @@ define protected amdgpu_kernel void @load_from_other_as(ptr nocapture nonnull %r
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[STRUCT_HOGE:%.*]], align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[E:%.*]] = shufflevector <1 x float> [[TMP1]], <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[E:%.*]] = shufflevector <1 x float> [[TMP1]], <1 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    store <4 x float> [[E]], ptr [[RESULTPTR:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;

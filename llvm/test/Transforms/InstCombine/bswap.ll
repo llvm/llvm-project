@@ -718,7 +718,7 @@ define i128 @shuf_16bytes(<16 x i8> %x) {
 
 define i32 @shuf_2bytes_widening(<2 x i8> %x) {
 ; CHECK-LABEL: @shuf_2bytes_widening(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
