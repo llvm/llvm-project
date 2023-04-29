@@ -400,10 +400,19 @@ void fir::factory::CharacterExprHelper::createLengthOneAssign(
   auto addr = lhs.getBuffer();
   auto toTy = fir::unwrapRefType(addr.getType());
   mlir::Value val = rhs.getBuffer();
-  if (fir::isa_ref_type(val.getType()))
-    val = builder.create<fir::LoadOp>(loc, val);
-  val = builder.createConvert(loc, toTy, val);
-  builder.create<fir::StoreOp>(loc, val, addr);
+  if (fir::isa_ref_type(val.getType())) {
+    auto fromCharLen1RefTy = builder.getRefType(getSingletonCharType(
+        builder.getContext(),
+        getCharacterKind(fir::unwrapRefType(val.getType()))));
+    val = builder.create<fir::LoadOp>(
+        loc, builder.createConvert(loc, fromCharLen1RefTy, val));
+  }
+  auto toCharLen1Ty =
+      getSingletonCharType(builder.getContext(), getCharacterKind(toTy));
+  val = builder.createConvert(loc, toCharLen1Ty, val);
+  builder.create<fir::StoreOp>(
+      loc, val,
+      builder.createConvert(loc, builder.getRefType(toCharLen1Ty), addr));
 }
 
 /// Returns the minimum of integer mlir::Value \p a and \b.
@@ -418,11 +427,29 @@ void fir::factory::CharacterExprHelper::createAssign(
     const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs) {
   auto rhsCstLen = getCompileTimeLength(rhs);
   auto lhsCstLen = getCompileTimeLength(lhs);
-  bool compileTimeSameLength =
-      (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) ||
-      (rhs.getLen() == lhs.getLen());
+  bool compileTimeSameLength = false;
+  bool isLengthOneAssign = false;
 
-  if (compileTimeSameLength && lhsCstLen && *lhsCstLen == 1) {
+  if (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) {
+    compileTimeSameLength = true;
+    if (*lhsCstLen == 1)
+      isLengthOneAssign = true;
+  } else if (rhs.getLen() == lhs.getLen()) {
+    compileTimeSameLength = true;
+
+    // If the length values are the same for LHS and RHS,
+    // then we can rely on the constant length deduced from
+    // any of the two types.
+    if (lhsCstLen && *lhsCstLen == 1)
+      isLengthOneAssign = true;
+    if (rhsCstLen && *rhsCstLen == 1)
+      isLengthOneAssign = true;
+
+    // We could have recognized constant operations here (e.g.
+    // two different arith.constant ops may produce the same value),
+    // but for now leave it to CSE to get rid of the duplicates.
+  }
+  if (isLengthOneAssign) {
     createLengthOneAssign(lhs, rhs);
     return;
   }
