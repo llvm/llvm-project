@@ -332,6 +332,60 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
   printer << ']';
 }
 
+// GPU Memory attributions functions shared by LaunchOp and GPUFuncOp.
+/// Parses a GPU function memory attribution.
+///
+/// memory-attribution ::= (`workgroup` `(` ssa-id-and-type-list `)`)?
+///                        (`private` `(` ssa-id-and-type-list `)`)?
+///
+/// Note that this function parses only one of the two similar parts, with the
+/// keyword provided as argument.
+static ParseResult
+parseAttributions(OpAsmParser &parser, StringRef keyword,
+                  SmallVectorImpl<OpAsmParser::Argument> &args) {
+  // If we could not parse the keyword, just assume empty list and succeed.
+  if (failed(parser.parseOptionalKeyword(keyword)))
+    return success();
+
+  return parser.parseArgumentList(args, OpAsmParser::Delimiter::Paren,
+                                  /*allowType=*/true);
+}
+
+/// Prints a GPU function memory attribution.
+static void printAttributions(OpAsmPrinter &p, StringRef keyword,
+                              ArrayRef<BlockArgument> values) {
+  if (values.empty())
+    return;
+
+  p << ' ' << keyword << '(';
+  llvm::interleaveComma(
+      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
+  p << ')';
+}
+
+/// Verifies a GPU function memory attribution.
+static LogicalResult verifyAttributions(Operation *op,
+                                        ArrayRef<BlockArgument> attributions,
+                                        gpu::AddressSpace memorySpace) {
+  for (Value v : attributions) {
+    auto type = v.getType().dyn_cast<MemRefType>();
+    if (!type)
+      return op->emitOpError() << "expected memref type in attribution";
+
+    // We can only verify the address space if it hasn't already been lowered
+    // from the AddressSpaceAttr to a target-specific numeric value.
+    auto addressSpace =
+        type.getMemorySpace().dyn_cast_or_null<gpu::AddressSpaceAttr>();
+    if (!addressSpace)
+      continue;
+    if (addressSpace.getValue() != memorySpace)
+      return op->emitOpError()
+             << "expected memory space " << stringifyAddressSpace(memorySpace)
+             << " in attribution";
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // AllReduceOp
 //===----------------------------------------------------------------------===//
@@ -439,7 +493,15 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value gridSizeX, Value gridSizeY, Value gridSizeZ,
                      Value getBlockSizeX, Value getBlockSizeY,
                      Value getBlockSizeZ, Value dynamicSharedMemorySize,
-                     Type asyncTokenType, ValueRange asyncDependencies) {
+                     Type asyncTokenType, ValueRange asyncDependencies,
+                     TypeRange workgroupAttributions,
+                     TypeRange privateAttributions) {
+  // Add a WorkGroup attribution attribute. This attribute is required to
+  // identify private attributions in the list of block argguments.
+  result.addAttribute(getNumWorkgroupAttributionsAttrName(),
+                      builder.getI64IntegerAttr(workgroupAttributions.size()));
+
+  // Add Op operands.
   result.addOperands(asyncDependencies);
   if (asyncTokenType)
     result.types.push_back(builder.getType<AsyncTokenType>());
@@ -450,14 +512,21 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
 
-  // Create a kernel body region with kNumConfigRegionAttributes + N arguments,
-  // where the first kNumConfigRegionAttributes arguments have `index` type and
-  // the rest have the same types as the data operands.
+  // Create a kernel body region with kNumConfigRegionAttributes + N memory
+  // attributions, where the first kNumConfigRegionAttributes arguments have
+  // `index` type and the rest have the same types as the data operands.
   Region *kernelRegion = result.addRegion();
   Block *body = new Block();
+  // TODO: Allow passing in proper locations here.
   for (unsigned i = 0; i < kNumConfigRegionAttributes; ++i)
     body->addArgument(builder.getIndexType(), result.location);
+  // Add WorkGroup & Private attributions to the region arguments.
+  for (Type argTy : workgroupAttributions)
+    body->addArgument(argTy, result.location);
+  for (Type argTy : privateAttributions)
+    body->addArgument(argTy, result.location);
   kernelRegion->push_back(body);
+  // Fill OperandSegmentSize Attribute.
   SmallVector<int32_t, 8> segmentSizes(8, 1);
   segmentSizes.front() = asyncDependencies.size();
   segmentSizes.back() = dynamicSharedMemorySize ? 1 : 0;
@@ -504,12 +573,17 @@ LogicalResult LaunchOp::verifyRegions() {
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
   if (!getBody().empty()) {
-    if (getBody().getNumArguments() !=
-        LaunchOp::kNumConfigOperands + getNumOperands() -
-            (getDynamicSharedMemorySize() ? 1 : 0) -
-            getAsyncDependencies().size())
+    if (getBody().getNumArguments() <
+        kNumConfigRegionAttributes + getNumWorkgroupAttributions())
       return emitOpError("unexpected number of region arguments");
   }
+
+  // Verify Attributions Address Spaces.
+  if (failed(verifyAttributions(getOperation(), getWorkgroupAttributions(),
+                                GPUDialect::getWorkgroupAddressSpace())) ||
+      failed(verifyAttributions(getOperation(), getPrivateAttributions(),
+                                GPUDialect::getPrivateAddressSpace())))
+    return failure();
 
   // Block terminators without successors are expected to exit the kernel region
   // and must be `gpu.terminator`.
@@ -563,10 +637,15 @@ void LaunchOp::print(OpAsmPrinter &p) {
     p << ' ' << getDynamicSharedMemorySizeKeyword() << ' '
       << getDynamicSharedMemorySize();
 
+  printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributions());
+  printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
+
   p << ' ';
+
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
-                              LaunchOp::getOperandSegmentSizeAttr()});
+                              LaunchOp::getOperandSegmentSizeAttr(),
+                              getNumWorkgroupAttributionsAttrName()});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -601,8 +680,9 @@ parseSizeAssignment(OpAsmParser &parser,
 
 /// Parses a Launch operation.
 /// operation ::= `gpu.launch` (`async` `[` ssa-id-list `]`)?
-//        `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
+///       `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
+///       memory-attribution
 ///       region attr-dict?
 /// ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
 ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -659,9 +739,12 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
-  // Introduce the body region and parse it. The region has
-  // kNumConfigRegionAttributes arguments that correspond to
-  // block/thread identifiers and grid/block sizes, all of the `index` type.
+  // Create the region arguments, it has kNumConfigRegionAttributes arguments
+  // that correspond to block/thread identifiers and grid/block sizes, all
+  // having `index` type, a variadic number of WorkGroup Attributions and
+  // a variadic number of Private Attributions. The number of WorkGroup
+  // Attributions is stored in the attr with name:
+  // LaunchOp::getNumWorkgroupAttributionsAttrName().
   Type index = parser.getBuilder().getIndexType();
   SmallVector<Type, LaunchOp::kNumConfigRegionAttributes> dataTypes(
       LaunchOp::kNumConfigRegionAttributes, index);
@@ -674,6 +757,27 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
     regionArguments.push_back(arg);
   }
 
+  Builder &builder = parser.getBuilder();
+  // Parse workgroup memory attributions.
+  if (failed(parseAttributions(parser, LaunchOp::getWorkgroupKeyword(),
+                               regionArguments)))
+    return failure();
+
+  // Store the number of operands we just parsed as the number of workgroup
+  // memory attributions.
+  unsigned numWorkgroupAttrs =
+      regionArguments.size() - LaunchOp::kNumConfigRegionAttributes;
+  result.addAttribute(LaunchOp::getNumWorkgroupAttributionsAttrName(),
+                      builder.getI64IntegerAttr(numWorkgroupAttrs));
+
+  // Parse private memory attributions.
+  if (failed(parseAttributions(parser, LaunchOp::getPrivateKeyword(),
+                               regionArguments)))
+    return failure();
+
+  // Introduce the body region and parse it. The region has
+  // kNumConfigRegionAttributes arguments that correspond to
+  // block/thread identifiers and grid/block sizes, all having `index` type.
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArguments) ||
       parser.parseOptionalAttrDict(result.attributes))
@@ -727,6 +831,25 @@ struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
 void LaunchOp::getCanonicalizationPatterns(RewritePatternSet &rewrites,
                                            MLIRContext *context) {
   rewrites.add<FoldLaunchArguments>(context);
+}
+
+/// Adds a new block argument that corresponds to buffers located in
+/// workgroup memory.
+BlockArgument LaunchOp::addWorkgroupAttribution(Type type, Location loc) {
+  auto attrName = getNumWorkgroupAttributionsAttrName();
+  auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
+  (*this)->setAttr(attrName,
+                   IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+  return getBody().insertArgument(
+      LaunchOp::kNumConfigRegionAttributes + attr.getInt(), type, loc);
+}
+
+/// Adds a new block argument that corresponds to buffers located in
+/// private memory.
+BlockArgument LaunchOp::addPrivateAttribution(Type type, Location loc) {
+  // Buffers on the private memory always come after buffers on the workgroup
+  // memory.
+  return getBody().addArgument(type, loc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -894,24 +1017,6 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
   body->getBlocks().push_back(entryBlock);
 }
 
-/// Parses a GPU function memory attribution.
-///
-/// memory-attribution ::= (`workgroup` `(` ssa-id-and-type-list `)`)?
-///                        (`private` `(` ssa-id-and-type-list `)`)?
-///
-/// Note that this function parses only one of the two similar parts, with the
-/// keyword provided as argument.
-static ParseResult
-parseAttributions(OpAsmParser &parser, StringRef keyword,
-                  SmallVectorImpl<OpAsmParser::Argument> &args) {
-  // If we could not parse the keyword, just assume empty list and succeed.
-  if (failed(parser.parseOptionalKeyword(keyword)))
-    return success();
-
-  return parser.parseArgumentList(args, OpAsmParser::Delimiter::Paren,
-                                  /*allowType=*/true);
-}
-
 /// Parses a GPU function.
 ///
 /// <operation> ::= `gpu.func` symbol-ref-id `(` argument-list `)`
@@ -985,17 +1090,6 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   return parser.parseRegion(*body, entryArgs);
 }
 
-static void printAttributions(OpAsmPrinter &p, StringRef keyword,
-                              ArrayRef<BlockArgument> values) {
-  if (values.empty())
-    return;
-
-  p << ' ' << keyword << '(';
-  llvm::interleaveComma(
-      values, p, [&p](BlockArgument v) { p << v << " : " << v.getType(); });
-  p << ')';
-}
-
 void GPUFuncOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
@@ -1023,28 +1117,6 @@ LogicalResult GPUFuncOp::verifyType() {
   if (isKernel() && getFunctionType().getNumResults() != 0)
     return emitOpError() << "expected void return type for kernel function";
 
-  return success();
-}
-
-static LogicalResult verifyAttributions(Operation *op,
-                                        ArrayRef<BlockArgument> attributions,
-                                        gpu::AddressSpace memorySpace) {
-  for (Value v : attributions) {
-    auto type = v.getType().dyn_cast<MemRefType>();
-    if (!type)
-      return op->emitOpError() << "expected memref type in attribution";
-
-    // We can only verify the address space if it hasn't already been lowered
-    // from the AddressSpaceAttr to a target-specific numeric value.
-    auto addressSpace =
-        type.getMemorySpace().dyn_cast_or_null<gpu::AddressSpaceAttr>();
-    if (!addressSpace)
-      continue;
-    if (addressSpace.getValue() != memorySpace)
-      return op->emitOpError()
-             << "expected memory space " << stringifyAddressSpace(memorySpace)
-             << " in attribution";
-  }
   return success();
 }
 
