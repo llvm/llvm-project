@@ -169,6 +169,7 @@ Changes to the RISC-V Backend
 * Added support for Zfa extension version 0.2.
 * Updated support experimental vector crypto extensions to version 0.5.1 of
   the specification.
+* Removed N extension (User-Level Interrupts) CSR names in the assembler.
 
 Changes to the WebAssembly Backend
 ----------------------------------
