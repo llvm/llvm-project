@@ -13791,6 +13791,11 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
+bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
+                                                             EVT VT) const {
+  return Subtarget->hasMVEIntegerOps() && isTypeLegal(VT);
+}
+
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   if (!Subtarget->hasNEON()) {
     if (Subtarget->isThumb1Only())
