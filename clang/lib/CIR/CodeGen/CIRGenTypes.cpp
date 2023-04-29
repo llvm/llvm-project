@@ -644,7 +644,13 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
 
   case Type::Enum: {
-    assert(0 && "not implemented");
+    const EnumDecl *ED = cast<EnumType>(Ty)->getDecl();
+    if (ED->isCompleteDefinition() || ED->isFixed())
+      return ConvertType(ED->getIntegerType());
+    // Return a placeholder 'i32' type.  This can be changed later when the
+    // type is defined (see UpdateCompletedType), but is likely to be the
+    // "right" answer.
+    ResultType = CGM.Int32Ty;
     break;
   }
 

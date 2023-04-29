@@ -1042,7 +1042,8 @@ public:
   void buildStoreOfScalar(mlir::Value value, LValue lvalue);
   void buildStoreOfScalar(mlir::Value Value, Address Addr, bool Volatile,
                           clang::QualType Ty, LValueBaseInfo BaseInfo,
-                          bool isNontemporal);
+                          bool isInit = false, bool isNontemporal = false);
+  void buildStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   mlir::Value buildToMemory(mlir::Value Value, clang::QualType Ty);
 

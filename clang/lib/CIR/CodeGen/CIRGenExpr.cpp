@@ -300,14 +300,14 @@ mlir::Value CIRGenFunction::buildToMemory(mlir::Value Value, QualType Ty) {
 }
 
 void CIRGenFunction::buildStoreOfScalar(mlir::Value value, LValue lvalue) {
-  // TODO: constant matrix type, volatile, non temporal, TBAA
+  // TODO: constant matrix type, volatile, no init, non temporal, TBAA
   buildStoreOfScalar(value, lvalue.getAddress(), false, lvalue.getType(),
-                     lvalue.getBaseInfo(), false);
+                     lvalue.getBaseInfo(), false, false);
 }
 
 void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
                                         bool Volatile, QualType Ty,
-                                        LValueBaseInfo BaseInfo,
+                                        LValueBaseInfo BaseInfo, bool isInit,
                                         bool isNontemporal) {
   // TODO(CIR): this has fallen out of date with codegen
 
@@ -337,6 +337,17 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
 
   if (UnimplementedFeature::tbaa())
     llvm_unreachable("NYI");
+}
+
+void CIRGenFunction::buildStoreOfScalar(mlir::Value value, LValue lvalue,
+                                        bool isInit) {
+  if (lvalue.getType()->isConstantMatrixType()) {
+    llvm_unreachable("NYI");
+  }
+
+  buildStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
+                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
+                     lvalue.isNontemporal());
 }
 
 /// Given an expression that represents a value lvalue, this
