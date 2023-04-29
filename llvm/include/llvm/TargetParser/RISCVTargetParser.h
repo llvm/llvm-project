@@ -15,16 +15,10 @@
 #define LLVM_TARGETPARSER_RISCVTARGETPARSER_H
 
 #include "llvm/ADT/StringRef.h"
-#include <vector>
 
 namespace llvm {
 
-class Triple;
-
 namespace RISCV {
-
-// We use 64 bits as the known part in the scalable vector types.
-static constexpr unsigned RVVBitsPerBlock = 64;
 
 enum CPUKind : unsigned {
 #define PROC(ENUM, NAME, DEFAULT_MARCH) CK_##ENUM,
