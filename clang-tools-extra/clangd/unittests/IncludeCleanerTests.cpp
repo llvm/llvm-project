@@ -45,8 +45,8 @@ using ::testing::Matcher;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
-Matcher<const Diag &> withFix(::testing::Matcher<Fix> FixMatcher) {
-  return Field(&Diag::Fixes, ElementsAre(FixMatcher));
+Matcher<const Diag &> withFix(std::vector<::testing::Matcher<Fix>> FixMatcheres) {
+  return Field(&Diag::Fixes, testing::UnorderedElementsAreArray(FixMatcheres));
 }
 
 MATCHER_P2(Diag, Range, Message,
@@ -60,6 +60,8 @@ MATCHER_P3(Fix, Range, Replacement, Message,
   return arg.Message == Message && arg.Edits.size() == 1 &&
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
+MATCHER_P(FixMessage, Message, "") { return arg.Message == Message; }
+
 
 std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
@@ -255,42 +257,51 @@ $insert_f[[]]$insert_vector[[]]
       UnorderedElementsAre(
           AllOf(Diag(MainFile.range("b"),
                      "No header providing \"b\" is directly included"),
-                withFix(Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
-                            "#include \"b.h\""))),
+                withFix({Fix(MainFile.range("insert_b"), "#include \"b.h\"\n",
+                             "#include \"b.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
-                withFix(Fix(MainFile.range("insert_d"),
-                            "#include \"dir/d.h\"\n", "#include \"dir/d.h\""))),
+                withFix({Fix(MainFile.range("insert_d"),
+                             "#include \"dir/d.h\"\n", "#include \"dir/d.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("f"),
                      "No header providing \"f\" is directly included"),
-                withFix(Fix(MainFile.range("insert_f"), "#include <f.h>\n",
-                            "#include <f.h>"))),
+                withFix({Fix(MainFile.range("insert_f"), "#include <f.h>\n",
+                             "#include <f.h>"),
+                         FixMessage("add all missing includes")})),
           AllOf(
               Diag(MainFile.range("foobar"),
                    "No header providing \"foobar\" is directly included"),
-              withFix(Fix(MainFile.range("insert_foobar"),
-                          "#include \"public.h\"\n", "#include \"public.h\""))),
+              withFix({Fix(MainFile.range("insert_foobar"),
+                           "#include \"public.h\"\n", "#include \"public.h\""),
+                       FixMessage("add all missing includes")})),
           AllOf(
               Diag(MainFile.range("vector"),
                    "No header providing \"std::vector\" is directly included"),
-              withFix(Fix(MainFile.range("insert_vector"),
-                          "#include <vector>\n", "#include <vector>"))),
+              withFix({Fix(MainFile.range("insert_vector"),
+                           "#include <vector>\n", "#include <vector>"),
+                       FixMessage("add all missing includes"),})),
           AllOf(Diag(MainFile.range("FOO"),
                      "No header providing \"FOO\" is directly included"),
-                withFix(Fix(MainFile.range("insert_foo"),
-                            "#include \"foo.h\"\n", "#include \"foo.h\""))),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("DEF"),
                      "No header providing \"Foo\" is directly included"),
-                withFix(Fix(MainFile.range("insert_foo"),
-                            "#include \"foo.h\"\n", "#include \"foo.h\""))),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("BAR"),
                      "No header providing \"BAR\" is directly included"),
-                withFix(Fix(MainFile.range("insert_foo"),
-                            "#include \"foo.h\"\n", "#include \"foo.h\""))),
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("Foo"),
                      "No header providing \"Foo\" is directly included"),
-                withFix(Fix(MainFile.range("insert_foo"),
-                            "#include \"foo.h\"\n", "#include \"foo.h\"")))));
+                withFix({Fix(MainFile.range("insert_foo"),
+                             "#include \"foo.h\"\n", "#include \"foo.h\""),
+                         FixMessage("add all missing includes")}))));
 }
 
 TEST(IncludeCleaner, IWYUPragmas) {
