@@ -1802,12 +1802,8 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (getLexer().getKind() != AsmToken::Percent) {
-    Error(getLoc(), "expected '%' for operand modifier");
+  if (parseToken(AsmToken::Percent, "expected '%' for operand modifier"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat '%'
 
   if (getLexer().getKind() != AsmToken::Identifier) {
     Error(getLoc(), "expected valid identifier for operand modifier");
@@ -1821,11 +1817,8 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   }
 
   getParser().Lex(); // Eat the identifier
-  if (getLexer().getKind() != AsmToken::LParen) {
-    Error(getLoc(), "expected '('");
+  if (parseToken(AsmToken::LParen, "expected '('"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat '('
 
   const MCExpr *SubExpr;
   if (getParser().parseParenExpression(SubExpr, E)) {
@@ -2159,12 +2152,8 @@ ParseFail:
 
 OperandMatchResultTy
 RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::LParen)) {
-    Error(getLoc(), "expected '('");
+  if (parseToken(AsmToken::LParen, "expected '('"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat '('
   Operands.push_back(RISCVOperand::createToken("(", getLoc()));
 
   if (parseRegister(Operands) != MatchOperand_Success) {
@@ -2172,12 +2161,8 @@ RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    Error(getLoc(), "expected ')'");
+  if (parseToken(AsmToken::RParen, "expected ')'"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat ')'
   Operands.push_back(RISCVOperand::createToken(")", getLoc()));
 
   return MatchOperand_Success;
@@ -2223,23 +2208,18 @@ RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
                                 ImmStart, ImmEnd, isRV64());
   }
 
-  if (getLexer().isNot(AsmToken::LParen)) {
-    Error(getLoc(), OptionalImmOp ? "expected '(' after optional integer offset"
-                                  : "expected '(' or optional integer offset");
+  if (parseToken(AsmToken::LParen,
+                 OptionalImmOp ? "expected '(' after optional integer offset"
+                               : "expected '(' or optional integer offset"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat '('
 
   if (parseRegister(Operands) != MatchOperand_Success) {
     Error(getLoc(), "expected register");
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    Error(getLoc(), "expected ')'");
+  if (parseToken(AsmToken::RParen, "expected ')'"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat ')'
 
   // Deferred Handling of non-zero offsets. This makes the error messages nicer.
   if (OptionalImmOp && !OptionalImmOp->isImmZero()) {
@@ -2322,13 +2302,10 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       return true;
   }
 
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    SMLoc Loc = getLexer().getLoc();
+  if (getParser().parseEOL("unexpected token")) {
     getParser().eatToEndOfStatement();
-    return Error(Loc, "unexpected token");
+    return true;
   }
-
-  getParser().Lex(); // Consume the EndOfStatement.
   return false;
 }
 
