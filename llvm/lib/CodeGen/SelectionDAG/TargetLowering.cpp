@@ -10319,8 +10319,10 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
 
     // Otherwise, select 0 if Src is NaN.
     SDValue ZeroInt = DAG.getConstant(0, dl, DstVT);
-    return DAG.getSelectCC(dl, Src, Src, ZeroInt, FpToInt,
-                           ISD::CondCode::SETUO);
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+    SDValue IsNan = DAG.getSetCC(dl, SetCCVT, Src, Src, ISD::CondCode::SETUO);
+    return DAG.getSelect(dl, DstVT, IsNan, ZeroInt, FpToInt);
   }
 
   SDValue MinIntNode = DAG.getConstant(MinInt, dl, DstVT);
@@ -10334,13 +10336,16 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
 
   SDValue Select = FpToInt;
 
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+
   // If Src ULT MinFloat, select MinInt. In particular, this also selects
   // MinInt if Src is NaN.
-  Select = DAG.getSelectCC(dl, Src, MinFloatNode, MinIntNode, Select,
-                           ISD::CondCode::SETULT);
+  SDValue ULT = DAG.getSetCC(dl, SetCCVT, Src, MinFloatNode, ISD::SETULT);
+  Select = DAG.getSelect(dl, DstVT, ULT, MinIntNode, Select);
   // If Src OGT MaxFloat, select MaxInt.
-  Select = DAG.getSelectCC(dl, Src, MaxFloatNode, MaxIntNode, Select,
-                           ISD::CondCode::SETOGT);
+  SDValue OGT = DAG.getSetCC(dl, SetCCVT, Src, MaxFloatNode, ISD::SETOGT);
+  Select = DAG.getSelect(dl, DstVT, OGT, MaxIntNode, Select);
 
   // In the unsigned case we are done, because we mapped NaN to MinInt, which
   // is already zero.
@@ -10349,7 +10354,8 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
 
   // Otherwise, select 0 if Src is NaN.
   SDValue ZeroInt = DAG.getConstant(0, dl, DstVT);
-  return DAG.getSelectCC(dl, Src, Src, ZeroInt, Select, ISD::CondCode::SETUO);
+  SDValue IsNan = DAG.getSetCC(dl, SetCCVT, Src, Src, ISD::CondCode::SETUO);
+  return DAG.getSelect(dl, DstVT, IsNan, ZeroInt, Select);
 }
 
 SDValue TargetLowering::expandVectorSplice(SDNode *Node,
