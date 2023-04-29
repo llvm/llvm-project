@@ -239,7 +239,9 @@ bool shouldInstrumentStack(const Triple &TargetTriple) {
 }
 
 bool shouldInstrumentWithCalls(const Triple &TargetTriple) {
-  return ClInstrumentWithCalls || TargetTriple.getArch() == Triple::x86_64;
+  return ClInstrumentWithCalls.getNumOccurrences()
+             ? ClInstrumentWithCalls
+             : TargetTriple.getArch() == Triple::x86_64;
 }
 
 bool mightUseStackSafetyAnalysis(bool DisableOptimization) {
