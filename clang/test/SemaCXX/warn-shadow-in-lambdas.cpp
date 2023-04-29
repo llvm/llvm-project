@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow -Wshadow-uncaptured-local %s
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -Wshadow-all %s
 // RUN: %clang_cc1 -std=c++17 -verify -fsyntax-only -Wshadow-all %s
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -Wshadow-all %s
 
 void foo(int param) { // expected-note 1+ {{previous declaration is here}}
   int var = 0; // expected-note 1+ {{previous declaration is here}}
@@ -145,4 +146,23 @@ void avoidWarningWhenRedefining() {
     // Don't warn on redefinitions.
     int b = 0; // expected-error {{redefinition of 'b'}}
   };
+}
+
+namespace GH61105 {
+void f() {
+  int y = 0;
+  int x = 0;
+#if __cplusplus >= 202002L
+  auto l1 = [y]<typename y>(y) { return 0; }; // expected-error {{declaration of 'y' shadows template parameter}} \
+                                              // expected-note {{template parameter is declared here}}
+  auto l2 = [=]<typename y>() { int a = y; return 0; }; // expected-error {{'y' does not refer to a value}} \
+                                                        // expected-note {{declared here}}
+  auto l3 = [&, y]<typename y, typename>(y) { int a = x; return 0; }; // expected-error {{declaration of 'y' shadows template parameter}} \
+                                                                      // expected-note {{template parameter is declared here}}
+  auto l4 = [x, y]<typename y, int x>() { return 0; }; // expected-error {{declaration of 'y' shadows template parameter}} \
+                                                       // expected-error {{declaration of 'x' shadows template parameter}} \
+                                                       // expected-note 2{{template parameter is declared here}}
+  auto l5 = []<typename y>(y) { return 0; }; // No diagnostic
+#endif
+}
 }
