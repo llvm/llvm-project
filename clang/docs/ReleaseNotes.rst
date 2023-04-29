@@ -157,6 +157,8 @@ Non-comprehensive list of changes in this release
 - A new builtin type trait ``__is_trivially_equaltiy_comparable`` has been added,
   which checks whether comparing two instances of a type is equivalent to
   ``memcmp(&lhs, &rhs, sizeof(T)) == 0``.
+- Clang now ignores null directives outside of the include guard when deciding
+  whether a file can be enabled for the multiple-include optimization.
 
 New Compiler Flags
 ------------------
