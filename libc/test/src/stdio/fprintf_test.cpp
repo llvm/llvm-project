@@ -34,8 +34,10 @@ using ::fread;
 } // namespace printf_test
 
 TEST(LlvmLibcFPrintfTest, WriteToFile) {
-  constexpr char FILENAME[] = "testdata/fprintf_output.test";
-  ::FILE *file = printf_test::fopen(FILENAME, "w");
+  const char *FILENAME = "fprintf_output.test";
+  auto FILE_PATH = libc_make_test_file_path(FILENAME);
+
+  ::FILE *file = printf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);
 
   int written;
@@ -55,7 +57,7 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
 
   ASSERT_EQ(0, printf_test::fclose(file));
 
-  file = printf_test::fopen(FILENAME, "r");
+  file = printf_test::fopen(FILE_PATH, "r");
   ASSERT_FALSE(file == nullptr);
 
   char data[50];
