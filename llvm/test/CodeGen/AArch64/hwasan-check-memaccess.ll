@@ -104,8 +104,8 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 ; CHECK-NEXT: .Ltmp6:
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: .Ltmp5:
-; CHECK-NEXT: lsr x16, x1, #56
-; CHECK-NEXT: cmp x16, #255
+; CHECK-NEXT: lsr x17, x1, #56
+; CHECK-NEXT: cmp x17, #255
 ; CHECK-NEXT: b.eq .Ltmp6
 ; CHECK-NEXT: stp x0, x1, [sp, #-256]!
 ; CHECK-NEXT: stp x29, x30, [sp, #232]
@@ -121,8 +121,8 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 ; CHECK-NEXT: .Ltmp8:
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: .Ltmp7:
-; CHECK-NEXT: lsr	x16, x1, #56
-; CHECK-NEXT: cmp	x16, #0
+; CHECK-NEXT: lsr	x17, x1, #56
+; CHECK-NEXT: cmp	x17, #0
 ; CHECK-NEXT: b.eq	.Ltmp8
 ; CHECK-NEXT: cmp	w16, #15
 ; CHECK-NEXT: b.hi	.Ltmp9
