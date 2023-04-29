@@ -30,10 +30,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
@@ -199,45 +196,7 @@ void MetaRename(Module &M,
   }
 }
 
-struct MetaRenamer : public ModulePass {
-  // Pass identification, replacement for typeid
-  static char ID;
-
-  MetaRenamer() : ModulePass(ID) {
-    initializeMetaRenamerPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool runOnModule(Module &M) override {
-    auto GetTLI = [this](Function &F) -> TargetLibraryInfo & {
-      return this->getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    };
-    MetaRename(M, GetTLI);
-    return true;
-  }
-};
-
 } // end anonymous namespace
-
-char MetaRenamer::ID = 0;
-
-INITIALIZE_PASS_BEGIN(MetaRenamer, "metarenamer",
-                      "Assign new names to everything", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(MetaRenamer, "metarenamer",
-                    "Assign new names to everything", false, false)
-
-//===----------------------------------------------------------------------===//
-//
-// MetaRenamer - Rename everything with metasyntactic names.
-//
-ModulePass *llvm::createMetaRenamerPass() {
-  return new MetaRenamer();
-}
 
 PreservedAnalyses MetaRenamerPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
