@@ -91,6 +91,13 @@ public:
         mod.getContext(), fir::getTargetTriple(mod), fir::getKindMapping(mod));
     setMembers(specifics.get(), &rewriter);
 
+    // We may need to call stacksave/stackrestore later, so
+    // create the FuncOps beforehand.
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(mod));
+    builder.setInsertionPointToStart(mod.getBody());
+    stackSaveFn = fir::factory::getLlvmStackSave(builder);
+    stackRestoreFn = fir::factory::getLlvmStackRestore(builder);
+
     // Perform type conversion on signatures and call sites.
     if (mlir::failed(convertTypes(mod))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
@@ -121,7 +128,8 @@ public:
   template <typename A, typename B, typename C>
   std::optional<std::function<mlir::Value(mlir::Operation *)>>
   rewriteCallComplexResultType(mlir::Location loc, A ty, B &newResTys,
-                               B &newInTys, C &newOpers) {
+                               B &newInTys, C &newOpers,
+                               mlir::Value &savedStackPtr) {
     if (noComplexConversion) {
       newResTys.push_back(ty);
       return std::nullopt;
@@ -134,6 +142,11 @@ public:
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
     if (attr.isSRet()) {
       assert(fir::isa_ref_type(resTy) && "must be a memory reference type");
+      // Save the stack pointer, if it has not been saved for this call yet.
+      // We will need to restore it after the call, because the alloca
+      // needs to be deallocated.
+      if (!savedStackPtr)
+        savedStackPtr = genStackSave(loc);
       mlir::Value stack =
           rewriter->create<fir::AllocaOp>(loc, fir::dyn_cast_ptrEleTy(resTy));
       newInTys.push_back(resTy);
@@ -145,7 +158,10 @@ public:
       };
     }
     newResTys.push_back(resTy);
-    return [=](mlir::Operation *call) -> mlir::Value {
+    return [=, &savedStackPtr](mlir::Operation *call) -> mlir::Value {
+      // We are going to generate an alloca, so save the stack pointer.
+      if (!savedStackPtr)
+        savedStackPtr = genStackSave(loc);
       auto mem = rewriter->create<fir::AllocaOp>(loc, resTy);
       rewriter->create<fir::StoreOp>(loc, call->getResult(0), mem);
       auto memTy = fir::ReferenceType::get(ty);
@@ -156,7 +172,7 @@ public:
 
   template <typename A, typename B, typename C>
   void rewriteCallComplexInputType(A ty, mlir::Value oper, B &newInTys,
-                                   C &newOpers) {
+                                   C &newOpers, mlir::Value &savedStackPtr) {
     if (noComplexConversion) {
       newInTys.push_back(ty);
       newOpers.push_back(oper);
@@ -173,6 +189,9 @@ public:
       auto resTy = std::get<mlir::Type>(m[0]);
       auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
       auto oldRefTy = fir::ReferenceType::get(ty);
+      // We are going to generate an alloca, so save the stack pointer.
+      if (!savedStackPtr)
+        savedStackPtr = genStackSave(loc);
       if (attr.isByVal()) {
         auto mem = rewriter->create<fir::AllocaOp>(loc, ty);
         rewriter->create<fir::StoreOp>(loc, oper, mem);
@@ -210,6 +229,7 @@ public:
     llvm::SmallVector<mlir::Type> newResTys;
     llvm::SmallVector<mlir::Type> newInTys;
     llvm::SmallVector<mlir::Value> newOpers;
+    mlir::Value savedStackPtr = nullptr;
 
     // If the call is indirect, the first argument must still be the function
     // to call.
@@ -231,11 +251,11 @@ public:
       llvm::TypeSwitch<mlir::Type>(ty)
           .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
             wrap = rewriteCallComplexResultType(loc, cmplx, newResTys, newInTys,
-                                                newOpers);
+                                                newOpers, savedStackPtr);
           })
           .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
             wrap = rewriteCallComplexResultType(loc, cmplx, newResTys, newInTys,
-                                                newOpers);
+                                                newOpers, savedStackPtr);
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     } else if (fnTy.getResults().size() > 1) {
@@ -290,10 +310,12 @@ public:
             }
           })
           .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
-            rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
+            rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers,
+                                        savedStackPtr);
           })
           .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
-            rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
+            rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers,
+                                        savedStackPtr);
           })
           .template Case<mlir::TupleType>([&](mlir::TupleType tuple) {
             if (fir::isCharacterProcedureTuple(tuple)) {
@@ -343,6 +365,8 @@ public:
     }
     newInTys.insert(newInTys.end(), trailingInTys.begin(), trailingInTys.end());
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
+
+    llvm::SmallVector<mlir::Value, 1> newCallResults;
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
       fir::CallOp newCall;
       if (callOp.getCallee()) {
@@ -357,18 +381,40 @@ public:
       }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap)
-        replaceOp(callOp, (*wrap)(newCall.getOperation()));
+        newCallResults.push_back((*wrap)(newCall.getOperation()));
       else
-        replaceOp(callOp, newCall.getResults());
+        newCallResults.append(newCall.result_begin(), newCall.result_end());
     } else {
       fir::DispatchOp dispatchOp = rewriter->create<A>(
           loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
           callOp.getOperands()[0], newOpers,
           rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift));
       if (wrap)
-        replaceOp(callOp, (*wrap)(dispatchOp.getOperation()));
+        newCallResults.push_back((*wrap)(dispatchOp.getOperation()));
       else
-        replaceOp(callOp, dispatchOp.getResults());
+        newCallResults.append(dispatchOp.result_begin(),
+                              dispatchOp.result_end());
+    }
+
+    if (newCallResults.size() <= 1) {
+      if (savedStackPtr) {
+        if (newCallResults.size() == 1) {
+          // We assume that all the allocas are inserted before
+          // the operation that defines the new call result.
+          rewriter->setInsertionPointAfterValue(newCallResults[0]);
+        } else {
+          // If the call does not have results, then insert
+          // stack restore after the original call operation.
+          rewriter->setInsertionPointAfter(callOp);
+        }
+        genStackRestore(loc, savedStackPtr);
+      }
+      replaceOp(callOp, newCallResults);
+    } else {
+      // The TODO is duplicated here to make sure this part
+      // handles the stackrestore insertion properly, if
+      // we add support for multiple call results.
+      TODO(loc, "multiple results not supported yet");
     }
   }
 
@@ -974,8 +1020,22 @@ private:
 
   inline void clearMembers() { setMembers(nullptr, nullptr); }
 
+  // Inserts a call to llvm.stacksave at the current insertion
+  // point and the given location. Returns the call's result Value.
+  inline mlir::Value genStackSave(mlir::Location loc) {
+    return rewriter->create<fir::CallOp>(loc, stackSaveFn).getResult(0);
+  }
+
+  // Inserts a call to llvm.stackrestore at the current insertion
+  // point and the given location and argument.
+  inline void genStackRestore(mlir::Location loc, mlir::Value sp) {
+    rewriter->create<fir::CallOp>(loc, stackRestoreFn, mlir::ValueRange{sp});
+  }
+
   fir::CodeGenSpecifics *specifics = nullptr;
   mlir::OpBuilder *rewriter = nullptr;
+  mlir::func::FuncOp stackSaveFn = nullptr;
+  mlir::func::FuncOp stackRestoreFn = nullptr;
 }; // namespace
 } // namespace
 
