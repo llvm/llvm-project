@@ -124,6 +124,9 @@ static const char kOperationPrintBytecodeDocstring[] =
 
 Args:
   file: The file like object to write to.
+  desired_version: The version of bytecode to emit.
+Returns:
+  The bytecode writer status.
 )";
 
 static const char kOperationStrDunderDocstring[] =
@@ -1131,12 +1134,21 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   mlirOpPrintingFlagsDestroy(flags);
 }
 
-void PyOperationBase::writeBytecode(const py::object &fileObject) {
+MlirBytecodeWriterResult
+PyOperationBase::writeBytecode(const py::object &fileObject,
+                               std::optional<int64_t> bytecodeVersion) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   PyFileAccumulator accum(fileObject, /*binary=*/true);
-  mlirOperationWriteBytecode(operation, accum.getCallback(),
-                             accum.getUserData());
+
+  if (!bytecodeVersion.has_value())
+    return mlirOperationWriteBytecode(operation, accum.getCallback(),
+                                      accum.getUserData());
+
+  MlirBytecodeWriterConfig config = mlirBytecodeWriterConfigCreate();
+  mlirBytecodeWriterConfigDesiredEmitVersion(config, *bytecodeVersion);
+  return mlirOperationWriteBytecodeWithConfig(
+      operation, config, accum.getCallback(), accum.getUserData());
 }
 
 py::object PyOperationBase::getAsm(bool binary,
@@ -2757,6 +2769,7 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("use_local_scope") = false,
            py::arg("assume_verified") = false, kOperationPrintDocstring)
       .def("write_bytecode", &PyOperationBase::writeBytecode, py::arg("file"),
+           py::arg("desired_version") = py::none(),
            kOperationPrintBytecodeDocstring)
       .def("get_asm", &PyOperationBase::getAsm,
            // Careful: Lots of arguments must match up with get_asm method.
@@ -3364,6 +3377,10 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_static("walk_symbol_tables", &PySymbolTable::walkSymbolTables,
                   py::arg("from_op"), py::arg("all_sym_uses_visible"),
                   py::arg("callback"));
+
+  py::class_<MlirBytecodeWriterResult>(m, "BytecodeResult", py::module_local())
+      .def("min_version",
+           [](MlirBytecodeWriterResult &res) { return res.minVersion; });
 
   // Container bindings.
   PyBlockArgumentList::bind(m);

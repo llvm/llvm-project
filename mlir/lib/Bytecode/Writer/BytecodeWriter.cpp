@@ -27,6 +27,10 @@ using namespace mlir::bytecode::detail;
 struct BytecodeWriterConfig::Impl {
   Impl(StringRef producer) : producer(producer) {}
 
+  /// Version to use when writing.
+  /// Note: This only differs from kVersion if a specific version is set.
+  int64_t bytecodeVersion = bytecode::kVersion;
+
   /// The producer of the bytecode.
   StringRef producer;
 
@@ -46,6 +50,12 @@ BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 void BytecodeWriterConfig::attachResourcePrinter(
     std::unique_ptr<AsmResourcePrinter> printer) {
   impl->externalResourcePrinters.emplace_back(std::move(printer));
+}
+
+void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
+  // Clamp to current version.
+  impl->bytecodeVersion =
+      std::min<int64_t>(bytecodeVersion, bytecode::kVersion);
 }
 
 //===----------------------------------------------------------------------===//
@@ -295,7 +305,8 @@ private:
 
 class DialectWriter : public DialectBytecodeWriter {
 public:
-  DialectWriter(EncodingEmitter &emitter, IRNumberingState &numberingState,
+  DialectWriter(int64_t bytecodeVersion, EncodingEmitter &emitter,
+                IRNumberingState &numberingState,
                 StringSectionBuilder &stringSection)
       : emitter(emitter), numberingState(numberingState),
         stringSection(stringSection) {}
@@ -362,7 +373,10 @@ public:
         reinterpret_cast<const uint8_t *>(blob.data()), blob.size()));
   }
 
+  int64_t getBytecodeVersion() const override { return bytecodeVersion; }
+
 private:
+  int64_t bytecodeVersion;
   EncodingEmitter &emitter;
   IRNumberingState &numberingState;
   StringSectionBuilder &stringSection;
@@ -421,11 +435,11 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
 namespace {
 class BytecodeWriter {
 public:
-  BytecodeWriter(Operation *op) : numberingState(op) {}
+  BytecodeWriter(Operation *op, const BytecodeWriterConfig::Impl &config)
+      : numberingState(op), config(config) {}
 
   /// Write the bytecode for the given root operation.
-  void write(Operation *rootOp, raw_ostream &os,
-             const BytecodeWriterConfig::Impl &config);
+  void write(Operation *rootOp, raw_ostream &os);
 
 private:
   //===--------------------------------------------------------------------===//
@@ -449,8 +463,7 @@ private:
   //===--------------------------------------------------------------------===//
   // Resources
 
-  void writeResourceSection(Operation *op, EncodingEmitter &emitter,
-                            const BytecodeWriterConfig::Impl &config);
+  void writeResourceSection(Operation *op, EncodingEmitter &emitter);
 
   //===--------------------------------------------------------------------===//
   // Strings
@@ -465,11 +478,13 @@ private:
 
   /// The IR numbering state generated for the root operation.
   IRNumberingState numberingState;
+
+  /// Configuration dictating bytecode emission.
+  const BytecodeWriterConfig::Impl &config;
 };
 } // namespace
 
-void BytecodeWriter::write(Operation *rootOp, raw_ostream &os,
-                           const BytecodeWriterConfig::Impl &config) {
+void BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
   EncodingEmitter emitter;
 
   // Emit the bytecode file header. This is how we identify the output as a
@@ -477,7 +492,7 @@ void BytecodeWriter::write(Operation *rootOp, raw_ostream &os,
   emitter.emitString("ML\xefR");
 
   // Emit the bytecode version.
-  emitter.emitVarInt(bytecode::kVersion);
+  emitter.emitVarInt(config.bytecodeVersion);
 
   // Emit the producer.
   emitter.emitNulTerminatedString(config.producer);
@@ -492,7 +507,7 @@ void BytecodeWriter::write(Operation *rootOp, raw_ostream &os,
   writeIRSection(emitter, rootOp);
 
   // Emit the resources section.
-  writeResourceSection(rootOp, emitter, config);
+  writeResourceSection(rootOp, emitter);
 
   // Emit the string section.
   writeStringSection(emitter);
@@ -540,12 +555,17 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
     // Write the string section and get the ID.
     size_t nameID = stringSection.insert(dialect.name);
 
+    if (config.bytecodeVersion == 0) {
+      dialectEmitter.emitVarInt(nameID);
+      continue;
+    }
+
     // Try writing the version to the versionEmitter.
     EncodingEmitter versionEmitter;
     if (dialect.interface) {
       // The writer used when emitting using a custom bytecode encoding.
-      DialectWriter versionWriter(versionEmitter, numberingState,
-                                  stringSection);
+      DialectWriter versionWriter(config.bytecodeVersion, versionEmitter,
+                                  numberingState, stringSection);
       dialect.interface->writeVersion(versionWriter);
     }
 
@@ -586,8 +606,8 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
     bool hasCustomEncoding = false;
     if (const BytecodeDialectInterface *interface = entry.dialect->interface) {
       // The writer used when emitting using a custom bytecode encoding.
-      DialectWriter dialectWriter(attrTypeEmitter, numberingState,
-                                  stringSection);
+      DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
+                                  numberingState, stringSection);
 
       if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
         // TODO: We don't currently support custom encoded mutable types.
@@ -787,9 +807,8 @@ private:
 };
 } // namespace
 
-void BytecodeWriter::writeResourceSection(
-    Operation *op, EncodingEmitter &emitter,
-    const BytecodeWriterConfig::Impl &config) {
+void BytecodeWriter::writeResourceSection(Operation *op,
+                                          EncodingEmitter &emitter) {
   EncodingEmitter resourceEmitter;
   EncodingEmitter resourceOffsetEmitter;
   uint64_t prevOffset = 0;
@@ -868,8 +887,12 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 // Entry Points
 //===----------------------------------------------------------------------===//
 
-void mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
-                               const BytecodeWriterConfig &config) {
-  BytecodeWriter writer(op);
-  writer.write(op, os, config.getImpl());
+BytecodeWriterResult
+mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
+                          const BytecodeWriterConfig &config) {
+  BytecodeWriter writer(op, config.getImpl());
+  writer.write(op, os);
+  // Return the bytecode version emitted - currently there is no additional
+  // feedback as to minimum beyond the requested one.
+  return {config.getImpl().bytecodeVersion};
 }
