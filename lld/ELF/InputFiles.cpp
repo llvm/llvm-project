@@ -195,6 +195,29 @@ std::optional<MemoryBufferRef> elf::readFile(StringRef path) {
   if (!config->chroot.empty() && path.startswith("/"))
     path = saver().save(config->chroot + path);
 
+  bool remapped = false;
+  auto it = config->remapInputs.find(path);
+  if (it != config->remapInputs.end()) {
+    path = it->second;
+    remapped = true;
+  } else {
+    for (const auto &[pat, toFile] : config->remapInputsWildcards) {
+      if (pat.match(path)) {
+        path = toFile;
+        remapped = true;
+        break;
+      }
+    }
+  }
+  if (remapped) {
+    // Use /dev/null to indicate an input file that should be ignored. Change
+    // the path to NUL on Windows.
+#ifdef _WIN32
+    if (path == "/dev/null")
+      path = "NUL";
+#endif
+  }
+
   log(path);
   config->dependencyFiles.insert(llvm::CachedHashString(path));
 
