@@ -99,6 +99,9 @@ Constant *ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
 /// correct sign, otherwise return the original constant. Inputs and outputs to
 /// floating point instructions can have their mode set separately, so the
 /// direction is also needed.
+///
+/// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
+/// floating-point type, returns nullptr for denormal inputs.
 Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
                           bool IsOutput);
 

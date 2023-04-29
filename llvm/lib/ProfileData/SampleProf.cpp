@@ -291,7 +291,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
   std::string CalleeGUID;
   CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
 
-  auto iter = CallsiteSamples.find(Loc);
+  auto iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
   if (iter == CallsiteSamples.end())
     return nullptr;
   auto FS = iter->second.find(CalleeName);

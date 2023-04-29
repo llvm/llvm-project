@@ -635,6 +635,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
+      setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT, Legal);
+
       setOperationPromotedToType(
           ISD::VECTOR_SPLICE, VT,
           MVT::getVectorVT(MVT::i8, VT.getVectorElementCount()));
@@ -894,8 +896,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::SETCC, VT, Custom);
 
-        setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT,
-                           Legal);
+        if (VT.getVectorElementType() == MVT::i1)
+          setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT,
+                             Legal);
 
         setOperationAction(ISD::SELECT, VT, Custom);
 
@@ -1147,6 +1150,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
   setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+
+  // Disable strict node mutation.
+  IsStrictFPEnabled = true;
 }
 
 EVT RISCVTargetLowering::getSetCCResultType(const DataLayout &DL,
@@ -9544,8 +9550,31 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getConstant(CB, DL, VT));
 }
 
+// Try to turn (add (xor (setcc X, Y), 1) -1) into (neg (setcc X, Y)).
+static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // RHS should be -1.
+  if (!isAllOnesConstant(N1))
+    return SDValue();
+
+  // Look for an (xor (setcc X, Y), 1).
+  if (N0.getOpcode() != ISD::XOR || !isOneConstant(N0.getOperand(1)) ||
+      N0.getOperand(0).getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // Emit a negate of the setcc.
+  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                     N0.getOperand(0));
+}
+
 static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
+  if (SDValue V = combineAddOfBooleanXor(N, DAG))
+    return V;
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;
   if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
@@ -9784,7 +9813,7 @@ public:
   // Returns differ operand.
   SDValue const &getDOp() const { return operator[](DifferPos); }
 
-  // Returns consition code of comparison operation.
+  // Returns condition code of comparison operation.
   ISD::CondCode getCondCode() const { return CCode; }
 };
 } // namespace

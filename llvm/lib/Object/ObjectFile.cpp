@@ -130,6 +130,10 @@ Triple ObjectFile::makeTriple() const {
     TheTriple.setOS(Triple::AIX);
     TheTriple.setObjectFormat(Triple::XCOFF);
   }
+  else if (isGOFF()) {
+    TheTriple.setOS(Triple::ZOS);
+    TheTriple.setObjectFormat(Triple::GOFF);
+  }
 
   return TheTriple;
 }
