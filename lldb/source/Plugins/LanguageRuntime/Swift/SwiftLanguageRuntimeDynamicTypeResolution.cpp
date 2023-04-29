@@ -955,7 +955,8 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
     offset = GetMemberVariableOffsetRemoteMirrors(instance_type, instance,
                                                   member_name, error);
 #ifndef NDEBUG
-    {
+    if (ModuleList::GetGlobalModuleListProperties()
+            .GetSwiftValidateTypeSystem()) {
       // Convert to an AST type, if necessary.
       if (auto ts = instance_type.GetTypeSystem()
                         .dyn_cast_or_null<TypeSystemSwiftTypeRef>())
@@ -1990,35 +1991,39 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
 #ifndef NDEBUG
   // Dynamic type resolution in RemoteAST might pull in other Swift modules, so
   // use the scratch context where such operations are legal and safe.
-  llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
-      in_value.GetSwiftScratchContext();
-  if (!maybe_scratch_ctx)
-    return false;
-  auto scratch_ctx = maybe_scratch_ctx->get();
-  if (!scratch_ctx)
-    return false;
-  SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
-  if (!swift_ast_ctx)
-    return true;
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetSwiftValidateTypeSystem()) {
+    llvm::Optional<SwiftScratchContextReader> maybe_scratch_ctx =
+        in_value.GetSwiftScratchContext();
+    if (!maybe_scratch_ctx)
+      return false;
+    auto scratch_ctx = maybe_scratch_ctx->get();
+    if (!scratch_ctx)
+      return false;
+    SwiftASTContext *swift_ast_ctx = scratch_ctx->GetSwiftASTContext();
+    if (!swift_ast_ctx)
+      return true;
 
-  auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
-  auto remote_ast_metadata_address = remote_ast.getHeapMetadataForObject(
-      swift::remote::RemoteAddress(instance_ptr));
-  if (remote_ast_metadata_address) {
-    auto instance_type = remote_ast.getTypeForRemoteTypeMetadata(
-        remote_ast_metadata_address.getValue(),
-        /*skipArtificial=*/true);
-    if (instance_type) {
-      auto ref_type = ToCompilerType(instance_type.getValue());
-      ConstString a = ref_type.GetMangledTypeName();
-      ConstString b = class_type_or_name.GetCompilerType().GetMangledTypeName();
-      if (a != b)
-        llvm::dbgs() << "RemoteAST and runtime diverge " << a << " != " << b
-                     << "\n";
-    } else {
-      if (log) {
-        log->Printf("could not get type metadata: %s\n",
-                    instance_type.getFailure().render().c_str());
+    auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
+    auto remote_ast_metadata_address = remote_ast.getHeapMetadataForObject(
+        swift::remote::RemoteAddress(instance_ptr));
+    if (remote_ast_metadata_address) {
+      auto instance_type = remote_ast.getTypeForRemoteTypeMetadata(
+          remote_ast_metadata_address.getValue(),
+          /*skipArtificial=*/true);
+      if (instance_type) {
+        auto ref_type = ToCompilerType(instance_type.getValue());
+        ConstString a = ref_type.GetMangledTypeName();
+        ConstString b =
+            class_type_or_name.GetCompilerType().GetMangledTypeName();
+        if (a != b)
+          llvm::dbgs() << "RemoteAST and runtime diverge " << a << " != " << b
+                       << "\n";
+      } else {
+        if (log) {
+          log->Printf("could not get type metadata: %s\n",
+                      instance_type.getFailure().render().c_str());
+        }
       }
     }
   }
@@ -2212,18 +2217,22 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
   address.SetRawAddress(out_address.getAddressData());
 
 #ifndef NDEBUG
-  auto reference_pair = remote_ast_impl(use_local_buffer, existential_address);
-  assert(pair.hasValue() >= reference_pair.hasValue() &&
-         "RemoteAST and runtime diverge");
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetSwiftValidateTypeSystem()) {
+    auto reference_pair =
+        remote_ast_impl(use_local_buffer, existential_address);
+    assert(pair.hasValue() >= reference_pair.hasValue() &&
+           "RemoteAST and runtime diverge");
 
-  if (reference_pair) {
-    CompilerType ref_type = std::get<CompilerType>(*reference_pair);
-    Address ref_address = std::get<Address>(*reference_pair);
-    ConstString a = class_type_or_name.GetCompilerType().GetMangledTypeName();
-    ConstString b = ref_type.GetMangledTypeName();
-    if (a != b)
-      llvm::dbgs() << "RemoteAST and runtime diverge " << a << " != " << b
-                   << "\n";
+    if (reference_pair) {
+      CompilerType ref_type = std::get<CompilerType>(*reference_pair);
+      Address ref_address = std::get<Address>(*reference_pair);
+      ConstString a = class_type_or_name.GetCompilerType().GetMangledTypeName();
+      ConstString b = ref_type.GetMangledTypeName();
+      if (a != b)
+        llvm::dbgs() << "RemoteAST and runtime diverge " << a << " != " << b
+                     << "\n";
+    }
   }
 #endif
   return true;
