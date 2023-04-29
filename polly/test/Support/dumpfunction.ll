@@ -20,8 +20,6 @@
 
 %unrelated_type = type { i32 }
 
-@callee_alias = dso_local unnamed_addr alias void(i32, ptr, i32), ptr @callee
-
 define internal void @callee(i32 %n, ptr noalias nonnull %A, i32 %i) #0 {
 entry:
   br label %for
