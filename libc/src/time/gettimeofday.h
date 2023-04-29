@@ -18,5 +18,3 @@ int gettimeofday(struct timeval *tv, void *tz);
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_TIME_GETTIMEOFDAY_H
-
-#include "include/time.h"

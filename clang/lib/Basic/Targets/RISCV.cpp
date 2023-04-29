@@ -200,6 +200,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     // Currently we support the v0.11 RISC-V V intrinsics.
     Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(0, 11)));
   }
+
+  auto VScale = getVScaleRange(Opts);
+  if (VScale && VScale->first && VScale->first == VScale->second)
+    Builder.defineMacro("__riscv_v_fixed_vlen",
+                        Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
 }
 
 static constexpr Builtin::Info BuiltinInfo[] = {

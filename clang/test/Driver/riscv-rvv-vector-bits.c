@@ -43,3 +43,24 @@
 // RUN:  -mrvv-vector-bits=64 2>&1 | FileCheck --check-prefix=CHECK-BAD-VALUE-ERROR %s
 
 // CHECK-BAD-VALUE-ERROR: error: unsupported argument '{{.*}}' to option '-mrvv-vector-bits='
+
+// Error if using attribute without -msve-vector-bits=<bits> or if using -msve-vector-bits=<bits>+ syntax
+// -----------------------------------------------------------------------------
+// RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
+// RUN:  -march=rv64gc_zve64x 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
+// RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
+// RUN:  -march=rv64gc_zve64x -mrvv-vector-bits=scalable 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
+
+typedef __rvv_int32m1_t vint32m1_t;
+typedef vint32m1_t noflag __attribute__((riscv_rvv_vector_bits(256)));
+
+// CHECK-NO-FLAG-ERROR: error: 'riscv_rvv_vector_bits' is only supported when '-mrvv-vector-bits=<bits>' is specified with a value of "zvl" or a power 2 in the range [64,65536]
+
+// Error if attribute vector size != -mrvv-vector-bits
+// -----------------------------------------------------------------------------
+// RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
+// RUN:  -march=rv64gc_zve64x -mrvv-vector-bits=128 2>&1 | FileCheck --check-prefix=CHECK-BAD-VECTOR-SIZE-ERROR %s
+
+typedef vint32_t bad_vector_size __attribute__((riscv_rvv_vector_bits(256)));
+
+// CHECK-BAD-VECTOR-SIZE-ERROR: error: invalid RVV vector size '256', must match value set by '-mrvv-vector-bits' ('128')

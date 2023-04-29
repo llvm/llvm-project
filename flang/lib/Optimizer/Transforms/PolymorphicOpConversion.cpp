@@ -340,7 +340,8 @@ mlir::LogicalResult SelectTypeConv::matchAndRewrite(
     std::optional<mlir::ValueRange> destOps =
         selectType.getSuccessorOperands(operands, idx);
     if (typeGuards[idx].dyn_cast<mlir::UnitAttr>())
-      rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(selectType, dest);
+      rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(
+          selectType, dest, destOps.value_or(mlir::ValueRange{}));
     else if (mlir::failed(genTypeLadderStep(loc, selector, typeGuards[idx],
                                             dest, destOps, mod, rewriter,
                                             kindMap)))
