@@ -434,14 +434,14 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
                                      genericOp, opOperand);
 
-  // We'll replace the init operand with the destination of pack op if the init
-  // operand has not users in the body of the linalg.generic (pure elementwise).
-  // If it has users we need to pack the init operand too and replace the init
-  // with the packing result.
-  Value dest = (genericOp.getRegionOutputArgs()[0].use_empty())
-                   ? packOpDest
-                   : packedOutOperand;
-
+  // If the dps init operand of the generic is a tensor.empty forward the pack
+  // op destination.
+  Value dest = packedOutOperand;
+  if (auto initTensor = genericOp.getDpsInitOperand(0)
+                            ->get()
+                            .getDefiningOp<tensor::EmptyOp>()) {
+    dest = packOpDest;
+  }
   return packElementWiseOp(rewriter, genericOp, dest, packedOutIndexingMap,
                            *packInfo);
 }
