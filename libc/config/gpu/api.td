@@ -12,3 +12,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
     "__atexithandler_t",
   ];
 }
+
+def FenvAPI: PublicAPI<"fenv.h"> {
+  let Types = ["fenv_t"];
+}
