@@ -213,7 +213,10 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
     ReportOutOfMemory(size, stack);
   }
   if (zeroise) {
-    internal_memset(allocated, 0, size);
+    // The secondary allocator mmaps memory, which should be zero-inited so we
+    // don't need to explicitly clear it.
+    if (allocator.FromPrimary(allocated))
+      internal_memset(allocated, 0, size);
   } else if (flags()->max_malloc_fill_size > 0) {
     uptr fill_size = Min(size, (uptr)flags()->max_malloc_fill_size);
     internal_memset(allocated, flags()->malloc_fill_byte, fill_size);
