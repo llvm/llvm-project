@@ -59,6 +59,10 @@ LogicalResult ApplyOp::verify() {
   if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
     return emitOpError("applicable operator is illegal");
 
+  Operation *op = getOperand().getDefiningOp();
+  if (op && dyn_cast<ConstantOp>(op))
+    return emitOpError("cannot apply to constant");
+
   return success();
 }
 
