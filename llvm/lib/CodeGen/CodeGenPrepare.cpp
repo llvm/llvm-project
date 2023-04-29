@@ -268,10 +268,6 @@ static cl::opt<unsigned>
     MaxAddressUsersToScan("cgp-max-address-users-to-scan", cl::init(100),
                           cl::Hidden,
                           cl::desc("Max number of address users to look at"));
-
-static cl::opt<unsigned> MaxLoopInvUsersToScan(
-    "cgp-max-loop-inv-users-to-scan", cl::init(20), cl::Hidden,
-    cl::desc("Max number of loop invariant users to look at"));
 namespace {
 
 enum ExtType {
@@ -5064,19 +5060,6 @@ static bool FindAllMemoryUses(
                            PSI, BFI, SeenInsts);
 }
 
-static bool isUsedInLoop(const Value *V, const Loop *L) {
-  unsigned N = 0;
-
-  for (const Use &U : V->uses()) {
-    if (++N > MaxLoopInvUsersToScan)
-      break;
-    const Instruction *UserI = cast<Instruction>(U.getUser());
-    if (L->contains(UserI->getParent()))
-      return true;
-  }
-
-  return false;
-}
 
 /// Return true if Val is already known to be live at the use site that we're
 /// folding it into. If so, there is no cost to include it in the addressing
@@ -5100,17 +5083,10 @@ bool AddressingModeMatcher::valueAlreadyLiveAtInst(Value *Val,
     if (AI->isStaticAlloca())
       return true;
 
-  // If the value is loop invariant and is used in the loop which contains the
-  // memory instruction, it's live.
-  BasicBlock *BB = MemoryInst->getParent();
-  if (Loop *L = LI.getLoopFor(BB);
-      L && L->isLoopInvariant(Val) && isUsedInLoop(Val, L))
-    return true;
-
   // Check to see if this value is already used in the memory instruction's
   // block.  If so, it's already live into the block at the very least, so we
   // can reasonably fold it.
-  return Val->isUsedInBasicBlock(BB);
+  return Val->isUsedInBasicBlock(MemoryInst->getParent());
 }
 
 /// It is possible for the addressing mode of the machine to fold the specified
