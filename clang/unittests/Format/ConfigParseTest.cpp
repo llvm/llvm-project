@@ -247,6 +247,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpacesBeforeTrailingComments, 1234u);
   CHECK_PARSE("IndentWidth: 32", IndentWidth, 32u);
   CHECK_PARSE("ContinuationIndentWidth: 11", ContinuationIndentWidth, 11u);
+  CHECK_PARSE("BracedInitializerIndentWidth: 34", BracedInitializerIndentWidth,
+              34);
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
 
   Style.QualifierAlignment = FormatStyle::QAS_Right;
