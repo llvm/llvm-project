@@ -934,6 +934,118 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
   }
 }
 
+/// Simplify the expressions in `map` while making use of lower or upper bounds
+/// of its operands. If `isMax` is true, the map is to be treated as a max of
+/// its result expressions, and min otherwise. Eg: min (d0, d1) -> (8, 4 * d0 +
+/// d1) can be simplified to (8) if the operands are respectively lower bounded
+/// by 2 and 0 (the second expression can't be lower than 8).
+static void simplifyMinOrMaxExprWithOperands(AffineMap &map,
+                                             ArrayRef<Value> operands,
+                                             bool isMax) {
+  // Can't simplify.
+  if (operands.empty())
+    return;
+
+  // Get the upper or lower bound on an affine.for op IV using its range.
+  // Get the constant lower or upper bounds on the operands.
+  SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
+  constLowerBounds.reserve(operands.size());
+  constUpperBounds.reserve(operands.size());
+  for (Value operand : operands) {
+    constLowerBounds.push_back(getLowerBound(operand));
+    constUpperBounds.push_back(getUpperBound(operand));
+  }
+
+  // We will compute the lower and upper bounds on each of the expressions
+  // Then, we will check (depending on max or min) as to whether a specific
+  // bound is redundant by checking if its highest (in case of max) and its
+  // lowest (in the case of min) value is already lower than (or higher than)
+  // the lower bound (or upper bound in the case of min) of another bound.
+  SmallVector<Optional<int64_t>, 4> lowerBounds, upperBounds;
+  lowerBounds.reserve(map.getNumResults());
+  upperBounds.reserve(map.getNumResults());
+  for (AffineExpr e : map.getResults()) {
+    if (auto constExpr = e.dyn_cast<AffineConstantExpr>()) {
+      lowerBounds.push_back(constExpr.getValue());
+      upperBounds.push_back(constExpr.getValue());
+    } else {
+      lowerBounds.push_back(getBoundForExpr(e, map.getNumDims(),
+                                            map.getNumSymbols(),
+                                            constLowerBounds, constUpperBounds,
+                                            /*isUpper=*/false));
+      upperBounds.push_back(getBoundForExpr(e, map.getNumDims(),
+                                            map.getNumSymbols(),
+                                            constLowerBounds, constUpperBounds,
+                                            /*isUpper=*/true));
+    }
+  }
+
+  // Collect expressions that are not redundant.
+  SmallVector<AffineExpr, 4> irredundantExprs;
+  for (auto exprEn : llvm::enumerate(map.getResults())) {
+    AffineExpr e = exprEn.value();
+    unsigned i = exprEn.index();
+    // Some expressions can be turned into constants.
+    if (lowerBounds[i] && upperBounds[i] && *lowerBounds[i] == *upperBounds[i])
+      e = getAffineConstantExpr(*lowerBounds[i], e.getContext());
+
+    // Check if the expression is redundant.
+    if (isMax) {
+      if (!upperBounds[i]) {
+        irredundantExprs.push_back(e);
+        continue;
+      }
+      // If there exists another expression such that its lower bound is greater
+      // than this expression's upper bound, it's redundant.
+      if (!llvm::any_of(llvm::enumerate(lowerBounds), [&](const auto &en) {
+            auto otherLowerBound = en.value();
+            unsigned pos = en.index();
+            if (pos == i || !otherLowerBound)
+              return false;
+            if (*otherLowerBound > *upperBounds[i])
+              return true;
+            if (*otherLowerBound < *upperBounds[i])
+              return false;
+            // Equality case. When both expressions are considered redundant, we
+            // don't want to get both of them. We keep the one that appears
+            // first.
+            if (upperBounds[pos] && lowerBounds[i] &&
+                lowerBounds[i] == upperBounds[i] &&
+                otherLowerBound == *upperBounds[pos] && i < pos)
+              return false;
+            return true;
+          }))
+        irredundantExprs.push_back(e);
+    } else {
+      if (!lowerBounds[i]) {
+        irredundantExprs.push_back(e);
+        continue;
+      }
+      // Likewise for the `min` case. Use the complement of the condition above.
+      if (!llvm::any_of(llvm::enumerate(upperBounds), [&](const auto &en) {
+            auto otherUpperBound = en.value();
+            unsigned pos = en.index();
+            if (pos == i || !otherUpperBound)
+              return false;
+            if (*otherUpperBound < *lowerBounds[i])
+              return true;
+            if (*otherUpperBound > *lowerBounds[i])
+              return false;
+            if (lowerBounds[pos] && upperBounds[i] &&
+                lowerBounds[i] == upperBounds[i] &&
+                otherUpperBound == lowerBounds[pos] && i < pos)
+              return false;
+            return true;
+          }))
+        irredundantExprs.push_back(e);
+    }
+  }
+
+  // Create the map without the redundant expressions.
+  map = AffineMap::get(map.getNumDims(), map.getNumSymbols(), irredundantExprs,
+                       map.getContext());
+}
+
 /// Simplify the map while exploiting information on the values in `operands`.
 //  Use "unused attribute" marker to silence warning stemming from the inability
 //  to see through the template expansion.
@@ -2217,6 +2329,8 @@ static LogicalResult canonicalizeLoopBounds(AffineForOp forOp) {
 
   composeAffineMapAndOperands(&lbMap, &lbOperands);
   canonicalizeMapAndOperands(&lbMap, &lbOperands);
+  simplifyMinOrMaxExprWithOperands(lbMap, lbOperands, /*isMax=*/true);
+  simplifyMinOrMaxExprWithOperands(ubMap, ubOperands, /*isMax=*/false);
   lbMap = removeDuplicateExprs(lbMap);
 
   composeAffineMapAndOperands(&ubMap, &ubOperands);
