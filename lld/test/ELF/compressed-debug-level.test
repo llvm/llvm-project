@@ -2,18 +2,22 @@
 
 # RUN: yaml2obj %s -o %t.o
 
-# RUN: ld.lld %t.o -o %t.default --compress-debug-sections=zlib
+## The environment variable DFLTCC=0 disables use of the hardware compression
+## facility on SystemZ.  When this facility is enabled, slightly different
+## compression results can be seen, which would throw off the tests below.
+
+# RUN: DFLTCC=0 ld.lld %t.o -o %t.default --compress-debug-sections=zlib
 # RUN: llvm-readelf --sections %t.default | FileCheck -check-prefixes=HEADER,LEVEL1 %s
 
-# RUN: ld.lld -O0 %t.o -o %t.O0 --compress-debug-sections=zlib
+# RUN: DFLTCC=0 ld.lld -O0 %t.o -o %t.O0 --compress-debug-sections=zlib
 # RUN: llvm-readelf --sections %t.O0 | FileCheck -check-prefixes=HEADER,LEVEL1 %s
 # RUN: cmp %t.default %t.O0
 
-# RUN: ld.lld -O1 %t.o -o %t.O1 --compress-debug-sections=zlib
+# RUN: DFLTCC=0 ld.lld -O1 %t.o -o %t.O1 --compress-debug-sections=zlib
 # RUN: llvm-readelf --sections %t.O1 | FileCheck -check-prefixes=HEADER,LEVEL1 %s
 # RUN: cmp %t.default %t.O1
 
-# RUN: ld.lld -O2 %t.o -o %t.O2 --compress-debug-sections=zlib
+# RUN: DFLTCC=0 ld.lld -O2 %t.o -o %t.O2 --compress-debug-sections=zlib
 # RUN: llvm-readelf --sections %t.O2 | FileCheck -check-prefixes=HEADER,LEVEL6 %s
 
 ## LLD uses zlib compression of level 1 when -O0, -O1 and level 6 when -O2.
