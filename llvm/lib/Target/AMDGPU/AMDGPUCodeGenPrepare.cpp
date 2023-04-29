@@ -1343,9 +1343,7 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
     Type *I32Ty = Builder.getInt32Ty();
-    Type *PT = PointerType::get(I32Ty, I.getPointerAddressSpace());
-    Value *BitCast= Builder.CreateBitCast(I.getPointerOperand(), PT);
-    LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, BitCast);
+    LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, I.getPointerOperand());
     WidenLoad->copyMetadata(I);
 
     // If we have range metadata, we need to convert the type, and not make
