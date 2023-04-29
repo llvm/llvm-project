@@ -176,6 +176,7 @@ TEST(LoggerTest, HTML) {
       << "has analysis point state";
   EXPECT_THAT(Logs[0], HasSubstr("transferBranch(0)")) << "has analysis logs";
   EXPECT_THAT(Logs[0], HasSubstr("LocToVal")) << "has built-in lattice dump";
+  EXPECT_THAT(Logs[0], HasSubstr("\"type\": \"int\"")) << "has value dump";
 }
 
 } // namespace
