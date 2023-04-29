@@ -944,6 +944,39 @@ struct FormatStyle {
   /// \version 12
   BitFieldColonSpacingStyle BitFieldColonSpacing;
 
+  /// The number of columns to use to indent the contents of braced init lists.
+  /// If unset, ``ContinuationIndentWidth`` is used.
+  /// \code
+  ///   AlignAfterOpenBracket: AlwaysBreak
+  ///   BracedInitializerIndentWidth: 2
+  ///
+  ///   void f() {
+  ///     SomeClass c{
+  ///       "foo",
+  ///       "bar",
+  ///       "baz",
+  ///     };
+  ///     auto s = SomeStruct{
+  ///       .foo = "foo",
+  ///       .bar = "bar",
+  ///       .baz = "baz",
+  ///     };
+  ///     SomeArrayT a[3] = {
+  ///       {
+  ///         foo,
+  ///         bar,
+  ///       },
+  ///       {
+  ///         foo,
+  ///         bar,
+  ///       },
+  ///       SomeArrayT{},
+  ///     };
+  ///   }
+  /// \endcode
+  /// \version 17
+  std::optional<unsigned> BracedInitializerIndentWidth;
+
   /// Different ways to wrap braces after control statements.
   enum BraceWrappingAfterControlStatementStyle : int8_t {
     /// Never wrap braces after a control statement.
@@ -4286,6 +4319,7 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
+           BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&

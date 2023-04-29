@@ -1829,6 +1829,41 @@ the configuration (without a prefix: ``Auto``).
                            }
 
 
+.. _BracedInitializerIndentWidth:
+
+**BracedInitializerIndentWidth** (``Unsigned``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
+  The number of columns to use to indent the contents of braced init lists.
+  If unset, ``ContinuationIndentWidth`` is used.
+
+  .. code-block:: c++
+
+    AlignAfterOpenBracket: AlwaysBreak
+    BracedInitializerIndentWidth: 2
+
+    void f() {
+      SomeClass c{
+        "foo",
+        "bar",
+        "baz",
+      };
+      auto s = SomeStruct{
+        .foo = "foo",
+        .bar = "bar",
+        .baz = "baz",
+      };
+      SomeArrayT a[3] = {
+        {
+          foo,
+          bar,
+        },
+        {
+          foo,
+          bar,
+        },
+        SomeArrayT{},
+      };
+    }
+
 .. _BreakAfterAttributes:
 
 **BreakAfterAttributes** (``AttributeBreakingStyle``) :versionbadge:`clang-format 16` :ref:`¶ <BreakAfterAttributes>`
