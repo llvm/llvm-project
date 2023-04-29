@@ -119,6 +119,9 @@ public:
   }
   void VisitChooseExpr(const ChooseExpr *E) { llvm_unreachable("NYI"); }
   void VisitInitListExpr(InitListExpr *E);
+  void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
+                                       FieldDecl *InitializedFieldInUnion,
+                                       Expr *ArrayFiller);
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
                               llvm::Value *outerBegin = nullptr) {
     llvm_unreachable("NYI");
@@ -152,12 +155,9 @@ public:
 
   void VisitVAArgExpr(VAArgExpr *E) { llvm_unreachable("NYI"); }
 
-  void EmitInitializationToLValue(Expr *E, LValue LV);
+  void buildInitializationToLValue(Expr *E, LValue LV);
 
-  void EmitNullInitializationToLValue(LValue Address) {
-    llvm_unreachable("NYI");
-  }
-  // case Expr::ChoseExprClass:
+  void buildNullInitializationToLValue(mlir::Location loc, LValue Address);
   void VisitCXXThrowExpr(const CXXThrowExpr *E) { llvm_unreachable("NYI"); }
   void VisitAtomicExpr(AtomicExpr *E) { llvm_unreachable("NYI"); }
 };
@@ -204,7 +204,35 @@ static bool isSimpleZero(const Expr *E, CIRGenFunction &CGF) {
   return false;
 }
 
-void AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
+void AggExprEmitter::buildNullInitializationToLValue(mlir::Location loc,
+                                                     LValue lv) {
+  QualType type = lv.getType();
+
+  // If the destination slot is already zeroed out before the aggregate is
+  // copied into it, we don't have to emit any zeros here.
+  if (Dest.isZeroed() && CGF.getTypes().isZeroInitializable(type))
+    return;
+
+  if (CGF.hasScalarEvaluationKind(type)) {
+    // For non-aggregates, we can store the appropriate null constant.
+    auto null = CGF.CGM.buildNullConstant(type, loc);
+    // Note that the following is not equivalent to
+    // EmitStoreThroughBitfieldLValue for ARC types.
+    if (lv.isBitField()) {
+      llvm_unreachable("NYI");
+    } else {
+      assert(lv.isSimple());
+      CGF.buildStoreOfScalar(null, lv, /* isInitialization */ true);
+    }
+  } else {
+    // There's a potential optimization opportunity in combining
+    // memsets; that would be easy for arrays, but relatively
+    // difficult for structures with the current code.
+    CGF.buildNullInitialization(loc, lv.getAddress(), lv.getType());
+  }
+}
+
+void AggExprEmitter::buildInitializationToLValue(Expr *E, LValue LV) {
   QualType type = LV.getType();
   // FIXME: Ignore result?
   // FIXME: Are initializers affected by volatile?
@@ -215,7 +243,9 @@ void AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
     // Storing "i32 0" to a zero'd memory location is a noop.
     return;
   } else if (isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) {
-    return EmitNullInitializationToLValue(LV);
+    auto loc = E->getSourceRange().isValid() ? CGF.getLoc(E->getSourceRange())
+                                             : *CGF.currSrcLoc;
+    return buildNullInitializationToLValue(loc, LV);
   } else if (isa<NoInitExpr>(E)) {
     // Do nothing.
     return;
@@ -316,7 +346,7 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *E) {
       llvm_unreachable("NYI");
     }
 
-    EmitInitializationToLValue(captureInit, LV);
+    buildInitializationToLValue(captureInit, LV);
 
     // Push a destructor if necessary.
     if (QualType::DestructionKind DtorKind =
@@ -470,11 +500,6 @@ void AggExprEmitter::withReturnValueSlot(
 }
 
 void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
-  // If the initializer list is empty ({}), and there are
-  // no explicitly initialized elements.
-  if (E->getNumInits() == 0)
-    return;
-
   // TODO(cir): use something like CGF.ErrorUnsupported
   if (E->hadArrayRangeDesignator())
     llvm_unreachable("GNU array range designator extension");
@@ -482,18 +507,135 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   if (E->isTransparent())
     return Visit(E->getInit(0));
 
-  AggValueSlot Dest = EnsureSlot(E->getType());
+  VisitCXXParenListOrInitListExpr(
+      E, E->inits(), E->getInitializedFieldInUnion(), E->getArrayFiller());
+}
 
-  [[maybe_unused]] LValue DestLV =
-      CGF.makeAddrLValue(Dest.getAddress(), E->getType());
+void AggExprEmitter::VisitCXXParenListOrInitListExpr(
+    Expr *ExprToVisit, ArrayRef<Expr *> InitExprs,
+    FieldDecl *InitializedFieldInUnion, Expr *ArrayFiller) {
+#if 0
+  // FIXME: Assess perf here?  Figure out what cases are worth optimizing here
+  // (Length of globals? Chunks of zeroed-out space?).
+  //
+  // If we can, prefer a copy from a global; this is a lot less code for long
+  // globals, and it's easier for the current optimizers to analyze.
+  if (llvm::Constant *C =
+          CGF.CGM.EmitConstantExpr(ExprToVisit, ExprToVisit->getType(), &CGF)) {
+    llvm::GlobalVariable* GV =
+    new llvm::GlobalVariable(CGF.CGM.getModule(), C->getType(), true,
+                             llvm::GlobalValue::InternalLinkage, C, "");
+    EmitFinalDestCopy(ExprToVisit->getType(),
+                      CGF.MakeAddrLValue(GV, ExprToVisit->getType()));
+    return;
+  }
+#endif
+
+  AggValueSlot Dest = EnsureSlot(ExprToVisit->getType());
+
+  LValue DestLV = CGF.makeAddrLValue(Dest.getAddress(), ExprToVisit->getType());
 
   // Handle initialization of an array.
-  if (E->getType()->isArrayType()) {
+  if (ExprToVisit->getType()->isArrayType()) {
     llvm_unreachable("NYI");
   }
 
-  assert(E->getType()->isRecordType() && "Only support structs/unions here!");
-  llvm_unreachable("NYI");
+  assert(ExprToVisit->getType()->isRecordType() &&
+         "Only support structs/unions here!");
+
+  // Do struct initialization; this code just sets each individual member
+  // to the approprate value.  This makes bitfield support automatic;
+  // the disadvantage is that the generated code is more difficult for
+  // the optimizer, especially with bitfields.
+  unsigned NumInitElements = InitExprs.size();
+  RecordDecl *record = ExprToVisit->getType()->castAs<RecordType>()->getDecl();
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception.
+  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
+  // FIXME(cir): placeholder
+  mlir::Operation *cleanupDominator = nullptr;
+  [[maybe_unused]] auto addCleanup =
+      [&](const EHScopeStack::stable_iterator &cleanup) {
+        llvm_unreachable("NYI");
+      };
+
+  unsigned curInitIndex = 0;
+
+  // Emit initialization of base classes.
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(record)) {
+    assert(NumInitElements >= CXXRD->getNumBases() &&
+           "missing initializer for base class");
+    for ([[maybe_unused]] auto &Base : CXXRD->bases()) {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  // Prepare a 'this' for CXXDefaultInitExprs.
+  CIRGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
+
+  if (record->isUnion()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Here we iterate over the fields; this makes it simpler to both
+  // default-initialize fields and skip over unnamed fields.
+  for (const auto *field : record->fields()) {
+    // We're done once we hit the flexible array member.
+    if (field->getType()->isIncompleteArrayType())
+      break;
+
+    // Always skip anonymous bitfields.
+    if (field->isUnnamedBitField())
+      continue;
+
+    // We're done if we reach the end of the explicit initializers, we
+    // have a zeroed object, and the rest of the fields are
+    // zero-initializable.
+    if (curInitIndex == NumInitElements && Dest.isZeroed() &&
+        CGF.getTypes().isZeroInitializable(ExprToVisit->getType()))
+      break;
+
+    LValue LV =
+        CGF.buildLValueForFieldInitialization(DestLV, field, field->getName());
+    // We never generate write-barries for initialized fields.
+    assert(!UnimplementedFeature::setNonGC());
+
+    if (curInitIndex < NumInitElements) {
+      // Store the initializer into the field.
+      CIRGenFunction::SourceLocRAIIObject loc{
+          CGF, CGF.getLoc(record->getSourceRange())};
+      buildInitializationToLValue(InitExprs[curInitIndex++], LV);
+    } else {
+      // We're out of initializers; default-initialize to null
+      buildNullInitializationToLValue(CGF.getLoc(ExprToVisit->getSourceRange()),
+                                      LV);
+    }
+
+    // Push a destructor if necessary.
+    // FIXME: if we have an array of structures, all explicitly
+    // initialized, we can end up pushing a linear number of cleanups.
+    [[maybe_unused]] bool pushedCleanup = false;
+    if (QualType::DestructionKind dtorKind =
+            field->getType().isDestructedType()) {
+      llvm_unreachable("NYI");
+    }
+
+    // From LLVM codegen, maybe not useful for CIR:
+    // If the GEP didn't get used because of a dead zero init or something
+    // else, clean it up for -O0 builds and general tidiness.
+  }
+
+  // Deactivate all the partial cleanups in reverse order, which
+  // generally means popping them.
+  assert((cleanupDominator || cleanups.empty()) &&
+         "Missing cleanupDominator before deactivating cleanup blocks");
+  for (unsigned i = cleanups.size(); i != 0; --i)
+    llvm_unreachable("NYI");
+
+  // Destroy the placeholder if we made one.
+  if (cleanupDominator)
+    llvm_unreachable("NYI");
 }
 
 void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
