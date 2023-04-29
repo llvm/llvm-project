@@ -1576,9 +1576,9 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   return success();
 }
 
-static llvm::TargetRegionEntryInfo
-getTargetEntryUniqueInfo(omp::TargetOp targetOp,
-                         llvm::StringRef parentName = "") {
+static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
+                                     omp::TargetOp targetOp,
+                                     llvm::StringRef parentName = "") {
   auto fileLoc = targetOp.getLoc()->findInstanceOf<FileLineColLoc>();
 
   assert(fileLoc && "No file found from location");
@@ -1587,11 +1587,13 @@ getTargetEntryUniqueInfo(omp::TargetOp targetOp,
   llvm::sys::fs::UniqueID id;
   if (auto ec = llvm::sys::fs::getUniqueID(fileName, id)) {
     targetOp.emitError("Unable to get unique ID for file");
+    return false;
   }
 
   uint64_t line = fileLoc.getLine();
-  return llvm::TargetRegionEntryInfo(parentName, id.getDevice(), id.getFile(),
-                                     line);
+  targetInfo = llvm::TargetRegionEntryInfo(parentName, id.getDevice(),
+                                           id.getFile(), line);
+  return true;
 }
 
 static bool targetOpSupported(Operation &opInst) {
@@ -1660,8 +1662,11 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   StringRef parentName = opInst.getParentOfType<LLVM::LLVMFuncOp>().getName();
-  llvm::TargetRegionEntryInfo entryInfo =
-      getTargetEntryUniqueInfo(targetOp, parentName);
+  llvm::TargetRegionEntryInfo entryInfo;
+
+  if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
+    return failure();
+
   int32_t defaultValTeams = -1;
   int32_t defaultValThreads = -1;
 
