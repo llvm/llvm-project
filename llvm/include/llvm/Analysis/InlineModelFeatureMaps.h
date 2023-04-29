@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-const std::vector<int64_t> ScalarShape;
+static const std::vector<int64_t> ScalarShape{1};
 
 // List of cost features. A "cost" feature is a summand of the heuristic-based
 // inline cost, and we define them separately to preserve the original heuristic
