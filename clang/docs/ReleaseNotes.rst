@@ -513,6 +513,8 @@ clang-format
 - Add additional Qualifier Ordering support for special cases such
   as templates, requires clauses, long qualified names.
 - Fix all known issues associated with ``LambdaBodyIndentation: OuterScope``.
+- Add ``BracedInitializerIndentWidth`` which can be used to configure
+  the indentation level of the contents of braced init lists.
 
 libclang
 --------
