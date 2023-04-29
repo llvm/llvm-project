@@ -1553,7 +1553,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       SmallVector<int, 16> Elts;
       for (unsigned i = 0; i < VWidth; ++i) {
         if (UndefElts[i])
-          Elts.push_back(UndefMaskElem);
+          Elts.push_back(PoisonMaskElem);
         else
           Elts.push_back(Shuffle->getMaskValue(i));
       }
