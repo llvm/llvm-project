@@ -2772,6 +2772,14 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     break;
   case Instruction::Add: {
     // X + Y.
+
+    // If Add has nuw wrap flag, then if either X or Y is non-zero the result is
+    // non-zero.
+    auto *BO = cast<OverflowingBinaryOperator>(V);
+    if (Q.IIQ.hasNoUnsignedWrap(BO))
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
+             isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
+
     KnownBits XKnown =
         computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
     KnownBits YKnown =
