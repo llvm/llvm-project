@@ -60,12 +60,29 @@ void test_index_internals() {
   static_assert(std::__variant_npos<IndexT> == IndexLim::max(), "");
 }
 
+template <class LargestType>
+struct type_with_index {
+  LargestType largest;
+#ifdef _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+  unsigned char index;
+#else
+  unsigned int index;
+#endif
+};
+
 int main(int, char**) {
   test_index_type<unsigned char>();
   // This won't compile due to template depth issues.
   //test_index_type<unsigned short>();
   test_index_internals<unsigned char>();
   test_index_internals<unsigned short>();
+
+  // Test that std::variant achieves the expected size. See https://llvm.org/PR61095.
+  static_assert(sizeof(std::variant<char, char, char>) == sizeof(type_with_index<char>));
+  static_assert(sizeof(std::variant<int, int, int>) == sizeof(type_with_index<int>));
+  static_assert(sizeof(std::variant<long, long, long>) == sizeof(type_with_index<long>));
+  static_assert(sizeof(std::variant<char, int, long>) == sizeof(type_with_index<long>));
+  static_assert(sizeof(std::variant<std::size_t, std::size_t, std::size_t>) == sizeof(type_with_index<std::size_t>));
 
   return 0;
 }
