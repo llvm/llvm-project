@@ -14,14 +14,15 @@
 #define MLIR_CIR_DIALECT_CIR_TYPES
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Types
 //===----------------------------------------------------------------------===//
 
-class CIR_Type<string name, string typeMnemonic> : TypeDef<CIR_Dialect,
-                                                           name> {
+class CIR_Type<string name, string typeMnemonic, list<Trait> traits = []> :
+    TypeDef<CIR_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
@@ -29,8 +30,8 @@ class CIR_Type<string name, string typeMnemonic> : TypeDef<CIR_Dialect,
 // PointerType
 //===----------------------------------------------------------------------===//
 
-def CIR_PointerType :
-    CIR_Type<"Pointer", "ptr"> {
+def CIR_PointerType : CIR_Type<"Pointer", "ptr",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
 
   let summary = "CIR pointer type";
   let description = [{
@@ -112,8 +113,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
 // ArrayType
 //===----------------------------------------------------------------------===//
 
-def CIR_ArrayType :
-    CIR_Type<"Array", "array"> {
+def CIR_ArrayType : CIR_Type<"Array", "array",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
 
   let summary = "CIR array type";
   let description = [{
