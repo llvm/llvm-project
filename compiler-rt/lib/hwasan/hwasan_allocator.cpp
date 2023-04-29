@@ -384,9 +384,12 @@ static void *HwasanReallocate(StackTrace *stack, void *tagged_ptr_old,
   if (tagged_ptr_old && tagged_ptr_new) {
     Metadata *meta =
         reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr_old));
-    internal_memcpy(
-        UntagPtr(tagged_ptr_new), untagged_ptr_old,
-        Min(new_size, static_cast<uptr>(meta->GetRequestedSize())));
+    void *untagged_ptr_new =
+        InTaggableRegion(reinterpret_cast<uptr>(tagged_ptr_new))
+            ? UntagPtr(tagged_ptr_new)
+            : tagged_ptr_new;
+    internal_memcpy(untagged_ptr_new, untagged_ptr_old,
+                    Min(new_size, static_cast<uptr>(meta->GetRequestedSize())));
     HwasanDeallocate(stack, tagged_ptr_old);
   }
   return tagged_ptr_new;

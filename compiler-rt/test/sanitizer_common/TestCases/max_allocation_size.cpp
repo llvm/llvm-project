@@ -43,9 +43,6 @@
 // win32 is disabled due to failing errno tests.
 // UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
-// FIXME: Something crashes.
-// XFAIL: hwasan-aliasing
-
 #include <assert.h>
 #include <errno.h>
 #include <limits>
