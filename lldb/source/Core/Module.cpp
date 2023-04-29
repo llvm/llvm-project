@@ -1755,8 +1755,8 @@ Module::RemapSourceFile(llvm::StringRef path) const {
 
 void Module::RegisterXcodeSDK(llvm::StringRef sdk_name,
                               llvm::StringRef sysroot) {
-  XcodeSDK sdk(sdk_name.str());
-  auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(sdk);
+  auto sdk_path_or_err =
+      HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_name.str()});
 
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
