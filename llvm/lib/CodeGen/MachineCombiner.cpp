@@ -91,8 +91,7 @@ public:
 
 private:
   bool combineInstructions(MachineBasicBlock *);
-  MachineInstr *getOperandDef(const MachineOperand &MO,
-                              SmallVectorImpl<MachineInstr *> &InsInstrs);
+  MachineInstr *getOperandDef(const MachineOperand &MO);
   bool isTransientMI(const MachineInstr *MI);
   unsigned getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
@@ -151,28 +150,11 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 MachineInstr *
-MachineCombiner::getOperandDef(const MachineOperand &MO,
-                               SmallVectorImpl<MachineInstr *> &InsInstrs) {
+MachineCombiner::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
   if (MO.isReg() && MO.getReg().isVirtual())
     DefInstr = MRI->getUniqueVRegDef(MO.getReg());
-  // Since the new instructions are not inserted into the machine function,
-  // the def-use information is not added in MRI. So it is possible that
-  // the register is defined in new instructions.
-  if (!DefInstr) {
-    for (auto *MI : InsInstrs) {
-      for (const MachineOperand &DefMO : MI->operands()) {
-        if (!(DefMO.isReg() && DefMO.getReg().isVirtual()))
-          continue;
-        if (!DefMO.isDef())
-          continue;
-        if (DefMO.getReg() != MO.getReg())
-          continue;
-        DefInstr = MI;
-      }
-    }
-  }
   // PHI's have no depth etc.
   if (DefInstr && DefInstr->isPHI())
     DefInstr = nullptr;
@@ -257,7 +239,7 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
         LatencyOp = TSchedModel.computeOperandLatency(DefInstr, DefIdx,
                                                       InstrPtr, UseIdx);
       } else {
-        MachineInstr *DefInstr = getOperandDef(MO, InsInstrs);
+        MachineInstr *DefInstr = getOperandDef(MO);
         if (DefInstr && (TII->getMachineCombinerTraceStrategy() !=
                              MachineTraceStrategy::TS_Local ||
                          DefInstr->getParent() == &MBB)) {
