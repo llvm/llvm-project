@@ -160,8 +160,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.bb8 (machine-block-address-taken, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
-  ; CHECK-NEXT:   liveins: $w20, $x19, $x21, $x22, $x23, $x24, $x8
+  ; CHECK-NEXT:   liveins: $w20, $x19, $x21, $x22, $x23, $x24
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $x8 = MOVi64imm 29273397577910035
   ; CHECK-NEXT:   renamable $x8 = ADDXri killed renamable $x8, 2048, 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb9:
