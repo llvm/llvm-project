@@ -645,10 +645,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UMULO, MVT::i32, Custom);
   setOperationAction(ISD::UMULO, MVT::i64, Custom);
 
-  setOperationAction(ISD::ADDCARRY, MVT::i32, Custom);
-  setOperationAction(ISD::ADDCARRY, MVT::i64, Custom);
-  setOperationAction(ISD::SUBCARRY, MVT::i32, Custom);
-  setOperationAction(ISD::SUBCARRY, MVT::i64, Custom);
+  setOperationAction(ISD::UADDO_CARRY, MVT::i32, Custom);
+  setOperationAction(ISD::UADDO_CARRY, MVT::i64, Custom);
+  setOperationAction(ISD::USUBO_CARRY, MVT::i32, Custom);
+  setOperationAction(ISD::USUBO_CARRY, MVT::i64, Custom);
   setOperationAction(ISD::SADDO_CARRY, MVT::i32, Custom);
   setOperationAction(ISD::SADDO_CARRY, MVT::i64, Custom);
   setOperationAction(ISD::SSUBO_CARRY, MVT::i32, Custom);
@@ -3683,8 +3683,8 @@ static SDValue overflowFlagToValue(SDValue Glue, EVT VT, SelectionDAG &DAG) {
 
 // This lowering is inefficient, but it will get cleaned up by
 // `foldOverflowCheck`
-static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
-                                bool IsSigned) {
+static SDValue lowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG,
+                                  unsigned Opcode, bool IsSigned) {
   EVT VT0 = Op.getValue(0).getValueType();
   EVT VT1 = Op.getValue(1).getValueType();
 
@@ -5760,14 +5760,14 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVACOPY(Op, DAG);
   case ISD::VAARG:
     return LowerVAARG(Op, DAG);
-  case ISD::ADDCARRY:
-    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::ADCS, false /*unsigned*/);
-  case ISD::SUBCARRY:
-    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::SBCS, false /*unsigned*/);
+  case ISD::UADDO_CARRY:
+    return lowerADDSUBO_CARRY(Op, DAG, AArch64ISD::ADCS, false /*unsigned*/);
+  case ISD::USUBO_CARRY:
+    return lowerADDSUBO_CARRY(Op, DAG, AArch64ISD::SBCS, false /*unsigned*/);
   case ISD::SADDO_CARRY:
-    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::ADCS, true /*signed*/);
+    return lowerADDSUBO_CARRY(Op, DAG, AArch64ISD::ADCS, true /*signed*/);
   case ISD::SSUBO_CARRY:
-    return lowerADDSUBCARRY(Op, DAG, AArch64ISD::SBCS, true /*signed*/);
+    return lowerADDSUBO_CARRY(Op, DAG, AArch64ISD::SBCS, true /*signed*/);
   case ISD::SADDO:
   case ISD::UADDO:
   case ISD::SSUBO:

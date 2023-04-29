@@ -658,7 +658,7 @@ private:
   SDValue lowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXALUO(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
