@@ -55,9 +55,8 @@ static std::unique_ptr<raw_fd_ostream> openFile(StringRef file) {
 }
 
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
-  return lto::getThinLTOOutputFile(
-      std::string(path), std::string(ctx.config.thinLTOPrefixReplaceOld),
-      std::string(ctx.config.thinLTOPrefixReplaceNew));
+  return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
+                                   ctx.config.thinLTOPrefixReplaceNew);
 }
 
 lto::Config BitcodeCompiler::createConfig() {
