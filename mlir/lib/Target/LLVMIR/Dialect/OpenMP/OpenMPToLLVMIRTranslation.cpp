@@ -1547,6 +1547,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 /// be passed as flags to the frontend, otherwise they are set to default
 LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                                LLVM::ModuleTranslation &moduleTranslation) {
+  if (!cast<mlir::ModuleOp>(op))
+    return failure();
+  
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   ompBuilder->createGlobalFlag(
