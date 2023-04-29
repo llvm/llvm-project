@@ -125,22 +125,8 @@ __attribute__((always_inline)) static void SigTrap(uptr p, uptr size) {
   // __builtin_unreachable();
 }
 
-__attribute__((always_inline, nodebug)) static inline uptr ShortTagSize(
-    tag_t mem_tag, uptr ptr) {
-  DCHECK(IsAligned(ptr, kShadowAlignment));
-  tag_t ptr_tag = GetTagFromPointer(ptr);
-  if (ptr_tag == mem_tag)
-    return kShadowAlignment;
-  if (mem_tag >= kShadowAlignment)
-    return 0;
-  if (*(u8 *)(ptr | (kShadowAlignment - 1)) != ptr_tag)
-    return 0;
-  return mem_tag;
-}
-
 __attribute__((always_inline, nodebug)) static inline bool
 PossiblyShortTagMatches(tag_t mem_tag, uptr ptr, uptr sz) {
-  DCHECK(IsAligned(ptr, kShadowAlignment));
   tag_t ptr_tag = GetTagFromPointer(ptr);
   if (ptr_tag == mem_tag)
     return true;
