@@ -52,6 +52,22 @@ using namespace mlir;
 using namespace llvm;
 
 namespace {
+class BytecodeVersionParser : public cl::parser<std::optional<int64_t>> {
+public:
+  BytecodeVersionParser(cl::Option &O)
+      : cl::parser<std::optional<int64_t>>(O) {}
+
+  bool parse(cl::Option &O, StringRef /*argName*/, StringRef arg,
+             std::optional<int64_t> &v) {
+    long long w;
+    if (getAsSignedInteger(arg, 10, w))
+      return O.error("Invalid argument '" + arg +
+                     "', only integer is supported.");
+    v = w;
+    return false;
+  }
+};
+
 /// This class is intended to manage the handling of command line options for
 /// creating a *-opt config. This is a singleton.
 struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
@@ -73,6 +89,13 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
     static cl::opt<bool, /*ExternalStorage=*/true> emitBytecode(
         "emit-bytecode", cl::desc("Emit bytecode when generating output"),
         cl::location(emitBytecodeFlag), cl::init(false));
+
+    static cl::opt<std::optional<int64_t>, /*ExternalStorage=*/true,
+                   BytecodeVersionParser>
+        bytecodeVersion(
+            "emit-bytecode-version",
+            cl::desc("Use specified bytecode when generating output"),
+            cl::location(emitBytecodeVersion), cl::init(std::nullopt));
 
     static cl::opt<std::string, /*ExternalStorage=*/true> irdlFile(
         "irdl-file",
@@ -241,13 +264,23 @@ performActions(raw_ostream &os,
   TimingScope outputTiming = timing.nest("Output");
   if (config.shouldEmitBytecode()) {
     BytecodeWriterConfig writerConfig(fallbackResourceMap);
+    if (auto v = config.bytecodeVersionToEmit()) {
+      writerConfig.setDesiredBytecodeVersion(*v);
+      // Returns failure if requested version couldn't be used for opt tools.
+      return success(
+          writeBytecodeToFile(op.get(), os, writerConfig).minVersion <= *v);
+    }
     writeBytecodeToFile(op.get(), os, writerConfig);
-  } else {
-    AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
-                      &fallbackResourceMap);
-    op.get()->print(os, asmState);
-    os << '\n';
+    return success();
   }
+
+  if (config.bytecodeVersionToEmit().has_value())
+    return emitError(UnknownLoc::get(pm.getContext()))
+           << "bytecode version while not emitting bytecode";
+  AsmState asmState(op.get(), OpPrintingFlags(), /*locationMap=*/nullptr,
+                    &fallbackResourceMap);
+  op.get()->print(os, asmState);
+  os << '\n';
   return success();
 }
 

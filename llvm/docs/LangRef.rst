@@ -2233,31 +2233,36 @@ example:
     This indicates the denormal (subnormal) handling that may be
     assumed for the default floating-point environment. This is a
     comma separated pair. The elements may be one of ``"ieee"``,
-    ``"preserve-sign"``, or ``"positive-zero"``. The first entry
-    indicates the flushing mode for the result of floating point
-    operations. The second indicates the handling of denormal inputs
+    ``"preserve-sign"``, ``"positive-zero"``, or ``"dynamic"``. The
+    first entry indicates the flushing mode for the result of floating
+    point operations. The second indicates the handling of denormal inputs
     to floating point instructions. For compatibility with older
     bitcode, if the second value is omitted, both input and output
     modes will assume the same mode.
 
-    If this is attribute is not specified, the default is
-    ``"ieee,ieee"``.
+    If this is attribute is not specified, the default is ``"ieee,ieee"``.
 
     If the output mode is ``"preserve-sign"``, or ``"positive-zero"``,
     denormal outputs may be flushed to zero by standard floating-point
     operations. It is not mandated that flushing to zero occurs, but if
     a denormal output is flushed to zero, it must respect the sign
-    mode. Not all targets support all modes. While this indicates the
-    expected floating point mode the function will be executed with,
-    this does not make any attempt to ensure the mode is
-    consistent. User or platform code is expected to set the floating
-    point mode appropriately before function entry.
+    mode. Not all targets support all modes.
 
-   If the input mode is ``"preserve-sign"``, or ``"positive-zero"``, a
-   floating-point operation must treat any input denormal value as
-   zero. In some situations, if an instruction does not respect this
-   mode, the input may need to be converted to 0 as if by
-   ``@llvm.canonicalize`` during lowering for correctness.
+    If the mode is ``"dynamic"``, the behavior is derived from the
+    dynamic state of the floating-point environment. Transformations
+    which depend on the behavior of denormal values should not be
+    performed.
+
+    While this indicates the expected floating point mode the function
+    will be executed with, this does not make any attempt to ensure
+    the mode is consistent. User or platform code is expected to set
+    the floating point mode appropriately before function entry.
+
+    If the input mode is ``"preserve-sign"``, or ``"positive-zero"``,
+    a floating-point operation must treat any input denormal value as
+    zero. In some situations, if an instruction does not respect this
+    mode, the input may need to be converted to 0 as if by
+    ``@llvm.canonicalize`` during lowering for correctness.
 
 ``"denormal-fp-math-f32"``
     Same as ``"denormal-fp-math"``, but only controls the behavior of

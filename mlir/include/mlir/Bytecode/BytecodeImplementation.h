@@ -233,6 +233,9 @@ public:
   /// guaranteed to not die before the end of the bytecode process. The blob is
   /// written as-is, with no additional compression or compaction.
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
+
+  /// Return the bytecode version being emitted for.
+  virtual int64_t getBytecodeVersion() const = 0;
 };
 
 //===--------------------------------------------------------------------===//

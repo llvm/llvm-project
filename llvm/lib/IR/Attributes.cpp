@@ -2001,6 +2001,37 @@ AttributeMask AttributeFuncs::getUBImplyingAttributes() {
   return AM;
 }
 
+/// Callees with dynamic denormal modes are compatible with any caller mode.
+static bool denormModeCompatible(DenormalMode CallerMode,
+                                 DenormalMode CalleeMode) {
+  if (CallerMode == CalleeMode || CalleeMode == DenormalMode::getDynamic())
+    return true;
+
+  // If they don't exactly match, it's OK if the mismatched component is
+  // dynamic.
+  if (CalleeMode.Input == CallerMode.Input &&
+      CalleeMode.Output == DenormalMode::Dynamic)
+    return true;
+
+  if (CalleeMode.Output == CallerMode.Output &&
+      CalleeMode.Input == DenormalMode::Dynamic)
+    return true;
+  return false;
+}
+
+static bool checkDenormMode(const Function &Caller, const Function &Callee) {
+  DenormalMode CallerMode = Caller.getDenormalModeRaw();
+  DenormalMode CalleeMode = Callee.getDenormalModeRaw();
+
+  if (denormModeCompatible(CallerMode, CalleeMode)) {
+    DenormalMode CallerModeF32 = Caller.getDenormalModeF32Raw();
+    DenormalMode CalleeModeF32 = Callee.getDenormalModeF32Raw();
+    return denormModeCompatible(CallerModeF32, CalleeModeF32);
+  }
+
+  return false;
+}
+
 template<typename AttrClass>
 static bool isEqual(const Function &Caller, const Function &Callee) {
   return Caller.getFnAttribute(AttrClass::getKind()) ==

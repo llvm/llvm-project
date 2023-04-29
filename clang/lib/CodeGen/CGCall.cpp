@@ -1829,10 +1829,32 @@ static bool HasStrictReturn(const CodeGenModule &Module, QualType RetTy,
          Module.getLangOpts().Sanitize.has(SanitizerKind::Return);
 }
 
-void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
-                                                 bool HasOptnone,
-                                                 bool AttrOnCallSite,
-                                               llvm::AttrBuilder &FuncAttrs) {
+/// Add denormal-fp-math and denormal-fp-math-f32 as appropriate for the
+/// requested denormal behavior, accounting for the overriding behavior of the
+/// -f32 case.
+static void addDenormalModeAttrs(llvm::DenormalMode FPDenormalMode,
+                                 llvm::DenormalMode FP32DenormalMode,
+                                 llvm::AttrBuilder &FuncAttrs) {
+  if (FPDenormalMode != llvm::DenormalMode::getDefault())
+    FuncAttrs.addAttribute("denormal-fp-math", FPDenormalMode.str());
+
+  if (FP32DenormalMode != FPDenormalMode && FP32DenormalMode.isValid())
+    FuncAttrs.addAttribute("denormal-fp-math-f32", FP32DenormalMode.str());
+}
+
+/// Add default attributes to a function, which have merge semantics under
+/// -mlink-builtin-bitcode and should not simply overwrite any existing
+/// attributes in the linked library.
+static void
+addMergableDefaultFunctionAttributes(const CodeGenOptions &CodeGenOpts,
+                                     llvm::AttrBuilder &FuncAttrs) {
+  addDenormalModeAttrs(CodeGenOpts.FPDenormalMode, CodeGenOpts.FP32DenormalMode,
+                       FuncAttrs);
+}
+
+void CodeGenModule::getTrivialDefaultFunctionAttributes(
+    StringRef Name, bool HasOptnone, bool AttrOnCallSite,
+    llvm::AttrBuilder &FuncAttrs) {
   // OptimizeNoneAttr takes precedence over -Os or -Oz. No warning needed.
   if (!HasOptnone) {
     if (CodeGenOpts.OptimizeSize)
@@ -1873,15 +1895,6 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
 
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
-
-    if (CodeGenOpts.FPDenormalMode != llvm::DenormalMode::getIEEE())
-      FuncAttrs.addAttribute("denormal-fp-math",
-                             CodeGenOpts.FPDenormalMode.str());
-    if (CodeGenOpts.FP32DenormalMode != CodeGenOpts.FPDenormalMode) {
-      FuncAttrs.addAttribute(
-          "denormal-fp-math-f32",
-          CodeGenOpts.FP32DenormalMode.str());
-    }
 
     if (LangOpts.getDefaultExceptionMode() == LangOptions::FPE_Ignore)
       FuncAttrs.addAttribute("no-trapping-math", "true");
@@ -1984,6 +1997,19 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
   }
 }
 
+void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
+                                                 bool HasOptnone,
+                                                 bool AttrOnCallSite,
+                                                 llvm::AttrBuilder &FuncAttrs) {
+  getTrivialDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite,
+                                      FuncAttrs);
+  if (!AttrOnCallSite) {
+    // If we're just getting the default, get the default values for mergeable
+    // attributes.
+    addMergableDefaultFunctionAttributes(CodeGenOpts, FuncAttrs);
+  }
+}
+
 void CodeGenModule::addDefaultFunctionDefinitionAttributes(llvm::Function &F) {
   llvm::AttrBuilder FuncAttrs(F.getContext());
   getDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
@@ -1992,8 +2018,60 @@ void CodeGenModule::addDefaultFunctionDefinitionAttributes(llvm::Function &F) {
   F.addFnAttrs(FuncAttrs);
 }
 
+/// Apply default attributes to \p F, accounting for merge semantics of
+/// attributes that should not overwrite existing attributes.
+void CodeGenModule::mergeDefaultFunctionDefinitionAttributes(
+    llvm::Function &F, bool WillInternalize) {
+  llvm::AttrBuilder FuncAttrs(F.getContext());
+  getTrivialDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
+                                      /*AttrOnCallSite=*/false, FuncAttrs);
+  GetCPUAndFeaturesAttributes(GlobalDecl(), FuncAttrs);
+
+  if (!WillInternalize && F.isInterposable()) {
+    // Do not promote "dynamic" denormal-fp-math to this translation unit's
+    // setting for weak functions that won't be internalized. The user has no
+    // real control for how builtin bitcode is linked, so we shouldn't assume
+    // later copies will use a consistent mode.
+    F.addFnAttrs(FuncAttrs);
+    return;
+  }
+
+  llvm::AttributeMask AttrsToRemove;
+
+  llvm::DenormalMode DenormModeToMerge = F.getDenormalModeRaw();
+  llvm::DenormalMode DenormModeToMergeF32 = F.getDenormalModeF32Raw();
+  llvm::DenormalMode Merged =
+      CodeGenOpts.FPDenormalMode.mergeCalleeMode(DenormModeToMerge);
+  llvm::DenormalMode MergedF32 = CodeGenOpts.FP32DenormalMode;
+
+  if (DenormModeToMergeF32.isValid()) {
+    MergedF32 =
+        CodeGenOpts.FP32DenormalMode.mergeCalleeMode(DenormModeToMergeF32);
+  }
+
+  if (Merged == llvm::DenormalMode::getDefault()) {
+    AttrsToRemove.addAttribute("denormal-fp-math");
+  } else if (Merged != DenormModeToMerge) {
+    // Overwrite existing attribute
+    FuncAttrs.addAttribute("denormal-fp-math",
+                           CodeGenOpts.FPDenormalMode.str());
+  }
+
+  if (MergedF32 == llvm::DenormalMode::getDefault()) {
+    AttrsToRemove.addAttribute("denormal-fp-math-f32");
+  } else if (MergedF32 != DenormModeToMergeF32) {
+    // Overwrite existing attribute
+    FuncAttrs.addAttribute("denormal-fp-math-f32",
+                           CodeGenOpts.FP32DenormalMode.str());
+  }
+
+  F.removeFnAttrs(AttrsToRemove);
+  addDenormalModeAttrs(Merged, MergedF32, FuncAttrs);
+  F.addFnAttrs(FuncAttrs);
+}
+
 void CodeGenModule::addDefaultFunctionDefinitionAttributes(
-                                                   llvm::AttrBuilder &attrs) {
+    llvm::AttrBuilder &attrs) {
   getDefaultFunctionAttributes(/*function name*/ "", /*optnone*/ false,
                                /*for call*/ false, attrs);
   GetCPUAndFeaturesAttributes(GlobalDecl(), attrs);

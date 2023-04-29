@@ -90,6 +90,15 @@ public:
   }
   StringRef getIrdlFile() const { return irdlFileFlag; }
 
+  /// Set the bytecode version to emit.
+  MlirOptMainConfig &setEmitBytecodeVersion(int64_t version) {
+    emitBytecodeVersion = version;
+    return *this;
+  }
+  std::optional<int64_t> bytecodeVersionToEmit() const {
+    return emitBytecodeVersion;
+  }
+
   /// Set the callback to populate the pass manager.
   MlirOptMainConfig &
   setPassPipelineSetupFn(std::function<LogicalResult(PassManager &)> callback) {
@@ -167,6 +176,9 @@ protected:
 
   /// Location Breakpoints to filter the action logging.
   std::vector<tracing::BreakpointManager *> logActionLocationFilter;
+
+  /// Emit bytecode at given version.
+  std::optional<int64_t> emitBytecodeVersion = std::nullopt;
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;

@@ -31,6 +31,8 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
   StringRef InitOrFiniKernelName = "amdgcn.device.init";
   if (!IsCtor)
     InitOrFiniKernelName = "amdgcn.device.fini";
+  if (Function *F = M.getFunction(InitOrFiniKernelName))
+    return F;
 
   Function *InitOrFiniKernel = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
@@ -63,12 +65,18 @@ static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
 
   for (Value *V : GA->operands()) {
     auto *CS = cast<ConstantStruct>(V);
-    IRB.CreateCall(ConstructorTy, CS->getOperand(1));
+    bool AlreadyRegistered =
+        llvm::any_of(CS->getOperand(1)->uses(), [=](Use &U) {
+          if (auto *CB = dyn_cast<CallBase>(U.getUser()))
+            if (CB->getCaller() == InitOrFiniKernel)
+              return true;
+          return false;
+        });
+    if (!AlreadyRegistered)
+      IRB.CreateCall(ConstructorTy, CS->getOperand(1));
   }
 
   appendToUsed(M, {InitOrFiniKernel});
-
-  GV->eraseFromParent();
   return true;
 }
 
@@ -83,9 +91,7 @@ class AMDGPUCtorDtorLoweringLegacy final : public ModulePass {
 public:
   static char ID;
   AMDGPUCtorDtorLoweringLegacy() : ModulePass(ID) {}
-  bool runOnModule(Module &M) override {
-    return lowerCtorsAndDtors(M);
-  }
+  bool runOnModule(Module &M) override { return lowerCtorsAndDtors(M); }
 };
 
 } // End anonymous namespace
