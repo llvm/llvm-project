@@ -32,6 +32,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP2]], 4294967295
 ; CHECK-NEXT:    [[HWASAN_SHADOW:%.*]] = add i64 [[TMP15]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = inttoptr i64 [[HWASAN_SHADOW]] to ptr
+; CHECK-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP6]], 56
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i8 @__hwasan_generate_tag()
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i8 [[TMP17]] to i64
@@ -41,14 +42,17 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP21]] to ptr
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP18]] to i8
 ; CHECK-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP24:%.*]] = lshr i64 [[TMP23]], 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP24]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP25]], i8 [[TMP22]], i64 1, i1 false)
+; CHECK-NEXT:    [[TMP24:%.*]] = and i64 [[TMP23]], 72057594037927935
+; CHECK-NEXT:    [[TMP25:%.*]] = lshr i64 [[TMP24]], 4
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP25]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP26]], i8 [[TMP22]], i64 1, i1 false)
 ; CHECK-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
-; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP27:%.*]] = lshr i64 [[TMP26]], 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP27]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP28]], i8 0, i64 1, i1 false)
+; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP29:%.*]] = and i64 [[TMP28]], 72057594037927935
+; CHECK-NEXT:    [[TMP30:%.*]] = lshr i64 [[TMP29]], 4
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP30]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP31]], i8 [[TMP27]], i64 1, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
