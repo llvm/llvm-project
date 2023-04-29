@@ -103,8 +103,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
   private:
     // All these support lazily computation and storage
     // for the struct size and alignment.
-    mutable std::optional<unsigned> size, align;
-    mutable std::optional<bool> padded = false;
+    mutable std::optional<unsigned> size{}, align{};
+    mutable std::optional<bool> padded{};
     void computeSizeAndAlignment(const ::mlir::DataLayout &dataLayout) const;
   public:
     void dropAst();
