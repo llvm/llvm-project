@@ -271,7 +271,8 @@ namespace clang {
             // in LLVM IR.
             if (F.isIntrinsic())
               continue;
-            Gen->CGM().addDefaultFunctionDefinitionAttributes(F);
+            Gen->CGM().mergeDefaultFunctionDefinitionAttributes(F,
+                                                                LM.Internalize);
           }
 
         CurLinkModule = LM.Module.get();

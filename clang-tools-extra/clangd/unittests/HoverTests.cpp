@@ -956,6 +956,29 @@ class Foo final {})cpp";
             HI.CalleeArgInfo->Type = "const float &";
             HI.CallPassType = HoverInfo::PassType{PassMode::Value, true};
           }},
+      {
+          R"cpp(
+          struct Foo {
+            explicit Foo(const float& arg) {}
+          };
+          int main() {
+            int a = 0;
+            Foo foo([[^a]]);
+          }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "a";
+            HI.Kind = index::SymbolKind::Variable;
+            HI.NamespaceScope = "";
+            HI.Definition = "int a = 0";
+            HI.LocalScope = "main::";
+            HI.Value = "0";
+            HI.Type = "int";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Name = "arg";
+            HI.CalleeArgInfo->Type = "const float &";
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, true};
+          }},
       {// Literal passed to function call
        R"cpp(
           void fun(int arg_a, const int &arg_b) {};
@@ -1342,6 +1365,7 @@ class CustomClass {
   CustomClass(const Base &x) {}
   CustomClass(int &x) {}
   CustomClass(float x) {}
+  CustomClass(int x, int y) {}
 };
 
 void int_by_ref(int &x) {}
@@ -1388,6 +1412,11 @@ void fun() {
       {"base_by_ref([[^derived]]);", PassMode::Ref, false},
       {"base_by_const_ref([[^derived]]);", PassMode::ConstRef, false},
       {"base_by_value([[^derived]]);", PassMode::Value, false},
+      // Custom class constructor tests
+      {"CustomClass c1([[^base]]);", PassMode::ConstRef, false},
+      {"auto c2 = new CustomClass([[^base]]);", PassMode::ConstRef, false},
+      {"CustomClass c3([[^int_x]]);", PassMode::Ref, false},
+      {"CustomClass c3(int_x, [[^int_x]]);", PassMode::Value, false},
       // Converted tests
       {"float_by_value([[^int_x]]);", PassMode::Value, true},
       {"float_by_value([[^int_ref]]);", PassMode::Value, true},
