@@ -416,7 +416,8 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
 }
 
 static const void *AllocationBegin(const void *p) {
-  const void *untagged_ptr = UntagPtr(p);
+  const void *untagged_ptr =
+      __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   if (!untagged_ptr)
     return nullptr;
 
@@ -432,12 +433,14 @@ static const void *AllocationBegin(const void *p) {
   return (const void *)AddTagToPointer((uptr)beg, tag);
 }
 
-static uptr AllocationSize(const void *tagged_ptr) {
-  const void *untagged_ptr = UntagPtr(tagged_ptr);
+static uptr AllocationSize(const void *p) {
+  const void *untagged_ptr =
+      __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   if (!untagged_ptr) return 0;
   const void *beg = allocator.GetBlockBegin(untagged_ptr);
-  Metadata *b = (Metadata *)allocator.GetMetaData(untagged_ptr);
-  if (beg != untagged_ptr) return 0;
+  if (!beg)
+    return 0;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
   return b->GetRequestedSize();
 }
 
