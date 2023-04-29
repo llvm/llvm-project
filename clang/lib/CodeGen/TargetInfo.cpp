@@ -9056,13 +9056,17 @@ Address HexagonABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 namespace {
 class LanaiABIInfo : public DefaultABIInfo {
+  struct CCState {
+    unsigned FreeRegs;
+  };
+
 public:
   LanaiABIInfo(CodeGen::CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
   bool shouldUseInReg(QualType Ty, CCState &State) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    CCState State(FI);
+    CCState State;
     // Lanai uses 4 registers to pass arguments unless the function has the
     // regparm attribute set.
     if (FI.getHasRegParm()) {
@@ -10074,6 +10078,10 @@ SparcV9TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 namespace {
 
 class ARCABIInfo : public DefaultABIInfo {
+  struct CCState {
+    unsigned FreeRegs;
+  };
+
 public:
   using DefaultABIInfo::DefaultABIInfo;
 
@@ -10096,7 +10104,7 @@ private:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    CCState State(FI);
+    CCState State;
     // ARC uses 8 registers to pass arguments.
     State.FreeRegs = 8;
 
