@@ -1223,6 +1223,13 @@ public:
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
 
+  /// When calculate the latency of the root instruction, accumulate the
+  /// latency of the sequence to the root latency.
+  /// \param Root - Instruction that could be combined with one of its operands
+  virtual bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const {
+    return true;
+  }
+
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
   void reassociateOps(MachineInstr &Root, MachineInstr &Prev,
