@@ -130,7 +130,7 @@ csrrs t1, uip, zero
 csrrs t2, 0x044, zero
 
 ##################################
-# User Floating Pont CSRs
+# User Floating Point CSRs
 ##################################
 # Tests in rvf-user-mode-csr.s
 
