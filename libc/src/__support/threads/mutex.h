@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
 #define LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
 
+#include "src/__support/macros/properties/architectures.h"
+
 // Platform independent code will include this header file which pulls
 // the platfrom specific specializations using platform macros.
 //
@@ -35,8 +37,10 @@
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-#ifdef __unix__
+#if defined(__unix__)
 #include "linux/mutex.h"
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "gpu/mutex.h"
 #endif // __unix__
 
 namespace __llvm_libc {
