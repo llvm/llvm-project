@@ -19,7 +19,6 @@
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <memory>

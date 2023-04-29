@@ -40,7 +40,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include <bitset>
 #include <optional>
 

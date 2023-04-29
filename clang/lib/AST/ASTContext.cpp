@@ -85,7 +85,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
