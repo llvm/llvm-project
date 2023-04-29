@@ -64,6 +64,24 @@ void PointerType::print(mlir::AsmPrinter &printer) const {
   printer << '>';
 }
 
+llvm::TypeSize
+PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                               ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
+uint64_t
+PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                             ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
+uint64_t PointerType::getPreferredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
 Type BoolType::parse(mlir::AsmParser &parser) {
   return get(parser.getContext());
 }
@@ -162,6 +180,24 @@ void ArrayType::print(mlir::AsmPrinter &printer) const {
   printer.printType(getEltType());
   printer << " x " << getSize();
   printer << '>';
+}
+
+llvm::TypeSize
+ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                             ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeSizeInBits(getEltType());
+}
+
+uint64_t
+ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                           ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeABIAlignment(getEltType());
+}
+
+uint64_t
+ArrayType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypePreferredAlignment(getEltType());
 }
 
 //===----------------------------------------------------------------------===//

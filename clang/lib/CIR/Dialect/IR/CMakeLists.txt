@@ -12,8 +12,9 @@ add_clang_library(MLIRCIR
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRDataLayoutInterfaces
   MLIRFuncDialect
-  MLIRLLVMDialect
   MLIRLoopLikeInterface
+  MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )
