@@ -39,7 +39,7 @@ CIRGenTypes::~CIRGenTypes() {
     delete &*I++;
 }
 
-// This is CIR's version of CodeGenTypes::addRecordTypeName
+// This is CIR's version of CIRGenTypes::addRecordTypeName
 std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
                                            StringRef suffix) {
   llvm::SmallString<256> typeName;
@@ -77,6 +77,10 @@ bool CIRGenTypes::isRecordLayoutComplete(const Type *Ty) const {
   return I != recordDeclTypes.end() && I->second.getBody();
 }
 
+static bool
+isSafeToConvert(QualType T, CIRGenTypes &CGT,
+                llvm::SmallPtrSet<const RecordDecl *, 16> &AlreadyChecked);
+
 /// Return true if it is safe to convert the specified record decl to IR and lay
 /// it out, false if doing so would cause us to get into a recursive compilation
 /// mess.
@@ -111,10 +115,34 @@ isSafeToConvert(const RecordDecl *RD, CIRGenTypes &CGT,
 
   // If this type would require laying out members that are currently being laid
   // out, don't do it.
-  for ([[maybe_unused]] const auto *I : RD->fields())
-    llvm_unreachable("NYI");
+  for (const auto *I : RD->fields())
+    if (!isSafeToConvert(I->getType(), CGT, AlreadyChecked))
+      return false;
 
   // If there are no problems, lets do it.
+  return true;
+}
+
+/// Return true if it is safe to convert this field type, which requires the
+/// structure elements contained by-value to all be recursively safe to convert.
+static bool
+isSafeToConvert(QualType T, CIRGenTypes &CGT,
+                llvm::SmallPtrSet<const RecordDecl *, 16> &AlreadyChecked) {
+  // Strip off atomic type sugar.
+  if (const auto *AT = T->getAs<AtomicType>())
+    T = AT->getValueType();
+
+  // If this is a record, check it.
+  if (const auto *RT = T->getAs<RecordType>())
+    return isSafeToConvert(RT->getDecl(), CGT, AlreadyChecked);
+
+  // If this is an array, check the elements, which are embedded inline.
+  if (const auto *AT = CGT.getContext().getAsArrayType(T))
+    return isSafeToConvert(AT->getElementType(), CGT, AlreadyChecked);
+
+  // Otherwise, there is no concern about transforming this. We only care about
+  // things that are contained by-value in a structure that can have another
+  // structure as a member.
   return true;
 }
 
