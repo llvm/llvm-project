@@ -16,6 +16,14 @@ func.func @const_attribute_return_type_2() {
 
 // -----
 
+func.func @empty_constant() {
+    // expected-error @+1 {{'emitc.constant' op value must not be empty}}
+    %c0 = "emitc.constant"(){value = ""} : () -> i32
+    return
+}
+
+// -----
+
 func.func @index_args_out_of_range_1() {
     // expected-error @+1 {{'emitc.call' op index argument is out of range}}
     emitc.call "test" () {args = [0 : index]} : () -> ()
@@ -75,6 +83,15 @@ func.func @empty_operator(%arg : i32) {
 func.func @illegal_operator(%arg : i32) {
     // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
     %2 = emitc.apply "+"(%arg) : (i32) -> !emitc.ptr<i32>
+    return
+}
+
+// -----
+
+func.func @illegal_operand() {
+    %1 = "emitc.constant"(){value = 42: i32} : () -> i32
+    // expected-error @+1 {{'emitc.apply' op cannot apply to constant}}
+    %2 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
     return
 }
 

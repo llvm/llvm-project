@@ -160,6 +160,7 @@ template <class Stream, class T>
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__fwd/istream.h>
 #include <__iterator/istreambuf_iterator.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>

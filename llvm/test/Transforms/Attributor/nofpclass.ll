@@ -1421,7 +1421,7 @@ define <4 x float> @shufflevector_undef_demanded(<2 x float> %arg0, <2 x float> 
 ; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define <4 x float> @shufflevector_undef_demanded
 ; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x float> nofpclass(inf) [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> undef
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[ARG0]], <2 x float> [[ARG1]], <4 x i32> poison
 ; CHECK-NEXT:    ret <4 x float> [[SHUFFLE]]
 ;
   %shuffle = shufflevector <2 x float> %arg0, <2 x float> %arg1, <4 x i32> undef

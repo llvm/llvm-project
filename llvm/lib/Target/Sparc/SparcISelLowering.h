@@ -31,6 +31,7 @@ namespace llvm {
     BPXCC,    // Branch to dest on xcc condition, with prediction (64-bit only).
     BRFCC,    // Branch to dest on fcc condition
     BRFCC_V9, // Branch to dest on fcc condition (v9 variant).
+    BR_REG,   // Branch to dest using the comparison of a register with zero.
     SELECT_ICC, // Select between two values using the current ICC flags.
     SELECT_XCC, // Select between two values using the current XCC flags.
     SELECT_FCC, // Select between two values using the current FCC flags.

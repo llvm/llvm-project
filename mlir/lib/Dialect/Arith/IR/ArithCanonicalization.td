@@ -319,6 +319,20 @@ def TruncationMatchesShiftAmount :
       CPred<"(getScalarOrElementWidth($0) - getScalarOrElementWidth($1)) == "
               "*getIntOrSplatIntValue($2)">]>>;
 
+// trunci(extsi(x)) -> extsi(x), when only the sign-extension bits are truncated
+def TruncIExtSIToExtSI :
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x)),
+        (Arith_ExtSIOp $x),
+        [(ValueWiderThan $ext, $tr),
+         (ValueWiderThan $tr, $x)]>;
+
+// trunci(extui(x)) -> extui(x), when only the zero-extension bits are truncated
+def TruncIExtUIToExtUI :
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x)),
+        (Arith_ExtUIOp $x),
+        [(ValueWiderThan $ext, $tr),
+         (ValueWiderThan $tr, $x)]>;
+
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
 def TruncIShrSIToTrunciShrUI :
     Pat<(Arith_TruncIOp:$tr

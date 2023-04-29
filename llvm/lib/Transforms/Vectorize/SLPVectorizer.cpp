@@ -349,7 +349,7 @@ static SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask,
                                    UseMask MaskArg) {
   SmallBitVector UseMask(VF, true);
   for (auto [Idx, Value] : enumerate(Mask)) {
-    if (Value == UndefMaskElem) {
+    if (Value == PoisonMaskElem) {
       if (MaskArg == UseMask::UndefsAsMask)
         UseMask.reset(Idx);
       continue;
@@ -467,7 +467,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
   Value *Vec2 = nullptr;
   enum ShuffleMode { Unknown, Select, Permute };
   ShuffleMode CommonShuffleMode = Unknown;
-  Mask.assign(VL.size(), UndefMaskElem);
+  Mask.assign(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     // Undef can be represented as an undef element in a vector.
     if (isa<UndefValue>(VL[I]))
@@ -644,7 +644,7 @@ tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
         !isa<ConstantInt, UndefValue>(EI->getIndexOperand()) ||
         is_contained(UndefVectorExtracts, I))
       continue;
-    if (Mask[I] == UndefMaskElem && !isa<PoisonValue>(GatheredExtracts[I]))
+    if (Mask[I] == PoisonMaskElem && !isa<PoisonValue>(GatheredExtracts[I]))
       std::swap(VL[I], GatheredExtracts[I]);
   }
   return Res;
@@ -958,12 +958,12 @@ static void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
     Mask.append(SubMask.begin(), SubMask.end());
     return;
   }
-  SmallVector<int> NewMask(SubMask.size(), UndefMaskElem);
+  SmallVector<int> NewMask(SubMask.size(), PoisonMaskElem);
   int TermValue = std::min(Mask.size(), SubMask.size());
   for (int I = 0, E = SubMask.size(); I < E; ++I) {
     if ((!ExtendingManyInputs &&
          (SubMask[I] >= TermValue || Mask[SubMask[I]] >= TermValue)) ||
-        SubMask[I] == UndefMaskElem)
+        SubMask[I] == PoisonMaskElem)
       continue;
     NewMask[I] = Mask[SubMask[I]];
   }
@@ -1010,7 +1010,7 @@ static void inversePermutation(ArrayRef<unsigned> Indices,
                                SmallVectorImpl<int> &Mask) {
   Mask.clear();
   const unsigned E = Indices.size();
-  Mask.resize(E, UndefMaskElem);
+  Mask.resize(E, PoisonMaskElem);
   for (unsigned I = 0; I < E; ++I)
     Mask[Indices[I]] = I;
 }
@@ -1023,7 +1023,7 @@ static void reorderScalars(SmallVectorImpl<Value *> &Scalars,
                             UndefValue::get(Scalars.front()->getType()));
   Prev.swap(Scalars);
   for (unsigned I = 0, E = Prev.size(); I < E; ++I)
-    if (Mask[I] != UndefMaskElem)
+    if (Mask[I] != PoisonMaskElem)
       Scalars[Mask[I]] = Prev[I];
 }
 
@@ -2538,8 +2538,8 @@ private:
                std::equal(VL.begin(), VL.end(), Mask.begin(),
                           [Scalars](Value *V, int Idx) {
                             return (isa<UndefValue>(V) &&
-                                    Idx == UndefMaskElem) ||
-                                   (Idx != UndefMaskElem && V == Scalars[Idx]);
+                                    Idx == PoisonMaskElem) ||
+                                   (Idx != PoisonMaskElem && V == Scalars[Idx]);
                           });
       };
       if (!ReorderIndices.empty()) {
@@ -2600,7 +2600,7 @@ private:
     ValueList Scalars;
 
     /// The Scalars are vectorized into this value. It is initialized to Null.
-    Value *VectorizedValue = nullptr;
+    WeakTrackingVH VectorizedValue = nullptr;
 
     /// Do we need to gather this sequence or vectorize it
     /// (either with vector instruction or with scatter/gather
@@ -3719,7 +3719,7 @@ static void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
   SmallVector<int> Prev(Reuses.begin(), Reuses.end());
   Prev.swap(Reuses);
   for (unsigned I = 0, E = Prev.size(); I < E; ++I)
-    if (Mask[I] != UndefMaskElem)
+    if (Mask[I] != PoisonMaskElem)
       Reuses[Mask[I]] = Prev[I];
 }
 
@@ -3743,7 +3743,7 @@ static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask) {
   }
   Order.assign(Mask.size(), Mask.size());
   for (unsigned I = 0, E = Mask.size(); I < E; ++I)
-    if (MaskOrder[I] != UndefMaskElem)
+    if (MaskOrder[I] != PoisonMaskElem)
       Order[MaskOrder[I]] = I;
   fixupOrderingIndices(Order);
 }
@@ -4078,14 +4078,14 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
           std::optional<unsigned> Idx = getExtractIndex(cast<Instruction>(V));
           return Idx && *Idx < Sz;
         })) {
-      SmallVector<int> ReorderMask(Sz, UndefMaskElem);
+      SmallVector<int> ReorderMask(Sz, PoisonMaskElem);
       if (TE.ReorderIndices.empty())
         std::iota(ReorderMask.begin(), ReorderMask.end(), 0);
       else
         inversePermutation(TE.ReorderIndices, ReorderMask);
       for (unsigned I = 0; I < VF; ++I) {
         int &Idx = ReusedMask[I];
-        if (Idx == UndefMaskElem)
+        if (Idx == PoisonMaskElem)
           continue;
         Value *V = TE.Scalars[ReorderMask[Idx]];
         std::optional<unsigned> EI = getExtractIndex(cast<Instruction>(V));
@@ -4100,7 +4100,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     for (unsigned K = 0; K < VF; K += Sz) {
       OrdersType CurrentOrder(TE.ReorderIndices);
       SmallVector<int> SubMask{ArrayRef(ReusedMask).slice(K, Sz)};
-      if (SubMask.front() == UndefMaskElem)
+      if (SubMask.front() == PoisonMaskElem)
         std::iota(SubMask.begin(), SubMask.end(), 0);
       reorderOrder(CurrentOrder, SubMask);
       transform(CurrentOrder, It, [K](unsigned Pos) { return Pos + K; });
@@ -4437,7 +4437,7 @@ void BoUpSLP::reorderTopToBottom() {
         unsigned E = Order.size();
         OrdersType CurrentOrder(E, E);
         transform(Mask, CurrentOrder.begin(), [E](int Idx) {
-          return Idx == UndefMaskElem ? E : static_cast<unsigned>(Idx);
+          return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
         });
         fixupOrderingIndices(CurrentOrder);
         ++OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second;
@@ -4462,10 +4462,10 @@ void BoUpSLP::reorderTopToBottom() {
       continue;
     SmallVector<int> Mask;
     inversePermutation(BestOrder, Mask);
-    SmallVector<int> MaskOrder(BestOrder.size(), UndefMaskElem);
+    SmallVector<int> MaskOrder(BestOrder.size(), PoisonMaskElem);
     unsigned E = BestOrder.size();
     transform(BestOrder, MaskOrder.begin(), [E](unsigned I) {
-      return I < E ? static_cast<int>(I) : UndefMaskElem;
+      return I < E ? static_cast<int>(I) : PoisonMaskElem;
     });
     // Do an actual reordering, if profitable.
     for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
@@ -4676,7 +4676,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           unsigned E = Order.size();
           OrdersType CurrentOrder(E, E);
           transform(Mask, CurrentOrder.begin(), [E](int Idx) {
-            return Idx == UndefMaskElem ? E : static_cast<unsigned>(Idx);
+            return Idx == PoisonMaskElem ? E : static_cast<unsigned>(Idx);
           });
           fixupOrderingIndices(CurrentOrder);
           OrdersUses.insert(std::make_pair(CurrentOrder, 0)).first->second +=
@@ -4755,10 +4755,10 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
       VisitedOps.clear();
       SmallVector<int> Mask;
       inversePermutation(BestOrder, Mask);
-      SmallVector<int> MaskOrder(BestOrder.size(), UndefMaskElem);
+      SmallVector<int> MaskOrder(BestOrder.size(), PoisonMaskElem);
       unsigned E = BestOrder.size();
       transform(BestOrder, MaskOrder.begin(), [E](unsigned I) {
-        return I < E ? static_cast<int>(I) : UndefMaskElem;
+        return I < E ? static_cast<int>(I) : PoisonMaskElem;
       });
       for (const std::pair<unsigned, TreeEntry *> &Op : Data.second) {
         TreeEntry *TE = Op.second;
@@ -5167,7 +5167,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     for (Value *V : VL) {
       if (isConstant(V)) {
         ReuseShuffleIndicies.emplace_back(
-            isa<UndefValue>(V) ? UndefMaskElem : UniqueValues.size());
+            isa<UndefValue>(V) ? PoisonMaskElem : UniqueValues.size());
         UniqueValues.emplace_back(V);
         continue;
       }
@@ -6298,7 +6298,7 @@ buildShuffleEntryMask(ArrayRef<Value *> VL, ArrayRef<unsigned> ReorderIndices,
                       SmallVectorImpl<Value *> *OpScalars = nullptr,
                       SmallVectorImpl<Value *> *AltScalars = nullptr) {
   unsigned Sz = VL.size();
-  Mask.assign(Sz, UndefMaskElem);
+  Mask.assign(Sz, PoisonMaskElem);
   SmallVector<int> OrderMask;
   if (!ReorderIndices.empty())
     inversePermutation(ReorderIndices, OrderMask);
@@ -6318,9 +6318,9 @@ buildShuffleEntryMask(ArrayRef<Value *> VL, ArrayRef<unsigned> ReorderIndices,
     }
   }
   if (!ReusesIndices.empty()) {
-    SmallVector<int> NewMask(ReusesIndices.size(), UndefMaskElem);
+    SmallVector<int> NewMask(ReusesIndices.size(), PoisonMaskElem);
     transform(ReusesIndices, NewMask.begin(), [&Mask](int Idx) {
-      return Idx != UndefMaskElem ? Mask[Idx] : UndefMaskElem;
+      return Idx != PoisonMaskElem ? Mask[Idx] : PoisonMaskElem;
     });
     Mask.swap(NewMask);
   }
@@ -6440,13 +6440,13 @@ protected:
   static void combineMasks(unsigned LocalVF, SmallVectorImpl<int> &Mask,
                            ArrayRef<int> ExtMask) {
     unsigned VF = Mask.size();
-    SmallVector<int> NewMask(ExtMask.size(), UndefMaskElem);
+    SmallVector<int> NewMask(ExtMask.size(), PoisonMaskElem);
     for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
-      if (ExtMask[I] == UndefMaskElem)
+      if (ExtMask[I] == PoisonMaskElem)
         continue;
       int MaskedIdx = Mask[ExtMask[I] % VF];
       NewMask[I] =
-          MaskedIdx == UndefMaskElem ? UndefMaskElem : MaskedIdx % LocalVF;
+          MaskedIdx == PoisonMaskElem ? PoisonMaskElem : MaskedIdx % LocalVF;
     }
     Mask.swap(NewMask);
   }
@@ -6533,9 +6533,9 @@ protected:
       if (auto *SVOpTy =
               dyn_cast<FixedVectorType>(SV->getOperand(0)->getType()))
         LocalVF = SVOpTy->getNumElements();
-      SmallVector<int> ExtMask(Mask.size(), UndefMaskElem);
+      SmallVector<int> ExtMask(Mask.size(), PoisonMaskElem);
       for (auto [Idx, I] : enumerate(Mask)) {
-        if (I == UndefMaskElem ||
+        if (I == PoisonMaskElem ||
             static_cast<unsigned>(I) >= SV->getShuffleMask().size())
           continue;
         ExtMask[Idx] = SV->getMaskValue(I);
@@ -6551,11 +6551,11 @@ protected:
       if (!IsOp1Undef && !IsOp2Undef) {
         // Update mask and mark undef elems.
         for (int &I : Mask) {
-          if (I == UndefMaskElem)
+          if (I == PoisonMaskElem)
             continue;
           if (SV->getMaskValue(I % SV->getShuffleMask().size()) ==
-              UndefMaskElem)
-            I = UndefMaskElem;
+              PoisonMaskElem)
+            I = PoisonMaskElem;
         }
         break;
       }
@@ -6577,8 +6577,8 @@ protected:
                "Expected masks of same sizes.");
         // Clear known poison elements.
         for (auto [I, Idx] : enumerate(Mask))
-          if (Idx == UndefMaskElem)
-            IdentityMask[I] = UndefMaskElem;
+          if (Idx == PoisonMaskElem)
+            IdentityMask[I] = PoisonMaskElem;
         Mask.swap(IdentityMask);
         auto *Shuffle = dyn_cast<ShuffleVectorInst>(V);
         return SinglePermute &&
@@ -6614,8 +6614,8 @@ protected:
       Value *Op2 = V2;
       int VF =
           cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
-      SmallVector<int> CombinedMask1(Mask.size(), UndefMaskElem);
-      SmallVector<int> CombinedMask2(Mask.size(), UndefMaskElem);
+      SmallVector<int> CombinedMask1(Mask.size(), PoisonMaskElem);
+      SmallVector<int> CombinedMask2(Mask.size(), PoisonMaskElem);
       for (int I = 0, E = Mask.size(); I < E; ++I) {
         if (Mask[I] < VF)
           CombinedMask1[I] = Mask[I];
@@ -6633,9 +6633,9 @@ protected:
         // again.
         if (auto *SV1 = dyn_cast<ShuffleVectorInst>(Op1))
           if (auto *SV2 = dyn_cast<ShuffleVectorInst>(Op2)) {
-            SmallVector<int> ExtMask1(Mask.size(), UndefMaskElem);
+            SmallVector<int> ExtMask1(Mask.size(), PoisonMaskElem);
             for (auto [Idx, I] : enumerate(CombinedMask1)) {
-                if (I == UndefMaskElem)
+                if (I == PoisonMaskElem)
                 continue;
                 ExtMask1[Idx] = SV1->getMaskValue(I);
             }
@@ -6643,9 +6643,9 @@ protected:
                 cast<FixedVectorType>(SV1->getOperand(1)->getType())
                     ->getNumElements(),
                 ExtMask1, UseMask::SecondArg);
-            SmallVector<int> ExtMask2(CombinedMask2.size(), UndefMaskElem);
+            SmallVector<int> ExtMask2(CombinedMask2.size(), PoisonMaskElem);
             for (auto [Idx, I] : enumerate(CombinedMask2)) {
-                if (I == UndefMaskElem)
+                if (I == PoisonMaskElem)
                 continue;
                 ExtMask2[Idx] = SV2->getMaskValue(I);
             }
@@ -6685,8 +6685,8 @@ protected:
                         ->getElementCount()
                         .getKnownMinValue());
       for (int I = 0, E = Mask.size(); I < E; ++I) {
-        if (CombinedMask2[I] != UndefMaskElem) {
-          assert(CombinedMask1[I] == UndefMaskElem &&
+        if (CombinedMask2[I] != PoisonMaskElem) {
+          assert(CombinedMask1[I] == PoisonMaskElem &&
                  "Expected undefined mask element");
           CombinedMask1[I] = CombinedMask2[I] + (Op1 == Op2 ? 0 : VF);
         }
@@ -6727,7 +6727,7 @@ protected:
 class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
-  SmallVector<Value *, 2> InVectors;
+  SmallVector<PointerUnion<Value *, const TreeEntry *> , 2> InVectors;
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
   ArrayRef<Value *> VectorizedVals;
@@ -6880,25 +6880,25 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     // Process extracts in blocks of EltsPerVector to check if the source vector
     // operand can be re-used directly. If not, add the cost of creating a
     // shuffle to extract the values into a vector register.
-    SmallVector<int> RegMask(EltsPerVector, UndefMaskElem);
+    SmallVector<int> RegMask(EltsPerVector, PoisonMaskElem);
     for (auto *V : VL) {
       ++Idx;
 
       // Reached the start of a new vector registers.
       if (Idx % EltsPerVector == 0) {
-        RegMask.assign(EltsPerVector, UndefMaskElem);
+        RegMask.assign(EltsPerVector, PoisonMaskElem);
         AllConsecutive = true;
         continue;
       }
 
       // Need to exclude undefs from analysis.
-      if (isa<UndefValue>(V) || Mask[Idx] == UndefMaskElem)
+      if (isa<UndefValue>(V) || Mask[Idx] == PoisonMaskElem)
         continue;
 
       // Check all extracts for a vector register on the target directly
       // extract values in order.
       unsigned CurrentIdx = *getExtractIndex(cast<Instruction>(V));
-      if (!isa<UndefValue>(VL[Idx - 1]) && Mask[Idx - 1] != UndefMaskElem) {
+      if (!isa<UndefValue>(VL[Idx - 1]) && Mask[Idx - 1] != PoisonMaskElem) {
         unsigned PrevIdx = *getExtractIndex(cast<Instruction>(VL[Idx - 1]));
         AllConsecutive &= PrevIdx + 1 == CurrentIdx &&
                           CurrentIdx % EltsPerVector == Idx % EltsPerVector;
@@ -6939,13 +6939,13 @@ public:
     // If the resulting type is scalarized, do not adjust the cost.
     unsigned VecNumParts = TTI.getNumberOfParts(VecTy);
     if (VecNumParts == VecTy->getNumElements()) {
-      InVectors.assign(1, Constant::getNullValue(VecTy));
+      InVectors.assign(1, E);
       return nullptr;
     }
     DenseMap<Value *, int> ExtractVectorsTys;
     for (auto [I, V] : enumerate(VL)) {
       // Ignore non-extractelement scalars.
-      if (isa<UndefValue>(V) || (!Mask.empty() && Mask[I] == UndefMaskElem))
+      if (isa<UndefValue>(V) || (!Mask.empty() && Mask[I] == PoisonMaskElem))
         continue;
       // If all users of instruction are going to be vectorized and this
       // instruction itself is not going to be vectorized, consider this
@@ -7023,26 +7023,22 @@ public:
     // into a vector and can be represented as a permutation elements in a
     // single input vector or of 2 input vectors.
     Cost += computeExtractCost(VL, Mask, ShuffleKind);
-    InVectors.assign(1, Constant::getNullValue(VecTy));
+    InVectors.assign(1, E);
     return VecBase;
   }
   void add(const TreeEntry *E1, const TreeEntry *E2, ArrayRef<int> Mask) {
     CommonMask.assign(Mask.begin(), Mask.end());
-    InVectors.assign(
-        2, Constant::getNullValue(FixedVectorType::get(
-               E1->Scalars.front()->getType(),
-               std::max(E1->getVectorFactor(), E2->getVectorFactor()))));
+    InVectors.assign({E1, E2});
   }
   void add(const TreeEntry *E1, ArrayRef<int> Mask) {
     CommonMask.assign(Mask.begin(), Mask.end());
-    InVectors.assign(
-        1, Constant::getNullValue(FixedVectorType::get(
-               E1->Scalars.front()->getType(), E1->getVectorFactor())));
+    InVectors.assign(1, E1);
   }
   void gather(ArrayRef<Value *> VL, Value *Root = nullptr) {
     Cost += getBuildVectorCost(VL, Root);
     if (!Root) {
       assert(InVectors.empty() && "Unexpected input vectors for buildvector.");
+      // FIXME: Need to find a way to avoid use of getNullValue here.
       InVectors.assign(1, Constant::getNullValue(FixedVectorType::get(
                               VL.front()->getType(), VL.size())));
     }
@@ -7057,13 +7053,18 @@ public:
     if (all_of(CommonMask, [=](int Idx) { return Idx < Limit; }) &&
         ShuffleVectorInst::isIdentityMask(CommonMask))
       return Cost;
+    Type *ScalarTy;
+    if (auto *V = InVectors.front().dyn_cast<Value *>())
+      ScalarTy = cast<VectorType>(V->getType())->getElementType();
+    else
+      ScalarTy = InVectors.front()
+                     .get<const TreeEntry *>()
+                     ->Scalars.front()
+                     ->getType();
     return Cost +
            TTI.getShuffleCost(InVectors.size() == 2 ? TTI::SK_PermuteTwoSrc
                                                     : TTI::SK_PermuteSingleSrc,
-                              FixedVectorType::get(
-                                  cast<VectorType>(InVectors.front()->getType())
-                                      ->getElementType(),
-                                  CommonMask.size()),
+                              FixedVectorType::get(ScalarTy, CommonMask.size()),
                               CommonMask);
   }
 
@@ -7167,7 +7168,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       // Remove shuffled elements from list of gathers.
       for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
-        if (Mask[I] != UndefMaskElem)
+        if (Mask[I] != PoisonMaskElem)
           GatheredScalars[I] = PoisonValue::get(ScalarTy);
       }
       LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
@@ -7398,7 +7399,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
     unsigned NumOfParts = TTI->getNumberOfParts(SrcVecTy);
 
-    SmallVector<int> InsertMask(NumElts, UndefMaskElem);
+    SmallVector<int> InsertMask(NumElts, PoisonMaskElem);
     unsigned OffsetBeg = *getInsertIndex(VL.front());
     unsigned OffsetEnd = OffsetBeg;
     InsertMask[OffsetBeg] = 0;
@@ -7435,13 +7436,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     SmallVector<int> Mask;
     if (!E->ReorderIndices.empty()) {
       inversePermutation(E->ReorderIndices, Mask);
-      Mask.append(InsertVecSz - Mask.size(), UndefMaskElem);
+      Mask.append(InsertVecSz - Mask.size(), PoisonMaskElem);
     } else {
-      Mask.assign(VecSz, UndefMaskElem);
+      Mask.assign(VecSz, PoisonMaskElem);
       std::iota(Mask.begin(), std::next(Mask.begin(), InsertVecSz), 0);
     }
     bool IsIdentity = true;
-    SmallVector<int> PrevMask(InsertVecSz, UndefMaskElem);
+    SmallVector<int> PrevMask(InsertVecSz, PoisonMaskElem);
     Mask.swap(PrevMask);
     for (unsigned I = 0; I < NumScalars; ++I) {
       unsigned InsertIdx = *getInsertIndex(VL[PrevMask[I]]);
@@ -7484,14 +7485,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                     InsertVecTy);
       } else {
         for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
-          Mask[I] = InMask.test(I) ? UndefMaskElem : I;
+          Mask[I] = InMask.test(I) ? PoisonMaskElem : I;
         for (unsigned I = OffsetBeg - Offset, End = OffsetEnd - Offset;
              I <= End; ++I)
-          if (Mask[I] != UndefMaskElem)
+          if (Mask[I] != PoisonMaskElem)
             Mask[I] = I + VecSz;
         for (unsigned I = OffsetEnd + 1 - Offset; I < VecSz; ++I)
           Mask[I] =
-              ((I >= InMask.size()) || InMask.test(I)) ? UndefMaskElem : I;
+              ((I >= InMask.size()) || InMask.test(I)) ? PoisonMaskElem : I;
         Cost += TTI->getShuffleCost(TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
       }
     }
@@ -8133,8 +8134,8 @@ static T *performExtractsShuffleAction(
         ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
     SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
     for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
-      if (Mask[Idx] == UndefMaskElem)
-        Mask[Idx] = IsBasePoison.test(Idx) ? UndefMaskElem : Idx;
+      if (Mask[Idx] == PoisonMaskElem)
+        Mask[Idx] = IsBasePoison.test(Idx) ? PoisonMaskElem : Idx;
       else
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
@@ -8163,8 +8164,8 @@ static T *performExtractsShuffleAction(
       // can shuffle them directly.
       ArrayRef<int> SecMask = VMIt->second;
       for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
-        if (SecMask[I] != UndefMaskElem) {
-          assert(Mask[I] == UndefMaskElem && "Multiple uses of scalars.");
+        if (SecMask[I] != PoisonMaskElem) {
+          assert(Mask[I] == PoisonMaskElem && "Multiple uses of scalars.");
           Mask[I] = SecMask[I] + Vec1VF;
         }
       }
@@ -8177,12 +8178,12 @@ static T *performExtractsShuffleAction(
           ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
       ArrayRef<int> SecMask = VMIt->second;
       for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
-        if (Mask[I] != UndefMaskElem) {
-          assert(SecMask[I] == UndefMaskElem && "Multiple uses of scalars.");
+        if (Mask[I] != PoisonMaskElem) {
+          assert(SecMask[I] == PoisonMaskElem && "Multiple uses of scalars.");
           if (Res1.second)
             Mask[I] = I;
-        } else if (SecMask[I] != UndefMaskElem) {
-          assert(Mask[I] == UndefMaskElem && "Multiple uses of scalars.");
+        } else if (SecMask[I] != PoisonMaskElem) {
+          assert(Mask[I] == PoisonMaskElem && "Multiple uses of scalars.");
           Mask[I] = (Res2.second ? I : SecMask[I]) + VF;
         }
       }
@@ -8199,11 +8200,11 @@ static T *performExtractsShuffleAction(
         ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
     ArrayRef<int> SecMask = VMIt->second;
     for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
-      if (SecMask[I] != UndefMaskElem) {
-        assert((Mask[I] == UndefMaskElem || IsBaseNotUndef) &&
+      if (SecMask[I] != PoisonMaskElem) {
+        assert((Mask[I] == PoisonMaskElem || IsBaseNotUndef) &&
                "Multiple uses of scalars.");
         Mask[I] = (Res.second ? I : SecMask[I]) + VF;
-      } else if (Mask[I] != UndefMaskElem) {
+      } else if (Mask[I] != PoisonMaskElem) {
         Mask[I] = I;
       }
     }
@@ -8298,7 +8299,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
             (void)ShuffleMasks.emplace_back();
             SmallVectorImpl<int> &Mask = ShuffleMasks.back()[ScalarTE];
             if (Mask.empty())
-              Mask.assign(FTy->getNumElements(), UndefMaskElem);
+              Mask.assign(FTy->getNumElements(), PoisonMaskElem);
             // Find the insertvector, vectorized in tree, if any.
             Value *Base = VU;
             while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
@@ -8312,7 +8313,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
                 do {
                   IEBase = cast<InsertElementInst>(Base);
                   int Idx = *getInsertIndex(IEBase);
-                  assert(Mask[Idx] == UndefMaskElem &&
+                  assert(Mask[Idx] == PoisonMaskElem &&
                          "InsertElementInstruction used already.");
                   Mask[Idx] = Idx;
                   Base = IEBase->getOperand(0);
@@ -8332,7 +8333,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
           int InIdx = *InsertIdx;
           SmallVectorImpl<int> &Mask = ShuffleMasks[VecId][ScalarTE];
           if (Mask.empty())
-            Mask.assign(FTy->getNumElements(), UndefMaskElem);
+            Mask.assign(FTy->getNumElements(), PoisonMaskElem);
           Mask[InIdx] = EU.Lane;
           DemandedElts[VecId].setBit(InIdx);
           continue;
@@ -8371,7 +8372,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
          (all_of(Mask,
                  [VF](int Idx) { return Idx < 2 * static_cast<int>(VF); }) &&
           !ShuffleVectorInst::isIdentityMask(Mask)))) {
-      SmallVector<int> OrigMask(VecVF, UndefMaskElem);
+      SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
       std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
                 OrigMask.begin());
       C = TTI->getShuffleCost(
@@ -8457,7 +8458,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
   // No need to check for the topmost gather node.
   if (TE == VectorizableTree.front().get())
     return std::nullopt;
-  Mask.assign(VL.size(), UndefMaskElem);
+  Mask.assign(VL.size(), PoisonMaskElem);
   assert(TE->UserTreeIndices.size() == 1 &&
          "Expected only single user of the gather node.");
   // TODO: currently checking only for Scalars in the tree entry, need to count
@@ -8620,7 +8621,7 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
       // Clear undef scalars.
       for (int I = 0, Sz = VL.size(); I < Sz; ++I)
         if (isa<PoisonValue>(VL[I]))
-          Mask[I] = UndefMaskElem;
+          Mask[I] = PoisonMaskElem;
       return TargetTransformInfo::SK_PermuteSingleSrc;
     }
     // No perfect match, just shuffle, so choose the first tree node from the
@@ -9069,7 +9070,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root) {
       if (isa<PoisonValue>(VL[I]))
         continue;
       if (auto *SV = dyn_cast<ShuffleVectorInst>(Root)) {
-        if (SV->getMaskValue(I) == UndefMaskElem)
+        if (SV->getMaskValue(I) == PoisonMaskElem)
           continue;
       }
     }
@@ -9180,7 +9181,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
       int V2VF = cast<FixedVectorType>(V2->getType())->getNumElements();
       int VF = std::max(V1VF, V2VF);
       int MinVF = std::min(V1VF, V2VF);
-      SmallVector<int> IdentityMask(VF, UndefMaskElem);
+      SmallVector<int> IdentityMask(VF, PoisonMaskElem);
       std::iota(IdentityMask.begin(), std::next(IdentityMask.begin(), MinVF),
                 0);
       Value *&Op = MinVF == V1VF ? V1 : V2;
@@ -9211,7 +9212,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
   static void transformMaskAfterShuffle(MutableArrayRef<int> CommonMask,
                                         ArrayRef<int> Mask) {
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != UndefMaskElem)
+      if (Mask[Idx] != PoisonMaskElem)
         CommonMask[Idx] = Idx;
   }
 
@@ -9224,7 +9225,7 @@ public:
     Value *VecBase = nullptr;
     for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
       int Idx = Mask[I];
-      if (Idx == UndefMaskElem)
+      if (Idx == PoisonMaskElem)
         continue;
       auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
       VecBase = EI->getVectorOperand();
@@ -9272,7 +9273,7 @@ public:
     }
     V1 = createShuffle(V1, V2, Mask);
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != UndefMaskElem)
+      if (Mask[Idx] != PoisonMaskElem)
         CommonMask[Idx] = Idx + Sz;
     InVectors.front() = Vec;
     if (InVectors.size() == 2)
@@ -9285,7 +9286,7 @@ public:
     if (InVectors.empty()) {
       if (!isa<FixedVectorType>(V1->getType())) {
         V1 = createShuffle(V1, nullptr, CommonMask);
-        CommonMask.assign(Mask.size(), UndefMaskElem);
+        CommonMask.assign(Mask.size(), PoisonMaskElem);
         transformMaskAfterShuffle(CommonMask, Mask);
       }
       InVectors.push_back(V1);
@@ -9307,7 +9308,7 @@ public:
           transformMaskAfterShuffle(CommonMask, CommonMask);
         }
         for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-          if (CommonMask[Idx] == UndefMaskElem && Mask[Idx] != UndefMaskElem)
+          if (CommonMask[Idx] == PoisonMaskElem && Mask[Idx] != PoisonMaskElem)
             CommonMask[Idx] =
                 V->getType() != V1->getType()
                     ? Idx + Sz
@@ -9325,7 +9326,7 @@ public:
       // Check if second vector is required if the used elements are already
       // used from the first one.
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (Mask[Idx] != UndefMaskElem && CommonMask[Idx] == UndefMaskElem) {
+        if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem) {
           InVectors.push_back(V1);
           break;
         }
@@ -9334,7 +9335,7 @@ public:
     if (auto *FTy = dyn_cast<FixedVectorType>(V1->getType()))
       VF = FTy->getNumElements();
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-      if (Mask[Idx] != UndefMaskElem && CommonMask[Idx] == UndefMaskElem)
+      if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
         CommonMask[Idx] = Mask[Idx] + (It == InVectors.begin() ? 0 : VF);
   }
   /// Adds another one input vector and the mask for the shuffling.
@@ -9359,13 +9360,13 @@ public:
         Vec = createShuffle(Vec, nullptr, CommonMask);
       }
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
-        if (CommonMask[Idx] != UndefMaskElem)
+        if (CommonMask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx;
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
       unsigned VecVF = cast<FixedVectorType>(Vec->getType())->getNumElements();
       if (VecVF < VF) {
-        SmallVector<int> ResizeMask(VF, UndefMaskElem);
+        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
         std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), VecVF), 0);
         Vec = createShuffle(Vec, nullptr, ResizeMask);
       }
@@ -9376,9 +9377,9 @@ public:
       if (CommonMask.empty()) {
         CommonMask.assign(ExtMask.begin(), ExtMask.end());
       } else {
-        SmallVector<int> NewMask(ExtMask.size(), UndefMaskElem);
+        SmallVector<int> NewMask(ExtMask.size(), PoisonMaskElem);
         for (int I = 0, Sz = ExtMask.size(); I < Sz; ++I) {
-          if (ExtMask[I] == UndefMaskElem)
+          if (ExtMask[I] == PoisonMaskElem)
             continue;
           NewMask[I] = CommonMask[ExtMask[I]];
         }
@@ -9449,18 +9450,18 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
           // ... (use %2)
           // %shuffle = shuffle <2 x> %2, poison, <2 x> {2, 0}
           // br %block
-          SmallVector<int> UniqueIdxs(VF, UndefMaskElem);
+          SmallVector<int> UniqueIdxs(VF, PoisonMaskElem);
           SmallSet<int, 4> UsedIdxs;
           int Pos = 0;
           for (int Idx : VE->ReuseShuffleIndices) {
-            if (Idx != static_cast<int>(VF) && Idx != UndefMaskElem &&
+            if (Idx != static_cast<int>(VF) && Idx != PoisonMaskElem &&
                 UsedIdxs.insert(Idx).second)
               UniqueIdxs[Idx] = Pos;
             ++Pos;
           }
           assert(VF >= UsedIdxs.size() && "Expected vectorization factor "
                                           "less than original vector size.");
-          UniqueIdxs.append(VF - UsedIdxs.size(), UndefMaskElem);
+          UniqueIdxs.append(VF - UsedIdxs.size(), PoisonMaskElem);
           V = FinalShuffle(V, UniqueIdxs);
         } else {
           assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
@@ -9543,7 +9544,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     if (It == VectorizableTree.end())
       return false;
     unsigned I =
-        *find_if_not(Mask, [](int Idx) { return Idx == UndefMaskElem; });
+        *find_if_not(Mask, [](int Idx) { return Idx == PoisonMaskElem; });
     int Sz = Mask.size();
     if (all_of(Mask, [Sz](int Idx) { return Idx < 2 * Sz; }) &&
         ShuffleVectorInst::isIdentityMask(Mask))
@@ -9603,10 +9604,10 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
         // Restore the mask for previous partially matched values.
         for (auto [I, V] : enumerate(E->Scalars)) {
           if (isa<PoisonValue>(V)) {
-            Mask[I] = UndefMaskElem;
+            Mask[I] = PoisonMaskElem;
             continue;
           }
-          if (Mask[I] == UndefMaskElem)
+          if (Mask[I] == PoisonMaskElem)
             Mask[I] = Entries.front()->findLaneForValue(V);
         }
         ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
@@ -9622,7 +9623,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       }
       // Remove shuffled elements from list of gathers.
       for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
-        if (Mask[I] != UndefMaskElem)
+        if (Mask[I] != PoisonMaskElem)
           GatheredScalars[I] = PoisonValue::get(ScalarTy);
       }
     }
@@ -9669,7 +9670,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     if (NumNonConsts == 1) {
       // Restore single insert element.
       if (IsSplat) {
-        ReuseMask.assign(VF, UndefMaskElem);
+        ReuseMask.assign(VF, PoisonMaskElem);
         std::swap(Scalars.front(), Scalars[SinglePos]);
         if (!UndefPos.empty() && UndefPos.front() == 0)
           Scalars.front() = UndefValue::get(ScalarTy);
@@ -9708,7 +9709,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
         // Replace undefs by the poisons, emit broadcast and then emit
         // freeze.
         for_each(UndefPos, [&](int I) {
-          ReuseMask[I] = UndefMaskElem;
+          ReuseMask[I] = PoisonMaskElem;
           if (isa<UndefValue>(Scalars[I]))
             Scalars[I] = PoisonValue::get(ScalarTy);
         });
@@ -9726,9 +9727,9 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       // Find input vectors.
       Value *Vec2 = nullptr;
       for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
-        if (ExtractMask[I] == UndefMaskElem ||
-            (!Mask.empty() && Mask[I] != UndefMaskElem)) {
-          ExtractMask[I] = UndefMaskElem;
+        if (ExtractMask[I] == PoisonMaskElem ||
+            (!Mask.empty() && Mask[I] != PoisonMaskElem)) {
+          ExtractMask[I] = PoisonMaskElem;
           continue;
         }
         if (isa<UndefValue>(E->Scalars[I]))
@@ -9815,7 +9816,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     }
     // Generate constants for final shuffle and build a mask for them.
     if (!all_of(GatheredScalars, PoisonValue::classof)) {
-      SmallVector<int> BVMask(GatheredScalars.size(), UndefMaskElem);
+      SmallVector<int> BVMask(GatheredScalars.size(), PoisonMaskElem);
       TryPackScalars(GatheredScalars, BVMask, /*IsRootPoison=*/true);
       Value *BV = gather(GatheredScalars);
       ShuffleBuilder.add(BV, BVMask);
@@ -9835,14 +9836,14 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
           });
   } else if (!allConstant(GatheredScalars)) {
     // Gather unique scalars and all constants.
-    SmallVector<int> ReuseMask(GatheredScalars.size(), UndefMaskElem);
+    SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
     Vec = gather(GatheredScalars);
     ShuffleBuilder.add(Vec, ReuseMask);
     Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   } else {
     // Gather all constants.
-    SmallVector<int> Mask(E->Scalars.size(), UndefMaskElem);
+    SmallVector<int> Mask(E->Scalars.size(), PoisonMaskElem);
     for (auto [I, V] : enumerate(E->Scalars)) {
       if (!isa<PoisonValue>(V))
         Mask[I] = I;
@@ -9986,14 +9987,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<int> Mask;
       if (!E->ReorderIndices.empty()) {
         inversePermutation(E->ReorderIndices, Mask);
-        Mask.append(NumElts - NumScalars, UndefMaskElem);
+        Mask.append(NumElts - NumScalars, PoisonMaskElem);
       } else {
-        Mask.assign(NumElts, UndefMaskElem);
+        Mask.assign(NumElts, PoisonMaskElem);
         std::iota(Mask.begin(), std::next(Mask.begin(), NumScalars), 0);
       }
       // Create InsertVector shuffle if necessary
       bool IsIdentity = true;
-      SmallVector<int> PrevMask(NumElts, UndefMaskElem);
+      SmallVector<int> PrevMask(NumElts, PoisonMaskElem);
       Mask.swap(PrevMask);
       for (unsigned I = 0; I < NumScalars; ++I) {
         Value *Scalar = E->Scalars[PrevMask[I]];
@@ -10009,9 +10010,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
       }
 
-      SmallVector<int> InsertMask(NumElts, UndefMaskElem);
+      SmallVector<int> InsertMask(NumElts, PoisonMaskElem);
       for (unsigned I = 0; I < NumElts; I++) {
-        if (Mask[I] != UndefMaskElem)
+        if (Mask[I] != PoisonMaskElem)
           InsertMask[Offset + I] = I;
       }
       SmallBitVector UseMask =
@@ -10026,7 +10027,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
           if (!IsFirstPoison.all()) {
             for (unsigned I = 0; I < NumElts; I++) {
-              if (InsertMask[I] == UndefMaskElem && !IsFirstPoison.test(I))
+              if (InsertMask[I] == PoisonMaskElem && !IsFirstPoison.test(I))
                 InsertMask[I] = I + NumElts;
             }
             }
@@ -10044,8 +10045,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           SmallBitVector IsFirstPoison =
               isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
           for (unsigned I = 0; I < NumElts; I++) {
-            if (InsertMask[I] == UndefMaskElem)
-              InsertMask[I] = IsFirstPoison.test(I) ? UndefMaskElem : I;
+            if (InsertMask[I] == PoisonMaskElem)
+              InsertMask[I] = IsFirstPoison.test(I) ? PoisonMaskElem : I;
             else
               InsertMask[I] += NumElts;
           }
@@ -10707,7 +10708,7 @@ Value *BoUpSLP::vectorizeTree(
                              ShuffledInserts.size() - 1);
               SmallVectorImpl<int> &Mask = It->ValueMasks[Vec];
               if (Mask.empty())
-                Mask.assign(FTy->getNumElements(), UndefMaskElem);
+                Mask.assign(FTy->getNumElements(), PoisonMaskElem);
               // Find the insertvector, vectorized in tree, if any.
               Value *Base = VU;
               while (auto *IEBase = dyn_cast<InsertElementInst>(Base)) {
@@ -10720,7 +10721,7 @@ Value *BoUpSLP::vectorizeTree(
                   do {
                     IEBase = cast<InsertElementInst>(Base);
                     int IEIdx = *getInsertIndex(IEBase);
-                    assert(Mask[Idx] == UndefMaskElem &&
+                    assert(Mask[Idx] == PoisonMaskElem &&
                            "InsertElementInstruction used already.");
                     Mask[IEIdx] = IEIdx;
                     Base = IEBase->getOperand(0);
@@ -10738,7 +10739,7 @@ Value *BoUpSLP::vectorizeTree(
             }
             SmallVectorImpl<int> &Mask = It->ValueMasks[Vec];
             if (Mask.empty())
-              Mask.assign(FTy->getNumElements(), UndefMaskElem);
+              Mask.assign(FTy->getNumElements(), PoisonMaskElem);
             Mask[Idx] = ExternalUse.Lane;
             It->InsertElements.push_back(cast<InsertElementInst>(User));
             continue;
@@ -10780,8 +10781,8 @@ Value *BoUpSLP::vectorizeTree(
   }
 
   auto CreateShuffle = [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
-    SmallVector<int> CombinedMask1(Mask.size(), UndefMaskElem);
-    SmallVector<int> CombinedMask2(Mask.size(), UndefMaskElem);
+    SmallVector<int> CombinedMask1(Mask.size(), PoisonMaskElem);
+    SmallVector<int> CombinedMask2(Mask.size(), PoisonMaskElem);
     int VF = cast<FixedVectorType>(V1->getType())->getNumElements();
     for (int I = 0, E = Mask.size(); I < E; ++I) {
       if (Mask[I] < VF)
@@ -10806,9 +10807,9 @@ Value *BoUpSLP::vectorizeTree(
         return std::make_pair(Vec, true);
       }
       if (!ForSingleMask) {
-        SmallVector<int> ResizeMask(VF, UndefMaskElem);
+        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
         for (unsigned I = 0; I < VF; ++I) {
-          if (Mask[I] != UndefMaskElem)
+          if (Mask[I] != PoisonMaskElem)
             ResizeMask[Mask[I]] = Mask[I];
         }
         Vec = CreateShuffle(Vec, nullptr, ResizeMask);
@@ -11011,14 +11012,14 @@ void BoUpSLP::optimizeGatherSequence() {
     // registers.
     unsigned LastUndefsCnt = 0;
     for (int I = 0, E = NewMask.size(); I < E; ++I) {
-      if (SM1[I] == UndefMaskElem)
+      if (SM1[I] == PoisonMaskElem)
         ++LastUndefsCnt;
       else
         LastUndefsCnt = 0;
-      if (NewMask[I] != UndefMaskElem && SM1[I] != UndefMaskElem &&
+      if (NewMask[I] != PoisonMaskElem && SM1[I] != PoisonMaskElem &&
           NewMask[I] != SM1[I])
         return false;
-      if (NewMask[I] == UndefMaskElem)
+      if (NewMask[I] == PoisonMaskElem)
         NewMask[I] = SM1[I];
     }
     // Check if the last undefs actually change the final number of used vector
@@ -13804,7 +13805,7 @@ private:
       // 7>, if elements 4th and 6th elements have even number of repeats.
       SmallVector<int> Mask(
           cast<FixedVectorType>(VectorizedValue->getType())->getNumElements(),
-          UndefMaskElem);
+          PoisonMaskElem);
       std::iota(Mask.begin(), Mask.end(), 0);
       bool NeedShuffle = false;
       for (unsigned I = 0, VF = VL.size(); I < VF; ++I) {

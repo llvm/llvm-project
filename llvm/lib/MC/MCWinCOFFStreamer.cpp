@@ -115,11 +115,7 @@ bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
   default: return false;
   case MCSA_WeakReference:
   case MCSA_Weak:
-    Symbol->setIsWeakExternal(COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS);
-    Symbol->setExternal(true);
-    break;
-  case MCSA_WeakAntiDep:
-    Symbol->setIsWeakExternal(COFF::IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
+    Symbol->setIsWeakExternal();
     Symbol->setExternal(true);
     break;
   case MCSA_Global:

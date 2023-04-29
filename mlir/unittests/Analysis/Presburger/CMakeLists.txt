@@ -10,6 +10,7 @@ add_mlir_unittest(MLIRPresburgerTests
   PresburgerSpaceTest.cpp
   PWMAFunctionTest.cpp
   SimplexTest.cpp
+  UtilsTest.cpp
 )
 
 target_link_libraries(MLIRPresburgerTests

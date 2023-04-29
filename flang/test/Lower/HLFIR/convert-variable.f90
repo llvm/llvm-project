@@ -95,3 +95,16 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_numeric_parameter() {
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QFscalar_numeric_parameterECp) : !fir.ref<i32>
 ! CHECK:  %[[VAL_1:.*]] = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QFscalar_numeric_parameterECp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+subroutine test_component_in_spec_expr(x, derived)
+  type t
+    integer :: component
+  end type
+  type(t) :: derived
+  ! Test that we do not try to instantiate "component" just because
+  ! its symbol appears in a specification expression.
+  real :: x(derived%component)
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_component_in_spec_expr(
+! CHECK-NOT: alloca
+! CHECK: return

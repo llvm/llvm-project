@@ -1213,7 +1213,7 @@ bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
       .Default(false);
 }
 
-static unsigned matchAsmCCConstraint(const char *&Name) {
+static unsigned matchAsmCCConstraint(const char *Name) {
   auto RV = llvm::StringSwitch<unsigned>(Name)
                 .Case("@cca", 4)
                 .Case("@ccae", 5)
