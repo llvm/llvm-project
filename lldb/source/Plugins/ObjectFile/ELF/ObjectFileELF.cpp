@@ -2637,6 +2637,44 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
   }
 }
 
+static void ApplyELF32ABS32RelRelocation(Symtab *symtab, ELFRelocation &rel,
+                                         DataExtractor &debug_data,
+                                         Section *rel_section) {
+  Log *log = GetLog(LLDBLog::Modules);
+  Symbol *symbol = symtab->FindSymbolByID(ELFRelocation::RelocSymbol32(rel));
+  if (symbol) {
+    addr_t value = symbol->GetAddressRef().GetFileAddress();
+    if (value == LLDB_INVALID_ADDRESS) {
+      const char *name = symbol->GetName().GetCString();
+      LLDB_LOGF(log, "Debug info symbol invalid: %s", name);
+      return;
+    }
+    assert(llvm::isUInt<32>(value) && "Valid addresses are 32-bit");
+    DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
+    WritableDataBuffer *data_buffer =
+        llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
+    uint8_t *dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                   ELFRelocation::RelocOffset32(rel);
+    // Implicit addend is stored inline as a signed value.
+    int32_t addend;
+    memcpy(&addend, dst, sizeof(int32_t));
+    // The sum must be positive. This extra check prevents UB from overflow in
+    // the actual range check below.
+    if (addend < 0 && static_cast<uint32_t>(-addend) > value) {
+      LLDB_LOGF(log, "Debug info relocation overflow: 0x%" PRIx64,
+                static_cast<int64_t>(value) + addend);
+      return;
+    }
+    if (!llvm::isUInt<32>(value + addend)) {
+      LLDB_LOGF(log, "Debug info relocation out of range: 0x%" PRIx64, value);
+      return;
+    }
+    uint32_t addr = value + addend;
+    memcpy(dst, &addr, sizeof(uint32_t));
+  }
+}
+
 unsigned ObjectFileELF::ApplyRelocations(
     Symtab *symtab, const ELFHeader *hdr, const ELFSectionHeader *rel_hdr,
     const ELFSectionHeader *symtab_hdr, const ELFSectionHeader *debug_hdr,
@@ -2667,6 +2705,21 @@ unsigned ObjectFileELF::ApplyRelocations(
 
     if (hdr->Is32Bit()) {
       switch (hdr->e_machine) {
+      case llvm::ELF::EM_ARM:
+        switch (reloc_type(rel)) {
+        case R_ARM_ABS32:
+          ApplyELF32ABS32RelRelocation(symtab, rel, debug_data, rel_section);
+          break;
+        case R_ARM_REL32:
+          GetModule()->ReportError("unsupported AArch32 relocation:"
+                                   " .rel{0}[{1}], type {2}",
+                                   rel_section->GetName().AsCString(), i,
+                                   reloc_type(rel));
+          break;
+        default:
+          assert(false && "unexpected relocation type");
+        }
+        break;
       case llvm::ELF::EM_386:
         switch (reloc_type(rel)) {
         case R_386_32:

@@ -69,9 +69,13 @@ def to_yaml_type(typestr: str):
   elif typestr == 'std::string':
     return 'String'
 
-  subtype, napplied = re.subn(r'^std::vector<(.*)>$', r'\1', typestr)
-  if napplied == 1:
-    return 'List of ' + pluralize(to_yaml_type(subtype))
+  match = re.match(r'std::vector<(.*)>$', typestr)
+  if match:
+    return 'List of ' + pluralize(to_yaml_type(match.group(1)))
+
+  match = re.match(r'std::optional<(.*)>$', typestr)
+  if match:
+    return to_yaml_type(match.group(1))
 
   return typestr
 
@@ -331,7 +335,8 @@ class OptionsReader:
       if option.type not in ['bool', 'unsigned', 'int', 'std::string',
                              'std::vector<std::string>',
                              'std::vector<IncludeCategory>',
-                             'std::vector<RawStringFormat>']:
+                             'std::vector<RawStringFormat>',
+                             'std::optional<unsigned>']:
         if option.type in enums:
           option.enum = enums[option.type]
         elif option.type in nested_structs:

@@ -112,11 +112,17 @@ function(build_native_tool target output_path_var)
   endif()
   set(output_path ${output_path}${LLVM_HOST_EXECUTABLE_SUFFIX})
 
+  # Make chain of preceding actions
+  if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    get_property(host_targets GLOBAL PROPERTY ${PROJECT_NAME}_HOST_TARGETS)
+    set_property(GLOBAL APPEND PROPERTY ${PROJECT_NAME}_HOST_TARGETS ${output_path})
+  endif()
+
   llvm_ExternalProject_BuildCmd(build_cmd ${target} ${${PROJECT_NAME}_NATIVE_BUILD}
                                 CONFIGURATION Release)
   add_custom_command(OUTPUT "${output_path}"
                      COMMAND ${build_cmd}
-                     DEPENDS CONFIGURE_${PROJECT_NAME}_NATIVE ${ARG_DEPENDS}
+                     DEPENDS CONFIGURE_${PROJECT_NAME}_NATIVE ${ARG_DEPENDS} ${host_targets}
                      WORKING_DIRECTORY "${${PROJECT_NAME}_NATIVE_BUILD}"
                      COMMENT "Building native ${target}..."
                      USES_TERMINAL)

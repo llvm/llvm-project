@@ -830,6 +830,69 @@ uint32_t DNBArchMachARM64::EnableHardwareBreakpoint(nub_addr_t addr,
   return INVALID_NUB_HW_INDEX;
 }
 
+std::vector<DNBArchMachARM64::WatchpointSpec>
+DNBArchMachARM64::AlignRequestedWatchpoint(nub_addr_t requested_addr,
+                                           nub_size_t requested_size) {
+
+  // Can't watch zero bytes
+  if (requested_size == 0)
+    return {};
+
+  // Smallest size we can watch on AArch64 is 8 bytes
+  constexpr nub_size_t min_watchpoint_alignment = 8;
+  nub_size_t aligned_size = std::max(requested_size, min_watchpoint_alignment);
+
+  // AArch64 addresses are 8 bytes.
+  constexpr int addr_byte_size = 8;
+  constexpr int addr_bit_size = addr_byte_size * 8;
+
+  /// Round up \a requested_size to the next power-of-2 size, at least 8
+  /// bytes
+  /// requested_size == 3  -> aligned_size == 8
+  /// requested_size == 13 -> aligned_size == 16
+  /// requested_size == 16 -> aligned_size == 16
+  /// Could be `std::bit_ceil(aligned_size)` when we build with C++20?
+  aligned_size = 1ULL << (addr_bit_size - __builtin_clzll(aligned_size - 1));
+
+  nub_addr_t aligned_start = requested_addr & ~(aligned_size - 1);
+  // Does this power-of-2 memory range, aligned to power-of-2, completely
+  // encompass the requested watch region.
+  if (aligned_start + aligned_size >= requested_addr + requested_size) {
+    WatchpointSpec wp;
+    wp.aligned_start = aligned_start;
+    wp.requested_start = requested_addr;
+    wp.aligned_size = aligned_size;
+    wp.requested_size = requested_size;
+    return {{wp}};
+  }
+
+  // We need to split this into two watchpoints, split on the aligned_size
+  // boundary and re-evaluate the alignment of each half.
+  //
+  // requested_addr 48 requested_size 20 -> aligned_size 32
+  //                              aligned_start 32
+  //                              split_addr 64
+  //                              first_requested_addr 48
+  //                              first_requested_size 16
+  //                              second_requested_addr 64
+  //                              second_requested_size 4
+  nub_addr_t split_addr = aligned_start + aligned_size;
+
+  nub_addr_t first_requested_addr = requested_addr;
+  nub_size_t first_requested_size = split_addr - requested_addr;
+  nub_addr_t second_requested_addr = split_addr;
+  nub_size_t second_requested_size = requested_size - first_requested_size;
+
+  std::vector<WatchpointSpec> first_wp =
+      AlignRequestedWatchpoint(first_requested_addr, first_requested_size);
+  std::vector<WatchpointSpec> second_wp =
+      AlignRequestedWatchpoint(second_requested_addr, second_requested_size);
+  if (first_wp.size() != 1 || second_wp.size() != 1)
+    return {};
+
+  return {{first_wp[0], second_wp[0]}};
+}
+
 uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
                                                     nub_size_t size, bool read,
                                                     bool write,
@@ -839,91 +902,65 @@ uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
                    "0x%8.8llx, size = %zu, read = %u, write = %u)",
                    (uint64_t)addr, size, read, write);
 
-  const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
+  std::vector<DNBArchMachARM64::WatchpointSpec> wps =
+      AlignRequestedWatchpoint(addr, size);
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::EnableHardwareWatchpoint() using %zu "
+                   "hardware watchpoints",
+                   wps.size());
 
-  // Can't watch zero bytes
-  if (size == 0)
+  if (wps.size() == 0)
     return INVALID_NUB_HW_INDEX;
 
   // We must watch for either read or write
   if (read == false && write == false)
     return INVALID_NUB_HW_INDEX;
 
-  // Otherwise, can't watch more than 8 bytes per WVR/WCR pair
-  if (size > 8)
-    return INVALID_NUB_HW_INDEX;
-
-  // Aarch64 watchpoints are in one of two forms: (1) 1-8 bytes, aligned to
-  // an 8 byte address, or (2) a power-of-two size region of memory; minimum
-  // 8 bytes, maximum 2GB; the starting address must be aligned to that power
-  // of two.
-  //
-  // For (1), 1-8 byte watchpoints, using the Byte Address Selector field in
-  // DBGWCR<n>.BAS.  Any of the bytes may be watched, but if multiple bytes
-  // are watched, the bytes selected must be contiguous.  The start address
-  // watched must be doubleword (8-byte) aligned; if the start address is
-  // word (4-byte) aligned, only 4 bytes can be watched.
-  //
-  // For (2), the MASK field in DBGWCR<n>.MASK is used.
-  //
-  // See the ARM ARM, section "Watchpoint exceptions", and more specifically,
-  // "Watchpoint data address comparisons".
-  //
-  // debugserver today only supports (1) - the Byte Address Selector 1-8 byte
-  // watchpoints that are 8-byte aligned.  To support larger watchpoints,
-  // debugserver would need to interpret the mach exception when the watched
-  // region was hit, see if the address accessed lies within the subset
-  // of the power-of-two region that lldb asked us to watch (v. ARM ARM,
-  // "Determining the memory location that caused a Watchpoint exception"),
-  // and silently resume the inferior (disable watchpoint, stepi, re-enable
-  // watchpoint) if the address lies outside the region that lldb asked us
-  // to watch.
-  //
-  // Alternatively, lldb would need to be prepared for a larger region
-  // being watched than it requested, and silently resume the inferior if
-  // the accessed address is outside the region lldb wants to watch.
-
-  nub_addr_t aligned_wp_address = addr & ~0x7;
-  uint32_t addr_dword_offset = addr & 0x7;
-
-  // Do we need to split up this logical watchpoint into two hardware watchpoint
-  // registers?
-  // e.g. a watchpoint of length 4 on address 6.  We need do this with
-  //   one watchpoint on address 0 with bytes 6 & 7 being monitored
-  //   one watchpoint on address 8 with bytes 0, 1, 2, 3 being monitored
-
-  if (addr_dword_offset + size > 8) {
-    DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::"
-                                      "EnableHardwareWatchpoint(addr = "
-                                      "0x%8.8llx, size = %zu) needs two "
-                                      "hardware watchpoints slots to monitor",
-                     (uint64_t)addr, size);
-    int low_watchpoint_size = 8 - addr_dword_offset;
-    int high_watchpoint_size = addr_dword_offset + size - 8;
-
-    uint32_t lo = EnableHardwareWatchpoint(addr, low_watchpoint_size, read,
-                                           write, also_set_on_task);
-    if (lo == INVALID_NUB_HW_INDEX)
+  // Only one hardware watchpoint needed
+  // to implement the user's request.
+  if (wps.size() == 1) {
+    if (wps[0].aligned_size <= 8)
+      return SetBASWatchpoint(wps[0], read, write, also_set_on_task);
+    else
       return INVALID_NUB_HW_INDEX;
-    uint32_t hi =
-        EnableHardwareWatchpoint(aligned_wp_address + 8, high_watchpoint_size,
-                                 read, write, also_set_on_task);
-    if (hi == INVALID_NUB_HW_INDEX) {
-      DisableHardwareWatchpoint(lo, also_set_on_task);
-      return INVALID_NUB_HW_INDEX;
-    }
-    // Tag this lo->hi mapping in our database.
-    LoHi[lo] = hi;
-    return lo;
   }
 
-  // At this point
-  //  1 aligned_wp_address is the requested address rounded down to 8-byte
-  //  alignment
-  //  2 addr_dword_offset is the offset into that double word (8-byte) region
-  //  that we are watching
-  //  3 size is the number of bytes within that 8-byte region that we are
-  //  watching
+  // We have multiple WatchpointSpecs
+
+  std::vector<uint32_t> wp_slots_used;
+  for (size_t i = 0; i < wps.size(); i++) {
+    uint32_t idx =
+        EnableHardwareWatchpoint(wps[i].requested_start, wps[i].requested_size,
+                                 read, write, also_set_on_task);
+    if (idx != INVALID_NUB_HW_INDEX)
+      wp_slots_used.push_back(idx);
+  }
+
+  // Did we fail to set all of the WatchpointSpecs needed
+  // for this user's request?
+  if (wps.size() != wp_slots_used.size()) {
+    for (int wp_slot : wp_slots_used)
+      DisableHardwareWatchpoint(wp_slot, also_set_on_task);
+    return INVALID_NUB_HW_INDEX;
+  }
+
+  LoHi[wp_slots_used[0]] = wp_slots_used[1];
+  return wp_slots_used[0];
+}
+
+uint32_t DNBArchMachARM64::SetBASWatchpoint(DNBArchMachARM64::WatchpointSpec wp,
+                                            bool read, bool write,
+                                            bool also_set_on_task) {
+  const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
+
+  nub_addr_t aligned_dword_addr = wp.aligned_start;
+  nub_addr_t watching_offset = wp.requested_start - wp.aligned_start;
+  nub_size_t watching_size = wp.requested_size;
+
+  // If user asks to watch 3 bytes at 0x1005,
+  // aligned_dword_addr 0x1000
+  // watching_offset 5
+  // watching_size 3
 
   // Set the Byte Address Selects bits DBGWCRn_EL1 bits [12:5] based on the
   // above.
@@ -933,66 +970,75 @@ uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
   // interested in.
   // e.g. if we are watching bytes 4,5,6,7 in a dword we want a BAS of
   // 0b11110000.
-  uint32_t byte_address_select = ((1 << size) - 1) << addr_dword_offset;
+  uint32_t byte_address_select = ((1 << watching_size) - 1) << watching_offset;
 
   // Read the debug state
   kern_return_t kret = GetDBGState(false);
+  if (kret != KERN_SUCCESS)
+    return INVALID_NUB_HW_INDEX;
 
-  if (kret == KERN_SUCCESS) {
-    // Check to make sure we have the needed hardware support
-    uint32_t i = 0;
+  // Check to make sure we have the needed hardware support
+  uint32_t i = 0;
 
-    for (i = 0; i < num_hw_watchpoints; ++i) {
-      if ((m_state.dbg.__wcr[i] & WCR_ENABLE) == 0)
-        break; // We found an available hw watchpoint slot (in i)
-    }
-
-    // See if we found an available hw watchpoint slot above
-    if (i < num_hw_watchpoints) {
-      // DumpDBGState(m_state.dbg);
-
-      // Clear any previous LoHi joined-watchpoint that may have been in use
-      LoHi[i] = 0;
-
-      // shift our Byte Address Select bits up to the correct bit range for the
-      // DBGWCRn_EL1
-      byte_address_select = byte_address_select << 5;
-
-      // Make sure bits 1:0 are clear in our address
-      m_state.dbg.__wvr[i] = aligned_wp_address;   // DVA (Data Virtual Address)
-      m_state.dbg.__wcr[i] = byte_address_select | // Which bytes that follow
-                                                   // the DVA that we will watch
-                             S_USER |              // Stop only in user mode
-                             (read ? WCR_LOAD : 0) |   // Stop on read access?
-                             (write ? WCR_STORE : 0) | // Stop on write access?
-                             WCR_ENABLE; // Enable this watchpoint;
-
-      DNBLogThreadedIf(
-          LOG_WATCHPOINTS, "DNBArchMachARM64::EnableHardwareWatchpoint() "
-                           "adding watchpoint on address 0x%llx with control "
-                           "register value 0x%x",
-          (uint64_t)m_state.dbg.__wvr[i], (uint32_t)m_state.dbg.__wcr[i]);
-
-      // The kernel will set the MDE_ENABLE bit in the MDSCR_EL1 for us
-      // automatically, don't need to do it here.
-
-      kret = SetDBGState(also_set_on_task);
-      // DumpDBGState(m_state.dbg);
-
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::"
-                                        "EnableHardwareWatchpoint() "
-                                        "SetDBGState() => 0x%8.8x.",
-                       kret);
-
-      if (kret == KERN_SUCCESS)
-        return i;
-    } else {
-      DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::"
-                                        "EnableHardwareWatchpoint(): All "
-                                        "hardware resources (%u) are in use.",
-                       num_hw_watchpoints);
-    }
+  for (i = 0; i < num_hw_watchpoints; ++i) {
+    if ((m_state.dbg.__wcr[i] & WCR_ENABLE) == 0)
+      break; // We found an available hw watchpoint slot
   }
+  if (i == num_hw_watchpoints) {
+    DNBLogThreadedIf(LOG_WATCHPOINTS,
+                     "DNBArchMachARM64::"
+                     "SetBASWatchpoint(): All "
+                     "hardware resources (%u) are in use.",
+                     num_hw_watchpoints);
+    return INVALID_NUB_HW_INDEX;
+  }
+
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::"
+                   "SetBASWatchpoint() "
+                   "set hardware register %d to BAS watchpoint "
+                   "aligned start address 0x%llx, watch region start "
+                   "offset %lld, number of bytes %zu",
+                   i, aligned_dword_addr, watching_offset, watching_size);
+
+  // Clear any previous LoHi joined-watchpoint that may have been in use
+  LoHi[i] = 0;
+
+  // shift our Byte Address Select bits up to the correct bit range for the
+  // DBGWCRn_EL1
+  byte_address_select = byte_address_select << 5;
+
+  // Make sure bits 1:0 are clear in our address
+  m_state.dbg.__wvr[i] = aligned_dword_addr;       // DVA (Data Virtual Address)
+  m_state.dbg.__wcr[i] = byte_address_select |     // Which bytes that follow
+                                                   // the DVA that we will watch
+                         S_USER |                  // Stop only in user mode
+                         (read ? WCR_LOAD : 0) |   // Stop on read access?
+                         (write ? WCR_STORE : 0) | // Stop on write access?
+                         WCR_ENABLE;               // Enable this watchpoint;
+
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::SetBASWatchpoint() "
+                   "adding watchpoint on address 0x%llx with control "
+                   "register value 0x%x",
+                   (uint64_t)m_state.dbg.__wvr[i],
+                   (uint32_t)m_state.dbg.__wcr[i]);
+
+  // The kernel will set the MDE_ENABLE bit in the MDSCR_EL1 for us
+  // automatically, don't need to do it here.
+
+  kret = SetDBGState(also_set_on_task);
+  // DumpDBGState(m_state.dbg);
+
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::"
+                   "SetBASWatchpoint() "
+                   "SetDBGState() => 0x%8.8x.",
+                   kret);
+
+  if (kret == KERN_SUCCESS)
+    return i;
+
   return INVALID_NUB_HW_INDEX;
 }
 
@@ -1020,9 +1066,10 @@ bool DNBArchMachARM64::ReenableHardwareWatchpoint_helper(uint32_t hw_index) {
   m_state.dbg.__wvr[hw_index] = m_disabled_watchpoints[hw_index].addr;
   m_state.dbg.__wcr[hw_index] = m_disabled_watchpoints[hw_index].control;
 
-  DNBLogThreadedIf(LOG_WATCHPOINTS, "DNBArchMachARM64::"
-                                    "EnableHardwareWatchpoint( %u ) - WVR%u = "
-                                    "0x%8.8llx  WCR%u = 0x%8.8llx",
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::"
+                   "SetBASWatchpoint( %u ) - WVR%u = "
+                   "0x%8.8llx  WCR%u = 0x%8.8llx",
                    hw_index, hw_index, (uint64_t)m_state.dbg.__wvr[hw_index],
                    hw_index, (uint64_t)m_state.dbg.__wcr[hw_index]);
 

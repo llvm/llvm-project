@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRNumbering.h"
+#include "../Encoding.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::bytecode::detail;
@@ -40,6 +42,10 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
     // file locations.
   }
   void writeOwnedBlob(ArrayRef<char> blob) override {}
+
+  int64_t getBytecodeVersion() const override {
+    llvm_unreachable("unexpected querying of version in IRNumbering");
+  }
 
   /// The parent numbering state that is populated by this writer.
   IRNumberingState &state;

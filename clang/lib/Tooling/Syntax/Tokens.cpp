@@ -986,7 +986,7 @@ std::string TokenBuffer::dumpForTests() const {
   OS << "\n";
 
   std::vector<FileID> Keys;
-  for (auto F : Files)
+  for (const auto &F : Files)
     Keys.push_back(F.first);
   llvm::sort(Keys);
 

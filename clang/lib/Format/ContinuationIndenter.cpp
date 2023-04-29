@@ -1665,10 +1665,14 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.opensBlockOrBlockTypeList(Style)) {
       NewIndent = Style.IndentWidth +
                   std::min(State.Column, CurrentState.NestedBlockIndent);
+    } else if (Current.is(tok::l_brace)) {
+      NewIndent =
+          CurrentState.LastSpace + Style.BracedInitializerIndentWidth.value_or(
+                                       Style.ContinuationIndentWidth);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
-    const FormatToken *NextNoComment = Current.getNextNonComment();
+    const FormatToken *NextNonComment = Current.getNextNonComment();
     bool EndsInComma = Current.MatchingParen &&
                        Current.MatchingParen->Previous &&
                        Current.MatchingParen->Previous->is(tok::comma);
@@ -1676,9 +1680,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                       Style.Language == FormatStyle::LK_Proto ||
                       Style.Language == FormatStyle::LK_TextProto ||
                       !Style.BinPackArguments ||
-                      (NextNoComment &&
-                       NextNoComment->isOneOf(TT_DesignatedInitializerPeriod,
-                                              TT_DesignatedInitializerLSquare));
+                      (NextNonComment && NextNonComment->isOneOf(
+                                             TT_DesignatedInitializerPeriod,
+                                             TT_DesignatedInitializerLSquare));
     BreakBeforeParameter = EndsInComma;
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);

@@ -2253,6 +2253,17 @@ public:
   /// false otherwise.
   bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
+  /// Return true if the given types are an RISC-V vector builtin type and a
+  /// VectorType that is a fixed-length representation of the RISC-V vector
+  /// builtin type for a specific vector-length.
+  bool areCompatibleRVVTypes(QualType FirstType, QualType SecondType);
+
+  /// Return true if the given vector types are lax-compatible RISC-V vector
+  /// types as defined by -flax-vector-conversions=, which permits implicit
+  /// conversions between vectors with different number of elements and/or
+  /// incompatible element types, false otherwise.
+  bool areLaxCompatibleRVVTypes(QualType FirstType, QualType SecondType);
+
   /// Return true if the type has been explicitly qualified with ObjC ownership.
   /// A type may be implicitly qualified with ownership under ObjC ARC, and in
   /// some cases the compiler treats these differently.

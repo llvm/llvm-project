@@ -48,6 +48,7 @@ extern "C" {
   };                                                                           \
   typedef struct name name
 
+DEFINE_C_API_STRUCT(MlirBytecodeWriterConfig, void);
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
@@ -409,6 +410,24 @@ MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
 
 //===----------------------------------------------------------------------===//
+// Bytecode printing flags API.
+//===----------------------------------------------------------------------===//
+
+/// Creates new printing flags with defaults, intended for customization.
+/// Must be freed with a call to mlirBytecodeWriterConfigDestroy().
+MLIR_CAPI_EXPORTED MlirBytecodeWriterConfig
+mlirBytecodeWriterConfigCreate(void);
+
+/// Destroys printing flags created with mlirBytecodeWriterConfigCreate.
+MLIR_CAPI_EXPORTED void
+mlirBytecodeWriterConfigDestroy(MlirBytecodeWriterConfig config);
+
+/// Sets the version to emit in the writer config.
+MLIR_CAPI_EXPORTED void
+mlirBytecodeWriterConfigDesiredEmitVersion(MlirBytecodeWriterConfig flags,
+                                           int64_t version);
+
+//===----------------------------------------------------------------------===//
 // Operation API.
 //===----------------------------------------------------------------------===//
 
@@ -546,10 +565,27 @@ MLIR_CAPI_EXPORTED void mlirOperationPrintWithFlags(MlirOperation op,
                                                     MlirStringCallback callback,
                                                     void *userData);
 
-/// Same as mlirOperationPrint but writing the bytecode format out.
-MLIR_CAPI_EXPORTED void mlirOperationWriteBytecode(MlirOperation op,
-                                                   MlirStringCallback callback,
-                                                   void *userData);
+struct MlirBytecodeWriterResult {
+  int64_t minVersion;
+};
+typedef struct MlirBytecodeWriterResult MlirBytecodeWriterResult;
+
+inline static bool
+mlirBytecodeWriterResultGetMinVersion(MlirBytecodeWriterResult res) {
+  return res.minVersion;
+}
+
+/// Same as mlirOperationPrint but writing the bytecode format and returns the
+/// minimum bytecode version the consumer needs to support.
+MLIR_CAPI_EXPORTED MlirBytecodeWriterResult mlirOperationWriteBytecode(
+    MlirOperation op, MlirStringCallback callback, void *userData);
+
+/// Same as mlirOperationWriteBytecode but with writer config.
+MLIR_CAPI_EXPORTED MlirBytecodeWriterResult
+mlirOperationWriteBytecodeWithConfig(MlirOperation op,
+                                     MlirBytecodeWriterConfig config,
+                                     MlirStringCallback callback,
+                                     void *userData);
 
 /// Prints an operation to stderr.
 MLIR_CAPI_EXPORTED void mlirOperationDump(MlirOperation op);
