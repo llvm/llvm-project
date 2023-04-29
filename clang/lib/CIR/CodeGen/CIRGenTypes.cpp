@@ -181,7 +181,8 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
 
   // If converting this type would cause us to infinitely loop, don't do it!
   if (!isSafeToConvert(RD, *this)) {
-    llvm_unreachable("NYI");
+    DeferredRecords.push_back(RD);
+    return entry;
   }
 
   // Okay, this is a definition of a type. Compile the implementation now.
@@ -600,10 +601,11 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     const ConstantArrayType *A = cast<ConstantArrayType>(Ty);
     auto EltTy = convertTypeForMem(A->getElementType());
 
+    // FIXME(cir): add a `isSized` method to CIRGenBuilder.
     auto isSized = [&](mlir::Type ty) {
       if (ty.isIntOrFloat() ||
           ty.isa<mlir::cir::PointerType, mlir::cir::StructType,
-                 mlir::cir::ArrayType>())
+                 mlir::cir::ArrayType, mlir::cir::BoolType>())
         return true;
       assert(0 && "not implemented");
       return false;
