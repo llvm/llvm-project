@@ -9855,6 +9855,7 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
   Madd->untieRegOperand(1);
   Madd->removeOperand(1);
   Madd->getOperand(0).setReg(NewReg);
+  InstrIdxForVirtReg.insert(std::make_pair(NewReg, 0));
   // Create vpaddd.
   Register DstReg = Root.getOperand(0).getReg();
   bool IsKill = Root.getOperand(1).isKill();
@@ -9862,7 +9863,6 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
       BuildMI(*MF, MIMetadata(Root), TII.get(AddOpc), DstReg)
           .addReg(Root.getOperand(1).getReg(), getKillRegState(IsKill))
           .addReg(Madd->getOperand(0).getReg(), getKillRegState(true));
-  InstrIdxForVirtReg.insert(std::make_pair(DstReg, 0));
   InsInstrs.push_back(Madd);
   InsInstrs.push_back(Add);
   DelInstrs.push_back(&Root);

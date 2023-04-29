@@ -654,6 +654,15 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
+  /// Return the representational value of "denormal-fp-math". Code interested
+  /// in the semantics of the function should use getDenormalMode instead.
+  DenormalMode getDenormalModeRaw() const;
+
+  /// Return the representational value of "denormal-fp-math-f32". Code
+  /// interested in the semantics of the function should use getDenormalMode
+  /// instead.
+  DenormalMode getDenormalModeF32Raw() const;
+
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
   void copyAttributesFrom(const Function *Src);

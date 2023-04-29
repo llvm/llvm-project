@@ -13351,37 +13351,36 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   assert(AI->getOperation() == AtomicRMWInst::FAdd &&
          "only fadd is supported for now");
 
-  // Given: atomicrmw fadd float* %addr, float %val ordering
+  // Given: atomicrmw fadd ptr %addr, float %val ordering
   //
   // With this expansion we produce the following code:
   //   [...]
-  //   %int8ptr = bitcast float* %addr to i8*
   //   br label %atomicrmw.check.shared
   //
   // atomicrmw.check.shared:
-  //   %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %int8ptr)
+  //   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %addr)
   //   br i1 %is.shared, label %atomicrmw.shared, label %atomicrmw.check.private
   //
   // atomicrmw.shared:
-  //   %cast.shared = addrspacecast float* %addr to float addrspace(3)*
-  //   %loaded.shared = atomicrmw fadd float addrspace(3)* %cast.shared,
+  //   %cast.shared = addrspacecast ptr %addr to ptr addrspace(3)
+  //   %loaded.shared = atomicrmw fadd ptr addrspace(3) %cast.shared,
   //                                   float %val ordering
   //   br label %atomicrmw.phi
   //
   // atomicrmw.check.private:
-  //   %is.private = call i1 @llvm.amdgcn.is.private(i8* %int8ptr)
+  //   %is.private = call i1 @llvm.amdgcn.is.private(ptr %int8ptr)
   //   br i1 %is.private, label %atomicrmw.private, label %atomicrmw.global
   //
   // atomicrmw.private:
-  //   %cast.private = addrspacecast float* %addr to float addrspace(5)*
-  //   %loaded.private = load float, float addrspace(5)* %cast.private
+  //   %cast.private = addrspacecast ptr %addr to ptr addrspace(5)
+  //   %loaded.private = load float, ptr addrspace(5) %cast.private
   //   %val.new = fadd float %loaded.private, %val
-  //   store float %val.new, float addrspace(5)* %cast.private
+  //   store float %val.new, ptr addrspace(5) %cast.private
   //   br label %atomicrmw.phi
   //
   // atomicrmw.global:
-  //   %cast.global = addrspacecast float* %addr to float addrspace(1)*
-  //   %loaded.global = atomicrmw fadd float addrspace(1)* %cast.global,
+  //   %cast.global = addrspacecast ptr %addr to ptr addrspace(1)
+  //   %loaded.global = atomicrmw fadd ptr addrspace(1) %cast.global,
   //                                   float %val ordering
   //   br label %atomicrmw.phi
   //
@@ -13430,12 +13429,11 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
-  Value *Int8Ptr = Builder.CreateBitCast(Addr, Builder.getInt8PtrTy());
   Builder.CreateBr(CheckSharedBB);
 
   Builder.SetInsertPoint(CheckSharedBB);
   CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared, {},
-                                               {Int8Ptr}, nullptr, "is.shared");
+                                               {Addr}, nullptr, "is.shared");
   Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
 
   Builder.SetInsertPoint(SharedBB);
@@ -13447,7 +13445,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
 
   Builder.SetInsertPoint(CheckPrivateBB);
   CallInst *IsPrivate = Builder.CreateIntrinsic(
-      Intrinsic::amdgcn_is_private, {}, {Int8Ptr}, nullptr, "is.private");
+      Intrinsic::amdgcn_is_private, {}, {Addr}, nullptr, "is.private");
   Builder.CreateCondBr(IsPrivate, PrivateBB, GlobalBB);
 
   Builder.SetInsertPoint(PrivateBB);

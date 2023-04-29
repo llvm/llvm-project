@@ -14053,6 +14053,13 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
                                             QualType(Source, 0))))
       return;
 
+    if (Target->isRVVVLSBuiltinType() &&
+        (S.Context.areCompatibleRVVTypes(QualType(Target, 0),
+                                         QualType(Source, 0)) ||
+         S.Context.areLaxCompatibleRVVTypes(QualType(Target, 0),
+                                            QualType(Source, 0))))
+      return;
+
     if (!isa<VectorType>(Target)) {
       if (S.SourceMgr.isInSystemMacro(CC))
         return;

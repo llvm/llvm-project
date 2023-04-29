@@ -3702,10 +3702,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void handleIsFpClass(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow = getShadow(&I, 0);
+    setShadow(&I, IRB.CreateICmpNE(Shadow, getCleanShadow(Shadow)));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
+      break;
+    case Intrinsic::is_fpclass:
+      handleIsFpClass(I);
       break;
     case Intrinsic::lifetime_start:
       handleLifetimeStart(I);

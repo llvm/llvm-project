@@ -2317,6 +2317,37 @@ Version 1.10.
   }];
 }
 
+def RISCVRVVVectorBitsDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+On RISC-V targets, the ``riscv_rvv_vector_bits(N)`` attribute is used to define
+fixed-length variants of sizeless types.
+
+For example:
+
+.. code-block:: c
+
+  #include <riscv_vector.h>
+
+  #if defined(__riscv_v_fixed_vlen)
+  typedef vint8m1_t fixed_vint8m1_t __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)));
+  #endif
+
+Creates a type ``fixed_vint8m1_t_t`` that is a fixed-length variant of
+``vint8m1_t`` that contains exactly 512 bits. Unlike ``vint8m1_t``, this type
+can be used in globals, structs, unions, and arrays, all of which are
+unsupported for sizeless types.
+
+The attribute can be attached to a single RVV vector (such as ``vint8m1_t``).
+The attribute will be rejected unless
+``N==__riscv_v_fixed_vlen``, the implementation defined feature macro that
+is enabled under the ``-mrvv-vector-bits`` flag. ``__riscv_v_fixed_vlen`` can
+only be a power of 2 between 64 and 65536.
+
+Only `*m1_t`(LMUL=1) types are supported at this time.
+}];
+}
+
 def AVRInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (AVR)";

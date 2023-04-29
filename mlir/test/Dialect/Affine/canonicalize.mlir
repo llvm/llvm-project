@@ -1264,6 +1264,141 @@ func.func @simplify_div_mod_with_operands(%N: index, %A: memref<64xf32>, %unknow
 
 // -----
 
+#map0 = affine_map<(d0) -> (32, d0 * -32 + 32)>
+#map1 = affine_map<(d0) -> (32, d0 * -32 + 64)>
+#map3 = affine_map<(d0) -> (16, d0 * -16 + 32)>
+
+// CHECK-DAG: #[[$SIMPLE_MAP:.*]] = affine_map<()[s0] -> (3, s0)>
+// CHECK-DAG: #[[$SIMPLE_MAP_MAX:.*]] = affine_map<()[s0] -> (5, s0)>
+// CHECK-DAG: #[[$SIMPLIFIED_MAP:.*]] = affine_map<(d0, d1) -> (-9, d0 * 4 - d1 * 4)>
+// CHECK-DAG: #[[$FLOORDIV:.*]] = affine_map<(d0) -> (d0 floordiv 2)>
+
+// CHECK-LABEL: func @simplify_min_max_bounds_simple
+func.func @simplify_min_max_bounds_simple(%M: index) {
+
+  // CHECK-NEXT: affine.for %{{.*}} = 0 to min #[[$SIMPLE_MAP]]
+  affine.for %i = 0 to min affine_map<(d0) -> (3, 5, d0)>(%M) {
+    "test.foo"() : () -> ()
+  }
+
+  // CHECK: affine.for %{{.*}} = 0 to min #[[$SIMPLE_MAP]]
+  affine.for %i = 0 to min affine_map<(d0) -> (3, 3, d0)>(%M) {
+    "test.foo"() : () -> ()
+  }
+
+  // CHECK: affine.for %{{.*}} = max #[[$SIMPLE_MAP_MAX]]
+  affine.for %i = max affine_map<(d0) -> (3, 5, d0)>(%M) to 10 {
+    "test.foo"() : () -> ()
+  }
+
+  // CHECK: affine.for %{{.*}} = max #[[$SIMPLE_MAP_MAX]]
+  affine.for %i = max affine_map<(d0) -> (5, 5, d0)>(%M) to 10 {
+    "test.foo"() : () -> ()
+  }
+
+  return
+}
+
+// CHECK-LABEL: func @simplify_bounds_tiled
+func.func @simplify_bounds_tiled() {
+  affine.for %arg5 = 0 to 1 {
+    affine.for %arg6 = 0 to 2 {
+      affine.for %arg8 = 0 to min #map0(%arg5) step 16 {
+        affine.for %arg9 = 0 to min #map1(%arg6) step 16 {
+          affine.for %arg10 = 0 to 2 {
+            affine.for %arg12 = 0 to min #map3(%arg10) step 16 {
+              "test.foo"() : () -> ()
+            }
+          }
+        }
+      }
+    }
+  }
+  // CHECK:      affine.for
+  // CHECK-NEXT:   affine.for
+  // CHECK-NEXT:     affine.for %{{.*}} = 0 to 32 step 16
+  // CHECK-NEXT:       affine.for %{{.*}} = 0 to 32 step 16
+  // CHECK-NEXT:         affine.for %{{.*}} = 0 to 2
+  // CHECK-NEXT:           affine.for %{{.*}} = 0 to 16 step 16
+
+  return
+}
+
+// CHECK-LABEL: func @simplify_min_max_multi_expr
+func.func @simplify_min_max_multi_expr() {
+  // Lower bound max.
+  // CHECK: affine.for
+  affine.for %i = 0 to 2 {
+    // CHECK: affine.for %{{.*}} = 5 to
+    affine.for %j = max affine_map<(d0) -> (5, 4 * d0)> (%i) to affine_map<(d0) -> (4 * d0 + 3)>(%i) {
+      "test.foo"() : () -> ()
+    }
+  }
+
+  // Expressions with multiple operands.
+  // CHECK: affine.for
+  affine.for %i = 0 to 2 {
+    // CHECK: affine.for
+    affine.for %j = 0 to 4 {
+      // The first upper bound expression will not be lower than -9. So, it's redundant.
+      // CHECK-NEXT: affine.for %{{.*}} = -10 to -9
+      affine.for %k = -10 to min affine_map<(d0, d1) -> (4 * d0 - 3 * d1, -9)>(%i, %j) {
+        "test.foo"() : () -> ()
+      }
+    }
+  }
+
+  // One expression is redundant but not the others.
+  // CHECK: affine.for
+  affine.for %i = 0 to 2 {
+    // CHECK: affine.for
+    affine.for %j = 0 to 4 {
+      // The first upper bound expression will not be lower than -9. So, it's redundant.
+      // CHECK-NEXT: affine.for %{{.*}} = -10 to min #[[$SIMPLIFIED_MAP]]
+      affine.for %k = -10 to min affine_map<(d0, d1) -> (4 * d0 - 3 * d1, -9, 4 * d0 - 4 * d1)>(%i, %j) {
+        "test.foo"() : () -> ()
+      }
+    }
+  }
+
+  // CHECK: affine.for %{{.*}} = 0 to 1
+  affine.for %i = 0 to 2 {
+    affine.for %j = max affine_map<(d0) -> (d0 floordiv 2, 0)>(%i) to 1 {
+      "test.foo"() : () -> ()
+    }
+  }
+
+  // The constant bound is redundant here.
+  // CHECK: affine.for %{{.*}} = #[[$FLOORDIV]](%{{.*}} to 10
+  affine.for %i = 0 to 8 {
+    affine.for %j = max affine_map<(d0) -> (d0 floordiv 2, 0)>(%i) to 10 {
+      "test.foo"() : () -> ()
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL: func @no_simplify_min_max
+func.func @no_simplify_min_max(%M: index) {
+  // Negative test cases.
+  // CHECK: affine.for
+  affine.for %i = 0 to 4 {
+    // CHECK-NEXT: affine.for %{{.*}} = 0 to min
+    affine.for %j = 0 to min affine_map<(d0) -> (2 * d0, 2)>(%i) {
+      "test.foo"() : () -> ()
+    }
+    // CHECK:      affine.for %{{.*}} = 0 to min {{.*}}(%{{.*}})[%{{.*}}]
+    affine.for %j = 0 to min affine_map<(d0)[s0] -> (d0, s0)>(%i)[%M] {
+      "test.foo"() : () -> ()
+    }
+  }
+
+  return
+}
+
+// -----
+
 //           CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 * ((-s0 + 40961) ceildiv 512))>
 // CHECK-BOTTOM-UP: #[[$map:.*]] = affine_map<()[s0] -> (s0 * ((-s0 + 40961) ceildiv 512))>
 //           CHECK-LABEL: func @regression_do_not_perform_invalid_replacements

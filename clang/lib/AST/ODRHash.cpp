@@ -594,7 +594,7 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
 
   ID.AddInteger(Record->getNumBases());
   auto Bases = Record->bases();
-  for (auto Base : Bases) {
+  for (const auto &Base : Bases) {
     AddQualType(Base.getType());
     ID.AddInteger(Base.isVirtual());
     ID.AddInteger(Base.getAccessSpecifierAsWritten());

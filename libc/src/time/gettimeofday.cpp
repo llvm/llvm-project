@@ -16,6 +16,7 @@
 
 namespace __llvm_libc {
 
+// TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, gettimeofday,
                    (struct timeval * tv, [[maybe_unused]] void *unused)) {
   if (tv == nullptr)

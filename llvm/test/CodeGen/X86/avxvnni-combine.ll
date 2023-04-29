@@ -278,7 +278,8 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
 ; ADL-NEXT:    vpmaddwd -16(%rdx,%r8), %xmm0, %xmm2
 ; ADL-NEXT:    vpaddd -16(%rsi,%r8), %xmm2, %xmm2
 ; ADL-NEXT:    vmovdqa %xmm2, -16(%rsi,%r8)
-; ADL-NEXT:    {vex} vpdpwssd (%rdx,%r8), %xmm0, %xmm1
+; ADL-NEXT:    vpmaddwd (%rdx,%r8), %xmm0, %xmm2
+; ADL-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; ADL-NEXT:    vmovdqa %xmm1, (%rsi,%r8)
 ; ADL-NEXT:    addq $2, %rcx
 ; ADL-NEXT:    addq $32, %r8
@@ -313,12 +314,12 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
 ; SPR-NEXT:    xorl %ecx, %ecx
 ; SPR-NEXT:    .p2align 4, 0x90
 ; SPR-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    vmovdqa -16(%rsi,%r8), %xmm1
-; SPR-NEXT:    vmovdqa (%rsi,%r8), %xmm2
-; SPR-NEXT:    {vex} vpdpwssd -16(%rdx,%r8), %xmm0, %xmm1
-; SPR-NEXT:    vmovdqa %xmm1, -16(%rsi,%r8)
-; SPR-NEXT:    vpmaddwd (%rdx,%r8), %xmm0, %xmm1
-; SPR-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; SPR-NEXT:    vmovdqa (%rsi,%r8), %xmm1
+; SPR-NEXT:    vpmaddwd -16(%rdx,%r8), %xmm0, %xmm2
+; SPR-NEXT:    vpaddd -16(%rsi,%r8), %xmm2, %xmm2
+; SPR-NEXT:    vmovdqa %xmm2, -16(%rsi,%r8)
+; SPR-NEXT:    vpmaddwd (%rdx,%r8), %xmm0, %xmm2
+; SPR-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; SPR-NEXT:    vmovdqa %xmm1, (%rsi,%r8)
 ; SPR-NEXT:    addq $2, %rcx
 ; SPR-NEXT:    addq $32, %r8
@@ -353,12 +354,12 @@ define void @bar_128(i32 %0, ptr %1, <2 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vmovdqa -16(%rsi,%r8), %xmm1
-; AVX512-NEXT:    vmovdqa (%rsi,%r8), %xmm2
-; AVX512-NEXT:    vpdpwssd -16(%rdx,%r8), %xmm0, %xmm1
-; AVX512-NEXT:    vmovdqa %xmm1, -16(%rsi,%r8)
-; AVX512-NEXT:    vpmaddwd (%rdx,%r8), %xmm0, %xmm1
-; AVX512-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vmovdqa (%rsi,%r8), %xmm1
+; AVX512-NEXT:    vpmaddwd -16(%rdx,%r8), %xmm0, %xmm2
+; AVX512-NEXT:    vpaddd -16(%rsi,%r8), %xmm2, %xmm2
+; AVX512-NEXT:    vmovdqa %xmm2, -16(%rsi,%r8)
+; AVX512-NEXT:    vpmaddwd (%rdx,%r8), %xmm0, %xmm2
+; AVX512-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovdqa %xmm1, (%rsi,%r8)
 ; AVX512-NEXT:    addq $2, %rcx
 ; AVX512-NEXT:    addq $32, %r8
@@ -718,7 +719,8 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
 ; ADL-NEXT:    vpmaddwd -32(%rdx,%r8), %ymm0, %ymm2
 ; ADL-NEXT:    vpaddd -32(%rsi,%r8), %ymm2, %ymm2
 ; ADL-NEXT:    vmovdqa %ymm2, -32(%rsi,%r8)
-; ADL-NEXT:    {vex} vpdpwssd (%rdx,%r8), %ymm0, %ymm1
+; ADL-NEXT:    vpmaddwd (%rdx,%r8), %ymm0, %ymm2
+; ADL-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; ADL-NEXT:    vmovdqa %ymm1, (%rsi,%r8)
 ; ADL-NEXT:    addq $2, %rcx
 ; ADL-NEXT:    addq $64, %r8
@@ -754,12 +756,12 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
 ; SPR-NEXT:    xorl %ecx, %ecx
 ; SPR-NEXT:    .p2align 4, 0x90
 ; SPR-NEXT:  .LBB5_7: # =>This Inner Loop Header: Depth=1
-; SPR-NEXT:    vmovdqa -32(%rsi,%r8), %ymm1
-; SPR-NEXT:    vmovdqa (%rsi,%r8), %ymm2
-; SPR-NEXT:    {vex} vpdpwssd -32(%rdx,%r8), %ymm0, %ymm1
-; SPR-NEXT:    vmovdqa %ymm1, -32(%rsi,%r8)
-; SPR-NEXT:    vpmaddwd (%rdx,%r8), %ymm0, %ymm1
-; SPR-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
+; SPR-NEXT:    vmovdqa (%rsi,%r8), %ymm1
+; SPR-NEXT:    vpmaddwd -32(%rdx,%r8), %ymm0, %ymm2
+; SPR-NEXT:    vpaddd -32(%rsi,%r8), %ymm2, %ymm2
+; SPR-NEXT:    vmovdqa %ymm2, -32(%rsi,%r8)
+; SPR-NEXT:    vpmaddwd (%rdx,%r8), %ymm0, %ymm2
+; SPR-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; SPR-NEXT:    vmovdqa %ymm1, (%rsi,%r8)
 ; SPR-NEXT:    addq $2, %rcx
 ; SPR-NEXT:    addq $64, %r8
@@ -795,12 +797,12 @@ define void @bar_256(i32 %0, ptr %1, <4 x i64> %2, ptr %3) {
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    .p2align 4, 0x90
 ; AVX512-NEXT:  .LBB5_7: # =>This Inner Loop Header: Depth=1
-; AVX512-NEXT:    vmovdqa -32(%rsi,%r8), %ymm1
-; AVX512-NEXT:    vmovdqa (%rsi,%r8), %ymm2
-; AVX512-NEXT:    vpdpwssd -32(%rdx,%r8), %ymm0, %ymm1
-; AVX512-NEXT:    vmovdqa %ymm1, -32(%rsi,%r8)
-; AVX512-NEXT:    vpmaddwd (%rdx,%r8), %ymm0, %ymm1
-; AVX512-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
+; AVX512-NEXT:    vmovdqa (%rsi,%r8), %ymm1
+; AVX512-NEXT:    vpmaddwd -32(%rdx,%r8), %ymm0, %ymm2
+; AVX512-NEXT:    vpaddd -32(%rsi,%r8), %ymm2, %ymm2
+; AVX512-NEXT:    vmovdqa %ymm2, -32(%rsi,%r8)
+; AVX512-NEXT:    vpmaddwd (%rdx,%r8), %ymm0, %ymm2
+; AVX512-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
 ; AVX512-NEXT:    vmovdqa %ymm1, (%rsi,%r8)
 ; AVX512-NEXT:    addq $2, %rcx
 ; AVX512-NEXT:    addq $64, %r8

@@ -181,12 +181,12 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_7: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vmovdqa64 -64(%rsi,%r8), %zmm1
-; CHECK-NEXT:    vmovdqa64 (%rsi,%r8), %zmm2
-; CHECK-NEXT:    vpdpwssd -64(%rdx,%r8), %zmm0, %zmm1
-; CHECK-NEXT:    vmovdqa64 %zmm1, -64(%rsi,%r8)
-; CHECK-NEXT:    vpmaddwd (%rdx,%r8), %zmm0, %zmm1
-; CHECK-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
+; CHECK-NEXT:    vmovdqa64 (%rsi,%r8), %zmm1
+; CHECK-NEXT:    vpmaddwd -64(%rdx,%r8), %zmm0, %zmm2
+; CHECK-NEXT:    vpaddd -64(%rsi,%r8), %zmm2, %zmm2
+; CHECK-NEXT:    vmovdqa64 %zmm2, -64(%rsi,%r8)
+; CHECK-NEXT:    vpmaddwd (%rdx,%r8), %zmm0, %zmm2
+; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, (%rsi,%r8)
 ; CHECK-NEXT:    addq $2, %rcx
 ; CHECK-NEXT:    subq $-128, %r8

@@ -37,18 +37,21 @@ enum Month : int {
 
 struct TimeConstants {
   static constexpr int SECONDS_PER_MIN = 60;
-  static constexpr int SECONDS_PER_HOUR = 3600;
-  static constexpr int SECONDS_PER_DAY = 86400;
   static constexpr int MINUTES_PER_HOUR = 60;
+  static constexpr int HOURS_PER_DAY = 24;
   static constexpr int DAYS_PER_WEEK = 7;
   static constexpr int MONTHS_PER_YEAR = 12;
   static constexpr int DAYS_PER_NON_LEAP_YEAR = 365;
   static constexpr int DAYS_PER_LEAP_YEAR = 366;
+
+  static constexpr int SECONDS_PER_HOUR = SECONDS_PER_MIN * MINUTES_PER_HOUR;
+  static constexpr int SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
+  static constexpr int NUMBER_OF_SECONDS_IN_LEAP_YEAR =
+      DAYS_PER_LEAP_YEAR * SECONDS_PER_DAY;
+
   static constexpr int TIME_YEAR_BASE = 1900;
   static constexpr int EPOCH_YEAR = 1970;
   static constexpr int EPOCH_WEEK_DAY = 4;
-  static constexpr int NUMBER_OF_SECONDS_IN_LEAP_YEAR =
-      (DAYS_PER_NON_LEAP_YEAR + 1) * SECONDS_PER_DAY;
 
   // For asctime the behavior is undefined if struct tm's tm_wday or tm_mon are
   // not within the normal ranges as defined in <time.h>, or if struct tm's
@@ -64,10 +67,10 @@ struct TimeConstants {
   static constexpr int WEEK_DAY_OF2000_MARCH_FIRST = 3;
 
   static constexpr int DAYS_PER400_YEARS =
-      (DAYS_PER_NON_LEAP_YEAR * 400 + (400 / 4) - 3);
+      (DAYS_PER_NON_LEAP_YEAR * 400) + (400 / 4) - 3;
   static constexpr int DAYS_PER100_YEARS =
-      (DAYS_PER_NON_LEAP_YEAR * 100 + (100 / 4) - 1);
-  static constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4 + 1);
+      (DAYS_PER_NON_LEAP_YEAR * 100) + (100 / 4) - 1;
+  static constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4) + 1;
 
   // The latest time that can be represented in this form is 03:14:07 UTC on
   // Tuesday, 19 January 2038 (corresponding to 2,147,483,647 seconds since the
@@ -81,6 +84,10 @@ struct TimeConstants {
 // Update the "tm" structure's year, month, etc. members from seconds.
 // "total_seconds" is the number of seconds since January 1st, 1970.
 extern int64_t update_from_seconds(int64_t total_seconds, struct tm *tm);
+
+// TODO(michaelrj): move these functions to use ErrorOr instead of setting
+// errno. They always accompany a specific return value so we only need the one
+// variable.
 
 // POSIX.1-2017 requires this.
 LIBC_INLINE time_t out_of_range() {
@@ -114,6 +121,10 @@ LIBC_INLINE char *asctime(const struct tm *timeptr, char *buffer,
   static const char *months_name[TimeConstants::MONTHS_PER_YEAR] = {
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+
+  // TODO(michaelr): look into removing this call to __builtin_snprintf that may
+  // be emitted as a call to snprintf. Alternatively, look into using our
+  // internal printf machinery.
   int written_size = __builtin_snprintf(
       buffer, bufferLength, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
       week_days_name[timeptr->tm_wday], months_name[timeptr->tm_mon],

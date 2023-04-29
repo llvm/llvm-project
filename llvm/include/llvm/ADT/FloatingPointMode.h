@@ -80,7 +80,10 @@ struct DenormalMode {
     PreserveSign,
 
     /// Denormals are flushed to positive zero.
-    PositiveZero
+    PositiveZero,
+
+    /// Denormals have unknown treatment.
+    Dynamic
   };
 
   /// Denormal flushing mode for floating point instruction results in the
@@ -101,6 +104,11 @@ struct DenormalMode {
     return DenormalMode(DenormalModeKind::Invalid, DenormalModeKind::Invalid);
   }
 
+  /// Return the assumed default mode for a function without denormal-fp-math.
+  static constexpr DenormalMode getDefault() {
+    return getIEEE();
+  }
+
   static constexpr DenormalMode getIEEE() {
     return DenormalMode(DenormalModeKind::IEEE, DenormalModeKind::IEEE);
   }
@@ -113,6 +121,10 @@ struct DenormalMode {
   static constexpr DenormalMode getPositiveZero() {
     return DenormalMode(DenormalModeKind::PositiveZero,
                         DenormalModeKind::PositiveZero);
+  }
+
+  static constexpr DenormalMode getDynamic() {
+    return DenormalMode(DenormalModeKind::Dynamic, DenormalModeKind::Dynamic);
   }
 
   bool operator==(DenormalMode Other) const {
@@ -144,6 +156,18 @@ struct DenormalMode {
            Output == DenormalModeKind::PositiveZero;
   }
 
+  /// Get the effective denormal mode if the mode if this caller calls into a
+  /// function with \p Callee. This promotes dynamic modes to the mode of the
+  /// caller.
+  DenormalMode mergeCalleeMode(DenormalMode Callee) const {
+    DenormalMode MergedMode = Callee;
+    if (Callee.Input == DenormalMode::Dynamic)
+      MergedMode.Input = Input;
+    if (Callee.Output == DenormalMode::Dynamic)
+      MergedMode.Output = Output;
+    return MergedMode;
+  }
+
   inline void print(raw_ostream &OS) const;
 
   inline std::string str() const {
@@ -164,10 +188,11 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-    .Cases("", "ieee", DenormalMode::IEEE)
-    .Case("preserve-sign", DenormalMode::PreserveSign)
-    .Case("positive-zero", DenormalMode::PositiveZero)
-    .Default(DenormalMode::Invalid);
+      .Cases("", "ieee", DenormalMode::IEEE)
+      .Case("preserve-sign", DenormalMode::PreserveSign)
+      .Case("positive-zero", DenormalMode::PositiveZero)
+      .Case("dynamic", DenormalMode::Dynamic)
+      .Default(DenormalMode::Invalid);
 }
 
 /// Return the name used for the denormal handling mode used by the the
@@ -180,6 +205,8 @@ inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
     return "preserve-sign";
   case DenormalMode::PositiveZero:
     return "positive-zero";
+  case DenormalMode::Dynamic:
+    return "dynamic";
   default:
     return "";
   }
