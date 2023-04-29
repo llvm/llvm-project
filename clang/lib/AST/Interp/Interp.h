@@ -413,12 +413,32 @@ bool Inv(InterpState &S, CodePtr OpPC) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Neg(InterpState &S, CodePtr OpPC) {
-  const T &Val = S.Stk.pop<T>();
+  const T &Value = S.Stk.pop<T>();
   T Result;
-  T::neg(Val, &Result);
 
+  if (!T::neg(Value, &Result)) {
+    S.Stk.push<T>(Result);
+    return true;
+  }
+
+  assert(isIntegralType(Name) &&
+         "don't expect other types to fail at constexpr negation");
   S.Stk.push<T>(Result);
-  return true;
+
+  APSInt NegatedValue = -Value.toAPSInt(Value.bitWidth() + 1);
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType Type = E->getType();
+
+  if (S.checkingForUndefinedBehavior()) {
+    SmallString<32> Trunc;
+    NegatedValue.trunc(Result.bitWidth()).toString(Trunc, 10);
+    auto Loc = E->getExprLoc();
+    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    return true;
+  }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << NegatedValue << Type;
+  return S.noteUndefinedBehavior();
 }
 
 enum class PushVal : bool {
