@@ -6,16 +6,8 @@ declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 @G = internal global ptr null
 
-;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null
-;.
 define void @init() {
 ; CHECK-LABEL: @init(
-; CHECK-NEXT:    [[MALLOCCALL:%.*]] = tail call ptr @malloc(i64 4)
-; CHECK-NEXT:    store ptr [[MALLOCCALL]], ptr @G, align 8
-; CHECK-NEXT:    [[GV:%.*]] = load ptr, ptr @G, align 8
-; CHECK-NEXT:    [[ADDRSPACECAST:%.*]] = addrspacecast ptr [[GV]] to ptr addrspace(1)
-; CHECK-NEXT:    store i32 20, ptr addrspace(1) [[ADDRSPACECAST]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %malloccall = tail call ptr @malloc(i64 4)
@@ -28,9 +20,7 @@ define void @init() {
 
 define i32 @get() {
 ; CHECK-LABEL: @get(
-; CHECK-NEXT:    [[GV:%.*]] = load ptr, ptr @G, align 8
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GV]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 20
 ;
   %GV = load ptr, ptr @G
   %V = load i32, ptr %GV
@@ -40,7 +30,6 @@ define i32 @get() {
 define void @foo(i64 %Size) nounwind noinline #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @G, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -51,6 +40,5 @@ entry:
 attributes #0 = { null_pointer_is_valid }
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { noinline nounwind null_pointer_is_valid }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { noinline nounwind null_pointer_is_valid }
 ;.
