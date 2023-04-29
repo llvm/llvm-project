@@ -57,7 +57,6 @@ set(FLANG_TEST_DEPENDS
   fir-opt
   tco
   bbc
-  llvm-ar
   llvm-dis
   llvm-objdump
   llvm-readobj
