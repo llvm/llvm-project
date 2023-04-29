@@ -131,7 +131,7 @@ __attribute__((always_inline, nodebug)) static inline uptr ShortTagSize(
   tag_t ptr_tag = GetTagFromPointer(ptr);
   if (ptr_tag == mem_tag)
     return kShadowAlignment;
-  if (mem_tag >= kShadowAlignment)
+  if (!mem_tag || mem_tag >= kShadowAlignment)
     return 0;
   if (*(u8 *)(ptr | (kShadowAlignment - 1)) != ptr_tag)
     return 0;

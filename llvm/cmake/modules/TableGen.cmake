@@ -171,14 +171,6 @@ macro(add_tablegen target project)
       add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
       set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
 
-      # Create an artificial dependency between tablegen projects, because they
-      # compile the same dependencies, thus using the same build folders.
-      # FIXME: A proper fix requires sequentially chaining tablegens.
-      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host AND
-          TARGET LLVM-tablegen-host)
-        add_dependencies(${project}-tablegen-host LLVM-tablegen-host)
-      endif()
-
       # If we're using the host tablegen, and utils were not requested, we have no
       # need to build this tablegen.
       if ( NOT LLVM_BUILD_UTILS )

@@ -30,10 +30,15 @@ void handle_server() {
 
   switch (port->get_opcode()) {
   case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
-    void *str = nullptr;
-    port->recv_n([&](uint64_t size) { return str = malloc(size); });
-    fputs(reinterpret_cast<char *>(str), stderr);
-    free(str);
+    uint64_t str_size;
+    char *str = nullptr;
+    port->recv_n([&](uint64_t size) {
+      str_size = size;
+      str = new char[size];
+      return str;
+    });
+    fwrite(str, str_size, 1, stderr);
+    delete[] str;
     break;
   }
   case __llvm_libc::rpc::Opcode::EXIT: {

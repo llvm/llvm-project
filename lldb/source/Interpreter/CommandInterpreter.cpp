@@ -3271,8 +3271,10 @@ bool CommandInterpreter::SaveTranscript(
   if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
     const FileSpec file_spec;
     error = file->GetFileSpec(const_cast<FileSpec &>(file_spec));
-    if (error.Success())
-      Host::OpenFileInExternalEditor(file_spec, 1);
+    if (error.Success()) {
+      if (llvm::Error e = Host::OpenFileInExternalEditor(file_spec, 1))
+        result.AppendError(llvm::toString(std::move(e)));
+    }
   }
 
   return true;
