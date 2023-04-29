@@ -119,12 +119,12 @@ private:
   /// Try to find horizontal reduction or otherwise, collect instructions
   /// for postponed vectorization attempts.
   /// \a P if not null designates phi node the reduction is fed into
-  /// (with reduction operators \a V or one of its operands, in a basic block
+  /// (with reduction operators \a Root or one of its operands, in a basic block
   /// \a BB).
   /// \returns true if a horizontal reduction was matched and reduced.
   /// \returns false if \a V is null or not an instruction,
   /// or a horizontal reduction was not matched or not possible.
-  bool vectorizeHorReduction(PHINode *P, Value *V, BasicBlock *BB,
+  bool vectorizeHorReduction(PHINode *P, Instruction *Root, BasicBlock *BB,
                              slpvectorizer::BoUpSLP &R,
                              TargetTransformInfo *TTI,
                              SmallVectorImpl<WeakTrackingVH> &PostponedInsts);
@@ -132,7 +132,7 @@ private:
   /// Make an attempt to vectorize reduction and then try to vectorize
   /// postponed binary operations.
   /// \returns true on any successfull vectorization.
-  bool vectorizeRootInstruction(PHINode *P, Value *V, BasicBlock *BB,
+  bool vectorizeRootInstruction(PHINode *P, Instruction *Root, BasicBlock *BB,
                                 slpvectorizer::BoUpSLP &R,
                                 TargetTransformInfo *TTI);
 

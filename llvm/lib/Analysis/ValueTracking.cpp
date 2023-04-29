@@ -6707,7 +6707,7 @@ bool llvm::isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
   return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth, true);
 }
 
-/// Return true if undefined behavior would provable be executed on the path to
+/// Return true if undefined behavior would provably be executed on the path to
 /// OnPathTo if Root produced a posion result.  Note that this doesn't say
 /// anything about whether OnPathTo is actually executed or whether Root is
 /// actually poison.  This can be used to assess whether a new use of Root can
@@ -7040,6 +7040,15 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
           YieldsPoison.insert(&I);
           break;
         }
+      }
+
+      // Special handling for select, which returns poison if its operand 0 is
+      // poison (handled in the loop above) *or* if both its true/false operands
+      // are poison (handled here).
+      if (I.getOpcode() == Instruction::Select &&
+          YieldsPoison.count(I.getOperand(1)) &&
+          YieldsPoison.count(I.getOperand(2))) {
+        YieldsPoison.insert(&I);
       }
     }
 

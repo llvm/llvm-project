@@ -177,10 +177,6 @@ typedef struct user_fpregs elf_fpregset_t;
 #  include "sanitizer_platform_interceptors.h"
 #  include "sanitizer_platform_limits_posix.h"
 
-#if SANITIZER_INTERCEPT_CRYPT_R
-#include <crypt.h>
-#endif
-
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
   unsigned struct_stat_sz = sizeof(struct stat);
@@ -299,10 +295,6 @@ namespace __sanitizer {
   unsigned struct_rlimit64_sz = sizeof(struct rlimit64);
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
 #endif // SANITIZER_GLIBC
-
-#if SANITIZER_INTERCEPT_CRYPT_R
-  unsigned struct_crypt_data_sz = sizeof(struct crypt_data);
-#endif
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_timex_sz = sizeof(struct timex);

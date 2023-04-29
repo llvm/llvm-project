@@ -17,6 +17,7 @@
 
 namespace __llvm_libc {
 
+// TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, clock_gettime,
                    (clockid_t clockid, struct timespec *tp)) {
   long ret_val =
