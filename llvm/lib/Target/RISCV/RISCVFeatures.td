@@ -88,11 +88,13 @@ def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
 
 def FeatureStdExtZicntr
     : SubtargetFeature<"zicntr", "HasStdExtZicntr", "true",
-                       "'zicntr' (Base Counters and Timers)">;
+                       "'zicntr' (Base Counters and Timers)",
+                       [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZihpm
     : SubtargetFeature<"zihpm", "HasStdExtZihpm", "true",
-                       "'zihpm' (Hardware Performance Counters)">;
+                       "'zihpm' (Hardware Performance Counters)",
+                       [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZfhmin
     : SubtargetFeature<"zfhmin", "HasStdExtZfhmin", "true",
