@@ -20,24 +20,6 @@ _PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std {
 
-// [alg.any_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-any_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred);
-
-// [alg.all_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-all_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred);
-
-// [alg.none_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-none_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred);
-
 // [alg.foreach]
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Function>

@@ -213,6 +213,7 @@ exception cstddef
 exception cstdlib
 exception type_traits
 exception version
+execution cstddef
 execution version
 expected cstddef
 expected initializer_list

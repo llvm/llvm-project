@@ -25,33 +25,6 @@ _PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std {
 
-// [alg.any_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-any_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
-
-  return __pstl::__internal::__pattern_any_of(
-      __dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred);
-}
-
-// [alg.all_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Pred>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-all_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Pred __pred) {
-  return !std::any_of(std::forward<_ExecutionPolicy>(__exec), __first, __last, std::not_fn(__pred));
-}
-
-// [alg.none_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-none_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  return !std::any_of(std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred);
-}
-
 // [alg.foreach]
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Function>

@@ -635,7 +635,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
-      setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT, Legal);
+      setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT, Custom);
 
       setOperationPromotedToType(
           ISD::VECTOR_SPLICE, VT,
@@ -898,7 +898,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         if (VT.getVectorElementType() == MVT::i1)
           setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT,
-                             Legal);
+                             Custom);
 
         setOperationAction(ISD::SELECT, VT, Custom);
 
@@ -7786,10 +7786,12 @@ SDValue RISCVTargetLowering::lowerVectorStrictFSetcc(SDValue Op,
                                  Op2, OLECCVal);
       SDValue Tmp2 = DAG.getNode(ISD::STRICT_FSETCCS, DL, VTList, Chain, Op2,
                                  Op1, OLECCVal);
-      SDValue And = DAG.getNode(ISD::AND, DL, VT, Tmp1, Tmp2);
       SDValue OutChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
                                      Tmp1.getValue(1), Tmp2.getValue(1));
-      return DAG.getMergeValues({And, OutChain}, DL);
+      // Tmp1 and Tmp2 might be the same node.
+      if (Tmp1 != Tmp2)
+        Tmp1 = DAG.getNode(ISD::AND, DL, VT, Tmp1, Tmp2);
+      return DAG.getMergeValues({Tmp1, OutChain}, DL);
     }
 
     // Expand (strict_fsetccs x, y, une) to (not (strict_fsetccs x, y, oeq))
