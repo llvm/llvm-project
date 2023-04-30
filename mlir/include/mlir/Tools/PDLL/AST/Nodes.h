@@ -1052,7 +1052,8 @@ private:
       : Base(loc, name), benefit(benefit),
         hasBoundedRecursion(hasBoundedRecursion), patternBody(body) {}
 
-  /// The benefit of the pattern if it was explicitly specified, None otherwise.
+  /// The benefit of the pattern if it was explicitly specified, std::nullopt
+  /// otherwise.
   std::optional<uint16_t> benefit;
 
   /// If the pattern has properly bounded rewrite recursion or not.
