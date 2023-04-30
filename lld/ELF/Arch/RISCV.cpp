@@ -27,9 +27,9 @@ using namespace lld::elf;
 
 namespace {
 
-class RISCVTargetInfo final : public TargetInfo {
+class RISCV final : public TargetInfo {
 public:
-  RISCVTargetInfo();
+  RISCV();
   uint32_t calcEFlags() const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -101,7 +101,7 @@ static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
          (extractBits(imm, 4, 0) << 7);
 }
 
-RISCVTargetInfo::RISCVTargetInfo() {
+RISCV::RISCV() {
   copyRel = R_RISCV_COPY;
   pltRel = R_RISCV_JUMP_SLOT;
   relativeRel = R_RISCV_RELATIVE;
@@ -136,7 +136,7 @@ static uint32_t getEFlags(InputFile *f) {
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
 }
 
-uint32_t RISCVTargetInfo::calcEFlags() const {
+uint32_t RISCV::calcEFlags() const {
   // If there are only binary input files (from -b binary), use a
   // value of 0 for the ELF header flags.
   if (ctx.objectFiles.empty())
@@ -163,8 +163,7 @@ uint32_t RISCVTargetInfo::calcEFlags() const {
   return target;
 }
 
-int64_t RISCVTargetInfo::getImplicitAddend(const uint8_t *buf,
-                                           RelType type) const {
+int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   default:
     internalLinkerError(getErrorLocation(buf),
@@ -190,21 +189,21 @@ int64_t RISCVTargetInfo::getImplicitAddend(const uint8_t *buf,
   }
 }
 
-void RISCVTargetInfo::writeGotHeader(uint8_t *buf) const {
+void RISCV::writeGotHeader(uint8_t *buf) const {
   if (config->is64)
     write64le(buf, mainPart->dynamic->getVA());
   else
     write32le(buf, mainPart->dynamic->getVA());
 }
 
-void RISCVTargetInfo::writeGotPlt(uint8_t *buf, const Symbol &s) const {
+void RISCV::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   if (config->is64)
     write64le(buf, in.plt->getVA());
   else
     write32le(buf, in.plt->getVA());
 }
 
-void RISCVTargetInfo::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
+void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   if (config->writeAddends) {
     if (config->is64)
       write64le(buf, s.getVA());
@@ -213,7 +212,7 @@ void RISCVTargetInfo::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   }
 }
 
-void RISCVTargetInfo::writePltHeader(uint8_t *buf) const {
+void RISCV::writePltHeader(uint8_t *buf) const {
   // 1: auipc t2, %pcrel_hi(.got.plt)
   // sub t1, t1, t3
   // l[wd] t3, %pcrel_lo(1b)(t2); t3 = _dl_runtime_resolve
@@ -234,8 +233,8 @@ void RISCVTargetInfo::writePltHeader(uint8_t *buf) const {
   write32le(buf + 28, itype(JALR, 0, X_T3, 0));
 }
 
-void RISCVTargetInfo::writePlt(uint8_t *buf, const Symbol &sym,
-                               uint64_t pltEntryAddr) const {
+void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
+                     uint64_t pltEntryAddr) const {
   // 1: auipc t3, %pcrel_hi(f@.got.plt)
   // l[wd] t3, %pcrel_lo(1b)(t3)
   // jalr t1, t3
@@ -247,13 +246,13 @@ void RISCVTargetInfo::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 12, itype(ADDI, 0, 0, 0));
 }
 
-RelType RISCVTargetInfo::getDynRel(RelType type) const {
+RelType RISCV::getDynRel(RelType type) const {
   return type == target->symbolicRel ? type
                                      : static_cast<RelType>(R_RISCV_NONE);
 }
 
-RelExpr RISCVTargetInfo::getRelExpr(const RelType type, const Symbol &s,
-                                    const uint8_t *loc) const {
+RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
+                          const uint8_t *loc) const {
   switch (type) {
   case R_RISCV_NONE:
     return R_NONE;
@@ -314,8 +313,7 @@ RelExpr RISCVTargetInfo::getRelExpr(const RelType type, const Symbol &s,
   }
 }
 
-void RISCVTargetInfo::relocate(uint8_t *loc, const Relocation &rel,
-                               uint64_t val) const {
+void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   const unsigned bits = config->wordsize * 8;
 
   switch (rel.type) {
@@ -756,7 +754,7 @@ static bool relax(InputSection &sec) {
 // target at a higher fixed address, invalidating an earlier relaxation. Any
 // change in section sizes can have cascading effect and require another
 // relaxation pass.
-bool RISCVTargetInfo::relaxOnce(int pass) const {
+bool RISCV::relaxOnce(int pass) const {
   llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
   if (config->relocatable)
     return false;
@@ -1075,6 +1073,6 @@ void elf::mergeRISCVAttributesSections() {
 }
 
 TargetInfo *elf::getRISCVTargetInfo() {
-  static RISCVTargetInfo target;
+  static RISCV target;
   return &target;
 }
