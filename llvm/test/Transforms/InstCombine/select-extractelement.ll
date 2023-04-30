@@ -109,11 +109,11 @@ define <4 x float> @simple_vector_select(<4 x float> %a, <4 x float> %b, <4 x i3
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[C]], i64 1
 ; CHECK-NEXT:    [[TOBOOL1_NOT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[A_SINK1:%.*]] = select i1 [[TOBOOL1_NOT]], <4 x float> [[B]], <4 x float> [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A_SINK]], <4 x float> [[A_SINK1]], <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A_SINK]], <4 x float> [[A_SINK1]], <4 x i32> <i32 0, i32 5, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[C]], i64 2
 ; CHECK-NEXT:    [[TOBOOL6_NOT:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[A_SINK2:%.*]] = select i1 [[TOBOOL6_NOT]], <4 x float> [[B]], <4 x float> [[A]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[A_SINK2]], <4 x i32> <i32 0, i32 1, i32 6, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[A_SINK2]], <4 x i32> <i32 0, i32 1, i32 6, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[C]], i64 3
 ; CHECK-NEXT:    [[TOBOOL11_NOT:%.*]] = icmp eq i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[A_SINK3:%.*]] = select i1 [[TOBOOL11_NOT]], <4 x float> [[B]], <4 x float> [[A]]

@@ -228,7 +228,7 @@ define <4 x double> @test_unhandled(<4 x double> %b) {
 ; CHECK-LABEL: @test_unhandled(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr @a, align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> <i32 3, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <4 x i32> <i32 3, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[B:%.*]], <4 x i32> <i32 0, i32 4, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x double> [[SHUFFLE]]
 ;

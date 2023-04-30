@@ -139,7 +139,7 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[TMP0]], i32 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -156,7 +156,7 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[TMP9]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP9]], <4 x i32> <i32 1, i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> [[TMP9]], <4 x i32> <i32 1, i32 poison, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <4 x float> [[TMP11]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+01, float 1.100000e+01>
 ; CHECK-NEXT:    [[TMP13]] = fadd <4 x float> [[TMP4]], [[TMP12]]

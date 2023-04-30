@@ -42,7 +42,7 @@ define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
@@ -56,7 +56,7 @@ define void @vecload_vs_broadcast(ptr noalias %from, ptr noalias %to, double %v1
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 undef, i32 0>
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP0]], [[TMP2]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
@@ -90,7 +90,7 @@ define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
@@ -104,7 +104,7 @@ define void @vecload_vs_broadcast2(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 undef, i32 0>
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
@@ -138,7 +138,7 @@ define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v
 ; CHECK:       lp:
 ; CHECK-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 undef, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
@@ -152,7 +152,7 @@ define void @vecload_vs_broadcast3(ptr noalias %from, ptr noalias %to, double %v
 ; SSE2:       lp:
 ; SSE2-NEXT:    [[P:%.*]] = phi double [ 1.000000e+00, [[LP]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
 ; SSE2-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[FROM:%.*]], align 4
-; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 undef, i32 0>
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; SSE2-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[P]], i64 0
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], [[TMP0]]
 ; SSE2-NEXT:    store <2 x double> [[TMP3]], ptr [[TO:%.*]], align 4
@@ -356,7 +356,7 @@ define void @good_load_order() {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 4
 ; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <4 x float> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[ARRAYIDX5]], align 4
@@ -391,7 +391,7 @@ define void @good_load_order() {
 ; SSE2-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], 4
 ; SSE2-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds [32000 x float], ptr @a, i32 0, i32 [[TMP6]]
 ; SSE2-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
-; SSE2-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
+; SSE2-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
 ; SSE2-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP1]], i64 0
 ; SSE2-NEXT:    [[TMP10:%.*]] = fmul <4 x float> [[TMP7]], [[TMP9]]
 ; SSE2-NEXT:    store <4 x float> [[TMP10]], ptr [[ARRAYIDX5]], align 4
