@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 void test_consteval() {
   if consteval ({(void)1;});  // expected-error {{expected { after consteval}}

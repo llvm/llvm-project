@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++2b %s
+// RUN: %clang_cc1 -verify -std=c++23 %s
 
 namespace N {
 
