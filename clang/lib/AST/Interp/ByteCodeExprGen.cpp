@@ -40,7 +40,7 @@ private:
 };
 
 /// Scope used to handle initialization methods.
-template <class Emitter> class OptionScope {
+template <class Emitter> class OptionScope final {
 public:
   /// Root constructor, compiling or discarding primitives.
   OptionScope(ByteCodeExprGen<Emitter> *Ctx, bool NewDiscardResult)
