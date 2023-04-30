@@ -341,15 +341,25 @@ struct KnownFPClass {
   }
 
   void copysign(const KnownFPClass &Sign) {
-    // Start assuming nothing about the sign.
-    SignBit = Sign.SignBit;
-    if (!SignBit)
-      return;
+    // Don't know anything about the sign of the source. Expand the possible set
+    // to its opposite sign pair.
+    if (KnownFPClasses & fcZero)
+      KnownFPClasses |= fcZero;
+    if (KnownFPClasses & fcSubnormal)
+      KnownFPClasses |= fcSubnormal;
+    if (KnownFPClasses & fcNormal)
+      KnownFPClasses |= fcNormal;
+    if (KnownFPClasses & fcInf)
+      KnownFPClasses |= fcInf;
 
-    if (*SignBit)
-      KnownFPClasses = KnownFPClasses & fcNegative;
-    else
-      KnownFPClasses = KnownFPClasses & fcPositive;
+    // Sign bit is exactly preserved even for nans.
+    SignBit = Sign.SignBit;
+
+    // Clear sign bits based on the input sign mask.
+    if (Sign.isKnownNever(fcPositive | fcNan) || (SignBit && *SignBit))
+      KnownFPClasses &= (fcNegative | fcNan);
+    if (Sign.isKnownNever(fcNegative | fcNan) || (SignBit && !*SignBit))
+      KnownFPClasses &= (fcPositive | fcNan);
   }
 
   void resetAll() { *this = KnownFPClass(); }
