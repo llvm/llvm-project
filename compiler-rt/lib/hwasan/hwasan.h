@@ -90,11 +90,12 @@ static inline bool InTaggableRegion(uptr addr) {
 }
 
 static inline tag_t GetTagFromPointer(uptr p) {
-  return (p >> kAddressTagShift) & kTagMask;
+  return InTaggableRegion(p) ? ((p >> kAddressTagShift) & kTagMask) : 0;
 }
 
 static inline uptr UntagAddr(uptr tagged_addr) {
-  return tagged_addr & ~kAddressTagMask;
+  return InTaggableRegion(tagged_addr) ? (tagged_addr & ~kAddressTagMask)
+                                       : tagged_addr;
 }
 
 static inline void *UntagPtr(const void *tagged_ptr) {
@@ -103,7 +104,9 @@ static inline void *UntagPtr(const void *tagged_ptr) {
 }
 
 static inline uptr AddTagToPointer(uptr p, tag_t tag) {
-  return (p & ~kAddressTagMask) | ((uptr)tag << kAddressTagShift);
+  return InTaggableRegion(p)
+             ? ((p & ~kAddressTagMask) | ((uptr)tag << kAddressTagShift))
+             : p;
 }
 
 namespace __hwasan {
