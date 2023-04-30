@@ -18,5 +18,3 @@ char *asctime(const struct tm *timeptr);
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_TIME_ASCTIME_H
-
-#include "include/time.h"
