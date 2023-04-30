@@ -70,6 +70,8 @@ mlir::Type fir::FirOpBuilder::getRealType(int kind) {
   switch (kindMap.getRealTypeID(kind)) {
   case llvm::Type::TypeID::HalfTyID:
     return mlir::FloatType::getF16(getContext());
+  case llvm::Type::TypeID::BFloatTyID:
+    return mlir::FloatType::getBF16(getContext());
   case llvm::Type::TypeID::FloatTyID:
     return mlir::FloatType::getF32(getContext());
   case llvm::Type::TypeID::DoubleTyID:
