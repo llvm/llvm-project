@@ -7787,8 +7787,8 @@ SDValue RISCVTargetLowering::lowerVectorStrictFSetcc(SDValue Op,
       SDValue Tmp2 = DAG.getNode(ISD::STRICT_FSETCCS, DL, VTList, Chain, Op2,
                                  Op1, OLECCVal);
       SDValue And = DAG.getNode(ISD::AND, DL, VT, Tmp1, Tmp2);
-      SDValue OutChain =
-          DAG.getMergeValues({Tmp1.getValue(1), Tmp2.getValue(1)}, DL);
+      SDValue OutChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
+                                     Tmp1.getValue(1), Tmp2.getValue(1));
       return DAG.getMergeValues({And, OutChain}, DL);
     }
 
