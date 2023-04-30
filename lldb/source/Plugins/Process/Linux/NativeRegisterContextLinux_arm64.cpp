@@ -62,7 +62,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     // Configure register sets supported by this AArch64 target.
     // Read SVE header to check for SVE support.
 #if LLDB_HAVE_USER_SVE_HEADER
-    struct user_sve_header sve_header;
+    struct sve::user_sve_header sve_header;
 #else
     struct {} sve_header;
 #endif
@@ -401,7 +401,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         uint64_t vg_value = reg_value.GetAsUInt64();
 
 #if LLDB_HAVE_USER_SVE_HEADER
-        if (sve_vl_valid(vg_value * 8)) {
+        if (sve::vl_valid(vg_value * 8)) {
           if (m_sve_header_is_valid && vg_value == GetSVERegVG())
             return error;
 
@@ -588,7 +588,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 #if LLDB_HAVE_USER_SVE_HEADER
     // We have SVE register data first write SVE header.
     ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
-    if (!sve_vl_valid(m_sve_header.vl)) {
+    if (!sve::vl_valid(m_sve_header.vl)) {
       m_sve_header_is_valid = false;
       error.SetErrorStringWithFormat("NativeRegisterContextLinux_arm64::%s "
                                      "Invalid SVE header in data_sp",
@@ -960,7 +960,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
       // ConfigureVectorLength regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
 #if LLDB_HAVE_USER_SVE_HEADER
-      if (sve_vl_valid(m_sve_header.vl))
+      if (sve::vl_valid(m_sve_header.vl))
         vq = sve::vq_from_vl(m_sve_header.vl);
 #endif
 
