@@ -327,6 +327,10 @@ Bug Fixes in This Version
   (`#62122 <https://github.com/llvm/llvm-project/issues/62122>`_)
 - Fix crash when handling undefined template partial specialization
   (`#61356 <https://github.com/llvm/llvm-project/issues/61356>`_)
+- Fix a crash caused by incorrectly evaluating constraints on an inheriting
+  constructor declaration.
+  (`#62361 <https://github.com/llvm/llvm-project/issues/62361>`_)
+  (`#62362 <https://github.com/llvm/llvm-project/issues/62362>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
