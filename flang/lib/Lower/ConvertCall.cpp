@@ -854,7 +854,10 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     const PreparedActualArgument &preparedActual, mlir::Type dummyType,
     const Fortran::lower::CallerInterface::PassedEntity &arg,
     const Fortran::lower::SomeExpr &expr,
-    Fortran::evaluate::FoldingContext &foldingContext) {
+    Fortran::lower::AbstractConverter &converter) {
+
+  Fortran::evaluate::FoldingContext &foldingContext =
+      converter.getFoldingContext();
 
   // Step 1: get the actual argument, which includes addressing the
   // element if this is an array in an elemental call.
@@ -931,8 +934,9 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (mustSetDynamicTypeToDummyType)
       TODO(loc, "passing polymorphic array expression to non polymorphic "
                 "contiguous dummy");
+    mlir::Type storageType = converter.genType(expr);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
-        loc, builder, entity, dummyType, "adapt.valuebyref");
+        loc, builder, entity, storageType, "adapt.valuebyref");
     entity = hlfir::Entity{associate.getBase()};
     preparedDummy.setExprAssociateCleanUp(associate.getFirBase(),
                                           associate.getMustFreeStrorageFlag());
@@ -983,10 +987,10 @@ static PreparedDummyArgument prepareUserCallActualArgument(
     const PreparedActualArgument &preparedActual, mlir::Type dummyType,
     const Fortran::lower::CallerInterface::PassedEntity &arg,
     const Fortran::lower::SomeExpr &expr,
-    Fortran::evaluate::FoldingContext &foldingContext) {
+    Fortran::lower::AbstractConverter &converter) {
   if (!preparedActual.handleDynamicOptional())
     return preparePresentUserCallActualArgument(
-        loc, builder, preparedActual, dummyType, arg, expr, foldingContext);
+        loc, builder, preparedActual, dummyType, arg, expr, converter);
 
   // Conditional dummy argument preparation. The actual may be absent
   // at runtime, causing any addressing, copy, and packaging to have
@@ -1007,8 +1011,8 @@ static PreparedDummyArgument prepareUserCallActualArgument(
   mlir::Block *preparationBlock = &badIfOp.getThenRegion().front();
   builder.setInsertionPointToStart(preparationBlock);
   PreparedDummyArgument unconditionalDummy =
-      preparePresentUserCallActualArgument(
-          loc, builder, preparedActual, dummyType, arg, expr, foldingContext);
+      preparePresentUserCallActualArgument(loc, builder, preparedActual,
+                                           dummyType, arg, expr, converter);
   builder.restoreInsertionPoint(insertPt);
 
   // TODO: when forwarding an optional to an optional of the same kind
@@ -1100,9 +1104,9 @@ genUserCall(PreparedActualArguments &loweredActuals,
     case PassBy::Box:
     case PassBy::BaseAddress:
     case PassBy::BoxChar: {
-      PreparedDummyArgument preparedDummy = prepareUserCallActualArgument(
-          loc, builder, *preparedActual, argTy, arg, *expr,
-          callContext.converter.getFoldingContext());
+      PreparedDummyArgument preparedDummy =
+          prepareUserCallActualArgument(loc, builder, *preparedActual, argTy,
+                                        arg, *expr, callContext.converter);
       if (preparedDummy.maybeCleanUp.has_value())
         callCleanUps.emplace_back(std::move(*preparedDummy.maybeCleanUp));
       caller.placeInput(arg, preparedDummy.dummy);
