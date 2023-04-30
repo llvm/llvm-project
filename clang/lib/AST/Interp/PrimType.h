@@ -42,6 +42,8 @@ enum PrimType : unsigned {
   PT_FnPtr,
 };
 
+constexpr bool isIntegralType(PrimType T) { return T <= PT_Uint64; }
+
 /// Mapping from primitive types to their representation.
 template <PrimType T> struct PrimConv;
 template <> struct PrimConv<PT_Sint8> { using T = Integral<8, true>; };
