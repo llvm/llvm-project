@@ -125,8 +125,8 @@ __attribute__((always_inline)) static void SigTrap(uptr p, uptr size) {
   // __builtin_unreachable();
 }
 
-__attribute__((always_inline, nodebug)) static bool PossiblyShortTagMatches(
-    tag_t mem_tag, uptr ptr, uptr sz) {
+__attribute__((always_inline, nodebug)) static inline bool
+PossiblyShortTagMatches(tag_t mem_tag, uptr ptr, uptr sz) {
   tag_t ptr_tag = GetTagFromPointer(ptr);
   if (ptr_tag == mem_tag)
     return true;
