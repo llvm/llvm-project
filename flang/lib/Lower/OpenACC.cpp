@@ -101,6 +101,7 @@ genObjectList(const Fortran::parser::AccObjectList &objectList,
   }
 }
 
+/// Generate the acc.bounds operation from the descriptor information.
 static llvm::SmallVector<mlir::Value>
 genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
                     Fortran::lower::AbstractConverter &converter,
@@ -126,6 +127,35 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
   return bounds;
 }
 
+/// Generate acc.bounds operation for base array without any subscripts
+/// provided.
+static llvm::SmallVector<mlir::Value>
+genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
+                 Fortran::lower::AbstractConverter &converter,
+                 const Fortran::parser::Name &name, mlir::Value baseAddr) {
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type boundTy = builder.getType<mlir::acc::DataBoundsType>();
+  fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*name.symbol);
+  llvm::SmallVector<mlir::Value> bounds;
+
+  if (dataExv.rank() == 0)
+    return bounds;
+
+  for (std::size_t dim = 0; dim < dataExv.rank(); ++dim) {
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value startIdx =
+        fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
+    mlir::Value extent = fir::factory::readExtent(builder, loc, dataExv, dim);
+    mlir::Value bound = builder.create<mlir::acc::DataBoundsOp>(
+        loc, boundTy, mlir::Value(), mlir::Value(), extent, mlir::Value(),
+        false, startIdx);
+    bounds.push_back(bound);
+  }
+  return bounds;
+}
+
+/// Generate acc.bounds operations for an array section when subscripts are
+/// provided.
 static llvm::SmallVector<mlir::Value>
 genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              Fortran::lower::AbstractConverter &converter,
@@ -346,6 +376,10 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                       bounds = genBoundsOpsFromBox(builder, operandLocation,
                                                    converter, *name.symbol,
                                                    baseAddr, (*expr).Rank());
+                    if (fir::unwrapRefType(baseAddr.getType())
+                            .isa<fir::SequenceType>())
+                      bounds = genBaseBoundsOps(builder, operandLocation,
+                                                converter, name, baseAddr);
                     createOpAndAddOperand(baseAddr, name.ToString(),
                                           operandLocation, bounds);
                   } else { // Unsupported
