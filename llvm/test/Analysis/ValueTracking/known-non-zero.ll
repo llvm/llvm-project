@@ -693,11 +693,7 @@ define i1 @bitcast_nonzero_fail_dont_check_float(float %xx, i32 %ind) {
 
 define i1 @ctlz_true_nonzero(i8 %xx, i8 %ind) {
 ; CHECK-LABEL: @ctlz_true_nonzero(
-; CHECK-NEXT:    [[XS:%.*]] = lshr i8 [[XX:%.*]], 1
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.ctlz.i8(i8 [[XS]], i1 true)
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xs = lshr i8 %xx, 1
   %x = call i8 @llvm.ctlz.i8(i8 %xs, i1 true)
@@ -708,11 +704,7 @@ define i1 @ctlz_true_nonzero(i8 %xx, i8 %ind) {
 
 define i1 @ctlz_false_nonzero(i8 %xx, i8 %ind) {
 ; CHECK-LABEL: @ctlz_false_nonzero(
-; CHECK-NEXT:    [[XA:%.*]] = and i8 [[XX:%.*]], 127
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.ctlz.i8(i8 [[XA]], i1 true)
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xa = and i8 %xx, 127
   %x = call i8 @llvm.ctlz.i8(i8 %xa, i1 true)
@@ -738,11 +730,7 @@ define i1 @ctlz_nonzero_fail_maybe_neg(i8 %xx, i8 %ind) {
 
 define i1 @cttz_true_nonzero(i8 %xx, i8 %ind) {
 ; CHECK-LABEL: @cttz_true_nonzero(
-; CHECK-NEXT:    [[XS:%.*]] = shl i8 [[XX:%.*]], 1
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.cttz.i8(i8 [[XS]], i1 true)
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xs = shl i8 %xx, 1
   %x = call i8 @llvm.cttz.i8(i8 %xs, i1 true)
@@ -753,11 +741,7 @@ define i1 @cttz_true_nonzero(i8 %xx, i8 %ind) {
 
 define i1 @cttz_false_nonzero(i8 %xx, i8 %ind) {
 ; CHECK-LABEL: @cttz_false_nonzero(
-; CHECK-NEXT:    [[XA:%.*]] = and i8 [[XX:%.*]], -2
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.cttz.i8(i8 [[XA]], i1 true)
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xa = and i8 %xx, -2
   %x = call i8 @llvm.cttz.i8(i8 %xa, i1 true)
