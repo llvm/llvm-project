@@ -540,6 +540,25 @@ static Value *emitBinaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   }
 }
 
+// Has second type mangled argument.
+static Value *emitBinaryExpMaybeConstrainedFPBuiltin(
+    CodeGenFunction &CGF, const CallExpr *E, llvm::Intrinsic::ID IntrinsicID,
+    llvm::Intrinsic::ID ConstrainedIntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+
+  if (CGF.Builder.getIsFPConstrained()) {
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+    Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID,
+                                       {Src0->getType(), Src1->getType()});
+    return CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1});
+  }
+
+  Function *F =
+      CGF.CGM.getIntrinsic(IntrinsicID, {Src0->getType(), Src1->getType()});
+  return CGF.Builder.CreateCall(F, {Src0, Src1});
+}
+
 // Emit an intrinsic that has 3 operands of the same type as its result.
 // Depending on mode, this may be a constrained floating-point intrinsic.
 static Value *emitTernaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
@@ -2567,7 +2586,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       return RValue::get(emitMaybeConstrainedFPToIntRoundBuiltin(
           *this, E, Intrinsic::llrint,
           Intrinsic::experimental_constrained_llrint));
-
+    case Builtin::BI__builtin_ldexp:
+    case Builtin::BI__builtin_ldexpf:
+    case Builtin::BI__builtin_ldexpl:
+    case Builtin::BI__builtin_ldexpf16:
+    case Builtin::BI__builtin_ldexpf128: {
+      return RValue::get(emitBinaryExpMaybeConstrainedFPBuiltin(
+          *this, E, Intrinsic::ldexp,
+          Intrinsic::experimental_constrained_ldexp));
+    }
     default:
       break;
     }
@@ -3035,6 +3062,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
 
     if (Builder.getIsFPConstrained()) {
+      // FIXME: llvm.powi has 2 mangling types,
+      // llvm.experimental.constrained.powi has one.
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
       Function *F = CGM.getIntrinsic(Intrinsic::experimental_constrained_powi,
                                      Src0->getType());
