@@ -2741,10 +2741,39 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     if (I->getType()->isPointerTy())
       return isGEPKnownNonNull(cast<GEPOperator>(I), Depth, Q);
     break;
-  case Instruction::BitCast:
-    if (I->getType()->isPointerTy())
+  case Instruction::BitCast: {
+    // We need to be a bit careful here. We can only peek through the bitcast
+    // if the scalar size of elements in the operand are smaller than and a
+    // multiple of the size they are casting too. Take three cases:
+    //
+    // 1) Unsafe:
+    //        bitcast <2 x i16> %NonZero to <4 x i8>
+    //
+    //    %NonZero can have 2 non-zero i16 elements, but isKnownNonZero on a
+    //    <4 x i8> requires that all 4 i8 elements be non-zero which isn't
+    //    guranteed (imagine just sign bit set in the 2 i16 elements).
+    //
+    // 2) Unsafe:
+    //        bitcast <4 x i3> %NonZero to <3 x i4>
+    //
+    //    Even though the scalar size of the src (`i3`) is smaller than the
+    //    scalar size of the dst `i4`, because `i3` is not a multiple of `i4`
+    //    its possible for the `3 x i4` elements to be zero because there are
+    //    some elements in the destination that don't contain any full src
+    //    element.
+    //
+    // 3) Safe:
+    //        bitcast <4 x i8> %NonZero to <2 x i16>
+    //
+    //    This is always safe as non-zero in the 4 i8 elements implies
+    //    non-zero in the combination of any two adjacent ones. Since i8 is a
+    //    multiple of i16, each i16 is guranteed to have 2 full i8 elements.
+    //    This all implies the 2 i16 elements are non-zero.
+    Type *FromTy = I->getOperand(0)->getType();
+    if ((FromTy->isIntOrIntVectorTy() || FromTy->isPtrOrPtrVectorTy()) &&
+        (BitWidth % getBitWidth(FromTy->getScalarType(), Q.DL)) == 0)
       return isKnownNonZero(I->getOperand(0), Depth, Q);
-    break;
+  } break;
   case Instruction::IntToPtr:
     // Note that we have to take special care to avoid looking through
     // truncating casts, e.g., int2ptr/ptr2int with appropriate sizes, as well
