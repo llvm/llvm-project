@@ -252,87 +252,115 @@ selectCallee(const ModuleSummaryIndex &Index,
 
 namespace {
 
-using EdgeInfo =
-    std::tuple<const GlobalValueSummary *, unsigned /* Threshold */>;
+using EdgeInfo = std::tuple<const FunctionSummary *, unsigned /* Threshold */>;
 
 } // anonymous namespace
 
-static bool shouldImportGlobal(
-    const ValueInfo &VI, const GVSummaryMapTy &DefinedGVSummaries,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing) {
-  const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
-  if (GVS == DefinedGVSummaries.end())
-    return true;
-  // We should not skip import if the module contains a non-prevailing
-  // definition with interposable linkage type. This is required for correctness
-  // in the situation where there is a prevailing def available for import and
-  // marked read-only. In this case, the non-prevailing def will be converted to
-  // a declaration, while the prevailing one becomes internal, thus no
-  // definitions will be available for linking. In order to prevent undefined
-  // symbol link error, the prevailing definition must be imported.
-  // FIXME: Consider adding a check that the suitable prevailing definition
-  // exists and marked read-only.
-  if (VI.getSummaryList().size() > 1 &&
-      GlobalValue::isInterposableLinkage(GVS->second->linkage()) &&
-      !isPrevailing(VI.getGUID(), GVS->second))
-    return true;
+/// Import globals referenced by a function or other globals that are being
+/// imported, if importing such global is possible.
+class GlobalsImporter final {
+  const ModuleSummaryIndex &Index;
+  const GVSummaryMapTy &DefinedGVSummaries;
+  function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+      IsPrevailing;
+  FunctionImporter::ImportMapTy &ImportList;
+  StringMap<FunctionImporter::ExportSetTy> *const ExportLists;
 
-  return false;
-}
+  bool shouldImportGlobal(const ValueInfo &VI) {
+    const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
+    if (GVS == DefinedGVSummaries.end())
+      return true;
+    // We should not skip import if the module contains a non-prevailing
+    // definition with interposable linkage type. This is required for
+    // correctness in the situation where there is a prevailing def available
+    // for import and marked read-only. In this case, the non-prevailing def
+    // will be converted to a declaration, while the prevailing one becomes
+    // internal, thus no definitions will be available for linking. In order to
+    // prevent undefined symbol link error, the prevailing definition must be
+    // imported.
+    // FIXME: Consider adding a check that the suitable prevailing definition
+    // exists and marked read-only.
+    if (VI.getSummaryList().size() > 1 &&
+        GlobalValue::isInterposableLinkage(GVS->second->linkage()) &&
+        !IsPrevailing(VI.getGUID(), GVS->second))
+      return true;
 
-static void computeImportForReferencedGlobals(
-    const GlobalValueSummary &Summary, const ModuleSummaryIndex &Index,
-    const GVSummaryMapTy &DefinedGVSummaries,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing,
-    SmallVectorImpl<EdgeInfo> &Worklist,
-    FunctionImporter::ImportMapTy &ImportList,
-    StringMap<FunctionImporter::ExportSetTy> *ExportLists) {
-  for (const auto &VI : Summary.refs()) {
-    if (!shouldImportGlobal(VI, DefinedGVSummaries, isPrevailing)) {
-      LLVM_DEBUG(
-          dbgs() << "Ref ignored! Target already in destination module.\n");
-      continue;
-    }
+    return false;
+  }
 
-    LLVM_DEBUG(dbgs() << " ref -> " << VI << "\n");
+  void
+  onImportingSummaryImpl(const GlobalValueSummary &Summary,
+                         SmallVectorImpl<const GlobalVarSummary *> &Worklist) {
+    for (const auto &VI : Summary.refs()) {
+      if (!shouldImportGlobal(VI)) {
+        LLVM_DEBUG(
+            dbgs() << "Ref ignored! Target already in destination module.\n");
+        continue;
+      }
 
-    // If this is a local variable, make sure we import the copy
-    // in the caller's module. The only time a local variable can
-    // share an entry in the index is if there is a local with the same name
-    // in another module that had the same source file name (in a different
-    // directory), where each was compiled in their own directory so there
-    // was not distinguishing path.
-    auto LocalNotInModule = [&](const GlobalValueSummary *RefSummary) -> bool {
-      return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
-             RefSummary->modulePath() != Summary.modulePath();
-    };
+      LLVM_DEBUG(dbgs() << " ref -> " << VI << "\n");
 
-    for (const auto &RefSummary : VI.getSummaryList())
-      if (isa<GlobalVarSummary>(RefSummary.get()) &&
-          Index.canImportGlobalVar(RefSummary.get(), /* AnalyzeRefs */ true) &&
-          !LocalNotInModule(RefSummary.get())) {
+      // If this is a local variable, make sure we import the copy
+      // in the caller's module. The only time a local variable can
+      // share an entry in the index is if there is a local with the same name
+      // in another module that had the same source file name (in a different
+      // directory), where each was compiled in their own directory so there
+      // was not distinguishing path.
+      auto LocalNotInModule =
+          [&](const GlobalValueSummary *RefSummary) -> bool {
+        return GlobalValue::isLocalLinkage(RefSummary->linkage()) &&
+               RefSummary->modulePath() != Summary.modulePath();
+      };
+
+      for (const auto &RefSummary : VI.getSummaryList()) {
+        const auto *GVS = dyn_cast<GlobalVarSummary>(RefSummary.get());
+        // Functions could be referenced by global vars - e.g. a vtable; but we
+        // don't currently imagine a reason those would be imported here, rather
+        // than as part of the logic deciding which functions to import (i.e.
+        // based on profile information). Should we decide to handle them here,
+        // we can refactor accordingly at that time.
+        if (!GVS || !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true) ||
+            LocalNotInModule(GVS))
+          continue;
         auto ILI = ImportList[RefSummary->modulePath()].insert(VI.getGUID());
         // Only update stat and exports if we haven't already imported this
         // variable.
         if (!ILI.second)
           break;
         NumImportedGlobalVarsThinLink++;
-        // Any references made by this variable will be marked exported later,
-        // in ComputeCrossModuleImport, after import decisions are complete,
-        // which is more efficient than adding them here.
+        // Any references made by this variable will be marked exported
+        // later, in ComputeCrossModuleImport, after import decisions are
+        // complete, which is more efficient than adding them here.
         if (ExportLists)
           (*ExportLists)[RefSummary->modulePath()].insert(VI);
 
         // If variable is not writeonly we attempt to recursively analyze
         // its references in order to import referenced constants.
-        if (!Index.isWriteOnly(cast<GlobalVarSummary>(RefSummary.get())))
-          Worklist.emplace_back(RefSummary.get(), 0);
+        if (!Index.isWriteOnly(GVS))
+          Worklist.emplace_back(GVS);
         break;
       }
+    }
   }
-}
+
+public:
+  GlobalsImporter(
+      const ModuleSummaryIndex &Index, const GVSummaryMapTy &DefinedGVSummaries,
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      FunctionImporter::ImportMapTy &ImportList,
+      StringMap<FunctionImporter::ExportSetTy> *ExportLists)
+      : Index(Index), DefinedGVSummaries(DefinedGVSummaries),
+        IsPrevailing(IsPrevailing), ImportList(ImportList),
+        ExportLists(ExportLists) {}
+
+  void onImportingSummary(const GlobalValueSummary &Summary) {
+    SmallVector<const GlobalVarSummary *, 128> Worklist;
+    onImportingSummaryImpl(Summary, Worklist);
+    while (!Worklist.empty())
+      onImportingSummaryImpl(*Worklist.pop_back_val(), Worklist);
+  }
+};
 
 static const char *
 getFailureName(FunctionImporter::ImportFailureReason Reason) {
@@ -365,13 +393,11 @@ static void computeImportForFunction(
     const unsigned Threshold, const GVSummaryMapTy &DefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    SmallVectorImpl<EdgeInfo> &Worklist,
+    SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
     FunctionImporter::ImportMapTy &ImportList,
     StringMap<FunctionImporter::ExportSetTy> *ExportLists,
     FunctionImporter::ImportThresholdsTy &ImportThresholds) {
-  computeImportForReferencedGlobals(Summary, Index, DefinedGVSummaries,
-                                    isPrevailing, Worklist, ImportList,
-                                    ExportLists);
+  GVImporter.onImportingSummary(Summary);
   static int ImportCount = 0;
   for (const auto &Edge : Summary.calls()) {
     ValueInfo VI = Edge.first;
@@ -546,6 +572,8 @@ static void ComputeImportForModule(
   // Worklist contains the list of function imported in this module, for which
   // we will analyse the callees and may import further down the callgraph.
   SmallVector<EdgeInfo, 128> Worklist;
+  GlobalsImporter GVI(Index, DefinedGVSummaries, isPrevailing, ImportList,
+                      ExportLists);
   FunctionImporter::ImportThresholdsTy ImportThresholds;
 
   // Populate the worklist with the import for the functions in the current
@@ -567,7 +595,7 @@ static void ComputeImportForModule(
       continue;
     LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
     computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedGVSummaries, isPrevailing, Worklist,
+                             DefinedGVSummaries, isPrevailing, Worklist, GVI,
                              ImportList, ExportLists, ImportThresholds);
   }
 
@@ -579,12 +607,8 @@ static void ComputeImportForModule(
 
     if (auto *FS = dyn_cast<FunctionSummary>(Summary))
       computeImportForFunction(*FS, Index, Threshold, DefinedGVSummaries,
-                               isPrevailing, Worklist, ImportList, ExportLists,
-                               ImportThresholds);
-    else
-      computeImportForReferencedGlobals(*Summary, Index, DefinedGVSummaries,
-                                        isPrevailing, Worklist, ImportList,
-                                        ExportLists);
+                               isPrevailing, Worklist, GVI, ImportList,
+                               ExportLists, ImportThresholds);
   }
 
   // Print stats about functions considered but rejected for importing
