@@ -1,0 +1,34 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+
+// <memory>
+
+// [out.ptr], function template out_ptr
+// template<class Pointer = void, class Smart, class... Args>
+//   auto out_ptr(Smart& s, Args&&... args);                   // since c++23
+
+#include <memory>
+
+int main(int, char**) {
+  {
+    std::unique_ptr<int> uPtr;
+
+    auto outUPtr1 = std::out_ptr(uPtr);
+    auto outUPtr2 = std::out_ptr<int*>(uPtr);
+  }
+  {
+    std::shared_ptr<int> sPtr;
+
+    auto outSPtr1 = std::out_ptr(sPtr, [](auto* p) { delete p; });
+    auto outSPtr2 = std::out_ptr<int*>(sPtr, [](auto* p) { delete p; });
+  }
+
+  return 0;
+}

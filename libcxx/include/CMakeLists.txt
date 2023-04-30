@@ -529,6 +529,8 @@ set(files
   __memory/concepts.h
   __memory/construct_at.h
   __memory/destruct_n.h
+  __memory/inout_ptr.h
+  __memory/out_ptr.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h

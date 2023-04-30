@@ -15,11 +15,14 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_class.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_void.h>
+#include <__type_traits/negation.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
+#include <__utility/forward.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,11 +31,16 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class = void>
-struct __has_element_type : false_type {};
+// clang-format off
+#define _LIBCPP_CLASS_TRAITS_HAS_XXX(NAME, PROPERTY)                                                                   \
+  template <class _Tp, class = void>                                                                                   \
+  struct NAME : false_type {};                                                                                         \
+  template <class _Tp>                                                                                                 \
+  struct NAME<_Tp, __void_t<typename _Tp::PROPERTY> > : true_type {}
+// clang-format on
 
-template <class _Tp>
-struct __has_element_type<_Tp, __void_t<typename _Tp::element_type> > : true_type {};
+_LIBCPP_CLASS_TRAITS_HAS_XXX(__has_pointer, pointer);
+_LIBCPP_CLASS_TRAITS_HAS_XXX(__has_element_type, element_type);
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
 struct __pointer_traits_element_type {};
@@ -240,6 +248,57 @@ inline _LIBCPP_INLINE_VISIBILITY constexpr
 auto to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
     return _VSTD::__to_address(__p);
 }
+#endif
+
+#if _LIBCPP_STD_VER >= 23
+
+template <class _Tp>
+struct __pointer_of {};
+
+template <class _Tp>
+  requires(__has_pointer<_Tp>::value)
+struct __pointer_of<_Tp> {
+  using type = typename _Tp::pointer;
+};
+
+template <class _Tp>
+  requires(!__has_pointer<_Tp>::value && __has_element_type<_Tp>::value)
+struct __pointer_of<_Tp> {
+  using type = typename _Tp::element_type*;
+};
+
+template <class _Tp>
+  requires(!__has_pointer<_Tp>::value && !__has_element_type<_Tp>::value &&
+           __has_element_type<pointer_traits<_Tp>>::value)
+struct __pointer_of<_Tp> {
+  using type = typename pointer_traits<_Tp>::element_type*;
+};
+
+template <typename _Tp>
+using __pointer_of_t = typename __pointer_of<_Tp>::type;
+
+template <class _Tp, class _Up>
+struct __pointer_of_or {
+  using type _LIBCPP_NODEBUG = _Up;
+};
+
+template <class _Tp, class _Up>
+  requires requires { typename __pointer_of_t<_Tp>; }
+struct __pointer_of_or<_Tp, _Up> {
+  using type _LIBCPP_NODEBUG = __pointer_of_t<_Tp>;
+};
+
+template <typename _Tp, typename _Up>
+using __pointer_of_or_t = typename __pointer_of_or<_Tp, _Up>::type;
+
+template <class _Smart>
+concept __resettable_smart_pointer = requires(_Smart __s) { __s.reset(); };
+
+template <class _Smart, class _Pointer = void, class... _Args>
+concept __resettable_smart_pointer_with_args = requires(_Smart __s, _Pointer __p, _Args... __args) {
+  __s.reset(static_cast<__pointer_of_or_t<_Smart, _Pointer>>(__p), std::forward<_Args>(__args)...);
+};
+
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

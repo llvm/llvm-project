@@ -1519,6 +1519,8 @@ module std_private_memory_concepts                        [system] {
 }
 module std_private_memory_construct_at                    [system] { header "__memory/construct_at.h" }
 module std_private_memory_destruct_n                      [system] { header "__memory/destruct_n.h" }
+module std_private_memory_inout_ptr                       [system] { header "__memory/inout_ptr.h" }
+module std_private_memory_out_ptr                         [system] { header "__memory/out_ptr.h" }
 module std_private_memory_pointer_traits                  [system] { header "__memory/pointer_traits.h" }
 module std_private_memory_ranges_construct_at             [system] { header "__memory/ranges_construct_at.h" }
 module std_private_memory_ranges_uninitialized_algorithms [system] {

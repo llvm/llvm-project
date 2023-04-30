@@ -485,17 +485,11 @@
 #   error "__cpp_lib_make_unique should have the value 201304L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should be defined in c++23"
-#   endif
-#   if __cpp_lib_out_ptr != 202106L
-#     error "__cpp_lib_out_ptr should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_out_ptr
-#     error "__cpp_lib_out_ptr should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_out_ptr
+#   error "__cpp_lib_out_ptr should be defined in c++23"
+# endif
+# if __cpp_lib_out_ptr != 202106L
+#   error "__cpp_lib_out_ptr should have the value 202106L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges
