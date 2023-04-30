@@ -125,7 +125,7 @@ packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
   }
 }
 
-bool containsNonScalarVarargs(CodeGenFunction *CGF, CallArgList Args) {
+bool containsNonScalarVarargs(CodeGenFunction *CGF, const CallArgList &Args) {
   return llvm::any_of(llvm::drop_begin(Args), [&](const CallArg &A) {
     return !A.getRValue(*CGF).isScalar();
   });
