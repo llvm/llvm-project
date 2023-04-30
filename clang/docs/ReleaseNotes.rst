@@ -331,6 +331,9 @@ Bug Fixes in This Version
   constructor declaration.
   (`#62361 <https://github.com/llvm/llvm-project/issues/62361>`_)
   (`#62362 <https://github.com/llvm/llvm-project/issues/62362>`_)
+- Fix crash when attempting to perform parenthesized initialization of an
+  aggregate with a base class with only non-public constructors.
+  (`#62296 <https://github.com/llvm/llvm-project/issues/62296 >`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
