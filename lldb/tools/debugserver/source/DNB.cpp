@@ -1768,10 +1768,8 @@ std::string DNBGetMacCatalystVersionString() {
 void DNBInitialize() {
   DNBLogThreadedIf(LOG_PROCESS, "DNBInitialize ()");
 #if defined(__i386__) || defined(__x86_64__)
-  DNBArchImplI386::Initialize();
   DNBArchImplX86_64::Initialize();
 #elif defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  DNBArchMachARM::Initialize();
   DNBArchMachARM64::Initialize();
 #endif
 }
