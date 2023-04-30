@@ -14,6 +14,7 @@
 #include <__concepts/different_from.h>
 #include <__config>
 #include <__functional/unwrap_ref.h>
+#include <__fwd/array.h>
 #include <__fwd/get.h>
 #include <__fwd/subrange.h>
 #include <__fwd/tuple.h>
