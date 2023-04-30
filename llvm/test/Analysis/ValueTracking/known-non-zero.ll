@@ -961,10 +961,7 @@ define i1 @umax_nonzero(i8 %xx, i8 %yy, i8 %ind) {
 ; CHECK-LABEL: @umax_nonzero(
 ; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.umax.i8(i8 [[XX]], i8 [[YY:%.*]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_nz = icmp ne i8 %xx, 0
   call void @llvm.assume(i1 %x_nz)
