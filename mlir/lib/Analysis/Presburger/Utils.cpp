@@ -437,6 +437,7 @@ void DivisionRepr::removeDuplicateDivs(
   // variable at position `i` only depends on local variables at position <
   // `i`. This would make sure that all divisions depending on other local
   // variables that can be merged, are merged.
+  normalizeDivs();
   for (unsigned i = 0; i < getNumDivs(); ++i) {
     // Check if a division representation exists for the `i^th` local var.
     if (denoms[i] == 0)
@@ -469,6 +470,14 @@ void DivisionRepr::removeDuplicateDivs(
       // Since `j` can never be zero, we do not need to worry about overflows.
       --j;
     }
+  }
+}
+
+void DivisionRepr::normalizeDivs() {
+  for (unsigned i = 0, e = getNumDivs(); i < e; ++i) {
+    if (getDenom(i) == 0 || getDividend(i).empty())
+      continue;
+    normalizeDiv(getDividend(i), getDenom(i));
   }
 }
 
