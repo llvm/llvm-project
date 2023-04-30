@@ -322,7 +322,9 @@ public:
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
-  /// this induction. If by some other means the caller has a better SCEV
+  /// this induction. Since Induction Phis can only be present inside loop
+  /// headers, the function will assert if it is passed a Phi whose parent is
+  /// not the loop header. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
   /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore
