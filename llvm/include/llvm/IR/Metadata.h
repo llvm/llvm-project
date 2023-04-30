@@ -1274,6 +1274,11 @@ private:
   template <class NodeTy>
   static void dispatchResetHash(NodeTy *, std::false_type) {}
 
+  /// Merge branch weights from two direct callsites.
+  static MDNode *mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
+                                             const Instruction *AInstr,
+                                             const Instruction *BInstr);
+
 public:
   using op_iterator = const MDOperand *;
   using op_range = iterator_range<op_iterator>;
@@ -1319,6 +1324,11 @@ public:
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
+  /// Merge !prof metadata from two instructions.
+  /// Currently only implemented with direct callsites with branch weights.
+  static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
+                                       const Instruction *AInstr,
+                                       const Instruction *BInstr);
 };
 
 /// Tuple of metadata.
