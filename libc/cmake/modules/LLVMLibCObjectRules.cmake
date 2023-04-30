@@ -136,6 +136,9 @@ function(_build_gpu_objects fq_target_name internal_target_name)
 
   set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
+  if(NOT ADD_GPU_OBJ_CXX_STANDARD)
+    set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
 
   foreach(add_gpu_obj_src ${ADD_GPU_OBJ_SRCS})
     # The packaged version will be built for every target GPU architecture. We do
@@ -170,6 +173,11 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
       target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
       target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
+      set_target_properties(
+        ${gpu_target_name}
+        PROPERTIES
+          CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
+      )
       if(ADD_GPU_OBJ_DEPENDS)
         add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
       endif()
@@ -324,6 +332,7 @@ function(create_object_library fq_target_name)
       SRCS ${ADD_OBJECT_SRCS}
       HDRS ${ADD_OBJECT_HDRS}
       DEPENDS ${fq_deps_list}
+      CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD}
       COMPILE_OPTIONS ${compile_options}
     )
   else()
@@ -598,6 +607,7 @@ function(create_entrypoint_object fq_target_name)
       SRCS ${ADD_ENTRYPOINT_OBJ_SRCS}
       HDRS ${ADD_ENTRYPOINT_OBJ_HDRS}
       COMPILE_OPTIONS ${common_compile_options}
+      CXX_STANDARD ${ADD_ENTRYPOINT_OBJ_CXX_STANDARD}
       DEPENDS ${full_deps_list}
       FLAGS "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     )
