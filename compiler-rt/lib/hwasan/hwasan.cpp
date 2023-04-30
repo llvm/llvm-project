@@ -445,16 +445,32 @@ void __hwasan_print_shadow(const void *p, uptr sz) {
 sptr __hwasan_test_shadow(const void *p, uptr sz) {
   if (sz == 0)
     return -1;
-  tag_t ptr_tag = GetTagFromPointer((uptr)p);
-  uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
+  uptr ptr = reinterpret_cast<uptr>(p);
+  tag_t ptr_tag = GetTagFromPointer(ptr);
+  uptr ptr_raw = UntagAddr(ptr);
   uptr shadow_first = MemToShadow(ptr_raw);
-  uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
-  for (uptr s = shadow_first; s <= shadow_last; ++s)
-    if (*(tag_t *)s != ptr_tag) {
-      sptr offset = ShadowToMem(s) - ptr_raw;
+  uptr shadow_last = MemToShadow(ptr_raw + sz);
+  for (uptr s = shadow_first; s < shadow_last; ++s) {
+    if (UNLIKELY(*(tag_t *)s != ptr_tag)) {
+      uptr short_size =
+          ShortTagSize(*(tag_t *)s, AddTagToPointer(ShadowToMem(s), ptr_tag));
+      sptr offset = ShadowToMem(s) - ptr_raw + short_size;
       return offset < 0 ? 0 : offset;
     }
-  return -1;
+  }
+
+  uptr end = ptr + sz;
+  uptr tail_sz = end & (kShadowAlignment - 1);
+  if (!tail_sz)
+    return -1;
+
+  uptr short_size =
+      ShortTagSize(*(tag_t *)shadow_last, end & ~(kShadowAlignment - 1));
+  if (LIKELY(tail_sz <= short_size))
+    return -1;
+
+  sptr offset = sz - tail_sz + short_size;
+  return offset < 0 ? 0 : offset;
 }
 
 u16 __sanitizer_unaligned_load16(const uu16 *p) {
