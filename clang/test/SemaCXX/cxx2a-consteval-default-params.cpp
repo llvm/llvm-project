@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2b %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++23 %s
 
 consteval int undefined();  // expected-note 4 {{declared here}}
 

@@ -725,7 +725,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ///         '&' identifier initializer
 ///
 ///       lambda-declarator:
-///         lambda-specifiers     [C++2b]
+///         lambda-specifiers     [C++23]
 ///         '(' parameter-declaration-clause ')' lambda-specifiers
 ///             requires-clause[opt]
 ///
@@ -1205,7 +1205,7 @@ static void tryConsumeLambdaSpecifierToken(Parser &P,
 static void addStaticToLambdaDeclSpecifier(Parser &P, SourceLocation StaticLoc,
                                            DeclSpec &DS) {
   if (StaticLoc.isValid()) {
-    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus2b
+    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus23
                           ? diag::err_static_lambda
                           : diag::warn_cxx20_compat_static_lambda);
     const char *PrevSpec = nullptr;
@@ -1362,7 +1362,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   // or operator template declaration. We accept this as a conforming extension
   // in all language modes that support lambdas.
   if (isCXX11AttributeSpecifier()) {
-    Diag(Tok, getLangOpts().CPlusPlus2b
+    Diag(Tok, getLangOpts().CPlusPlus23
                   ? diag::warn_cxx20_compat_decl_attrs_on_lambda
                   : diag::ext_decl_attrs_on_lambda);
     MaybeParseCXX11Attributes(D);
@@ -1501,7 +1501,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                   tok::kw_requires, tok::kw_noexcept) ||
       (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
 
-  if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus2b) {
+  if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus23) {
     // It's common to forget that one needs '()' before 'mutable', an
     // attribute specifier, the result type, or the requires clause. Deal with
     // this.
@@ -1996,7 +1996,7 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   if (!DG)
     return DG;
 
-  Diag(DeclStart, !getLangOpts().CPlusPlus2b
+  Diag(DeclStart, !getLangOpts().CPlusPlus23
                       ? diag::ext_alias_in_init_statement
                       : diag::warn_cxx20_alias_in_init_statement)
       << SourceRange(DeclStart, DeclEnd);

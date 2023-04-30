@@ -452,7 +452,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   } else {
     //   -- __cplusplus
     // FIXME: Use correct value for C++23.
-    if (LangOpts.CPlusPlus2b)
+    if (LangOpts.CPlusPlus23)
       Builder.defineMacro("__cplusplus", "202101L");
     //      [C++20] The integer literal 202002L.
     else if (LangOpts.CPlusPlus20)
@@ -606,7 +606,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_unicode_literals", "200710L");
     Builder.defineMacro("__cpp_user_defined_literals", "200809L");
     Builder.defineMacro("__cpp_lambdas", "200907L");
-    Builder.defineMacro("__cpp_constexpr", LangOpts.CPlusPlus2b   ? "202211L"
+    Builder.defineMacro("__cpp_constexpr", LangOpts.CPlusPlus23   ? "202211L"
                                            : LangOpts.CPlusPlus20 ? "201907L"
                                            : LangOpts.CPlusPlus17 ? "201603L"
                                            : LangOpts.CPlusPlus14 ? "201304L"
@@ -690,15 +690,15 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     //Builder.defineMacro("__cpp_modules", "201907L");
     Builder.defineMacro("__cpp_using_enum", "201907L");
   }
-  // C++2b features.
-  if (LangOpts.CPlusPlus2b) {
+  // C++23 features.
+  if (LangOpts.CPlusPlus23) {
     Builder.defineMacro("__cpp_implicit_move", "202011L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
   }
 
-  // We provide those C++2b features as extensions in earlier language modes, so
+  // We provide those C++23 features as extensions in earlier language modes, so
   // we also define their feature test macros.
   if (LangOpts.CPlusPlus11)
     Builder.defineMacro("__cpp_static_call_operator", "202207L");

@@ -1370,7 +1370,7 @@ public:
       return Context == ExpressionEvaluationContext::ImmediateFunctionContext ||
              (Context == ExpressionEvaluationContext::DiscardedStatement &&
               InImmediateFunctionContext) ||
-             // C++2b [expr.const]p14:
+             // C++23 [expr.const]p14:
              // An expression or conversion is in an immediate function
              // context if it is potentially evaluated and either:
              //   * its innermost enclosing non-block scope is a function

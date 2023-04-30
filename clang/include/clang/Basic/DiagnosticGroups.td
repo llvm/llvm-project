@@ -304,9 +304,9 @@ def CXXPre20CompatPedantic : DiagGroup<"pre-c++20-compat-pedantic",
                                        [CXXPre20Compat]>;
 def : DiagGroup<"c++98-c++11-c++14-c++17-compat-pedantic",
                 [CXXPre20CompatPedantic]>;
-def CXXPre2bCompat : DiagGroup<"pre-c++2b-compat">;
-def CXXPre2bCompatPedantic :
-  DiagGroup<"pre-c++2b-compat-pedantic", [CXXPre2bCompat]>;
+def CXXPre23Compat : DiagGroup<"pre-c++23-compat">;
+def CXXPre23CompatPedantic :
+  DiagGroup<"pre-c++23-compat-pedantic", [CXXPre23Compat]>;
 
 def CXX98CompatBindToTemporaryCopy :
   DiagGroup<"c++98-compat-bind-to-temporary-copy">;
@@ -321,7 +321,7 @@ def CXX98Compat : DiagGroup<"c++98-compat",
                              CXXPre14Compat,
                              CXXPre17Compat,
                              CXXPre20Compat,
-                             CXXPre2bCompat]>;
+                             CXXPre23Compat]>;
 // Warnings for C++11 features which are Extensions in C++98 mode.
 def CXX98CompatPedantic : DiagGroup<"c++98-compat-pedantic",
                                     [CXX98Compat,
@@ -330,7 +330,7 @@ def CXX98CompatPedantic : DiagGroup<"c++98-compat-pedantic",
                                      CXXPre14CompatPedantic,
                                      CXXPre17CompatPedantic,
                                      CXXPre20CompatPedantic,
-                                     CXXPre2bCompatPedantic]>;
+                                     CXXPre23CompatPedantic]>;
 
 def CXX11Narrowing : DiagGroup<"c++11-narrowing">;
 
@@ -360,39 +360,39 @@ def CXX11Compat : DiagGroup<"c++11-compat",
                              CXXPre14Compat,
                              CXXPre17Compat,
                              CXXPre20Compat,
-                             CXXPre2bCompat]>;
+                             CXXPre23Compat]>;
 def : DiagGroup<"c++0x-compat", [CXX11Compat]>;
 def CXX11CompatPedantic : DiagGroup<"c++11-compat-pedantic",
                                     [CXX11Compat,
                                      CXXPre14CompatPedantic,
                                      CXXPre17CompatPedantic,
                                      CXXPre20CompatPedantic,
-                                     CXXPre2bCompatPedantic]>;
+                                     CXXPre23CompatPedantic]>;
 
 def CXX14Compat : DiagGroup<"c++14-compat", [CXXPre17Compat,
                                              CXXPre20Compat,
-                                             CXXPre2bCompat]>;
+                                             CXXPre23Compat]>;
 def CXX14CompatPedantic : DiagGroup<"c++14-compat-pedantic",
                                     [CXX14Compat,
                                      CXXPre17CompatPedantic,
                                      CXXPre20CompatPedantic,
-                                     CXXPre2bCompatPedantic]>;
+                                     CXXPre23CompatPedantic]>;
 
 def CXX17Compat : DiagGroup<"c++17-compat", [DeprecatedRegister,
                                              DeprecatedIncrementBool,
                                              CXX17CompatMangling,
                                              CXXPre20Compat,
-                                             CXXPre2bCompat]>;
+                                             CXXPre23Compat]>;
 def CXX17CompatPedantic : DiagGroup<"c++17-compat-pedantic",
                                     [CXX17Compat,
                                      CXXPre20CompatPedantic,
-                                     CXXPre2bCompatPedantic]>;
+                                     CXXPre23CompatPedantic]>;
 def : DiagGroup<"c++1z-compat", [CXX17Compat]>;
 
-def CXX20Compat : DiagGroup<"c++20-compat", [CXXPre2bCompat]>;
+def CXX20Compat : DiagGroup<"c++20-compat", [CXXPre23Compat]>;
 def CXX20CompatPedantic : DiagGroup<"c++20-compat-pedantic",
                                     [CXX20Compat,
-                                     CXXPre2bCompatPedantic]>;
+                                     CXXPre23CompatPedantic]>;
 def : DiagGroup<"c++2a-compat", [CXX20Compat]>;
 def : DiagGroup<"c++2a-compat-pedantic", [CXX20CompatPedantic]>;
 
@@ -1108,9 +1108,9 @@ def CXX17 : DiagGroup<"c++17-extensions", [CXX17Attrs]>;
 // earlier C++ versions.
 def CXX20 : DiagGroup<"c++20-extensions", [CXX20Designator, CXX20Attrs]>;
 
-// A warning group for warnings about using C++2b features as extensions in
+// A warning group for warnings about using C++23 features as extensions in
 // earlier C++ versions.
-def CXX2b : DiagGroup<"c++2b-extensions">;
+def CXX23 : DiagGroup<"c++23-extensions">;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
