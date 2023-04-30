@@ -704,6 +704,10 @@ public:
   bool isLegalInterleavedAccessType(FixedVectorType *, unsigned Factor,
                                     const DataLayout &) const;
 
+  /// Return true if a stride load store of the given result type and
+  /// alignment is legal.
+  bool isLegalStridedLoadStore(const DataLayout &DL, Type *DataType, Align Alignment) const;
+
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
   bool lowerInterleavedLoad(LoadInst *LI,
