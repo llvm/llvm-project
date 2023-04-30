@@ -1325,6 +1325,8 @@ public:
   /// function which relies on particular fast-math attributes for correctness.
   /// It's up to you to ensure that this is safe.
   void addDefaultFunctionDefinitionAttributes(llvm::Function &F);
+  void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
+                                                bool WillInternalize);
 
   /// Like the overload taking a `Function &`, but intended specifically
   /// for frontends that want to build on Clang's target-configuration logic.
@@ -1788,6 +1790,12 @@ private:
   void SimplifyPersonality();
 
   void destroyConstantSignedPointerCaches();
+
+  /// Helper function for getDefaultFunctionAttributes. Builds a set of function
+  /// attributes which can be simply added to a function.
+  void getTrivialDefaultFunctionAttributes(StringRef Name, bool HasOptnone,
+                                           bool AttrOnCallSite,
+                                           llvm::AttrBuilder &FuncAttrs);
 
   /// Helper function for ConstructAttributeList and
   /// addDefaultFunctionDefinitionAttributes.  Builds a set of function
