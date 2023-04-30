@@ -23,8 +23,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <array>
 #include <functional>
@@ -34,7 +36,6 @@
 
 namespace llvm {
 
-class Record;
 class Init;
 class ListInit;
 class DagInit;
