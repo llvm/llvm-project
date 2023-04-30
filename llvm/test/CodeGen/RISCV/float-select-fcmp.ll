@@ -3,12 +3,21 @@
 ; RUN:   -target-abi=ilp32f | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64f | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
+; RUN:   -target-abi=ilp32 | FileCheck --check-prefix=CHECKZFINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
+; RUN:   -target-abi=lp64 | FileCheck --check-prefix=CHECKZFINX %s
 
 define float @select_fcmp_false(float %a, float %b) nounwind {
 ; CHECK-LABEL: select_fcmp_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_false:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp false float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -23,6 +32,15 @@ define float @select_fcmp_oeq(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_oeq:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a2, a0, a1
+; CHECKZFINX-NEXT:    bnez a2, .LBB1_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB1_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp oeq float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -37,6 +55,15 @@ define float @select_fcmp_ogt(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ogt:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    flt.s a2, a1, a0
+; CHECKZFINX-NEXT:    bnez a2, .LBB2_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB2_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ogt float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -51,6 +78,15 @@ define float @select_fcmp_oge(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_oge:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    fle.s a2, a1, a0
+; CHECKZFINX-NEXT:    bnez a2, .LBB3_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB3_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp oge float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -65,6 +101,15 @@ define float @select_fcmp_olt(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_olt:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKZFINX-NEXT:    bnez a2, .LBB4_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB4_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp olt float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -79,6 +124,15 @@ define float @select_fcmp_ole(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ole:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    fle.s a2, a0, a1
+; CHECKZFINX-NEXT:    bnez a2, .LBB5_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB5_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ole float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -95,6 +149,17 @@ define float @select_fcmp_one(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_one:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKZFINX-NEXT:    flt.s a3, a1, a0
+; CHECKZFINX-NEXT:    or a2, a3, a2
+; CHECKZFINX-NEXT:    bnez a2, .LBB6_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB6_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp one float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -111,6 +176,17 @@ define float @select_fcmp_ord(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ord:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a2, a1, a1
+; CHECKZFINX-NEXT:    feq.s a3, a0, a0
+; CHECKZFINX-NEXT:    and a2, a3, a2
+; CHECKZFINX-NEXT:    bnez a2, .LBB7_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB7_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ord float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -127,6 +203,17 @@ define float @select_fcmp_ueq(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ueq:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKZFINX-NEXT:    flt.s a3, a1, a0
+; CHECKZFINX-NEXT:    or a2, a3, a2
+; CHECKZFINX-NEXT:    beqz a2, .LBB8_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB8_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ueq float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -141,6 +228,15 @@ define float @select_fcmp_ugt(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ugt:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    fle.s a2, a0, a1
+; CHECKZFINX-NEXT:    beqz a2, .LBB9_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB9_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ugt float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -155,6 +251,15 @@ define float @select_fcmp_uge(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB10_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_uge:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    flt.s a2, a0, a1
+; CHECKZFINX-NEXT:    beqz a2, .LBB10_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB10_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp uge float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -169,6 +274,15 @@ define float @select_fcmp_ult(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ult:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    fle.s a2, a1, a0
+; CHECKZFINX-NEXT:    beqz a2, .LBB11_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB11_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ult float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -183,6 +297,15 @@ define float @select_fcmp_ule(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_ule:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    flt.s a2, a1, a0
+; CHECKZFINX-NEXT:    beqz a2, .LBB12_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB12_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ule float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -197,6 +320,15 @@ define float @select_fcmp_une(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_une:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a2, a0, a1
+; CHECKZFINX-NEXT:    beqz a2, .LBB13_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB13_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp une float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -213,6 +345,17 @@ define float @select_fcmp_uno(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fmv.s fa0, fa1
 ; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_uno:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a2, a1, a1
+; CHECKZFINX-NEXT:    feq.s a3, a0, a0
+; CHECKZFINX-NEXT:    and a2, a3, a2
+; CHECKZFINX-NEXT:    beqz a2, .LBB14_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:  .LBB14_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp uno float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -222,6 +365,10 @@ define float @select_fcmp_true(float %a, float %b) nounwind {
 ; CHECK-LABEL: select_fcmp_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_true:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp true float %a, %b
   %2 = select i1 %1, float %a, float %b
   ret float %2
@@ -237,6 +384,16 @@ define i32 @i32_select_fcmp_oeq(float %a, float %b, i32 %c, i32 %d) nounwind {
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB16_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: i32_select_fcmp_oeq:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a1, a0, a1
+; CHECKZFINX-NEXT:    mv a0, a2
+; CHECKZFINX-NEXT:    bnez a1, .LBB16_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a3
+; CHECKZFINX-NEXT:  .LBB16_2:
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp oeq float %a, %b
   %2 = select i1 %1, i32 %c, i32 %d
   ret i32 %2
@@ -249,6 +406,13 @@ define i32 @select_fcmp_oeq_1_2(float %a, float %b) {
 ; CHECK-NEXT:    li a1, 2
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_oeq_1_2:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    feq.s a0, a0, a1
+; CHECKZFINX-NEXT:    li a1, 2
+; CHECKZFINX-NEXT:    sub a0, a1, a0
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp fast oeq float %a, %b
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
@@ -260,6 +424,12 @@ define signext i32 @select_fcmp_uge_negone_zero(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fle.s a0, fa0, fa1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_uge_negone_zero:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKZFINX-NEXT:    addi a0, a0, -1
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ugt float %a, %b
   %2 = select i1 %1, i32 -1, i32 0
   ret i32 %2
@@ -271,6 +441,12 @@ define signext i32 @select_fcmp_uge_1_2(float %a, float %b) nounwind {
 ; CHECK-NEXT:    fle.s a0, fa0, fa1
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: select_fcmp_uge_1_2:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    fle.s a0, a0, a1
+; CHECKZFINX-NEXT:    addi a0, a0, 1
+; CHECKZFINX-NEXT:    ret
   %1 = fcmp ugt float %a, %b
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
