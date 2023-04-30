@@ -32,9 +32,8 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV32I-NEXT:    addi a0, a3, 1
 ; RV32I-NEXT:    andi a1, a3, 255
 ; RV32I-NEXT:    sltu a1, a1, s1
-; RV32I-NEXT:    xori a1, a1, 1
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a2, a1, a0
+; RV32I-NEXT:    neg a2, a1
+; RV32I-NEXT:    and a2, a2, a0
 ; RV32I-NEXT:    sb a3, 3(sp)
 ; RV32I-NEXT:    addi a1, sp, 3
 ; RV32I-NEXT:    li a3, 5
@@ -69,8 +68,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV32IA-NEXT:    andi a6, a4, 255
 ; RV32IA-NEXT:    addi a4, a4, 1
 ; RV32IA-NEXT:    sltu a6, a6, a1
-; RV32IA-NEXT:    xori a6, a6, 1
-; RV32IA-NEXT:    addi a6, a6, -1
+; RV32IA-NEXT:    neg a6, a6
 ; RV32IA-NEXT:    and a4, a6, a4
 ; RV32IA-NEXT:    andi a4, a4, 255
 ; RV32IA-NEXT:    sll a4, a4, a0
@@ -108,9 +106,8 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64I-NEXT:    addi a0, a3, 1
 ; RV64I-NEXT:    andi a1, a3, 255
 ; RV64I-NEXT:    sltu a1, a1, s1
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    and a2, a1, a0
+; RV64I-NEXT:    neg a2, a1
+; RV64I-NEXT:    and a2, a2, a0
 ; RV64I-NEXT:    sb a3, 7(sp)
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 5
@@ -145,8 +142,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64IA-NEXT:    andi a7, a5, 255
 ; RV64IA-NEXT:    addiw a5, a5, 1
 ; RV64IA-NEXT:    sltu a7, a7, a1
-; RV64IA-NEXT:    xori a7, a7, 1
-; RV64IA-NEXT:    addiw a7, a7, -1
+; RV64IA-NEXT:    negw a7, a7
 ; RV64IA-NEXT:    and a5, a7, a5
 ; RV64IA-NEXT:    andi a5, a5, 255
 ; RV64IA-NEXT:    sllw a5, a5, a0
@@ -192,9 +188,8 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32I-NEXT:    and a0, a3, s1
 ; RV32I-NEXT:    addi a1, a3, 1
 ; RV32I-NEXT:    sltu a0, a0, s2
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    and a2, a0, a1
+; RV32I-NEXT:    neg a2, a0
+; RV32I-NEXT:    and a2, a2, a1
 ; RV32I-NEXT:    sh a3, 14(sp)
 ; RV32I-NEXT:    addi a1, sp, 14
 ; RV32I-NEXT:    li a3, 5
@@ -231,8 +226,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV32IA-NEXT:    and a7, a5, a3
 ; RV32IA-NEXT:    addi a5, a5, 1
 ; RV32IA-NEXT:    sltu a7, a7, a1
-; RV32IA-NEXT:    xori a7, a7, 1
-; RV32IA-NEXT:    addi a7, a7, -1
+; RV32IA-NEXT:    neg a7, a7
 ; RV32IA-NEXT:    and a5, a5, a3
 ; RV32IA-NEXT:    and a5, a7, a5
 ; RV32IA-NEXT:    sll a5, a5, a0
@@ -274,9 +268,8 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64I-NEXT:    and a0, a3, s1
 ; RV64I-NEXT:    addi a1, a3, 1
 ; RV64I-NEXT:    sltu a0, a0, s2
-; RV64I-NEXT:    xori a0, a0, 1
-; RV64I-NEXT:    addi a0, a0, -1
-; RV64I-NEXT:    and a2, a0, a1
+; RV64I-NEXT:    neg a2, a0
+; RV64I-NEXT:    and a2, a2, a1
 ; RV64I-NEXT:    sh a3, 14(sp)
 ; RV64I-NEXT:    addi a1, sp, 14
 ; RV64I-NEXT:    li a3, 5
@@ -313,8 +306,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; RV64IA-NEXT:    and t0, a6, a3
 ; RV64IA-NEXT:    addiw a6, a6, 1
 ; RV64IA-NEXT:    sltu t0, t0, a1
-; RV64IA-NEXT:    xori t0, t0, 1
-; RV64IA-NEXT:    addiw t0, t0, -1
+; RV64IA-NEXT:    negw t0, t0
 ; RV64IA-NEXT:    and a6, a6, a3
 ; RV64IA-NEXT:    and a6, t0, a6
 ; RV64IA-NEXT:    sllw a6, a6, a0
@@ -355,9 +347,8 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    addi a0, a3, 1
 ; RV32I-NEXT:    sltu a1, a3, s1
-; RV32I-NEXT:    xori a1, a1, 1
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a2, a1, a0
+; RV32I-NEXT:    neg a2, a1
+; RV32I-NEXT:    and a2, a2, a0
 ; RV32I-NEXT:    sw a3, 0(sp)
 ; RV32I-NEXT:    mv a1, sp
 ; RV32I-NEXT:    li a3, 5
@@ -383,8 +374,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV32IA-NEXT:    mv a3, a2
 ; RV32IA-NEXT:    addi a2, a2, 1
 ; RV32IA-NEXT:    sltu a4, a3, a1
-; RV32IA-NEXT:    xori a4, a4, 1
-; RV32IA-NEXT:    addi a4, a4, -1
+; RV32IA-NEXT:    neg a4, a4
 ; RV32IA-NEXT:    and a4, a4, a2
 ; RV32IA-NEXT:  .LBB2_3: # %atomicrmw.start
 ; RV32IA-NEXT:    # Parent Loop BB2_1 Depth=1
@@ -417,9 +407,8 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    addiw a0, a3, 1
 ; RV64I-NEXT:    sltu a1, a3, s1
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    and a2, a1, a0
+; RV64I-NEXT:    neg a2, a1
+; RV64I-NEXT:    and a2, a2, a0
 ; RV64I-NEXT:    sw a3, 4(sp)
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 5
@@ -446,8 +435,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; RV64IA-NEXT:    addiw a3, a2, 1
 ; RV64IA-NEXT:    sext.w a4, a2
 ; RV64IA-NEXT:    sltu a2, a4, a1
-; RV64IA-NEXT:    xori a2, a2, 1
-; RV64IA-NEXT:    addi a2, a2, -1
+; RV64IA-NEXT:    neg a2, a2
 ; RV64IA-NEXT:    and a3, a2, a3
 ; RV64IA-NEXT:  .LBB2_3: # %atomicrmw.start
 ; RV64IA-NEXT:    # Parent Loop BB2_1 Depth=1
@@ -596,9 +584,8 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    addi a0, a3, 1
 ; RV64I-NEXT:    sltu a1, a3, s1
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    and a2, a1, a0
+; RV64I-NEXT:    neg a2, a1
+; RV64I-NEXT:    and a2, a2, a0
 ; RV64I-NEXT:    sd a3, 0(sp)
 ; RV64I-NEXT:    mv a1, sp
 ; RV64I-NEXT:    li a3, 5
@@ -624,8 +611,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV64IA-NEXT:    mv a3, a2
 ; RV64IA-NEXT:    addi a2, a2, 1
 ; RV64IA-NEXT:    sltu a4, a3, a1
-; RV64IA-NEXT:    xori a4, a4, 1
-; RV64IA-NEXT:    addi a4, a4, -1
+; RV64IA-NEXT:    neg a4, a4
 ; RV64IA-NEXT:    and a4, a4, a2
 ; RV64IA-NEXT:  .LBB3_3: # %atomicrmw.start
 ; RV64IA-NEXT:    # Parent Loop BB3_1 Depth=1
