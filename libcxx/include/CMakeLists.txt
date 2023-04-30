@@ -385,11 +385,17 @@ set(files
   __functional/unwrap_ref.h
   __functional/weak_result_type.h
   __fwd/array.h
+  __fwd/fstream.h
   __fwd/get.h
   __fwd/hash.h
+  __fwd/ios.h
+  __fwd/istream.h
   __fwd/memory_resource.h
+  __fwd/ostream.h
   __fwd/pair.h
   __fwd/span.h
+  __fwd/sstream.h
+  __fwd/streambuf.h
   __fwd/string.h
   __fwd/string_view.h
   __fwd/subrange.h
