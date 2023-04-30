@@ -116,9 +116,9 @@ csrrw t0, 0xfff, t1
 csrrs s0, 0xc00, x0
 # CHECK-ASM-AND-OBJ: csrrs s0, fflags, a5
 csrrs s0, 0x001, a5
-# CHECK-ASM-AND-OBJ: csrrc sp, ustatus, ra
+# CHECK-ASM-AND-OBJ: csrrc sp, 0, ra
 csrrc sp, 0x000, ra
-# CHECK-ASM-AND-OBJ: csrrwi a5, ustatus, 0
+# CHECK-ASM-AND-OBJ: csrrwi a5, 0, 0
 csrrwi a5, 0x000, 0
 # CHECK-ASM-AND-OBJ: csrrsi t2, 4095, 31
 csrrsi t2, 0xfff, 31
