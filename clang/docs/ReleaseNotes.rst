@@ -331,10 +331,7 @@ Bug Fixes in This Version
   (`#62122 <https://github.com/llvm/llvm-project/issues/62122>`_)
 - Fix crash when handling undefined template partial specialization
   (`#61356 <https://github.com/llvm/llvm-project/issues/61356>`_)
-- Fix a crash caused by incorrectly evaluating constraints on an inheriting
-  constructor declaration.
-  (`#62361 <https://github.com/llvm/llvm-project/issues/62361>`_)
-  (`#62362 <https://github.com/llvm/llvm-project/issues/62362>`_)
+- Fix premature substitution into the constraints of an inherited constructor.
 - Fix crash when attempting to perform parenthesized initialization of an
   aggregate with a base class with only non-public constructors.
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
