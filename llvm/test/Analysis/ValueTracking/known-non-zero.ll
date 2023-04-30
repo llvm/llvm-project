@@ -855,12 +855,7 @@ define i1 @ushl_nonzero_fail_x_maybe_z(i8 %xx, i8 %y, i8 %ind) {
 
 define i1 @ssub_sat_nonzero(i8 %xx, i8 %yy, i8 %ind) {
 ; CHECK-LABEL: @ssub_sat_nonzero(
-; CHECK-NEXT:    [[XA:%.*]] = and i8 [[XX:%.*]], -65
-; CHECK-NEXT:    [[YO:%.*]] = or i8 [[YY:%.*]], 64
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[XA]], i8 [[YO]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xa = and i8 %xx, 191
   %yo = or i8 %yy, 64
