@@ -2872,11 +2872,24 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // If X and Y are non-zero then so is X * Y as long as the multiplication
     // does not overflow.
     const OverflowingBinaryOperator *BO = cast<OverflowingBinaryOperator>(V);
-    if ((Q.IIQ.hasNoSignedWrap(BO) || Q.IIQ.hasNoUnsignedWrap(BO)) &&
-        isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) &&
-        isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q))
-      return true;
-    break;
+    if (Q.IIQ.hasNoSignedWrap(BO) || Q.IIQ.hasNoUnsignedWrap(BO))
+      return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) &&
+             isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
+
+    // If either X or Y is odd, then if the other is non-zero the result can't
+    // be zero.
+    KnownBits XKnown =
+        computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
+    if (XKnown.One[0])
+      return isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
+
+    KnownBits YKnown =
+        computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
+    if (YKnown.One[0])
+      return XKnown.isNonZero() ||
+             isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q);
+
+    return KnownBits::mul(XKnown, YKnown).isNonZero();
   }
   case Instruction::Select:
     // (C ? X : Y) != 0 if X != 0 and Y != 0.
