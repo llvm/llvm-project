@@ -109,7 +109,8 @@ def main():
         commandLine = (pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
         remoteCommands.append('cd {}'.format(tmp))
         if args.env:
-            remoteCommands.append('export {}'.format(cmd_quote(' '.join(args.env))))
+            env = list(map(cmd_quote, args.env))
+            remoteCommands.append('export {}'.format(' '.join(args.env)))
         remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.
