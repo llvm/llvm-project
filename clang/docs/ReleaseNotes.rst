@@ -325,6 +325,8 @@ Bug Fixes in This Version
   member pointer as an invalid expression.
 - Fix crash when member function contains invalid default argument.
   (`#62122 <https://github.com/llvm/llvm-project/issues/62122>`_)
+- Fix crash when handling undefined template partial specialization
+  (`#61356 <https://github.com/llvm/llvm-project/issues/61356>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
