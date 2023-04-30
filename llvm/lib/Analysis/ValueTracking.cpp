@@ -2932,6 +2932,12 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
           return true;
         break;
+      case Intrinsic::cttz:
+        return computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q)
+            .Zero[0];
+      case Intrinsic::ctlz:
+        return computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q)
+            .isNonNegative();
       case Intrinsic::fshr:
       case Intrinsic::fshl:
         // If Op0 == Op1, this is a rotate. rotate(x, y) != 0 iff x != 0.
