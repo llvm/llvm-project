@@ -6727,7 +6727,7 @@ protected:
 class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
-  SmallVector<Value *, 2> InVectors;
+  SmallVector<PointerUnion<Value *, const TreeEntry *> , 2> InVectors;
   const TargetTransformInfo &TTI;
   InstructionCost Cost = 0;
   ArrayRef<Value *> VectorizedVals;
@@ -6939,7 +6939,7 @@ public:
     // If the resulting type is scalarized, do not adjust the cost.
     unsigned VecNumParts = TTI.getNumberOfParts(VecTy);
     if (VecNumParts == VecTy->getNumElements()) {
-      InVectors.assign(1, Constant::getNullValue(VecTy));
+      InVectors.assign(1, E);
       return nullptr;
     }
     DenseMap<Value *, int> ExtractVectorsTys;
@@ -7023,26 +7023,22 @@ public:
     // into a vector and can be represented as a permutation elements in a
     // single input vector or of 2 input vectors.
     Cost += computeExtractCost(VL, Mask, ShuffleKind);
-    InVectors.assign(1, Constant::getNullValue(VecTy));
+    InVectors.assign(1, E);
     return VecBase;
   }
   void add(const TreeEntry *E1, const TreeEntry *E2, ArrayRef<int> Mask) {
     CommonMask.assign(Mask.begin(), Mask.end());
-    InVectors.assign(
-        2, Constant::getNullValue(FixedVectorType::get(
-               E1->Scalars.front()->getType(),
-               std::max(E1->getVectorFactor(), E2->getVectorFactor()))));
+    InVectors.assign({E1, E2});
   }
   void add(const TreeEntry *E1, ArrayRef<int> Mask) {
     CommonMask.assign(Mask.begin(), Mask.end());
-    InVectors.assign(
-        1, Constant::getNullValue(FixedVectorType::get(
-               E1->Scalars.front()->getType(), E1->getVectorFactor())));
+    InVectors.assign(1, E1);
   }
   void gather(ArrayRef<Value *> VL, Value *Root = nullptr) {
     Cost += getBuildVectorCost(VL, Root);
     if (!Root) {
       assert(InVectors.empty() && "Unexpected input vectors for buildvector.");
+      // FIXME: Need to find a way to avoid use of getNullValue here.
       InVectors.assign(1, Constant::getNullValue(FixedVectorType::get(
                               VL.front()->getType(), VL.size())));
     }
@@ -7057,13 +7053,18 @@ public:
     if (all_of(CommonMask, [=](int Idx) { return Idx < Limit; }) &&
         ShuffleVectorInst::isIdentityMask(CommonMask))
       return Cost;
+    Type *ScalarTy;
+    if (auto *V = InVectors.front().dyn_cast<Value *>())
+      ScalarTy = cast<VectorType>(V->getType())->getElementType();
+    else
+      ScalarTy = InVectors.front()
+                     .get<const TreeEntry *>()
+                     ->Scalars.front()
+                     ->getType();
     return Cost +
            TTI.getShuffleCost(InVectors.size() == 2 ? TTI::SK_PermuteTwoSrc
                                                     : TTI::SK_PermuteSingleSrc,
-                              FixedVectorType::get(
-                                  cast<VectorType>(InVectors.front()->getType())
-                                      ->getElementType(),
-                                  CommonMask.size()),
+                              FixedVectorType::get(ScalarTy, CommonMask.size()),
                               CommonMask);
   }
 
