@@ -80,6 +80,15 @@ func.func @illegal_operator(%arg : i32) {
 
 // -----
 
+func.func @illegal_operand() {
+    %1 = "emitc.constant"(){value = 42: i32} : () -> i32
+    // expected-error @+1 {{'emitc.apply' op cannot apply to constant}}
+    %2 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
+    return
+}
+
+// -----
+
 func.func @var_attribute_return_type_1() {
     // expected-error @+1 {{'emitc.variable' op requires attribute's type ('i64') to match op's return type ('i32')}}
     %c0 = "emitc.variable"(){value = 42: i64} : () -> i32
