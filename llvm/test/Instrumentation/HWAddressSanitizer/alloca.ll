@@ -17,32 +17,33 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; DYNAMIC-SHADOW-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; DYNAMIC-SHADOW-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; DYNAMIC-SHADOW-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
-; DYNAMIC-SHADOW-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP1]], [[TMP2]]
-; DYNAMIC-SHADOW-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP1]], 56
+; DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; DYNAMIC-SHADOW-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = trunc i64 [[TMP3]] to i8
+; DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP1]], 56
+; DYNAMIC-SHADOW-NEXT:    [[HWASAN_UAR_TAG:%.*]] = trunc i64 [[TMP4]] to i8
 ; DYNAMIC-SHADOW-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; DYNAMIC-SHADOW-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG10:![0-9]+]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 72057594037927935, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 56, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]], !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to ptr, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP3]] to i8, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 72057594037927935, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP10]], 4, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP11]], !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i32 0, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    store i8 4, ptr [[TMP13]], align 1, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-NEXT:    store i8 [[TMP8]], ptr [[TMP14]], align 1, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[X_TAG:%.*]] = xor i8 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG10:![0-9]+]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 72057594037927935, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP7:%.*]] = zext i8 [[X_TAG]] to i64, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 56, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP9:%.*]] = or i64 [[TMP6]], [[TMP8]], !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP9]] to ptr, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 72057594037927935, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 4, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP12]], !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    store i8 4, ptr [[TMP14]], align 1, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG10]]
+; DYNAMIC-SHADOW-NEXT:    store i8 [[X_TAG]], ptr [[TMP15]], align 1, !dbg [[DBG10]]
 ; DYNAMIC-SHADOW-NEXT:    call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META11:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref)), !dbg [[DBG10]]
 ; DYNAMIC-SHADOW-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]]), !dbg [[DBG13:![0-9]+]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8, !dbg [[DBG14:![0-9]+]]
-; DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
+; DYNAMIC-SHADOW-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14:![0-9]+]]
 ; DYNAMIC-SHADOW-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 72057594037927935, !dbg [[DBG14]]
 ; DYNAMIC-SHADOW-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP17]], 4, !dbg [[DBG14]]
 ; DYNAMIC-SHADOW-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP18]], !dbg [[DBG14]]
-; DYNAMIC-SHADOW-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP19]], i8 [[TMP15]], i64 1, i1 false), !dbg [[DBG14]]
+; DYNAMIC-SHADOW-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP19]], i8 [[HWASAN_UAR_TAG]], i64 1, i1 false), !dbg [[DBG14]]
 ; DYNAMIC-SHADOW-NEXT:    ret void, !dbg [[DBG14]]
 ;
 ; ZERO-BASED-SHADOW-LABEL: define void @test_alloca
@@ -52,32 +53,33 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
-; ZERO-BASED-SHADOW-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP1]], [[TMP2]]
-; ZERO-BASED-SHADOW-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP1]], 56
+; ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; ZERO-BASED-SHADOW-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = trunc i64 [[TMP3]] to i8
+; ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP1]], 56
+; ZERO-BASED-SHADOW-NEXT:    [[HWASAN_UAR_TAG:%.*]] = trunc i64 [[TMP4]] to i8
 ; ZERO-BASED-SHADOW-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; ZERO-BASED-SHADOW-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG10:![0-9]+]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 72057594037927935, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 56, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]], !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to ptr, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP3]] to i8, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 72057594037927935, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP10]], 4, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i32 0, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    store i8 4, ptr [[TMP13]], align 1, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG10]]
-; ZERO-BASED-SHADOW-NEXT:    store i8 [[TMP8]], ptr [[TMP14]], align 1, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[X_TAG:%.*]] = xor i8 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG10:![0-9]+]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 72057594037927935, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP7:%.*]] = zext i8 [[X_TAG]] to i64, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 56, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP9:%.*]] = or i64 [[TMP6]], [[TMP8]], !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP9]] to ptr, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], 72057594037927935, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 4, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    store i8 4, ptr [[TMP14]], align 1, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG10]]
+; ZERO-BASED-SHADOW-NEXT:    store i8 [[X_TAG]], ptr [[TMP15]], align 1, !dbg [[DBG10]]
 ; ZERO-BASED-SHADOW-NEXT:    call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META11:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref)), !dbg [[DBG10]]
 ; ZERO-BASED-SHADOW-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]]), !dbg [[DBG13:![0-9]+]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8, !dbg [[DBG14:![0-9]+]]
-; ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14:![0-9]+]]
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 72057594037927935, !dbg [[DBG14]]
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP18:%.*]] = lshr i64 [[TMP17]], 4, !dbg [[DBG14]]
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[TMP18]] to ptr, !dbg [[DBG14]]
-; ZERO-BASED-SHADOW-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP19]], i8 [[TMP15]], i64 1, i1 false), !dbg [[DBG14]]
+; ZERO-BASED-SHADOW-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP19]], i8 [[HWASAN_UAR_TAG]], i64 1, i1 false), !dbg [[DBG14]]
 ; ZERO-BASED-SHADOW-NEXT:    ret void, !dbg [[DBG14]]
 ;
 entry:

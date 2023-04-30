@@ -988,7 +988,8 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
   if (!UseShortGranules)
     Size = AlignedSize;
 
-  Tag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
+  assert(Tag->getType() == Int8Ty);
+
   if (InstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
                    {IRB.CreatePointerCast(AI, Int8PtrTy), Tag,
@@ -1037,15 +1038,15 @@ unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
   return FastMasks[AllocaNo % std::size(FastMasks)];
 }
 
-Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *OldTag) {
-  if (TagMaskByte == 0xFF)
-    return OldTag; // No need to clear the tag byte.
-  return IRB.CreateAnd(OldTag,
-                       ConstantInt::get(OldTag->getType(), TagMaskByte));
+Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *Tag) {
+  Tag = IRB.CreateTrunc(Tag, Int8Ty);
+  if (TagMaskByte != 0xFF) // No need to clear the tag byte.
+    Tag = IRB.CreateAnd(Tag, ConstantInt::get(Tag->getType(), TagMaskByte));
+  return Tag;
 }
 
 Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
-  return IRB.CreateZExt(IRB.CreateCall(HwasanGenerateTagFunc), IntptrTy);
+  return IRB.CreateCall(HwasanGenerateTagFunc);
 }
 
 Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
@@ -1076,7 +1077,6 @@ Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
   Value *StackPointerLong = getSP(IRB);
   Value *UARTag =
       applyTagMask(IRB, IRB.CreateLShr(StackPointerLong, PointerTagShift));
-
   UARTag->setName("hwasan.uar.tag");
   return UARTag;
 }
@@ -1086,6 +1086,8 @@ Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty,
                                       Value *PtrLong, Value *Tag) {
   assert(!UsePageAliases);
   Value *TaggedPtrLong;
+  assert(Tag->getType() == Int8Ty);
+  Tag = IRB.CreateZExt(Tag, IntptrTy);
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
     Value *ShiftedTag =
@@ -1211,7 +1213,7 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
     case instr: {
       ThreadLongMaybeUntagged = getThreadLongMaybeUntagged();
 
-      StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
+      StackBaseTag = applyTagMask(IRB, IRB.CreateAShr(ThreadLong, 3));
 
       // Store data to ring buffer.
       Value *FrameRecordInfo = getFrameRecordInfo(IRB);
@@ -1309,6 +1311,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     std::string Name =
         AI->hasName() ? AI->getName().str() : "alloca." + itostr(N);
     Replacement->setName(Name + ".hwasan");
+    Tag->setName(Name + ".tag");
 
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
