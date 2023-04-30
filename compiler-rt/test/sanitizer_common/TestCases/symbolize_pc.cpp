@@ -3,7 +3,7 @@
 //
 // Tests __sanitizer_symbolize_pc.
 
-// FIXME: Inverstigate why it does not print GLOBAL_VAR_ABC.
+// FIXME: Investigate why it does not print GLOBAL_VAR_ABC.
 // XFAIL: hwasan && target=aarch64{{.*}}
 
 #include <stdio.h>
