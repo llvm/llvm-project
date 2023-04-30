@@ -620,10 +620,19 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
   if (!LT || !RT)
     return false;
 
+  // C++17 onwards require that we evaluate the RHS first.
+  // Compute RHS and save it in a temporary variable so we can
+  // load it again later.
+  if (!visit(RHS))
+    return false;
+
+  unsigned TempOffset = this->allocateLocalPrimitive(E, *RT, /*IsConst=*/true);
+  if (!this->emitSetLocal(*RT, TempOffset, E))
+    return false;
+
   // First, visit LHS.
   if (!visit(LHS))
     return false;
-
   if (!this->emitLoad(*LT, E))
     return false;
 
@@ -636,7 +645,7 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
   }
 
   // Now load RHS.
-  if (!visit(RHS))
+  if (!this->emitGetLocal(*RT, TempOffset, E))
     return false;
 
   switch (E->getOpcode()) {
@@ -734,18 +743,32 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   assert(!E->getType()->isPointerType() && "Handled above");
   assert(!E->getType()->isFloatingType() && "Handled above");
 
-  // Get LHS pointer, load its value and get RHS value.
+  // C++17 onwards require that we evaluate the RHS first.
+  // Compute RHS and save it in a temporary variable so we can
+  // load it again later.
+  // FIXME: Compound assignments are unsequenced in C, so we might
+  //   have to figure out how to reject them.
+  if (!visit(RHS))
+    return false;
+
+  unsigned TempOffset = this->allocateLocalPrimitive(E, *RT, /*IsConst=*/true);
+
+  if (!this->emitSetLocal(*RT, TempOffset, E))
+    return false;
+
+  // Get LHS pointer, load its value and cast it to the
+  // computation type if necessary.
   if (!visit(LHS))
     return false;
   if (!this->emitLoad(*LT, E))
     return false;
-  // If necessary, cast LHS to its computation type.
   if (*LT != *LHSComputationT) {
     if (!this->emitCast(*LT, *LHSComputationT, E))
       return false;
   }
 
-  if (!visit(RHS))
+  // Get the RHS value on the stack.
+  if (!this->emitGetLocal(*RT, TempOffset, E))
     return false;
 
   // Perform operation.
