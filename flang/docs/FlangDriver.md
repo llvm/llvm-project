@@ -149,6 +149,13 @@ flang-new -ccc-print-phases -c file.f
 +- 3: backend, {2}, assembler
 4: assembler, {3}, object
 ```
+Note that currently Flang does not support code-generation and `flang-new` will
+fail during the second step above with the following error:
+```bash
+error: code-generation is not available yet
+```
+The other phases are printed nonetheless when using `-ccc-print-phases`, as
+that reflects what `clangDriver`, the library, will try to create and run.
 
 For actions specific to the frontend (e.g. preprocessing or code generation), a
 command to call the frontend driver is generated (more specifically, an
@@ -197,41 +204,6 @@ action flags, only the last one will be taken into account. The default action
 is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang-new -fc1 <input-file>` is equivalent to `flang-new -fc1 -fsyntax-only
 <input-file>`.
-
-## Linker invocation
-> **_NOTE:_**  Linker invocation through the `flang-new` driver is so far
-> experimental. This section describes the currently intended design, and not
-> necessarily what is implemented.
-
-Calling
-```bash
-flang-new -flang-experimental-exec prog.f90
-```
-will, on a high level, do two things:
-* call the frontend driver, `flang-new -fc1`, to build the object file `prog.o`
-* call the system linker to build the executable `a.out`.
-
-In both invocations, `flang-new` will add default options to the frontend driver
-and the linker invocations. To see the exact invocations on your system, you can
-call
-```bash
-flang-new -### prog.f90
-```
-The link line will contain a fair number of options, which will depend on your
-system. Compared to when linking a C program with `clang`, the main additions
-are (on GNU/linux),
-* `--undefined=_QQmain`: A Fortran main program will appear in the corresponding
-  object file as a function called `_QQmain`. This flag makes sure that an
-  object file containing a Fortran main program (i.e., a symbol `_QQmain`) be
-  included in the linking also when it is bundled in an archive.
-* `-lFortran_main`: The Fortran_main archive is part of Flang's runtime. It
-  exports the symbol `main`, i.e., a c main function, which will make some
-  initial configuration before calling `_QQmain`, and clean up before returning.
-* `-lFortranRuntime`: Flang's Fortran runtime, containing, for example,
-  implementations of intrinsic functions.
-* `-lFortranDecimal`: Part of Flang's runtime, containing routines for parsing
-  and formatting decimal numbers.
-* `-lm`: Link with the math library, on which Flang's runtime depends.
 
 ## The `flang-to-external-fc` script
 The `flang-to-external-fc` wrapper script for `flang-new` was introduced as a
