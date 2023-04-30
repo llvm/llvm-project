@@ -2920,6 +2920,8 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::sshl_sat:
+      case Intrinsic::ushl_sat:
       case Intrinsic::abs:
       case Intrinsic::bitreverse:
       case Intrinsic::bswap:
