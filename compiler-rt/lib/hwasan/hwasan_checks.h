@@ -134,9 +134,6 @@ PossiblyShortTagMatches(tag_t mem_tag, uptr ptr, uptr sz) {
     return false;
   if ((ptr & (kShadowAlignment - 1)) + sz > mem_tag)
     return false;
-#if !defined(__aarch64__) && !(SANITIZER_RISCV64)
-  ptr = UntagAddr(ptr);
-#endif
   return *(u8 *)(ptr | (kShadowAlignment - 1)) == ptr_tag;
 }
 
