@@ -10,7 +10,8 @@
 #ifndef _PSTL_CONFIG_H
 #define _PSTL_CONFIG_H
 
-#include <__pstl_config_site>
+// TODO: Make this a proper configuration option
+#define _PSTL_PAR_BACKEND_SERIAL
 
 // The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
 #define _PSTL_VERSION 16000
