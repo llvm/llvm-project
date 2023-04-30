@@ -574,6 +574,29 @@ bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return CmpHelper<T>(S, OpPC, Fn);
 }
 
+/// Function pointers cannot be compared in an ordered way.
+template <>
+inline bool CmpHelper<FunctionPointer>(InterpState &S, CodePtr OpPC,
+                                       CompareFn Fn) {
+  const auto &RHS = S.Stk.pop<FunctionPointer>();
+  const auto &LHS = S.Stk.pop<FunctionPointer>();
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+      << LHS.toDiagnosticString(S.getCtx())
+      << RHS.toDiagnosticString(S.getCtx());
+  return false;
+}
+
+template <>
+inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
+                                         CompareFn Fn) {
+  const auto &RHS = S.Stk.pop<FunctionPointer>();
+  const auto &LHS = S.Stk.pop<FunctionPointer>();
+  S.Stk.push<Boolean>(Boolean::from(Fn(LHS.compare(RHS))));
+  return true;
+}
+
 template <>
 inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
