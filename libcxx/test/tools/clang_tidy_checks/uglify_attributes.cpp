@@ -25,6 +25,24 @@ bool isUgly(std::string_view str) {
   return str.find("__") != std::string_view::npos;
 }
 
+// Starting with Clang 17 ToT C++23 support is provided by CPlusPlus23 instead
+// of C++23 support is provided by CPlusPlus2b. To allow a smooth transition for
+// libc++ use "reflection" to select the proper member. Since the change
+// happens in the development cycle it's not possible to use #ifdefs.
+template <class T>
+bool CPlusPlus23(const T& lang_opts)
+  requires requires { T::CPlusPlus2b; }
+{
+  return lang_opts.CPlusPlus2b;
+}
+
+template <class T>
+bool CPlusPlus23(const T& lang_opts)
+  requires requires { T::CPlusPlus23; }
+{
+  return lang_opts.CPlusPlus23;
+}
+
 std::vector<const char*> get_standard_attributes(const clang::LangOptions& lang_opts) {
   std::vector<const char*> attributes = {"noreturn", "carries_dependency"};
 
@@ -43,7 +61,7 @@ std::vector<const char*> get_standard_attributes(const clang::LangOptions& lang_
     attributes.emplace_back("no_unique_address");
   }
 
-  if (lang_opts.CPlusPlus2b) {
+  if (CPlusPlus23(lang_opts)) {
     attributes.emplace_back("assume");
   }
 
