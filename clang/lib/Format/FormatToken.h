@@ -37,6 +37,8 @@ namespace format {
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
   TYPE(BracedListLBrace)                                                       \
+  /* The colon at the end of a case label. */                                  \
+  TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
@@ -73,8 +75,7 @@ namespace format {
   TYPE(FunctionTypeLParen)                                                     \
   /* The colons as part of a C11 _Generic selection */                         \
   TYPE(GenericSelectionColon)                                                  \
-  /* The colon at the end of a goto label or a case label. Currently only used \
-   * for Verilog. */                                                           \
+  /* The colon at the end of a goto label. */                                  \
   TYPE(GotoLabelColon)                                                         \
   TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
@@ -1803,7 +1804,7 @@ struct AdditionalKeywords {
   bool isVerilogEndOfLabel(const FormatToken &Tok) const {
     const FormatToken *Next = Tok.getNextNonComment();
     // In Verilog the colon in a default label is optional.
-    return Tok.is(TT_GotoLabelColon) ||
+    return Tok.is(TT_CaseLabelColon) ||
            (Tok.is(tok::kw_default) &&
             !(Next && Next->isOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
                                     kw_input, kw_output, kw_sequence)));

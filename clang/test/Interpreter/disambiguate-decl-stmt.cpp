@@ -26,6 +26,10 @@ I x = 10;
 x.I::~I();
 x = 20;
 
+struct Dtor1 {~Dtor1();};
+Dtor1::~Dtor1() { printf("Dtor1\n"); }
+Dtor1 d1;
+
 // Ctors
 
 // Deduction guide
