@@ -2942,6 +2942,26 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
           return true;
         break;
+      case Intrinsic::smin:
+      case Intrinsic::smax: {
+        auto KnownOpImpliesNonZero = [&](const KnownBits &K) {
+          return II->getIntrinsicID() == Intrinsic::smin
+                     ? K.isNegative()
+                     : K.isStrictlyPositive();
+        };
+        KnownBits XKnown =
+            computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q);
+        if (KnownOpImpliesNonZero(XKnown))
+          return true;
+        KnownBits YKnown =
+            computeKnownBits(II->getArgOperand(1), DemandedElts, Depth, Q);
+        if (KnownOpImpliesNonZero(YKnown))
+          return true;
+
+        if (XKnown.isNonZero() && YKnown.isNonZero())
+          return true;
+      }
+        [[fallthrough]];
       case Intrinsic::umin:
         return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) &&
                isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q);
