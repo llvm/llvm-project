@@ -1074,12 +1074,7 @@ define i1 @smin_nonzero_fail_y_maybe_z(i8 %xx, i8 %yy, i8 %ind) {
 
 define i1 @smax_nonzero_pos_arg(i8 %xx, i8 %yy, i8 %ind) {
 ; CHECK-LABEL: @smax_nonzero_pos_arg(
-; CHECK-NEXT:    [[YA:%.*]] = and i8 [[YY:%.*]], 127
-; CHECK-NEXT:    [[YO:%.*]] = or i8 [[YA]], 1
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.smax.i8(i8 [[XX:%.*]], i8 [[YO]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ya = and i8 %yy, 127
   %yo = or i8 %ya, 1
