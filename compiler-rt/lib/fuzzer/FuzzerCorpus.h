@@ -77,7 +77,7 @@ struct InputInfo {
     SumIncidence = 0.0;
 
     // Apply add-one smoothing to locally discovered features.
-    for (auto F : FeatureFreqs) {
+    for (const auto &F : FeatureFreqs) {
       double LocalIncidence = F.second + 1;
       Energy -= LocalIncidence * log(LocalIncidence);
       SumIncidence += LocalIncidence;
