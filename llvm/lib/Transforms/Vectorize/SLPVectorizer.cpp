@@ -13909,15 +13909,15 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   return false;
 }
 
-/// Try and get a reduction value from a phi node.
+/// Try and get a reduction instruction from a phi node.
 ///
 /// Given a phi node \p P in a block \p ParentBB, consider possible reductions
 /// if they come from either \p ParentBB or a containing loop latch.
 ///
 /// \returns A candidate reduction value if possible, or \code nullptr \endcode
 /// if not possible.
-static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
-                                BasicBlock *ParentBB, LoopInfo *LI) {
+static Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                                      BasicBlock *ParentBB, LoopInfo *LI) {
   // There are situations where the reduction value is not dominated by the
   // reduction phi. Vectorizing such cases has been reported to cause
   // miscompiles. See PR25787.
@@ -13926,13 +13926,13 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
            DT->dominates(P->getParent(), cast<Instruction>(R)->getParent());
   };
 
-  Value *Rdx = nullptr;
+  Instruction *Rdx = nullptr;
 
   // Return the incoming value if it comes from the same BB as the phi node.
   if (P->getIncomingBlock(0) == ParentBB) {
-    Rdx = P->getIncomingValue(0);
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
   } else if (P->getIncomingBlock(1) == ParentBB) {
-    Rdx = P->getIncomingValue(1);
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
   }
 
   if (Rdx && DominatedReduxValue(Rdx))
@@ -13949,9 +13949,9 @@ static Value *getReductionValue(const DominatorTree *DT, PHINode *P,
   // There is a loop latch, return the incoming value if it comes from
   // that. This reduction pattern occasionally turns up.
   if (P->getIncomingBlock(0) == BBLatch) {
-    Rdx = P->getIncomingValue(0);
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
   } else if (P->getIncomingBlock(1) == BBLatch) {
-    Rdx = P->getIncomingValue(1);
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
   }
 
   if (Rdx && DominatedReduxValue(Rdx))
@@ -13999,15 +13999,10 @@ static Instruction *tryGetScondaryReductionRoot(PHINode *Phi,
 }
 
 bool SLPVectorizerPass::vectorizeHorReduction(
-    PHINode *P, Value *V, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
+    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
     SmallVectorImpl<WeakTrackingVH> &PostponedInsts) {
   if (!ShouldVectorizeHor)
     return false;
-
-  auto *Root = dyn_cast_or_null<Instruction>(V);
-  if (!Root)
-    return false;
-
   if (!isa<BinaryOperator>(Root))
     P = nullptr;
 
@@ -14106,11 +14101,11 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   return Res;
 }
 
-bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
+bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
                                                  BasicBlock *BB, BoUpSLP &R,
                                                  TargetTransformInfo *TTI) {
   SmallVector<WeakTrackingVH> PostponedInsts;
-  bool Res = vectorizeHorReduction(P, V, BB, R, TTI, PostponedInsts);
+  bool Res = vectorizeHorReduction(P, Root, BB, R, TTI, PostponedInsts);
   Res |= tryToVectorize(PostponedInsts, R);
   return Res;
 }
@@ -14323,7 +14318,8 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
       if (R.isDeleted(I))
         continue;
       for (Value *Op : I->operands())
-        OpsChanged |= vectorizeRootInstruction(nullptr, Op, BB, R, TTI);
+        if (auto *RootOp = dyn_cast<Instruction>(Op))
+          OpsChanged |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
     }
     // Try to vectorize operands as vector bundles.
     for (Instruction *I : PostponedCmps) {
@@ -14550,8 +14546,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Check that the PHI is a reduction PHI.
       if (P->getNumIncomingValues() == 2) {
         // Try to match and vectorize a horizontal reduction.
-        if (vectorizeRootInstruction(P, getReductionValue(DT, P, BB, LI), BB, R,
-                                     TTI)) {
+        Instruction *Root = getReductionInstr(DT, P, BB, LI);
+        if (Root && vectorizeRootInstruction(P, Root, BB, R, TTI)) {
           Changed = true;
           it = BB->begin();
           e = BB->end();
@@ -14573,7 +14569,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // vectorization.
         if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
             PI && !PostProcessInstructions.contains(PI))
-          Changed |= vectorizeRootInstruction(nullptr, P->getIncomingValue(I),
+          Changed |= vectorizeRootInstruction(nullptr, PI,
                                               P->getIncomingBlock(I), R, TTI);
       }
       continue;
@@ -14606,7 +14602,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (auto *VI = dyn_cast<Instruction>(V);
               VI && !PostProcessInstructions.contains(VI))
             // Try to match and vectorize a horizontal reduction.
-            OpsChanged |= vectorizeRootInstruction(nullptr, V, BB, R, TTI);
+            OpsChanged |= vectorizeRootInstruction(nullptr, VI, BB, R, TTI);
         }
       }
       // Start vectorization of post-process list of instructions from the
