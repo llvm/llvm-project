@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Operator.h"
-#include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Type.h"
@@ -323,23 +322,14 @@ auto Operator::getTraits() const -> llvm::iterator_range<const_trait_iterator> {
   return {trait_begin(), trait_end()};
 }
 
-auto Operator::attribute_begin() const -> const_attribute_iterator {
+auto Operator::attribute_begin() const -> attribute_iterator {
   return attributes.begin();
 }
-auto Operator::attribute_end() const -> const_attribute_iterator {
+auto Operator::attribute_end() const -> attribute_iterator {
   return attributes.end();
 }
 auto Operator::getAttributes() const
-    -> llvm::iterator_range<const_attribute_iterator> {
-  return {attribute_begin(), attribute_end()};
-}
-auto Operator::attribute_begin() -> attribute_iterator {
-  return attributes.begin();
-}
-auto Operator::attribute_end() -> attribute_iterator {
-  return attributes.end();
-}
-auto Operator::getAttributes() -> llvm::iterator_range<attribute_iterator> {
+    -> llvm::iterator_range<attribute_iterator> {
   return {attribute_begin(), attribute_end()};
 }
 
@@ -552,7 +542,6 @@ void Operator::populateOpStructure() {
   auto &recordKeeper = def.getRecords();
   auto *typeConstraintClass = recordKeeper.getClass("TypeConstraint");
   auto *attrClass = recordKeeper.getClass("Attr");
-  auto *propertyClass = recordKeeper.getClass("Property");
   auto *derivedAttrClass = recordKeeper.getClass("DerivedAttr");
   auto *opVarClass = recordKeeper.getClass("OpVariable");
   numNativeAttributes = 0;
@@ -587,14 +576,9 @@ void Operator::populateOpStructure() {
                         "derived attributes not allowed in argument list");
       attributes.push_back({givenName, Attribute(argDef)});
       ++numNativeAttributes;
-    } else if (argDef->isSubClassOf(propertyClass)) {
-      if (givenName.empty())
-        PrintFatalError(argDef->getLoc(), "properties must be named");
-      properties.push_back({givenName, Property(argDef)});
     } else {
-      PrintFatalError(def.getLoc(),
-                      "unexpected def type; only defs deriving "
-                      "from TypeConstraint or Attr or Property are allowed");
+      PrintFatalError(def.getLoc(), "unexpected def type; only defs deriving "
+                                    "from TypeConstraint or Attr are allowed");
     }
     if (!givenName.empty())
       argumentsAndResultsIndex[givenName] = i;
@@ -624,7 +608,7 @@ void Operator::populateOpStructure() {
   // `attributes` because we will put their elements' pointers in `arguments`.
   // SmallVector may perform re-allocation under the hood when adding new
   // elements.
-  int operandIndex = 0, attrIndex = 0, propIndex = 0;
+  int operandIndex = 0, attrIndex = 0;
   for (unsigned i = 0; i != numArgs; ++i) {
     Record *argDef = dyn_cast<DefInit>(argumentValues->getArg(i))->getDef();
     if (argDef->isSubClassOf(opVarClass))
@@ -634,13 +618,11 @@ void Operator::populateOpStructure() {
       attrOrOperandMapping.push_back(
           {OperandOrAttribute::Kind::Operand, operandIndex});
       arguments.emplace_back(&operands[operandIndex++]);
-    } else if (argDef->isSubClassOf(attrClass)) {
+    } else {
+      assert(argDef->isSubClassOf(attrClass));
       attrOrOperandMapping.push_back(
           {OperandOrAttribute::Kind::Attribute, attrIndex});
       arguments.emplace_back(&attributes[attrIndex++]);
-    } else {
-      assert(argDef->isSubClassOf(propertyClass));
-      arguments.emplace_back(&properties[propIndex++]);
     }
   }
 

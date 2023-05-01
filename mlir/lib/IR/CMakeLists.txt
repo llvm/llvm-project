@@ -22,7 +22,6 @@ add_mlir_library(MLIRIR
   IntegerSet.cpp
   Location.cpp
   MLIRContext.cpp
-  ODSSupport.cpp
   Operation.cpp
   OperationSupport.cpp
   PatternMatch.cpp

@@ -244,11 +244,11 @@ LogicalResult inferReturnTensorTypes(
     function_ref<
         LogicalResult(MLIRContext *, std::optional<Location> location,
                       ValueShapeRange operands, DictionaryAttr attributes,
-                      OpaqueProperties properties, RegionRange regions,
+                      RegionRange regions,
                       SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes);
 
 /// Verifies that the inferred result types match the actual result types for
@@ -281,7 +281,7 @@ public:
   static LogicalResult
   inferReturnTypes(MLIRContext *context, std::optional<Location> location,
                    ValueRange operands, DictionaryAttr attributes,
-                   OpaqueProperties properties, RegionRange regions,
+                   RegionRange regions,
                    SmallVectorImpl<Type> &inferredReturnTypes) {
     static_assert(
         ConcreteType::template hasTrait<InferShapedTypeOpInterface::Trait>(),
@@ -291,7 +291,7 @@ public:
         "requires InferTypeOpInterface to ensure succesful invocation");
     return ::mlir::detail::inferReturnTensorTypes(
         ConcreteType::inferReturnTypeComponents, context, location, operands,
-        attributes, properties, regions, inferredReturnTypes);
+        attributes, regions, inferredReturnTypes);
   }
 };
 
