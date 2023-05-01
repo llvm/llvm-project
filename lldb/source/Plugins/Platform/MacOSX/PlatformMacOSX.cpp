@@ -124,8 +124,7 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   }
 
   // Use the default SDK as a fallback.
-  auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK::GetAnyMacOS()});
+  auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(XcodeSDK::GetAnyMacOS());
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for Xcode SDK: " +
                           toString(sdk_path_or_err.takeError()));
