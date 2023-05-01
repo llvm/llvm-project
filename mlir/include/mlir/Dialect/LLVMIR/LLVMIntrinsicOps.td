@@ -716,6 +716,26 @@ def LLVM_masked_compressstore
   let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
 }
 
+//
+// Trap intrinsics.
+//
+
+def LLVM_Trap : LLVM_ZeroResultIntrOp<"trap">;
+
+def LLVM_DebugTrap : LLVM_ZeroResultIntrOp<"debugtrap">;
+
+def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap"> {
+  let arguments = (ins I8Attr:$failureKind);
+  string llvmBuilder = [{
+    builder.CreateIntrinsic(
+      llvm::Intrinsic::ubsantrap, {}, {builder.getInt8($failureKind)});
+  }];
+  string mlirBuilder = [{
+    $_op =
+      $_builder.create<LLVM::UBSanTrap>($_location, $_int_attr($failureKind));
+  }];
+}
+
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
