@@ -2942,6 +2942,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
             isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
           return true;
         break;
+      case Intrinsic::umin:
+        return isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) &&
+               isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q);
       case Intrinsic::cttz:
         return computeKnownBits(II->getArgOperand(0), DemandedElts, Depth, Q)
             .Zero[0];
