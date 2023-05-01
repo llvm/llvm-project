@@ -145,15 +145,14 @@ merge:
   ret i32 %v
 }
 
-; Matching "through" %init will break LCSSA at the SCEV expression
-; level.
+; It's okay to match "through" %init, as SCEV expressions don't preserve LCSSA.
 define i32 @f5(ptr %val) {
 ; CHECK-LABEL: 'f5'
 ; CHECK-NEXT:  Classifying expressions for: @f5
 ; CHECK-NEXT:    %inc = load i32, ptr %val, align 4
 ; CHECK-NEXT:    --> %inc U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.end: Variant }
 ; CHECK-NEXT:    %init = phi i32 [ 0, %for.condt ], [ %inc, %for.end ]
-; CHECK-NEXT:    --> %init U: full-set S: full-set
+; CHECK-NEXT:    --> %inc U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @f5
 ; CHECK-NEXT:  Loop %for.end: <multiple exits> backedge-taken count is false
 ; CHECK-NEXT:    exit count for for.end: false
