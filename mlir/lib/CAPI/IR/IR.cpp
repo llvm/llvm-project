@@ -146,6 +146,23 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
 }
 
 //===----------------------------------------------------------------------===//
+// Bytecode printing flags API.
+//===----------------------------------------------------------------------===//
+
+MlirBytecodeWriterConfig mlirBytecodeWriterConfigCreate() {
+  return wrap(new BytecodeWriterConfig());
+}
+
+void mlirBytecodeWriterConfigDestroy(MlirBytecodeWriterConfig config) {
+  delete unwrap(config);
+}
+
+void mlirBytecodeWriterConfigDesiredEmitVersion(MlirBytecodeWriterConfig flags,
+                                                int64_t version) {
+  unwrap(flags)->setDesiredBytecodeVersion(version);
+}
+
+//===----------------------------------------------------------------------===//
 // Location API.
 //===----------------------------------------------------------------------===//
 
@@ -507,10 +524,25 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
   unwrap(op)->print(stream, *unwrap(flags));
 }
 
-void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
-                                void *userData) {
+MlirBytecodeWriterResult mlirOperationWriteBytecode(MlirOperation op,
+                                                    MlirStringCallback callback,
+                                                    void *userData) {
   detail::CallbackOstream stream(callback, userData);
-  writeBytecodeToFile(unwrap(op), stream);
+  MlirBytecodeWriterResult res;
+  BytecodeWriterResult r = writeBytecodeToFile(unwrap(op), stream);
+  res.minVersion = r.minVersion;
+  return res;
+}
+
+MlirBytecodeWriterResult mlirOperationWriteBytecodeWithConfig(
+    MlirOperation op, MlirBytecodeWriterConfig config,
+    MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  BytecodeWriterResult r =
+      writeBytecodeToFile(unwrap(op), stream, *unwrap(config));
+  MlirBytecodeWriterResult res;
+  res.minVersion = r.minVersion;
+  return res;
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
