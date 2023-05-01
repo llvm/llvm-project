@@ -9,6 +9,13 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_TEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_TEST_H
 
+// This macro takes a file name and returns a value implicitly castable to
+// a const char*. That const char* is the path to a file with the provided name
+// in a directory where the test is allowed to write. By default it writes
+// directly to the filename provided, but implementations are allowed to
+// redefine it as necessary.
+#define libc_make_test_file_path(file_name) (file_name)
+
 #ifdef LIBC_COPT_TEST_USE_FUCHSIA
 #include "FuchsiaTest.h"
 #elif defined(LIBC_COPT_TEST_USE_PIGWEED)
