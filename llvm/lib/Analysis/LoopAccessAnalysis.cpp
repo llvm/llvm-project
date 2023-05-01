@@ -1414,19 +1414,19 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
     isNoWrapAddRec(Ptr, AR, PSE, Lp);
   if (!IsNoWrapAddRec && !IsInBoundsGEP &&
       NullPointerIsDefined(Lp->getHeader()->getParent(), AddrSpace)) {
-    if (Assume) {
-      PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
-      IsNoWrapAddRec = true;
-      LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap in the address space:\n"
-                        << "LAA:   Pointer: " << *Ptr << "\n"
-                        << "LAA:   SCEV: " << *AR << "\n"
-                        << "LAA:   Added an overflow assumption\n");
-    } else {
+    if (!Assume) {
       LLVM_DEBUG(
           dbgs() << "LAA: Bad stride - Pointer may wrap in the address space "
                  << *Ptr << " SCEV: " << *AR << "\n");
       return std::nullopt;
     }
+
+    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
+    IsNoWrapAddRec = true;
+    LLVM_DEBUG(dbgs() << "LAA: Pointer may wrap in the address space:\n"
+                      << "LAA:   Pointer: " << *Ptr << "\n"
+                      << "LAA:   SCEV: " << *AR << "\n"
+                      << "LAA:   Added an overflow assumption\n");
   }
 
   // Check the step is constant.
@@ -1463,16 +1463,16 @@ std::optional<int64_t> llvm::getPtrStride(PredicatedScalarEvolution &PSE,
   if (!IsNoWrapAddRec && Stride != 1 && Stride != -1 &&
       (IsInBoundsGEP || !NullPointerIsDefined(Lp->getHeader()->getParent(),
                                               AddrSpace))) {
-    if (Assume) {
-      // We can avoid this case by adding a run-time check.
-      LLVM_DEBUG(dbgs() << "LAA: Non unit strided pointer which is not either "
-                        << "inbounds or in address space 0 may wrap:\n"
-                        << "LAA:   Pointer: " << *Ptr << "\n"
-                        << "LAA:   SCEV: " << *AR << "\n"
-                        << "LAA:   Added an overflow assumption\n");
-      PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
-    } else
+    if (!Assume)
       return std::nullopt;
+
+    // We can avoid this case by adding a run-time check.
+    LLVM_DEBUG(dbgs() << "LAA: Non unit strided pointer which is not either "
+                      << "inbounds or in address space 0 may wrap:\n"
+                      << "LAA:   Pointer: " << *Ptr << "\n"
+                      << "LAA:   SCEV: " << *AR << "\n"
+                      << "LAA:   Added an overflow assumption\n");
+    PSE.setNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW);
   }
 
   return Stride;
