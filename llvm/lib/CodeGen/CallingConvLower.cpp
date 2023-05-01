@@ -25,10 +25,13 @@
 
 using namespace llvm;
 
-CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
-                 SmallVectorImpl<CCValAssign> &locs, LLVMContext &C)
-    : CallingConv(CC), IsVarArg(isVarArg), MF(mf),
-      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(locs), Context(C) {
+CCState::CCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
+                 SmallVectorImpl<CCValAssign> &Locs, LLVMContext &Context,
+                 bool NegativeOffsets)
+    : CallingConv(CC), IsVarArg(IsVarArg), MF(MF),
+      TRI(*MF.getSubtarget().getRegisterInfo()), Locs(Locs), Context(Context),
+      NegativeOffsets(NegativeOffsets) {
+
   // No stack is used.
   StackSize = 0;
 
@@ -51,7 +54,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
   ensureMaxAlignment(Alignment);
   MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Alignment);
   Size = unsigned(alignTo(Size, MinAlign));
-  unsigned Offset = AllocateStack(Size, Alignment);
+  uint64_t Offset = AllocateStack(Size, Alignment);
   addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
 }
 
@@ -197,7 +200,7 @@ static bool isValueTypeInRegForCC(CallingConv::ID CC, MVT VT) {
 
 void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
                                           MVT VT, CCAssignFn Fn) {
-  unsigned SavedStackSize = StackSize;
+  uint64_t SavedStackSize = StackSize;
   Align SavedMaxStackArgAlign = MaxStackArgAlign;
   unsigned NumLocs = Locs.size();
 
