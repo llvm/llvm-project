@@ -334,7 +334,6 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                   const auto *dataRef =
                       std::get_if<Fortran::parser::DataRef>(&designator.u);
                   mlir::Value addr;
-                  mlir::Value baseAddr;
                   std::stringstream asFortran;
                   fir::ExtendedValue dataExv;
                   if (Fortran::parser::Unwrap<
