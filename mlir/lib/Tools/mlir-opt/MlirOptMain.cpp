@@ -264,14 +264,9 @@ performActions(raw_ostream &os,
   TimingScope outputTiming = timing.nest("Output");
   if (config.shouldEmitBytecode()) {
     BytecodeWriterConfig writerConfig(fallbackResourceMap);
-    if (auto v = config.bytecodeVersionToEmit()) {
+    if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
-      // Returns failure if requested version couldn't be used for opt tools.
-      return success(
-          writeBytecodeToFile(op.get(), os, writerConfig).minVersion <= *v);
-    }
-    writeBytecodeToFile(op.get(), os, writerConfig);
-    return success();
+    return writeBytecodeToFile(op.get(), os, writerConfig);
   }
 
   if (config.bytecodeVersionToEmit().has_value())
