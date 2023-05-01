@@ -473,9 +473,7 @@ define i1 @add_nonzero_nuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_nonzero_nuw(
 ; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
-; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_nz = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %x_nz)
