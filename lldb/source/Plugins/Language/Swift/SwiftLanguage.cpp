@@ -1216,7 +1216,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
           auto as_type = m_result.GetAs<CompilerType>();
           auto as_decl = m_result.GetAs<swift::Decl *>();
 
-          if (as_type.hasValue() && as_type.getValue()) {
+          if (as_type.has_value() && as_type.value()) {
             if (auto swift_ast_ctx = as_type->GetTypeSystem()
                                          .dyn_cast_or_null<TypeSystemSwift>())
               swift_ast_ctx->DumpTypeDescription(
@@ -1227,10 +1227,10 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
               as_type->DumpTypeDescription(
                   &stream, eDescriptionLevelFull,
                   exe_scope); // we should always have a swift type here..
-          } else if (as_decl.hasValue() && as_decl.getValue()) {
+          } else if (as_decl.has_value() && as_decl.value()) {
             std::string buffer;
             llvm::raw_string_ostream str_stream(buffer);
-            swift::Decl *decl = as_decl.getValue();
+            swift::Decl *decl = as_decl.value();
             decl->print(str_stream,
                         SwiftASTContext::GetUserVisibleTypePrintingOptions(
                             print_help_if_available));
@@ -1374,8 +1374,8 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                             candidate = ast_ctx->FindTypeOrDecl(
                                 name_parts[0].str().c_str(), module);
                           }
-                          if (candidate.hasValue()) {
-                            TypesOrDecls candidates{candidate.getValue()};
+                          if (candidate.has_value()) {
+                            TypesOrDecls candidates{candidate.value()};
                             for (; idx_of_deeper < name_parts.size();
                                  idx_of_deeper++) {
                               TypesOrDecls new_candidates;

@@ -486,8 +486,8 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
                 "0x%" PRIx64,
                 m_metadata_location);
 
-  if (m_compiler_type.hasValue())
-    return m_compiler_type.getValue();
+  if (m_compiler_type.has_value())
+    return m_compiler_type.value();
 
   llvm::Optional<SwiftScratchContextReader> maybe_swift_scratch_ctx =
       m_for_object_sp->GetSwiftScratchContext();
@@ -516,7 +516,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
     if (log)
       log->Printf("[MetadataPromise] result is type %s",
                   m_compiler_type->GetTypeName().AsCString());
-    return m_compiler_type.getValue();
+    return m_compiler_type.value();
   } else {
     const auto &failure = result.getFailure();
     if (error)
@@ -524,7 +524,7 @@ SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(Status *error) {
                                       failure.render().c_str());
     if (log)
       log->Printf("[MetadataPromise] failure: %s", failure.render().c_str());
-    return (m_compiler_type = CompilerType()).getValue();
+    return (m_compiler_type = CompilerType()).value();
   }
 }
 
@@ -961,7 +961,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
         instance_type = ts->ReconstructType(instance_type);
       auto reference = GetMemberVariableOffsetRemoteAST(instance_type, instance,
                                                         member_name);
-      if (reference.hasValue() && offset != reference) {
+      if (reference.has_value() && offset != reference) {
         instance_type.dump();
         llvm::dbgs() << "member_name = " << member_name << "\n";
         llvm::dbgs() << "remote mirrors: " << offset << "\n";
@@ -2216,7 +2216,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
 
 #ifndef NDEBUG
   auto reference_pair = remote_ast_impl(use_local_buffer, existential_address);
-  assert(pair.hasValue() >= reference_pair.hasValue() &&
+  assert(pair.has_value() >= reference_pair.has_value() &&
          "RemoteAST and runtime diverge");
 
   if (reference_pair) {
@@ -2868,7 +2868,7 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
 
       // An error has occurred when trying to read value witness table,
       // default to treating it as pointer.
-      if (!is_inlined.hasValue())
+      if (!is_inlined.has_value())
         return Value::ValueType::LoadAddress;
 
       // Inlined data, same as static data.

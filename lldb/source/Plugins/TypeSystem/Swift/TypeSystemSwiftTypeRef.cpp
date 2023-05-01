@@ -1876,10 +1876,10 @@ bool Equivalent(llvm::Optional<T> l, llvm::Optional<T> r) {
   // There are situations where SwiftASTContext incorrectly returns
   // all Clang-imported members of structs as having a size of 0, we
   // thus assume that a larger number is "better".
-  if (l.hasValue() && r.hasValue() && *l > *r)
+  if (l.has_value() && r.has_value() && *l > *r)
     return true;
   // Assume that any value is "better" than none.
-  if (l.hasValue() && !r.hasValue())
+  if (l.has_value() && !r.has_value())
     return true;
   llvm::dbgs() << l << " != " << r << "\n";
   return false;
