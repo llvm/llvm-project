@@ -84,11 +84,13 @@ stdlib.h
 =============  =========  ============
 Function Name  Available  RPC Required
 =============  =========  ============
+abs            |check|
 atoi           |check|
 atof           |check|
 atol           |check|
 atoll          |check|
-atexit         |check|
+labs           |check|
+llabs          |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|
