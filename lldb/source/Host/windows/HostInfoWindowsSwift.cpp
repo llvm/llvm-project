@@ -13,6 +13,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include <llvm/Support/ConvertUTF.h>
 
 #include <string>
 
@@ -42,4 +43,14 @@ std::string
 HostInfoWindows::GetSwiftResourceDir(llvm::Triple triple,
                                      llvm::StringRef platform_sdk_path) {
   return GetSwiftResourceDir().GetPath();
+}
+
+llvm::Expected<llvm::StringRef> HostInfoWindows::GetSDKRoot(SDKOptions options) {
+  std::string buffer;
+  if (wchar_t *path = _wgetenv(L"SDKROOT"))
+    if (llvm::convertUTF16ToUTF8String(
+            llvm::ArrayRef{reinterpret_cast<llvm::UTF16 *>(path), wcslen(path)},
+            buffer))
+      return buffer;
+  return llvm::make_error<HostInfoError>("`SDKROOT` is unset");
 }
