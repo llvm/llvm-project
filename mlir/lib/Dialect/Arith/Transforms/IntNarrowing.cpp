@@ -9,16 +9,19 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <cassert>
 #include <cstdint>
 
@@ -144,6 +147,80 @@ using SIToFPPattern = IToFPPattern<arith::SIToFPOp, ExtensionKind::Sign>;
 using UIToFPPattern = IToFPPattern<arith::UIToFPOp, ExtensionKind::Zero>;
 
 //===----------------------------------------------------------------------===//
+// Patterns to Commute Extension Ops
+//===----------------------------------------------------------------------===//
+
+struct ExtensionOverExtract final : OpRewritePattern<vector::ExtractOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *def = op.getVector().getDefiningOp();
+    if (!def)
+      return failure();
+
+    return TypeSwitch<Operation *, LogicalResult>(def)
+        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
+          Value newExtract = rewriter.create<vector::ExtractOp>(
+              op.getLoc(), extOp.getIn(), op.getPosition());
+          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
+                                                       newExtract);
+          return success();
+        })
+        .Default(failure());
+  }
+};
+
+struct ExtensionOverExtractElement final
+    : OpRewritePattern<vector::ExtractElementOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractElementOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *def = op.getVector().getDefiningOp();
+    if (!def)
+      return failure();
+
+    return TypeSwitch<Operation *, LogicalResult>(def)
+        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
+          Value newExtract = rewriter.create<vector::ExtractElementOp>(
+              op.getLoc(), extOp.getIn(), op.getPosition());
+          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
+                                                       newExtract);
+          return success();
+        })
+        .Default(failure());
+  }
+};
+
+struct ExtensionOverExtractStridedSlice final
+    : OpRewritePattern<vector::ExtractStridedSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp op,
+                                PatternRewriter &rewriter) const override {
+    Operation *def = op.getVector().getDefiningOp();
+    if (!def)
+      return failure();
+
+    return TypeSwitch<Operation *, LogicalResult>(def)
+        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
+          VectorType origTy = op.getType();
+          Type inElemTy =
+              cast<VectorType>(extOp.getIn().getType()).getElementType();
+          VectorType extractTy = origTy.cloneWith(origTy.getShape(), inElemTy);
+          Value newExtract = rewriter.create<vector::ExtractStridedSliceOp>(
+              op.getLoc(), extractTy, extOp.getIn(), op.getOffsets(),
+              op.getSizes(), op.getStrides());
+          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
+                                                       newExtract);
+          return success();
+        })
+        .Default(failure());
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Pass Definitions
 //===----------------------------------------------------------------------===//
 
@@ -169,6 +246,12 @@ struct ArithIntNarrowingPass final
 
 void populateArithIntNarrowingPatterns(
     RewritePatternSet &patterns, const ArithIntNarrowingOptions &options) {
+  // Add commute patterns with a higher benefit. This is to expose more
+  // optimization opportunities to narrowing patterns.
+  patterns.add<ExtensionOverExtract, ExtensionOverExtractElement,
+               ExtensionOverExtractStridedSlice>(patterns.getContext(),
+                                                 PatternBenefit(2));
+
   patterns.add<SIToFPPattern, UIToFPPattern>(patterns.getContext(), options);
 }
 
