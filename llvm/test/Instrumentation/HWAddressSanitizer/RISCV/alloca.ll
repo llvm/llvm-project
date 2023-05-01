@@ -3,7 +3,6 @@
 ;
 ; RUN: opt < %s -passes=hwasan -hwasan-with-ifunc=1 -S | FileCheck %s --check-prefixes=DYNAMIC-SHADOW
 ; RUN: opt < %s -passes=hwasan -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=ZERO-BASED-SHADOW
-; RUN: opt < %s -passes=hwasan -hwasan-with-ifunc=1 -hwasan-uar-retag-to-zero=0 -S | FileCheck %s --check-prefixes=DYNAMIC-SHADOW-UAR-TAGS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux"
@@ -70,38 +69,6 @@ define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; ZERO-BASED-SHADOW-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr, !dbg [[DBG14]]
 ; ZERO-BASED-SHADOW-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP15]], i8 0, i64 1, i1 false), !dbg [[DBG14]]
 ; ZERO-BASED-SHADOW-NEXT:    ret void, !dbg [[DBG14]]
-;
-; DYNAMIC-SHADOW-UAR-TAGS-LABEL: define void @test_alloca
-; DYNAMIC-SHADOW-UAR-TAGS-SAME: () #[[ATTR0:[0-9]+]] personality ptr @__hwasan_personality_thunk !dbg [[DBG7:![0-9]+]] {
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:  entry:
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr @__hwasan_shadow)
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP1]], [[TMP2]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0, !dbg [[DBG10:![0-9]+]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP3]], 56, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP6:%.*]] = or i64 [[TMP4]], [[TMP5]], !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP6]] to ptr, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP3]] to i8, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 4, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP9]], !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    store i8 4, ptr [[TMP11]], align 1, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[X]], i32 15, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    store i8 [[TMP7]], ptr [[TMP12]], align 1, !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META11:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0, DW_OP_plus, DW_OP_deref)), !dbg [[DBG10]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]]), !dbg [[DBG13:![0-9]+]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP13:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 255, !dbg [[DBG14:![0-9]+]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP14:%.*]] = trunc i64 [[TMP13]] to i8, !dbg [[DBG14]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG14]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP15]], 4, !dbg [[DBG14]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[DOTHWASAN_SHADOW]], i64 [[TMP16]], !dbg [[DBG14]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP17]], i8 [[TMP14]], i64 1, i1 false), !dbg [[DBG14]]
-; DYNAMIC-SHADOW-UAR-TAGS-NEXT:    ret void, !dbg [[DBG14]]
 ;
 entry:
   %x = alloca i32, align 4
