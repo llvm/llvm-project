@@ -596,11 +596,7 @@ define i1 @fshl_non_zero_fail(i8 %x, i8 %y, i8 %z, i8 %w) {
 
 define i1 @bitcast_nonzero(<2 x i8> %xx, i16 %ind) {
 ; CHECK-LABEL: @bitcast_nonzero(
-; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <2 x i8> [[XX:%.*]], <i8 1, i8 1>
-; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x i8> [[XA]] to i16
-; CHECK-NEXT:    [[Z:%.*]] = or i16 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xa = add nuw nsw <2 x i8> %xx, <i8 1, i8 1>
   %x = bitcast <2 x i8> %xa to i16
@@ -641,11 +637,7 @@ define <2 x i1> @bitcast_fail_nonzero_int_to_vec(i16 %xx, <2 x i8> %ind) {
 
 define <2 x i1> @bitcast_veci8_to_veci16(<4 x i8> %xx, <2 x i16> %ind) {
 ; CHECK-LABEL: @bitcast_veci8_to_veci16(
-; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <4 x i8> [[XX:%.*]], <i8 1, i8 1, i8 1, i8 1>
-; CHECK-NEXT:    [[X:%.*]] = bitcast <4 x i8> [[XA]] to <2 x i16>
-; CHECK-NEXT:    [[Z:%.*]] = or <2 x i16> [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i16> [[Z]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %xa = add nuw nsw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
   %x = bitcast <4 x i8> %xa to <2 x i16>
