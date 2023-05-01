@@ -3,7 +3,7 @@
 // CHECK:      Name: .llvm_addrsig
 // CHECK-NEXT: VirtualSize: 0x0
 // CHECK-NEXT: VirtualAddress: 0x0
-// CHECK-NEXT: RawDataSize: 6
+// CHECK-NEXT: RawDataSize: 4
 // CHECK-NEXT: PointerToRawData:
 // CHECK-NEXT: PointerToRelocations: 0x0
 // CHECK-NEXT: PointerToLineNumbers: 0x0
@@ -46,8 +46,6 @@
 // CHECK-NEXT:   Sym: g3 (11)
 // CHECK-NEXT:   Sym: local (10)
 // CHECK-NEXT:   Sym: .data (2)
-// CHECK-NEXT:   Sym: weak_sym (12)
-// CHECK-NEXT:   Sym: .data (2)
 // CHECK-NEXT: ]
 
 .globl g1
@@ -66,10 +64,3 @@ local:
 
 .data
 .Llocal:
-
-.weak weak_sym
-weak_sym:
-.addrsig_sym weak_sym
-
-.set .Lalias_weak_sym, weak_sym
-.addrsig_sym .Lalias_weak_sym
