@@ -13,7 +13,7 @@
 // <algorithm>
 
 // template<class ExecutionPolicy, class ForwardIterator, class Predicate>
-//   bool any_of(ExecutionPolicy&& exec, ForwardIterator first, ForwardIterator last,
+//   bool all_of(ExecutionPolicy&& exec, ForwardIterator first, ForwardIterator last,
 //               Predicate pred);
 
 #include <algorithm>
