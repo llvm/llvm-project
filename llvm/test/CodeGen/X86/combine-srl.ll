@@ -346,23 +346,18 @@ define <4 x i32> @combine_vec_lshr_lzcnt_bit1(<4 x i32> %x) {
 ; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    pshufb %xmm0, %xmm2
-; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    psrlw $4, %xmm3
-; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    pshufb %xmm3, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm4, %xmm3
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    paddb %xmm1, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    pcmpeqb %xmm4, %xmm1
-; SSE-NEXT:    psrlw $8, %xmm1
-; SSE-NEXT:    pand %xmm3, %xmm1
-; SSE-NEXT:    psrlw $8, %xmm3
-; SSE-NEXT:    paddw %xmm1, %xmm3
-; SSE-NEXT:    pcmpeqw %xmm4, %xmm0
+; SSE-NEXT:    psrlw $4, %xmm0
+; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    pshufb %xmm0, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm3, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    paddb %xmm1, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    psrlw $8, %xmm0
+; SSE-NEXT:    paddw %xmm1, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm0[0],xmm3[1],xmm0[2],xmm3[3],xmm0[4],xmm3[5],xmm0[6],xmm3[7]
 ; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    psrld $16, %xmm3
 ; SSE-NEXT:    paddd %xmm3, %xmm0
 ; SSE-NEXT:    psrld $5, %xmm0
 ; SSE-NEXT:    retq
@@ -372,22 +367,18 @@ define <4 x i32> @combine_vec_lshr_lzcnt_bit1(<4 x i32> %x) {
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX-NEXT:    vpshufb %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vpsrlw $4, %xmm0, %xmm3
-; AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm5
-; AVX-NEXT:    vpand %xmm5, %xmm2, %xmm2
-; AVX-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX-NEXT:    vpaddb %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpcmpeqb %xmm4, %xmm0, %xmm2
-; AVX-NEXT:    vpsrlw $8, %xmm2, %xmm2
-; AVX-NEXT:    vpand %xmm2, %xmm1, %xmm2
-; AVX-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqw %xmm4, %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $4, %xmm0, %xmm0
+; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm4
+; AVX-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; AVX-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm3[1],xmm0[2],xmm3[3],xmm0[4],xmm3[5],xmm0[6],xmm3[7]
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $5, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %x, <i32 4, i32 32, i32 64, i32 128>
