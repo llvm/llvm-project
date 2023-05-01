@@ -82,6 +82,8 @@ define void @test_02(ptr %y.coerce) convergent {
 ; SINK-NEXT:    [[TMP0:%.*]] = tail call i32 @tid()
 ; SINK-NEXT:    [[REM:%.*]] = and i32 [[TMP0]], 1
 ; SINK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[REM]], 0
+; SINK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP0]] to i64
+; SINK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[Y_COERCE:%.*]], i64 [[IDXPROM4]]
 ; SINK-NEXT:    br i1 [[CMP_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; SINK:       if.then:
 ; SINK-NEXT:    [[TMP1:%.*]] = tail call i32 @mbcnt(i32 -1, i32 0)
@@ -101,8 +103,6 @@ define void @test_02(ptr %y.coerce) convergent {
 ; SINK-NEXT:    br label [[IF_END]]
 ; SINK:       if.end:
 ; SINK-NEXT:    [[DOTSINK:%.*]] = phi i32 [ [[TMP6]], [[IF_ELSE]] ], [ [[TMP3]], [[IF_THEN]] ]
-; SINK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP0]] to i64
-; SINK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[Y_COERCE:%.*]], i64 [[IDXPROM4]]
 ; SINK-NEXT:    store i32 [[DOTSINK]], ptr [[ARRAYIDX5]], align 4
 ; SINK-NEXT:    ret void
 ;
