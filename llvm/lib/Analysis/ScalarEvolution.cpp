@@ -7452,8 +7452,8 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
         }
         // CreateSCEV calls getNoWrapFlagsFromUB, which under certain conditions
         // requires a SCEV for the LHS.
-        if (NewBO->Op && (NewBO->IsNSW || NewBO->IsNUW)) {
-          auto *I = dyn_cast<Instruction>(NewBO->Op);
+        if (BO->Op && (BO->IsNSW || BO->IsNUW)) {
+          auto *I = dyn_cast<Instruction>(BO->Op);
           if (I && programUndefinedIfPoison(I)) {
             Ops.push_back(BO->LHS);
             break;
