@@ -31,23 +31,6 @@ struct SharedCacheImageInfo {
   lldb::DataBufferSP data_sp;
 };
 
-namespace {
-struct HostInfoError : public llvm::ErrorInfo<HostInfoError> {
-  static char ID;
-  const std::string message_;
-
-  HostInfoError(const std::string message) : message_(std::move(message)) {}
-
-  void log(llvm::raw_ostream &OS) const override { OS << "HostInfoError"; }
-
-  std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
-  }
-};
-
-char HostInfoError::ID = 0;
-} // namespace
-
 class HostInfoBase {
 private:
   // Static class, unconstructable.
@@ -125,14 +108,10 @@ public:
 
   static FileSpec GetXcodeContentsDirectory() { return {}; }
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
-
-  struct SDKOptions {
-    std::optional<XcodeSDK> XcodeSDK;
-  };
-
-  /// Return the directory containing something like a SDK (reused for Swift).
-  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options) {
-    return llvm::make_error<HostInfoError>("cannot determine SDK root");
+  
+  /// Return the directory containing a specific Xcode SDK.
+  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk) {
+    return "";
   }
 
   /// Return information about module \p image_name if it is loaded in
