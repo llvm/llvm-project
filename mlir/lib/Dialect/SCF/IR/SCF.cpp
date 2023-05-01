@@ -1779,7 +1779,7 @@ bool mlir::scf::insideMutuallyExclusiveBranches(Operation *a, Operation *b) {
 LogicalResult
 IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
                        ValueRange operands, DictionaryAttr attrs,
-                       OpaqueProperties properties, RegionRange regions,
+                       RegionRange regions,
                        SmallVectorImpl<Type> &inferredReturnTypes) {
   if (regions.empty())
     return failure();
@@ -1872,8 +1872,7 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   MLIRContext *ctx = builder.getContext();
   auto attrDict = DictionaryAttr::get(ctx, result.attributes);
   if (succeeded(inferReturnTypes(ctx, std::nullopt, result.operands, attrDict,
-                                 /*properties=*/nullptr, result.regions,
-                                 inferredReturnTypes))) {
+                                 result.regions, inferredReturnTypes))) {
     result.addTypes(inferredReturnTypes);
   }
 }

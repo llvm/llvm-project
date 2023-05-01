@@ -576,12 +576,7 @@ class ExtraClassDeclaration
 public:
   /// Create an extra class declaration.
   ExtraClassDeclaration(StringRef extraClassDeclaration,
-                        std::string extraClassDefinition = "")
-      : ExtraClassDeclaration(extraClassDeclaration.str(),
-                              std::move(extraClassDefinition)) {}
-
-  ExtraClassDeclaration(std::string extraClassDeclaration,
-                        std::string extraClassDefinition = "")
+                        StringRef extraClassDefinition = "")
       : extraClassDeclaration(extraClassDeclaration),
         extraClassDefinition(extraClassDefinition) {}
 
@@ -595,7 +590,7 @@ public:
 private:
   /// The string of the extra class declarations. It is re-indented before
   /// printed.
-  std::string extraClassDeclaration;
+  StringRef extraClassDeclaration;
   /// The string of the extra class definitions. It is re-indented before
   /// printed.
   std::string extraClassDefinition;

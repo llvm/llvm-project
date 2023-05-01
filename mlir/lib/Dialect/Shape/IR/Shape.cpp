@@ -393,7 +393,7 @@ void AssumingOp::build(
 
 LogicalResult mlir::shape::AddOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType().isa<SizeType>() ||
       operands[1].getType().isa<SizeType>())
@@ -911,7 +911,7 @@ void ConstShapeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 LogicalResult mlir::shape::ConstShapeOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   Builder b(context);
   auto shape = attributes.getAs<DenseIntElementsAttr>("shape");
@@ -1092,7 +1092,7 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::DimOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   DimOpAdaptor dimOp(operands);
   inferredReturnTypes.assign({dimOp.getIndex().getType()});
@@ -1140,7 +1140,7 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::DivOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType().isa<SizeType>() ||
       operands[1].getType().isa<SizeType>())
@@ -1361,7 +1361,7 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 
 LogicalResult mlir::shape::GetExtentOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   inferredReturnTypes.assign({IndexType::get(context)});
   return success();
@@ -1399,7 +1399,7 @@ OpFoldResult IsBroadcastableOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::MeetOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands.empty())
     return failure();
@@ -1535,7 +1535,7 @@ void shape::RankOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 LogicalResult mlir::shape::RankOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType().isa<ShapeType>())
     inferredReturnTypes.assign({SizeType::get(context)});
@@ -1571,7 +1571,7 @@ OpFoldResult NumElementsOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::NumElementsOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType().isa<ShapeType>())
     inferredReturnTypes.assign({SizeType::get(context)});
@@ -1603,7 +1603,7 @@ OpFoldResult MaxOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::MaxOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() == operands[1].getType())
     inferredReturnTypes.assign({operands[0].getType()});
@@ -1635,7 +1635,7 @@ OpFoldResult MinOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::MinOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() == operands[1].getType())
     inferredReturnTypes.assign({operands[0].getType()});
@@ -1672,7 +1672,7 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 
 LogicalResult mlir::shape::MulOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType().isa<SizeType>() ||
       operands[1].getType().isa<SizeType>())
@@ -1759,7 +1759,7 @@ void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 LogicalResult mlir::shape::ShapeOfOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType().isa<ValueShapeType>())
     inferredReturnTypes.assign({ShapeType::get(context)});
