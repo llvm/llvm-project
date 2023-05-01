@@ -1108,12 +1108,12 @@ Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
     // Kernel addresses have 0xFF in the most significant byte.
     UntaggedPtrLong =
         IRB.CreateOr(PtrLong, ConstantInt::get(PtrLong->getType(),
-                                               0xFFULL << PointerTagShift));
+                                               TagMaskByte << PointerTagShift));
   } else {
     // Userspace addresses have 0x00.
-    UntaggedPtrLong =
-        IRB.CreateAnd(PtrLong, ConstantInt::get(PtrLong->getType(),
-                                                ~(0xFFULL << PointerTagShift)));
+    UntaggedPtrLong = IRB.CreateAnd(
+        PtrLong, ConstantInt::get(PtrLong->getType(),
+                                  ~(TagMaskByte << PointerTagShift)));
   }
   return UntaggedPtrLong;
 }
