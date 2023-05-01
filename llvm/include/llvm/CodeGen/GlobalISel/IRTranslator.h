@@ -41,6 +41,7 @@ class CallLowering;
 class Constant;
 class ConstrainedFPIntrinsic;
 class DataLayout;
+class DbgDeclareInst;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
@@ -243,6 +244,14 @@ private:
 
   bool translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                MachineIRBuilder &MIRBuilder);
+
+  /// Returns the single livein physical register Arg was lowered to, if
+  /// possible.
+  std::optional<MCRegister> getArgPhysReg(Argument &Arg);
+
+  /// If DebugInst targets an Argument and its expression is an EntryValue,
+  /// lower it as an entry in the MF debug table.
+  bool translateIfEntryValueArgument(const DbgDeclareInst &DebugInst);
 
   bool translateInlineAsm(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
