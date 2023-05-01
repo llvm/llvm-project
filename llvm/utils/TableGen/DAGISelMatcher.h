@@ -21,7 +21,7 @@
 #include <utility>
 
 namespace llvm {
-  struct CodeGenRegister;
+  class CodeGenRegister;
   class CodeGenDAGPatterns;
   class CodeGenInstruction;
   class Matcher;
