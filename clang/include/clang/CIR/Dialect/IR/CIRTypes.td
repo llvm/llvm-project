@@ -68,7 +68,8 @@ def CIR_BoolType :
 //
 //===----------------------------------------------------------------------===//
 
-def CIR_StructType : CIR_Type<"Struct", "struct"> {
+def CIR_StructType : CIR_Type<"Struct", "struct",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
 
   let summary = "CIR struct type";
   let description = [{
@@ -80,6 +81,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
     ArrayRefParameter<"mlir::Type", "members">:$members,
     "mlir::StringAttr":$typeName,
     "bool":$body,
+    "bool":$packed,
     "std::optional<::mlir::cir::ASTRecordDeclAttr>":$ast
   );
 
@@ -89,7 +91,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
       "bool":$body
     ), [{
       auto id = mlir::StringAttr::get(context, typeName);
-      auto sTy = StructType::get(context, members, id, body, std::nullopt);
+      auto sTy = StructType::get(context, members, id, body,
+                                 /*packed=*/false, std::nullopt);
       return sTy;
     }]>
   ];
@@ -97,9 +100,17 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
+  private:
+    // All these support lazily computation and storage
+    // for the struct size and alignment.
+    mutable std::optional<unsigned> size, align;
+    mutable std::optional<bool> padded = false;
+    void computeSizeAndAlignment(const ::mlir::DataLayout &dataLayout) const;
   public:
     void dropAst();
     size_t getNumElements() const { return getMembers().size(); }
+    bool isOpaque() const { return !getBody(); }
+    bool isPadded(const ::mlir::DataLayout &dataLayout) const;
   }];
 
   let extraClassDefinition = [{

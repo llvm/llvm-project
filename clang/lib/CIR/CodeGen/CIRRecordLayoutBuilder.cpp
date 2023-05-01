@@ -342,7 +342,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
           mlir::StringAttr::get(&getMLIRContext(), name + ".base");
       *BaseTy = mlir::cir::StructType::get(
           &getMLIRContext(), baseBuilder.fieldTypes, baseIdentifier,
-          /*body=*/true,
+          /*body=*/true, /**packed=*/false,
           mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
       // TODO(cir): add something like addRecordTypeName
 
@@ -358,7 +358,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
   // but we may need to recursively layout D while laying D out as a base type.
   *Ty = mlir::cir::StructType::get(
       &getMLIRContext(), builder.fieldTypes, identifier,
-      /*body=*/true, mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
+      /*body=*/true, /**packed=*/false,
+      mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty ? *Ty : mlir::cir::StructType{},

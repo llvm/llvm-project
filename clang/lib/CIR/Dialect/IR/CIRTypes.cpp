@@ -64,24 +64,6 @@ void PointerType::print(mlir::AsmPrinter &printer) const {
   printer << '>';
 }
 
-llvm::TypeSize
-PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
-                               ::mlir::DataLayoutEntryListRef params) const {
-  llvm_unreachable("NYI");
-}
-
-uint64_t
-PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
-                             ::mlir::DataLayoutEntryListRef params) const {
-  llvm_unreachable("NYI");
-}
-
-uint64_t PointerType::getPreferredAlignment(
-    const ::mlir::DataLayout &dataLayout,
-    ::mlir::DataLayoutEntryListRef params) const {
-  llvm_unreachable("NYI");
-}
-
 Type BoolType::parse(mlir::AsmParser &parser) {
   return get(parser.getContext());
 }
@@ -182,6 +164,28 @@ void ArrayType::print(mlir::AsmPrinter &printer) const {
   printer << '>';
 }
 
+//===----------------------------------------------------------------------===//
+// Data Layout information for types
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                               ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
+uint64_t
+PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                             ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
+uint64_t PointerType::getPreferredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
@@ -198,6 +202,81 @@ uint64_t
 ArrayType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   return dataLayout.getTypePreferredAlignment(getEltType());
+}
+
+llvm::TypeSize
+StructType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                              ::mlir::DataLayoutEntryListRef params) const {
+  if (!size)
+    computeSizeAndAlignment(dataLayout);
+  return llvm::TypeSize::getFixed(*size * 8);
+}
+
+uint64_t
+StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                            ::mlir::DataLayoutEntryListRef params) const {
+  if (!align)
+    computeSizeAndAlignment(dataLayout);
+  return *align;
+}
+
+uint64_t
+StructType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                  ::mlir::DataLayoutEntryListRef params) const {
+  llvm_unreachable("NYI");
+}
+
+bool StructType::isPadded(const ::mlir::DataLayout &dataLayout) const {
+  if (!padded)
+    computeSizeAndAlignment(dataLayout);
+  return *padded;
+}
+
+void StructType::computeSizeAndAlignment(
+    const ::mlir::DataLayout &dataLayout) const {
+  assert(!isOpaque() && "Cannot get layout of opaque structs");
+  // Do not recompute.
+  if (size || align || padded)
+    return;
+
+  unsigned structSize = 0;
+  llvm::Align structAlignment{1};
+  [[maybe_unused]] bool isPadded = false;
+  unsigned numElements = getNumElements();
+  auto members = getMembers();
+
+  // Loop over each of the elements, placing them in memory.
+  for (unsigned i = 0, e = numElements; i != e; ++i) {
+    auto ty = members[i];
+    const llvm::Align tyAlign =
+        llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
+
+    // Add padding if necessary to align the data element properly.
+    if (!llvm::isAligned(tyAlign, structSize)) {
+      isPadded = true;
+      structSize = llvm::alignTo(structSize, tyAlign);
+    }
+
+    // Keep track of maximum alignment constraint.
+    structAlignment = std::max(tyAlign, structAlignment);
+
+    // FIXME: track struct size up to each element.
+    // getMemberOffsets()[i] = structSize;
+
+    // Consume space for this data item
+    structSize += dataLayout.getTypeSize(ty);
+  }
+
+  // Add padding to the end of the struct so that it could be put in an array
+  // and all array elements would be aligned correctly.
+  if (!llvm::isAligned(structAlignment, structSize)) {
+    isPadded = true;
+    structSize = llvm::alignTo(structSize, structAlignment);
+  }
+
+  size = structSize;
+  align = structAlignment.value();
+  padded = isPadded;
 }
 
 //===----------------------------------------------------------------------===//
