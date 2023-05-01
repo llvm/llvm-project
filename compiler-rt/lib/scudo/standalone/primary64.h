@@ -201,16 +201,18 @@ public:
         // cause a recursive allocation). However, The number of free blocks may
         // be less than two. Therefore, populate the free list before inserting
         // the blocks.
-        if (Size >= 2U) {
+        const bool NeedToRefill = Size == 1U && Region->FreeList.empty();
+        // If BatchClass has been exhausted, the program should have been
+        // aborted.
+        DCHECK(!Region->Exhausted);
+
+        if (UNLIKELY(
+                NeedToRefill &&
+                !populateFreeList(C, SizeClassMap::BatchClassId, Region))) {
+          PrintStats = true;
+        } else {
           pushBlocksImpl(C, SizeClassMap::BatchClassId, Region, Array, Size);
           Region->Stats.PushedBlocks += Size;
-        } else {
-          const bool RegionIsExhausted = Region->Exhausted;
-          if (UNLIKELY(
-                  RegionIsExhausted ||
-                  !populateFreeList(C, SizeClassMap::BatchClassId, Region))) {
-            PrintStats = !RegionIsExhausted && Region->Exhausted;
-          }
         }
       }
 
@@ -227,6 +229,7 @@ public:
         // when it happens.
         reportOutOfBatchClass();
       }
+
       return;
     }
 
