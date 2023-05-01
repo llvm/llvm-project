@@ -18,7 +18,7 @@ define void @test_vXf64(<4 x double> %src256, <8 x double> %src512) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_0123 = shufflevector <8 x double> %src512, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_2345 = shufflevector <8 x double> %src512, <8 x double> undef, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V512_4567 = shufflevector <8 x double> %src512, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of -1 for instruction: %V512_567u = shufflevector <8 x double> %src512, <8 x double> undef, <4 x i32> <i32 5, i32 6, i32 7, i32 undef>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of -1 for instruction: %V512_567u = shufflevector <8 x double> %src512, <8 x double> undef, <4 x i32> <i32 5, i32 6, i32 7, i32 poison>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %V256_01 = shufflevector <4 x double> %src256, <4 x double> undef, <2 x i32> <i32 0, i32 1>

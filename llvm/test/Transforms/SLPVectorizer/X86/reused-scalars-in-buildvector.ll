@@ -12,7 +12,7 @@ define void @test(ptr %p, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[C:%.*]], i32 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[D:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i32> [[TMP11]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[P:%.*]], align 4

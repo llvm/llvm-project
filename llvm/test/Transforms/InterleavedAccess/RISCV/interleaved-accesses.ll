@@ -220,7 +220,7 @@ define void @store_factor2(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
 define void @store_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
 ; RV32-LABEL: @store_factor3(
 ; RV32-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; RV32-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; RV32-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; RV32-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; RV32-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; RV32-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
@@ -229,7 +229,7 @@ define void @store_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ;
 ; RV64-LABEL: @store_factor3(
 ; RV64-NEXT:    [[S0:%.*]] = shufflevector <4 x i32> [[V0:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; RV64-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; RV64-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; RV64-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; RV64-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; RV64-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[S0]], <8 x i32> [[S1]], <4 x i32> <i32 8, i32 9, i32 10, i32 11>
@@ -293,7 +293,7 @@ define void @store_factor2_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
 define void @store_factor3_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
 ; RV32-LABEL: @store_factor3_wide(
 ; RV32-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; RV32-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; RV32-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; RV32-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; RV32-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; RV32-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -302,7 +302,7 @@ define void @store_factor3_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ;
 ; RV64-LABEL: @store_factor3_wide(
 ; RV64-NEXT:    [[S0:%.*]] = shufflevector <8 x i32> [[V0:%.*]], <8 x i32> [[V1:%.*]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; RV64-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; RV64-NEXT:    [[S1:%.*]] = shufflevector <8 x i32> [[V2:%.*]], <8 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; RV64-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; RV64-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; RV64-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[S0]], <16 x i32> [[S1]], <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
