@@ -7442,10 +7442,10 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
         auto NewBO = MatchBinaryOp(BO->LHS, getDataLayout(), AC, DT,
                                    dyn_cast<Instruction>(V));
         if (!NewBO ||
-            (U->getOpcode() == Instruction::Add &&
+            (BO->Opcode == Instruction::Add &&
              (NewBO->Opcode != Instruction::Add &&
               NewBO->Opcode != Instruction::Sub)) ||
-            (U->getOpcode() == Instruction::Mul &&
+            (BO->Opcode == Instruction::Mul &&
              NewBO->Opcode != Instruction::Mul)) {
           Ops.push_back(BO->LHS);
           break;
