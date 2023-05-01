@@ -2512,6 +2512,45 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   }
 }
 
+static bool isNonZeroAdd(const APInt &DemandedElts, unsigned Depth,
+                         const Query &Q, unsigned BitWidth, Value *X, Value *Y,
+                         bool NSW) {
+  KnownBits XKnown = computeKnownBits(X, DemandedElts, Depth, Q);
+  KnownBits YKnown = computeKnownBits(Y, DemandedElts, Depth, Q);
+
+  // If X and Y are both non-negative (as signed values) then their sum is not
+  // zero unless both X and Y are zero.
+  if (XKnown.isNonNegative() && YKnown.isNonNegative())
+    if (isKnownNonZero(Y, DemandedElts, Depth, Q) ||
+        isKnownNonZero(X, DemandedElts, Depth, Q))
+      return true;
+
+  // If X and Y are both negative (as signed values) then their sum is not
+  // zero unless both X and Y equal INT_MIN.
+  if (XKnown.isNegative() && YKnown.isNegative()) {
+    APInt Mask = APInt::getSignedMaxValue(BitWidth);
+    // The sign bit of X is set.  If some other bit is set then X is not equal
+    // to INT_MIN.
+    if (XKnown.One.intersects(Mask))
+      return true;
+    // The sign bit of Y is set.  If some other bit is set then Y is not equal
+    // to INT_MIN.
+    if (YKnown.One.intersects(Mask))
+      return true;
+  }
+
+  // The sum of a non-negative number and a power of two is not zero.
+  if (XKnown.isNonNegative() &&
+      isKnownToBeAPowerOfTwo(Y, /*OrZero*/ false, Depth, Q))
+    return true;
+  if (YKnown.isNonNegative() &&
+      isKnownToBeAPowerOfTwo(X, /*OrZero*/ false, Depth, Q))
+    return true;
+
+  return KnownBits::computeForAddSub(/*Add*/ true, NSW, XKnown, YKnown)
+      .isNonZero();
+}
+
 static bool isNonZeroSub(const APInt &DemandedElts, unsigned Depth,
                          const Query &Q, unsigned BitWidth, Value *X,
                          Value *Y) {
@@ -2797,40 +2836,8 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       return isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
              isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q);
 
-    KnownBits XKnown =
-        computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
-    KnownBits YKnown =
-        computeKnownBits(I->getOperand(1), DemandedElts, Depth, Q);
-
-    // If X and Y are both non-negative (as signed values) then their sum is not
-    // zero unless both X and Y are zero.
-    if (XKnown.isNonNegative() && YKnown.isNonNegative())
-      if (isKnownNonZero(I->getOperand(0), DemandedElts, Depth, Q) ||
-          isKnownNonZero(I->getOperand(1), DemandedElts, Depth, Q))
-        return true;
-
-    // If X and Y are both negative (as signed values) then their sum is not
-    // zero unless both X and Y equal INT_MIN.
-    if (XKnown.isNegative() && YKnown.isNegative()) {
-      APInt Mask = APInt::getSignedMaxValue(BitWidth);
-      // The sign bit of X is set.  If some other bit is set then X is not equal
-      // to INT_MIN.
-      if (XKnown.One.intersects(Mask))
-        return true;
-      // The sign bit of Y is set.  If some other bit is set then Y is not equal
-      // to INT_MIN.
-      if (YKnown.One.intersects(Mask))
-        return true;
-    }
-
-    // The sum of a non-negative number and a power of two is not zero.
-    if (XKnown.isNonNegative() &&
-        isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ false, Depth, Q))
-      return true;
-    if (YKnown.isNonNegative() &&
-        isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ false, Depth, Q))
-      return true;
-    break;
+    return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
+                        I->getOperand(1), Q.IIQ.hasNoSignedWrap(BO));
   }
   case Instruction::Mul: {
     // If X and Y are non-zero then so is X * Y as long as the multiplication
