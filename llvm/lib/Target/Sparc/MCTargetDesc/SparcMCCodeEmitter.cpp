@@ -235,8 +235,10 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(
-      MCFixup::create(0, MO.getExpr(), (MCFixupKind)Sparc::fixup_sparc_br16));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
+                                   (MCFixupKind)Sparc::fixup_sparc_br16_2));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
+                                   (MCFixupKind)Sparc::fixup_sparc_br16_14));
 
   return 0;
 }
