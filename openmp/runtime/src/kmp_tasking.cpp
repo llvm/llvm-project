@@ -22,12 +22,8 @@
 #endif
 
 #if ENABLE_LIBOMPTARGET
-static void (*tgt_target_nowait_query)(void **);
-
-void __kmp_init_target_task() {
-  *(void **)(&tgt_target_nowait_query) = KMP_DLSYM("__tgt_target_nowait_query");
-  KMP_ASSERT(tgt_target_nowait_query);
-}
+// Declaration of synchronization function from libomptarget.
+extern "C" void __tgt_target_nowait_query(void **) KMP_WEAK_ATTRIBUTE_INTERNAL;
 #endif
 
 /* forward declaration */
@@ -1809,7 +1805,7 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       // If we have a valid target async handle, that means that we have already
       // executed the task routine once. We must query for the handle completion
       // instead of re-executing the routine.
-      tgt_target_nowait_query(&taskdata->td_target_data.async_handle);
+      __tgt_target_nowait_query(&taskdata->td_target_data.async_handle);
     } else
 #endif
     if (task->routine != NULL) {
