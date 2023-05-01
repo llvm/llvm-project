@@ -34,15 +34,16 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-NEXT:    [[BUF:%.*]] = alloca [4096 x i8], align 16
 ; CHECK-NEXT:    [[TMP15:%.*]] = xor i64 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = ptrtoint ptr [[BUF]] to i64
-; CHECK-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP15]], 56
-; CHECK-NEXT:    [[TMP18:%.*]] = or i64 [[TMP16]], [[TMP17]]
-; CHECK-NEXT:    [[BUF_HWASAN:%.*]] = inttoptr i64 [[TMP18]] to ptr
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP15]] to i8
-; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[BUF]] to i64
-; CHECK-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 72057594037927935
-; CHECK-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP21]], 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP22]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP23]], i8 [[TMP19]], i64 256, i1 false)
+; CHECK-NEXT:    [[TMP17:%.*]] = and i64 [[TMP16]], 72057594037927935
+; CHECK-NEXT:    [[TMP18:%.*]] = shl i64 [[TMP15]], 56
+; CHECK-NEXT:    [[TMP19:%.*]] = or i64 [[TMP17]], [[TMP18]]
+; CHECK-NEXT:    [[BUF_HWASAN:%.*]] = inttoptr i64 [[TMP19]] to ptr
+; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[TMP15]] to i8
+; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP21]], 72057594037927935
+; CHECK-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 4
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP23]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP24]], i8 [[TMP20]], i64 256, i1 false)
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @setjmp(ptr noundef @jbuf)
 ; CHECK-NEXT:    switch i32 [[CALL]], label [[WHILE_BODY:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[RETURN:%.*]]
@@ -57,12 +58,12 @@ define dso_local noundef i1 @_Z6targetv() sanitize_hwaddress {
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ true, [[WHILE_BODY]] ], [ true, [[SW_BB1]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[BUF]] to i64
-; CHECK-NEXT:    [[TMP26:%.*]] = and i64 [[TMP25]], 72057594037927935
-; CHECK-NEXT:    [[TMP27:%.*]] = lshr i64 [[TMP26]], 4
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP27]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP28]], i8 [[TMP24]], i64 256, i1 false)
+; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[BUF]] to i64
+; CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP26]], 72057594037927935
+; CHECK-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP28]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP29]], i8 [[TMP25]], i64 256, i1 false)
 ; CHECK-NEXT:    ret i1 [[RETVAL_0]]
 ;
 entry:
