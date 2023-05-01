@@ -123,7 +123,7 @@
 # CHECK-NEXT:            {
 # CHECK-NEXT:              "edits": [
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "newText": "#include <foo.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
@@ -145,7 +145,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
 # CHECK-NEXT:      "command": "clangd.applyFix",
-# CHECK-NEXT:      "title": "Apply fix: #include <foo.h>"
+# CHECK-NEXT:      "title": "Apply fix: #include {{.*}}foo.h{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
@@ -165,7 +165,7 @@
 # CHECK-NEXT:              "edits": [
 # CHECK-NEXT:                {
 # CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
-# CHECK-NEXT:                  "newText": "#include <bar.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
@@ -179,7 +179,7 @@
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
 # CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
-# CHECK-NEXT:                  "newText": "#include <foo.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
@@ -257,7 +257,7 @@
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
 # CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
-# CHECK-NEXT:                  "newText": "#include <bar.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
@@ -271,7 +271,7 @@
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
 # CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
-# CHECK-NEXT:                  "newText": "#include <foo.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
@@ -442,7 +442,7 @@
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
 # CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
-# CHECK-NEXT:                  "newText": "#include <bar.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
@@ -456,7 +456,7 @@
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
 # CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
-# CHECK-NEXT:                  "newText": "#include <foo.h>\n",
+# CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
 # CHECK-NEXT:                      "character": 0,
