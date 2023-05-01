@@ -26,16 +26,8 @@ namespace RISCV {
 // We use 64 bits as the known part in the scalable vector types.
 static constexpr unsigned RVVBitsPerBlock = 64;
 
-enum CPUKind : unsigned {
-#define PROC(ENUM, NAME, DEFAULT_MARCH) CK_##ENUM,
-#define TUNE_PROC(ENUM, NAME) CK_##ENUM,
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-};
-
-bool checkCPUKind(CPUKind Kind, bool IsRV64);
-bool checkTuneCPUKind(CPUKind Kind, bool IsRV64);
-CPUKind parseCPUKind(StringRef CPU);
-CPUKind parseTuneCPUKind(StringRef CPU, bool IsRV64);
+bool parseCPU(StringRef CPU, bool IsRV64);
+bool parseTuneCPU(StringRef CPU, bool IsRV64);
 StringRef getMArchFromMcpu(StringRef CPU);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
