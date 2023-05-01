@@ -22,6 +22,11 @@ struct RISCVExtensionInfo {
   unsigned MinorVersion;
 };
 
+namespace RISCV {
+// We use 64 bits as the known part in the scalable vector types.
+static constexpr unsigned RVVBitsPerBlock = 64;
+}
+
 class RISCVISAInfo {
 public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
