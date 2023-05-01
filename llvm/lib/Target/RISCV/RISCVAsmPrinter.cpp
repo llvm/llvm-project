@@ -85,6 +85,8 @@ public:
 
 private:
   void emitAttributes();
+
+  void emitNTLHint(const MachineInstr *MI);
 };
 }
 
@@ -100,9 +102,43 @@ void RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
+// If the target supports Zihintnthl and the instruction has a nontemporal
+// MachineMemOperand, emit an NTLH hint instruction before it.
+void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
+  if (!STI->hasStdExtZihintntl())
+    return;
+
+  if (MI->memoperands_empty())
+    return;
+
+  MachineMemOperand *MMO = *(MI->memoperands_begin());
+  if (!MMO->isNonTemporal())
+    return;
+
+  unsigned NontemporalMode = 0;
+  if (MMO->getFlags() & MONontemporalBit0)
+    NontemporalMode += 0b1;
+  if (MMO->getFlags() & MONontemporalBit1)
+    NontemporalMode += 0b10;
+
+  MCInst Hint;
+  if (STI->hasStdExtCOrZca() && STI->enableRVCHintInstrs())
+    Hint.setOpcode(RISCV::C_ADD_HINT);
+  else
+    Hint.setOpcode(RISCV::ADD);
+
+  Hint.addOperand(MCOperand::createReg(RISCV::X0));
+  Hint.addOperand(MCOperand::createReg(RISCV::X0));
+  Hint.addOperand(MCOperand::createReg(RISCV::X2 + NontemporalMode));
+
+  EmitToStreamer(*OutStreamer, Hint);
+}
+
 void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   RISCV_MC::verifyInstructionPredicates(MI->getOpcode(),
                                         getSubtargetInfo().getFeatureBits());
+
+  emitNTLHint(MI);
 
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
