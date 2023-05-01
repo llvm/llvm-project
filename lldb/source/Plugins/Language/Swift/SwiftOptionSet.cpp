@@ -75,7 +75,7 @@ lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
 
 void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     FillCasesIfNeeded() {
-  if (m_cases.hasValue())
+  if (m_cases.has_value())
     return;
 
   m_cases = CasesVector();

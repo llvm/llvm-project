@@ -825,7 +825,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
   {
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f42usyx_q_txQp_tq_Rhzr0_lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 2);
     ASSERT_EQ(s.generic_params[0].depth, 0);
@@ -838,7 +838,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
   {
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a1SV1f2ts1vqd_1_qd__qd__Qp_qd_0_tr1_lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 3);
     ASSERT_EQ(s.generic_params[0].depth, 1);
@@ -859,7 +859,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     // define swiftcc void @"$s1a2f12tsyxxQp_tlF"(%swift.opaque** noalias nocapture %0, i64 %1, %swift.type** %T)
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f12tsyxxQp_tlF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 1);
     ASSERT_EQ(s.pack_expansions.size(), 1);
@@ -873,7 +873,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     // define swiftcc void @"$s1a2f22us2vsyxxQp_q_q_Qptr0_lF"(%swift.opaque** noalias nocapture %0, %swift.opaque** noalias nocapture %1, i64 %2, i64 %3, %swift.type** %U, %swift.type** %V)
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f22us2vsyxxQp_q_q_Qptr0_lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 2);
     ASSERT_EQ(s.pack_expansions.size(), 2);
@@ -890,7 +890,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
 
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f32ts05more_B0yxxQp_xxQptlF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 1);
     ASSERT_EQ(s.pack_expansions.size(), 2);
@@ -906,7 +906,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
 
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f42usyx_q_txQp_tq_Rhzr0_lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 2);
     ASSERT_EQ(s.pack_expansions.size(), 1);
@@ -922,7 +922,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
 
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f52tsyx_q_txQp_tr0_lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 2);
     ASSERT_EQ(s.pack_expansions.size(), 1);
@@ -939,7 +939,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
 
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f62us05more_B02vsyxxQp_xxQpq_q_Qptr0_lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 2);
     ASSERT_EQ(s.pack_expansions.size(), 3);
@@ -959,7 +959,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1a2f72us2vs05more_B00d1_C0yxxQp_q_q_QpxxQpq_q_Qptr0_lF",
         *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.generic_params.size(), 2);
     ASSERT_EQ(s.pack_expansions.size(), 4);
@@ -981,7 +981,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     //}
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1t1CC1fyyqd__lF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     // "U" does not count.
     ASSERT_EQ(s.dependent_generic_param_count, 1);
@@ -997,7 +997,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     //}
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1t1CC1fyyx_qd__tlF", *m_swift_ts);
-    ASSERT_TRUE(maybe_signature.hasValue());
+    ASSERT_TRUE(maybe_signature.has_value());
     auto s = *maybe_signature;
     ASSERT_EQ(s.dependent_generic_param_count, 1);
     ASSERT_EQ(s.generic_params.size(), 2);
@@ -1010,6 +1010,6 @@ TEST_F(TestTypeSystemSwiftTypeRef, GenericSignature) {
     // public func f() {}
     auto maybe_signature = SwiftLanguageRuntime::GetGenericSignature(
         "$s1t1fyyF", *m_swift_ts);
-    ASSERT_FALSE(maybe_signature.hasValue());
+    ASSERT_FALSE(maybe_signature.has_value());
   }
 }
