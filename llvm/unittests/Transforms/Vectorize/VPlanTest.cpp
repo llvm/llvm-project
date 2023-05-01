@@ -264,20 +264,6 @@ TEST(VPBasicBlockTest, getPlan) {
   }
 
   {
-    // Region block is entry into VPlan.
-    VPBasicBlock *R1BB1 = new VPBasicBlock();
-    VPBasicBlock *R1BB2 = new VPBasicBlock();
-    VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
-    VPBlockUtils::connectBlocks(R1BB1, R1BB2);
-
-    VPlan Plan;
-    Plan.setEntry(R1);
-    EXPECT_EQ(&Plan, R1->getPlan());
-    EXPECT_EQ(&Plan, R1BB1->getPlan());
-    EXPECT_EQ(&Plan, R1BB2->getPlan());
-  }
-
-  {
     // VPBasicBlock is the entry into the VPlan, followed by a region.
     VPBasicBlock *R1BB1 = new VPBasicBlock();
     VPBasicBlock *R1BB2 = new VPBasicBlock();
@@ -359,6 +345,8 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
   {
     // 2 consecutive regions.
+    // VPBB0
+    //  |
     // R1 {
     //     \
     //     R1BB1
@@ -374,6 +362,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     //      |
     //    R2BB2
     //
+    VPBasicBlock *VPBB0 = new VPBasicBlock("VPBB0");
     VPBasicBlock *R1BB1 = new VPBasicBlock();
     VPBasicBlock *R1BB2 = new VPBasicBlock();
     VPBasicBlock *R1BB3 = new VPBasicBlock();
@@ -381,6 +370,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB4, "R1");
     R1BB2->setParent(R1);
     R1BB3->setParent(R1);
+    VPBlockUtils::connectBlocks(VPBB0, R1);
     VPBlockUtils::connectBlocks(R1BB1, R1BB2);
     VPBlockUtils::connectBlocks(R1BB1, R1BB3);
     VPBlockUtils::connectBlocks(R1BB2, R1BB4);
@@ -449,7 +439,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Use Plan to properly clean up created blocks.
     VPlan Plan;
-    Plan.setEntry(R1);
+    Plan.setEntry(VPBB0);
   }
 
   {
