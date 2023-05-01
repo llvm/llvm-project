@@ -12,14 +12,6 @@
 !       Make sure they're not added.
 ! RUN: %flang -### -flang-experimental-exec -target aarch64-windows-msvc %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
 
-! Check linker invocation to generate shared object (only GNU toolchain for now)
-! Output should not contain any undefined reference to _QQmain since it is not
-! considered a valid entry point for shared objects, which are usually specified
-! using the bind attribute.
-! RUN: %flang -### -flang-experimental-exec -shared -target x86_64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU-SHARED --implicit-check-not _QQmain
-! RUN: %flang -### -flang-experimental-exec -shared -target aarch64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU-SHARED --implicit-check-not _QQmain
-! RUN: %flang -### -flang-experimental-exec -shared -target riscv64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU-SHARED --implicit-check-not _QQmain
-
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"
 ! CHECK-SAME:  "-o" "[[object_file:.*\.o]]" {{.*}}Inputs/hello.f90
@@ -31,7 +23,6 @@
 !       executable and may find the GNU linker from MinGW or Cygwin.
 ! GNU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! GNU-SAME: "[[object_file]]"
-! GNU-SAME: --undefined=_QQmain
 ! GNU-SAME: -lFortran_main
 ! GNU-SAME: -lFortranRuntime
 ! GNU-SAME: -lFortranDecimal
@@ -59,9 +50,3 @@
 ! MSVC-SAME: FortranDecimal.lib
 ! MSVC-SAME: /subsystem:console
 ! MSVC-SAME: "[[object_file]]"
-
-! Linker invocation to generate a shared object
-! GNU-SHARED-LABEL:  "{{.*}}ld"
-! GNU-SHARED-SAME: "[[object_file]]"
-! GNU-SHARED-SAME: -lFortranRuntime
-! GNU-SHARED-SAME: -lFortranDecimal
