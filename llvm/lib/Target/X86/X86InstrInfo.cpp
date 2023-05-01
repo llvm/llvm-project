@@ -9791,7 +9791,7 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
   unsigned MaddOpc = 0;
   switch (Opc) {
   default:
-    assert("It should not reach here");
+    assert(false && "It should not reach here");
     break;
   // vpdpwssd xmm2,xmm3,xmm1
   // -->
