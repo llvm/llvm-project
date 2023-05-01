@@ -25,25 +25,6 @@ _PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std {
 
-// [alg.foreach]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Function>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
-for_each(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Function __f) {
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
-
-  __pstl::__internal::__pattern_walk1(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last, __f);
-}
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Function>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-for_each_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __n, _Function __f) {
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
-
-  return __pstl::__internal::__pattern_walk1_n(
-      __dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __n, __f);
-}
-
 // [alg.find]
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
