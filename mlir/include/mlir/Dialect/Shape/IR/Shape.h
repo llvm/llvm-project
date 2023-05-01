@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_SHAPE_IR_SHAPE_H
 #define MLIR_DIALECT_SHAPE_IR_SHAPE_H
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/FunctionInterfaces.h"
