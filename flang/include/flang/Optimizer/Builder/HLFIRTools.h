@@ -181,6 +181,11 @@ public:
     return base.getDefiningOp<fir::FortranVariableOpInterface>();
   }
 
+  bool isOptional() const {
+    auto varIface = getIfVariableInterface();
+    return varIface ? varIface.isOptional() : false;
+  }
+
   // Get the entity as an mlir SSA value containing all the shape, type
   // parameters and dynamic shape information.
   mlir::Value getBase() const { return *this; }
