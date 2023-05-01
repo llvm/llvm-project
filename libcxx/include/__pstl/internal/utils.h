@@ -10,6 +10,7 @@
 #ifndef _PSTL_UTILS_H
 #define _PSTL_UTILS_H
 
+#include <__exception/terminate.h>
 #include <iterator>
 #include <new>
 #include <utility>

@@ -140,6 +140,7 @@ deque version
 exception cstddef
 exception cstdlib
 exception version
+execution cstddef
 execution version
 expected cstddef
 expected initializer_list
