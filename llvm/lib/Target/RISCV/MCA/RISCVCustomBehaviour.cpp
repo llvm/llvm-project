@@ -81,7 +81,7 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
                       << '\n');
     return nullptr;
   }
-  if (RISCVLMULInstrument::isDataValid(Data)) {
+  if (!RISCVLMULInstrument::isDataValid(Data)) {
     LLVM_DEBUG(dbgs() << "RVCB: Bad data for instrument kind " << Desc << ": "
                       << Data << '\n');
     return nullptr;
