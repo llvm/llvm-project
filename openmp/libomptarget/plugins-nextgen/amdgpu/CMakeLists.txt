@@ -94,6 +94,11 @@ add_llvm_library(omptarget.rtl.amdgpu.nextgen SHARED
 )
 add_dependencies(omptarget.rtl.amdgpu.nextgen amdgcn_hostexec_services)
 
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  target_link_libraries(omptarget.rtl.amdgpu.nextgen PRIVATE
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
+endif()
+
 target_include_directories(
   omptarget.rtl.amdgpu.nextgen
   PRIVATE

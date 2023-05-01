@@ -62,6 +62,13 @@ target_link_libraries(omptarget PRIVATE
   ${LLVM_OFFLOAD_ARCH}
   "-Wl,--no-allow-shlib-undefined")
 
+target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
+
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  target_link_libraries(omptarget PRIVATE
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+endif()
+
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
 install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${RUN_PACKAGE}${OPENMP_INSTALL_LIBDIR}")
