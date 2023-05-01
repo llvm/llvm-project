@@ -262,6 +262,7 @@ set(cuda_wrapper_files
   cuda_wrappers/cmath
   cuda_wrappers/complex
   cuda_wrappers/new
+  cuda_wrappers/bits/shared_ptr_base.h
 )
 
 set(ppc_wrapper_files
