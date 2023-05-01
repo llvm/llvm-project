@@ -16,6 +16,14 @@ func.func @const_attribute_return_type_2() {
 
 // -----
 
+func.func @empty_constant() {
+    // expected-error @+1 {{'emitc.constant' op value must not be empty}}
+    %c0 = "emitc.constant"(){value = ""} : () -> i32
+    return
+}
+
+// -----
+
 func.func @index_args_out_of_range_1() {
     // expected-error @+1 {{'emitc.call' op index argument is out of range}}
     emitc.call "test" () {args = [0 : index]} : () -> ()
