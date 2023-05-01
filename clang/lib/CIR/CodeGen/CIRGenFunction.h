@@ -1612,7 +1612,7 @@ template <> struct DominatingValue<RValue> {
   public:
     static bool needsSaving(RValue value);
     static saved_type save(CIRGenFunction &CGF, RValue value);
-    RValue restore(CIRGenFunction &CGF);
+    RValue restore(CIRGenFunction &CGF) { llvm_unreachable("NYI"); }
 
     // implementations in CGCleanup.cpp
   };
