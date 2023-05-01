@@ -15,13 +15,13 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <cassert>
 #include <cstdint>
 
@@ -100,11 +100,63 @@ FailureOr<unsigned> calculateBitsRequired(Type type) {
 
 enum class ExtensionKind { Sign, Zero };
 
-ExtensionKind getExtensionKind(Operation *op) {
-  assert(op);
-  assert((isa<arith::ExtSIOp, arith::ExtUIOp>(op)) && "Not an extension op");
-  return isa<arith::ExtSIOp>(op) ? ExtensionKind::Sign : ExtensionKind::Zero;
-}
+/// Wrapper around `arith::ExtSIOp` and `arith::ExtUIOp` ops that abstracts away
+/// the exact op type. Exposes helper functions to query the types, operands,
+/// and the result. This is so that we can handle both extension kinds without
+/// needing to use templates or branching.
+class ExtensionOp {
+public:
+  /// Attemps to create a new extension op from `op`. Returns an extension op
+  /// wrapper when `op` is either `arith.extsi` or `arith.extui`, and failure
+  /// otherwise.
+  static FailureOr<ExtensionOp> from(Operation *op) {
+    if (auto sext = dyn_cast_or_null<arith::ExtSIOp>(op))
+      return ExtensionOp{op, ExtensionKind::Sign};
+    if (auto zext = dyn_cast_or_null<arith::ExtUIOp>(op))
+      return ExtensionOp{op, ExtensionKind::Zero};
+
+    return failure();
+  }
+
+  ExtensionOp(const ExtensionOp &) = default;
+  ExtensionOp &operator=(const ExtensionOp &) = default;
+
+  /// Creates a new extension op of the same kind.
+  Operation *recreate(PatternRewriter &rewriter, Location loc, Type newType,
+                      Value in) {
+    if (kind == ExtensionKind::Sign)
+      return rewriter.create<arith::ExtSIOp>(loc, newType, in);
+
+    return rewriter.create<arith::ExtUIOp>(loc, newType, in);
+  }
+
+  /// Replaces `toReplace` with a new extension op of the same kind.
+  void recreateAndReplace(PatternRewriter &rewriter, Operation *toReplace,
+                          Value in) {
+    assert(toReplace->getNumResults() == 1);
+    Type newType = toReplace->getResult(0).getType();
+    Operation *newOp = recreate(rewriter, toReplace->getLoc(), newType, in);
+    rewriter.replaceOp(toReplace, newOp->getResult(0));
+  }
+
+  ExtensionKind getKind() { return kind; }
+
+  Value getResult() { return op->getResult(0); }
+  Value getIn() { return op->getOperand(0); }
+
+  Type getType() { return getResult().getType(); }
+  Type getElementType() { return getElementTypeOrSelf(getType()); }
+  Type getInType() { return getIn().getType(); }
+  Type getInElementType() { return getElementTypeOrSelf(getInType()); }
+
+private:
+  ExtensionOp(Operation *op, ExtensionKind kind) : op(op), kind(kind) {
+    assert(op);
+    assert((isa<arith::ExtSIOp, arith::ExtUIOp>(op)) && "Not an extension op");
+  }
+  Operation *op = nullptr;
+  ExtensionKind kind = {};
+};
 
 /// Returns the integer bitwidth required to represent `value`.
 unsigned calculateBitsRequired(const APInt &value,
@@ -197,24 +249,40 @@ using UIToFPPattern = IToFPPattern<arith::UIToFPOp, ExtensionKind::Zero>;
 // Patterns to Commute Extension Ops
 //===----------------------------------------------------------------------===//
 
+struct ExtensionOverBroadcast final : NarrowingPattern<vector::BroadcastOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getSource().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getResultVectorType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newBroadcast =
+        rewriter.create<vector::BroadcastOp>(op.getLoc(), newTy, ext->getIn());
+    ext->recreateAndReplace(rewriter, op, newBroadcast);
+    return success();
+  }
+};
+
 struct ExtensionOverExtract final : NarrowingPattern<vector::ExtractOp> {
   using NarrowingPattern::NarrowingPattern;
 
   LogicalResult matchAndRewrite(vector::ExtractOp op,
                                 PatternRewriter &rewriter) const override {
-    Operation *def = op.getVector().getDefiningOp();
-    if (!def)
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getVector().getDefiningOp());
+    if (failed(ext))
       return failure();
 
-    return TypeSwitch<Operation *, LogicalResult>(def)
-        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
-          Value newExtract = rewriter.create<vector::ExtractOp>(
-              op.getLoc(), extOp.getIn(), op.getPosition());
-          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
-                                                       newExtract);
-          return success();
-        })
-        .Default(failure());
+    Value newExtract = rewriter.create<vector::ExtractOp>(
+        op.getLoc(), ext->getIn(), op.getPosition());
+    ext->recreateAndReplace(rewriter, op, newExtract);
+    return success();
   }
 };
 
@@ -224,19 +292,15 @@ struct ExtensionOverExtractElement final
 
   LogicalResult matchAndRewrite(vector::ExtractElementOp op,
                                 PatternRewriter &rewriter) const override {
-    Operation *def = op.getVector().getDefiningOp();
-    if (!def)
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getVector().getDefiningOp());
+    if (failed(ext))
       return failure();
 
-    return TypeSwitch<Operation *, LogicalResult>(def)
-        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
-          Value newExtract = rewriter.create<vector::ExtractElementOp>(
-              op.getLoc(), extOp.getIn(), op.getPosition());
-          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
-                                                       newExtract);
-          return success();
-        })
-        .Default(failure());
+    Value newExtract = rewriter.create<vector::ExtractElementOp>(
+        op.getLoc(), ext->getIn(), op.getPosition());
+    ext->recreateAndReplace(rewriter, op, newExtract);
+    return success();
   }
 };
 
@@ -246,56 +310,51 @@ struct ExtensionOverExtractStridedSlice final
 
   LogicalResult matchAndRewrite(vector::ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
-    Operation *def = op.getVector().getDefiningOp();
-    if (!def)
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getVector().getDefiningOp());
+    if (failed(ext))
       return failure();
 
-    return TypeSwitch<Operation *, LogicalResult>(def)
-        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
-          VectorType origTy = op.getType();
-          Type inElemTy =
-              cast<VectorType>(extOp.getIn().getType()).getElementType();
-          VectorType extractTy = origTy.cloneWith(origTy.getShape(), inElemTy);
-          Value newExtract = rewriter.create<vector::ExtractStridedSliceOp>(
-              op.getLoc(), extractTy, extOp.getIn(), op.getOffsets(),
-              op.getSizes(), op.getStrides());
-          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
-                                                       newExtract);
-          return success();
-        })
-        .Default(failure());
+    VectorType origTy = op.getType();
+    VectorType extractTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newExtract = rewriter.create<vector::ExtractStridedSliceOp>(
+        op.getLoc(), extractTy, ext->getIn(), op.getOffsets(), op.getSizes(),
+        op.getStrides());
+    ext->recreateAndReplace(rewriter, op, newExtract);
+    return success();
   }
 };
 
-struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
-  using NarrowingPattern::NarrowingPattern;
+/// Base pattern for `vector.insert` narrowing patterns.
+template <typename InsertionOp>
+struct ExtensionOverInsertionPattern : NarrowingPattern<InsertionOp> {
+  using NarrowingPattern<InsertionOp>::NarrowingPattern;
 
-  LogicalResult matchAndRewrite(vector::InsertOp op,
-                                PatternRewriter &rewriter) const override {
-    Operation *def = op.getSource().getDefiningOp();
-    if (!def)
+  /// Derived classes must provide a function to create the matching insertion
+  /// op based on the original op and new arguments.
+  virtual InsertionOp createInsertionOp(PatternRewriter &rewriter,
+                                        InsertionOp origInsert,
+                                        Value narrowValue,
+                                        Value narrowDest) const = 0;
+
+  LogicalResult matchAndRewrite(InsertionOp op,
+                                PatternRewriter &rewriter) const final {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getSource().getDefiningOp());
+    if (failed(ext))
       return failure();
 
-    return TypeSwitch<Operation *, LogicalResult>(def)
-        .Case<arith::ExtSIOp, arith::ExtUIOp>([&](auto extOp) {
-          // Rewrite the insertion in terms of narrower operands
-          // and later extend the result to the original bitwidth.
-          FailureOr<vector::InsertOp> newInsert =
-              createNarrowInsert(op, rewriter, extOp);
-          if (failed(newInsert))
-            return failure();
-          rewriter.replaceOpWithNewOp<decltype(extOp)>(op, op.getType(),
-                                                       *newInsert);
-          return success();
-        })
-        .Default(failure());
+    FailureOr<InsertionOp> newInsert = createNarrowInsert(op, rewriter, *ext);
+    if (failed(newInsert))
+      return failure();
+    ext->recreateAndReplace(rewriter, op, *newInsert);
+    return success();
   }
 
-  FailureOr<vector::InsertOp> createNarrowInsert(vector::InsertOp op,
-                                                 PatternRewriter &rewriter,
-                                                 Operation *insValue) const {
-    assert((isa<arith::ExtSIOp, arith::ExtUIOp>(insValue)));
-
+  FailureOr<InsertionOp> createNarrowInsert(InsertionOp op,
+                                            PatternRewriter &rewriter,
+                                            ExtensionOp insValue) const {
     // Calculate the operand and result bitwidths. We can only apply narrowing
     // when the inserted source value and destination vector require fewer bits
     // than the result. Because the source and destination may have different
@@ -306,14 +365,15 @@ struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
     if (failed(origBitsRequired))
       return failure();
 
-    ExtensionKind kind = getExtensionKind(insValue);
+    // TODO: We could relax this check by disregarding bitwidth requirements of
+    // elements that we know will be replaced by the insertion.
     FailureOr<unsigned> destBitsRequired =
-        calculateBitsRequired(op.getDest(), kind);
+        calculateBitsRequired(op.getDest(), insValue.getKind());
     if (failed(destBitsRequired) || *destBitsRequired >= *origBitsRequired)
       return failure();
 
     FailureOr<unsigned> insertedBitsRequired =
-        calculateBitsRequired(insValue->getOperands().front(), kind);
+        calculateBitsRequired(insValue.getIn(), insValue.getKind());
     if (failed(insertedBitsRequired) ||
         *insertedBitsRequired >= *origBitsRequired)
       return failure();
@@ -322,22 +382,124 @@ struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
     // both the source and the destination values.
     unsigned newInsertionBits =
         std::max(*destBitsRequired, *insertedBitsRequired);
-    FailureOr<Type> newVecTy = getNarrowType(newInsertionBits, op.getType());
+    FailureOr<Type> newVecTy =
+        this->getNarrowType(newInsertionBits, op.getType());
     if (failed(newVecTy) || *newVecTy == op.getType())
       return failure();
 
     FailureOr<Type> newInsertedValueTy =
-        getNarrowType(newInsertionBits, insValue->getResultTypes().front());
+        this->getNarrowType(newInsertionBits, insValue.getType());
     if (failed(newInsertedValueTy))
       return failure();
 
     Location loc = op.getLoc();
     Value narrowValue = rewriter.createOrFold<arith::TruncIOp>(
-        loc, *newInsertedValueTy, insValue->getResult(0));
+        loc, *newInsertedValueTy, insValue.getResult());
     Value narrowDest =
         rewriter.createOrFold<arith::TruncIOp>(loc, *newVecTy, op.getDest());
-    return rewriter.create<vector::InsertOp>(loc, narrowValue, narrowDest,
-                                             op.getPosition());
+    return createInsertionOp(rewriter, op, narrowValue, narrowDest);
+  }
+};
+
+struct ExtensionOverInsert final
+    : ExtensionOverInsertionPattern<vector::InsertOp> {
+  using ExtensionOverInsertionPattern::ExtensionOverInsertionPattern;
+
+  vector::InsertOp createInsertionOp(PatternRewriter &rewriter,
+                                     vector::InsertOp origInsert,
+                                     Value narrowValue,
+                                     Value narrowDest) const override {
+    return rewriter.create<vector::InsertOp>(
+        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getPosition());
+  }
+};
+
+struct ExtensionOverInsertElement final
+    : ExtensionOverInsertionPattern<vector::InsertElementOp> {
+  using ExtensionOverInsertionPattern::ExtensionOverInsertionPattern;
+
+  vector::InsertElementOp createInsertionOp(PatternRewriter &rewriter,
+                                            vector::InsertElementOp origInsert,
+                                            Value narrowValue,
+                                            Value narrowDest) const override {
+    return rewriter.create<vector::InsertElementOp>(
+        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getPosition());
+  }
+};
+
+struct ExtensionOverInsertStridedSlice final
+    : ExtensionOverInsertionPattern<vector::InsertStridedSliceOp> {
+  using ExtensionOverInsertionPattern::ExtensionOverInsertionPattern;
+
+  vector::InsertStridedSliceOp
+  createInsertionOp(PatternRewriter &rewriter,
+                    vector::InsertStridedSliceOp origInsert, Value narrowValue,
+                    Value narrowDest) const override {
+    return rewriter.create<vector::InsertStridedSliceOp>(
+        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getOffsets(),
+        origInsert.getStrides());
+  }
+};
+
+struct ExtensionOverShapeCast final : NarrowingPattern<vector::ShapeCastOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getSource().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getResultVectorType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newCast =
+        rewriter.create<vector::ShapeCastOp>(op.getLoc(), newTy, ext->getIn());
+    ext->recreateAndReplace(rewriter, op, newCast);
+    return success();
+  }
+};
+
+struct ExtensionOverTranspose final : NarrowingPattern<vector::TransposeOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getVector().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getResultVectorType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newTranspose = rewriter.create<vector::TransposeOp>(
+        op.getLoc(), newTy, ext->getIn(), op.getTransp());
+    ext->recreateAndReplace(rewriter, op, newTranspose);
+    return success();
+  }
+};
+
+struct ExtensionOverFlatTranspose final
+    : NarrowingPattern<vector::FlatTransposeOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::FlatTransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getMatrix().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newTranspose = rewriter.create<vector::FlatTransposeOp>(
+        op.getLoc(), newTy, ext->getIn(), op.getRowsAttr(),
+        op.getColumnsAttr());
+    ext->recreateAndReplace(rewriter, op, newTranspose);
+    return success();
   }
 };
 
@@ -369,8 +531,11 @@ void populateArithIntNarrowingPatterns(
     RewritePatternSet &patterns, const ArithIntNarrowingOptions &options) {
   // Add commute patterns with a higher benefit. This is to expose more
   // optimization opportunities to narrowing patterns.
-  patterns.add<ExtensionOverExtract, ExtensionOverExtractElement,
-               ExtensionOverExtractStridedSlice, ExtensionOverInsert>(
+  patterns.add<ExtensionOverBroadcast, ExtensionOverExtract,
+               ExtensionOverExtractElement, ExtensionOverExtractStridedSlice,
+               ExtensionOverInsert, ExtensionOverInsertElement,
+               ExtensionOverInsertStridedSlice, ExtensionOverShapeCast,
+               ExtensionOverTranspose, ExtensionOverFlatTranspose>(
       patterns.getContext(), options, PatternBenefit(2));
 
   patterns.add<SIToFPPattern, UIToFPPattern>(patterns.getContext(), options);

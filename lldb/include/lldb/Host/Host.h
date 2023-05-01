@@ -236,7 +236,8 @@ public:
                                 bool run_in_shell = true,
                                 bool hide_stderr = false);
 
-  static llvm::Error OpenFileInExternalEditor(const FileSpec &file_spec,
+  static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
+                                              const FileSpec &file_spec,
                                               uint32_t line_no);
 
   /// Check if we're running in an interactive graphical session.

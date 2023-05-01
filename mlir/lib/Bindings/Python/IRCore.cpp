@@ -16,6 +16,7 @@
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -1134,9 +1135,8 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   mlirOpPrintingFlagsDestroy(flags);
 }
 
-MlirBytecodeWriterResult
-PyOperationBase::writeBytecode(const py::object &fileObject,
-                               std::optional<int64_t> bytecodeVersion) {
+void PyOperationBase::writeBytecode(const py::object &fileObject,
+                                    std::optional<int64_t> bytecodeVersion) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   PyFileAccumulator accum(fileObject, /*binary=*/true);
@@ -1147,8 +1147,12 @@ PyOperationBase::writeBytecode(const py::object &fileObject,
 
   MlirBytecodeWriterConfig config = mlirBytecodeWriterConfigCreate();
   mlirBytecodeWriterConfigDesiredEmitVersion(config, *bytecodeVersion);
-  return mlirOperationWriteBytecodeWithConfig(
+  MlirLogicalResult res = mlirOperationWriteBytecodeWithConfig(
       operation, config, accum.getCallback(), accum.getUserData());
+  if (mlirLogicalResultIsFailure(res))
+    throw py::value_error((Twine("Unable to honor desired bytecode version ") +
+                           Twine(*bytecodeVersion))
+                              .str());
 }
 
 py::object PyOperationBase::getAsm(bool binary,
@@ -3377,10 +3381,6 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_static("walk_symbol_tables", &PySymbolTable::walkSymbolTables,
                   py::arg("from_op"), py::arg("all_sym_uses_visible"),
                   py::arg("callback"));
-
-  py::class_<MlirBytecodeWriterResult>(m, "BytecodeResult", py::module_local())
-      .def("min_version",
-           [](MlirBytecodeWriterResult &res) { return res.minVersion; });
 
   // Container bindings.
   PyBlockArgumentList::bind(m);

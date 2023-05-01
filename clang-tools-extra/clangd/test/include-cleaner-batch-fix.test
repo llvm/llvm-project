@@ -33,22 +33,6 @@
 # CHECK-NEXT:     "diagnostics": [
 # CHECK-NEXT:       {
 # CHECK-NEXT:         "code": "missing-includes",
-# CHECK-NEXT:         "message": "No header providing \"Bar\" is directly included (fixes available)",
-# CHECK-NEXT:         "range": {
-# CHECK-NEXT:           "end": {
-# CHECK-NEXT:             "character": 14,
-# CHECK-NEXT:             "line": 2
-# CHECK-NEXT:           },
-# CHECK-NEXT:           "start": {
-# CHECK-NEXT:             "character": 11,
-# CHECK-NEXT:             "line": 2
-# CHECK-NEXT:           }
-# CHECK-NEXT:         },
-# CHECK-NEXT:         "severity": 2,
-# CHECK-NEXT:         "source": "clangd"
-# CHECK-NEXT:       },
-# CHECK-NEXT:       {
-# CHECK-NEXT:         "code": "missing-includes",
 # CHECK-NEXT:         "message": "No header providing \"Foo\" is directly included (fixes available)",
 # CHECK-NEXT:         "range": {
 # CHECK-NEXT:           "end": {
@@ -57,6 +41,22 @@
 # CHECK-NEXT:           },
 # CHECK-NEXT:           "start": {
 # CHECK-NEXT:             "character": 1,
+# CHECK-NEXT:             "line": 2
+# CHECK-NEXT:           }
+# CHECK-NEXT:         },
+# CHECK-NEXT:         "severity": 2,
+# CHECK-NEXT:         "source": "clangd"
+# CHECK-NEXT:       },
+# CHECK-NEXT:       {
+# CHECK-NEXT:         "code": "missing-includes",
+# CHECK-NEXT:         "message": "No header providing \"Bar\" is directly included (fixes available)",
+# CHECK-NEXT:         "range": {
+# CHECK-NEXT:           "end": {
+# CHECK-NEXT:             "character": 14,
+# CHECK-NEXT:             "line": 2
+# CHECK-NEXT:           },
+# CHECK-NEXT:           "start": {
+# CHECK-NEXT:             "character": 11,
 # CHECK-NEXT:             "line": 2
 # CHECK-NEXT:           }
 # CHECK-NEXT:         },

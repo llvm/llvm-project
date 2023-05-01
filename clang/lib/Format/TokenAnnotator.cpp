@@ -970,6 +970,10 @@ private:
     case tok::colon:
       if (!Tok->Previous)
         return false;
+      // Goto labels and case labels are already identified in
+      // UnwrappedLineParser.
+      if (Tok->isTypeFinalized())
+        break;
       // Colons from ?: are handled in parseConditional().
       if (Style.isJavaScript()) {
         if (Contexts.back().ColonIsForRangeExpr || // colon in for loop
@@ -1008,7 +1012,7 @@ private:
           // In Verilog a case label doesn't have the case keyword. We
           // assume a colon following an expression is a case label.
           // Colons from ?: are annotated in parseConditional().
-          Tok->setType(TT_GotoLabelColon);
+          Tok->setType(TT_CaseLabelColon);
           if (Line.Level > 1 || (!Line.InPPDirective && Line.Level > 0))
             --Line.Level;
         }
@@ -2161,6 +2165,10 @@ private:
   /// This is a heuristic based on whether \p Tok is an identifier following
   /// something that is likely a type.
   bool isStartOfName(const FormatToken &Tok) {
+    // Handled in ExpressionParser for Verilog.
+    if (Style.isVerilog())
+      return false;
+
     if (Tok.isNot(tok::identifier) || !Tok.Previous)
       return false;
 
@@ -4541,13 +4549,12 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
            Style.BitFieldColonSpacing == FormatStyle::BFCS_After;
   }
   if (Right.is(tok::colon)) {
-    if (Right.is(TT_GotoLabelColon) ||
-        (!Style.isVerilog() &&
-         Line.First->isOneOf(tok::kw_default, tok::kw_case))) {
+    if (Right.is(TT_CaseLabelColon))
       return Style.SpaceBeforeCaseColon;
-    }
-    const FormatToken *Next = Right.getNextNonComment();
-    if (!Next || Next->is(tok::semi))
+    if (Right.is(TT_GotoLabelColon))
+      return false;
+    // `private:` and `public:`.
+    if (!Right.getNextNonComment())
       return false;
     if (Right.is(TT_ObjCMethodExpr))
       return false;

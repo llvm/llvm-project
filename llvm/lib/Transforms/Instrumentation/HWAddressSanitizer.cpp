@@ -314,8 +314,7 @@ public:
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
-  Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, AllocaInst *AI,
-                      unsigned AllocaNo);
+  Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
   Value *getUARTag(IRBuilder<> &IRB);
 
   Value *getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty);
@@ -989,10 +988,10 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
   if (!UseShortGranules)
     Size = AlignedSize;
 
-  Value *JustTag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
+  Tag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
   if (InstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
-                   {IRB.CreatePointerCast(AI, Int8PtrTy), JustTag,
+                   {IRB.CreatePointerCast(AI, Int8PtrTy), Tag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
   } else {
     size_t ShadowSize = Size >> Mapping.Scale;
@@ -1005,14 +1004,14 @@ void HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag,
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
     if (ShadowSize)
-      IRB.CreateMemSet(ShadowPtr, JustTag, ShadowSize, Align(1));
+      IRB.CreateMemSet(ShadowPtr, Tag, ShadowSize, Align(1));
     if (Size != AlignedSize) {
       const uint8_t SizeRemainder = Size % Mapping.getObjectAlignment().value();
       IRB.CreateStore(ConstantInt::get(Int8Ty, SizeRemainder),
                       IRB.CreateConstGEP1_32(Int8Ty, ShadowPtr, ShadowSize));
-      IRB.CreateStore(JustTag, IRB.CreateConstGEP1_32(
-                                   Int8Ty, IRB.CreateBitCast(AI, Int8PtrTy),
-                                   AlignedSize - 1));
+      IRB.CreateStore(Tag, IRB.CreateConstGEP1_32(
+                               Int8Ty, IRB.CreatePointerCast(AI, Int8PtrTy),
+                               AlignedSize - 1));
     }
   }
 }
@@ -1041,7 +1040,8 @@ unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
 Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *OldTag) {
   if (TagMaskByte == 0xFF)
     return OldTag; // No need to clear the tag byte.
-  return IRB.CreateAnd(OldTag, ConstantInt::get(IntptrTy, TagMaskByte));
+  return IRB.CreateAnd(OldTag,
+                       ConstantInt::get(OldTag->getType(), TagMaskByte));
 }
 
 Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
@@ -1065,11 +1065,11 @@ Value *HWAddressSanitizer::getStackBaseTag(IRBuilder<> &IRB) {
 }
 
 Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
-                                        AllocaInst *AI, unsigned AllocaNo) {
+                                        unsigned AllocaNo) {
   if (ClGenerateTagsWithCalls)
     return getNextTagWithCall(IRB);
-  return IRB.CreateXor(StackTag,
-                       ConstantInt::get(IntptrTy, retagMask(AllocaNo)));
+  return IRB.CreateXor(
+      StackTag, ConstantInt::get(StackTag->getType(), retagMask(AllocaNo)));
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
@@ -1302,9 +1302,10 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     IRBuilder<> IRB(AI->getNextNode());
 
     // Replace uses of the alloca with tagged address.
-    Value *Tag = getAllocaTag(IRB, StackTag, AI, N);
+    Value *Tag = getAllocaTag(IRB, StackTag, N);
     Value *AILong = IRB.CreatePointerCast(AI, IntptrTy);
-    Value *Replacement = tagPointer(IRB, AI->getType(), AILong, Tag);
+    Value *AINoTagLong = untagPointer(IRB, AILong);
+    Value *Replacement = tagPointer(IRB, AI->getType(), AINoTagLong, Tag);
     std::string Name =
         AI->hasName() ? AI->getName().str() : "alloca." + itostr(N);
     Replacement->setName(Name + ".hwasan");
@@ -1331,7 +1332,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     llvm::for_each(Info.LifetimeStart, HandleLifetime);
     llvm::for_each(Info.LifetimeEnd, HandleLifetime);
 
-    AI->replaceUsesWithIf(Replacement, [AICast, AILong](Use &U) {
+    AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
       auto *User = U.getUser();
       return User != AILong && User != AICast && !isLifetimeIntrinsic(User);
     });
@@ -1351,7 +1352,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
       // When untagging, use the `AlignedSize` because we need to set the tags
-      // for the entire alloca to zero. If we used `Size` here, we would
+      // for the entire alloca to original. If we used `Size` here, we would
       // keep the last granule tagged, and store zero in the last byte of the
       // last granule, due to how short granules are implemented.
       tagAlloca(IRB, AI, UARTag, AlignedSize);

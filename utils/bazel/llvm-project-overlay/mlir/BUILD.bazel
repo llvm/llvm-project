@@ -372,6 +372,7 @@ mlir_c_api_cc_library(
         "include/mlir/CAPI/Wrap.h",
     ],
     header_deps = [
+        ":BytecodeWriter",
         ":IR",
         ":Pass",
         ":Support",
@@ -380,7 +381,6 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":AsmParser",
-        ":BytecodeWriter",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":InferTypeOpInterface",

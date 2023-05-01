@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/IR/Action.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
@@ -410,6 +411,24 @@ RegionPatternRewriteDriver::RegionPatternRewriteDriver(
   }
 }
 
+namespace {
+class GreedyPatternRewriteIteration
+    : public tracing::ActionImpl<GreedyPatternRewriteIteration> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GreedyPatternRewriteIteration)
+  GreedyPatternRewriteIteration(ArrayRef<IRUnit> units, int64_t iteration)
+      : tracing::ActionImpl<GreedyPatternRewriteIteration>(units),
+        iteration(iteration) {}
+  static constexpr StringLiteral tag = "GreedyPatternRewriteIteration";
+  void print(raw_ostream &os) const override {
+    os << "GreedyPatternRewriteIteration(" << iteration << ")";
+  }
+
+private:
+  int64_t iteration = 0;
+};
+} // namespace
+
 LogicalResult RegionPatternRewriteDriver::simplify() && {
   auto insertKnownConstant = [&](Operation *op) {
     // Check for existing constants when populating the worklist. This avoids
@@ -423,6 +442,7 @@ LogicalResult RegionPatternRewriteDriver::simplify() && {
 
   bool changed = false;
   int64_t iteration = 0;
+  MLIRContext *ctx = getContext();
   do {
     // Check if the iteration limit was reached.
     if (iteration++ >= config.maxIterations &&
@@ -455,12 +475,16 @@ LogicalResult RegionPatternRewriteDriver::simplify() && {
         worklistMap[worklist[i]] = i;
     }
 
-    changed = processWorklist();
+    ctx->executeAction<GreedyPatternRewriteIteration>(
+        [&] {
+          changed = processWorklist();
 
-    // After applying patterns, make sure that the CFG of each of the regions
-    // is kept up to date.
-    if (config.enableRegionSimplification)
-      changed |= succeeded(simplifyRegions(*this, region));
+          // After applying patterns, make sure that the CFG of each of the
+          // regions is kept up to date.
+          if (config.enableRegionSimplification)
+            changed |= succeeded(simplifyRegions(*this, region));
+        },
+        {&region}, iteration);
   } while (changed);
 
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.

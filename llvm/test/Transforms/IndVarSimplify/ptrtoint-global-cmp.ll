@@ -6,25 +6,18 @@
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 ptrtoint (ptr @a to i64), i64 add (i64 ptrtoint (ptr @a to i64), i64 16))
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], ptrtoint (ptr @a to i64)
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP2]], [[UMIN]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i8 [[IV]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr @a, i64 [[IDXPROM]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_LATCH]], label [[EXIT_1:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = add nsw i32 [[L]], [[RED]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV]], 4
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_HEADER]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_HEADER]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       exit.2:
