@@ -124,7 +124,7 @@ struct AArch64OutgoingValueAssigner
     } else
       Res = AssignFnVarArg(ValNo, ValVT, LocVT, LocInfo, Flags, State);
 
-    StackOffset = State.getNextStackOffset();
+    StackSize = State.getStackSize();
     return Res;
   }
 };
@@ -706,7 +706,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   }
 
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
-  uint64_t StackOffset = Assigner.StackOffset;
+  uint64_t StackSize = Assigner.StackSize;
   if (F.isVarArg()) {
     if ((!Subtarget.isTargetDarwin() && !Subtarget.isWindowsArm64EC()) || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
@@ -720,22 +720,21 @@ bool AArch64CallLowering::lowerFormalArguments(
     }
 
     // We currently pass all varargs at 8-byte alignment, or 4 in ILP32.
-    StackOffset =
-        alignTo(Assigner.StackOffset, Subtarget.isTargetILP32() ? 4 : 8);
+    StackSize = alignTo(Assigner.StackSize, Subtarget.isTargetILP32() ? 4 : 8);
 
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
-    FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackOffset, true));
+    FuncInfo->setVarArgsStackIndex(MFI.CreateFixedObject(4, StackSize, true));
   }
 
   if (doesCalleeRestoreStack(F.getCallingConv(),
                              MF.getTarget().Options.GuaranteedTailCallOpt)) {
     // We have a non-standard ABI, so why not make full use of the stack that
     // we're going to pop? It must be aligned to 16 B in any case.
-    StackOffset = alignTo(StackOffset, 16);
+    StackSize = alignTo(StackSize, 16);
 
     // If we're expected to restore the stack (e.g. fastcc), then we'll be
     // adding a multiple of 16.
-    FuncInfo->setArgumentStackToRestore(StackOffset);
+    FuncInfo->setArgumentStackToRestore(StackSize);
 
     // Our own callers will guarantee that the space is free by giving an
     // aligned value to CALLSEQ_START.
@@ -745,7 +744,7 @@ bool AArch64CallLowering::lowerFormalArguments(
   // will fit on the caller's stack. So, whenever we lower formal arguments,
   // we should keep track of this information, since we might lower a tail call
   // in this function later.
-  FuncInfo->setBytesInStackArgArea(StackOffset);
+  FuncInfo->setBytesInStackArgArea(StackSize);
 
   if (Subtarget.hasCustomCallingConv())
     Subtarget.getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
@@ -861,7 +860,7 @@ bool AArch64CallLowering::areCalleeOutgoingArgsTailCallable(
 
   // Make sure that they can fit on the caller's stack.
   const AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
-  if (OutInfo.getNextStackOffset() > FuncInfo->getBytesInStackArgArea()) {
+  if (OutInfo.getStackSize() > FuncInfo->getBytesInStackArgArea()) {
     LLVM_DEBUG(dbgs() << "... Cannot fit call operands on caller's stack.\n");
     return false;
   }
@@ -1110,7 +1109,7 @@ bool AArch64CallLowering::lowerTailCall(
 
     // The callee will pop the argument stack as a tail call. Thus, we must
     // keep it 16-byte aligned.
-    NumBytes = alignTo(OutInfo.getNextStackOffset(), 16);
+    NumBytes = alignTo(OutInfo.getStackSize(), 16);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
@@ -1315,12 +1314,12 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   uint64_t CalleePopBytes =
       doesCalleeRestoreStack(Info.CallConv,
                              MF.getTarget().Options.GuaranteedTailCallOpt)
-          ? alignTo(Assigner.StackOffset, 16)
+          ? alignTo(Assigner.StackSize, 16)
           : 0;
 
-  CallSeqStart.addImm(Assigner.StackOffset).addImm(0);
+  CallSeqStart.addImm(Assigner.StackSize).addImm(0);
   MIRBuilder.buildInstr(AArch64::ADJCALLSTACKUP)
-      .addImm(Assigner.StackOffset)
+      .addImm(Assigner.StackSize)
       .addImm(CalleePopBytes);
 
   // If Callee is a reg, since it is used by a target specific
