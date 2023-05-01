@@ -9,14 +9,9 @@ define i1 @not_isfinite_or_zero_f16(half %x) sanitize_memory {
 ; CHECK-LABEL: @not_isfinite_or_zero_f16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i16 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[TMP1]], 0
 ; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 615)
-; CHECK-NEXT:    store i1 false, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i1 [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %class = call i1 @llvm.is.fpclass.f16(half %x, i32 615)
@@ -28,15 +23,9 @@ define <2 x i1> @not_isfinite_or_zero_v2f16_pos0_neg0_vec(<2 x half> %x) sanitiz
 ; CHECK-LABEL: @not_isfinite_or_zero_v2f16_pos0_neg0_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i16> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[CLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> [[X:%.*]], i32 615)
-; CHECK-NEXT:    store <2 x i1> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i1> [[TMP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i1> [[CLASS]]
 ;
   %class = call <2 x i1> @llvm.is.fpclass.v2f16(<2 x half> %x, i32 615)
