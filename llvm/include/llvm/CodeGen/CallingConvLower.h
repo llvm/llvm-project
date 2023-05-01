@@ -175,7 +175,7 @@ private:
   SmallVectorImpl<CCValAssign> &Locs;
   LLVMContext &Context;
 
-  unsigned StackOffset;
+  unsigned StackSize;
   Align MaxStackArgAlign;
   SmallVector<uint32_t, 16> UsedRegs;
   SmallVector<CCValAssign, 4> PendingLocs;
@@ -236,17 +236,14 @@ public:
   CallingConv::ID getCallingConv() const { return CallingConv; }
   bool isVarArg() const { return IsVarArg; }
 
-  /// getNextStackOffset - Return the next stack offset such that all stack
-  /// slots satisfy their alignment requirements.
-  unsigned getNextStackOffset() const {
-    return StackOffset;
-  }
+  /// Returns the size of the currently allocated portion of the stack.
+  unsigned getStackSize() const { return StackSize; }
 
   /// getAlignedCallFrameSize - Return the size of the call frame needed to
   /// be able to store all arguments and such that the alignment requirement
   /// of each of the arguments is satisfied.
   unsigned getAlignedCallFrameSize() const {
-    return alignTo(StackOffset, MaxStackArgAlign);
+    return alignTo(StackSize, MaxStackArgAlign);
   }
 
   /// isAllocated - Return true if the specified register (or an alias) is
@@ -400,9 +397,9 @@ public:
   /// AllocateStack - Allocate a chunk of stack space with the specified size
   /// and alignment.
   unsigned AllocateStack(unsigned Size, Align Alignment) {
-    StackOffset = alignTo(StackOffset, Alignment);
-    unsigned Result = StackOffset;
-    StackOffset += Size;
+    StackSize = alignTo(StackSize, Alignment);
+    unsigned Result = StackSize;
+    StackSize += Size;
     MaxStackArgAlign = std::max(Alignment, MaxStackArgAlign);
     ensureMaxAlignment(Alignment);
     return Result;
