@@ -90,9 +90,8 @@ subroutine acc_enter_data
 !CHECK: %[[BOUND1:.*]] = acc.bounds extent(%c10{{.*}} : index) startIdx(%[[C1]] : index)
 !CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[B]] : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "b", structured = false}
 !CHECK: %[[BOX_D:.*]] = fir.load %[[D]] : !fir.ref<!fir.box<!fir.ptr<f32>>> 
-!CHECK: %[[BOX_ADDR_D:.*]] = fir.box_addr %[[BOX_D]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ref<!fir.ptr<f32>>
-!CHECK: %[[D_PTR:.*]] = fir.load %[[BOX_ADDR_D]] : !fir.ref<!fir.ptr<f32>> 
-!CHECK: %[[ATTACH_D:.*]] = acc.attach varPtr(%[[D_PTR]] : !fir.ptr<f32>) -> !fir.ptr<f32> {name = "d", structured = false}
+!CHECK: %[[BOX_ADDR_D:.*]] = fir.box_addr %[[BOX_D]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+!CHECK: %[[ATTACH_D:.*]] = acc.attach varPtr(%[[BOX_ADDR_D]] : !fir.ptr<f32>) -> !fir.ptr<f32> {name = "d", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[COPYIN_A]], %[[CREATE_B]], %[[ATTACH_D]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ptr<f32>){{$}}
 
   !$acc enter data create(a) async
@@ -457,9 +456,8 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX_A_1]], %[[C0_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX_A_0]], %[[C0_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}
-!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a", structured = false}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xf32>>)
 
   !$acc enter data create(a(:))
@@ -473,9 +471,8 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[C0:.*]] = arith.constant 0 : index
 !CHECK: %[[DIMS2:.*]]:3 = fir.box_dims %[[BOX_A_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[DIMS2]]#1 : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}
-!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(:)", structured = false}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(:)", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xf32>>)
 
   !$acc enter data create(a(2:5))
@@ -490,9 +487,8 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[C5:.*]] = arith.constant 5 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[C5]], %[[DIMS0]]#0 : index
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}
-!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(2:5)", structured = false}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(2:5)", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xf32>>)
 
   !$acc enter data create(a(3:))
@@ -509,9 +505,8 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[DIMS2:.*]]:3 = fir.box_dims %[[BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 !CHECK: %[[EXT:.*]] = arith.subi %[[DIMS2]]#1, %[[LB]] : index 
 !CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}
-!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(3:)", structured = false}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(3:)", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xf32>>)
 
   !$acc enter data create(a(:7))
@@ -524,17 +519,143 @@ subroutine acc_enter_data_allocatable()
 !CHECK: %[[C7:.*]] = arith.constant 7 : index
 !CHECK: %[[UB:.*]] = arith.subi %[[C7]], %[[DIMS0]]#0 : index
 !CHECK: %[[BOUND:.*]] = acc.bounds upperbound(%[[UB]] : index) stride(%[[DIMS1]]#2 : index) startIdx(%[[DIMS0]]#0 : index) {strideInBytes = true}
-!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(:7)", structured = false}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {name = "a(:7)", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xf32>>)
 
   !$acc enter data create(i)
 !CHECK: %[[BOX_I:.*]] = fir.load %[[I]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_I]] : (!fir.box<!fir.heap<i32>>) -> !fir.ref<!fir.heap<i32>>
-!CHECK: %[[ADDR:.*]] = fir.load %[[BOX_ADDR]] : !fir.ref<!fir.heap<i32>>
-!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !fir.heap<i32>)   -> !fir.heap<i32> {name = "i", structured = false}
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_I]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<i32>) -> !fir.heap<i32> {name = "i", structured = false}
 !CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<i32>)
 
 end subroutine
 
+subroutine acc_enter_data_derived_type()
+  type :: dt
+    real :: data
+    real :: array(1:10)
+  end type
+
+  type :: t
+    type(dt) :: d
+  end type
+
+  type :: z
+    integer, allocatable :: data(:)
+  end type
+
+  type :: tt
+    type(dt) :: d(10)
+  end type
+
+  type(dt) :: a
+  type(t) :: b
+  type(dt) :: aa(10)
+  type(z) :: c
+  type(tt) :: d
+
+!CHECK-LABEL: func.func @_QPacc_enter_data_derived_type() {
+!CHECK: %[[A:.*]] = fir.alloca !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}> {bindc_name = "a", uniq_name = "_QFacc_enter_data_derived_typeEa"}
+!CHECK: %[[AA:.*]] = fir.alloca !fir.array<10x!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>> {bindc_name = "aa", uniq_name = "_QFacc_enter_data_derived_typeEaa"}
+!CHECK: %[[B:.*]] = fir.alloca !fir.type<_QFacc_enter_data_derived_typeTt{d:!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>}> {bindc_name = "b", uniq_name = "_QFacc_enter_data_derived_typeEb"}
+!CHECK: %[[C:.*]] = fir.alloca !fir.type<_QFacc_enter_data_derived_typeTz{data:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "c", uniq_name = "_QFacc_enter_data_derived_typeEc"}
+!CHECK: %[[D:.*]] = fir.alloca !fir.type<_QFacc_enter_data_derived_typeTtt{d:!fir.array<10x!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>}> {bindc_name = "d", uniq_name = "_QFacc_enter_data_derived_typeEd"}
+
+  !$acc enter data create(a%data)
+!CHECK: %[[DATA_FIELD:.*]] = fir.field_index data, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}> 
+!CHECK: %[[DATA_COORD:.*]] = fir.coordinate_of %[[A]], %[[DATA_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<f32> 
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[DATA_COORD]] : !fir.ref<f32>) -> !fir.ref<f32> {name = "a%data", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<f32>)
+
+  !$acc enter data create(b%d%data)
+!CHECK: %[[D_FIELD:.*]] = fir.field_index d, !fir.type<_QFacc_enter_data_derived_typeTt{d:!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>}>
+!CHECK: %[[DATA_FIELD:.*]] = fir.field_index data, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[DATA_COORD:.*]] = fir.coordinate_of %[[B]], %[[D_FIELD]], %[[DATA_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTt{d:!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>}>>, !fir.field, !fir.field) -> !fir.ref<f32>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[DATA_COORD]] : !fir.ref<f32>) -> !fir.ref<f32> {name = "b%d%data", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<f32>)
+
+  !$acc enter data create(a%array)
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[A]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[C10]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a%array", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+  !$acc enter data create(a%array(:))
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[A]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[C10]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a%array(:)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+  !$acc enter data create(a%array(1:5))
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[A]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[C0:.*]] = arith.constant 0 : index
+!CHECK: %[[C4:.*]] = arith.constant 4 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[C0]] : index) upperbound(%[[C4]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a%array(1:5)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+  !$acc enter data create(a%array(:5))
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[A]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[C4:.*]] = arith.constant 4 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds upperbound(%[[C4]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a%array(:5)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+  !$acc enter data create(a%array(2:))
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[A]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
+!CHECK: %[[STARTIDX:.*]] = arith.constant 1 : index
+!CHECK: %[[LB:.*]] = arith.constant 1 : index
+!CHECK: %[[EXT:.*]] = arith.subi %c10_5, %c1_7 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) extent(%[[EXT]] : index) startIdx(%[[STARTIDX]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "a%array(2:)", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+!$acc enter data create(b%d%array)
+!CHECK: %[[D_FIELD:.*]] = fir.field_index d, !fir.type<_QFacc_enter_data_derived_typeTt{d:!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>}>
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[B]], %[[D_FIELD]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTt{d:!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>}>>, !fir.field, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[C10]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "b%d%array", structured = false}
+
+  !$acc enter data create(c%data)
+!CHECK: %[[DATA_FIELD:.*]] = fir.field_index data, !fir.type<_QFacc_enter_data_derived_typeTz{data:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
+!CHECK: %[[DATA_COORD:.*]] = fir.coordinate_of %[[C]], %[[DATA_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTz{data:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[DATA_BOX:.*]] = fir.load %[[DATA_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[DIM0:.*]] = arith.constant 0 : index
+!CHECK: %[[DIMS0:.*]]:3 = fir.box_dims %[[DATA_BOX]], %[[DIM0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[DIMS0]]#1 : index) startIdx(%[[DIMS0]]#0 : index)
+!CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[DATA_BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xi32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xi32>> {name = "c%data", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.heap<!fir.array<?xi32>>)
+
+  !$acc enter data create (d%d(1)%array)
+!CHECK: %[[D_FIELD:.*]] = fir.field_index d, !fir.type<_QFacc_enter_data_derived_typeTtt{d:!fir.array<10x!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>}>
+!CHECK: %[[D_COORD:.*]] = fir.coordinate_of %[[D]], %[[D_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTtt{d:!fir.array<10x!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>}>>, !fir.field) -> !fir.ref<!fir.array<10x!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>>
+!CHECK: %[[IDX:.*]] = arith.constant 1 : i64
+!CHECK: %[[ONE:.*]] = arith.constant 1 : i64
+!CHECK: %[[NORMALIZED_IDX:.*]] = arith.subi %[[IDX]], %[[ONE]] : i64
+!CHECK: %[[D1_COORD:.*]] = fir.coordinate_of %[[D_COORD]], %[[NORMALIZED_IDX]] : (!fir.ref<!fir.array<10x!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>>, i64) -> !fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>
+!CHECK: %[[ARRAY_FIELD:.*]] = fir.field_index array, !fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>
+!CHECK: %[[ARRAY_COORD:.*]] = fir.coordinate_of %[[D1_COORD]], %[[ARRAY_FIELD]] : (!fir.ref<!fir.type<_QFacc_enter_data_derived_typeTdt{data:f32,array:!fir.array<10xf32>}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+!CHECK: %[[C10:.*]] = arith.constant 10 : index
+!CHECK: %[[C1:.*]] = arith.constant 1 : index
+!CHECK: %[[BOUND:.*]] = acc.bounds extent(%[[C10]] : index) startIdx(%[[C1]] : index)
+!CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<10xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xf32>> {name = "d%d(1_8)%array", structured = false}
+!CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.array<10xf32>>)
+
+end subroutine
