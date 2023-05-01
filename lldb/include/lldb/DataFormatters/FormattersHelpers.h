@@ -58,6 +58,8 @@ size_t ExtractIndexFromString(const char *item_name);
 
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
+lldb::ValueObjectSP GetValueOfLibCXXCompressedPair(ValueObject &pair);
+
 time_t GetOSXEpoch();
 
 struct InferiorSizedWord {
