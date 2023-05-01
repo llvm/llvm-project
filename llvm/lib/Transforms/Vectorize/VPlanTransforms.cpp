@@ -27,8 +27,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE,
-    const TargetLibraryInfo &TLI) {
+    ScalarEvolution &SE, const TargetLibraryInfo &TLI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan->getEntry());
@@ -41,12 +40,6 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 
       VPValue *VPV = Ingredient.getVPSingleValue();
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
-      if (DeadInstructions.count(Inst)) {
-        VPValue DummyValue;
-        VPV->replaceAllUsesWith(&DummyValue);
-        Ingredient.eraseFromParent();
-        continue;
-      }
 
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {

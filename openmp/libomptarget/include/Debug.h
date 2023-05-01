@@ -60,6 +60,8 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_AMD_KERNEL_TRACE = 0x1000,
   // Enable also API-level tracing
   OMP_INFOTYPE_AMD_API_TRACE = 0x200,
+  // Print whenever data does not have a viable device counterpart.
+  OMP_INFOTYPE_EMPTY_MAPPING = 0x0040,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
