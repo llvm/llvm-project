@@ -1204,7 +1204,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // Called functions expect 6 argument words to exist in the stack frame, used
   // or not.
   unsigned StackReserved = 6 * 8u;
-  unsigned ArgsSize = std::max(StackReserved, CCInfo.getStackSize());
+  unsigned ArgsSize = std::max<unsigned>(StackReserved, CCInfo.getStackSize());
 
   // Keep stack frames 16-byte aligned.
   ArgsSize = alignTo(ArgsSize, 16);
