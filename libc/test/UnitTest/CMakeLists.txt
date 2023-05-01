@@ -52,7 +52,7 @@ add_library(
 
 target_include_directories(LibcTestMain PUBLIC ${LIBC_SOURCE_DIR})
 target_compile_options(LibcTestMain PRIVATE -fno-exceptions -fno-rtti)
-if(LLVM_LIBC_FULL_BUILD)
+if(LIBC_GPU_BUILD)
   target_include_directories(LibcTestMain PRIVATE ${LIBC_BUILD_DIR}/include)
   target_compile_options(LibcTestMain PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS})
 endif()
