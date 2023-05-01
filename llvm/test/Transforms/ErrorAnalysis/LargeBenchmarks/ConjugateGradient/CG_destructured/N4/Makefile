@@ -18,8 +18,7 @@ RUN_TIME_LIB_FLAGS = -function-to-analyze conjugateGradientSolver \
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
-				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h \
-				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/Statistics.h
+				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
 run: cg_destructured_4_ac.ll
 	$(LLI) cg_destructured_4_ac.ll
@@ -28,10 +27,11 @@ cg_destructured_4_ac.ll: cg_destructured_4.ll
 	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) cg_destructured_4.ll -o cg_destructured_4_ac.ll
 
 cg_destructured_4.ll:
-	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) cg_destructured_4.c -o cg_destructured_4.ll
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) cg_destructured_4.cpp -o cg_destructured_4.ll
 
 build_original:
-	gcc cg_destructured_4.c -o cg_destructured_4.out
+	gcc cg_destructured_4.cpp -o cg_destructured_4.out
 
 clean:
-	rm -rf cg_destructured_4.ll cg_destructured_4_ac.ll .fAF_logs a.out *.txt
+	rm -rf cg_destructured_4.ll cg_destructured_4_ac.ll a.out *.txt \
+#	.fAF_logs

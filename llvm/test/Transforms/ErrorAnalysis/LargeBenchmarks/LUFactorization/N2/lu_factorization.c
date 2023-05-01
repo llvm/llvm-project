@@ -47,7 +47,7 @@ int main()
 {
   float A[2][2]= { { 4, 12 }, { 12, 6 } }, // Matrix A
         L[2][2]= {0}, // Lower triangular matrix
-        U[2][2];            // Upper triangular matrix
+        U[2][2];      // Upper triangular matrix
 
   float B[2]= {166, 112}; // Constant terms
 

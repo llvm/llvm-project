@@ -1,15 +1,43 @@
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <cmath>
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <time.h>
 using namespace std;
 
-const double NEARZERO = 1.0e-10;       // interpretation of "zero"
+#define TYPE double
+#define PRINT_PRECISION_TYPE "%0.15lf"
 
-using vec    = vector<double>;         // vector
+// Inputs
+#define N 150                       // dimension of the problem
+#define A00 0.8010
+#define A01 -0.2575
+#define A02 -0.0258
+#define A03 -0.3176
+#define A10 -0.2957
+#define A11 0.5946
+#define A12 -0.0290
+#define A13 -0.0699
+#define A20 -0.3061
+#define A21 -0.1270
+#define A22 0.8229
+#define A23 -0.1898
+#define A30 -0.1088
+#define A31 -0.2161
+#define A32 -0.2965
+#define A33 0.8214
+#define B0 1
+#define B1 2
+#define B2 3
+#define B3 4
+
+// Setting a tolerance level which will be used as a termination condition for this algorithm
+const TYPE TOLERANCE = 0.0000000001;
+const TYPE NEARZERO = 0.0000000001;       // interpretation of "zero"
+
+using vec    = vector<TYPE>;         // vector
 using matrix = vector<vec>;            // matrix (=collection of (row) vectors)
 
 // Prototypes
@@ -19,27 +47,32 @@ vec matrixTimesVector( const matrix &A, const vec &V );
 vec vectorCombination( double a, const vec &U, double b, const vec &V );
 double innerProduct( const vec &U, const vec &V );
 double vectorNorm( const vec &V );
-vec conjugateGradientSolver( const matrix &A, const vec &B );
+void conjugateGradientSolver(TYPE A_0_0, TYPE A_0_1, TYPE A_0_2, TYPE A_0_3,
+                            TYPE A_1_0, TYPE A_1_1, TYPE A_1_2, TYPE A_1_3,
+                            TYPE A_2_0, TYPE A_2_1, TYPE A_2_2, TYPE A_2_3,
+                            TYPE A_3_0, TYPE A_3_1, TYPE A_3_2, TYPE A_3_3,
+                            TYPE B_0, TYPE B_1, TYPE B_2, TYPE B_3);
 
 
 //======================================================================
 
 
-int main()
-{
-  matrix A = {{ 0.8010,-0.2575,-0.0258,-0.3176},
-              {-0.2957, 0.5946,-0.0290,-0.0699},
-              {-0.3061,-0.1270, 0.8229,-0.1898},
-              {-0.1088,-0.2161,-0.2965, 0.8214}};
-  vec B = { 1, 2, 3, 4 };
-
-  vec X = conjugateGradientSolver( A, B );
-
+int main() {
+  // Calculate Time
+  clock_t t;
+  t = clock();
+  conjugateGradientSolver(A00, A01, A02, A03,
+                          A10, A11, A12, A13,
+                          A20, A21, A22, A23,
+                          A30, A31, A32, A33,
+                          B0, B1, B2, B3);
+  t = clock() - t;
+  printf("Time: %f\n", ((double)t)/CLOCKS_PER_SEC);
   cout << "Solves AX = B\n";
-  print( "\nA:", A );
-  print( "\nB:", B );
-  print( "\nX:", X );
-  print( "\nCheck AX:", matrixTimesVector( A, X ) );
+//  print( "\nA:", A );
+//  print( "\nB:", B );
+//  print( "\nX:", X );
+//  print( "\nCheck AX:", matrixTimesVector( A, X ) );
 }
 
 
@@ -125,34 +158,25 @@ double vectorNorm( const vec &V )                          // Vector norm
 //======================================================================
 
 // The conjugate gradient solving algorithm.
-vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
-{
-  // Setting a tolerance level which will be used as a termination condition for this algorithm
-  double TOLERANCE = 1.0e-10;
-
-  // Number of vectors/rows in the matrix A.
-  int n = A_.size();
-  int iterations = 5;
-
-  // Matrix Initialization
-  double A_0_0 = A_[0][0], A_0_1 = A_[0][1], A_0_2 = A_[0][2], A_0_3 = A_[0][3];
-  double A_1_0 = A_[1][0], A_1_1 = A_[1][1], A_1_2 = A_[1][2], A_1_3 = A_[1][3];
-  double A_2_0 = A_[2][0], A_2_1 = A_[2][1], A_2_2 = A_[2][2], A_2_3 = A_[2][3];
-  double A_3_0 = A_[3][0], A_3_1 = A_[3][1], A_3_2 = A_[3][2], A_3_3 = A_[3][3];
-
+__attribute__((noinline))
+void conjugateGradientSolver(TYPE A_0_0, TYPE A_0_1, TYPE A_0_2, TYPE A_0_3,
+                            TYPE A_1_0, TYPE A_1_1, TYPE A_1_2, TYPE A_1_3,
+                            TYPE A_2_0, TYPE A_2_1, TYPE A_2_2, TYPE A_2_3,
+                            TYPE A_3_0, TYPE A_3_1, TYPE A_3_2, TYPE A_3_3,
+                            TYPE B_0, TYPE B_1, TYPE B_2, TYPE B_3) {
   // Initializing vector X which will be set to the solution by this algorithm.
-  double X_0 = 0.0, X_1 = 0.0, X_2 = 0.0, X_3 = 0.0;
+  TYPE X_0 = 0.0, X_1 = 0.0, X_2 = 0.0, X_3 = 0.0;
 
   // Vector Initializations
-  double R_0 = B_[0], R_1 = B_[1], R_2 = B_[2], R_3 = B_[3];
-  double P_0 = B_[0], P_1 = B_[1], P_2 = B_[2], P_3 = B_[3];
+  TYPE R_0 = B_0, R_1 = B_1, R_2 = B_2, R_3 = B_3;
+  TYPE P_0 = B_0, P_1 = B_1, P_2 = B_2, P_3 = B_3;
 
   int k = 0;
 
-  while ( k < iterations )
+  while ( k < N )
   {
-    double Rold_0 = R_0, Rold_1 = R_1, Rold_2 = R_2, Rold_3 = R_3;
-    double AP_0, AP_1, AP_2, AP_3;
+    TYPE Rold_0 = R_0, Rold_1 = R_1, Rold_2 = R_2, Rold_3 = R_3;
+    TYPE AP_0, AP_1, AP_2, AP_3;
 
 
     //    for ( int i = 0; i < n; i++ ) {
@@ -183,7 +207,7 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
     AP_3 += A_3_2*P_2;
     AP_3 += A_3_3*P_3;
 
-    double NormOfR = 0;
+    TYPE NormOfR = 0;
     //    for (int j = 0; j < n; ++j)
     //      NormOfR += R[j]*R[j];
 
@@ -193,7 +217,7 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
     NormOfR += R_3*R_3;
 
 
-    double P_AP_Product = 0;
+    TYPE P_AP_Product = 0;
     //    for (int j = 0; j < n; ++j)
     //      P_AP_Product += P[j]*AP[j];
 
@@ -202,7 +226,7 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
     P_AP_Product += P_2*AP_2;
     P_AP_Product += P_3*AP_3;
 
-    double alpha = NormOfR / max( P_AP_Product, NEARZERO );
+    TYPE alpha = NormOfR / max( P_AP_Product, NEARZERO );
 
 
     //    for ( int j = 0; j < n; j++ )
@@ -228,7 +252,7 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
     if (NormOfR < TOLERANCE) break;
 
 
-    double NormOfRold = 0;
+    TYPE NormOfRold = 0;
     //    for (int j = 0; j < n; ++j)
     //      NormOfRold += Rold[j] * Rold[j];
 
@@ -239,7 +263,7 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
 
     //    double beta = NormOfR / max( NormOfRold, NEARZERO );
 
-    double beta = NormOfR / max( NormOfRold, NEARZERO );
+    TYPE beta = NormOfR / max( NormOfRold, NEARZERO );
 
     //    for ( int j = 0; j < n; j++ )
     //      P[j] = R[j] + beta * P[j];                            // Next gradient
@@ -252,11 +276,13 @@ vec conjugateGradientSolver( const matrix &A_, const vec &B_ )
     k++;
   }
 
-  vec X( n, 0.0);
+  printf("Number of iterations: %d\n", k);
+
+  vec X( 4, 0.0);
   X[0] = X_0;
   X[1] = X_1;
   X[2] = X_2;
   X[3] = X_3;
 
-  return X;
+  return ;
 }

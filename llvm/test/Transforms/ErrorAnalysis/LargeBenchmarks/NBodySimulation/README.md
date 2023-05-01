@@ -16,6 +16,8 @@ Highest Amplification Factor: 26.367014
 Highest Condition Number: 8.639406
 Highest Amplification Density: 8.639406
 Longest Path Length                             : 35
+Time: 0.097660\
+AF: 14.742505756975582 (ULPErr: 4.000000; 1.000000 digits) of Node with AFId:368383 WRT Input:%x0.addr.059 through path: [(62, 38), (48, 38), (34, 38), (20, 38), (19, 38), (11, 43)]
 
 Run 2:\
 #define x 0.637385368347168\
@@ -58,6 +60,7 @@ Highest Amplification Factor: 1752007089.561460\
 Highest Condition Number: 58.725245\
 Highest Amplification Density: 4146822.314689\
 Longest Path Length                             : 696\
+Time: 0.008459
 AF: 1752007089.561460494995117 (ULPErr: 31.000000; 2.000000 digits) of Node with AFId:14510 WRT Input:%y0.addr.055 through path: 
 [(5804, 38), (5790, 38), (5776, 38), (5762, 38), (5748, 38), (5734, 38), (5720, 38), (5706, 38), (5692, 38), (5678, 38), 
 (5664, 38), (5650, 38), (5636, 38), (5622, 38), (5608, 38), (5594, 38), (5580, 38), (5566, 38), (5552, 38), (5538, 38), 
@@ -118,6 +121,7 @@ Highest Amplification Factor: 26.366961\
 Highest Condition Number: 8.639395\
 Highest Amplification Density: 8.639395\
 Longest Path Length                             : 35\
+Time: 0.096648\
 AF: 26.366960899069884 (ULPErr: 5.000000; 1.000000 digits) of Node with AFId:361778 WRT Input:%x0.addr.056 through path: 
 [(62, 37), (48, 37), (47, 37), (39, 42), (25, 42), (11, 42)]
 
@@ -162,6 +166,7 @@ Highest Amplification Factor: 1718653732.507403\
 Highest Condition Number: 58.828155\
 Highest Amplification Density: 4067820.596229\
 Longest Path Length                             : 696\
+Time: 0.007939\
 AF: 1718653732.507402658462524 (ULPErr: 31.000000; 2.000000 digits) of Node with AFId:14510 WRT Input:%y0.addr.055 through path: 
 [(5804, 38), (5790, 38), (5776, 38), (5762, 38), (5748, 38), (5734, 38), (5720, 38), (5706, 38), (5692, 38), (5678, 38), 
 (5664, 38), (5650, 38), (5636, 38), (5622, 38), (5608, 38), (5594, 38), (5580, 38), (5566, 38), (5552, 38), (5538, 38), 

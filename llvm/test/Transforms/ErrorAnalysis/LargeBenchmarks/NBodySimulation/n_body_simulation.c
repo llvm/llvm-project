@@ -1,9 +1,10 @@
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
 
-#define TYPE float
-#define PRINT_PRECISION_FORMAT "%0.7f"
-#define SQRT sqrtf
+#define TYPE double
+#define PRINT_PRECISION_FORMAT "%0.15lf"
+#define SQRT sqrt
 
 // Inputs
 #define n 650
@@ -54,13 +55,20 @@ void run_simulation(TYPE x0, TYPE y0, TYPE z0, TYPE vx0, TYPE vy0, TYPE vz0) {
     z0 = z_New;
   }
 
-//  printf("x = "PRINT_PRECISION_FORMAT"\n", x);
-//  printf("y = "PRINT_PRECISION_FORMAT"\n", y);
-//  printf("z = "PRINT_PRECISION_FORMAT"\n", z);
+  printf("x = "PRINT_PRECISION_FORMAT"\n", x);
+  printf("y = "PRINT_PRECISION_FORMAT"\n", y);
+  printf("z = "PRINT_PRECISION_FORMAT"\n", z);
 }
 
 int main() {
+  // Calculate Time
+  clock_t t;
+  t = clock();
+
   run_simulation(x, y, z, vx, vy, vz);
+
+  t = clock() - t;
+  printf("Time: %f\n", ((double)t)/CLOCKS_PER_SEC);
 
   return 0;
 }

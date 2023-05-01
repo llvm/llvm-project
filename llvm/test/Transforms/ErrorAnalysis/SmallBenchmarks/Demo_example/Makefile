@@ -13,25 +13,25 @@ OPT_FLAGS = -S -passes=error-analysis
 
 LLI = $(LLVM_PROJECT_ROOT)/build/bin/lli
 
-RUN_TIME_LIB_FLAGS = -function-to-analyze conjugateGradientSolver \
+RUN_TIME_LIB_FLAGS = -function-to-analyze demo \
 					-evaluations 0
 
 RUN_TIME_FILES = --include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AtomicCondition.h \
 				--include $(RUN_TIME_LIB_ROOT)/AtomicCondition/AmplificationFactor.h \
 				--include $(RUN_TIME_LIB_ROOT)/Utilities/RunTimeUtilities.h
 
-run: cg_destructured_3_ac.ll
-	$(LLI) cg_destructured_3_ac.ll
+run: demo_ac.ll
+	$(LLI) demo_ac.ll
 
-cg_destructured_3_ac.ll: cg_destructured_3.ll
-	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) cg_destructured_3.ll -o cg_destructured_3_ac.ll
+demo_ac.ll: demo.ll
+	$(OPT) $(OPT_FLAGS) $(RUN_TIME_LIB_FLAGS) demo.ll -o demo_ac.ll
 
-cg_destructured_3.ll:
-	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) cg_destructured_3.cpp -o cg_destructured_3.ll
+demo.ll:
+	$(CXX) $(CXX_FLAGS) $(RUN_TIME_FILES) $(OP) demo.c -o demo.ll
 
 build_original:
-	gcc cg_destructured_3.cpp -o cg_destructured_3.out
+	gcc demo.c -lm -o demo.out
 
 clean:
-	rm -rf cg_destructured_3.ll cg_destructured_3_ac.ll a.out *.txt \
-#	.fAF_logs
+	rm -rf demo.ll demo_ac.ll demo_ac.out demo.out *.txt
+	#.fAF_logs

@@ -1,16 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-double RHO = 12;
-double SIGMA = 10;
-double BETA = 8/3;
+#include <time.h>
 
 #define TYPE double
 #define PRINT_PRECISION_FORMAT "%0.15lf"
 
+// Inputs
+TYPE RHO = 12;
+TYPE SIGMA = 10;
+TYPE BETA = 8/3;
+#define x 0.797150265052314
+#define y 0.797377767475103
+#define z 0.020565719820157
+#define n 400
+
 void solve_lorenz(TYPE x_0, TYPE y_0, TYPE z_0) {
   TYPE x_1 = 0, y_1 = 0, z_1 = 0;
-  int n = 100;
 
   char command_filename[] = "lorenz_ode_commands.txt";
   FILE *command_unit;
@@ -52,13 +57,14 @@ void solve_lorenz(TYPE x_0, TYPE y_0, TYPE z_0) {
 }
 
 int main() {
-  TYPE x_0 = 1.2;
-  TYPE y_0 = 1.3;
-  TYPE z_0 = 1.4;
-//  printf("Enter value of z: ");
-//  scanf("%lf", &z_0);
+  // Calculate Time
+  clock_t t;
+  t = clock();
 
-  solve_lorenz(x_0, y_0, z_0);
+  solve_lorenz(x, y, z);
+
+  t = clock() - t;
+  printf("Time: %f\n", ((double)t)/CLOCKS_PER_SEC);
 
 //  printf("z_1 = "PRINT_PRECISION_FORMAT"\n\n", z_1);
 }

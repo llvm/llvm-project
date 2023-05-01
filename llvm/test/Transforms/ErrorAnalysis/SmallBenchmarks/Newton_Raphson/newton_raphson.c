@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <time.h>
 
 #define TYPE double
 #define PRINT_PRECISION_FORMAT "%0.15lf"
@@ -8,7 +9,7 @@
 // Inputs
 #define x 0.0
 #define TOLERANCE 0.000001
-#define n 1000
+#define n 51
 
 __attribute__((noinline))
 TYPE newton_raphson(TYPE x_I) {
@@ -42,7 +43,12 @@ TYPE newton_raphson(TYPE x_I) {
 }
 
 int main() {
+  // Calculate Time
+  clock_t t;
+  t = clock();
   printf("x = "PRINT_PRECISION_FORMAT"\n", newton_raphson(x));
+  t = clock() - t;
+  printf("Time: %f\n", ((double)t)/CLOCKS_PER_SEC);
 
   return 0;
 }
