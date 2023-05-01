@@ -1064,8 +1064,7 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
                   Fortran::lower::StatementContext &stmtCtx,
                   const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond, async, waitDevnum;
-  llvm::SmallVector<mlir::Value> copyinOperands, createOperands,
-      createZeroOperands, attachOperands, waitOperands, dataClauseOperands;
+  llvm::SmallVector<mlir::Value> waitOperands, dataClauseOperands;
 
   // Async, wait and self clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -1076,7 +1075,7 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Lower clauses values mapped to operands.
-  // Keep track of each group of operands separatly as clauses can appear
+  // Keep track of each group of operands separately as clauses can appear
   // more than once.
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
@@ -1108,16 +1107,13 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
       const auto &modifier =
           std::get<std::optional<Fortran::parser::AccDataModifier>>(
               listWithModifier.t);
+      mlir::acc::DataClause clause = mlir::acc::DataClause::acc_create;
       if (modifier &&
-          (*modifier).v == Fortran::parser::AccDataModifier::Modifier::Zero) {
-        genDataOperandOperations<mlir::acc::CreateOp>(
-            accObjectList, converter, semanticsContext, stmtCtx,
-            dataClauseOperands, mlir::acc::DataClause::acc_create_zero, false);
-      } else {
-        genDataOperandOperations<mlir::acc::CreateOp>(
-            accObjectList, converter, semanticsContext, stmtCtx,
-            dataClauseOperands, mlir::acc::DataClause::acc_create, false);
-      }
+          (*modifier).v == Fortran::parser::AccDataModifier::Modifier::Zero)
+        clause = mlir::acc::DataClause::acc_create_zero;
+      genDataOperandOperations<mlir::acc::CreateOp>(
+          accObjectList, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, clause, false);
     } else if (const auto *attachClause =
                    std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
       genDataOperandOperations<mlir::acc::AttachOp>(
@@ -1129,17 +1125,14 @@ genACCEnterDataOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 16> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
   addOperand(operands, operandSegments, ifCond);
   addOperand(operands, operandSegments, async);
   addOperand(operands, operandSegments, waitDevnum);
   addOperands(operands, operandSegments, waitOperands);
-  addOperands(operands, operandSegments, copyinOperands);
-  addOperands(operands, operandSegments, createOperands);
-  addOperands(operands, operandSegments, createZeroOperands);
-  addOperands(operands, operandSegments, attachOperands);
+  operandSegments.append({0, 0, 0, 0});
   addOperands(operands, operandSegments, dataClauseOperands);
 
   mlir::acc::EnterDataOp enterDataOp = createSimpleOp<mlir::acc::EnterDataOp>(
