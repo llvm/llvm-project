@@ -1193,9 +1193,7 @@ public:
   bool runtimeChecksRequired();
 
   /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every VF in \p CandidateVFs. If UserVF is not ZERO
-  /// then this vectorization factor will be selected if vectorization is
-  /// possible.
+  /// This method checks every VF in \p CandidateVFs.
   VectorizationFactor
   selectVectorizationFactor(const ElementCountSet &CandidateVFs);
 
