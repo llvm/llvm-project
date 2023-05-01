@@ -293,8 +293,11 @@ public:
   void SetPrompt(const char *) = delete;
 
   bool GetUseExternalEditor() const;
-
   bool SetUseExternalEditor(bool use_external_editor_p);
+
+  llvm::StringRef GetExternalEditor() const;
+
+  bool SetExternalEditor(llvm::StringRef editor);
 
   bool GetUseColor() const;
 

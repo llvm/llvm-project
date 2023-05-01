@@ -135,6 +135,10 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Whether to use an external editor or not.">;
+  def ExternalEditor: Property<"external-editor", "String">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"External editor to use when use-external-editor is enabled.">;
   def UseColor: Property<"use-color", "Boolean">,
     Global,
     DefaultTrue,
