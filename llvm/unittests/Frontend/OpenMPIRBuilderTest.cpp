@@ -5119,6 +5119,62 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, TargetRegion) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  OpenMPIRBuilderConfig Config(false, false, false, false);
+  OMPBuilder.setConfig(Config);
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  auto Int32Ty = Builder.getInt32Ty();
+
+  AllocaInst *APtr = Builder.CreateAlloca(Int32Ty, nullptr, "a_ptr");
+  AllocaInst *BPtr = Builder.CreateAlloca(Int32Ty, nullptr, "b_ptr");
+  AllocaInst *CPtr = Builder.CreateAlloca(Int32Ty, nullptr, "c_ptr");
+
+  Builder.CreateStore(Builder.getInt32(10), APtr);
+  Builder.CreateStore(Builder.getInt32(20), BPtr);
+  auto BodyGenCB = [&](InsertPointTy AllocaIP,
+                       InsertPointTy CodeGenIP) -> InsertPointTy {
+    Builder.restoreIP(CodeGenIP);
+    LoadInst *AVal = Builder.CreateLoad(Int32Ty, APtr);
+    LoadInst *BVal = Builder.CreateLoad(Int32Ty, BPtr);
+    Value *Sum = Builder.CreateAdd(AVal, BVal);
+    Builder.CreateStore(Sum, CPtr);
+    return Builder.saveIP();
+  };
+
+  llvm::SmallVector<llvm::Value *> Inputs;
+  Inputs.push_back(APtr);
+  Inputs.push_back(BPtr);
+  Inputs.push_back(CPtr);
+
+  TargetRegionEntryInfo EntryInfo("func", 42, 4711, 17);
+  OpenMPIRBuilder::LocationDescription OmpLoc({Builder.saveIP(), DL});
+  Builder.restoreIP(OMPBuilder.createTarget(OmpLoc, Builder.saveIP(), EntryInfo,
+                                            -1, -1, Inputs, BodyGenCB));
+  OMPBuilder.finalize();
+  Builder.CreateRetVoid();
+
+  // Check the outlined call
+  auto Iter = F->getEntryBlock().rbegin();
+  CallInst *Call = dyn_cast<CallInst>(&*(++Iter));
+  EXPECT_NE(Call, nullptr);
+
+  // Check that the correct aguments are passed in
+  for (auto ArgInput : zip(Call->args(), Inputs)) {
+    EXPECT_EQ(std::get<0>(ArgInput), std::get<1>(ArgInput));
+  }
+
+  // Check that the outlined function exists with the expected prefix
+  Function *OutlinedFunc = Call->getCalledFunction();
+  EXPECT_NE(OutlinedFunc, nullptr);
+  StringRef FunctionName = OutlinedFunc->getName();
+  EXPECT_TRUE(FunctionName.startswith("__omp_offloading"));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTask) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
