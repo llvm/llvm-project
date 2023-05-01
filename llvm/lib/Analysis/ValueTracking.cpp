@@ -6438,7 +6438,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
     ArrayRef<int> Mask = isa<ConstantExpr>(Op)
                              ? cast<ConstantExpr>(Op)->getShuffleMask()
                              : cast<ShuffleVectorInst>(Op)->getShuffleMask();
-    return is_contained(Mask, UndefMaskElem);
+    return is_contained(Mask, PoisonMaskElem);
   }
   case Instruction::FNeg:
   case Instruction::PHI:
