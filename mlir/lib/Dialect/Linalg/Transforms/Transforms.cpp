@@ -477,7 +477,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // 1. Filter out NYI cases.
   auto packedTensorType =
       packOp->getResultTypes().front().cast<RankedTensorType>();
-  if (!packedTensorType.hasStaticShape()) {
+  if (llvm::any_of(packOp.getStaticInnerTiles(),
+                   [](int64_t size) { return ShapedType::isDynamic(size); })) {
     return rewriter.notifyMatchFailure(
         packOp,
         "non-static shape NYI, needs a more powerful tensor.expand_shape op");
@@ -520,6 +521,22 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   applyPermutationToVector(stripMinedShape, packedToStripMinedShapePerm);
 
   // 4. Pad the source of packOp to a shape we can expand into stripMinedShape.
+  SmallVector<OpFoldResult> lows(packOp.getSourceRank(),
+                                 rewriter.getIndexAttr(0));
+  SmallVector<OpFoldResult> highs(packOp.getSourceRank(),
+                                  rewriter.getIndexAttr(0));
+  for (auto [pos, innerSize] :
+       llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getMixedTiles())) {
+    OpFoldResult origSize = rewriter.createOrFold<tensor::DimOp>(
+        loc, packOp.getSource(),
+        rewriter.create<arith::ConstantIndexOp>(loc, pos));
+    AffineExpr s0, d0;
+    bindDims(rewriter.getContext(), d0);
+    bindSymbols(rewriter.getContext(), s0);
+    auto map = AffineMap::get(1, 1, d0.ceilDiv(s0) * s0 - d0);
+    highs[pos] = affine::makeComposedFoldedAffineApply(rewriter, loc, map,
+                                                       {origSize, innerSize});
+  }
   RankedTensorType collapsed = tensor::CollapseShapeOp::inferCollapsedType(
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
       packingMetadata.reassociations);
@@ -529,8 +546,8 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
         loc, rewriter.getZeroAttr(getElementTypeOrSelf(collapsed)));
   }
   auto padOp =
-      tensor::createPadHighOp(collapsed, packOp.getSource(), paddingValue,
-                              /*nofold=*/false, loc, rewriter);
+      rewriter.create<tensor::PadOp>(loc, collapsed, packOp.getSource(), lows,
+                                     highs, paddingValue, /*nofold=*/false);
 
   LLVM_DEBUG(
       DBGSNL(); DBGSNL(); llvm::interleaveComma(packingMetadata.insertPositions,
