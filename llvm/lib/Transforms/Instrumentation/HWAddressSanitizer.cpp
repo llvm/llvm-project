@@ -1040,7 +1040,8 @@ unsigned HWAddressSanitizer::retagMask(unsigned AllocaNo) {
 Value *HWAddressSanitizer::applyTagMask(IRBuilder<> &IRB, Value *OldTag) {
   if (TagMaskByte == 0xFF)
     return OldTag; // No need to clear the tag byte.
-  return IRB.CreateAnd(OldTag, ConstantInt::get(IntptrTy, TagMaskByte));
+  return IRB.CreateAnd(OldTag,
+                       ConstantInt::get(OldTag->getType(), TagMaskByte));
 }
 
 Value *HWAddressSanitizer::getNextTagWithCall(IRBuilder<> &IRB) {
@@ -1067,8 +1068,8 @@ Value *HWAddressSanitizer::getAllocaTag(IRBuilder<> &IRB, Value *StackTag,
                                         unsigned AllocaNo) {
   if (ClGenerateTagsWithCalls)
     return getNextTagWithCall(IRB);
-  return IRB.CreateXor(StackTag,
-                       ConstantInt::get(IntptrTy, retagMask(AllocaNo)));
+  return IRB.CreateXor(
+      StackTag, ConstantInt::get(StackTag->getType(), retagMask(AllocaNo)));
 }
 
 Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB) {
