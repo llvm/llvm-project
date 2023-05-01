@@ -359,6 +359,12 @@ TEST_F(FormatTestVerilog, Headers) {
                "     input var shortreal in2,\n"
                "     output tagged_st out);\n"
                "endmodule");
+  // There should be a space following the type but not the variable name.
+  verifyFormat("module test\n"
+               "    (input wire [7 : 0] a,\n"
+               "     input wire b[7 : 0],\n"
+               "     input wire [7 : 0] c[7 : 0]);\n"
+               "endmodule");
   // Ports should be grouped by types.
   verifyFormat("module test\n"
                "    (input [7 : 0] a,\n"
