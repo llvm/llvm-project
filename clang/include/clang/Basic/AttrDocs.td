@@ -2344,7 +2344,7 @@ The attribute will be rejected unless
 is enabled under the ``-mrvv-vector-bits`` flag. ``__riscv_v_fixed_vlen`` can
 only be a power of 2 between 64 and 65536.
 
-Only `*m1_t`(LMUL=1) types are supported at this time.
+Only ``*m1_t`` (LMUL=1) types are supported at this time.
 }];
 }
 
