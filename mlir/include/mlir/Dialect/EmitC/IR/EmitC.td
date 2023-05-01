@@ -45,7 +45,6 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 
     ```
   }];
-  // TODO: Disallow to apply the operator & (address of) to emitc.constant operations.
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
     AnyType:$operand
