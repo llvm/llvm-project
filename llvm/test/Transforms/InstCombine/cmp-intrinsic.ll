@@ -812,8 +812,8 @@ define <2 x i1> @bitreverse_vec_eq_1_2_todo_no_splat(<2 x i8> %x) {
 
 define i1 @umax_eq_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_eq_zero(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
@@ -845,8 +845,8 @@ define i1 @umax_sle_zero_fail(i8 %x, i8 %y) {
 
 define i1 @umax_ne_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_ne_zero(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[M]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = call i8 @llvm.umax.i8(i8 %x, i8 %y)
