@@ -13,7 +13,10 @@
 #include "bolt/Core/DebugData.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/DWP/DWP.h"
 #include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -45,6 +48,7 @@ public:
     uint64_t Length;
     uint64_t TUHash;
   };
+  using UnitMetaVectorType = std::vector<UnitMeta>;
 
 private:
   BinaryContext &BC;
@@ -88,15 +92,6 @@ private:
 
   std::mutex LocListDebugInfoPatchesMutex;
 
-  /// Dwo id specific its .debug_info.dwo section content.
-  std::unordered_map<uint64_t, std::string> DwoDebugInfoMap;
-
-  /// Dwo id specific its .debug_abbrev.dwo section content.
-  std::unordered_map<uint64_t, std::string> DwoDebugAbbrevMap;
-
-  /// Dwo id specific its .debug_types.dwo section content.
-  std::unordered_map<uint64_t, std::string> DwoDebugTypeMap;
-
   /// Dwo id specific its RangesBase.
   std::unordered_map<uint64_t, uint64_t> DwoRangesBase;
 
@@ -106,12 +101,6 @@ private:
   /// Entries for GDB Index Types CU List
   using GDBIndexTUEntryType = std::vector<GDBIndexTUEntry>;
   GDBIndexTUEntryType GDBIndexTUEntryVector;
-
-  using UnitMetaVectorType = std::vector<UnitMeta>;
-  using TUnitMetaDwoMapType = std::unordered_map<uint64_t, UnitMetaVectorType>;
-  using CUnitMetaDwoMapType = std::unordered_map<uint64_t, UnitMeta>;
-  CUnitMetaDwoMapType CUnitMetaDwoMap;
-  TUnitMetaDwoMapType TUnitMetaDwoMap;
 
   /// DWARFLegacy is all DWARF versions before DWARF 5.
   enum class DWARFVersion { DWARFLegacy, DWARF5 };
@@ -148,12 +137,6 @@ private:
 
   /// Rewrite .gdb_index section if present.
   void updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs);
-
-  /// Output .dwo files.
-  void writeDWOFiles(std::unordered_map<uint64_t, std::string> &DWOIdToName);
-
-  /// Output .dwp files.
-  void writeDWP(std::unordered_map<uint64_t, std::string> &DWOIdToName);
 
   /// DWARFDie contains a pointer to a DIE and hence gets invalidated once the
   /// embedded DIE is destroyed. This wrapper class stores a DIE internally and
@@ -197,38 +180,7 @@ public:
   /// Update stmt_list for CUs based on the new .debug_line \p Layout.
   void updateLineTableOffsets(const MCAsmLayout &Layout);
 
-  /// Given a \p DWOId, return its DebugLocWriter if it exists.
-  DebugLocWriter *getDebugLocWriter(uint64_t DWOId) {
-    auto Iter = LocListWritersByCU.find(DWOId);
-    return Iter == LocListWritersByCU.end() ? nullptr
-                                            : LocListWritersByCU[DWOId].get();
-  }
-
-  StringRef getDwoDebugInfoStr(uint64_t DWOId) {
-    return DwoDebugInfoMap[DWOId];
-  }
-
-  StringRef getDwoDebugAbbrevStr(uint64_t DWOId) {
-    return DwoDebugAbbrevMap[DWOId];
-  }
-
-  StringRef getDwoDebugTypeStr(uint64_t DWOId) {
-    return DwoDebugTypeMap[DWOId];
-  }
-
   uint64_t getDwoRangesBase(uint64_t DWOId) { return DwoRangesBase[DWOId]; }
-
-  void setDwoDebugInfoStr(uint64_t DWOId, StringRef Str) {
-    DwoDebugInfoMap[DWOId] = Str.str();
-  }
-
-  void setDwoDebugAbbrevStr(uint64_t DWOId, StringRef Str) {
-    DwoDebugAbbrevMap[DWOId] = Str.str();
-  }
-
-  void setDwoDebugTypeStr(uint64_t DWOId, StringRef Str) {
-    DwoDebugTypeMap[DWOId] = Str.str();
-  }
 
   void setDwoRangesBase(uint64_t DWOId, uint64_t RangesBase) {
     DwoRangesBase[DWOId] = RangesBase;
@@ -242,30 +194,37 @@ public:
     return GDBIndexTUEntryVector;
   }
 
-  /// Stores meta data for each CU per DWO ID. It's used to create cu-index for
-  /// DWARF5.
-  void addCUnitMetaEntry(const uint64_t DWOId, const UnitMeta &Entry) {
-    auto RetVal = CUnitMetaDwoMap.insert({DWOId, Entry});
-    if (!RetVal.second)
-      errs() << "BOLT-WARNING: [internal-dwarf-error]: Trying to set CU meta "
-                "data twice for DWOID: "
-             << Twine::utohexstr(DWOId) << ".\n";
-  }
+  using OverriddenSectionsMap = std::unordered_map<DWARFSectionKind, StringRef>;
+  /// Output .dwo files.
+  void writeDWOFiles(DWARFUnit &, const OverriddenSectionsMap &,
+                     const std::string &, DebugLocWriter &);
+  using KnownSectionsEntry = std::pair<MCSection *, DWARFSectionKind>;
+  struct DWPState {
+    std::unique_ptr<ToolOutputFile> Out;
+    std::unique_ptr<BinaryContext> TmpBC;
+    std::unique_ptr<MCStreamer> Streamer;
+    std::unique_ptr<DWPStringPool> Strings;
+    const MCObjectFileInfo *MCOFI = nullptr;
+    const DWARFUnitIndex *CUIndex = nullptr;
+    std::deque<SmallString<32>> UncompressedSections;
+    MapVector<uint64_t, UnitIndexEntry> IndexEntries;
+    MapVector<uint64_t, UnitIndexEntry> TypeIndexEntries;
+    StringMap<KnownSectionsEntry> KnownSections;
+    uint32_t ContributionOffsets[8] = {};
+    uint32_t IndexVersion = 2;
+    uint64_t DebugInfoSize = 0;
+    uint16_t Version = 0;
+    bool IsDWP = false;
+  };
+  /// Init .dwp file
+  void initDWPState(DWPState &);
 
-  /// Stores meta data for each TU per DWO ID. It's used to create cu-index for
-  /// DWARF5.
-  void addTUnitMetaEntry(const uint64_t DWOId, const UnitMeta &Entry) {
-    TUnitMetaDwoMap[DWOId].emplace_back(Entry);
-  }
+  /// Write out .dwp File
+  void finalizeDWP(DWPState &);
 
-  /// Returns Meta data for TUs in offset increasing order.
-  UnitMetaVectorType &getTUnitMetaEntries(const uint64_t DWOId) {
-    return TUnitMetaDwoMap[DWOId];
-  }
-  /// Returns Meta data for TUs in offset increasing order.
-  const UnitMeta &getCUnitMetaEntry(const uint64_t DWOId) {
-    return CUnitMetaDwoMap[DWOId];
-  }
+  /// add content of dwo to .dwp file.
+  void updateDWP(DWARFUnit &, const OverriddenSectionsMap &, const UnitMeta &,
+                 UnitMetaVectorType &, DWPState &, DebugLocWriter &);
 };
 
 } // namespace bolt
