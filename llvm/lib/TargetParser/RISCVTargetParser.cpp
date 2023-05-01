@@ -27,14 +27,13 @@ enum CPUKind : unsigned {
 
 struct CPUInfo {
   StringLiteral Name;
-  CPUKind Kind;
   StringLiteral DefaultMarch;
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
 constexpr CPUInfo RISCVCPUInfo[] = {
 #define PROC(ENUM, NAME, DEFAULT_MARCH)                              \
-  {NAME, CK_##ENUM, DEFAULT_MARCH},
+  {NAME, DEFAULT_MARCH},
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
