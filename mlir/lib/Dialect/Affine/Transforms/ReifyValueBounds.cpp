@@ -19,7 +19,7 @@ using namespace mlir::affine;
 static FailureOr<OpFoldResult>
 reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
                 Value value, std::optional<int64_t> dim,
-                function_ref<bool(Value, std::optional<int64_t>)> stopCondition,
+                ValueBoundsConstraintSet::StopConditionFn stopCondition,
                 bool closedUB) {
   // Compute bound.
   AffineMap boundMap;
@@ -28,6 +28,13 @@ reifyValueBound(OpBuilder &b, Location loc, presburger::BoundType type,
           boundMap, mapOperands, type, value, dim, stopCondition, closedUB)))
     return failure();
 
+  // Reify bound.
+  return affine::materializeComputedBound(b, loc, boundMap, mapOperands);
+}
+
+OpFoldResult affine::materializeComputedBound(
+    OpBuilder &b, Location loc, AffineMap boundMap,
+    ArrayRef<std::pair<Value, std::optional<int64_t>>> mapOperands) {
   // Materialize tensor.dim/memref.dim ops.
   SmallVector<Value> operands;
   for (auto valueDim : mapOperands) {

@@ -4,9 +4,15 @@ add_mlir_dialect_library(MLIRTensorTransformOps
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tensor/TransformOps
 
+  DEPENDS
+  MLIRTensorTransformOpsIncGen
+
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
   MLIRIR
   MLIRPDLDialect
+  MLIRSCFDialect
   MLIRTensorDialect
+  MLIRTensorTransforms
   MLIRTransformDialect
 )
