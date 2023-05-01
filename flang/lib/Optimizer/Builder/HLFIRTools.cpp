@@ -270,6 +270,8 @@ mlir::Value hlfir::genVariableRawAddress(mlir::Location loc,
   if (var.isMutableBox())
     baseAddr = builder.create<fir::LoadOp>(loc, baseAddr);
   // Get raw address.
+  if (var.getType().isa<fir::BoxCharType>())
+    baseAddr = genUnboxChar(loc, builder, var.getBase()).getAddr();
   if (baseAddr.getType().isa<fir::BaseBoxType>())
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
   return baseAddr;
@@ -310,9 +312,12 @@ hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
       var.getFortranElementType().dyn_cast<fir::CharacterType>();
   if (!maybeCharType || maybeCharType.hasDynamicLen())
     hlfir::genLengthParameters(loc, builder, var, typeParams);
+  mlir::Value addr = var.getBase();
+  if (var.getType().isa<fir::BoxCharType>())
+    addr = genVariableRawAddress(loc, builder, var);
   mlir::Type boxType = fir::BoxType::get(var.getElementOrSequenceType());
   auto embox =
-      builder.create<fir::EmboxOp>(loc, boxType, var, shape,
+      builder.create<fir::EmboxOp>(loc, boxType, addr, shape,
                                    /*slice=*/mlir::Value{}, typeParams);
   return hlfir::Entity{embox.getResult()};
 }
