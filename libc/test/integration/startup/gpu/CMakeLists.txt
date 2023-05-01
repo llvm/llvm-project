@@ -25,3 +25,13 @@ add_integration_test(
     --blocks 16
     --threads 1
 )
+
+# Constructors are currently only supported on AMDGPU.
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
+  add_integration_test(
+    init_fini_array_test
+    SUITE libc-startup-tests
+    SRCS
+      init_fini_array_test.cpp
+  )
+endif()
