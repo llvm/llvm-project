@@ -35,7 +35,6 @@ struct VPlanTransforms {
   VPInstructionsToVPRecipes(VPlanPtr &Plan,
                             function_ref<const InductionDescriptor *(PHINode *)>
                                 GetIntOrFpInductionDescriptor,
-                            SmallPtrSetImpl<Instruction *> &DeadInstructions,
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
