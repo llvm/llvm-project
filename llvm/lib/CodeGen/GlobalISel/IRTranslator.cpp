@@ -1879,6 +1879,37 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
   return true;
 }
 
+std::optional<MCRegister> IRTranslator::getArgPhysReg(Argument &Arg) {
+  auto VRegs = getOrCreateVRegs(Arg);
+  if (VRegs.size() != 1)
+    return std::nullopt;
+
+  // Arguments are lowered as a copy of a livein physical register.
+  auto *VRegDef = MF->getRegInfo().getVRegDef(VRegs[0]);
+  if (!VRegDef || !VRegDef->isCopy())
+    return std::nullopt;
+  return VRegDef->getOperand(1).getReg().asMCReg();
+}
+
+bool IRTranslator::translateIfEntryValueArgument(
+    const DbgDeclareInst &DebugInst) {
+  auto *Arg = dyn_cast<Argument>(DebugInst.getAddress());
+  if (!Arg)
+    return false;
+
+  const DIExpression *Expr = DebugInst.getExpression();
+  if (!Expr->isEntryValue())
+    return false;
+
+  std::optional<MCRegister> PhysReg = getArgPhysReg(*Arg);
+  if (!PhysReg)
+    return false;
+
+  MF->setVariableDbgInfo(DebugInst.getVariable(), Expr, *PhysReg,
+                         DebugInst.getDebugLoc());
+  return true;
+}
+
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
   if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
@@ -1945,12 +1976,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       // instructions (in fact, they get ignored if they *do* exist).
       MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
                              getOrCreateFrameIndex(*AI), DI.getDebugLoc());
-    } else {
-      // A dbg.declare describes the address of a source variable, so lower it
-      // into an indirect DBG_VALUE.
-      MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
-                                       DI.getVariable(), DI.getExpression());
+      return true;
     }
+
+    if (translateIfEntryValueArgument(DI))
+      return true;
+
+    // A dbg.declare describes the address of a source variable, so lower it
+    // into an indirect DBG_VALUE.
+    MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
+                                     DI.getVariable(), DI.getExpression());
     return true;
   }
   case Intrinsic::dbg_label: {
