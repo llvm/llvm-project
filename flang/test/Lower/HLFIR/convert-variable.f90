@@ -23,7 +23,8 @@ end subroutine
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<1>
 ! CHECK:  %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 10 : index
-! CHECK:  %[[VAL_3:.*]] = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_2]] {uniq_name = "_QFscalar_character_cst_lenEc"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
+! CHECK:  %[[VAL_4:.*]] = hlfir.declare %[[VAL_3]] typeparams %[[VAL_2]] {uniq_name = "_QFscalar_character_cst_lenEc"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 
 subroutine array_numeric(x)
   integer :: x(10, 20)
