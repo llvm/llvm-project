@@ -52,17 +52,17 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t SlotSize = STI.getXLen() / 8;
   // Store return address to shadow call stack
-  // s[w|d]  ra, 0(gp)
   // addi    gp, gp, [4|8]
-  BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
-      .addReg(RAReg)
-      .addReg(SCSPReg)
-      .addImm(0)
-      .setMIFlag(MachineInstr::FrameSetup);
+  // s[w|d]  ra, -[4|8](gp)
   BuildMI(MBB, MI, DL, TII->get(RISCV::ADDI))
       .addReg(SCSPReg, RegState::Define)
       .addReg(SCSPReg)
       .addImm(SlotSize)
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
+      .addReg(RAReg)
+      .addReg(SCSPReg)
+      .addImm(-SlotSize)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // Emit a CFI instruction that causes SlotSize to be subtracted from the value
