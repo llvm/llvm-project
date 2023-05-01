@@ -51,10 +51,10 @@ define void @sdiv_ok(i16 %n, i16 %xx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[XO:%.*]] = or i16 [[XX:%.*]], 1
 ; CHECK-NEXT:    [[X:%.*]] = and i16 [[XO]], 123
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[N:%.*]], [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[N:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i16 [[DIV]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -74,10 +74,10 @@ define void @srem_ok2(i16 %nn, i16 %xx) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = and i16 [[NN:%.*]], 123
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = srem i16 [[N]], [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[DIV:%.*]] = srem i16 [[N]], [[X]]
 ; CHECK-NEXT:    call void @use(i16 [[DIV]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -117,10 +117,10 @@ define void @udiv_ok(i16 %n, i16 %xx) {
 ; CHECK-LABEL: @udiv_ok(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i16 [[N:%.*]], [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i16 [[N:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i16 [[DIV]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
