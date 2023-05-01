@@ -2936,6 +2936,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
         return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1),
                             /*NSW*/ true);
+      case Intrinsic::umax:
       case Intrinsic::uadd_sat:
         if (isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) ||
             isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
