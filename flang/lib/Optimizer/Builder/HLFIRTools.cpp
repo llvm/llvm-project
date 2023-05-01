@@ -791,7 +791,7 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
   if (firBase.getType().isa<fir::BaseBoxType>()) {
     if (!variable.isSimplyContiguous() || variable.isPolymorphic() ||
-        variable.isDerivedWithLengthParameters()) {
+        variable.isDerivedWithLengthParameters() || variable.isOptional()) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds =
           getNonDefaultLowerBounds(loc, builder, variable);
       return fir::BoxValue(firBase, nonDefaultLbounds,
