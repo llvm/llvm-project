@@ -1389,4 +1389,17 @@ define ptr @const_gep_0xi8_global() {
   ret ptr getelementptr ([0 x i8], ptr @g_0xi8_e, i64 0, i64 10)
 }
 
+define ptr @const_gep_chain(ptr %p, i64 %a) {
+; CHECK-LABEL: @const_gep_chain(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 6
+; CHECK-NEXT:    ret ptr [[P4]]
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 %a
+  %p2 = getelementptr inbounds i8, ptr %p1, i64 1
+  %p3 = getelementptr inbounds i8, ptr %p2, i64 2
+  %p4 = getelementptr inbounds i8, ptr %p3, i64 3
+  ret ptr %p4
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}

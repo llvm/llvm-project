@@ -319,8 +319,8 @@ public:
   void printPlans(raw_ostream &O);
 #endif
 
-  /// Look through the existing plans and return true if we have one with all
-  /// the vectorization factors in question.
+  /// Look through the existing plans and return true if we have one with
+  /// vectorization factor \p VF.
   bool hasPlanWithVF(ElementCount VF) const {
     return any_of(VPlans,
                   [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });

@@ -90,7 +90,7 @@ namespace sampleprof {
 enum SampleProfileFormat {
   SPF_None = 0,
   SPF_Text = 0x1,
-  SPF_Compact_Binary = 0x2,
+  SPF_Compact_Binary = 0x2, // Deprecated
   SPF_GCC = 0x3,
   SPF_Ext_Binary = 0x4,
   SPF_Binary = 0xff

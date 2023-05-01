@@ -129,26 +129,23 @@ int __sanitizer_acquire_crash_state();
 /// state <c>mid == end</c>, so that should be the final state when the
 /// container is destroyed or when the container reallocates the storage.
 ///
-/// For ASan, <c><i>beg</i></c> should be 8-aligned and <c><i>end</i></c>
-/// should be either 8-aligned or it should point to the end of a separate
-/// heap-, stack-, or global-allocated buffer. So the following example will
-/// not work:
+/// For ASan, <c><i>beg</i></c> no longer needs to be 8-aligned,
+/// first and last granule may be shared with other objects
+/// and therefore the function can be used for any allocator.
+///
+/// The following example shows how to use the function:
 ///
 /// \code
-///   int64_t x[2]; // 16 bytes, 8-aligned
-///   char *beg = (char *)&x[0];
-///   char *end = beg + 12; // Not 8-aligned, not the end of the buffer
-/// \endcode
-///
-/// The following, however, will work:
-/// \code
-///   int32_t x[3]; // 12 bytes, but 8-aligned under ASan.
+///   int32_t x[3]; // 12 bytes
 ///   char *beg = (char*)&x[0];
-///   char *end = beg + 12; // Not 8-aligned, but is the end of the buffer
+///   char *end = beg + 12;
+///   __sanitizer_annotate_contiguous_container(beg, end, beg, end);
 /// \endcode
 ///
 /// \note  Use this function with caution and do not use for anything other
 /// than vector-like classes.
+/// \note  Unaligned <c><i>beg</i></c> or <c><i>end</i></c> may miss bugs in
+/// these granules.
 ///
 /// \param beg Beginning of memory region.
 /// \param end End of memory region.

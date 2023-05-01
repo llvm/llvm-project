@@ -150,7 +150,8 @@ namespace llvm {
   };
 
   /// CodeGenRegister - Represents a register definition.
-  struct CodeGenRegister {
+  class CodeGenRegister {
+  public:
     Record *TheDef;
     unsigned EnumValue;
     std::vector<int64_t> CostPerUse;

@@ -16,8 +16,6 @@
 #include "execution_defs.h"
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl {
 namespace __internal {
 
@@ -87,7 +85,5 @@ __select_backend(__pstl::execution::parallel_unsequenced_policy, _IteratorTypes&
 
 } // namespace __internal
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_IMPL_H */

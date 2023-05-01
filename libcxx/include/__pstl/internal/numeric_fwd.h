@@ -15,8 +15,6 @@
 
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl {
 namespace __internal {
 
@@ -250,7 +248,5 @@ _OutputIterator __pattern_adjacent_difference(
 
 } // namespace __internal
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_NUMERIC_FWD_H */

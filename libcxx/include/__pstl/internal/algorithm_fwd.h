@@ -16,33 +16,8 @@
 
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl {
 namespace __internal {
-
-//------------------------------------------------------------------------
-// any_of
-//------------------------------------------------------------------------
-
-template <class _ForwardIterator, class _Pred>
-bool __brick_any_of(const _ForwardIterator,
-                    const _ForwardIterator,
-                    _Pred,
-                    /*__is_vector=*/std::false_type) noexcept;
-
-template <class _RandomAccessIterator, class _Pred>
-bool __brick_any_of(const _RandomAccessIterator,
-                    const _RandomAccessIterator,
-                    _Pred,
-                    /*__is_vector=*/std::true_type) noexcept;
-
-template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Pred>
-bool __pattern_any_of(_Tag, _ExecutionPolicy&&, _ForwardIterator, _ForwardIterator, _Pred) noexcept;
-
-template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Pred>
-bool __pattern_any_of(
-    __parallel_tag<_IsVector>, _ExecutionPolicy&&, _RandomAccessIterator, _RandomAccessIterator, _Pred);
 
 //------------------------------------------------------------------------
 // walk1 (pseudo)
@@ -344,31 +319,6 @@ bool __pattern_equal(
     _RandomAccessIterator2,
     _RandomAccessIterator2,
     _BinaryPredicate);
-
-//------------------------------------------------------------------------
-// find_if
-//------------------------------------------------------------------------
-
-template <class _ForwardIterator, class _Predicate>
-_ForwardIterator __brick_find_if(
-    _ForwardIterator,
-    _ForwardIterator,
-    _Predicate,
-    /*is_vector=*/std::false_type) noexcept;
-
-template <class _RandomAccessIterator, class _Predicate>
-_RandomAccessIterator __brick_find_if(
-    _RandomAccessIterator,
-    _RandomAccessIterator,
-    _Predicate,
-    /*is_vector=*/std::true_type) noexcept;
-
-template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-_ForwardIterator __pattern_find_if(_Tag, _ExecutionPolicy&&, _ForwardIterator, _ForwardIterator, _Predicate) noexcept;
-
-template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Predicate>
-_RandomAccessIterator __pattern_find_if(
-    __parallel_tag<_IsVector>, _ExecutionPolicy&&, _RandomAccessIterator, _RandomAccessIterator, _Predicate);
 
 //------------------------------------------------------------------------
 // find_end
@@ -1815,7 +1765,5 @@ bool __pattern_lexicographical_compare(
 
 } // namespace __internal
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_ALGORITHM_FWD_H */

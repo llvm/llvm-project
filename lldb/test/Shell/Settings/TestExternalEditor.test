@@ -1,0 +1,4 @@
+REQUIRES: system-darwin
+RUN: %lldb -o 'settings set use-external-editor true' -o 'setting set external-editor foo' -o 'session save' -b 2>&1 | FileCheck %s
+RUN: LLDB_EXTERNAL_EDITOR="foo" %lldb -o 'settings set use-external-editor true' -o 'session save' -b 2>&1 | FileCheck %s
+CHECK: error: could not find external editor "foo": LSFindApplicationForInfo returned error

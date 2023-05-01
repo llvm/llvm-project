@@ -719,7 +719,11 @@ LogicalResult UnpackOp::verify() {
   const auto coordinatesTp = getRankedTensorType(getCoordinates());
   const auto srcTp = getSparseTensorType(getTensor());
   return verifyPackUnPack(*this, false, srcTp, valuesTp, coordinatesTp,
-                          nullptr);
+                          getBatchedLvlsAttr());
+}
+
+unsigned UnpackOp::getNumBatchedLvls() {
+  return getBatchedLvls().has_value() ? getBatchedLvls()->getZExtValue() : 0;
 }
 
 LogicalResult ConvertOp::verify() {
