@@ -767,13 +767,9 @@ define i1 @cttz_nonzero_fail_maybe_odd(i8 %xx, i8 %cnt, i8 %ind) {
 
 define i1 @mul_nonzero_odd(i8 %xx, i8 %y, i8 %ind) {
 ; CHECK-LABEL: @mul_nonzero_odd(
-; CHECK-NEXT:    [[XO:%.*]] = or i8 [[XX:%.*]], 1
 ; CHECK-NEXT:    [[Y_NZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NZ]])
-; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XO]], [[Y]]
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %xo = or i8 %xx, 1
   %y_nz = icmp ne i8 %y, 0
