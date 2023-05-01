@@ -1545,15 +1545,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // Hexagon has A4_addp_c and A4_subp_c that take and generate a carry bit,
   // but they only operate on i64.
   for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::UADDO,    VT, Custom);
-    setOperationAction(ISD::USUBO,    VT, Custom);
-    setOperationAction(ISD::SADDO,    VT, Expand);
-    setOperationAction(ISD::SSUBO,    VT, Expand);
-    setOperationAction(ISD::ADDCARRY, VT, Expand);
-    setOperationAction(ISD::SUBCARRY, VT, Expand);
+    setOperationAction(ISD::UADDO, VT, Custom);
+    setOperationAction(ISD::USUBO, VT, Custom);
+    setOperationAction(ISD::SADDO, VT, Expand);
+    setOperationAction(ISD::SSUBO, VT, Expand);
+    setOperationAction(ISD::UADDO_CARRY, VT, Expand);
+    setOperationAction(ISD::USUBO_CARRY, VT, Expand);
   }
-  setOperationAction(ISD::ADDCARRY, MVT::i64, Custom);
-  setOperationAction(ISD::SUBCARRY, MVT::i64, Custom);
+  setOperationAction(ISD::UADDO_CARRY, MVT::i64, Custom);
+  setOperationAction(ISD::USUBO_CARRY, MVT::i64, Custom);
 
   setOperationAction(ISD::CTLZ, MVT::i8,  Promote);
   setOperationAction(ISD::CTLZ, MVT::i16, Promote);
@@ -3263,13 +3263,13 @@ HexagonTargetLowering::LowerUAddSubO(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-SDValue
-HexagonTargetLowering::LowerAddSubCarry(SDValue Op, SelectionDAG &DAG) const {
+SDValue HexagonTargetLowering::LowerUAddSubOCarry(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   unsigned Opc = Op.getOpcode();
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1), C = Op.getOperand(2);
 
-  if (Opc == ISD::ADDCARRY)
+  if (Opc == ISD::UADDO_CARRY)
     return DAG.getNode(HexagonISD::ADDC, dl, Op.getNode()->getVTList(),
                        { X, Y, C });
 
@@ -3342,8 +3342,8 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::STORE:                return LowerStore(Op, DAG);
     case ISD::UADDO:
     case ISD::USUBO:                return LowerUAddSubO(Op, DAG);
-    case ISD::ADDCARRY:
-    case ISD::SUBCARRY:             return LowerAddSubCarry(Op, DAG);
+    case ISD::UADDO_CARRY:
+    case ISD::USUBO_CARRY:          return LowerUAddSubOCarry(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                  return LowerVECTOR_SHIFT(Op, DAG);

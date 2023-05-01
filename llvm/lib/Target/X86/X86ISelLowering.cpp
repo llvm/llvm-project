@@ -2331,8 +2331,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMULO, VT, Custom);
 
     // Support carry in as value rather than glue.
-    setOperationAction(ISD::ADDCARRY, VT, Custom);
-    setOperationAction(ISD::SUBCARRY, VT, Custom);
+    setOperationAction(ISD::UADDO_CARRY, VT, Custom);
+    setOperationAction(ISD::USUBO_CARRY, VT, Custom);
     setOperationAction(ISD::SETCCCARRY, VT, Custom);
     setOperationAction(ISD::SADDO_CARRY, VT, Custom);
     setOperationAction(ISD::SSUBO_CARRY, VT, Custom);
@@ -33358,7 +33358,7 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
   return Swap.getValue(1);
 }
 
-static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   MVT VT = N->getSimpleValueType(0);
   unsigned Opc = Op.getOpcode();
@@ -33376,7 +33376,7 @@ static SDValue LowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG) {
   Carry = DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32),
                       Carry, DAG.getAllOnesConstant(DL, CarryVT));
 
-  bool IsAdd = Opc == ISD::ADDCARRY || Opc == ISD::SADDO_CARRY;
+  bool IsAdd = Opc == ISD::UADDO_CARRY || Opc == ISD::SADDO_CARRY;
   SDValue Sum = DAG.getNode(IsAdd ? X86ISD::ADC : X86ISD::SBB, DL, VTs,
                             Op.getOperand(0), Op.getOperand(1),
                             Carry.getValue(1));
@@ -33951,8 +33951,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::BITCAST:            return LowerBITCAST(Op, Subtarget, DAG);
   case ISD::SADDO_CARRY:
   case ISD::SSUBO_CARRY:
-  case ISD::ADDCARRY:
-  case ISD::SUBCARRY:           return LowerADDSUBCARRY(Op, DAG);
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:        return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::ADD:
   case ISD::SUB:                return lowerAddSub(Op, DAG, Subtarget);
   case ISD::UADDSAT:

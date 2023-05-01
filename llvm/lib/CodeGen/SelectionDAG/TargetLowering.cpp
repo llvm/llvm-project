@@ -7222,7 +7222,7 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
     Next = DAG.getNode(ISD::ADDC, dl, DAG.getVTList(VT, MVT::Glue), Next,
                        Merge(Lo, Hi));
   else
-    Next = DAG.getNode(ISD::ADDCARRY, dl, DAG.getVTList(VT, BoolType), Next,
+    Next = DAG.getNode(ISD::UADDO_CARRY, dl, DAG.getVTList(VT, BoolType), Next,
                        Merge(Lo, Hi), DAG.getConstant(0, dl, BoolType));
 
   SDValue Carry = Next.getValue(1);
@@ -7236,7 +7236,7 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
     Hi = DAG.getNode(ISD::ADDE, dl, DAG.getVTList(HiLoVT, MVT::Glue), Hi, Zero,
                      Carry);
   else
-    Hi = DAG.getNode(ISD::ADDCARRY, dl, DAG.getVTList(HiLoVT, BoolType), Hi,
+    Hi = DAG.getNode(ISD::UADDO_CARRY, dl, DAG.getVTList(HiLoVT, BoolType), Hi,
                      Zero, Carry);
 
   Next = DAG.getNode(ISD::ADD, dl, VT, Next, Merge(Lo, Hi));
@@ -7378,13 +7378,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
     }
 
-    // Use addcarry if we can, otherwise use a compare to detect overflow.
+    // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
     EVT SetCCType =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), HiLoVT);
-    if (isOperationLegalOrCustom(ISD::ADDCARRY, HiLoVT)) {
+    if (isOperationLegalOrCustom(ISD::UADDO_CARRY, HiLoVT)) {
       SDVTList VTList = DAG.getVTList(HiLoVT, SetCCType);
       Sum = DAG.getNode(ISD::UADDO, dl, VTList, LL, LH);
-      Sum = DAG.getNode(ISD::ADDCARRY, dl, VTList, Sum,
+      Sum = DAG.getNode(ISD::UADDO_CARRY, dl, VTList, Sum,
                         DAG.getConstant(0, dl, HiLoVT), Sum.getValue(1));
     } else {
       Sum = DAG.getNode(ISD::ADD, dl, HiLoVT, LL, LH);
@@ -9935,8 +9935,8 @@ void TargetLowering::expandUADDSUBO(
   SDValue RHS = Node->getOperand(1);
   bool IsAdd = Node->getOpcode() == ISD::UADDO;
 
-  // If ADD/SUBCARRY is legal, use that instead.
-  unsigned OpcCarry = IsAdd ? ISD::ADDCARRY : ISD::SUBCARRY;
+  // If UADDO_CARRY/SUBO_CARRY is legal, use that instead.
+  unsigned OpcCarry = IsAdd ? ISD::UADDO_CARRY : ISD::USUBO_CARRY;
   if (isOperationLegalOrCustom(OpcCarry, Node->getValueType(0))) {
     SDValue CarryIn = DAG.getConstant(0, dl, Node->getValueType(1));
     SDValue NodeCarry = DAG.getNode(OpcCarry, dl, Node->getVTList(),
