@@ -380,28 +380,6 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
       __new_value);
 }
 
-// [alg.fill]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
-fill(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
-
-  __pstl::__internal::__pattern_fill(__dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last, __value);
-}
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Tp>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-fill_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __count, const _Tp& __value) {
-  if (__count <= 0)
-    return __first;
-
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
-
-  return __pstl::__internal::__pattern_fill_n(
-      __dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __count, __value);
-}
-
 // [alg.generate]
 template <class _ExecutionPolicy, class _ForwardIterator, class _Generator>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>

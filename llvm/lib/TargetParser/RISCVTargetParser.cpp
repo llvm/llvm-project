@@ -19,6 +19,12 @@
 namespace llvm {
 namespace RISCV {
 
+enum CPUKind : unsigned {
+#define PROC(ENUM, NAME, DEFAULT_MARCH) CK_##ENUM,
+#define TUNE_PROC(ENUM, NAME) CK_##ENUM,
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+};
+
 struct CPUInfo {
   StringLiteral Name;
   CPUKind Kind;
@@ -33,13 +39,28 @@ constexpr CPUInfo RISCVCPUInfo[] = {
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
-bool checkCPUKind(CPUKind Kind, bool IsRV64) {
+static CPUKind getCPUByName(StringRef CPU) {
+  return llvm::StringSwitch<CPUKind>(CPU)
+#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+      .Default(CK_INVALID);
+}
+
+bool parseCPU(StringRef CPU, bool IsRV64) {
+  CPUKind Kind = getCPUByName(CPU);
+
   if (Kind == CK_INVALID)
     return false;
   return RISCVCPUInfo[static_cast<unsigned>(Kind)].is64Bit() == IsRV64;
 }
 
-bool checkTuneCPUKind(CPUKind Kind, bool IsRV64) {
+bool parseTuneCPU(StringRef TuneCPU, bool IsRV64) {
+  CPUKind Kind = llvm::StringSwitch<CPUKind>(TuneCPU)
+#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
+#define TUNE_PROC(ENUM, NAME) .Case(NAME, CK_##ENUM)
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+      .Default(CK_INVALID);
+
   if (Kind == CK_INVALID)
     return false;
 #define TUNE_PROC(ENUM, NAME)                                                  \
@@ -49,23 +70,8 @@ bool checkTuneCPUKind(CPUKind Kind, bool IsRV64) {
   return RISCVCPUInfo[static_cast<unsigned>(Kind)].is64Bit() == IsRV64;
 }
 
-CPUKind parseCPUKind(StringRef CPU) {
-  return llvm::StringSwitch<CPUKind>(CPU)
-#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-      .Default(CK_INVALID);
-}
-
-CPUKind parseTuneCPUKind(StringRef TuneCPU, bool IsRV64) {
-  return llvm::StringSwitch<CPUKind>(TuneCPU)
-#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
-#define TUNE_PROC(ENUM, NAME) .Case(NAME, CK_##ENUM)
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-      .Default(CK_INVALID);
-}
-
 StringRef getMArchFromMcpu(StringRef CPU) {
-  CPUKind Kind = parseCPUKind(CPU);
+  CPUKind Kind = getCPUByName(CPU);
   return RISCVCPUInfo[static_cast<unsigned>(Kind)].DefaultMarch;
 }
 
