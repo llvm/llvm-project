@@ -65,6 +65,7 @@ def libc_function(
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
     deps = deps or []
+
     # We use the explicit equals pattern here because append and += mutate the
     # original list, where this creates a new list and stores it in deps.
     deps = deps + [LIBC_ROOT_TARGET]
