@@ -85,9 +85,16 @@ def AMDGPUcall : SDNode<"AMDGPUISD::CALL",
   SDNPVariadic]
 >;
 
-def AMDGPUtc_return: SDNode<"AMDGPUISD::TC_RETURN",
-  SDTypeProfile<0, 3, [SDTCisPtrTy<0>]>,
-  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+def AMDGPUTCReturnTP : SDTypeProfile<0, 3, [
+  SDTCisPtrTy<0>
+]>;
+
+def AMDGPUtc_return: SDNode<"AMDGPUISD::TC_RETURN", AMDGPUTCReturnTP,
+[SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
+def AMDGPUtc_return_gfx: SDNode<"AMDGPUISD::TC_RETURN_GFX", AMDGPUTCReturnTP,
+[SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
 >;
 
 def AMDGPUtrap : SDNode<"AMDGPUISD::TRAP",
