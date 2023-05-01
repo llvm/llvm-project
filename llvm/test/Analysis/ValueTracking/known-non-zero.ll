@@ -924,10 +924,7 @@ define i1 @sadd_sat_nonzero(i8 %xx, i8 %yy, i8 %ind) {
 ; CHECK-NEXT:    [[Y_POS:%.*]] = icmp sge i8 [[YY:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_STRICT_POS]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_POS]])
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[XX]], i8 [[YY]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_strict_pos = icmp sgt i8 %xx, 0
   %y_pos = icmp sge i8 %yy, 0

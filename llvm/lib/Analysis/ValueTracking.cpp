@@ -2932,6 +2932,10 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       case Intrinsic::ssub_sat:
         return isNonZeroSub(DemandedElts, Depth, Q, BitWidth,
                             II->getArgOperand(0), II->getArgOperand(1));
+      case Intrinsic::sadd_sat:
+        return isNonZeroAdd(DemandedElts, Depth, Q, BitWidth,
+                            II->getArgOperand(0), II->getArgOperand(1),
+                            /*NSW*/ true);
       case Intrinsic::uadd_sat:
         if (isKnownNonZero(II->getArgOperand(0), DemandedElts, Depth, Q) ||
             isKnownNonZero(II->getArgOperand(1), DemandedElts, Depth, Q))
