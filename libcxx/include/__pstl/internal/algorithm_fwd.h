@@ -22,29 +22,6 @@ namespace __pstl {
 namespace __internal {
 
 //------------------------------------------------------------------------
-// any_of
-//------------------------------------------------------------------------
-
-template <class _ForwardIterator, class _Pred>
-bool __brick_any_of(const _ForwardIterator,
-                    const _ForwardIterator,
-                    _Pred,
-                    /*__is_vector=*/std::false_type) noexcept;
-
-template <class _RandomAccessIterator, class _Pred>
-bool __brick_any_of(const _RandomAccessIterator,
-                    const _RandomAccessIterator,
-                    _Pred,
-                    /*__is_vector=*/std::true_type) noexcept;
-
-template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Pred>
-bool __pattern_any_of(_Tag, _ExecutionPolicy&&, _ForwardIterator, _ForwardIterator, _Pred) noexcept;
-
-template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Pred>
-bool __pattern_any_of(
-    __parallel_tag<_IsVector>, _ExecutionPolicy&&, _RandomAccessIterator, _RandomAccessIterator, _Pred);
-
-//------------------------------------------------------------------------
 // walk1 (pseudo)
 //
 // walk1 evaluates f(x) for each dereferenced value x drawn from [first,last)

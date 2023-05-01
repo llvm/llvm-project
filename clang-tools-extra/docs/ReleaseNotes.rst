@@ -201,6 +201,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/dynamic-static-initializers>` check.
   Global options of the same name should be used instead.
 
+- Improved :doc:`bugprone-exception-escape
+  <clang-tidy/checks/bugprone/exception-escape>` to not emit warnings for
+  forward declarations of functions.
+
 - Improved :doc:`bugprone-fold-init-type
   <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not
   define `value_type` type aliases.

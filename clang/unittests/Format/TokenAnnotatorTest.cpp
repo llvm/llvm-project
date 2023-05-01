@@ -1615,13 +1615,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   Tokens = Annotate("extern function [1 : 0] x;");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_BitFieldColon);
+  Tokens = Annotate("module test\n"
+                    "    (input wire [7 : 0] a[7 : 0]);\n"
+                    "endmodule");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_VerilogDimensionedTypeName);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_BitFieldColon);
+  EXPECT_TOKEN(Tokens[13], tok::colon, TT_BitFieldColon);
   // Test case labels and ternary operators.
   Tokens = Annotate("case (x)\n"
                     "  x:\n"
                     "    x;\n"
                     "endcase\n");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
-  EXPECT_TOKEN(Tokens[5], tok::colon, TT_GotoLabelColon);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_CaseLabelColon);
   Tokens = Annotate("case (x)\n"
                     "  x ? x : x:\n"
                     "    x;\n"
@@ -1629,7 +1636,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::question, TT_ConditionalExpr);
   EXPECT_TOKEN(Tokens[7], tok::colon, TT_ConditionalExpr);
-  EXPECT_TOKEN(Tokens[9], tok::colon, TT_GotoLabelColon);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_CaseLabelColon);
   // Non-blocking assignments.
   Tokens = Annotate("a <= b;");
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
@@ -1750,6 +1757,21 @@ TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
   Tokens = annotate("cond ? cond2 ? : id1 : id2", Style);
   EXPECT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
+}
+
+TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
+  auto Tokens = annotate("{ x: break; }");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_GotoLabelColon);
+  Tokens = annotate("{ case x: break; }");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
+  Tokens = annotate("{ x: { break; } }");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::colon, TT_GotoLabelColon);
+  Tokens = annotate("{ case x: { break; } }");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_CaseLabelColon);
 }
 
 } // namespace

@@ -20,34 +20,6 @@ _PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std {
 
-// [alg.any_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-any_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred);
-
-// [alg.all_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-all_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred);
-
-// [alg.none_of]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool>
-none_of(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred);
-
-// [alg.foreach]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Function>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, void>
-for_each(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Function __f);
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Function>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-for_each_n(_ExecutionPolicy&& __exec, _ForwardIterator __first, _Size __n, _Function __f);
-
 // [alg.find]
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>

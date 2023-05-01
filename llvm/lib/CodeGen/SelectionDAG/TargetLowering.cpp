@@ -6703,9 +6703,9 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   // NOTE: we avoid letting illegal types through even if we're before legalize
   // ops – legalization has a hard time producing good code for the code that
   // follows.
-  if (!isOperationLegalOrCustom(ISD::SETEQ, VT) ||
+  if (!isOperationLegalOrCustom(ISD::SETCC, SETCCVT) ||
       !isOperationLegalOrCustom(ISD::AND, VT) ||
-      !isOperationLegalOrCustom(Cond, VT) ||
+      !isCondCodeLegalOrCustom(Cond, VT.getSimpleVT()) ||
       !isOperationLegalOrCustom(ISD::VSELECT, SETCCVT))
     return SDValue();
 
