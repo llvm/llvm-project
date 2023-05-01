@@ -75,21 +75,15 @@ private:
   std::unique_ptr<Impl> impl;
 };
 
-/// Status of bytecode serialization.
-struct BytecodeWriterResult {
-  /// The minimum version of the reader required to read the serialized file.
-  int64_t minVersion;
-};
-
 //===----------------------------------------------------------------------===//
 // Entry Points
 //===----------------------------------------------------------------------===//
 
 /// Write the bytecode for the given operation to the provided output stream.
 /// For streams where it matters, the given stream should be in "binary" mode.
-BytecodeWriterResult
-writeBytecodeToFile(Operation *op, raw_ostream &os,
-                    const BytecodeWriterConfig &config = {});
+/// It only ever fails if setDesiredByteCodeVersion can't be honored.
+LogicalResult writeBytecodeToFile(Operation *op, raw_ostream &os,
+                                  const BytecodeWriterConfig &config = {});
 
 } // namespace mlir
 
