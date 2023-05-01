@@ -982,6 +982,20 @@ TEST_F(ValueTrackingTest, programUndefinedIfPoison) {
   EXPECT_EQ(programUndefinedIfPoison(A), true);
 }
 
+TEST_F(ValueTrackingTest, programUndefinedIfPoisonSelect) {
+  parseAssembly("declare i32 @any_num()"
+                "define void @test(i1 %Cond) {\n"
+                "  %A = call i32 @any_num()\n"
+                "  %B = add i32 %A, 1\n"
+                "  %C = select i1 %Cond, i32 %A, i32 %B\n"
+                "  udiv i32 1, %C"
+                "  ret void\n"
+                "}\n");
+  // If A is poison, B is also poison, and therefore C is poison regardless of
+  // the value of %Cond.
+  EXPECT_EQ(programUndefinedIfPoison(A), true);
+}
+
 TEST_F(ValueTrackingTest, programUndefinedIfUndefOrPoison) {
   parseAssembly("declare i32 @any_num()"
                 "define void @test(i32 %mask) {\n"

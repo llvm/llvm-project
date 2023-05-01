@@ -533,4 +533,34 @@ TEST(RandomIRBuilderTest, sinkToInstrinsic) {
   }
   ASSERT_FALSE(Modified);
 }
+
+TEST(RandomIRBuilderTest, DoNotCallPointerWhenSink) {
+  const char *Source = "\n\
+        declare void @g()  \n\
+        define void @f(ptr %ptr) {  \n\
+        Entry:   \n\
+            call void @g()  \n\
+            ret void \n\
+        }";
+  LLVMContext Ctx;
+  std::mt19937 mt(Seed);
+  std::uniform_int_distribution<int> RandInt(INT_MIN, INT_MAX);
+
+  RandomIRBuilder IB(RandInt(mt), {});
+  std::unique_ptr<Module> M = parseAssembly(Source, Ctx);
+  Function &F = *M->getFunction("f");
+  BasicBlock &BB = F.getEntryBlock();
+  bool Modified = false;
+
+  Instruction *I = &*BB.begin();
+  for (int i = 0; i < 20; i++) {
+    Value *OldOperand = I->getOperand(0);
+    Value *Src = F.getArg(0);
+    IB.connectToSink(BB, {I}, Src);
+    Value *NewOperand = I->getOperand(0);
+    Modified |= (OldOperand != NewOperand);
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+  }
+  ASSERT_FALSE(Modified);
+}
 } // namespace

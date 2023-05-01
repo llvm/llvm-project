@@ -309,7 +309,6 @@ extern unsigned struct_msqid_ds_sz;
 extern unsigned struct_mq_attr_sz;
 extern unsigned struct_timex_sz;
 extern unsigned struct_statvfs_sz;
-extern unsigned struct_crypt_data_sz;
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 struct __sanitizer_iovec {
@@ -578,8 +577,13 @@ struct __sanitizer_sigset_t {
 #endif
 
 struct __sanitizer_siginfo_pad {
+#if SANITIZER_X32
+  // x32 siginfo_t is aligned to 8 bytes.
+  u64 pad[128 / sizeof(u64)];
+#else
   // Require uptr, because siginfo_t is always pointer-size aligned on Linux.
   uptr pad[128 / sizeof(uptr)];
+#endif
 };
 
 #if SANITIZER_LINUX

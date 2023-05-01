@@ -1133,7 +1133,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   if (auto *E = dyn_cast<SCEVUnknown>(Expr))
     return Plan.getVPValueOrAddLiveIn(E->getValue());
 
-  VPBasicBlock *Preheader = Plan.getEntry()->getEntryBasicBlock();
+  VPBasicBlock *Preheader = Plan.getEntry();
   VPExpandSCEVRecipe *Step = new VPExpandSCEVRecipe(Expr, SE);
   Preheader->appendRecipe(Step);
   return Step;

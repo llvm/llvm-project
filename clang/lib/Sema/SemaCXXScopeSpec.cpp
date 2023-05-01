@@ -131,7 +131,8 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
             // entering the context, and that can't happen in a SFINAE context.
             assert(!isSFINAEContext() && "partial specialization scope "
                                          "specifier in SFINAE context?");
-            if (!hasReachableDefinition(PartialSpec))
+            if (PartialSpec->hasDefinition() &&
+                !hasReachableDefinition(PartialSpec))
               diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
                                     MissingImportKind::PartialSpecialization,
                                     true);

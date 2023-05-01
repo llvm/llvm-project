@@ -8,6 +8,7 @@
 #include "clang/AST/APValue.h"
 
 namespace clang {
+class ASTContext;
 namespace interp {
 
 class FunctionPointer final {
@@ -36,6 +37,13 @@ public:
     else
       OS << "nullptr";
     OS << ")";
+  }
+
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    if (!Func)
+      return "nullptr";
+
+    return toAPValue().getAsString(Ctx, Func->getDecl()->getType());
   }
 
   ComparisonCategoryResult compare(const FunctionPointer &RHS) const {

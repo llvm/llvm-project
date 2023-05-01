@@ -702,17 +702,30 @@ void Function::addDereferenceableOrNullParamAttr(unsigned ArgNo,
 
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
   if (&FPType == &APFloat::IEEEsingle()) {
-    Attribute Attr = getFnAttribute("denormal-fp-math-f32");
-    StringRef Val = Attr.getValueAsString();
-    if (!Val.empty())
-      return parseDenormalFPAttribute(Val);
-
+    DenormalMode Mode = getDenormalModeF32Raw();
     // If the f32 variant of the attribute isn't specified, try to use the
     // generic one.
+    if (Mode.isValid())
+      return Mode;
   }
 
+  return getDenormalModeRaw();
+}
+
+DenormalMode Function::getDenormalModeRaw() const {
   Attribute Attr = getFnAttribute("denormal-fp-math");
-  return parseDenormalFPAttribute(Attr.getValueAsString());
+  StringRef Val = Attr.getValueAsString();
+  return parseDenormalFPAttribute(Val);
+}
+
+DenormalMode Function::getDenormalModeF32Raw() const {
+  Attribute Attr = getFnAttribute("denormal-fp-math-f32");
+  if (Attr.isValid()) {
+    StringRef Val = Attr.getValueAsString();
+    return parseDenormalFPAttribute(Val);
+  }
+
+  return DenormalMode::getInvalid();
 }
 
 const std::string &Function::getGC() const {

@@ -37,10 +37,11 @@ subroutine pass_kind2_char_to_char(c)
   call takes_char(c)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpass_kind2_char_to_char(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ec
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}Ec
+! CHECK:  %[[VAL_3:.*]] = fir.emboxchar %[[VAL_2]]#1, %{{.*}} : (!fir.ref<!fir.char<2,4>>, index) -> !fir.boxchar<2>
 ! CHECK:  %[[VAL_4:.*]] = fir.address_of(@_QPtakes_char) : (!fir.boxchar<1>) -> ()
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : ((!fir.boxchar<1>) -> ()) -> ((!fir.boxchar<2>) -> ())
-! CHECK:  fir.call %[[VAL_5]](%[[VAL_3]]#0) {{.*}}: (!fir.boxchar<2>) -> ()
+! CHECK:  fir.call %[[VAL_5]](%[[VAL_3]]) {{.*}}: (!fir.boxchar<2>) -> ()
 
 subroutine takes_real(r)
   real(8) :: r
@@ -60,10 +61,11 @@ subroutine pass_char_to_real(c)
   call takes_real(c)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpass_char_to_real(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ec
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}Ec
+! CHECK:  %[[VAL_3:.*]] = fir.emboxchar %[[VAL_2]]#1, %{{.*}} : (!fir.ref<!fir.char<1,8>>, index) -> !fir.boxchar<1>
 ! CHECK:  %[[VAL_4:.*]] = fir.address_of(@_QPtakes_real) : (!fir.ref<f64>) -> ()
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : ((!fir.ref<f64>) -> ()) -> ((!fir.boxchar<1>) -> ())
-! CHECK:  fir.call %[[VAL_5]](%[[VAL_3]]#0) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK:  fir.call %[[VAL_5]](%[[VAL_3]]) {{.*}}: (!fir.boxchar<1>) -> ()
 
 subroutine pass_proc_to_real()
   real(8), external :: proc
@@ -105,10 +107,11 @@ subroutine pass_char_to_char_proc(c)
   call takes_char_proc(c)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpass_char_to_char_proc(
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}Ec
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}Ec
+! CHECK:  %[[VAL_3:.*]] = fir.emboxchar %[[VAL_2]]#1, %{{.*}} : (!fir.ref<!fir.char<1,8>>, index) -> !fir.boxchar<1>
 ! CHECK:  %[[VAL_4:.*]] = fir.address_of(@_QPtakes_char_proc) : (tuple<!fir.boxproc<() -> ()>, i64>) -> ()
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : ((tuple<!fir.boxproc<() -> ()>, i64>) -> ()) -> ((!fir.boxchar<1>) -> ())
-! CHECK:  fir.call %[[VAL_5]](%[[VAL_3]]#0) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK:  fir.call %[[VAL_5]](%[[VAL_3]]) {{.*}}: (!fir.boxchar<1>) -> ()
 
 subroutine takes_proc(proc)
   real(8), external :: proc

@@ -217,6 +217,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #endif
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__fwd/ios.h>
 #include <__ios/fpos.h>
 #include <__locale>
 #include <__system_error/error_category.h>

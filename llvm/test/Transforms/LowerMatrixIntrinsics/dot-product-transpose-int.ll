@@ -178,7 +178,7 @@ define <1 x i32> @test_builtin_column_major_variable_stride_multiuse(ptr %src, <
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[COL_LOAD]], <1 x i32> [[COL_LOAD3]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <1 x i32> [[COL_LOAD6]], <1 x i32> [[COL_LOAD9]], <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x i32> [[COL_LOAD12]], <1 x i32> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x i32> [[COL_LOAD12]], <1 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i32> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x i32> poison, i32 [[TMP6]], i64 0

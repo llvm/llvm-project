@@ -1374,11 +1374,12 @@ bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
   return false;
 }
 
-bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd) {
+bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd, bool force) {
   auto pos = m_command_dict.find(std::string(cmd));
   if (pos != m_command_dict.end()) {
-    if (pos->second->IsRemovable()) {
-      // Only regular expression objects or python commands are removable
+    if (force || pos->second->IsRemovable()) {
+      // Only regular expression objects or python commands are removable under
+      // normal circumstances.
       m_command_dict.erase(pos);
       return true;
     }
@@ -3270,8 +3271,10 @@ bool CommandInterpreter::SaveTranscript(
   if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
     const FileSpec file_spec;
     error = file->GetFileSpec(const_cast<FileSpec &>(file_spec));
-    if (error.Success())
-      Host::OpenFileInExternalEditor(file_spec, 1);
+    if (error.Success()) {
+      if (llvm::Error e = Host::OpenFileInExternalEditor(file_spec, 1))
+        result.AppendError(llvm::toString(std::move(e)));
+    }
   }
 
   return true;

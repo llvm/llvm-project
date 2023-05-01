@@ -9,14 +9,26 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
 
-// This file can only include headers from src/__support/CPP/ or
-// utils/testutils. No other headers should be included.
+// This is defined as a simple macro in test.h so that it exists for platforms
+// that don't use our test infrastructure. It's defined as a proper function
+// below.
+#ifdef libc_make_test_file_path
+#undef libc_make_test_file_path
+#endif // libc_make_test_file_path
+
+// This is defined as a macro here to avoid namespace issues.
+#define libc_make_test_file_path(file_name)                                    \
+  (__llvm_libc::testing::libc_make_test_file_path_func(file_name))
+
+// This file can only include headers from src/__support/ or test/UnitTest. No
+// other headers should be included.
 
 #include "PlatformDefs.h"
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/c_string.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
@@ -258,6 +270,8 @@ template <typename... Types> struct TypeList {
 
 // Make TypeList visible in __llvm_libc::testing.
 template <typename... Types> using TypeList = internal::TypeList<Types...>;
+
+CString libc_make_test_file_path_func(const char *file_name);
 
 } // namespace testing
 } // namespace __llvm_libc

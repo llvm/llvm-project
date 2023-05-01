@@ -204,8 +204,8 @@ struct LinalgPromotionOptions {
   /// If ith element of `useFullTiles` is true the full view should be used
   /// for the promoted buffer of the ith operand in `operandsToPromote`.
   /// Otherwise the partial view will be used. The decision is defaulted to
-  /// `useFullTileBuffersDefault` when `useFullTileBuffers` is None and for
-  /// operands missing from `useFullTileBuffers`.
+  /// `useFullTileBuffersDefault` when `useFullTileBuffers` is std::nullopt and
+  /// for operands missing from `useFullTileBuffers`.
   std::optional<llvm::SmallBitVector> useFullTileBuffers;
   LinalgPromotionOptions &setUseFullTileBuffers(ArrayRef<bool> useFullTiles) {
     unsigned size = useFullTiles.size();

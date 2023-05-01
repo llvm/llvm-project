@@ -28,34 +28,6 @@ csrrs t1, sstatus, zero
 # uimm12
 csrrs t2, 0x100, zero
 
-# sedeleg
-# name
-# CHECK-INST: csrrs t1, sedeleg, zero
-# CHECK-ENC: encoding: [0x73,0x23,0x20,0x10]
-# CHECK-INST-ALIAS: csrr t1, sedeleg
-# uimm12
-# CHECK-INST: csrrs t2, sedeleg, zero
-# CHECK-ENC: encoding: [0xf3,0x23,0x20,0x10]
-# CHECK-INST-ALIAS: csrr t2, sedeleg
-# name
-csrrs t1, sedeleg, zero
-# uimm12
-csrrs t2, 0x102, zero
-
-# sideleg
-# name
-# CHECK-INST: csrrs t1, sideleg, zero
-# CHECK-ENC: encoding: [0x73,0x23,0x30,0x10]
-# CHECK-INST-ALIAS: csrr t1, sideleg
-# uimm12
-# CHECK-INST: csrrs t2, sideleg, zero
-# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x10]
-# CHECK-INST-ALIAS: csrr t2, sideleg
-# name
-csrrs t1, sideleg, zero
-# uimm12
-csrrs t2, 0x103, zero
-
 # sie
 # name
 # CHECK-INST: csrrs t1, sie, zero

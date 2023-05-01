@@ -241,14 +241,15 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableNoTrappingFPMath);
 
-  static const auto DenormFlagEnumOptions =
-  cl::values(clEnumValN(DenormalMode::IEEE, "ieee",
-                        "IEEE 754 denormal numbers"),
-             clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
-                        "the sign of a  flushed-to-zero number is preserved "
-                        "in the sign of 0"),
-             clEnumValN(DenormalMode::PositiveZero, "positive-zero",
-                        "denormals are flushed to positive zero"));
+  static const auto DenormFlagEnumOptions = cl::values(
+      clEnumValN(DenormalMode::IEEE, "ieee", "IEEE 754 denormal numbers"),
+      clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
+                 "the sign of a  flushed-to-zero number is preserved "
+                 "in the sign of 0"),
+      clEnumValN(DenormalMode::PositiveZero, "positive-zero",
+                 "denormals are flushed to positive zero"),
+      clEnumValN(DenormalMode::Dynamic, "dynamic",
+                 "denormals have unknown treatment"));
 
   // FIXME: Doesn't have way to specify separate input and output modes.
   static cl::opt<DenormalMode::DenormalModeKind> DenormalFPMath(

@@ -869,7 +869,9 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   const uint64_t MaxEdgeCount = getInstrMaxCountValue();
 
   instrprof_error Result;
-  auto Err = [&](Error E) { Result = InstrProfError::take(std::move(E)); };
+  auto Err = [&](Error E) {
+    Result = std::get<0>(InstrProfError::take(std::move(E)));
+  };
   Result = instrprof_error::success;
   Writer.addRecord({"foo", 0x1234, {1}}, Err);
   ASSERT_EQ(Result, instrprof_error::success);
@@ -1354,16 +1356,18 @@ TEST(ProfileReaderTest, ReadsLargeFiles) {
   if (!RawProfile)
     GTEST_SKIP();
   auto RawProfileReaderOrErr = InstrProfReader::create(std::move(RawProfile));
-  ASSERT_TRUE(InstrProfError::take(RawProfileReaderOrErr.takeError()) ==
-              instrprof_error::unrecognized_format);
+  ASSERT_TRUE(
+      std::get<0>(InstrProfError::take(RawProfileReaderOrErr.takeError())) ==
+      instrprof_error::unrecognized_format);
 
   auto IndexedProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
   if (!IndexedProfile)
     GTEST_SKIP();
   auto IndexedReaderOrErr =
       IndexedInstrProfReader::create(std::move(IndexedProfile), nullptr);
-  ASSERT_TRUE(InstrProfError::take(IndexedReaderOrErr.takeError()) ==
-              instrprof_error::bad_magic);
+  ASSERT_TRUE(
+      std::get<0>(InstrProfError::take(IndexedReaderOrErr.takeError())) ==
+      instrprof_error::bad_magic);
 }
 #endif
 

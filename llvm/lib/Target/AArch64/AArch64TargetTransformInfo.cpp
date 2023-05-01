@@ -3265,9 +3265,9 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       unsigned NumSources = 0;
       for (unsigned E = 0; E < LTNumElts; E++) {
         int MaskElt = (N * LTNumElts + E < TpNumElts) ? Mask[N * LTNumElts + E]
-                                                      : UndefMaskElem;
+                                                      : PoisonMaskElem;
         if (MaskElt < 0) {
-          NMask.push_back(UndefMaskElem);
+          NMask.push_back(PoisonMaskElem);
           continue;
         }
 

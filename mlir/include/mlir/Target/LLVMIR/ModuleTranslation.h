@@ -164,6 +164,9 @@ public:
   /// constructed.
   llvm::OpenMPIRBuilder *getOpenMPBuilder();
 
+  /// Returns the LLVM module in which the IR is being constructed.
+  llvm::Module *getLLVMModule() { return llvmModule.get(); }
+
   /// Translates the given location.
   const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 

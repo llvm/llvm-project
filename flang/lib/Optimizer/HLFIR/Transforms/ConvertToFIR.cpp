@@ -91,12 +91,22 @@ public:
       if (rhsIsValue) {
         // createBox can only be called for fir::ExtendedValue that are
         // already in memory. Place the integer/real/complex/logical scalar
-        // in memory (convert to the LHS type so that i1 are allocated in
-        // a proper Fortran logical storage).
-        mlir::Type lhsValueType = lhs.getFortranElementType();
-        mlir::Value rhsVal =
-            builder.createConvert(loc, lhsValueType, fir::getBase(rhsExv));
-        mlir::Value temp = builder.create<fir::AllocaOp>(loc, lhsValueType);
+        // in memory.
+        // The RHS might be i1, which is not supported for emboxing.
+        // If LHS is not polymorphic, we may cast the RHS to the LHS type
+        // before emboxing. If LHS is polymorphic we have to figure out
+        // the data type for RHS emboxing anyway.
+        // It is probably a good idea to make sure that the data type
+        // of the RHS is always a valid Fortran storage data type.
+        // For the time being, just handle i1 explicitly here.
+        mlir::Type rhsType = rhs.getFortranElementType();
+        mlir::Value rhsVal = fir::getBase(rhsExv);
+        if (rhsType == builder.getI1Type()) {
+          rhsType = fir::LogicalType::get(builder.getContext(), 4);
+          rhsVal = builder.createConvert(loc, rhsType, rhsVal);
+        }
+
+        mlir::Value temp = builder.create<fir::AllocaOp>(loc, rhsType);
         builder.create<fir::StoreOp>(loc, rhsVal, temp);
         rhsExv = temp;
       }

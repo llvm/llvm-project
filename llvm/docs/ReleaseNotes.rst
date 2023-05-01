@@ -84,6 +84,7 @@ Changes to the AArch64 Backend
 
 * Added Assembly Support for the 2022 A-profile extensions FEAT_GCS (Guarded
   Control Stacks), FEAT_CHK (Check Feature Status), and FEAT_ATS1A.
+* Support for preserve_all calling convention is added.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -169,6 +170,7 @@ Changes to the RISC-V Backend
 * Added support for Zfa extension version 0.2.
 * Updated support experimental vector crypto extensions to version 0.5.1 of
   the specification.
+* Removed N extension (User-Level Interrupts) CSR names in the assembler.
 
 Changes to the WebAssembly Backend
 ----------------------------------

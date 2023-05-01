@@ -2666,7 +2666,7 @@ def err_invalid_constexpr : Error<
 def err_invalid_constexpr_member : Error<"non-static data member cannot be "
   "constexpr%select{; did you intend to make it %select{const|static}0?|}1">;
 def err_constexpr_tag : Error<
-  "%select{class|struct|interface|union|enum}0 "
+  "%select{class|struct|interface|union|enum|enum class|enum struct}0 "
   "cannot be marked %sub{select_constexpr_spec_kind}1">;
 def err_constexpr_dtor : Error<
   "destructor cannot be declared %sub{select_constexpr_spec_kind}0">;
@@ -3055,6 +3055,14 @@ def err_attribute_arm_feature_sve_bits_unsupported : Error<
   "value of 128, 256, 512, 1024 or 2048.">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
+def err_attribute_riscv_rvv_bits_unsupported : Error<
+  "%0 is only supported when '-mrvv-vector-bits=<bits>' is specified with a "
+  "value of \"zvl\" or a power 2 in the range [64,65536]">;
+def err_attribute_bad_rvv_vector_size : Error<
+  "invalid RVV vector size '%0', must match value set by "
+  "'-mrvv-vector-bits' ('%1')">;
+def err_attribute_invalid_rvv_type : Error<
+  "%0 attribute applied to non-RVV type %1">;
 def err_attribute_requires_positive_integer : Error<
   "%0 attribute requires a %select{positive|non-negative}1 "
   "integral compile time constant expression">;
@@ -3165,8 +3173,9 @@ def err_attribute_invalid_size : Error<
   "vector size not an integral multiple of component size">;
 def err_attribute_zero_size : Error<"zero %0 size">;
 def err_attribute_size_too_large : Error<"%0 size too large">;
-def err_typecheck_sve_ambiguous : Error<
-  "cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous (%0 and %1)">;
+def err_typecheck_sve_rvv_ambiguous : Error<
+  "cannot combine fixed-length and sizeless %select{SVE|RVV}0 vectors "
+  "in expression, result is ambiguous (%1 and %2)">;
 def err_typecheck_sve_rvv_gnu_ambiguous : Error<
   "cannot combine GNU and %select{SVE|RVV}0 vectors in expression, result is ambiguous (%1 and %2)">;
 def err_typecheck_vector_not_convertable_implict_truncation : Error<
@@ -3423,7 +3432,7 @@ def warn_type_attribute_deprecated_on_decl : Warning<
   InGroup<DeprecatedAttributes>;
 def warn_declspec_attribute_ignored : Warning<
   "attribute %0 is ignored, place it after "
-  "\"%select{class|struct|interface|union|enum}1\" to apply attribute to "
+  "\"%select{class|struct|interface|union|enum|enum class|enum struct}1\" to apply attribute to "
   "type declaration">, InGroup<IgnoredAttributes>;
 def warn_attribute_precede_definition : Warning<
   "attribute declaration must precede definition">,
@@ -6928,7 +6937,7 @@ def warn_standalone_specifier : Warning<"'%0' ignored on this declaration">,
 def ext_standalone_specifier : ExtWarn<"'%0' is not permitted on a declaration "
   "of a type">, InGroup<MissingDeclarations>;
 def err_standalone_class_nested_name_specifier : Error<
-  "forward declaration of %select{class|struct|interface|union|enum}0 cannot "
+  "forward declaration of %select{class|struct|interface|union|enum|enum class|enum struct}0 cannot "
   "have a nested name specifier">;
 def err_typecheck_sclass_func : Error<"illegal storage class on function">;
 def err_static_block_func : Error<

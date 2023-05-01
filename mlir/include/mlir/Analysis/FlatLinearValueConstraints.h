@@ -492,7 +492,7 @@ protected:
   /// Values corresponding to the (column) non-local variables of this
   /// constraint system appearing in the order the variables correspond to
   /// columns. Variables that aren't associated with any Value are set to
-  /// None.
+  /// std::nullopt.
   SmallVector<std::optional<Value>, 8> values;
 };
 

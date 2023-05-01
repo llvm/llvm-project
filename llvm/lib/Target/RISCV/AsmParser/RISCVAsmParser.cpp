@@ -87,6 +87,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
                                   int64_t Lower, int64_t Upper,
                                   const Twine &Msg);
+  bool generateImmOutOfRangeError(SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -1168,10 +1170,16 @@ unsigned RISCVAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 }
 
 bool RISCVAsmParser::generateImmOutOfRangeError(
+    SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
+    const Twine &Msg = "immediate must be an integer in the range") {
+  return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
+}
+
+bool RISCVAsmParser::generateImmOutOfRangeError(
     OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
     const Twine &Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-  return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
+  return generateImmOutOfRangeError(ErrorLoc, Lower, Upper, Msg);
 }
 
 bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -1563,8 +1571,9 @@ RISCVAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
     break;
   }
 
-  Error(S, "opcode must be a valid opcode name or an immediate in the range "
-           "[0, 127]");
+  generateImmOutOfRangeError(S, 0, 127,
+                             "opcode must be a valid opcode name or an "
+                             "immediate in the range");
   return MatchOperand_ParseFail;
 }
 
@@ -1624,8 +1633,9 @@ RISCVAsmParser::parseInsnCDirectiveOpcode(OperandVector &Operands) {
   }
   }
 
-  Error(S, "opcode must be a valid opcode name or an immediate in the range "
-           "[0, 2]");
+  generateImmOutOfRangeError(S, 0, 2,
+                             "opcode must be a valid opcode name or an "
+                             "immediate in the range");
   return MatchOperand_ParseFail;
 }
 
@@ -1660,8 +1670,7 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       }
     }
 
-    Twine Msg = "immediate must be an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 12) - 1) + "]");
+    generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
     return MatchOperand_ParseFail;
   }
   case AsmToken::Identifier: {
@@ -1688,15 +1697,14 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       return MatchOperand_Success;
     }
 
-    Twine Msg = "operand must be a valid system register name "
-                "or an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 12) - 1) + "]");
+    generateImmOutOfRangeError(S, 0, (1 << 12) - 1,
+                               "operand must be a valid system register name "
+                               "or an integer in the range");
     return MatchOperand_ParseFail;
   }
   case AsmToken::Percent: {
     // Discard operand with modifier.
-    Twine Msg = "immediate must be an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 12) - 1) + "]");
+    generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
     return MatchOperand_ParseFail;
   }
   }
@@ -1794,12 +1802,8 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (getLexer().getKind() != AsmToken::Percent) {
-    Error(getLoc(), "expected '%' for operand modifier");
+  if (parseToken(AsmToken::Percent, "expected '%' for operand modifier"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat '%'
 
   if (getLexer().getKind() != AsmToken::Identifier) {
     Error(getLoc(), "expected valid identifier for operand modifier");
@@ -1813,11 +1817,8 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   }
 
   getParser().Lex(); // Eat the identifier
-  if (getLexer().getKind() != AsmToken::LParen) {
-    Error(getLoc(), "expected '('");
+  if (parseToken(AsmToken::LParen, "expected '('"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat '('
 
   const MCExpr *SubExpr;
   if (getParser().parseParenExpression(SubExpr, E)) {
@@ -2151,12 +2152,8 @@ ParseFail:
 
 OperandMatchResultTy
 RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::LParen)) {
-    Error(getLoc(), "expected '('");
+  if (parseToken(AsmToken::LParen, "expected '('"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat '('
   Operands.push_back(RISCVOperand::createToken("(", getLoc()));
 
   if (parseRegister(Operands) != MatchOperand_Success) {
@@ -2164,12 +2161,8 @@ RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    Error(getLoc(), "expected ')'");
+  if (parseToken(AsmToken::RParen, "expected ')'"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat ')'
   Operands.push_back(RISCVOperand::createToken(")", getLoc()));
 
   return MatchOperand_Success;
@@ -2215,23 +2208,18 @@ RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
                                 ImmStart, ImmEnd, isRV64());
   }
 
-  if (getLexer().isNot(AsmToken::LParen)) {
-    Error(getLoc(), OptionalImmOp ? "expected '(' after optional integer offset"
-                                  : "expected '(' or optional integer offset");
+  if (parseToken(AsmToken::LParen,
+                 OptionalImmOp ? "expected '(' after optional integer offset"
+                               : "expected '(' or optional integer offset"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat '('
 
   if (parseRegister(Operands) != MatchOperand_Success) {
     Error(getLoc(), "expected register");
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    Error(getLoc(), "expected ')'");
+  if (parseToken(AsmToken::RParen, "expected ')'"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat ')'
 
   // Deferred Handling of non-zero offsets. This makes the error messages nicer.
   if (OptionalImmOp && !OptionalImmOp->isImmZero()) {
@@ -2314,13 +2302,10 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       return true;
   }
 
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    SMLoc Loc = getLexer().getLoc();
+  if (getParser().parseEOL("unexpected token")) {
     getParser().eatToEndOfStatement();
-    return Error(Loc, "unexpected token");
+    return true;
   }
-
-  getParser().Lex(); // Consume the EndOfStatement.
   return false;
 }
 

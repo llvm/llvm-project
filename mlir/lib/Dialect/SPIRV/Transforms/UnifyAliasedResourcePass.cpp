@@ -220,6 +220,9 @@ ResourceAliasAnalysis::ResourceAliasAnalysis(Operation *root) {
 }
 
 bool ResourceAliasAnalysis::shouldUnify(Operation *op) const {
+  if (!op)
+    return false;
+
   if (auto varOp = dyn_cast<spirv::GlobalVariableOp>(op)) {
     auto canonicalOp = getCanonicalResource(varOp);
     return canonicalOp && varOp != canonicalOp;
@@ -566,16 +569,15 @@ public:
 private:
   spirv::GetTargetEnvFn getTargetEnvFn;
 };
-} // namespace
 
 void UnifyAliasedResourcePass::runOnOperation() {
   spirv::ModuleOp moduleOp = getOperation();
   MLIRContext *context = &getContext();
 
   if (getTargetEnvFn) {
-    // This pass is only needed for targeting WebGPU, Metal, or layering Vulkan
-    // on Metal via MoltenVK, where we need to translate SPIR-V into WGSL or
-    // MSL. The translation has limitations.
+    // This pass is only needed for targeting WebGPU, Metal, or layering
+    // Vulkan on Metal via MoltenVK, where we need to translate SPIR-V into
+    // WGSL or MSL. The translation has limitations.
     spirv::TargetEnvAttr targetEnv = getTargetEnvFn(moduleOp);
     spirv::ClientAPI clientAPI = targetEnv.getClientAPI();
     bool isVulkanOnAppleDevices =
@@ -614,6 +616,7 @@ void UnifyAliasedResourcePass::runOnOperation() {
       resources.front()->removeAttr("aliased");
   }
 }
+} // namespace
 
 std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
 spirv::createUnifyAliasedResourcePass(spirv::GetTargetEnvFn getTargetEnv) {

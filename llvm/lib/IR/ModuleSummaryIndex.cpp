@@ -317,7 +317,7 @@ void ModuleSummaryIndex::propagateAttributes(
           }
 }
 
-bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
+bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
                                             bool AnalyzeRefs) const {
   auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
     // We don't analyze GV references during attribute propagation, so

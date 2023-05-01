@@ -554,7 +554,9 @@ public:
                           bool assumeVerified);
 
   // Implement the bound 'writeBytecode' method.
-  void writeBytecode(const pybind11::object &fileObject);
+  MlirBytecodeWriterResult
+  writeBytecode(const pybind11::object &fileObject,
+                std::optional<int64_t> bytecodeVersion);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
