@@ -76,6 +76,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -6772,6 +6773,31 @@ const ConstantRange &ScalarEvolution::getRangeRef(
           ConstantRange(APInt::getSignedMinValue(BitWidth).ashr(NS - 1),
                         APInt::getSignedMaxValue(BitWidth).ashr(NS - 1) + 1),
           RangeType);
+
+    if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
+      // Strengthen the range if the underlying IR value is a global using the
+      // size of the global.
+      ObjectSizeOpts Opts;
+      Opts.RoundToAlign = false;
+      Opts.NullIsUnknownSize = true;
+      uint64_t ObjSize;
+      auto *GV = dyn_cast<GlobalVariable>(U->getValue());
+      if (GV && getObjectSize(U->getValue(), ObjSize, DL, &TLI, Opts) &&
+          ObjSize > 1) {
+        // The highest address the object can start is ObjSize bytes before the
+        // end (unsigned max value). If this value is not a multiple of the
+        // alignment, the last possible start value is the next lowest multiple
+        // of the alignment. Note: The computations below cannot overflow,
+        // because if they would there's no possible start address for the
+        // object.
+        APInt MaxVal = APInt::getMaxValue(BitWidth) - APInt(BitWidth, ObjSize);
+        uint64_t Align = GV->getAlign().valueOrOne().value();
+        uint64_t Rem = MaxVal.urem(Align);
+        MaxVal -= APInt(BitWidth, Rem);
+        ConservativeResult = ConservativeResult.intersectWith(
+            {ConservativeResult.getUnsignedMin(), MaxVal + 1}, RangeType);
+      }
+    }
 
     // A range of Phi is a subset of union of all ranges of its input.
     if (PHINode *Phi = dyn_cast<PHINode>(U->getValue())) {
