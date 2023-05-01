@@ -137,9 +137,8 @@ compound=true
 #endif
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   TargetLibraryInfo TLI(TLII);
-  SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(
-      Plan, [](PHINode *P) { return nullptr; }, DeadInstructions, *SE, TLI);
+      Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -166,11 +165,10 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildHCFG(LoopHeader);
 
-  SmallPtrSet<Instruction *, 1> DeadInstructions;
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   TargetLibraryInfo TLI(TLII);
   VPlanTransforms::VPInstructionsToVPRecipes(
-      Plan, [](PHINode *P) { return nullptr; }, DeadInstructions, *SE, TLI);
+      Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());
