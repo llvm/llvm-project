@@ -244,13 +244,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Legal);
 
-  setOperationAction({ISD::ADDCARRY, ISD::SUBCARRY}, MVT::i32, Legal);
+  setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i32, Legal);
 
   setOperationAction({ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS}, MVT::i64,
                      Expand);
 
 #if 0
-  setOperationAction({ISD::ADDCARRY, ISD::SUBCARRY}, MVT::i64, Legal);
+  setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
 #endif
 
   // We only support LOAD/STORE and vector manipulation ops for vectors
@@ -744,9 +744,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      Custom);
 
   setTargetDAGCombine({ISD::ADD,
-                       ISD::ADDCARRY,
+                       ISD::UADDO_CARRY,
                        ISD::SUB,
-                       ISD::SUBCARRY,
+                       ISD::USUBO_CARRY,
                        ISD::FADD,
                        ISD::FSUB,
                        ISD::FMINNUM,
@@ -11268,11 +11268,11 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
     return SDValue();
 
-  // add x, zext (setcc) => addcarry x, 0, setcc
-  // add x, sext (setcc) => subcarry x, 0, setcc
+  // add x, zext (setcc) => uaddo_carry x, 0, setcc
+  // add x, sext (setcc) => usubo_carry x, 0, setcc
   unsigned Opc = LHS.getOpcode();
   if (Opc == ISD::ZERO_EXTEND || Opc == ISD::SIGN_EXTEND ||
-      Opc == ISD::ANY_EXTEND || Opc == ISD::ADDCARRY)
+      Opc == ISD::ANY_EXTEND || Opc == ISD::UADDO_CARRY)
     std::swap(RHS, LHS);
 
   Opc = RHS.getOpcode();
@@ -11288,15 +11288,15 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       break;
     SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
     SDValue Args[] = { LHS, DAG.getConstant(0, SL, MVT::i32), Cond };
-    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::SUBCARRY : ISD::ADDCARRY;
+    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::USUBO_CARRY : ISD::UADDO_CARRY;
     return DAG.getNode(Opc, SL, VTList, Args);
   }
-  case ISD::ADDCARRY: {
-    // add x, (addcarry y, 0, cc) => addcarry x, y, cc
+  case ISD::UADDO_CARRY: {
+    // add x, (uaddo_carry y, 0, cc) => uaddo_carry x, y, cc
     if (!isNullConstant(RHS.getOperand(1)))
       break;
     SDValue Args[] = { LHS, RHS.getOperand(0), RHS.getOperand(2) };
-    return DAG.getNode(ISD::ADDCARRY, SDLoc(N), RHS->getVTList(), Args);
+    return DAG.getNode(ISD::UADDO_CARRY, SDLoc(N), RHS->getVTList(), Args);
   }
   }
   return SDValue();
@@ -11314,8 +11314,8 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  // sub x, zext (setcc) => subcarry x, 0, setcc
-  // sub x, sext (setcc) => addcarry x, 0, setcc
+  // sub x, zext (setcc) => usubo_carry x, 0, setcc
+  // sub x, sext (setcc) => uaddo_carry x, 0, setcc
   unsigned Opc = RHS.getOpcode();
   switch (Opc) {
   default: break;
@@ -11329,18 +11329,18 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
       break;
     SDVTList VTList = DAG.getVTList(MVT::i32, MVT::i1);
     SDValue Args[] = { LHS, DAG.getConstant(0, SL, MVT::i32), Cond };
-    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::ADDCARRY : ISD::SUBCARRY;
+    Opc = (Opc == ISD::SIGN_EXTEND) ? ISD::UADDO_CARRY : ISD::USUBO_CARRY;
     return DAG.getNode(Opc, SL, VTList, Args);
   }
   }
 
-  if (LHS.getOpcode() == ISD::SUBCARRY) {
-    // sub (subcarry x, 0, cc), y => subcarry x, y, cc
+  if (LHS.getOpcode() == ISD::USUBO_CARRY) {
+    // sub (usubo_carry x, 0, cc), y => usubo_carry x, y, cc
     auto C = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
     if (!C || !C->isZero())
       return SDValue();
     SDValue Args[] = { LHS.getOperand(0), RHS, LHS.getOperand(2) };
-    return DAG.getNode(ISD::SUBCARRY, SDLoc(N), LHS->getVTList(), Args);
+    return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);
   }
   return SDValue();
 }
@@ -11357,12 +11357,12 @@ SDValue SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue LHS = N->getOperand(0);
 
-  // addcarry (add x, y), 0, cc => addcarry x, y, cc
-  // subcarry (sub x, y), 0, cc => subcarry x, y, cc
+  // uaddo_carry (add x, y), 0, cc => uaddo_carry x, y, cc
+  // usubo_carry (sub x, y), 0, cc => usubo_carry x, y, cc
   unsigned LHSOpc = LHS.getOpcode();
   unsigned Opc = N->getOpcode();
-  if ((LHSOpc == ISD::ADD && Opc == ISD::ADDCARRY) ||
-      (LHSOpc == ISD::SUB && Opc == ISD::SUBCARRY)) {
+  if ((LHSOpc == ISD::ADD && Opc == ISD::UADDO_CARRY) ||
+      (LHSOpc == ISD::SUB && Opc == ISD::USUBO_CARRY)) {
     SDValue Args[] = { LHS.getOperand(0), LHS.getOperand(1), N->getOperand(2) };
     return DAG.getNode(Opc, SDLoc(N), N->getVTList(), Args);
   }
@@ -11714,8 +11714,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performAddCombine(N, DCI);
   case ISD::SUB:
     return performSubCombine(N, DCI);
-  case ISD::ADDCARRY:
-  case ISD::SUBCARRY:
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
     return performAddCarrySubCarryCombine(N, DCI);
   case ISD::FADD:
     return performFAddCombine(N, DCI);

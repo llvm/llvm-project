@@ -186,8 +186,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::USUBO, VT, Custom);
 
       // Support carry in as value rather than glue.
-      setOperationAction(ISD::ADDCARRY, VT, Custom);
-      setOperationAction(ISD::SUBCARRY, VT, Custom);
+      setOperationAction(ISD::UADDO_CARRY, VT, Custom);
+      setOperationAction(ISD::USUBO_CARRY, VT, Custom);
 
       // Lower ATOMIC_LOAD and ATOMIC_STORE into normal volatile loads and
       // stores, putting a serialization instruction after the stores.
@@ -3995,20 +3995,20 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
 }
 
 static bool isAddCarryChain(SDValue Carry) {
-  while (Carry.getOpcode() == ISD::ADDCARRY)
+  while (Carry.getOpcode() == ISD::UADDO_CARRY)
     Carry = Carry.getOperand(2);
   return Carry.getOpcode() == ISD::UADDO;
 }
 
 static bool isSubBorrowChain(SDValue Carry) {
-  while (Carry.getOpcode() == ISD::SUBCARRY)
+  while (Carry.getOpcode() == ISD::USUBO_CARRY)
     Carry = Carry.getOperand(2);
   return Carry.getOpcode() == ISD::USUBO;
 }
 
-// Lower ADDCARRY/SUBCARRY nodes.
-SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
-                                                SelectionDAG &DAG) const {
+// Lower UADDO_CARRY/USUBO_CARRY nodes.
+SDValue SystemZTargetLowering::lowerUADDSUBO_CARRY(SDValue Op,
+                                                   SelectionDAG &DAG) const {
 
   SDNode *N = Op.getNode();
   MVT VT = N->getSimpleValueType(0);
@@ -4027,7 +4027,7 @@ SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
 
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown instruction!");
-  case ISD::ADDCARRY:
+  case ISD::UADDO_CARRY:
     if (!isAddCarryChain(Carry))
       return SDValue();
 
@@ -4035,7 +4035,7 @@ SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
     CCValid = SystemZ::CCMASK_LOGICAL;
     CCMask = SystemZ::CCMASK_LOGICAL_CARRY;
     break;
-  case ISD::SUBCARRY:
+  case ISD::USUBO_CARRY:
     if (!isSubBorrowChain(Carry))
       return SDValue();
 
@@ -5741,9 +5741,9 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   case ISD::UADDO:
   case ISD::USUBO:
     return lowerXALUO(Op, DAG);
-  case ISD::ADDCARRY:
-  case ISD::SUBCARRY:
-    return lowerADDSUBCARRY(Op, DAG);
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
+    return lowerUADDSUBO_CARRY(Op, DAG);
   case ISD::OR:
     return lowerOR(Op, DAG);
   case ISD::CTPOP:
