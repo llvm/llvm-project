@@ -69,8 +69,11 @@ enum ID : uint8_t {
   /// This section contains the versions of each dialect.
   kDialectVersions = 7,
 
+  /// This section contains the properties for the operations.
+  kProperties = 8,
+
   /// The total number of section types.
-  kNumSections = 8,
+  kNumSections = 9,
 };
 } // namespace Section
 
@@ -90,6 +93,7 @@ enum : uint8_t {
   kHasSuccessors    = 0b00001000,
   kHasInlineRegions = 0b00010000,
   kHasUseListOrders = 0b00100000,
+  kHasProperties    = 0b01000000,
   // clang-format on
 };
 } // namespace OpEncodingMask
