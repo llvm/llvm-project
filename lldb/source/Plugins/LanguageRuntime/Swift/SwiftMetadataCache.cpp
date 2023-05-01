@@ -28,7 +28,7 @@ SwiftMetadataCache::SwiftMetadataCache() {
   }
 }
 
-bool SwiftMetadataCache::is_enabled() { return m_data_file_cache.hasValue(); }
+bool SwiftMetadataCache::is_enabled() { return m_data_file_cache.has_value(); }
 
 void SwiftMetadataCache::registerModuleWithReflectionInfoID(ModuleSP module,
                                                             uint64_t info_id) {
