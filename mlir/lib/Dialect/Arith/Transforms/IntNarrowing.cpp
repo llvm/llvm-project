@@ -306,27 +306,35 @@ struct ExtensionOverExtractStridedSlice final
   }
 };
 
-struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
-  using NarrowingPattern::NarrowingPattern;
+/// Base pattern for `vector.insert` narrowing patterns.
+template <typename InsertionOp>
+struct ExtensionOverInsertionPattern : NarrowingPattern<InsertionOp> {
+  using NarrowingPattern<InsertionOp>::NarrowingPattern;
 
-  LogicalResult matchAndRewrite(vector::InsertOp op,
-                                PatternRewriter &rewriter) const override {
+  /// Derived classes must provide a function to create the matching insertion
+  /// op based on the original op and new arguments.
+  virtual InsertionOp createInsertionOp(PatternRewriter &rewriter,
+                                        InsertionOp origInsert,
+                                        Value narrowValue,
+                                        Value narrowDest) const = 0;
+
+  LogicalResult matchAndRewrite(InsertionOp op,
+                                PatternRewriter &rewriter) const final {
     FailureOr<ExtensionOp> ext =
         ExtensionOp::from(op.getSource().getDefiningOp());
     if (failed(ext))
       return failure();
 
-    FailureOr<vector::InsertOp> newInsert =
-        createNarrowInsert(op, rewriter, *ext);
+    FailureOr<InsertionOp> newInsert = createNarrowInsert(op, rewriter, *ext);
     if (failed(newInsert))
       return failure();
     ext->recreateAndReplace(rewriter, op, *newInsert);
     return success();
   }
 
-  FailureOr<vector::InsertOp> createNarrowInsert(vector::InsertOp op,
-                                                 PatternRewriter &rewriter,
-                                                 ExtensionOp insValue) const {
+  FailureOr<InsertionOp> createNarrowInsert(InsertionOp op,
+                                            PatternRewriter &rewriter,
+                                            ExtensionOp insValue) const {
     // Calculate the operand and result bitwidths. We can only apply narrowing
     // when the inserted source value and destination vector require fewer bits
     // than the result. Because the source and destination may have different
@@ -337,6 +345,8 @@ struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
     if (failed(origBitsRequired))
       return failure();
 
+    // TODO: We could relax this check by disregarding bitwidth requirements of
+    // elements that we know will be replaced by the insertion.
     FailureOr<unsigned> destBitsRequired =
         calculateBitsRequired(op.getDest(), insValue.getKind());
     if (failed(destBitsRequired) || *destBitsRequired >= *origBitsRequired)
@@ -352,12 +362,13 @@ struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
     // both the source and the destination values.
     unsigned newInsertionBits =
         std::max(*destBitsRequired, *insertedBitsRequired);
-    FailureOr<Type> newVecTy = getNarrowType(newInsertionBits, op.getType());
+    FailureOr<Type> newVecTy =
+        this->getNarrowType(newInsertionBits, op.getType());
     if (failed(newVecTy) || *newVecTy == op.getType())
       return failure();
 
     FailureOr<Type> newInsertedValueTy =
-        getNarrowType(newInsertionBits, insValue.getType());
+        this->getNarrowType(newInsertionBits, insValue.getType());
     if (failed(newInsertedValueTy))
       return failure();
 
@@ -366,8 +377,47 @@ struct ExtensionOverInsert final : NarrowingPattern<vector::InsertOp> {
         loc, *newInsertedValueTy, insValue.getResult());
     Value narrowDest =
         rewriter.createOrFold<arith::TruncIOp>(loc, *newVecTy, op.getDest());
-    return rewriter.create<vector::InsertOp>(loc, narrowValue, narrowDest,
-                                             op.getPosition());
+    return createInsertionOp(rewriter, op, narrowValue, narrowDest);
+  }
+};
+
+struct ExtensionOverInsert final
+    : ExtensionOverInsertionPattern<vector::InsertOp> {
+  using ExtensionOverInsertionPattern::ExtensionOverInsertionPattern;
+
+  vector::InsertOp createInsertionOp(PatternRewriter &rewriter,
+                                     vector::InsertOp origInsert,
+                                     Value narrowValue,
+                                     Value narrowDest) const override {
+    return rewriter.create<vector::InsertOp>(
+        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getPosition());
+  }
+};
+
+struct ExtensionOverInsertElement final
+    : ExtensionOverInsertionPattern<vector::InsertElementOp> {
+  using ExtensionOverInsertionPattern::ExtensionOverInsertionPattern;
+
+  vector::InsertElementOp createInsertionOp(PatternRewriter &rewriter,
+                                            vector::InsertElementOp origInsert,
+                                            Value narrowValue,
+                                            Value narrowDest) const override {
+    return rewriter.create<vector::InsertElementOp>(
+        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getPosition());
+  }
+};
+
+struct ExtensionOverInsertStridedSlice final
+    : ExtensionOverInsertionPattern<vector::InsertStridedSliceOp> {
+  using ExtensionOverInsertionPattern::ExtensionOverInsertionPattern;
+
+  vector::InsertStridedSliceOp
+  createInsertionOp(PatternRewriter &rewriter,
+                    vector::InsertStridedSliceOp origInsert, Value narrowValue,
+                    Value narrowDest) const override {
+    return rewriter.create<vector::InsertStridedSliceOp>(
+        origInsert.getLoc(), narrowValue, narrowDest, origInsert.getOffsets(),
+        origInsert.getStrides());
   }
 };
 
@@ -400,7 +450,8 @@ void populateArithIntNarrowingPatterns(
   // Add commute patterns with a higher benefit. This is to expose more
   // optimization opportunities to narrowing patterns.
   patterns.add<ExtensionOverExtract, ExtensionOverExtractElement,
-               ExtensionOverExtractStridedSlice, ExtensionOverInsert>(
+               ExtensionOverExtractStridedSlice, ExtensionOverInsert,
+               ExtensionOverInsertElement, ExtensionOverInsertStridedSlice>(
       patterns.getContext(), options, PatternBenefit(2));
 
   patterns.add<SIToFPPattern, UIToFPPattern>(patterns.getContext(), options);
