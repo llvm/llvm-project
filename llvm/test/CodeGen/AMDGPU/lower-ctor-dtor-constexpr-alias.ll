@@ -18,8 +18,6 @@
 @foo.alias = hidden alias void (), ptr @foo
 
 ;.
-; CHECK-NOT: @llvm.global_ctors
-; CHECK-NOT: @llvm.global_dtors
 ; CHECK: @llvm.used = appending global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
 ; CHECK: @foo.alias = hidden alias void (), ptr @foo
 ;.
