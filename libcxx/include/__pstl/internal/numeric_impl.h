@@ -20,8 +20,6 @@
 #include "unseq_backend_simd.h"
 #include "algorithm_fwd.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl {
 namespace __internal {
 
@@ -536,7 +534,5 @@ _RandomAccessIterator2 __pattern_adjacent_difference(
 
 } // namespace __internal
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_NUMERIC_IMPL_H */

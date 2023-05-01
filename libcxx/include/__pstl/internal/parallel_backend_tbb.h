@@ -30,8 +30,6 @@
 #    error Intel(R) Threading Building Blocks 2018 is required; older versions are not supported.
 #endif
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl
 {
 namespace __tbb_backend
@@ -1290,7 +1288,5 @@ __parallel_invoke(__pstl::__internal::__tbb_backend_tag, _ExecutionPolicy&&, _F1
 
 } // namespace __tbb_backend
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_PARALLEL_BACKEND_TBB_H */
