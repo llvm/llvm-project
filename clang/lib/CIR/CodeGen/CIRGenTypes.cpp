@@ -171,7 +171,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
     auto name = getRecordTypeName(RD, "");
     auto identifier = mlir::StringAttr::get(&getMLIRContext(), name);
     entry = mlir::cir::StructType::get(
-        &getMLIRContext(), {}, identifier, /*body=*/false,
+        &getMLIRContext(), {}, identifier, /*body=*/false, /**packed=*/false,
         mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), RD));
   }
 
