@@ -14,8 +14,6 @@
 
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl {
 namespace execution {
 inline namespace v1 {
@@ -72,7 +70,5 @@ struct __parallel_tag;
 } // namespace __internal
 
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_POLICY_DEFS_H */

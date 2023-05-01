@@ -31,8 +31,6 @@
 #    define _PSTL_PRAGMA(x) _Pragma(#    x)
 #endif
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl
 {
 namespace __omp_backend

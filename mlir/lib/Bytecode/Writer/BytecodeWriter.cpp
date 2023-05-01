@@ -887,12 +887,10 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 // Entry Points
 //===----------------------------------------------------------------------===//
 
-BytecodeWriterResult
-mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
-                          const BytecodeWriterConfig &config) {
+LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
+                                        const BytecodeWriterConfig &config) {
   BytecodeWriter writer(op, config.getImpl());
   writer.write(op, os);
-  // Return the bytecode version emitted - currently there is no additional
-  // feedback as to minimum beyond the requested one.
-  return {config.getImpl().bytecodeVersion};
+  // Currently there is no failure case.
+  return success();
 }

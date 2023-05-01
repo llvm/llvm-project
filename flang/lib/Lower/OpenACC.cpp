@@ -638,7 +638,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
     // end up having its own operation.
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperand(operands, operandSegments, gangNum);
@@ -853,7 +853,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 8> operands;
   llvm::SmallVector<int32_t, 8> operandSegments;
   addOperand(operands, operandSegments, async);
@@ -1200,7 +1200,7 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 14> operands;
   llvm::SmallVector<int32_t, 7> operandSegments;
   addOperand(operands, operandSegments, ifCond);
@@ -1255,7 +1255,7 @@ genACCInitShutdownOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 6> operands;
   llvm::SmallVector<int32_t, 3> operandSegments;
   addOperands(operands, operandSegments, deviceTypeOperands);
@@ -1315,7 +1315,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperand(operands, operandSegments, ifCond);
@@ -1424,7 +1424,7 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     }
   }
 
-  // Prepare the operand segement size attribute and the operands value range.
+  // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
   llvm::SmallVector<int32_t> operandSegments;
   addOperands(operands, operandSegments, waitOperands);

@@ -10,11 +10,10 @@
 #ifndef _PSTL_UTILS_H
 #define _PSTL_UTILS_H
 
+#include <__exception/terminate.h>
 #include <iterator>
 #include <new>
 #include <utility>
-
-_PSTL_HIDE_FROM_ABI_PUSH
 
 namespace __pstl {
 namespace __internal {
@@ -135,7 +134,5 @@ _ForwardIterator __cmp_iterators_by_values(_ForwardIterator __a, _ForwardIterato
 
 } // namespace __internal
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_UTILS_H */

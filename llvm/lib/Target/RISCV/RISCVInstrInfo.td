@@ -1911,7 +1911,6 @@ include "RISCVInstrInfoZfa.td"
 include "RISCVInstrInfoZfh.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
-include "RISCVInstrInfoZihintntl.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions

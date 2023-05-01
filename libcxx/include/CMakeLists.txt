@@ -69,6 +69,10 @@ set(files
   __algorithm/partition_point.h
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
+  __algorithm/pstl_any_all_none_of.h
+  __algorithm/pstl_fill.h
+  __algorithm/pstl_find.h
+  __algorithm/pstl_for_each.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
@@ -506,7 +510,6 @@ set(files
   __pstl/internal/execution_impl.h
   __pstl/internal/glue_algorithm_defs.h
   __pstl/internal/glue_algorithm_impl.h
-  __pstl/internal/glue_execution_defs.h
   __pstl/internal/glue_memory_defs.h
   __pstl/internal/glue_memory_impl.h
   __pstl/internal/glue_numeric_defs.h
@@ -534,7 +537,6 @@ set(files
   __pstl/internal/unseq_backend_simd.h
   __pstl/internal/utils.h
   __pstl_algorithm
-  __pstl_execution
   __pstl_memory
   __pstl_numeric
   __random/bernoulli_distribution.h
@@ -613,6 +615,7 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
+  __std_mbstate_t.h
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
@@ -700,6 +703,7 @@ set(files
   __type_traits/is_empty.h
   __type_traits/is_enum.h
   __type_traits/is_equality_comparable.h
+  __type_traits/is_execution_policy.h
   __type_traits/is_final.h
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
@@ -800,6 +804,7 @@ set(files
   __utility/priority_tag.h
   __utility/rel_ops.h
   __utility/swap.h
+  __utility/terminate_on_exception.h
   __utility/to_underlying.h
   __utility/unreachable.h
   __variant/monostate.h

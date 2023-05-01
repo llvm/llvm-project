@@ -2332,21 +2332,26 @@ exit:
 define i32 @test_partial_unswitch_all_conds_guaranteed_non_poison(i1 noundef %c.1, i1 noundef %c.2) {
 ; CHECK-LABEL: @test_partial_unswitch_all_conds_guaranteed_non_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[C_1:%.*]], [[C_2:%.*]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_US:%.*]]
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
 ; CHECK-NEXT:    br label [[LOOP_US:%.*]]
 ; CHECK:       loop.us:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @a()
-; CHECK-NEXT:    br label [[EXIT_SPLIT_US:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @a()
+; CHECK-NEXT:    br label [[TMP1:%.*]]
+; CHECK:       1:
+; CHECK-NEXT:    br label [[TMP2:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[UNSWITCHED_SELECT_US:%.*]] = phi i1 [ [[C_2:%.*]], [[TMP1]] ]
+; CHECK-NEXT:    br i1 [[UNSWITCHED_SELECT_US]], label [[LOOP_US]], label [[EXIT_SPLIT_US:%.*]]
 ; CHECK:       exit.split.us:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @a()
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 true, i1 true, i1 false
-; CHECK-NEXT:    br i1 [[SEL]], label [[LOOP]], label [[EXIT_SPLIT:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @a()
+; CHECK-NEXT:    br label [[TMP4:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT_SPLIT:%.*]]
 ; CHECK:       exit.split:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
