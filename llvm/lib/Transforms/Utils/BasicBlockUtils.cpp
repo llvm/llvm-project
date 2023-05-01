@@ -600,8 +600,8 @@ bool llvm::IsBlockFollowedByDeoptOrUnreachable(const BasicBlock *BB) {
   unsigned Depth = 0;
   while (BB && Depth++ < MaxDeoptOrUnreachableSuccessorCheckDepth &&
          VisitedBlocks.insert(BB).second) {
-    if (BB->getTerminatingDeoptimizeCall() ||
-        isa<UnreachableInst>(BB->getTerminator()))
+    if (isa<UnreachableInst>(BB->getTerminator()) ||
+        BB->getTerminatingDeoptimizeCall())
       return true;
     BB = BB->getUniqueSuccessor();
   }
