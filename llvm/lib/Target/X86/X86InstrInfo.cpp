@@ -9787,8 +9787,8 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
 
   unsigned Opc = Root.getOpcode();
-  unsigned AddOpc;
-  unsigned MaddOpc;
+  unsigned AddOpc = 0;
+  unsigned MaddOpc = 0;
   switch (Opc) {
   default:
     assert("It should not reach here");
