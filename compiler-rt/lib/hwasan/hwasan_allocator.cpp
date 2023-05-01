@@ -417,7 +417,7 @@ HwasanChunkView FindHeapChunkByAddress(uptr address) {
 
 static const void *AllocationBegin(const void *p) {
   const void *untagged_ptr =
-      __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
+      InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   if (!untagged_ptr)
     return nullptr;
 
@@ -435,7 +435,7 @@ static const void *AllocationBegin(const void *p) {
 
 static uptr AllocationSize(const void *p) {
   const void *untagged_ptr =
-      __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
+      InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   if (!untagged_ptr) return 0;
   const void *beg = allocator.GetBlockBegin(untagged_ptr);
   if (!beg)
@@ -549,7 +549,7 @@ void GetAllocatorGlobalRange(uptr *begin, uptr *end) {
 }
 
 uptr PointsIntoChunk(void *p) {
-  p = __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
+  p = InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   uptr addr = reinterpret_cast<uptr>(p);
   uptr chunk =
       reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBeginFastLocked(p));
@@ -567,7 +567,7 @@ uptr PointsIntoChunk(void *p) {
 }
 
 uptr GetUserBegin(uptr chunk) {
-  if (__hwasan::InTaggableRegion(chunk))
+  if (InTaggableRegion(chunk))
     CHECK_EQ(UntagAddr(chunk), chunk);
   void *block = __hwasan::allocator.GetBlockBeginFastLocked(
       reinterpret_cast<void *>(chunk));
@@ -583,13 +583,13 @@ uptr GetUserBegin(uptr chunk) {
 
 uptr GetUserAddr(uptr chunk) {
   tag_t mem_tag = *(tag_t *)__hwasan::MemToShadow(chunk);
-  if (!__hwasan::InTaggableRegion(chunk))
+  if (!InTaggableRegion(chunk))
     return chunk;
   return AddTagToPointer(chunk, mem_tag);
 }
 
 LsanMetadata::LsanMetadata(uptr chunk) {
-  if (__hwasan::InTaggableRegion(chunk))
+  if (InTaggableRegion(chunk))
     CHECK_EQ(UntagAddr(chunk), chunk);
   metadata_ =
       chunk ? __hwasan::allocator.GetMetaData(reinterpret_cast<void *>(chunk))
@@ -628,7 +628,7 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg) {
 }
 
 IgnoreObjectResult IgnoreObject(const void *p) {
-  p = __hwasan::InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
+  p = InTaggableRegion(reinterpret_cast<uptr>(p)) ? UntagPtr(p) : p;
   uptr addr = reinterpret_cast<uptr>(p);
   uptr chunk = reinterpret_cast<uptr>(__hwasan::allocator.GetBlockBegin(p));
   if (!chunk)
