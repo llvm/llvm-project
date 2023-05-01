@@ -14,32 +14,32 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 20
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i8
-; CHECK-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = and i8 [[TMP5]], 63
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP2]], 57
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
-; CHECK-NEXT:    [[HWASAN_UAR_TAG:%.*]] = and i8 [[TMP7]], 63
+; CHECK-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = and i64 [[TMP4]], 63
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP2]], 57
+; CHECK-NEXT:    [[HWASAN_UAR_TAG:%.*]] = and i64 [[TMP5]], 63
 ; CHECK-NEXT:    [[X:%.*]] = alloca { [4 x i8], [12 x i8] }, align 16
-; CHECK-NEXT:    [[X_TAG:%.*]] = xor i8 [[HWASAN_STACK_BASE_TAG]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP8]], -9079256848778919937
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i8 [[X_TAG]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 57
-; CHECK-NEXT:    [[TMP12:%.*]] = or i64 [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP12]] to ptr
-; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[X_TAG]], i64 16)
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], -9079256848778919937
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP6]], 57
+; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[TMP11]], i64 16)
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i8, i64 16, align 16
-; CHECK-NEXT:    [[Y_TAG:%.*]] = xor i8 [[HWASAN_STACK_BASE_TAG]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[Y]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP13]], -9079256848778919937
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i8 [[Y_TAG]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 57
-; CHECK-NEXT:    [[TMP17:%.*]] = or i64 [[TMP14]], [[TMP16]]
-; CHECK-NEXT:    [[Y_HWASAN:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[Y]], i8 [[Y_TAG]], i64 16)
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[TMP12]], 57
+; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[Y_HWASAN:%.*]] = inttoptr i64 [[TMP16]] to ptr
+; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP12]] to i8
+; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[Y]], i8 [[TMP17]], i64 16)
 ; CHECK-NEXT:    call void @use(ptr [[X_HWASAN]], ptr [[Y_HWASAN]])
-; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[HWASAN_UAR_TAG]], i64 16)
-; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[Y]], i8 [[HWASAN_UAR_TAG]], i64 16)
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[X]], i8 [[TMP18]], i64 16)
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    call void @__hwasan_tag_memory(ptr [[Y]], i8 [[TMP19]], i64 16)
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i8, i64 4
