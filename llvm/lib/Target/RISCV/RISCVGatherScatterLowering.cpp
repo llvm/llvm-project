@@ -63,8 +63,6 @@ public:
   }
 
 private:
-  bool isLegalTypeAndAlignment(Type *DataType, Value *AlignOp);
-
   bool tryCreateStridedLoadStore(IntrinsicInst *II, Type *DataType, Value *Ptr,
                                  Value *AlignOp);
 
@@ -85,24 +83,6 @@ INITIALIZE_PASS(RISCVGatherScatterLowering, DEBUG_TYPE,
 
 FunctionPass *llvm::createRISCVGatherScatterLoweringPass() {
   return new RISCVGatherScatterLowering();
-}
-
-bool RISCVGatherScatterLowering::isLegalTypeAndAlignment(Type *DataType,
-                                                         Value *AlignOp) {
-  Type *ScalarType = DataType->getScalarType();
-  if (!TLI->isLegalElementTypeForRVV(ScalarType))
-    return false;
-
-  MaybeAlign MA = cast<ConstantInt>(AlignOp)->getMaybeAlignValue();
-  if (MA && MA->value() < DL->getTypeStoreSize(ScalarType).getFixedValue())
-    return false;
-
-  // FIXME: Let the backend type legalize by splitting/widening?
-  EVT DataVT = TLI->getValueType(*DL, DataType);
-  if (!TLI->isTypeLegal(DataVT))
-    return false;
-
-  return true;
 }
 
 // TODO: Should we consider the mask when looking for a stride?
@@ -464,7 +444,12 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
                                                            Value *Ptr,
                                                            Value *AlignOp) {
   // Make sure the operation will be supported by the backend.
-  if (!isLegalTypeAndAlignment(DataType, AlignOp))
+  MaybeAlign MA = cast<ConstantInt>(AlignOp)->getMaybeAlignValue();
+  if (!MA || !TLI->isLegalStridedLoadStore(*DL, DataType, *MA))
+    return false;
+
+  // FIXME: Let the backend type legalize by splitting/widening?
+  if (!TLI->isTypeLegal(TLI->getValueType(*DL, DataType)))
     return false;
 
   // Pointer should be a GEP.
