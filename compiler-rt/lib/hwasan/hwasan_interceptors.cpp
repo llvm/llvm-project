@@ -14,9 +14,10 @@
 // sanitizer_common/sanitizer_common_interceptors.h
 //===----------------------------------------------------------------------===//
 
-#include "interception/interception.h"
 #include "hwasan.h"
 #include "hwasan_thread.h"
+#include "interception/interception.h"
+#include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
 #if !SANITIZER_FUCHSIA
@@ -28,11 +29,13 @@ using namespace __hwasan;
 struct ThreadStartArg {
   thread_callback_t callback;
   void *param;
+  __sanitizer_sigset_t starting_sigset_;
 };
 
 static void *HwasanThreadStartFunc(void *arg) {
   __hwasan_thread_enter();
   ThreadStartArg A = *reinterpret_cast<ThreadStartArg*>(arg);
+  SetSigProcMask(&A.starting_sigset_, nullptr);
   UnmapOrDie(arg, GetPageSizeCached());
   return A.callback(A.param);
 }
@@ -43,16 +46,14 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
   ScopedTaggingDisabler tagging_disabler;
   ThreadStartArg *A = reinterpret_cast<ThreadStartArg *> (MmapOrDie(
       GetPageSizeCached(), "pthread_create"));
-  *A = {callback, param};
-  int res;
-  {
-    // ASAN uses the same approach to disable leaks from pthread_create.
+  A->callback = callback;
+  A->param = param;
+  ScopedBlockSignals block(&A->starting_sigset_);
+  // ASAN uses the same approach to disable leaks from pthread_create.
 #    if CAN_SANITIZE_LEAKS
-    __lsan::ScopedInterceptorDisabler lsan_disabler;
+  __lsan::ScopedInterceptorDisabler lsan_disabler;
 #    endif
-    res = REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
-  }
-  return res;
+  return REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
 }
 
 INTERCEPTOR(int, pthread_join, void *t, void **arg) {
