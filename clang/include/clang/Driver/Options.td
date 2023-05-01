@@ -3959,8 +3959,12 @@ def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Grou
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
-def mrecip : Flag<["-"], "mrecip">, Group<m_Group>;
+def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
+  HelpText<"Equivalent to '-mrecip=all'">;
 def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Control use of approximate reciprocal and reciprocal square root instructions followed by <n> iterations of "
+           "Newton-Raphson refinement. "
+           "<value> = ( ['!'] ['vec-'] ('rcp'|'sqrt') [('h'|'s'|'d')] [':'<n>] ) | 'all' | 'default' | 'none'">,
   MarshallingInfoStringVector<CodeGenOpts<"Reciprocals">>;
 def mprefer_vector_width_EQ : Joined<["-"], "mprefer-vector-width=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.">,
