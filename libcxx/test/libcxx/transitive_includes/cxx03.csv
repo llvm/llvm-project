@@ -333,7 +333,6 @@ format stdexcept
 format string
 format string_view
 format tuple
-format vector
 format version
 forward_list algorithm
 forward_list atomic
@@ -869,7 +868,6 @@ thread string_view
 thread system_error
 thread tuple
 thread type_traits
-thread vector
 thread version
 tuple compare
 tuple cstddef
