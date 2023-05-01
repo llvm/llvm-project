@@ -1297,6 +1297,14 @@ public:
     });
   }
 
+  /// Returns the collection of variables for which we have debug info and that
+  /// have been assigned an entry value register.
+  auto getEntryValueVariableDbgInfo() const {
+    return make_filter_range(getVariableDbgInfo(), [](const auto &VarInfo) {
+      return VarInfo.inEntryValueRegister();
+    });
+  }
+
   /// Start tracking the arguments passed to the call \p CallI.
   void addCallArgsForwardingRegs(const MachineInstr *CallI,
                                  CallSiteInfoImpl &&CallInfo) {

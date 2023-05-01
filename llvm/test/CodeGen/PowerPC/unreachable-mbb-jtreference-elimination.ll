@@ -4,6 +4,7 @@
 define dso_local void @foo() #0 {
 ; CHECK-LABEL: fixedStack:
 ; CHECK-NEXT:  stack: []
+; CHECK-NEXT:  entry_values: []
 ; CHECK-NEXT:  callSites: []
 ; CHECK-NEXT:  debugValueSubstitutions: []
 ; CHECK-NEXT:  constants: []

@@ -119,6 +119,9 @@ public:
                const MachineJumpTableInfo &JTI);
   void convertStackObjects(yaml::MachineFunction &YMF,
                            const MachineFunction &MF, ModuleSlotTracker &MST);
+  void convertEntryValueObjects(yaml::MachineFunction &YMF,
+                                const MachineFunction &MF,
+                                ModuleSlotTracker &MST);
   void convertCallSiteObjects(yaml::MachineFunction &YMF,
                               const MachineFunction &MF,
                               ModuleSlotTracker &MST);
@@ -221,6 +224,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   MST.incorporateFunction(MF.getFunction());
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
   convertStackObjects(YamlMF, MF, MST);
+  convertEntryValueObjects(YamlMF, MF, MST);
   convertCallSiteObjects(YamlMF, MF, MST);
   for (const auto &Sub : MF.DebugValueSubstitutions) {
     const auto &SubSrc = Sub.Src;
@@ -370,6 +374,19 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   if (MFI.getRestorePoint()) {
     raw_string_ostream StrOS(YamlMFI.RestorePoint.Value);
     StrOS << printMBBReference(*MFI.getRestorePoint());
+  }
+}
+
+void MIRPrinter::convertEntryValueObjects(yaml::MachineFunction &YMF,
+                                          const MachineFunction &MF,
+                                          ModuleSlotTracker &MST) {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  for (const MachineFunction::VariableDbgInfo &DebugVar :
+       MF.getEntryValueVariableDbgInfo()) {
+    yaml::EntryValueObject &Obj = YMF.EntryValueObjects.emplace_back();
+    printStackObjectDbgInfo(DebugVar, Obj, MST);
+    MCRegister EntryValReg = DebugVar.getEntryValueRegister();
+    printRegMIR(EntryValReg, Obj.EntryValueRegister, TRI);
   }
 }
 
