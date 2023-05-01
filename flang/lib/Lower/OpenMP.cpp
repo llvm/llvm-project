@@ -1181,6 +1181,18 @@ static Value getReductionInitValue(mlir::Location loc, mlir::Type type,
     unsigned bits = type.getIntOrFloatBitWidth();
     int64_t maxInt = llvm::APInt::getSignedMaxValue(bits).getSExtValue();
     return builder.createIntegerConstant(loc, type, maxInt);
+  } else if (reductionOpName.contains("ior")) {
+    unsigned bits = type.getIntOrFloatBitWidth();
+    int64_t zeroInt = llvm::APInt::getZero(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, type, zeroInt);
+  } else if (reductionOpName.contains("ieor")) {
+    unsigned bits = type.getIntOrFloatBitWidth();
+    int64_t zeroInt = llvm::APInt::getZero(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, type, zeroInt);
+  } else if (reductionOpName.contains("iand")) {
+    unsigned bits = type.getIntOrFloatBitWidth();
+    int64_t allOnInt = llvm::APInt::getAllOnes(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, type, allOnInt);
   } else {
     if (type.isa<FloatType>())
       return builder.create<mlir::arith::ConstantOp>(
@@ -1268,6 +1280,15 @@ createReductionDecl(fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
       reductionOp =
           getReductionOperation<mlir::arith::MinFOp, mlir::arith::MinSIOp>(
               builder, type, loc, op1, op2);
+    } else if (name->source == "ior") {
+      assert((type.isIntOrIndex()) && "only integer is expected");
+      reductionOp = builder.create<mlir::arith::OrIOp>(loc, op1, op2);
+    } else if (name->source == "ieor") {
+      assert((type.isIntOrIndex()) && "only integer is expected");
+      reductionOp = builder.create<mlir::arith::XOrIOp>(loc, op1, op2);
+    } else if (name->source == "iand") {
+      assert((type.isIntOrIndex()) && "only integer is expected");
+      reductionOp = builder.create<mlir::arith::AndIOp>(loc, op1, op2);
     } else {
       TODO(loc, "Reduction of some intrinsic operators is not supported");
     }
@@ -1594,7 +1615,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                          &redOperator.u)) {
         if (const auto *name{Fortran::parser::Unwrap<Fortran::parser::Name>(
                 reductionIntrinsic)}) {
-          if ((name->source != "max") && (name->source != "min")) {
+          if ((name->source != "max") && (name->source != "min") &&
+              (name->source != "ior") && (name->source != "ieor") &&
+              (name->source != "iand")) {
             TODO(currentLocation,
                  "Reduction of intrinsic procedures is not supported");
           }
@@ -2364,7 +2387,10 @@ void Fortran::lower::genOpenMPReduction(
                          &redOperator.u)) {
         if (const auto *name{Fortran::parser::Unwrap<Fortran::parser::Name>(
                 reductionIntrinsic)}) {
-          if ((name->source != "max") && (name->source != "min")) {
+          std::string redName = name->ToString();
+          if ((name->source != "max") && (name->source != "min") &&
+              (name->source != "ior") && (name->source != "ieor") &&
+              (name->source != "iand")) {
             continue;
           }
           for (const auto &ompObject : objectList.v) {
@@ -2383,12 +2409,21 @@ void Fortran::lower::genOpenMPReduction(
                         findReductionChain(loadVal, &reductionVal);
                     if (reductionOp == nullptr)
                       continue;
-                    assert(mlir::isa<mlir::arith::SelectOp>(reductionOp) &&
-                           "Selection Op not found in reduction intrinsic");
-                    mlir::Operation *compareOp =
-                        getCompareFromReductionOp(reductionOp, loadVal);
-                    updateReduction(compareOp, firOpBuilder, loadVal,
-                                    reductionVal);
+
+                    if (redName == "max" || redName == "min") {
+                      assert(mlir::isa<mlir::arith::SelectOp>(reductionOp) &&
+                             "Selection Op not found in reduction intrinsic");
+                      mlir::Operation *compareOp =
+                          getCompareFromReductionOp(reductionOp, loadVal);
+                      updateReduction(compareOp, firOpBuilder, loadVal,
+                                      reductionVal);
+                    }
+                    if (redName == "ior" || redName == "ieor" ||
+                        redName == "iand") {
+
+                      updateReduction(reductionOp, firOpBuilder, loadVal,
+                                      reductionVal);
+                    }
                   }
                 }
               }
