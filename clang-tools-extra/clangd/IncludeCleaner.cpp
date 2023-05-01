@@ -422,13 +422,17 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   // times.
   llvm::stable_sort(MissingIncludes, [](const MissingIncludeDiagInfo &LHS,
                                         const MissingIncludeDiagInfo &RHS) {
-    if (LHS.Symbol == RHS.Symbol) {
+    // First sort by reference location.
+    if (LHS.SymRefRange != RHS.SymRefRange) {
       // We can get away just by comparing the offsets as all the ranges are in
       // main file.
       return LHS.SymRefRange.beginOffset() < RHS.SymRefRange.beginOffset();
     }
-    // If symbols are different we don't care about the ordering.
-    return true;
+    // For the same location, break ties using the symbol. Note that this won't
+    // be stable across runs.
+    using MapInfo = llvm::DenseMapInfo<include_cleaner::Symbol>;
+    return MapInfo::getHashValue(LHS.Symbol) <
+           MapInfo::getHashValue(RHS.Symbol);
   });
   MissingIncludes.erase(llvm::unique(MissingIncludes), MissingIncludes.end());
   std::vector<const Inclusion *> UnusedIncludes =
