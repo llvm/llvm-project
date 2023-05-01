@@ -811,41 +811,6 @@ public:
   static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
-class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
-private:
-  /// Function name table.
-  std::vector<std::string> NameTable;
-  /// The table mapping from function name to the offset of its FunctionSample
-  /// towards file start.
-  DenseMap<StringRef, uint64_t> FuncOffsetTable;
-  /// The set containing the functions to use when compiling a module.
-  DenseSet<StringRef> FuncsToUse;
-  std::error_code verifySPMagic(uint64_t Magic) override;
-  std::error_code readNameTable() override;
-  /// Read a string indirectly via the name table.
-  ErrorOr<StringRef> readStringFromTable() override;
-  std::error_code readHeader() override;
-  std::error_code readFuncOffsetTable();
-
-public:
-  SampleProfileReaderCompactBinary(std::unique_ptr<MemoryBuffer> B,
-                                   LLVMContext &C)
-      : SampleProfileReaderBinary(std::move(B), C, SPF_Compact_Binary) {}
-
-  /// \brief Return true if \p Buffer is in the format supported by this class.
-  static bool hasFormat(const MemoryBuffer &Buffer);
-
-  /// Read samples only for functions to use.
-  std::error_code readImpl() override;
-
-  /// Collect functions with definitions in Module M. Return true if
-  /// the reader has been given a module.
-  bool collectFuncsFromModule() override;
-
-  /// Return whether names in the profile are all MD5 numbers.
-  bool useMD5() override { return true; }
-};
-
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;
 
 // Supported histogram types in GCC.  Currently, we only need support for

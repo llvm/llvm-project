@@ -25,30 +25,6 @@ _PSTL_HIDE_FROM_ABI_PUSH
 
 namespace std {
 
-// [alg.find]
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-find_if(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first);
-
-  return __pstl::__internal::__pattern_find_if(
-      __dispatch_tag, std::forward<_ExecutionPolicy>(__exec), __first, __last, __pred);
-}
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-find_if_not(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  return std::find_if(std::forward<_ExecutionPolicy>(__exec), __first, __last, std::not_fn(__pred));
-}
-
-template <class _ExecutionPolicy, class _ForwardIterator, class _Tp>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator>
-find(_ExecutionPolicy&& __exec, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
-  return std::find_if(
-      std::forward<_ExecutionPolicy>(__exec), __first, __last, __pstl::__internal::__equal_value<_Tp>(__value));
-}
-
 // [alg.find.end]
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
 __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator1>

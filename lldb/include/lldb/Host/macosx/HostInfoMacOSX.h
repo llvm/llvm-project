@@ -31,7 +31,7 @@ public:
   static FileSpec GetXcodeDeveloperDirectory();
 
   /// Query xcrun to find an Xcode SDK directory.
-  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
+  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk);
 
   /// Shared cache utilities
   static SharedCacheImageInfo

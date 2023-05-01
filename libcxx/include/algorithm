@@ -1910,6 +1910,7 @@ template <class BidirectionalIterator, class Compare>
 
 #ifdef _LIBCPP_HAS_PARALLEL_ALGORITHMS
 #  include <__algorithm/pstl_any_all_none_of.h>
+#  include <__algorithm/pstl_find.h>
 #  include <__algorithm/pstl_for_each.h>
 #endif
 
