@@ -1,5 +1,5 @@
 add_header_library(
-  linux_riscv64_util
+  linux_riscv_util
   HDRS
     syscall.h
   DEPENDS

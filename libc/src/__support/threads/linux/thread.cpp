@@ -57,7 +57,7 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
 #define CLONE_RESULT_REGISTER "x0"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #define CLONE_RESULT_REGISTER "t0"
 #elif defined(LIBC_TARGET_ARCH_IS_X86_64)
 #define CLONE_RESULT_REGISTER "rax"
@@ -169,7 +169,7 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
   // is set to the stack pointer where start args are stored. So, we fetch
   // from there.
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(1));
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   // The current frame pointer is the previous stack pointer where the start
   // args are stored.
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
@@ -306,7 +306,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
       tls.tp           // The thread pointer value for the new thread.
   );
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                  \
-    defined(LIBC_TARGET_ARCH_IS_RISCV64)
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   long register clone_result asm(CLONE_RESULT_REGISTER);
   clone_result = LIBC_NAMESPACE::syscall_impl<long>(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV64_SQRT_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV64_SQRT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_SQRT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_SQRT_H
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#if !defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #error "Invalid include"
 #endif
 
@@ -36,4 +36,4 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV64_SQRT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_RISCV_SQRT_H

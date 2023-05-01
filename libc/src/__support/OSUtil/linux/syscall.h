@@ -19,8 +19,8 @@
 #include "aarch64/syscall.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/syscall.h"
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-#include "riscv64/syscall.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "riscv/syscall.h"
 #endif
 
 namespace LIBC_NAMESPACE {

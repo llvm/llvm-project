@@ -21,7 +21,8 @@
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
 TEST(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) || defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   // Few Arm HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //

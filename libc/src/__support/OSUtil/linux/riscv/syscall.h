@@ -1,4 +1,4 @@
-//===--------- inline implementation of riscv64 syscalls ----------* C++ *-===//
+//===--------- inline implementation of riscv syscalls ------------* C++ *-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV64_SYSCALL_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV64_SYSCALL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV_SYSCALL_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV_SYSCALL_H
 
 #include "src/__support/common.h"
 
@@ -107,4 +107,4 @@ LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
 #undef REGISTER_CONSTRAINT_5
 #undef REGISTER_CONSTRAINT_6
 
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV64_SYSCALL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_RISCV_SYSCALL_H
