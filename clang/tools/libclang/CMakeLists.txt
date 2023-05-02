@@ -35,6 +35,7 @@ set(SOURCES
   CRefactor.cpp
   CXComment.cpp
   CXCursor.cpp
+  CXError.cpp
   CXExtractAPI.cpp
   CXIndexDataConsumer.cpp
   CXCompilationDatabase.cpp

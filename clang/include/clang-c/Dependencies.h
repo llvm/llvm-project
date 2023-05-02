@@ -211,6 +211,14 @@ clang_experimental_DependencyScannerServiceOptions_setCASDatabases(
     CXDependencyScannerServiceOptions Opts, CXCASDatabases);
 
 /**
+ * Specify the specific CAS options for the scanner to use for the produced
+ * compiler arguments.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setCASOptions(
+    CXDependencyScannerServiceOptions Opts, CXCASOptions);
+
+/**
  * Specify a \c CXCASObjectStore in the given options. If an object store and
  * action cache are available, the scanner will produce cached commands.
  * Deprecated, use

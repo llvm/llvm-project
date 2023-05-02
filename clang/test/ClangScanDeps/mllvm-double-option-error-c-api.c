@@ -1,4 +1,4 @@
-// RUN: c-index-test core -scan-deps %S -- clang_tool -Dmz -mllvm -asan-instrumentation-with-call-threshold=0 -mllvm -asan-instrumentation-with-call-threshold=0 %s -I %S/Inputs | FileCheck %s
+// RUN: c-index-test core -scan-deps -working-dir %S -- clang_tool -Dmz -mllvm -asan-instrumentation-with-call-threshold=0 -mllvm -asan-instrumentation-with-call-threshold=0 %s -I %S/Inputs | FileCheck %s
 
 #ifdef mz
 #include "header.h"
