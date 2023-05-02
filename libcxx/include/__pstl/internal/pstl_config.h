@@ -15,9 +15,6 @@
 // TODO: Make this a proper configuration option
 #define _PSTL_PAR_BACKEND_SERIAL
 
-#include <__assert>
-#define _PSTL_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
-
 #define _PSTL_PRAGMA(x) _Pragma(#    x)
 
 // Enable SIMD for compilers that support OpenMP 4.0
