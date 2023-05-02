@@ -6,6 +6,7 @@ declare void @use_f32(float)
 declare void @use_v2f16(<2 x half>)
 declare void @use_v2i8(<2 x i8>)
 declare i32 @llvm.sadd.sat.i32(i32, i32)
+declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
 
 define i32 @test1(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test1(
@@ -108,6 +109,47 @@ define i32 @test_sub_deduce_false(i32 %x, i32 %y) {
   %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
   ret i32 %sub
 }
+
+define <2 x i8> @test_sub_dont_deduce_with_undef_cond_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @test_sub_dont_deduce_with_undef_cond_vec(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 9, i8 undef>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %c = icmp ne <2 x i8> %x, <i8 9, i8 undef>
+  %cond = select <2 x i1> %c, <2 x i8> %y, <2 x i8> <i8 7, i8 7>
+  %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
+  ret <2 x i8> %sub
+}
+
+define <2 x i8> @test_sub_dont_deduce_with_poison_cond_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @test_sub_dont_deduce_with_poison_cond_vec(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 poison, i8 9>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %c = icmp ne <2 x i8> %x, <i8 poison, i8 9>
+  %cond = select <2 x i1> %c, <2 x i8> %y, <2 x i8> <i8 7, i8 7>
+  %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
+  ret <2 x i8> %sub
+}
+
+
+define <2 x i8> @test_sub_deduce_with_undef_val_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @test_sub_deduce_with_undef_val_vec(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 4, i8 -1>, <2 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %c = icmp ne <2 x i8> %x, <i8 1, i8 2>
+  %cond = select <2 x i1> %c, <2 x i8> %y, <2 x i8> <i8 3, i8 undef>
+  %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
+  ret <2 x i8> %sub
+}
+
 
 define i32 @test6(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test6(
