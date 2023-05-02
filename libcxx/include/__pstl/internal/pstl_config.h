@@ -10,79 +10,31 @@
 #ifndef _PSTL_CONFIG_H
 #define _PSTL_CONFIG_H
 
+#include <__config>
+
 // TODO: Make this a proper configuration option
 #define _PSTL_PAR_BACKEND_SERIAL
 
-// The version is XYYZ, where X is major, YY is minor, and Z is patch (i.e. X.YY.Z)
-#define _PSTL_VERSION 16000
-#define _PSTL_VERSION_MAJOR (_PSTL_VERSION / 1000)
-#define _PSTL_VERSION_MINOR ((_PSTL_VERSION % 1000) / 10)
-#define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
+#include <__assert>
+#define _PSTL_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
 
-#if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB) && !defined(_PSTL_PAR_BACKEND_OPENMP)
-#    error "A parallel backend must be specified"
-#endif
-
-// Check the user-defined macro for warnings
-#if defined(PSTL_USAGE_WARNINGS)
-#    define _PSTL_USAGE_WARNINGS
-#endif
-
-#if defined(_LIBCPP_VERSION)
-#    include <__assert>
-#    define _PSTL_ASSERT(pred) _LIBCPP_ASSERT(pred, "")
-#elif defined(__GLIBCXX__)
-#    define _PSTL_ASSERT(pred) __glibcxx_assert(pred)
-#else
-#    include <cassert>
-#    define _PSTL_ASSERT(pred) (assert((pred)))
-#endif
-
-// Portability "#pragma" definition
-#ifdef _MSC_VER
-#    define _PSTL_PRAGMA(x) __pragma(x)
-#else
-#    define _PSTL_PRAGMA(x) _Pragma(#    x)
-#endif
-
-#define _PSTL_STRING_AUX(x) #x
-#define _PSTL_STRING(x) _PSTL_STRING_AUX(x)
-#define _PSTL_STRING_CONCAT(x, y) x #y
-
-// note that when ICC or Clang is in use, _PSTL_GCC_VERSION might not fully match
-// the actual GCC version on the system.
-#define _PSTL_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-
-#if defined(__clang__)
-// according to clang documentation, version can be vendor specific
-#    define _PSTL_CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
-#endif
+#define _PSTL_PRAGMA(x) _Pragma(#    x)
 
 // Enable SIMD for compilers that support OpenMP 4.0
-#if (defined(_OPENMP) && _OPENMP >= 201307) || \
-    (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1600) || \
-    (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || \
-    defined(__clang__)
+#if (defined(_OPENMP) && _OPENMP >= 201307)
 #    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
 #    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
-#elif !defined(_MSC_VER) //#pragma simd
-#    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(simd)
-#    define _PSTL_PRAGMA_DECLARE_SIMD
-#    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(simd reduction(PRM))
 #else //no simd
 #    define _PSTL_PRAGMA_SIMD
 #    define _PSTL_PRAGMA_DECLARE_SIMD
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
 #endif //Enable SIMD
 
-#if defined(__INTEL_COMPILER)
-#    define _PSTL_PRAGMA_FORCEINLINE _PSTL_PRAGMA(forceinline)
-#else
-#    define _PSTL_PRAGMA_FORCEINLINE
-#endif
+#define _PSTL_PRAGMA_FORCEINLINE
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1900
+// TODO: find out when to enable these annotations
+#if 0
 #    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
 #    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan inclusive(PRM))
 #    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan exclusive(PRM))
@@ -92,57 +44,18 @@
 #    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
 #endif
 
-// Should be defined to 1 for environments with a vendor implementation of C++17 execution policies
-#define _PSTL_CPP17_EXECUTION_POLICIES_PRESENT (_MSC_VER >= 1912 && _MSVC_LANG >= 201703L) ||                          \
-    (_GLIBCXX_RELEASE >= 9 && __GLIBCXX__ >= 20190503 && __cplusplus >= 201703L)
+#define _PSTL_CPP14_2RANGE_MISMATCH_EQUAL_PRESENT
+#define _PSTL_CPP14_MAKE_REVERSE_ITERATOR_PRESENT
+#define _PSTL_CPP14_INTEGER_SEQUENCE_PRESENT
+#define _PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT
 
-#if (defined(_MSC_VER) && _MSC_VER >= 1900) || \
-    __cplusplus >= 201300L || \
-    __cpp_lib_robust_nonmodifying_seq_ops == 201304
-#   define _PSTL_CPP14_2RANGE_MISMATCH_EQUAL_PRESENT
-#endif
-#if (defined(_MSC_VER) && _MSC_VER >= 1900) || \
-    __cplusplus >= 201402L || \
-    __cpp_lib_make_reverse_iterator == 201402
-#   define _PSTL_CPP14_MAKE_REVERSE_ITERATOR_PRESENT
-#endif
-#if (defined(_MSC_VER) && _MSC_VER >= 1900) || __cplusplus >= 201402L
-#   define _PSTL_CPP14_INTEGER_SEQUENCE_PRESENT
-#endif
-#if (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1700) || \
-    (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 190023918) || \
-    __cplusplus >= 201402L
-#   define _PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT
-#endif
-
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1800
-#   define _PSTL_EARLYEXIT_PRESENT
-#   define _PSTL_MONOTONIC_PRESENT
-#endif
-
-#if (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1900) || \
-    (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || \
-    (defined(_OPENMP) && _OPENMP >= 201307)
+#if defined(_OPENMP) && _OPENMP >= 201307
 #    define _PSTL_UDR_PRESENT
 #endif
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1900 && __INTEL_COMPILER_BUILD_DATE >= 20180626
-#   define _PSTL_UDS_PRESENT
-#endif
-
-#if defined(_PSTL_EARLYEXIT_PRESENT)
-#    define _PSTL_PRAGMA_SIMD_EARLYEXIT _PSTL_PRAGMA(omp simd early_exit)
-#else
-#    define _PSTL_PRAGMA_SIMD_EARLYEXIT
-#endif
-
-#if defined(_PSTL_MONOTONIC_PRESENT)
-#    define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(PRM) _PSTL_PRAGMA(omp ordered simd monotonic(PRM))
-#    define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(PRM1, PRM2) _PSTL_PRAGMA(omp ordered simd monotonic(PRM1, PRM2))
-#else
-#    define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(PRM)
-#    define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(PRM1, PRM2)
-#endif
+#define _PSTL_PRAGMA_SIMD_EARLYEXIT
+#define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(PRM)
+#define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(PRM1, PRM2)
 
 // Declaration of reduction functor, where
 // NAME - the name of the functor
@@ -154,43 +67,9 @@
 #define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                       \
     _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1600
-#    define _PSTL_PRAGMA_VECTOR_UNALIGNED _PSTL_PRAGMA(vector unaligned)
-#else
-#    define _PSTL_PRAGMA_VECTOR_UNALIGNED
-#endif
-
-// Check the user-defined macro to use non-temporal stores
-#if defined(PSTL_USE_NONTEMPORAL_STORES) && (__INTEL_COMPILER >= 1600)
-#    define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED _PSTL_PRAGMA(vector nontemporal)
-#else
-#    define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-#endif
-
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER) // the preprocessors don't type a message location
-#    define _PSTL_PRAGMA_LOCATION __FILE__ ":" _PSTL_STRING(__LINE__) ": [Parallel STL message]: "
-#else
-#    define _PSTL_PRAGMA_LOCATION " [Parallel STL message]: "
-#endif
-
-#define _PSTL_PRAGMA_MESSAGE_IMPL(x) _PSTL_PRAGMA(message(_PSTL_STRING_CONCAT(_PSTL_PRAGMA_LOCATION, x)))
-
-#if defined(_PSTL_USAGE_WARNINGS)
-#    define _PSTL_PRAGMA_MESSAGE(x) _PSTL_PRAGMA_MESSAGE_IMPL(x)
-#    define _PSTL_PRAGMA_MESSAGE_POLICIES(x) _PSTL_PRAGMA_MESSAGE_IMPL(x)
-#else
-#    define _PSTL_PRAGMA_MESSAGE(x)
-#    define _PSTL_PRAGMA_MESSAGE_POLICIES(x)
-#endif
-
-// broken macros
-#if (defined(__GLIBCXX__) && __GLIBCXX__ < 20150716) || \
-    (defined(_MSC_VER) && _MSC_VER < 1800)
-#   define _PSTL_CPP11_STD_ROTATE_BROKEN
-#endif
-
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER == 1800
-#   define _PSTL_ICC_18_OMP_SIMD_BROKEN
-#endif
+#define _PSTL_PRAGMA_VECTOR_UNALIGNED
+#define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+#define _PSTL_PRAGMA_MESSAGE(x)
+#define _PSTL_PRAGMA_MESSAGE_POLICIES(x)
 
 #endif /* _PSTL_CONFIG_H */
