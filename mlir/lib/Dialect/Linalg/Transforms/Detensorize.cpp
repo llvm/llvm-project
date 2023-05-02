@@ -476,6 +476,9 @@ struct LinalgDetensorize
     DenseSet<BlockArgument> blockArgsToDetensor;
     FunctionOpInterface funcOp = getOperation();
 
+    if (funcOp.getFunctionBody().empty())
+      return;
+
     // Make sure the entry block of the function doesn't contain any Linalg ops.
     // Otherwise, it may lead to the signature of the block being changed by the
     // dialect conversion below, which would make the function op invalid
