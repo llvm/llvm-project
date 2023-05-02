@@ -237,6 +237,10 @@ struct BinaryOpNarrowingPattern : NarrowingPattern<BinaryOp> {
   /// this, taking into account `BinaryOp` semantics.
   virtual unsigned getResultBitsProduced(unsigned operandBits) const = 0;
 
+  /// Customization point for patterns that should only apply with
+  /// zero/sign-extension ops as arguments.
+  virtual bool isSupported(ExtensionOp) const { return true; }
+
   LogicalResult matchAndRewrite(BinaryOp op,
                                 PatternRewriter &rewriter) const final {
     Type origTy = op.getType();
@@ -247,7 +251,7 @@ struct BinaryOpNarrowingPattern : NarrowingPattern<BinaryOp> {
     // For the optimization to apply, we expect the lhs to be an extension op,
     // and for the rhs to either be the same extension op or a constant.
     FailureOr<ExtensionOp> ext = ExtensionOp::from(op.getLhs().getDefiningOp());
-    if (failed(ext))
+    if (failed(ext) || !isSupported(*ext))
       return failure();
 
     FailureOr<unsigned> lhsBitsRequired =
@@ -286,6 +290,27 @@ struct BinaryOpNarrowingPattern : NarrowingPattern<BinaryOp> {
 struct AddIPattern final : BinaryOpNarrowingPattern<arith::AddIOp> {
   using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
 
+  // Addition may require one extra bit for the result.
+  // Example: `UINT8_MAX + 1 == 255 + 1 == 256`.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits + 1;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// SubIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct SubIPattern final : BinaryOpNarrowingPattern<arith::SubIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // This optimization only applies to signed arguments.
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == ExtensionKind::Sign;
+  }
+
+  // Subtraction may require one extra bit for the result.
+  // Example: `INT8_MAX - (-1) == 127 - (-1) == 128`.
   unsigned getResultBitsProduced(unsigned operandBits) const override {
     return operandBits + 1;
   }
@@ -298,8 +323,47 @@ struct AddIPattern final : BinaryOpNarrowingPattern<arith::AddIOp> {
 struct MulIPattern final : BinaryOpNarrowingPattern<arith::MulIOp> {
   using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
 
+  // Multiplication may require up double the operand bits.
+  // Example: `UNT8_MAX * UINT8_MAX == 255 * 255 == 65025`.
   unsigned getResultBitsProduced(unsigned operandBits) const override {
     return 2 * operandBits;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// DivSIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct DivSIPattern final : BinaryOpNarrowingPattern<arith::DivSIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // This optimization only applies to signed arguments.
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == ExtensionKind::Sign;
+  }
+
+  // Unlike multiplication, signed division requires only one more result bit.
+  // Example: `INT8_MIN / (-1) == -128 / (-1) == 128`.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits + 1;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// DivUIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct DivUIPattern final : BinaryOpNarrowingPattern<arith::DivUIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // This optimization only applies to unsigned arguments.
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == ExtensionKind::Zero;
+  }
+
+  // Unsigned division does not require any extra result bits.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits;
   }
 };
 
@@ -625,7 +689,8 @@ void populateArithIntNarrowingPatterns(
                ExtensionOverTranspose, ExtensionOverFlatTranspose>(
       patterns.getContext(), options, PatternBenefit(2));
 
-  patterns.add<AddIPattern, MulIPattern, SIToFPPattern, UIToFPPattern>(
+  patterns.add<AddIPattern, SubIPattern, MulIPattern, DivSIPattern,
+               DivUIPattern, SIToFPPattern, UIToFPPattern>(
       patterns.getContext(), options);
 }
 
