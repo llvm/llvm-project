@@ -178,14 +178,17 @@ SlotPromoter::SlotPromoter(MemorySlot slot,
                            PromotableAllocationOpInterface allocator,
                            OpBuilder &builder, DominanceInfo &dominance)
     : slot(slot), allocator(allocator), builder(builder), dominance(dominance) {
-  bool isResultOrNewBlockArgument = slot.ptr.getDefiningOp() == allocator;
-  if (BlockArgument arg = slot.ptr.dyn_cast<BlockArgument>())
-    isResultOrNewBlockArgument = isResultOrNewBlockArgument ||
-                                 arg.getOwner()->getParentOp() == allocator;
-  (void)isResultOrNewBlockArgument;
-  assert(isResultOrNewBlockArgument &&
+#ifndef NDEBUG
+  auto isResultOrNewBlockArgument = [&]() {
+    if (BlockArgument arg = slot.ptr.dyn_cast<BlockArgument>())
+      return arg.getOwner()->getParentOp() == allocator;
+    return slot.ptr.getDefiningOp() == allocator;
+  };
+
+  assert(isResultOrNewBlockArgument() &&
          "a slot must be a result of the allocator or an argument of the child "
          "regions of the allocator");
+#endif // NDEBUG
 }
 
 Value SlotPromoter::getLazyDefaultValue() {
@@ -242,8 +245,7 @@ LogicalResult SlotPromoter::computeBlockingUses() {
 
     // Then, register any new blocking uses for coming operations.
     for (OpOperand *blockingUse : newBlockingUses) {
-      assert(llvm::find(user->getResults(), blockingUse->get()) !=
-             user->result_end());
+      assert(llvm::is_contained(user->getResults(), blockingUse->get()));
 
       SmallPtrSetImpl<OpOperand *> &newUserBlockingUseSet =
           userToBlockingUses.getOrInsertDefault(blockingUse->getOwner());
