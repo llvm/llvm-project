@@ -59,7 +59,11 @@ endif()
 add_dependencies(clang clang-resource-headers)
 
 if(NOT CLANG_LINKS_TO_CREATE)
-  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp flang)
+  if(CLANG_LINK_FLANG)
+    set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp flang)
+  else()
+    set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
+  endif()
 endif()
 
 if (CLANG_ENABLE_HLSL)

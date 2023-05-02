@@ -195,6 +195,8 @@ set(PPC_LINUX_DEFAULT_IEEELONGDOUBLE OFF CACHE BOOL
 set(CLANG_SPAWN_CC1 OFF CACHE BOOL
     "Whether clang should use a new process for the CC1 invocation")
 
+option(CLANG_LINK_FLANG "Create flang install link to clang" ON)
+
 option(CLANG_DEFAULT_PIE_ON_LINUX "Default to -fPIE and -pie on linux-gnu" ON)
 
 set(CLANG_DEFAULT_LINKER "" CACHE STRING
