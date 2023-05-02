@@ -21,7 +21,7 @@ define void @test_basic() #0 {
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB0_2
+; ARM-linux-NEXT: bls     .LBB0_2
 
 ; ARM-linux:      mov     r4, #48
 ; ARM-linux-NEXT: mov     r5, #0
@@ -40,7 +40,7 @@ define void @test_basic() #0 {
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB0_2
+; ARM-android-NEXT: bls     .LBB0_2
 
 ; ARM-android:      mov     r4, #48
 ; ARM-android-NEXT: mov     r5, #0
@@ -68,7 +68,7 @@ define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB1_2
+; ARM-linux-NEXT: bls     .LBB1_2
 
 ; ARM-linux:      mov     r4, #56
 ; ARM-linux-NEXT: mov     r5, #0
@@ -87,7 +87,7 @@ define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB1_2
+; ARM-android-NEXT: bls     .LBB1_2
 
 ; ARM-android:      mov     r4, #56
 ; ARM-android-NEXT: mov     r5, #0
@@ -114,7 +114,7 @@ define void @test_large() #0 {
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB2_2
+; ARM-linux-NEXT: bls     .LBB2_2
 
 ; ARM-linux:      ldr     r4, .LCPI2_0
 ; ARM-linux-NEXT: mov     r5, #0
@@ -137,7 +137,7 @@ define void @test_large() #0 {
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB2_2
+; ARM-android-NEXT: bls     .LBB2_2
 
 ; ARM-android:      ldr     r4, .LCPI2_0
 ; ARM-android-NEXT: mov     r5, #0
@@ -166,7 +166,7 @@ define fastcc void @test_fastcc() #0 {
 ; ARM-linux-NEXT: mov     r5, sp
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB3_2
+; ARM-linux-NEXT: bls     .LBB3_2
 
 ; ARM-linux:      mov     r4, #48
 ; ARM-linux-NEXT: mov     r5, #0
@@ -185,7 +185,7 @@ define fastcc void @test_fastcc() #0 {
 ; ARM-android-NEXT: mov     r5, sp
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB3_2
+; ARM-android-NEXT: bls     .LBB3_2
 
 ; ARM-android:      mov     r4, #48
 ; ARM-android-NEXT: mov     r5, #0
@@ -212,7 +212,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; ARM-linux-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-linux-NEXT: ldr     r4, [r4, #4]
 ; ARM-linux-NEXT: cmp     r4, r5
-; ARM-linux-NEXT: blo     .LBB4_2
+; ARM-linux-NEXT: bls     .LBB4_2
 
 ; ARM-linux:      ldr     r4, .LCPI4_0
 ; ARM-linux-NEXT: mov     r5, #0
@@ -235,7 +235,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; ARM-android-NEXT: mrc     p15, #0, r4, c13, c0, #3
 ; ARM-android-NEXT: ldr     r4, [r4, #252]
 ; ARM-android-NEXT: cmp     r4, r5
-; ARM-android-NEXT: blo     .LBB4_2
+; ARM-android-NEXT: bls     .LBB4_2
 
 ; ARM-android:      ldr     r4, .LCPI4_0
 ; ARM-android-NEXT: mov     r5, #0
