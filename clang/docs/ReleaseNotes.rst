@@ -313,8 +313,8 @@ Bug Fixes in This Version
   not a type concept.
 - Fix crash when a doc comment contains a line splicing.
   (`#62054 <https://github.com/llvm/llvm-project/issues/62054>`_)
-- Work around with a clang coverage crash which happens when visiting 
-  expressions/statements with invalid source locations in non-assert builds. 
+- Work around with a clang coverage crash which happens when visiting
+  expressions/statements with invalid source locations in non-assert builds.
   Assert builds may still see assertions triggered from this.
 - Fix a failed assertion due to an invalid source location when trying to form
   a coverage report for an unresolved constructor expression.
@@ -335,6 +335,8 @@ Bug Fixes in This Version
 - Fix crash when attempting to perform parenthesized initialization of an
   aggregate with a base class with only non-public constructors.
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
+- Fix a stack overflow issue when evaluating ``consteval`` default arguments.
+  (`#60082` <https://github.com/llvm/llvm-project/issues/60082>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
