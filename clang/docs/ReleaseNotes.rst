@@ -337,6 +337,9 @@ Bug Fixes in This Version
   (`#62296 <https://github.com/llvm/llvm-project/issues/62296>`_)
 - Fix a stack overflow issue when evaluating ``consteval`` default arguments.
   (`#60082` <https://github.com/llvm/llvm-project/issues/60082>`_)
+- Fix the assertion hit when generating code for global variable initializer of
+  _BitInt(1) type.
+  (`#62207 <https://github.com/llvm/llvm-project/issues/62207>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
