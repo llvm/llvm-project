@@ -23,3 +23,11 @@
 // RUN: not %clang --target=noarch-unknown-nacl -o %t.o %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-NOARCH-NACL %s
 // CHECK-NOARCH-NACL:  error: the target architecture 'noarch' is not supported by the target 'Native Client'
+
+// RUN: not %clang --target=noarch-unknown-windows-gnu -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-NOARCH-MINGW %s
+// CHECK-NOARCH-MINGW: error: unknown target triple 'noarch-unknown-windows-gnu'
+
+// RUN: not %clang --target=noarch-unknown-windows-itanium -o %t.o %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-NOARCH-CROSSWINDOWS %s
+// CHECK-NOARCH-CROSSWINDOWS: error: unknown target triple 'noarch-unknown-windows-itanium'
