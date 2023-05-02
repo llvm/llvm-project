@@ -52,7 +52,6 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
      << "#define PROC(ENUM, NAME, DEFAULT_MARCH)\n"
      << "#endif\n\n";
 
-  OS << "PROC(INVALID, {\"invalid\"}, {\"\"})\n";
   // Iterate on all definition records.
   for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
     std::string MArch = Rec->getValueAsString("DefaultMarch").str();

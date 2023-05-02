@@ -41,33 +41,29 @@ public:
   }
 
   llvm::StringRef GetArchitecture() {
-    return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, ePropertyArchitecture, "");
+    return m_collection_sp->GetPropertyAtIndexAsString(ePropertyArchitecture)
+        .value_or("");
   }
 
   FileSpec GetEmulatorPath() {
-    return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr,
-                                                         ePropertyEmulatorPath);
+    return m_collection_sp->GetPropertyAtIndexAsFileSpec(ePropertyEmulatorPath);
   }
 
   Args GetEmulatorArgs() {
     Args result;
-    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorArgs,
-                                              result);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyEmulatorArgs, result);
     return result;
   }
 
   Environment GetEmulatorEnvVars() {
     Args args;
-    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEmulatorEnvVars,
-                                              args);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyEmulatorEnvVars, args);
     return Environment(args);
   }
 
   Environment GetTargetEnvVars() {
     Args args;
-    m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyTargetEnvVars,
-                                              args);
+    m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyTargetEnvVars, args);
     return Environment(args);
   }
 };

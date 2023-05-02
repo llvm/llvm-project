@@ -576,6 +576,19 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                                 AssemblerPredicate<(all_of FeatureStdExtZicond),
                                 "'Zicond' (Integer Conditional Operations)">;
 
+def FeatureStdExtSmaia
+    : SubtargetFeature<"experimental-smaia", "HasStdExtSmaia", "true",
+                       "'Smaia' (Smaia encompasses all added CSRs and all "
+                       "modifications to interrupt response behavior that the "
+                       "AIA specifies for a hart, over all privilege levels.)",
+                       []>;
+
+def FeatureStdExtSsaia
+    : SubtargetFeature<"experimental-ssaia", "HasStdExtSsaia", "true",
+                       "'Ssaia' (Ssaia is essentially the same as Smaia except "
+                       "excluding the machine-level CSRs and behavior not "
+                       "directly visible to supervisor level.)", []>;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//

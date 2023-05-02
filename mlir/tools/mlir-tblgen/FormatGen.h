@@ -60,6 +60,7 @@ public:
     keyword_start,
     kw_attr_dict,
     kw_attr_dict_w_keyword,
+    kw_prop_dict,
     kw_custom,
     kw_functional_type,
     kw_oilist,
@@ -287,6 +288,7 @@ public:
   /// These are the kinds of directives.
   enum Kind {
     AttrDict,
+    PropDict,
     Custom,
     FunctionalType,
     OIList,

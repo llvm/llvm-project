@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -50,7 +51,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -192,6 +192,7 @@ static void moveOperands(MachineOperand *Dst, MachineOperand *Src,
 /// an explicit operand it is added at the end of the explicit operand list
 /// (before the first implicit operand).
 void MachineInstr::addOperand(MachineFunction &MF, const MachineOperand &Op) {
+  assert(NumOperands < USHRT_MAX && "Cannot add more operands.");
   assert(MCID && "Cannot add operands before providing an instr descriptor");
 
   // Check if we're adding one of our existing operands.

@@ -1,3 +1,5 @@
+
+
 //===- Interfaces.cpp - C Interface for MLIR Interfaces -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -39,8 +41,8 @@ MlirTypeID mlirInferTypeOpInterfaceTypeID() {
 MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
     MlirStringRef opName, MlirContext context, MlirLocation location,
     intptr_t nOperands, MlirValue *operands, MlirAttribute attributes,
-    intptr_t nRegions, MlirRegion *regions, MlirTypesCallback callback,
-    void *userData) {
+    void *properties, intptr_t nRegions, MlirRegion *regions,
+    MlirTypesCallback callback, void *userData) {
   StringRef name(opName.data, opName.length);
   std::optional<RegisteredOperationName> info =
       RegisteredOperationName::lookup(name, unwrap(context));
@@ -72,7 +74,7 @@ MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
   SmallVector<Type> inferredTypes;
   if (failed(info->getInterface<InferTypeOpInterface>()->inferReturnTypes(
           unwrap(context), maybeLocation, unwrappedOperands, attributeDict,
-          unwrappedRegions, inferredTypes)))
+          properties, unwrappedRegions, inferredTypes)))
     return mlirLogicalResultFailure();
 
   SmallVector<MlirType> wrappedInferredTypes;

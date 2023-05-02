@@ -2205,6 +2205,9 @@ public:
         return std::string();
       }) const;
 
+  /// Compute hash values for each block of the function.
+  void computeBlockHashes() const;
+
   void setDWARFUnit(DWARFUnit *Unit) { DwarfUnit = Unit; }
 
   /// Return DWARF compile unit for this function.

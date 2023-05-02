@@ -113,6 +113,7 @@ public:
 
   bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
+  bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const { return XLenVT; }

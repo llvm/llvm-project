@@ -100,7 +100,7 @@ public:
   void buildEdges() {
     LLVM_DEBUG(dbgs() << "Build Edge on " << F.getName() << "\n");
 
-    const BasicBlock *Entry = &(F.getEntryBlock());
+    BasicBlock *Entry = &(F.getEntryBlock());
     uint64_t EntryWeight = (BFI != nullptr ? BFI->getEntryFreq() : 2);
     // If we want to instrument the entry count, lower the weight to 0.
     if (InstrumentFuncEntry)
@@ -257,7 +257,7 @@ public:
   }
 
   // Add an edge to AllEdges with weight W.
-  Edge &addEdge(const BasicBlock *Src, const BasicBlock *Dest, uint64_t W) {
+  Edge &addEdge(BasicBlock *Src, BasicBlock *Dest, uint64_t W) {
     uint32_t Index = BBInfos.size();
     auto Iter = BBInfos.end();
     bool Inserted;

@@ -3168,12 +3168,12 @@ void ARMFrameLowering::adjustForSegmentedStacks(
       .addReg(ScratchReg1)
       .add(predOps(ARMCC::AL));
 
-  // This jump is taken if StackLimit < SP - stack required.
+  // This jump is taken if StackLimit <= SP - stack required.
   Opcode = Thumb ? ARM::tBcc : ARM::Bcc;
-  BuildMI(GetMBB, DL, TII.get(Opcode)).addMBB(PostStackMBB)
-       .addImm(ARMCC::LO)
-       .addReg(ARM::CPSR);
-
+  BuildMI(GetMBB, DL, TII.get(Opcode))
+      .addMBB(PostStackMBB)
+      .addImm(ARMCC::LS)
+      .addReg(ARM::CPSR);
 
   // Calling __morestack(StackSize, Size of stack arguments).
   // __morestack knows that the stack size requested is in SR0(r4)

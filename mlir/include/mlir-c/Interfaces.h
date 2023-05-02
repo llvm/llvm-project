@@ -57,8 +57,8 @@ typedef void (*MlirTypesCallback)(intptr_t, MlirType *, void *);
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
     MlirStringRef opName, MlirContext context, MlirLocation location,
     intptr_t nOperands, MlirValue *operands, MlirAttribute attributes,
-    intptr_t nRegions, MlirRegion *regions, MlirTypesCallback callback,
-    void *userData);
+    void *properties, intptr_t nRegions, MlirRegion *regions,
+    MlirTypesCallback callback, void *userData);
 
 #ifdef __cplusplus
 }

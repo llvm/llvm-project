@@ -263,46 +263,46 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
 
 bool Debugger::GetAutoConfirm() const {
   const uint32_t idx = ePropertyAutoConfirm;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 const FormatEntity::Entry *Debugger::GetDisassemblyFormat() const {
   const uint32_t idx = ePropertyDisassemblyFormat;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(idx);
 }
 
 const FormatEntity::Entry *Debugger::GetFrameFormat() const {
   const uint32_t idx = ePropertyFrameFormat;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(idx);
 }
 
 const FormatEntity::Entry *Debugger::GetFrameFormatUnique() const {
   const uint32_t idx = ePropertyFrameFormatUnique;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(idx);
 }
 
 uint32_t Debugger::GetStopDisassemblyMaxSize() const {
   const uint32_t idx = ePropertyStopDisassemblyMaxSize;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::GetNotifyVoid() const {
   const uint32_t idx = ePropertyNotiftVoid;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 llvm::StringRef Debugger::GetPrompt() const {
   const uint32_t idx = ePropertyPrompt;
-  return m_collection_sp->GetPropertyAtIndexAsString(
-      nullptr, idx, g_debugger_properties[idx].default_cstr_value);
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 void Debugger::SetPrompt(llvm::StringRef p) {
   const uint32_t idx = ePropertyPrompt;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, p);
+  m_collection_sp->SetPropertyAtIndexAsString(idx, p);
   llvm::StringRef new_prompt = GetPrompt();
   std::string str =
       lldb_private::ansi::FormatAnsiTerminalCodes(new_prompt, GetUseColor());
@@ -313,30 +313,30 @@ void Debugger::SetPrompt(llvm::StringRef p) {
 
 const FormatEntity::Entry *Debugger::GetThreadFormat() const {
   const uint32_t idx = ePropertyThreadFormat;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(idx);
 }
 
 const FormatEntity::Entry *Debugger::GetThreadStopFormat() const {
   const uint32_t idx = ePropertyThreadStopFormat;
-  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFormatEntity(idx);
 }
 
 lldb::ScriptLanguage Debugger::GetScriptLanguage() const {
   const uint32_t idx = ePropertyScriptLanguage;
-  return (lldb::ScriptLanguage)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return (lldb::ScriptLanguage)m_collection_sp
+      ->GetPropertyAtIndexAsEnumeration(idx)
+      .value_or(g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::SetScriptLanguage(lldb::ScriptLanguage script_lang) {
   const uint32_t idx = ePropertyScriptLanguage;
-  return m_collection_sp->SetPropertyAtIndexAsEnumeration(nullptr, idx,
-                                                          script_lang);
+  return m_collection_sp->SetPropertyAtIndexAsEnumeration(idx, script_lang);
 }
 
 lldb::LanguageType Debugger::GetREPLLanguage() const {
   const uint32_t idx = ePropertyREPLLanguage;
   OptionValueLanguage *value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueLanguage(nullptr, idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueLanguage(idx);
   if (value)
     return value->GetCurrentValue();
   return LanguageType();
@@ -344,13 +344,13 @@ lldb::LanguageType Debugger::GetREPLLanguage() const {
 
 bool Debugger::SetREPLLanguage(lldb::LanguageType repl_lang) {
   const uint32_t idx = ePropertyREPLLanguage;
-  return m_collection_sp->SetPropertyAtIndexAsLanguage(nullptr, idx, repl_lang);
+  return m_collection_sp->SetPropertyAtIndexAsLanguage(idx, repl_lang);
 }
 
 uint32_t Debugger::GetTerminalWidth() const {
   const uint32_t idx = ePropertyTerminalWidth;
-  return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsSInt64(idx).value_or(
+      g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::SetTerminalWidth(uint32_t term_width) {
@@ -358,90 +358,94 @@ bool Debugger::SetTerminalWidth(uint32_t term_width) {
     handler_sp->TerminalSizeChanged();
 
   const uint32_t idx = ePropertyTerminalWidth;
-  return m_collection_sp->SetPropertyAtIndexAsSInt64(nullptr, idx, term_width);
+  return m_collection_sp->SetPropertyAtIndexAsSInt64(idx, term_width);
 }
 
 bool Debugger::GetUseExternalEditor() const {
   const uint32_t idx = ePropertyUseExternalEditor;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetUseExternalEditor(bool b) {
   const uint32_t idx = ePropertyUseExternalEditor;
-  return m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  return m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 llvm::StringRef Debugger::GetExternalEditor() const {
   const uint32_t idx = ePropertyExternalEditor;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 bool Debugger::SetExternalEditor(llvm::StringRef editor) {
   const uint32_t idx = ePropertyExternalEditor;
-  return m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, editor);
+  return m_collection_sp->SetPropertyAtIndexAsString(idx, editor);
 }
 
 bool Debugger::GetUseColor() const {
   const uint32_t idx = ePropertyUseColor;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetUseColor(bool b) {
   const uint32_t idx = ePropertyUseColor;
-  bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
   SetPrompt(GetPrompt());
   return ret;
 }
 
 bool Debugger::GetShowProgress() const {
   const uint32_t idx = ePropertyShowProgress;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetShowProgress(bool show_progress) {
   const uint32_t idx = ePropertyShowProgress;
-  return m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx,
-                                                      show_progress);
+  return m_collection_sp->SetPropertyAtIndexAsBoolean(idx, show_progress);
 }
 
 llvm::StringRef Debugger::GetShowProgressAnsiPrefix() const {
   const uint32_t idx = ePropertyShowProgressAnsiPrefix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 llvm::StringRef Debugger::GetShowProgressAnsiSuffix() const {
   const uint32_t idx = ePropertyShowProgressAnsiSuffix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 bool Debugger::GetUseAutosuggestion() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
   const uint32_t idx = ePropertyShowAutosuggestionAnsiPrefix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
   const uint32_t idx = ePropertyShowAutosuggestionAnsiSuffix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 bool Debugger::GetUseSourceCache() const {
   const uint32_t idx = ePropertyUseSourceCache;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetUseSourceCache(bool b) {
   const uint32_t idx = ePropertyUseSourceCache;
-  bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  bool ret = m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
   if (!ret) {
     m_source_file_cache.Clear();
   }
@@ -449,102 +453,111 @@ bool Debugger::SetUseSourceCache(bool b) {
 }
 bool Debugger::GetHighlightSource() const {
   const uint32_t idx = ePropertyHighlightSource;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value);
 }
 
 StopShowColumn Debugger::GetStopShowColumn() const {
   const uint32_t idx = ePropertyStopShowColumn;
-  return (lldb::StopShowColumn)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return (lldb::StopShowColumn)m_collection_sp
+      ->GetPropertyAtIndexAsEnumeration(idx)
+      .value_or(g_debugger_properties[idx].default_uint_value);
 }
 
 llvm::StringRef Debugger::GetStopShowColumnAnsiPrefix() const {
   const uint32_t idx = ePropertyStopShowColumnAnsiPrefix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 llvm::StringRef Debugger::GetStopShowColumnAnsiSuffix() const {
   const uint32_t idx = ePropertyStopShowColumnAnsiSuffix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 llvm::StringRef Debugger::GetStopShowLineMarkerAnsiPrefix() const {
   const uint32_t idx = ePropertyStopShowLineMarkerAnsiPrefix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 llvm::StringRef Debugger::GetStopShowLineMarkerAnsiSuffix() const {
   const uint32_t idx = ePropertyStopShowLineMarkerAnsiSuffix;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx, "");
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_debugger_properties[idx].default_cstr_value);
 }
 
 uint32_t Debugger::GetStopSourceLineCount(bool before) const {
   const uint32_t idx =
       before ? ePropertyStopLineCountBefore : ePropertyStopLineCountAfter;
-  return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsSInt64(idx).value_or(
+      g_debugger_properties[idx].default_uint_value);
 }
 
 Debugger::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
   const uint32_t idx = ePropertyStopDisassemblyDisplay;
-  return (Debugger::StopDisassemblyType)
-      m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return (Debugger::StopDisassemblyType)m_collection_sp
+      ->GetPropertyAtIndexAsEnumeration(idx)
+      .value_or(g_debugger_properties[idx].default_uint_value);
 }
 
 uint32_t Debugger::GetDisassemblyLineCount() const {
   const uint32_t idx = ePropertyStopDisassemblyCount;
-  return m_collection_sp->GetPropertyAtIndexAsSInt64(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsSInt64(idx).value_or(
+      g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::GetAutoOneLineSummaries() const {
   const uint32_t idx = ePropertyAutoOneLineSummaries;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, true);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::GetEscapeNonPrintables() const {
   const uint32_t idx = ePropertyEscapeNonPrintables;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, true);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::GetAutoIndent() const {
   const uint32_t idx = ePropertyAutoIndent;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, true);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetAutoIndent(bool b) {
   const uint32_t idx = ePropertyAutoIndent;
-  return m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  return m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool Debugger::GetPrintDecls() const {
   const uint32_t idx = ePropertyPrintDecls;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, true);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_debugger_properties[idx].default_uint_value != 0);
 }
 
 bool Debugger::SetPrintDecls(bool b) {
   const uint32_t idx = ePropertyPrintDecls;
-  return m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  return m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 uint32_t Debugger::GetTabSize() const {
   const uint32_t idx = ePropertyTabSize;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_debugger_properties[idx].default_uint_value);
 }
 
 bool Debugger::SetTabSize(uint32_t tab_size) {
   const uint32_t idx = ePropertyTabSize;
-  return m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, tab_size);
+  return m_collection_sp->SetPropertyAtIndexAsUInt64(idx, tab_size);
 }
 
 lldb::DWIMPrintVerbosity Debugger::GetDWIMPrintVerbosity() const {
   const uint32_t idx = ePropertyDWIMPrintVerbosity;
-  return (lldb::DWIMPrintVerbosity)
-      m_collection_sp->GetPropertyAtIndexAsEnumeration(
-          nullptr, idx, g_debugger_properties[idx].default_uint_value);
+  return (lldb::DWIMPrintVerbosity)m_collection_sp
+      ->GetPropertyAtIndexAsEnumeration(idx)
+      .value_or(g_debugger_properties[idx].default_uint_value);
 }
 
 #pragma mark Debugger
@@ -799,6 +812,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
                     GetStaticBroadcasterClass().AsCString()),
       m_forward_listener_sp(), m_clear_once() {
   m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
+  // Initialize the debugger properties as early as possible as other parts of
+  // LLDB will start querying them during construction.
+  m_collection_sp->Initialize(g_debugger_properties);
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);
@@ -820,7 +836,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
-  m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
       ConstString("target"), "Settings specify to debugging targets.", true,
       Target::GetGlobalProperties().GetValueProperties());
@@ -838,7 +853,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   }
   OptionValueSInt64 *term_width =
       m_collection_sp->GetPropertyAtIndexAsOptionValueSInt64(
-          nullptr, ePropertyTerminalWidth);
+          ePropertyTerminalWidth);
   term_width->SetMinimumValue(10);
   term_width->SetMaximumValue(1024);
 
@@ -1252,7 +1267,7 @@ void Debugger::CancelInterruptRequest() {
 
 bool Debugger::InterruptRequested() {
   // This is the one we should call internally.  This will return true either
-  // if there's a debugger interrupt and we aren't on the IOHandler thread, 
+  // if there's a debugger interrupt and we aren't on the IOHandler thread,
   // or if we are on the IOHandler thread and there's a CommandInterpreter
   // interrupt.
   if (!IsIOHandlerThreadCurrentThread()) {
@@ -2016,7 +2031,7 @@ void Debugger::HandleDiagnosticEvent(const lldb::EventSP &event_sp) {
 }
 
 bool Debugger::HasIOHandlerThread() const {
-  return m_io_handler_thread.IsJoinable(); 
+  return m_io_handler_thread.IsJoinable();
 }
 
 HostThread Debugger::SetIOHandlerThread(HostThread &new_thread) {

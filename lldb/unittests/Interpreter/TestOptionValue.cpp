@@ -16,6 +16,7 @@ class Callback {
 public:
   virtual void Invoke() const {}
   void operator()() const { Invoke(); }
+
 protected:
   ~Callback() = default;
 };
@@ -101,12 +102,11 @@ public:
   }
 
   OptionValueDictionary *GetDictionary() {
-    return GetPropertyAtIndexAsOptionValueDictionary(nullptr, m_dict_index);
+    return GetPropertyAtIndexAsOptionValueDictionary(m_dict_index);
   }
 
   OptionValueFileSpecList *GetFileList() {
-    return GetPropertyAtIndexAsOptionValueFileSpecList(nullptr, true,
-                                                       m_file_list_index);
+    return GetPropertyAtIndexAsOptionValueFileSpecList(m_file_list_index);
   }
 
 private:
@@ -146,12 +146,12 @@ TEST(TestProperties, DeepCopy) {
   ASSERT_TRUE(dict_copy_ptr->OptionWasSet());
   ASSERT_EQ(dict_copy_ptr->GetNumValues(), 2U);
 
-  auto value_ptr = dict_copy_ptr->GetValueForKey(ConstString("A"));
+  auto value_ptr = dict_copy_ptr->GetValueForKey("A");
   ASSERT_TRUE(value_ptr);
   ASSERT_EQ(value_ptr->GetParent().get(), dict_copy_ptr);
   ASSERT_EQ(value_ptr->GetUInt64Value(), 1U);
 
-  value_ptr = dict_copy_ptr->GetValueForKey(ConstString("B"));
+  value_ptr = dict_copy_ptr->GetValueForKey("B");
   ASSERT_TRUE(value_ptr);
   ASSERT_EQ(value_ptr->GetParent().get(), dict_copy_ptr);
   ASSERT_EQ(value_ptr->GetUInt64Value(), 2U);
@@ -170,5 +170,6 @@ TEST(TestProperties, DeepCopy) {
   dict_copy_ptr->SetValueFromString("C=3", eVarSetOperationAppend);
 
   // Trigger the callback second time.
-  file_list_copy_ptr->SetValueFromString("0 another/path", eVarSetOperationReplace);
+  file_list_copy_ptr->SetValueFromString("0 another/path",
+                                         eVarSetOperationReplace);
 }

@@ -204,6 +204,12 @@ public:
 
   uint64_t GetExprErrorLimit() const;
 
+  uint64_t GetExprAllocAddress() const;
+
+  uint64_t GetExprAllocSize() const;
+
+  uint64_t GetExprAllocAlign() const;
+
   bool GetUseHexImmediates() const;
 
   bool GetUseFastStepping() const;

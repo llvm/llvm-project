@@ -7,5 +7,5 @@ func.func @test() -> i32 {
 }
 
 // CHECK-LABEL: func.func @test
-// CHECK-NEXT: %[[C:.*]] = "test.constant"() {value = 5 : i32}
+// CHECK-NEXT: %[[C:.*]] = "test.constant"() <{value = 5 : i32}>
 // CHECK-NEXT: return %[[C]]

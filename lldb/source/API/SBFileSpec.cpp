@@ -114,9 +114,7 @@ const char *SBFileSpec::GetFilename() const {
 const char *SBFileSpec::GetDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  FileSpec directory{*m_opaque_up};
-  directory.ClearFilename();
-  return directory.GetPathAsConstString().GetCString();
+  return m_opaque_up->GetDirectory().GetCString();
 }
 
 void SBFileSpec::SetFilename(const char *filename) {
