@@ -234,8 +234,7 @@ Status OptionValueDictionary::SetValueFromString(llvm::StringRef value,
 
 lldb::OptionValueSP
 OptionValueDictionary::GetSubValue(const ExecutionContext *exe_ctx,
-                                   llvm::StringRef name, bool will_modify,
-                                   Status &error) const {
+                                   llvm::StringRef name, Status &error) const {
   lldb::OptionValueSP value_sp;
   if (name.empty())
     return nullptr;
@@ -280,7 +279,7 @@ OptionValueDictionary::GetSubValue(const ExecutionContext *exe_ctx,
 
   if (sub_name.empty())
     return value_sp;
-  return value_sp->GetSubValue(exe_ctx, sub_name, will_modify, error);
+  return value_sp->GetSubValue(exe_ctx, sub_name, error);
 }
 
 Status OptionValueDictionary::SetSubValue(const ExecutionContext *exe_ctx,
@@ -288,8 +287,7 @@ Status OptionValueDictionary::SetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
                                           llvm::StringRef value) {
   Status error;
-  const bool will_modify = true;
-  lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, will_modify, error));
+  lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, name, error));
   if (value_sp)
     error = value_sp->SetValueFromString(value, op);
   else {

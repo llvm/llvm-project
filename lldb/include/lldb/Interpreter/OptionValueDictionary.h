@@ -61,7 +61,7 @@ public:
   lldb::OptionValueSP GetValueForKey(llvm::StringRef key) const;
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
-                                  llvm::StringRef name, bool will_modify,
+                                  llvm::StringRef name,
                                   Status &error) const override;
 
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
