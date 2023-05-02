@@ -16,8 +16,6 @@
 #include "execution_defs.h"
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace std {
 
 // [alg.find.end]
@@ -694,7 +692,5 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool> lexicog
     _ForwardIterator2 __last2);
 
 } // namespace std
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_GLUE_ALGORITHM_DEFS_H */
