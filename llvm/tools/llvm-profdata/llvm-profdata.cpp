@@ -1182,10 +1182,11 @@ static int merge_main(int argc, const char *argv[]) {
       cl::values(clEnumVal(instr, "Instrumentation profile (default)"),
                  clEnumVal(sample, "Sample profile")));
   cl::opt<ProfileFormat> OutputFormat(
-      cl::desc("Format of output profile"), cl::init(PF_Binary),
+      cl::desc("Format of output profile"), cl::init(PF_Ext_Binary),
       cl::values(
-          clEnumValN(PF_Binary, "binary", "Binary encoding (default)"),
-          clEnumValN(PF_Ext_Binary, "extbinary", "Extensible binary encoding"),
+          clEnumValN(PF_Binary, "binary", "Binary encoding"),
+          clEnumValN(PF_Ext_Binary, "extbinary", "Extensible binary encoding "
+                     "(default)"),
           clEnumValN(PF_Text, "text", "Text encoding"),
           clEnumValN(PF_GCC, "gcc",
                      "GCC encoding (only meaningful for -sample)")));
