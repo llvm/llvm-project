@@ -1,5 +1,28 @@
+source_set("llvm-min-tblgen-sources") {
+  sources = [
+    "Attributes.cpp",
+    "CodeGenIntrinsics.cpp",
+    "DirectiveEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "RISCVTargetDefEmitter.cpp",
+    "SDNodeProperties.cpp",
+    "TableGen.cpp",
+    "VTEmitter.cpp",
+  ]
+}
+
+executable("llvm-min-tblgen") {
+  deps = [
+    ":llvm-min-tblgen-sources",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Support",
+    "//llvm/lib/TableGen",
+  ]
+}
+
 executable("llvm-tblgen") {
   deps = [
+    ":llvm-min-tblgen-sources",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Support",
     "//llvm/lib/TableGen",
@@ -9,7 +32,6 @@ executable("llvm-tblgen") {
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
     "AsmWriterInst.cpp",
-    "Attributes.cpp",
     "CTagsEmitter.cpp",
     "CallingConvEmitter.cpp",
     "CodeEmitterGen.cpp",
@@ -17,7 +39,6 @@ executable("llvm-tblgen") {
     "CodeGenHwModes.cpp",
     "CodeGenInstAlias.cpp",
     "CodeGenInstruction.cpp",
-    "CodeGenIntrinsics.cpp",
     "CodeGenMapTable.cpp",
     "CodeGenRegisters.cpp",
     "CodeGenSchedule.cpp",
@@ -32,7 +53,6 @@ executable("llvm-tblgen") {
     "DFAPacketizerEmitter.cpp",
     "DXILEmitter.cpp",
     "DecoderEmitter.cpp",
-    "DirectiveEmitter.cpp",
     "DisassemblerEmitter.cpp",
     "ExegesisEmitter.cpp",
     "FastISelEmitter.cpp",
@@ -41,22 +61,17 @@ executable("llvm-tblgen") {
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
-    "IntrinsicEmitter.cpp",
     "OptEmitter.cpp",
     "OptParserEmitter.cpp",
     "OptRSTEmitter.cpp",
     "PredicateExpander.cpp",
     "PseudoLoweringEmitter.cpp",
-    "RISCVTargetDefEmitter.cpp",
     "RegisterBankEmitter.cpp",
     "RegisterInfoEmitter.cpp",
-    "SDNodeProperties.cpp",
     "SearchableTableEmitter.cpp",
     "SubtargetEmitter.cpp",
     "SubtargetFeatureInfo.cpp",
-    "TableGen.cpp",
     "Types.cpp",
-    "VTEmitter.cpp",
     "VarLenCodeEmitterGen.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
     "X86DisassemblerTables.cpp",
