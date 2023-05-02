@@ -1047,18 +1047,20 @@ protected:
     DataBufferHeap buffer;
 
     if (m_memory_options.m_string.OptionWasSet()) {
-      llvm::StringRef str = m_memory_options.m_string.GetStringValue();
-      if (str.empty()) {
+      std::optional<llvm::StringRef> str =
+          m_memory_options.m_string.GetStringValue();
+      if (!str) {
         result.AppendError("search string must have non-zero length.");
         return false;
       }
-      buffer.CopyData(str);
+      buffer.CopyData(*str);
     } else if (m_memory_options.m_expr.OptionWasSet()) {
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ValueObjectSP result_sp;
       if ((eExpressionCompleted ==
            process->GetTarget().EvaluateExpression(
-               m_memory_options.m_expr.GetStringValue(), frame, result_sp)) &&
+               m_memory_options.m_expr.GetStringValue().value_or(""), frame,
+               result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
         std::optional<uint64_t> size =
