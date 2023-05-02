@@ -91,13 +91,13 @@ public:
 
   llvm::Triple::EnvironmentType ABI() const {
     return (llvm::Triple::EnvironmentType)m_collection_sp
-        ->GetPropertyAtIndexAsEnumeration(nullptr, ePropertyABI)
+        ->GetPropertyAtIndexAsEnumeration(ePropertyABI)
         .value_or(llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {
     return m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
-        nullptr, ePropertyModuleABIMap);
+        ePropertyModuleABIMap);
   }
 };
 
