@@ -29,13 +29,13 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr addrspace(13) [[TMP7]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr addrspace(13) [[TMP10]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(13) [[TMP7]], i64 8
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(13) [[TMP7]], i64 8
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP2]])
 ; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr addrspace(13) [[UGLYGEP]], i64 [[MUL_RESULT2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr addrspace(13) [[TMP14]], [[UGLYGEP]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr addrspace(13) [[SCEVGEP]], i64 [[MUL_RESULT2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr addrspace(13) [[TMP14]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP12]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -99,7 +99,7 @@ define ptr addrspace(10) @japi1_vect_42283(ptr nocapture readonly %0, i32 %1) lo
 ; CHECK-NEXT:    store i64 [[DOTUNPACK2]], ptr addrspace(13) [[DOTREPACK4]], align 8, !tbaa [[TBAA10]]
 ; CHECK-NEXT:    [[TMP27]] = add i64 [[VALUE_PHI5]], 1
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[VALUE_PHI5]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[DOTNOT]], label [[L44]], label [[L26]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[L44]], label [[L26]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       L44:
 ; CHECK-NEXT:    ret ptr addrspace(10) null
 ;
