@@ -616,6 +616,7 @@ cc_library(
     features = ["-header_modules"],
     strip_include_prefix = "utils/TableGen",
     deps = [
+        ":CodeGenTypes",
         ":Support",
         ":TableGen",
         ":config",
@@ -642,11 +643,11 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":CodeGenTypes",
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
         ":config",
-        ":intrinsic_enums_gen",
         ":llvm-tblgen-headers",
     ],
 )
@@ -671,6 +672,16 @@ gentbl(
         "include/llvm/CodeGen/*.td",
         "include/llvm/IR/Intrinsics*.td",
     ]),
+)
+
+gentbl(
+    name = "vt_gen",
+    tbl_outs = [("-gen-vt", "include/llvm/CodeGen/GenVT.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/CodeGen/ValueTypes.td",
+    td_srcs = [
+        "include/llvm/CodeGen/ValueTypes.td",
+    ],
 )
 
 # Note that the intrinsics are not currently set up so they can be pruned for
@@ -1667,6 +1678,22 @@ cc_library(
 )
 
 cc_library(
+    name = "CodeGenTypes",
+    srcs = [
+        "lib/CodeGen/LowLevelType.cpp",
+    ],
+    hdrs = [
+        "include/llvm/CodeGen/LowLevelType.h",
+        "include/llvm/CodeGen/MachineValueType.h",
+    ],
+    copts = llvm_copts,
+    deps = [
+        ":Support",
+        ":vt_gen",
+    ],
+)
+
+cc_library(
     name = "CodeGen",
     srcs = glob(
         [
@@ -1674,6 +1701,9 @@ cc_library(
             "lib/CodeGen/**/*.h",
             "lib/CodeGen/SelectionDAG/*.cpp",
             "lib/CodeGen/SelectionDAG/*.h",
+        ],
+        exclude = [
+            "lib/CodeGen/LowLevelType.cpp",
         ],
     ),
     hdrs = [
@@ -1695,6 +1725,7 @@ cc_library(
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",
+        ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
@@ -2212,6 +2243,7 @@ gentbl(
             # Depending on `:CodeGen` headers in this library is almost
             # certainly a layering problem in numerous targets.
             ":CodeGen",
+            ":CodeGenTypes",
             ":DebugInfoCodeView",
             ":MC",
             ":MCDisassembler",
@@ -2244,6 +2276,7 @@ gentbl(
             ":BinaryFormat",
             ":CFGuard",
             ":CodeGen",
+            ":CodeGenTypes",
             ":Core",
             ":IPO",
             ":MC",
@@ -2269,6 +2302,7 @@ gentbl(
         copts = llvm_copts,
         deps = [
             ":BinaryFormat",
+            ":CodeGenTypes",
             ":MC",
             ":MCParser",
             ":Support",
@@ -2314,7 +2348,7 @@ gentbl(
         copts = llvm_copts,
         features = ["-layering_check"],
         deps = [
-            ":CodeGen",
+            ":CodeGenTypes",
             ":Core",
             ":MC",
             ":MCDisassembler",
@@ -2336,6 +2370,7 @@ gentbl(
         copts = llvm_copts,
         features = ["-layering_check"],
         deps = [
+            ":CodeGenTypes",
             ":MC",
             ":MCA",
             ":MCParser",
@@ -2455,6 +2490,7 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":IPO",
         ":IRPrinter",
@@ -2707,6 +2743,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":CodeGen",
+        ":CodeGenTypes",
         ":DebugInfoDWARF",
         ":MC",
         ":Support",
@@ -2933,6 +2970,7 @@ cc_library(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":ExecutionEngine",
         ":MC",
@@ -2984,6 +3022,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":BinaryFormat",
         ":CodeGen",
+        ":CodeGenTypes",
         ":DWARFLinker",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -3015,6 +3054,7 @@ cc_binary(
         ":AsmParser",
         ":BitReader",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":IRPrinter",
         ":IRReader",
@@ -3404,6 +3444,7 @@ cc_binary(
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
+        ":CodeGenTypes",
         ":DWARFLinker",
         ":DebugInfoDWARF",
         ":DwarfutilOptionsTableGen",
@@ -3444,6 +3485,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":CodeGenTypes",
         ":Exegesis",
         ":MC",
         ":MCParser",
@@ -4307,6 +4349,7 @@ cc_binary(
         ":BitReader",
         ":BitWriter",
         ":CodeGen",
+        ":CodeGenTypes",
         ":Core",
         ":IPO",
         ":IRReader",

@@ -33,6 +33,7 @@ add_llvm_target(ARCCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

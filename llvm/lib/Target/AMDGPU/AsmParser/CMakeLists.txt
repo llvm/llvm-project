@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMAMDGPUAsmParser
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
+  CodeGenTypes
   MC
   MCParser
   Support

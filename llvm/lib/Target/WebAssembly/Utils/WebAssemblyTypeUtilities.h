@@ -17,9 +17,9 @@
 
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/MachineValueType.h"
 
 namespace llvm {
 

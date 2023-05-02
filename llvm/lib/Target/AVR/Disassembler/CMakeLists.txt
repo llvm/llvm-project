@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMAVRDisassembler
 
   LINK_COMPONENTS
   AVRInfo
+  CodeGenTypes
   MC
   MCDisassembler
   Support

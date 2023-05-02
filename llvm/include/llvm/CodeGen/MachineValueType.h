@@ -1,4 +1,4 @@
-//===- MachineValueType.h - Machine-Level types -----------------*- C++ -*-===//
+//===- CodeGen/MachineValueType.h - Machine-Level types ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TMP_MACHINEVALUETYPE_H
-#define LLVM_TMP_MACHINEVALUETYPE_H
+#ifndef LLVM_CODEGEN_MACHINEVALUETYPE_H
+#define LLVM_CODEGEN_MACHINEVALUETYPE_H
 
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -23,7 +23,7 @@
 #include <cassert>
 #include <cstdint>
 
-namespace llvm::tmp {
+namespace llvm {
 
   class Type;
   class raw_ostream;
@@ -40,7 +40,7 @@ namespace llvm::tmp {
 
 #define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc) Ty = n,
 #define GET_VT_RANGES
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
 #undef GET_VT_RANGES
 
@@ -179,7 +179,7 @@ namespace llvm::tmp {
 #define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc)                          \
   case Ty:                                                                     \
     return Any;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
       default:
         return false;
@@ -264,7 +264,7 @@ namespace llvm::tmp {
 #define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
   case Ty:                                                                     \
     return ElTy;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
       }
     }
@@ -278,7 +278,7 @@ namespace llvm::tmp {
 #define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
   case Ty:                                                                     \
     return nElem;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
       }
     }
@@ -311,7 +311,7 @@ namespace llvm::tmp {
 #define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc)                          \
   case Ty:                                                                     \
     return (Sc ? TypeSize::Scalable(Sz) : TypeSize::Fixed(Sz));
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
         }
       case Other:
@@ -329,6 +329,8 @@ namespace llvm::tmp {
                          "in codegen and has no size");
       case Metadata:
         llvm_unreachable("Value type is metadata.");
+      case aarch64svcount: // FIXME: Not in the td.
+        return TypeSize::Scalable(16);
       }
     }
 
@@ -427,7 +429,7 @@ namespace llvm::tmp {
 #define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc)                          \
   if (FP == 3 && sz == BitWidth)                                               \
     return Ty;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
 
       llvm_unreachable("Bad bit width!");
@@ -437,7 +439,7 @@ namespace llvm::tmp {
 #define GET_VT_ATTR(Ty, n, sz, Any, Int, FP, Vec, Sc)                          \
   if (Int == 3 && sz == BitWidth)                                              \
     return Ty;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_ATTR
 
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
@@ -447,7 +449,7 @@ namespace llvm::tmp {
 #define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
   if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                      \
     return Ty;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
@@ -457,7 +459,7 @@ namespace llvm::tmp {
 #define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
   if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                       \
     return Ty;
-#include "GenVT.inc"
+#include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
@@ -548,6 +550,6 @@ namespace llvm::tmp {
     return OS;
   }
 
-} // namespace llvm::tmp
+} // end namespace llvm
 
-#endif // LLVM_TMP_MACHINEVALUETYPE_H
+#endif // LLVM_CODEGEN_MACHINEVALUETYPE_H

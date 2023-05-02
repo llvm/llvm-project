@@ -18,7 +18,7 @@
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 enable-arm-sve=%ENABLE_VLA"
 // REDEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
 // REDEFINE:    TENSOR1="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
-// REDEFINE:    lli \
+// REDEFINE:    %lli_host_or_aarch64_cmd \
 // REDEFINE:   --entry-function=entry_lli \
 // REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
 // REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \

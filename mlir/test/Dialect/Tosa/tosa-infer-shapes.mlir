@@ -1224,3 +1224,13 @@ func.func @test_dynamic_batch_fft2d(%arg0: tensor<?x4x8xf32>, %arg1: tensor<?x4x
   %output_real, %output_imag = "tosa.fft2d"(%arg0, %arg1) {inverse = false} : (tensor<?x4x8xf32>, tensor<?x4x8xf32>) -> (tensor<?x4x8xf32>, tensor<?x4x8xf32>)
   return %output_real, %output_imag : tensor<?x4x8xf32>, tensor<?x4x8xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_unranked_equal
+func.func @test_unranked_equal(%arg0 : tensor<*xf32>, %arg1 : tensor<f32>) -> () {
+  // CHECK: "tosa.equal"(%arg0, %arg1) : (tensor<*xf32>, tensor<f32>) -> tensor<*xi1>
+  %0 = "tosa.equal"(%arg0, %arg1) : (tensor<*xf32>, tensor<f32>) -> tensor<*xi1>
+
+  return
+}
