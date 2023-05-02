@@ -1,5 +1,6 @@
   # Test handling of values represented via DW_OP_div
 
+  # REQUIRES: lld
   # RUN: %clang --target=x86_64-pc-linux -o %t %s
   # RUN: %lldb %t -o "b f" -o "r" -o "c" -o "c" -o "expression -T -- i" \
   # RUN: -o "exit" | FileCheck %s
