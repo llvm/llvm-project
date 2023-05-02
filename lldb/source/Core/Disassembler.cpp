@@ -755,7 +755,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   char buffer[1024];
 
   auto option_value_sp = std::make_shared<OptionValueDictionary>();
-  static ConstString encoding_key("data_encoding");
+  static constexpr llvm::StringLiteral encoding_key("data_encoding");
   OptionValue::Type data_type = OptionValue::eTypeInvalid;
 
   while (!done) {
@@ -802,7 +802,6 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         return option_value_sp;
       }
 
-      ConstString const_key(key.c_str());
       // Check value to see if it's the start of an array or dictionary.
 
       lldb::OptionValueSP value_sp;
@@ -838,15 +837,14 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         value_sp = std::make_shared<OptionValueString>(value.c_str(), "");
       }
 
-      if (const_key == encoding_key) {
+      if (key == encoding_key) {
         // A 'data_encoding=..." is NOT a normal key-value pair; it is meta-data
-        // indicating the
-        // data type of an upcoming array (usually the next bit of data to be
-        // read in).
-        if (strcmp(value.c_str(), "uint32_t") == 0)
+        // indicating the data type of an upcoming array (usually the next bit
+        // of data to be read in).
+        if (llvm::StringRef(value) == "uint32_t")
           data_type = OptionValue::eTypeUInt64;
       } else
-        option_value_sp->GetAsDictionary()->SetValueForKey(const_key, value_sp,
+        option_value_sp->GetAsDictionary()->SetValueForKey(key, value_sp,
                                                            false);
     }
   }
