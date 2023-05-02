@@ -381,7 +381,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
     QualType ParamType = Param->getType();
     if (ParamType->isReferenceType()) {
-      auto &Val = arena().create<ReferenceValue>(*ArgLoc);
+      auto &Val = DACtx->arena().create<ReferenceValue>(*ArgLoc);
       setValue(Loc, Val);
     } else if (auto *ArgVal = getValue(*ArgLoc)) {
       setValue(Loc, *ArgVal);
@@ -707,7 +707,7 @@ Value *Environment::createValueUnlessSelfReferential(
     // with integers, and so distinguishing them serves no purpose, but could
     // prevent convergence.
     CreatedValuesCount++;
-    return &arena().create<IntegerValue>();
+    return &DACtx->arena().create<IntegerValue>();
   }
 
   if (Type->isReferenceType() || Type->isPointerType()) {
@@ -725,9 +725,9 @@ Value *Environment::createValueUnlessSelfReferential(
     }
 
     if (Type->isReferenceType())
-      return &arena().create<ReferenceValue>(PointeeLoc);
+      return &DACtx->arena().create<ReferenceValue>(PointeeLoc);
     else
-      return &arena().create<PointerValue>(PointeeLoc);
+      return &DACtx->arena().create<PointerValue>(PointeeLoc);
   }
 
   if (Type->isRecordType()) {
@@ -747,7 +747,7 @@ Value *Environment::createValueUnlessSelfReferential(
       Visited.erase(FieldType.getCanonicalType());
     }
 
-    return &arena().create<StructValue>(std::move(FieldValues));
+    return &DACtx->arena().create<StructValue>(std::move(FieldValues));
   }
 
   return nullptr;

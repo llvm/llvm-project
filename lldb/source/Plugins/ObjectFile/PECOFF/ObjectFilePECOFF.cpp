@@ -90,14 +90,14 @@ public:
   }
 
   llvm::Triple::EnvironmentType ABI() const {
-    return (llvm::Triple::EnvironmentType)
-        m_collection_sp->GetPropertyAtIndexAsEnumeration(
-            nullptr, ePropertyABI, llvm::Triple::UnknownEnvironment);
+    return (llvm::Triple::EnvironmentType)m_collection_sp
+        ->GetPropertyAtIndexAsEnumeration(ePropertyABI)
+        .value_or(llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {
     return m_collection_sp->GetPropertyAtIndexAsOptionValueDictionary(
-        nullptr, ePropertyModuleABIMap);
+        ePropertyModuleABIMap);
   }
 };
 
@@ -300,20 +300,18 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     if (!module_env_option) {
       // Step 2: Try with the file name in lowercase.
       auto name_lower = name.GetStringRef().lower();
-      module_env_option =
-          map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+      module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
     }
     if (!module_env_option) {
       // Step 3: Try with the file name with ".debug" suffix stripped.
       auto name_stripped = name.GetStringRef();
       if (name_stripped.consume_back_insensitive(".debug")) {
-        module_env_option = map->GetValueForKey(ConstString(name_stripped));
+        module_env_option = map->GetValueForKey(name_stripped);
         if (!module_env_option) {
           // Step 4: Try with the file name in lowercase with ".debug" suffix
           // stripped.
           auto name_lower = name_stripped.lower();
-          module_env_option =
-              map->GetValueForKey(ConstString(llvm::StringRef(name_lower)));
+          module_env_option = map->GetValueForKey(llvm::StringRef(name_lower));
         }
       }
     }
@@ -321,7 +319,8 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   llvm::Triple::EnvironmentType env;
   if (module_env_option)
     env =
-        (llvm::Triple::EnvironmentType)module_env_option->GetEnumerationValue();
+        (llvm::Triple::EnvironmentType)module_env_option->GetEnumerationValue()
+            .value_or(0);
   else
     env = GetGlobalPluginProperties().ABI();
 

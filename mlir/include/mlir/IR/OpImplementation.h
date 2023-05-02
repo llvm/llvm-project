@@ -957,13 +957,13 @@ public:
   /// populated in `result`.
   template <typename AttrType>
   std::enable_if_t<detect_has_parse_method<AttrType>::value, ParseResult>
-  parseCustomAttributeWithFallback(AttrType &result) {
+  parseCustomAttributeWithFallback(AttrType &result, Type type = {}) {
     SMLoc loc = getCurrentLocation();
 
     // Parse any kind of attribute.
     Attribute attr;
     if (parseCustomAttributeWithFallback(
-            attr, {}, [&](Attribute &result, Type type) -> ParseResult {
+            attr, type, [&](Attribute &result, Type type) -> ParseResult {
               result = AttrType::parse(*this, type);
               return success(!!result);
             }))
@@ -979,8 +979,8 @@ public:
   /// SFINAE parsing method for Attribute that don't implement a parse method.
   template <typename AttrType>
   std::enable_if_t<!detect_has_parse_method<AttrType>::value, ParseResult>
-  parseCustomAttributeWithFallback(AttrType &result) {
-    return parseAttribute(result);
+  parseCustomAttributeWithFallback(AttrType &result, Type type = {}) {
+    return parseAttribute(result, type);
   }
 
   /// Parse an arbitrary optional attribute of a given type and return it in
@@ -1368,6 +1368,7 @@ public:
       std::optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions =
           std::nullopt,
       std::optional<ArrayRef<NamedAttribute>> parsedAttributes = std::nullopt,
+      std::optional<Attribute> parsedPropertiesAttribute = std::nullopt,
       std::optional<FunctionType> parsedFnType = std::nullopt) = 0;
 
   /// Parse a single SSA value operand name along with a result number if

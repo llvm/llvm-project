@@ -1605,7 +1605,7 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record, ProcSym &Proc) {
 
     // We don't have a way to see if the symbol is compiler generated. Use
     // the linkage name, to detect `scalar deleting destructor' functions.
-    std::string DemangledSymbol = demangle(std::string(LinkageName));
+    std::string DemangledSymbol = demangle(LinkageName);
     if (DemangledSymbol.find("scalar deleting dtor") != std::string::npos) {
       Function->setIsArtificial();
     } else {

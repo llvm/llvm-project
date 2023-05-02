@@ -36,13 +36,13 @@ func.func @if_result(%arg0: tuple<tuple<>, i1, tuple<i2>>, %arg1: i1) -> tuple<t
 // CHECK-NEXT:    %[[V1:.*]] = "test.make_tuple"(%[[V0]], %[[ARG0]]) : (tuple<>, i1) -> tuple<tuple<>, i1>
 // CHECK-NEXT:    %[[V2:.*]] = scf.if %[[ARG1]] -> (i1) {
 // CHECK-NEXT:      %[[V3:.*]] = "test.op"(%[[V1]]) : (tuple<tuple<>, i1>) -> tuple<tuple<>, i1>
-// CHECK-NEXT:      %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 0 : i32} : (tuple<tuple<>, i1>) -> tuple<>
-// CHECK-NEXT:      %[[V5:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 1 : i32} : (tuple<tuple<>, i1>) -> i1
+// CHECK-NEXT:      %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) <{index = 0 : i32}> : (tuple<tuple<>, i1>) -> tuple<>
+// CHECK-NEXT:      %[[V5:.*]] = "test.get_tuple_element"(%[[V3]]) <{index = 1 : i32}> : (tuple<tuple<>, i1>) -> i1
 // CHECK-NEXT:      scf.yield %[[V5]] : i1
 // CHECK-NEXT:    } else {
 // CHECK-NEXT:      %[[V6:.*]] = "test.source"() : () -> tuple<tuple<>, i1>
-// CHECK-NEXT:      %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 0 : i32} : (tuple<tuple<>, i1>) -> tuple<>
-// CHECK-NEXT:      %[[V8:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 1 : i32} : (tuple<tuple<>, i1>) -> i1
+// CHECK-NEXT:      %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) <{index = 0 : i32}> : (tuple<tuple<>, i1>) -> tuple<>
+// CHECK-NEXT:      %[[V8:.*]] = "test.get_tuple_element"(%[[V6]]) <{index = 1 : i32}> : (tuple<tuple<>, i1>) -> i1
 // CHECK-NEXT:      scf.yield %[[V8]] : i1
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return %[[V2]] : i1
@@ -94,14 +94,14 @@ func.func @while_operands_results(%arg0: tuple<tuple<>, i1, tuple<i2>>, %arg1: i
 // CHECK-NEXT:      %[[V1:.*]] = "test.make_tuple"() : () -> tuple<>
 // CHECK-NEXT:      %[[V2:.*]] = "test.make_tuple"(%[[V1]], %[[ARG2]]) : (tuple<>, i1) -> tuple<tuple<>, i1>
 // CHECK-NEXT:      %[[V3:.*]] = "test.op"(%[[V2]]) : (tuple<tuple<>, i1>) -> tuple<tuple<>, i1>
-// CHECK-NEXT:      %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 0 : i32} : (tuple<tuple<>, i1>) -> tuple<>
-// CHECK-NEXT:      %[[V5:.*]] = "test.get_tuple_element"(%[[V3]]) {index = 1 : i32} : (tuple<tuple<>, i1>) -> i1
+// CHECK-NEXT:      %[[V4:.*]] = "test.get_tuple_element"(%[[V3]]) <{index = 0 : i32}> : (tuple<tuple<>, i1>) -> tuple<>
+// CHECK-NEXT:      %[[V5:.*]] = "test.get_tuple_element"(%[[V3]]) <{index = 1 : i32}> : (tuple<tuple<>, i1>) -> i1
 // CHECK-NEXT:      scf.condition(%[[ARG1]]) %[[V5]] : i1
 // CHECK-NEXT:    } do {
 // CHECK-NEXT:    ^bb0(%[[ARG3:.*]]: i1):
 // CHECK-NEXT:      %[[V6:.*]] = "test.source"() : () -> tuple<tuple<>, i1>
-// CHECK-NEXT:      %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 0 : i32} : (tuple<tuple<>, i1>) -> tuple<>
-// CHECK-NEXT:      %[[V8:.*]] = "test.get_tuple_element"(%[[V6]]) {index = 1 : i32} : (tuple<tuple<>, i1>) -> i1
+// CHECK-NEXT:      %[[V7:.*]] = "test.get_tuple_element"(%[[V6]]) <{index = 0 : i32}> : (tuple<tuple<>, i1>) -> tuple<>
+// CHECK-NEXT:      %[[V8:.*]] = "test.get_tuple_element"(%[[V6]]) <{index = 1 : i32}> : (tuple<tuple<>, i1>) -> i1
 // CHECK-NEXT:      scf.yield %[[V8]] : i1
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return %[[V0]] : i1

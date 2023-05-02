@@ -3210,10 +3210,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
     printTypeIdInfo(*TIdInfo);
 
   // The AllocationType identifiers capture the profiled context behavior
-  // reaching a specific static allocation site (possibly cloned). Thus
-  // "notcoldandcold" implies there are multiple contexts which reach this site,
-  // some of which are cold and some of which are not, and that need to
-  // disambiguate via cloning or other context identification.
+  // reaching a specific static allocation site (possibly cloned).
   auto AllocTypeName = [](uint8_t Type) -> const char * {
     switch (Type) {
     case (uint8_t)AllocationType::None:
@@ -3222,8 +3219,6 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       return "notcold";
     case (uint8_t)AllocationType::Cold:
       return "cold";
-    case (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold:
-      return "notcoldandcold";
     }
     llvm_unreachable("Unexpected alloc type");
   };

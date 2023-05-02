@@ -1,7 +1,7 @@
 // RUN: mlir-opt -test-int-range-inference %s | FileCheck %s
 
 // CHECK-LABEL: func @constant
-// CHECK: %[[cst:.*]] = "test.constant"() {value = 3 : index}
+// CHECK: %[[cst:.*]] = "test.constant"() <{value = 3 : index}
 // CHECK: return %[[cst]]
 func.func @constant() -> index {
   %0 = test.with_bounds { umin = 3 : index, umax = 3 : index,
@@ -10,7 +10,7 @@ func.func @constant() -> index {
 }
 
 // CHECK-LABEL: func @increment
-// CHECK: %[[cst:.*]] = "test.constant"() {value = 4 : index}
+// CHECK: %[[cst:.*]] = "test.constant"() <{value = 4 : index}
 // CHECK: return %[[cst]]
 func.func @increment() -> index {
   %0 = test.with_bounds { umin = 3 : index, umax = 3 : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
@@ -103,8 +103,8 @@ func.func @func_args_unbound(%arg0 : index) -> index {
 
 // CHECK-LABEL: func @propagate_across_while_loop_false()
 func.func @propagate_across_while_loop_false() -> index {
-  // CHECK-DAG: %[[C0:.*]] = "test.constant"() {value = 0
-  // CHECK-DAG: %[[C1:.*]] = "test.constant"() {value = 1
+  // CHECK-DAG: %[[C0:.*]] = "test.constant"() <{value = 0
+  // CHECK-DAG: %[[C1:.*]] = "test.constant"() <{value = 1
   %0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
                           smin = 0 : index, smax = 0 : index }
   %1 = scf.while : () -> index {
@@ -122,8 +122,8 @@ func.func @propagate_across_while_loop_false() -> index {
 
 // CHECK-LABEL: func @propagate_across_while_loop
 func.func @propagate_across_while_loop(%arg0 : i1) -> index {
-  // CHECK-DAG: %[[C0:.*]] = "test.constant"() {value = 0
-  // CHECK-DAG: %[[C1:.*]] = "test.constant"() {value = 1
+  // CHECK-DAG: %[[C0:.*]] = "test.constant"() <{value = 0
+  // CHECK-DAG: %[[C1:.*]] = "test.constant"() <{value = 1
   %0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
                           smin = 0 : index, smax = 0 : index }
   %1 = scf.while : () -> index {
@@ -140,7 +140,7 @@ func.func @propagate_across_while_loop(%arg0 : i1) -> index {
 
 // CHECK-LABEL: func @dont_propagate_across_infinite_loop()
 func.func @dont_propagate_across_infinite_loop() -> index {
-  // CHECK: %[[C0:.*]] = "test.constant"() {value = 0
+  // CHECK: %[[C0:.*]] = "test.constant"() <{value = 0
   %0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
                           smin = 0 : index, smax = 0 : index }
   // CHECK: %[[loopRes:.*]] = scf.while

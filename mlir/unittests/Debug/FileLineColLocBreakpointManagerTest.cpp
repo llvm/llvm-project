@@ -25,7 +25,7 @@ static Operation *createOp(MLIRContext *context, Location loc,
   context->allowUnregisteredDialects();
   return Operation::create(loc, OperationName(operationName, context),
                            std::nullopt, std::nullopt, std::nullopt,
-                           std::nullopt, numRegions);
+                           OpaqueProperties(nullptr), std::nullopt, numRegions);
 }
 
 namespace {

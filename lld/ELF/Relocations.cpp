@@ -1537,9 +1537,6 @@ template <class ELFT> void elf::scanRelocations() {
     tg.spawn(fn, serial);
   }
 
-  // Both the main thread and thread pool index 0 use getThreadIndex()==0. Be
-  // careful that they don't concurrently run scanSections. When serial is
-  // true, fn() has finished at this point, so running execute is safe.
   tg.spawn([] {
     RelocationScanner scanner;
     for (Partition &part : partitions) {

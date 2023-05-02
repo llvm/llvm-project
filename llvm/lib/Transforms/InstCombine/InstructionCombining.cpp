@@ -1040,7 +1040,8 @@ static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
                                        : SI->getFalseValue());
     } else if (match(SI->getCondition(),
                      m_ICmp(Pred, m_Specific(Op), m_Constant(C))) &&
-               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+               Pred == (IsTrueArm ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
+               isGuaranteedNotToBeUndefOrPoison(C)) {
       // Pass
     } else {
       C = dyn_cast<Constant>(Op);

@@ -216,6 +216,180 @@ FailureOr<unsigned> calculateBitsRequired(Value value,
   return calculateBitsRequired(value.getType());
 }
 
+/// Base pattern for arith binary ops.
+/// Example:
+/// ```
+///   %lhs = arith.extsi %a : i8 to i32
+///   %rhs = arith.extsi %b : i8 to i32
+///   %r = arith.addi %lhs, %rhs : i32
+/// ==>
+///   %lhs = arith.extsi %a : i8 to i16
+///   %rhs = arith.extsi %b : i8 to i16
+///   %add = arith.addi %lhs, %rhs : i16
+///   %r = arith.extsi %add : i16 to i32
+/// ```
+template <typename BinaryOp>
+struct BinaryOpNarrowingPattern : NarrowingPattern<BinaryOp> {
+  using NarrowingPattern<BinaryOp>::NarrowingPattern;
+
+  /// Returns the number of bits required to represent the full result, assuming
+  /// that both operands are `operandBits`-wide. Derived classes must implement
+  /// this, taking into account `BinaryOp` semantics.
+  virtual unsigned getResultBitsProduced(unsigned operandBits) const = 0;
+
+  /// Customization point for patterns that should only apply with
+  /// zero/sign-extension ops as arguments.
+  virtual bool isSupported(ExtensionOp) const { return true; }
+
+  LogicalResult matchAndRewrite(BinaryOp op,
+                                PatternRewriter &rewriter) const final {
+    Type origTy = op.getType();
+    FailureOr<unsigned> resultBits = calculateBitsRequired(origTy);
+    if (failed(resultBits))
+      return failure();
+
+    // For the optimization to apply, we expect the lhs to be an extension op,
+    // and for the rhs to either be the same extension op or a constant.
+    FailureOr<ExtensionOp> ext = ExtensionOp::from(op.getLhs().getDefiningOp());
+    if (failed(ext) || !isSupported(*ext))
+      return failure();
+
+    FailureOr<unsigned> lhsBitsRequired =
+        calculateBitsRequired(ext->getIn(), ext->getKind());
+    if (failed(lhsBitsRequired) || *lhsBitsRequired >= *resultBits)
+      return failure();
+
+    FailureOr<unsigned> rhsBitsRequired =
+        calculateBitsRequired(op.getRhs(), ext->getKind());
+    if (failed(rhsBitsRequired) || *rhsBitsRequired >= *resultBits)
+      return failure();
+
+    // Negotiate a common bit requirements for both lhs and rhs, accounting for
+    // the result requiring more bits than the operands.
+    unsigned commonBitsRequired =
+        getResultBitsProduced(std::max(*lhsBitsRequired, *rhsBitsRequired));
+    FailureOr<Type> narrowTy = this->getNarrowType(commonBitsRequired, origTy);
+    if (failed(narrowTy) || calculateBitsRequired(*narrowTy) >= *resultBits)
+      return failure();
+
+    Location loc = op.getLoc();
+    Value newLhs =
+        rewriter.createOrFold<arith::TruncIOp>(loc, *narrowTy, op.getLhs());
+    Value newRhs =
+        rewriter.createOrFold<arith::TruncIOp>(loc, *narrowTy, op.getRhs());
+    Value newAdd = rewriter.create<BinaryOp>(loc, newLhs, newRhs);
+    ext->recreateAndReplace(rewriter, op, newAdd);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// AddIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct AddIPattern final : BinaryOpNarrowingPattern<arith::AddIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // Addition may require one extra bit for the result.
+  // Example: `UINT8_MAX + 1 == 255 + 1 == 256`.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits + 1;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// SubIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct SubIPattern final : BinaryOpNarrowingPattern<arith::SubIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // This optimization only applies to signed arguments.
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == ExtensionKind::Sign;
+  }
+
+  // Subtraction may require one extra bit for the result.
+  // Example: `INT8_MAX - (-1) == 127 - (-1) == 128`.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits + 1;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// MulIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct MulIPattern final : BinaryOpNarrowingPattern<arith::MulIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // Multiplication may require up double the operand bits.
+  // Example: `UNT8_MAX * UINT8_MAX == 255 * 255 == 65025`.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return 2 * operandBits;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// DivSIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct DivSIPattern final : BinaryOpNarrowingPattern<arith::DivSIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // This optimization only applies to signed arguments.
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == ExtensionKind::Sign;
+  }
+
+  // Unlike multiplication, signed division requires only one more result bit.
+  // Example: `INT8_MIN / (-1) == -128 / (-1) == 128`.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits + 1;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// DivUIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct DivUIPattern final : BinaryOpNarrowingPattern<arith::DivUIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  // This optimization only applies to unsigned arguments.
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == ExtensionKind::Zero;
+  }
+
+  // Unsigned division does not require any extra result bits.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Min/Max Patterns
+//===----------------------------------------------------------------------===//
+
+template <typename MinMaxOp, ExtensionKind Kind>
+struct MinMaxPattern final : BinaryOpNarrowingPattern<MinMaxOp> {
+  using BinaryOpNarrowingPattern<MinMaxOp>::BinaryOpNarrowingPattern;
+
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == Kind;
+  }
+
+  // Min/max returns one of the arguments and does not require any extra result
+  // bits.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits;
+  }
+};
+using MaxSIPattern = MinMaxPattern<arith::MaxSIOp, ExtensionKind::Sign>;
+using MaxUIPattern = MinMaxPattern<arith::MaxUIOp, ExtensionKind::Zero>;
+using MinSIPattern = MinMaxPattern<arith::MinSIOp, ExtensionKind::Sign>;
+using MinUIPattern = MinMaxPattern<arith::MinUIOp, ExtensionKind::Zero>;
+
 //===----------------------------------------------------------------------===//
 // *IToFPOp Patterns
 //===----------------------------------------------------------------------===//
@@ -538,7 +712,10 @@ void populateArithIntNarrowingPatterns(
                ExtensionOverTranspose, ExtensionOverFlatTranspose>(
       patterns.getContext(), options, PatternBenefit(2));
 
-  patterns.add<SIToFPPattern, UIToFPPattern>(patterns.getContext(), options);
+  patterns.add<AddIPattern, SubIPattern, MulIPattern, DivSIPattern,
+               DivUIPattern, MaxSIPattern, MaxUIPattern, MinSIPattern,
+               MinUIPattern, SIToFPPattern, UIToFPPattern>(
+      patterns.getContext(), options);
 }
 
 } // namespace mlir::arith

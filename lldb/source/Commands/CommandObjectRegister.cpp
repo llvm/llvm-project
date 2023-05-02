@@ -171,8 +171,8 @@ protected:
       const size_t set_array_size = m_command_options.set_indexes.GetSize();
       if (set_array_size > 0) {
         for (size_t i = 0; i < set_array_size; ++i) {
-          set_idx = m_command_options.set_indexes[i]->GetUInt64Value(UINT32_MAX,
-                                                                     nullptr);
+          set_idx = m_command_options.set_indexes[i]->GetUInt64Value().value_or(
+              UINT32_MAX);
           if (set_idx < reg_ctx->GetRegisterSetCount()) {
             if (!DumpRegisterSet(m_exe_ctx, strm, reg_ctx, set_idx)) {
               if (errno)

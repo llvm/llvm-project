@@ -228,6 +228,7 @@ gentbl(
     td_file = "include/clang/Basic/riscv_vector.td",
     td_srcs = [
         "include/clang/Basic/riscv_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
     ],
 )
 
@@ -241,6 +242,7 @@ gentbl(
     td_file = "include/clang/Basic/riscv_vector.td",
     td_srcs = [
         "include/clang/Basic/riscv_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
     ],
 )
 
@@ -254,6 +256,49 @@ gentbl(
     td_file = "include/clang/Basic/riscv_vector.td",
     td_srcs = [
         "include/clang/Basic/riscv_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
+    ],
+)
+
+gentbl(
+    name = "basic_riscv_sifive_vector_builtins_gen",
+    tbl_outs = [(
+        "-gen-riscv-sifive-vector-builtins",
+        "include/clang/Basic/riscv_sifive_vector_builtins.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/riscv_sifive_vector.td",
+    td_srcs = [
+        "include/clang/Basic/riscv_sifive_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
+    ],
+)
+
+gentbl(
+    name = "basic_riscv_sifive_vector_builtin_cg_gen",
+    tbl_outs = [(
+        "-gen-riscv-sifive-vector-builtin-codegen",
+        "include/clang/Basic/riscv_sifive_vector_builtin_cg.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/riscv_sifive_vector.td",
+    td_srcs = [
+        "include/clang/Basic/riscv_sifive_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
+    ],
+)
+
+gentbl(
+    name = "basic_riscv_sifive_vector_builtin_sema_gen",
+    tbl_outs = [(
+        "-gen-riscv-sifive-vector-builtin-sema",
+        "include/clang/Basic/riscv_sifive_vector_builtin_sema.inc",
+    )],
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/riscv_sifive_vector.td",
+    td_srcs = [
+        "include/clang/Basic/riscv_sifive_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
     ],
 )
 
@@ -486,6 +531,7 @@ cc_library(
         ":basic_arm_sve_typeflags_gen",
         ":basic_attr_gen",
         ":basic_internal_headers",
+        ":basic_riscv_sifive_vector_builtins_gen",
         ":basic_riscv_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtins_gen",
         ":config",
@@ -929,6 +975,7 @@ cc_library(
         ":basic_arm_cde_sema_gen",
         ":basic_arm_sve_builtins_gen",
         ":basic_arm_sve_sema_rangechecks_gen",
+        ":basic_riscv_sifive_vector_builtin_sema_gen",
         ":basic_riscv_vector_builtin_sema_gen",
         ":edit",
         ":lex",
@@ -1530,6 +1577,7 @@ gentbl(
     td_file = "include/clang/Basic/riscv_vector.td",
     td_srcs = [
         "include/clang/Basic/riscv_vector.td",
+        "include/clang/Basic/riscv_vector_common.td",
     ],
 )
 
@@ -1694,6 +1742,7 @@ cc_library(
         ":basic",
         ":basic_arm_cde_cg_gen",
         ":basic_arm_sve_builtin_cg_gen",
+        ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
         ":driver",
         ":frontend",
@@ -1706,7 +1755,7 @@ cc_library(
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:BitstreamReader",
-        "//llvm:CodeGen",
+        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:Coroutines",
         "//llvm:Coverage",

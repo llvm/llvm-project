@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -49,7 +50,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
@@ -2298,11 +2298,11 @@ public:
   /// considered beneficial.
   /// If optimizing for size, expansion is only considered beneficial for upto
   /// 5 multiplies and a divide (if the exponent is negative).
-  bool isBeneficialToExpandPowI(int Exponent, bool OptForSize) const {
+  bool isBeneficialToExpandPowI(int64_t Exponent, bool OptForSize) const {
     if (Exponent < 0)
       Exponent = -Exponent;
-    return !OptForSize ||
-           (llvm::popcount((unsigned int)Exponent) + Log2_32(Exponent) < 7);
+    uint64_t E = static_cast<uint64_t>(Exponent);
+    return !OptForSize || (llvm::popcount(E) + Log2_64(E) < 7);
   }
 
   //===--------------------------------------------------------------------===//

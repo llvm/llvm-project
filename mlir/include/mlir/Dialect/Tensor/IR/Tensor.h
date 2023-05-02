@@ -142,6 +142,9 @@ FailureOr<Value> getOrCreateDestination(OpBuilder &b, Location loc,
 LogicalResult getOrCreateDestinations(OpBuilder &b, Location loc, Operation *op,
                                       SmallVector<Value> &result);
 
+/// Tests if types are the same when ignoring encoding on ranked tensors.
+bool isSameTypeWithoutEncoding(Type tp1, Type tp2);
+
 /// Function to control the folding of constant and extract slice.
 using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
 

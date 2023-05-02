@@ -47,7 +47,6 @@ public:
 
   virtual lldb::OptionValueSP GetPropertyValue(const ExecutionContext *exe_ctx,
                                                llvm::StringRef property_path,
-                                               bool will_modify,
                                                Status &error) const;
 
   virtual Status SetPropertyValue(const ExecutionContext *exe_ctx,

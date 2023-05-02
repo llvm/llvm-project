@@ -5838,9 +5838,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
           // indices form a positive value.
           if (GEP->isInBounds() && GEP->getOperand(0) == PN) {
             Flags = setFlags(Flags, SCEV::FlagNW);
-
-            const SCEV *Ptr = getSCEV(GEP->getPointerOperand());
-            if (isKnownPositive(getMinusSCEV(getSCEV(GEP), Ptr)))
+            if (isKnownPositive(Accum))
               Flags = setFlags(Flags, SCEV::FlagNUW);
           }
 

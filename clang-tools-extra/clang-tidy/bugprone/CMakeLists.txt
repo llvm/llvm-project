@@ -31,6 +31,7 @@ add_clang_library(clangTidyBugproneModule
   MisplacedPointerArithmeticInAllocCheck.cpp
   MisplacedWideningCastCheck.cpp
   MoveForwardingReferenceCheck.cpp
+  MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp

@@ -51,6 +51,7 @@ add_llvm_target(RISCVCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   IPO

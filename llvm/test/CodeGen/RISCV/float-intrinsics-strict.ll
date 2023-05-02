@@ -5,6 +5,12 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+f \
 ; RUN:   -verify-machineinstrs -disable-strictnode-mutation -target-abi=lp64f \
 ; RUN:   | FileCheck -check-prefixes=CHECKIF,RV64IF %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+zfinx \
+; RUN:   -verify-machineinstrs -disable-strictnode-mutation -target-abi=ilp32 \
+; RUN:   | FileCheck -check-prefixes=CHECKIZFINX,RV32IZFINX %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zfinx \
+; RUN:   -verify-machineinstrs -disable-strictnode-mutation -target-abi=lp64 \
+; RUN:   | FileCheck -check-prefixes=CHECKIZFINX,RV64IZFINX %s
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 \
 ; RUN:   -verify-machineinstrs -disable-strictnode-mutation \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
@@ -19,6 +25,11 @@ define float @sqrt_f32(float %a) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fsqrt.s fa0, fa0
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: sqrt_f32:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fsqrt.s a0, a0
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: sqrt_f32:
 ; RV32I:       # %bb.0:
@@ -63,6 +74,25 @@ define float @powi_f32(float %a, i32 %b) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: powi_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call __powisf2@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: powi_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    sext.w a1, a1
+; RV64IZFINX-NEXT:    call __powisf2@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: powi_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -106,6 +136,24 @@ define float @sin_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: sin_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call sinf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: sin_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call sinf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: sin_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -147,6 +195,24 @@ define float @cos_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: cos_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call cosf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: cos_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call cosf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: cos_f32:
 ; RV32I:       # %bb.0:
@@ -206,6 +272,42 @@ define float @sincos_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    flw fs1, 0(sp) # 4-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: sincos_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    mv s0, a0
+; RV32IZFINX-NEXT:    call sinf@plt
+; RV32IZFINX-NEXT:    mv s1, a0
+; RV32IZFINX-NEXT:    mv a0, s0
+; RV32IZFINX-NEXT:    call cosf@plt
+; RV32IZFINX-NEXT:    fadd.s a0, s1, a0
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: sincos_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -32
+; RV64IZFINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    mv s0, a0
+; RV64IZFINX-NEXT:    call sinf@plt
+; RV64IZFINX-NEXT:    mv s1, a0
+; RV64IZFINX-NEXT:    mv a0, s0
+; RV64IZFINX-NEXT:    call cosf@plt
+; RV64IZFINX-NEXT:    fadd.s a0, s1, a0
+; RV64IZFINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 32
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: sincos_f32:
 ; RV32I:       # %bb.0:
@@ -273,6 +375,24 @@ define float @pow_f32(float %a, float %b) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: pow_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call powf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: pow_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call powf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: pow_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -314,6 +434,24 @@ define float @exp_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: exp_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call expf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: exp_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call expf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: exp_f32:
 ; RV32I:       # %bb.0:
@@ -357,6 +495,24 @@ define float @exp2_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: exp2_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call exp2f@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: exp2_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call exp2f@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: exp2_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -398,6 +554,24 @@ define float @log_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: log_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call logf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: log_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call logf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: log_f32:
 ; RV32I:       # %bb.0:
@@ -441,6 +615,24 @@ define float @log10_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: log10_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call log10f@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: log10_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call log10f@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: log10_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -483,6 +675,24 @@ define float @log2_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: log2_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call log2f@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: log2_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call log2f@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: log2_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -512,6 +722,11 @@ define float @fma_f32(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF-NEXT:    fmadd.s fa0, fa0, fa1, fa2
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fma_f32:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fma_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -540,6 +755,11 @@ define float @fmuladd_f32(float %a, float %b, float %c) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fmadd.s fa0, fa0, fa1, fa2
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fmuladd_f32:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fmuladd_f32:
 ; RV32I:       # %bb.0:
@@ -593,6 +813,24 @@ define float @minnum_f32(float %a, float %b) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: minnum_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call fminf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: minnum_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call fminf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: minnum_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -634,6 +872,24 @@ define float @maxnum_f32(float %a, float %b) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: maxnum_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call fmaxf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: maxnum_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call fmaxf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: maxnum_f32:
 ; RV32I:       # %bb.0:
@@ -694,6 +950,24 @@ define float @floor_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: floor_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call floorf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: floor_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call floorf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: floor_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -735,6 +1009,24 @@ define float @ceil_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: ceil_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call ceilf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: ceil_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call ceilf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: ceil_f32:
 ; RV32I:       # %bb.0:
@@ -778,6 +1070,24 @@ define float @trunc_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: trunc_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call truncf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: trunc_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call truncf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: trunc_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -819,6 +1129,24 @@ define float @rint_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: rint_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call rintf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: rint_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call rintf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: rint_f32:
 ; RV32I:       # %bb.0:
@@ -862,6 +1190,24 @@ define float @nearbyint_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: nearbyint_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call nearbyintf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: nearbyint_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call nearbyintf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: nearbyint_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -903,6 +1249,24 @@ define float @round_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: round_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call roundf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: round_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call roundf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: round_f32:
 ; RV32I:       # %bb.0:
@@ -946,6 +1310,24 @@ define float @roundeven_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: roundeven_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call roundevenf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: roundeven_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addi sp, sp, -16
+; RV64IZFINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IZFINX-NEXT:    call roundevenf@plt
+; RV64IZFINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IZFINX-NEXT:    addi sp, sp, 16
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: roundeven_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -980,6 +1362,16 @@ define iXLen @lrint_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    fcvt.l.s a0, fa0
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: lrint_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fcvt.w.s a0, a0
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: lrint_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: lrint_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1013,6 +1405,16 @@ define iXLen @lround_f32(float %a) nounwind strictfp {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fcvt.l.s a0, fa0, rmm
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: lround_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fcvt.w.s a0, a0, rmm
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: lround_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: lround_f32:
 ; RV32I:       # %bb.0:
@@ -1052,6 +1454,20 @@ define i64 @llrint_f32(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    fcvt.l.s a0, fa0
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: llrint_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call llrintf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: llrint_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: llrint_f32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -1089,6 +1505,20 @@ define i64 @llround_f32(float %a) nounwind strictfp {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fcvt.l.s a0, fa0, rmm
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: llround_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call llroundf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: llround_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: llround_f32:
 ; RV32I:       # %bb.0:

@@ -32,31 +32,32 @@ class __buffer
     operator=(const __buffer&) = delete;
 
   public:
+    _LIBCPP_HIDE_FROM_ABI
     __buffer(std::size_t __n) : __allocator_(), __ptr_(__allocator_.allocate(__n)), __buf_size_(__n) {}
 
-    operator bool() const { return __ptr_ != nullptr; }
-    _Tp*
+    _LIBCPP_HIDE_FROM_ABI operator bool() const { return __ptr_ != nullptr; }
+    _LIBCPP_HIDE_FROM_ABI _Tp*
     get() const
     {
         return __ptr_;
     }
-    ~__buffer() { __allocator_.deallocate(__ptr_, __buf_size_); }
+    _LIBCPP_HIDE_FROM_ABI ~__buffer() { __allocator_.deallocate(__ptr_, __buf_size_); }
 };
 
-inline void
+_LIBCPP_HIDE_FROM_ABI inline void
 __cancel_execution()
 {
 }
 
 template <class _ExecutionPolicy, class _Index, class _Fp>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __parallel_for(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
 {
     __f(__first, __last);
 }
 
 template <class _ExecutionPolicy, class _Value, class _Index, typename _RealBody, typename _Reduction>
-_Value
+_LIBCPP_HIDE_FROM_ABI _Value
 __parallel_reduce(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last,
                   const _Value& __identity, const _RealBody& __real_body, const _Reduction&)
 {
@@ -71,7 +72,7 @@ __parallel_reduce(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, 
 }
 
 template <class _ExecutionPolicy, class _Index, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduce>
-_Tp
+_LIBCPP_HIDE_FROM_ABI _Tp
 __parallel_transform_reduce(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last,
                             _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce)
 {
@@ -79,7 +80,7 @@ __parallel_transform_reduce(__pstl::__internal::__serial_backend_tag, _Execution
 }
 
 template <class _ExecutionPolicy, typename _Index, typename _Tp, typename _Rp, typename _Cp, typename _Sp, typename _Ap>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __parallel_strict_scan(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __n, _Tp __initial,
                        _Rp __reduce, _Cp __combine, _Sp __scan, _Ap __apex)
 {
@@ -92,7 +93,7 @@ __parallel_strict_scan(__pstl::__internal::__serial_backend_tag, _ExecutionPolic
 }
 
 template <class _ExecutionPolicy, class _Index, class _UnaryOp, class _Tp, class _BinaryOp, class _Reduce, class _Scan>
-_Tp
+_LIBCPP_HIDE_FROM_ABI _Tp
 __parallel_transform_scan(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __n, _UnaryOp,
                           _Tp __init, _BinaryOp, _Reduce, _Scan __scan)
 {
@@ -100,7 +101,7 @@ __parallel_transform_scan(__pstl::__internal::__serial_backend_tag, _ExecutionPo
 }
 
 template <class _ExecutionPolicy, typename _RandomAccessIterator, typename _Compare, typename _LeafSort>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __parallel_stable_sort(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _RandomAccessIterator __first,
                        _RandomAccessIterator __last, _Compare __comp, _LeafSort __leaf_sort, std::size_t = 0)
 {
@@ -109,7 +110,7 @@ __parallel_stable_sort(__pstl::__internal::__serial_backend_tag, _ExecutionPolic
 
 template <class _ExecutionPolicy, typename _RandomAccessIterator1, typename _RandomAccessIterator2,
           typename _RandomAccessIterator3, typename _Compare, typename _LeafMerge>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __parallel_merge(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _RandomAccessIterator1 __first1,
                  _RandomAccessIterator1 __last1, _RandomAccessIterator2 __first2, _RandomAccessIterator2 __last2,
                  _RandomAccessIterator3 __outit, _Compare __comp, _LeafMerge __leaf_merge)
@@ -118,7 +119,7 @@ __parallel_merge(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _
 }
 
 template <class _ExecutionPolicy, typename _F1, typename _F2>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __parallel_invoke(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
 {
     std::forward<_F1>(__f1)();

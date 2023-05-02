@@ -177,6 +177,7 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
       StringSwitch<FormatToken::Kind>(str)
           .Case("attr-dict", FormatToken::kw_attr_dict)
           .Case("attr-dict-with-keyword", FormatToken::kw_attr_dict_w_keyword)
+          .Case("prop-dict", FormatToken::kw_prop_dict)
           .Case("custom", FormatToken::kw_custom)
           .Case("functional-type", FormatToken::kw_functional_type)
           .Case("oilist", FormatToken::kw_oilist)
