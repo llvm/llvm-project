@@ -114,7 +114,7 @@ bool ModuleListProperties::GetEnableBackgroundLookup() const {
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
   return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr,
                                                 ePropertyClangModulesCachePath)
       ->GetCurrentValue();
 }
@@ -126,7 +126,7 @@ bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
   return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr,
                                                 ePropertyLLDBIndexCachePath)
       ->GetCurrentValue();
 }
@@ -168,7 +168,7 @@ uint64_t ModuleListProperties::GetLLDBIndexCacheExpirationDays() {
 void ModuleListProperties::UpdateSymlinkMappings() {
   FileSpecList list = m_collection_sp
                           ->GetPropertyAtIndexAsOptionValueFileSpecList(
-                              nullptr, false, ePropertySymLinkPaths)
+                              nullptr, ePropertySymLinkPaths)
                           ->GetCurrentValue();
   llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
   const bool notify = false;
