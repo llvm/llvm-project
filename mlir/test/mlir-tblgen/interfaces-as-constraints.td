@@ -34,13 +34,13 @@ def OpUsingAllOfThose : Op<Test_Dialect, "OpUsingAllOfThose"> {
 // CHECK-NEXT:        << " must be TypeInterfaceInNamespace instance, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_attr_constraint.*}}(
-// CHECK:   if (attr && !((attr.isa<TopLevelAttrInterface>()))) {
-// CHECK-NEXT:    return op->emitOpError("attribute '") << attrName
+// CHECK:   if (attr && !((attr.isa<TopLevelAttrInterface>())))
+// CHECK-NEXT:     return getDiag() << "attribute '" << attrName
 // CHECK-NEXT:        << "' failed to satisfy constraint: TopLevelAttrInterface instance";
 
 // CHECK: static ::mlir::LogicalResult {{__mlir_ods_local_attr_constraint.*}}(
-// CHECK:   if (attr && !((attr.isa<test::AttrInterfaceInNamespace>()))) {
-// CHECK-NEXT:    return op->emitOpError("attribute '") << attrName
+// CHECK:   if (attr && !((attr.isa<test::AttrInterfaceInNamespace>())))
+// CHECK-NEXT:    return getDiag() << "attribute '" << attrName
 // CHECK-NEXT:        << "' failed to satisfy constraint: AttrInterfaceInNamespace instance";
 
 // CHECK: TopLevelAttrInterface OpUsingAllOfThose::getAttr1()

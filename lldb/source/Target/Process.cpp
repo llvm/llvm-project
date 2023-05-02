@@ -93,7 +93,6 @@ public:
   ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
-                                     bool will_modify,
                                      uint32_t idx) const override {
     // When getting the value for a key from the process options, we will
     // always try and grab the setting from the current process if there is
@@ -329,7 +328,7 @@ bool ProcessProperties::GetSteppingRunsAllThreads() const {
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (!exp_values)
@@ -342,7 +341,7 @@ bool ProcessProperties::GetOSPluginReportsAllThreads() const {
 
 void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -481,8 +480,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
 
   // Allow the platform to override the default cache line size
   OptionValueSP value_sp =
-      m_collection_sp
-          ->GetPropertyAtIndex(nullptr, true, ePropertyMemCacheLineSize)
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyMemCacheLineSize)
           ->GetValue();
   uint32_t platform_cache_line_size =
       target_sp->GetPlatform()->GetDefaultMemoryCacheLineSize();

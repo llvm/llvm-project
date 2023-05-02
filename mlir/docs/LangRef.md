@@ -290,12 +290,14 @@ Syntax:
 operation            ::= op-result-list? (generic-operation | custom-operation)
                          trailing-location?
 generic-operation    ::= string-literal `(` value-use-list? `)`  successor-list?
-                         region-list? dictionary-attribute? `:` function-type
+                         dictionary-properties? region-list? dictionary-attribute?
+                         `:` function-type
 custom-operation     ::= bare-id custom-operation-format
 op-result-list       ::= op-result (`,` op-result)* `=`
 op-result            ::= value-id (`:` integer-literal)
 successor-list       ::= `[` successor (`,` successor)* `]`
 successor            ::= caret-id (`:` block-arg-list)?
+dictionary-propertes ::= `<` dictionary-attribute `>`
 region-list          ::= `(` region (`,` region)* `)`
 dictionary-attribute ::= `{` (attribute-entry (`,` attribute-entry)*)? `}`
 trailing-location    ::= (`loc` `(` location `)`)?
@@ -312,9 +314,10 @@ semantics. For example, MLIR supports
 The internal representation of an operation is simple: an operation is
 identified by a unique string (e.g. `dim`, `tf.Conv2d`, `x86.repmovsb`,
 `ppc.eieio`, etc), can return zero or more results, take zero or more operands,
-has a dictionary of [attributes](#attributes), has zero or more successors, and
-zero or more enclosed [regions](#regions). The generic printing form includes
-all these elements literally, with a function type to indicate the types of the
+has storage for [properties](#properties), has a dictionary of
+[attributes](#attributes), has zero or more successors, and zero or more
+enclosed [regions](#regions). The generic printing form includes all these
+elements literally, with a function type to indicate the types of the
 results and operands.
 
 Example:
@@ -328,8 +331,11 @@ Example:
 %foo, %bar = "foo_div"() : () -> (f32, i32)
 
 // Invoke a TensorFlow function called tf.scramble with two inputs
-// and an attribute "fruit".
-%2 = "tf.scramble"(%result#0, %bar) {fruit = "banana"} : (f32, i32) -> f32
+// and an attribute "fruit" stored in properties.
+%2 = "tf.scramble"(%result#0, %bar) <{fruit = "banana"}> : (f32, i32) -> f32
+
+// Invoke an operation with some discardable attributes
+%foo, %bar = "foo_div"() {some_attr = "value", other_attr = 42 : i64} : () -> (f32, i32)
 ```
 
 In addition to the basic syntax above, dialects may register known operations.
@@ -733,6 +739,15 @@ The [builtin dialect](Dialects/Builtin.md) defines a set of types that are
 directly usable by any other dialect in MLIR. These types cover a range from
 primitive integer and floating-point types, function types, and more.
 
+## Properties
+
+Properties are extra data members stored directly on an Operation class. They
+provide a way to store [inherent attributes](#attributes) and other arbitrary
+data. The semantics of the data is specific to a given operation, and may be
+exposed through [Interfaces](Interfaces.md) accessors and other methods.
+Properties can always be serialized to Attribute in order to be printed
+generically.
+
 ## Attributes
 
 Syntax:
@@ -751,9 +766,10 @@ values. MLIR's builtin dialect provides a rich set of
 arrays, dictionaries, strings, etc.). Additionally, dialects can define their
 own [dialect attribute values](#dialect-attribute-values).
 
-The top-level attribute dictionary attached to an operation has special
-semantics. The attribute entries are considered to be of two different kinds
-based on whether their dictionary key has a dialect prefix:
+For dialects which haven't adopted properties yet, the top-level attribute
+dictionary attached to an operation has special semantics. The attribute
+entries are considered to be of two different kinds based on whether their
+dictionary key has a dialect prefix:
 
 -   *inherent attributes* are inherent to the definition of an operation's
     semantics. The operation itself is expected to verify the consistency of
@@ -770,6 +786,10 @@ based on whether their dictionary key has a dialect prefix:
 Note that attribute values are allowed to themselves be dictionary attributes,
 but only the top-level dictionary attribute attached to the operation is subject
 to the classification above.
+
+When properties are adopted, only discardable attributes are stored in the
+top-level dictionary, while inherent attributes are stored in the properties
+storage.
 
 ### Attribute Value Aliases
 

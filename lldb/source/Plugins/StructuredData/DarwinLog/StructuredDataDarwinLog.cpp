@@ -975,9 +975,10 @@ EnableOptionsSP ParseAutoEnableOptions(Status &error, Debugger &debugger) {
 
   // Parse the arguments.
   auto options_property_sp =
-      debugger.GetPropertyValue(nullptr, "plugin.structured-data.darwin-log."
-                                         "auto-enable-options",
-                                false, error);
+      debugger.GetPropertyValue(nullptr,
+                                "plugin.structured-data.darwin-log."
+                                "auto-enable-options",
+                                error);
   if (!error.Success())
     return EnableOptionsSP();
   if (!options_property_sp) {

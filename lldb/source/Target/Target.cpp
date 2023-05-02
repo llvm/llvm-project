@@ -4008,7 +4008,6 @@ public:
   TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
-                                     bool will_modify,
                                      uint32_t idx) const override {
     // When getting the value for a key from the target options, we will always
     // try and grab the setting from the current target if there is one. Else
@@ -4130,8 +4129,8 @@ void TargetProperties::UpdateLaunchInfoFromProperties() {
 
 bool TargetProperties::GetInjectLocalVariables(
     ExecutionContext *exe_ctx) const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      exe_ctx, false, ePropertyExperimental);
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(exe_ctx, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4145,7 +4144,7 @@ bool TargetProperties::GetInjectLocalVariables(
 void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
                                                bool b) {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(exe_ctx, true, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(exe_ctx, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4374,7 +4373,7 @@ PathMappingList &TargetProperties::GetSourcePathMap() const {
   const uint32_t idx = ePropertySourceMap;
   OptionValuePathMappings *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(nullptr,
-                                                                   false, idx);
+                                                                   idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4389,7 +4388,7 @@ void TargetProperties::AppendExecutableSearchPaths(const FileSpec &dir) {
   const uint32_t idx = ePropertyExecutableSearchPaths;
   OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   false, idx);
+                                                                   idx);
   assert(option_value);
   option_value->AppendCurrentValue(dir);
 }
@@ -4398,7 +4397,7 @@ FileSpecList TargetProperties::GetExecutableSearchPaths() {
   const uint32_t idx = ePropertyExecutableSearchPaths;
   const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   false, idx);
+                                                                   idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4407,7 +4406,7 @@ FileSpecList TargetProperties::GetDebugFileSearchPaths() {
   const uint32_t idx = ePropertyDebugFileSearchPaths;
   const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   false, idx);
+                                                                   idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4416,7 +4415,7 @@ FileSpecList TargetProperties::GetClangModuleSearchPaths() {
   const uint32_t idx = ePropertyClangModuleSearchPaths;
   const OptionValueFileSpecList *option_value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   false, idx);
+                                                                   idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4477,7 +4476,7 @@ void TargetProperties::CheckJITObjectsDir() {
   if (exists && is_directory && writable)
     return;
 
-  m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertySaveObjectsDir)
+  m_collection_sp->GetPropertyAtIndex(nullptr, ePropertySaveObjectsDir)
       ->GetValue()
       ->Clear();
 
@@ -4578,8 +4577,7 @@ LanguageType TargetProperties::GetLanguage() const {
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
   const uint32_t idx = ePropertyExprPrefix;
   OptionValueFileSpec *file =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
-                                                               idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, idx);
   if (file) {
     DataBufferSP data_sp(file->GetFileContents());
     if (data_sp)

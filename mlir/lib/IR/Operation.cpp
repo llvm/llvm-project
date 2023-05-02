@@ -7,13 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <numeric>
 
@@ -25,19 +29,31 @@ using namespace mlir;
 
 /// Create a new Operation from operation state.
 Operation *Operation::create(const OperationState &state) {
-  return create(state.location, state.name, state.types, state.operands,
-                state.attributes.getDictionary(state.getContext()),
-                state.successors, state.regions);
+  Operation *op =
+      create(state.location, state.name, state.types, state.operands,
+             state.attributes.getDictionary(state.getContext()),
+             state.properties, state.successors, state.regions);
+  if (LLVM_UNLIKELY(state.propertiesAttr)) {
+    assert(!state.properties);
+    LogicalResult result =
+        op->setPropertiesFromAttribute(state.propertiesAttr,
+                                       /*diagnostic=*/nullptr);
+    assert(result.succeeded() && "invalid properties in op creation");
+    (void)result;
+  }
+  return op;
 }
 
 /// Create a new Operation with the specific fields.
 Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
-                             NamedAttrList &&attributes, BlockRange successors,
+                             NamedAttrList &&attributes,
+                             OpaqueProperties properties, BlockRange successors,
                              RegionRange regions) {
   unsigned numRegions = regions.size();
-  Operation *op = create(location, name, resultTypes, operands,
-                         std::move(attributes), successors, numRegions);
+  Operation *op =
+      create(location, name, resultTypes, operands, std::move(attributes),
+             properties, successors, numRegions);
   for (unsigned i = 0; i < numRegions; ++i)
     if (regions[i])
       op->getRegion(i).takeBody(*regions[i]);
@@ -47,21 +63,23 @@ Operation *Operation::create(Location location, OperationName name,
 /// Create a new Operation with the specific fields.
 Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
-                             NamedAttrList &&attributes, BlockRange successors,
+                             NamedAttrList &&attributes,
+                             OpaqueProperties properties, BlockRange successors,
                              unsigned numRegions) {
   // Populate default attributes.
   name.populateDefaultAttrs(attributes);
 
   return create(location, name, resultTypes, operands,
-                attributes.getDictionary(location.getContext()), successors,
-                numRegions);
+                attributes.getDictionary(location.getContext()), properties,
+                successors, numRegions);
 }
 
 /// Overload of create that takes an existing DictionaryAttr to avoid
 /// unnecessarily uniquing a list of attributes.
 Operation *Operation::create(Location location, OperationName name,
                              TypeRange resultTypes, ValueRange operands,
-                             DictionaryAttr attributes, BlockRange successors,
+                             DictionaryAttr attributes,
+                             OpaqueProperties properties, BlockRange successors,
                              unsigned numRegions) {
   assert(llvm::all_of(resultTypes, [](Type t) { return t; }) &&
          "unexpected null result type");
@@ -72,6 +90,7 @@ Operation *Operation::create(Location location, OperationName name,
   unsigned numSuccessors = successors.size();
   unsigned numOperands = operands.size();
   unsigned numResults = resultTypes.size();
+  int opPropertiesAllocSize = name.getOpPropertyByteSize();
 
   // If the operation is known to have no operands, don't allocate an operand
   // storage.
@@ -82,8 +101,10 @@ Operation *Operation::create(Location location, OperationName name,
   // into account the size of the operation, its trailing objects, and its
   // prefixed objects.
   size_t byteSize =
-      totalSizeToAlloc<detail::OperandStorage, BlockOperand, Region, OpOperand>(
-          needsOperandStorage ? 1 : 0, numSuccessors, numRegions, numOperands);
+      totalSizeToAlloc<detail::OperandStorage, detail::OpProperties,
+                       BlockOperand, Region, OpOperand>(
+          needsOperandStorage ? 1 : 0, opPropertiesAllocSize, numSuccessors,
+          numRegions, numOperands);
   size_t prefixByteSize = llvm::alignTo(
       Operation::prefixAllocSize(numTrailingResults, numInlineResults),
       alignof(Operation));
@@ -91,9 +112,9 @@ Operation *Operation::create(Location location, OperationName name,
   void *rawMem = mallocMem + prefixByteSize;
 
   // Create the new Operation.
-  Operation *op =
-      ::new (rawMem) Operation(location, name, numResults, numSuccessors,
-                               numRegions, attributes, needsOperandStorage);
+  Operation *op = ::new (rawMem) Operation(
+      location, name, numResults, numSuccessors, numRegions,
+      opPropertiesAllocSize, attributes, properties, needsOperandStorage);
 
   assert((numSuccessors == 0 || op->mightHaveTrait<OpTrait::IsTerminator>()) &&
          "unexpected successors in a non-terminator operation");
@@ -122,16 +143,22 @@ Operation *Operation::create(Location location, OperationName name,
   for (unsigned i = 0; i != numSuccessors; ++i)
     new (&blockOperands[i]) BlockOperand(op, successors[i]);
 
+  // This must be done after properties are initalized.
+  op->setAttrs(attributes);
+
   return op;
 }
 
 Operation::Operation(Location location, OperationName name, unsigned numResults,
                      unsigned numSuccessors, unsigned numRegions,
-                     DictionaryAttr attributes, bool hasOperandStorage)
+                     int fullPropertiesStorageSize, DictionaryAttr attributes,
+                     OpaqueProperties properties, bool hasOperandStorage)
     : location(location), numResults(numResults), numSuccs(numSuccessors),
-      numRegions(numRegions), hasOperandStorage(hasOperandStorage), name(name),
-      attrs(attributes) {
+      numRegions(numRegions), hasOperandStorage(hasOperandStorage),
+      propertiesStorageSize((fullPropertiesStorageSize + 7) / 8), name(name) {
   assert(attributes && "unexpected null attribute dictionary");
+  assert(fullPropertiesStorageSize <= propertiesCapacity &&
+         "Properties size overflow");
 #ifndef NDEBUG
   if (!getDialect() && !getContext()->allowsUnregisteredDialects())
     llvm::report_fatal_error(
@@ -140,6 +167,8 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
         "allowUnregisteredDialects() on the MLIRContext, or use "
         "-allow-unregistered-dialect with the MLIR tool used.");
 #endif
+  if (fullPropertiesStorageSize)
+    name.initOpProperties(getPropertiesStorage(), properties);
 }
 
 // Operations are deleted through the destroy() member because they are
@@ -168,6 +197,8 @@ Operation::~Operation() {
   // Explicitly destroy the regions.
   for (auto &region : getRegions())
     region.~Region();
+  if (propertiesStorageSize)
+    name.destroyOpProperties(getPropertiesStorage());
 }
 
 /// Destroy this operation or one of its subclasses.
@@ -257,6 +288,68 @@ InFlightDiagnostic Operation::emitRemark(const Twine &message) {
   if (getContext()->shouldPrintOpOnDiagnostic())
     diag.attachNote(getLoc()) << "see current operation: " << *this;
   return diag;
+}
+
+DictionaryAttr Operation::getAttrDictionary() {
+  if (getPropertiesStorageSize()) {
+    NamedAttrList attrsList = attrs;
+    getName().populateInherentAttrs(this, attrsList);
+    return attrsList.getDictionary(getContext());
+  }
+  return attrs;
+}
+
+void Operation::setAttrs(DictionaryAttr newAttrs) {
+  assert(newAttrs && "expected valid attribute dictionary");
+  if (getPropertiesStorageSize()) {
+    attrs = DictionaryAttr::get(getContext(), {});
+    for (const NamedAttribute &attr : newAttrs)
+      setAttr(attr.getName(), attr.getValue());
+    return;
+  }
+  attrs = newAttrs;
+}
+void Operation::setAttrs(ArrayRef<NamedAttribute> newAttrs) {
+  if (getPropertiesStorageSize()) {
+    setAttrs(DictionaryAttr::get(getContext(), {}));
+    for (const NamedAttribute &attr : newAttrs)
+      setAttr(attr.getName(), attr.getValue());
+    return;
+  }
+  attrs = DictionaryAttr::get(getContext(), newAttrs);
+}
+
+std::optional<Attribute> Operation::getInherentAttr(StringRef name) {
+  return getName().getInherentAttr(this, name);
+}
+
+void Operation::setInherentAttr(StringAttr name, Attribute value) {
+  getName().setInherentAttr(this, name, value);
+}
+
+Attribute Operation::getPropertiesAsAttribute() {
+  Optional<RegisteredOperationName> info = getRegisteredInfo();
+  if (LLVM_UNLIKELY(!info))
+    return *getPropertiesStorage().as<Attribute *>();
+  return info->getOpPropertiesAsAttribute(this);
+}
+LogicalResult
+Operation::setPropertiesFromAttribute(Attribute attr,
+                                      InFlightDiagnostic *diagnostic) {
+  Optional<RegisteredOperationName> info = getRegisteredInfo();
+  if (LLVM_UNLIKELY(!info)) {
+    *getPropertiesStorage().as<Attribute *>() = attr;
+    return success();
+  }
+  return info->setOpPropertiesFromAttribute(this, attr, diagnostic);
+}
+
+void Operation::copyProperties(OpaqueProperties rhs) {
+  name.copyOpProperties(getPropertiesStorage(), rhs);
+}
+
+llvm::hash_code Operation::hashProperties() {
+  return name.hashOpProperties(getPropertiesStorage());
 }
 
 //===----------------------------------------------------------------------===//
@@ -581,7 +674,7 @@ Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
 
   // Create the new operation.
   auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
-                       successors, getNumRegions());
+                       getPropertiesStorage(), successors, getNumRegions());
   mapper.map(this, newOp);
 
   // Clone the regions.
@@ -634,6 +727,20 @@ void OpState::printOpName(Operation *op, OpAsmPrinter &p,
   if (name.startswith((defaultDialect + ".").str()) && name.count('.') == 1)
     name = name.drop_front(defaultDialect.size() + 1);
   p.getStream() << name;
+}
+
+/// Parse properties as a Attribute.
+ParseResult OpState::genericParseProperties(OpAsmParser &parser,
+                                            Attribute &result) {
+  if (parser.parseLess() || parser.parseAttribute(result) ||
+      parser.parseGreater())
+    return failure();
+  return success();
+}
+
+/// Print the properties as a Attribute.
+void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties) {
+  p << "<" << properties << ">";
 }
 
 /// Emit an error about fatal conditions with this operation, reporting up to

@@ -187,7 +187,7 @@ public:
   /// return types. Throws value_error on failure.
   std::vector<PyType>
   inferReturnTypes(std::optional<py::list> operandList,
-                   std::optional<PyAttribute> attributes,
+                   std::optional<PyAttribute> attributes, void *properties,
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
@@ -255,7 +255,7 @@ public:
 
     MlirLogicalResult result = mlirInferTypeOpInterfaceInferReturnTypes(
         opNameRef, pyContext.get(), location.resolve(), mlirOperands.size(),
-        mlirOperands.data(), attributeDict, mlirRegions.size(),
+        mlirOperands.data(), attributeDict, properties, mlirRegions.size(),
         mlirRegions.data(), &appendResultsCallback, &data);
 
     if (mlirLogicalResultIsFailure(result)) {
@@ -268,7 +268,8 @@ public:
   static void bindDerived(ClassTy &cls) {
     cls.def("inferReturnTypes", &PyInferTypeOpInterface::inferReturnTypes,
             py::arg("operands") = py::none(),
-            py::arg("attributes") = py::none(), py::arg("regions") = py::none(),
+            py::arg("attributes") = py::none(),
+            py::arg("properties") = py::none(), py::arg("regions") = py::none(),
             py::arg("context") = py::none(), py::arg("loc") = py::none(),
             inferReturnTypesDoc);
   }

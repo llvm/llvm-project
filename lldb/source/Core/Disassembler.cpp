@@ -253,7 +253,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
     if (target_sp) {
       Status error;
       OptionValueSP value_sp = target_sp->GetDebugger().GetPropertyValue(
-          &exe_ctx, "target.process.thread.step-avoid-regexp", false, error);
+          &exe_ctx, "target.process.thread.step-avoid-regexp", error);
       if (value_sp && value_sp->GetType() == OptionValue::eTypeRegex) {
         OptionValueRegex *re = value_sp->GetAsRegex();
         if (re) {
