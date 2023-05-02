@@ -207,8 +207,8 @@ rdcycle x24
 # CHECK-S-OBJ: rdtime s9
 rdtime x25
 
-# CHECK-S-OBJ-NOALIAS: csrrs  s0, 336, zero
-# CHECK-S-OBJ: csrr s0, 336
+# CHECK-S-OBJ-NOALIAS: csrrs s0, siselect, zero
+# CHECK-S-OBJ: csrr s0, siselect
 csrr x8, 0x150
 # CHECK-S-OBJ-NOALIAS: csrrw zero, sscratch, s1
 # CHECK-S-OBJ: csrw sscratch, s1
@@ -220,8 +220,8 @@ csrs 0xfff, x22
 # CHECK-S-OBJ: csrc 4095, s7
 csrc 0xfff, x23
 
-# CHECK-S-OBJ-NOALIAS: csrrwi zero, 336, 15
-# CHECK-S-OBJ: csrwi 336, 15
+# CHECK-S-OBJ-NOALIAS: csrrwi zero, siselect, 15
+# CHECK-S-OBJ: csrwi siselect, 15
 csrwi 0x150, 0xf
 # CHECK-S-OBJ-NOALIAS: csrrsi zero, 4095, 16
 # CHECK-S-OBJ: csrsi 4095, 16
@@ -230,18 +230,18 @@ csrsi 0xfff, 0x10
 # CHECK-S-OBJ: csrci sscratch, 17
 csrci 0x140, 0x11
 
-# CHECK-S-OBJ-NOALIAS: csrrwi zero, 336, 7
-# CHECK-S-OBJ: csrwi 336, 7
+# CHECK-S-OBJ-NOALIAS: csrrwi zero, siselect, 7
+# CHECK-S-OBJ: csrwi siselect, 7
 csrw 0x150, 7
-# CHECK-S-OBJ-NOALIAS: csrrsi zero, 336, 7
-# CHECK-S-OBJ: csrsi 336, 7
+# CHECK-S-OBJ-NOALIAS: csrrsi zero, siselect, 7
+# CHECK-S-OBJ: csrsi siselect, 7
 csrs 0x150, 7
-# CHECK-S-OBJ-NOALIAS: csrrci zero, 336, 7
-# CHECK-S-OBJ: csrci 336, 7
+# CHECK-S-OBJ-NOALIAS: csrrci zero, siselect, 7
+# CHECK-S-OBJ: csrci siselect, 7
 csrc 0x150, 7
 
-# CHECK-S-OBJ-NOALIAS: csrrwi t0, 336, 15
-# CHECK-S-OBJ: csrrwi t0, 336, 15
+# CHECK-S-OBJ-NOALIAS: csrrwi t0, siselect, 15
+# CHECK-S-OBJ: csrrwi t0, siselect, 15
 csrrw t0, 0x150, 0xf
 # CHECK-S-OBJ-NOALIAS: csrrsi t0, 4095, 16
 # CHECK-S-OBJ: csrrsi t0, 4095, 16

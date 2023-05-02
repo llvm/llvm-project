@@ -90,9 +90,9 @@ public:
   }
 
   llvm::Triple::EnvironmentType ABI() const {
-    return (llvm::Triple::EnvironmentType)
-        m_collection_sp->GetPropertyAtIndexAsEnumeration(
-            nullptr, ePropertyABI, llvm::Triple::UnknownEnvironment);
+    return (llvm::Triple::EnvironmentType)m_collection_sp
+        ->GetPropertyAtIndexAsEnumeration(nullptr, ePropertyABI)
+        .value_or(llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {
@@ -319,7 +319,8 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   llvm::Triple::EnvironmentType env;
   if (module_env_option)
     env =
-        (llvm::Triple::EnvironmentType)module_env_option->GetEnumerationValue();
+        (llvm::Triple::EnvironmentType)module_env_option->GetEnumerationValue()
+            .value_or(0);
   else
     env = GetGlobalPluginProperties().ABI();
 

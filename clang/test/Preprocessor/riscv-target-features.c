@@ -63,6 +63,8 @@
 // CHECK-NOT: __riscv_zvksh {{.*$}}
 // CHECK-NOT: __riscv_zvkt {{.*$}}
 // CHECK-NOT: __riscv_zicond {{.*$}}
+// CHECK-NOT: __riscv_smaia {{.*$}}
+// CHECK-NOT: __riscv_ssaia {{.*$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
 // RUN: -o - | FileCheck %s
@@ -640,3 +642,19 @@
 // RUN: -march=rv64i_zicond1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZICOND-EXT %s
 // CHECK-ZICOND-EXT: __riscv_zicond  1000000{{$}}
+
+// RUN: %clang -target riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32ismaia1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SMAIA-EXT %s
+// RUN: %clang -target riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64ismaia1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SMAIA-EXT %s
+// CHECK-SMAIA-EXT: __riscv_smaia  1000000{{$}}
+
+// RUN: %clang -target riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32issaia1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SSAIA-EXT %s
+// RUN: %clang -target riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64issaia1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SSAIA-EXT %s
+// CHECK-SSAIA-EXT: __riscv_ssaia  1000000{{$}}
