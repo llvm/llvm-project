@@ -8,16 +8,6 @@ target triple = "i686-pc-windows-msvc18.0.0"
 
 ; Check that we do not use a basic block that has EFLAGS as live-in
 ; if we need to realign the stack.
-; PR27531.
-; CHECK-LABEL: stackRealignment:
-; Prologue code.
-; CHECK: pushl
-; Make sure we actually perform some stack realignment.
-; CHECK: andl ${{[-0-9]+}}, %esp
-; This is the end of the entry block.
-; The prologue should have happened before that point because past
-; this point, EFLAGS is live.
-; CHECK: jg
 define x86_thiscallcc void @stackRealignment(ptr %this) {
 ; SHRINK-WRAP-LABEL: stackRealignment:
 ; SHRINK-WRAP:       # %bb.0: # %entry
