@@ -5,9 +5,16 @@
 #include <stdio.h>
 
 #pragma omp begin declare target
-char *N1, *N2;
+#define MAX_NAME_SIZE 100
+char N1[MAX_NAME_SIZE], N2[MAX_NAME_SIZE];
 int V1, V2;
-#pragma omp declare target
+void copy_name(char *dst, char *src) {
+  int i;
+  for (i = 0; i < MAX_NAME_SIZE - 1 && src[i]; ++i)
+    dst[i] = src[i];
+  dst[i] = 0;
+}
+#pragma omp end declare target
 
 #define CHECK_PRESENCE(Var1, Var2, Var3)                                       \
   printf("    presence of %s, %s, %s: %d, %d, %d\n", #Var1, #Var2, #Var3,      \
@@ -19,12 +26,12 @@ int V1, V2;
   printf("    values of %s, %s: %d, %d\n", N1, N2, (Var1), (Var2))
 
 #define CHECK_VALUES_DELAYED(Var1, Var2)                                       \
-  N1 = #Var1;                                                                  \
-  N2 = #Var2;                                                                  \
+  copy_name(N1, #Var1);                                                        \
+  copy_name(N2, #Var2);                                                        \
   V1 = (Var1);                                                                 \
   V2 = (Var2);
 
-#define CHECK_DELAYED_VALUS()                                                  \
+#define CHECK_DELAYED_VALUES()                                                 \
   _Pragma("omp target update from(N1, N2, V1, V2)")                            \
       CHECK_VALUES_HELPER(N1, N2, V1, V2)
 
@@ -149,7 +156,7 @@ int main() {
       // CHECK-NEXT: values of s.i, s.j: 21, 31
       CHECK_VALUES_DELAYED(s.i, s.j);
     }
-    CHECK_DELAYED_VALUS();
+    CHECK_DELAYED_VALUES();
   }
   // CHECK-NEXT: presence of s, s.i, s.j: 0, 0, 0
   // CHECK-NEXT: values of s.i, s.j: 21, 31
@@ -180,7 +187,7 @@ int main() {
       // CHECK-NEXT: values of s.i, s.j: 21, 31
       CHECK_VALUES_DELAYED(s.i, s.j);
     }
-    CHECK_DELAYED_VALUS();
+    CHECK_DELAYED_VALUES();
   }
   // CHECK-NEXT: presence of s, s.i, s.j: 0, 0, 0
   // CHECK-NEXT: values of s.i, s.j: 21, 31
