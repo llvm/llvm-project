@@ -2558,7 +2558,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
   SmallVector<Instruction *, 1> ToUpdate;
   ToUpdate.push_back(DefI);
   SmallVector<PHINode *, 16> PHIsToRemove;
-  formLCSSAForInstructions(ToUpdate, SE.DT, SE.LI, &SE, Builder, &PHIsToRemove);
+  formLCSSAForInstructions(ToUpdate, SE.DT, SE.LI, Builder, &PHIsToRemove);
   for (PHINode *PN : PHIsToRemove) {
     if (!PN->use_empty())
       continue;
