@@ -71,7 +71,7 @@ define i64 @sign_i64(i64 %a) {
 define i64 @not_sign_i64(i64 %a) {
 ; CHECK-LABEL: not_sign_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    cneg x0, x8, le
 ; CHECK-NEXT:    ret
@@ -104,7 +104,7 @@ define i64 @not_sign_i64_3(i64 %a) {
 define i64 @not_sign_i64_4(i64 %a) {
 ; CHECK-LABEL: not_sign_i64_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x0, #-1
+; CHECK-NEXT:    mov x0, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ret
   %c = icmp ugt i64 %a, -1
   %res = select i1 %c, i64 1, i64 -1
@@ -229,10 +229,10 @@ define <4 x i32> @not_sign_4xi32_3(<4 x i32> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NEXT:    movi v2.4s, #1
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI18_0]
 ; CHECK-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    bic v1.16b, v2.16b, v0.16b
+; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %c = icmp sgt <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %res = select <4 x i1> %c, <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 1>
