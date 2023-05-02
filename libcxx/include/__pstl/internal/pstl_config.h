@@ -31,8 +31,6 @@
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
 #endif //Enable SIMD
 
-#define _PSTL_PRAGMA_FORCEINLINE
-
 // TODO: find out when to enable these annotations
 #if 0
 #    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
@@ -44,18 +42,11 @@
 #    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
 #endif
 
-#define _PSTL_CPP14_2RANGE_MISMATCH_EQUAL_PRESENT
-#define _PSTL_CPP14_MAKE_REVERSE_ITERATOR_PRESENT
-#define _PSTL_CPP14_INTEGER_SEQUENCE_PRESENT
-#define _PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT
-
 #if defined(_OPENMP) && _OPENMP >= 201307
 #    define _PSTL_UDR_PRESENT
 #endif
 
-#define _PSTL_PRAGMA_SIMD_EARLYEXIT
-#define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(PRM)
-#define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(PRM1, PRM2)
+#define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
 
 // Declaration of reduction functor, where
 // NAME - the name of the functor
@@ -66,10 +57,5 @@
 // omp_orig - refers to the original variable to be reduced
 #define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                       \
     _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
-
-#define _PSTL_PRAGMA_VECTOR_UNALIGNED
-#define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-#define _PSTL_PRAGMA_MESSAGE(x)
-#define _PSTL_PRAGMA_MESSAGE_POLICIES(x)
 
 #endif /* _PSTL_CONFIG_H */
