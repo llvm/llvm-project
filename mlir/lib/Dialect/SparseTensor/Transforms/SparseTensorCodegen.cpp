@@ -1609,6 +1609,7 @@ struct SparseUnpackOpConverter : public OpConversionPattern<UnpackOp> {
     const unsigned nBatched = op.getNumBatchedLvls();
     assert(isCOOType(srcTp.getEncoding(), nBatched, true) &&
            desc.getFields().size() == 4); // specifier + pos + crds + values
+    (void)srcTp;
     auto logicRes = nBatched == 0
                         ? genUnBatchedUnpackOp(op, desc, rewriter)
                         : genBatchedUnpackOp(op, nBatched, desc, rewriter);
