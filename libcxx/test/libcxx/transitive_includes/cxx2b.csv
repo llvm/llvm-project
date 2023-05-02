@@ -13,7 +13,6 @@ any cstring
 any initializer_list
 any limits
 any new
-any stdexcept
 any typeinfo
 any version
 array compare
@@ -635,7 +634,6 @@ valarray cstdint
 valarray initializer_list
 valarray limits
 valarray new
-valarray stdexcept
 valarray version
 variant compare
 variant cstddef

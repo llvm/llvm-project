@@ -12,7 +12,6 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/find.h>
 #include <__config>
-#include <__functional/not_fn.h>
 #include <__pstl/internal/parallel_impl.h>
 #include <__pstl/internal/unseq_backend_simd.h>
 #include <__type_traits/is_execution_policy.h>
@@ -94,7 +93,9 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _ForwardIterator
 find_if_not(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  return std::find_if(__policy, __first, __last, std::not_fn(std::move(__pred)));
+  return std::find_if(__policy, __first, __last, [&](__iter_reference<_ForwardIterator> __value) {
+    return !__pred(__value);
+  });
 }
 
 _LIBCPP_END_NAMESPACE_STD
