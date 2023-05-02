@@ -69,6 +69,7 @@ add_llvm_target(MipsCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   MC

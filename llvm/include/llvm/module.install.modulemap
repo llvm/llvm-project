@@ -1,4 +1,8 @@
 
+module LLVM_Extern_CodeGenTypes_Gen {
+  textual header "CodeGen/GenVT.inc"
+}
+
 module LLVM_Extern_Config_Def {
  textual header "Config/AsmParsers.def"
  textual header "Config/AsmPrinters.def"

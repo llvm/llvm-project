@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMARMAsmParser
   ARMDesc
   ARMInfo
   ARMUtils
+  CodeGenTypes
   MC
   MCParser
   Support

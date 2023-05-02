@@ -884,7 +884,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Opc = RISCV::FMV_H_X;
       break;
     case MVT::f32:
-      Opc = RISCV::FMV_W_X;
+      Opc = Subtarget->hasStdExtZfinx() ? RISCV::COPY : RISCV::FMV_W_X;
       break;
     case MVT::f64:
       // For RV32, we can't move from a GPR, we need to convert instead. This

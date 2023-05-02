@@ -40,6 +40,7 @@ add_llvm_target(M68kCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   M68kDesc

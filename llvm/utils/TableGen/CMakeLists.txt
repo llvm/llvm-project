@@ -25,6 +25,11 @@ add_tablegen(llvm-min-tblgen LLVM_HEADERS
   )
 set_target_properties(llvm-min-tblgen PROPERTIES FOLDER "Tablegenning")
 
+set(LLVM_LINK_COMPONENTS
+  CodeGenTypes
+  Support
+  )
+
 add_tablegen(llvm-tblgen LLVM
   DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
   EXPORT LLVM
@@ -81,9 +86,6 @@ add_tablegen(llvm-tblgen LLVM
   X86RecognizableInstr.cpp
   WebAssemblyDisassemblerEmitter.cpp
   $<TARGET_OBJECTS:obj.LLVMTableGenCommon>
-
-  DEPENDS
-  intrinsics_gen
   )
 target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenGlobalISel)
 set_target_properties(llvm-tblgen PROPERTIES FOLDER "Tablegenning")

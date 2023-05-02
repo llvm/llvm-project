@@ -36,6 +36,7 @@ add_llvm_target(CSKYCodeGen
   CSKYDesc
   CSKYInfo
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

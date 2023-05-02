@@ -100,7 +100,7 @@ public:
 
   EnableJITLoaderGDB GetEnable() const {
     return (EnableJITLoaderGDB)m_collection_sp
-        ->GetPropertyAtIndexAsEnumeration(nullptr, ePropertyEnable)
+        ->GetPropertyAtIndexAsEnumeration(ePropertyEnable)
         .value_or(
             g_jitloadergdb_properties[ePropertyEnable].default_uint_value);
   }

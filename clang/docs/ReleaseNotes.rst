@@ -340,6 +340,8 @@ Bug Fixes in This Version
 - Fix the assertion hit when generating code for global variable initializer of
   _BitInt(1) type.
   (`#62207 <https://github.com/llvm/llvm-project/issues/62207>`_)
+- Fix lambdas and other anonymous function names not respecting ``-fdebug-prefix-map``
+  (`#62192 <https://github.com/llvm/llvm-project/issues/62192>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

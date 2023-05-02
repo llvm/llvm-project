@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  CodeGenTypes
   Support
   TableGen
   )
@@ -12,6 +13,9 @@ add_llvm_library(LLVMTableGenGlobalISel STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
   GIMatchDagPredicate.cpp
   GIMatchDagPredicateDependencyEdge.cpp
   GIMatchTree.cpp
+
+  DEPENDS
+  vt_gen
   )
 
 # Users may include its headers as "GlobalISel/*.h"
