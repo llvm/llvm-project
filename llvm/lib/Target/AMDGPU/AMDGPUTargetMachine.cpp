@@ -751,17 +751,22 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
          AMDGPU::isFlatGlobalAddrSpace(DestAS);
 }
 
-// FIXME: This should likely be driven from tablegen or an ".inc" header.
-constexpr std::pair<unsigned, unsigned> LLVMToDWARFAddrSpaceMapping[] = {
-    {AMDGPUAS::GLOBAL_ADDRESS, 0}, {AMDGPUAS::CONSTANT_ADDRESS, 0},
-    {AMDGPUAS::FLAT_ADDRESS, 1},   {AMDGPUAS::REGION_ADDRESS, 2},
-    {AMDGPUAS::LOCAL_ADDRESS, 3},  {AMDGPUAS::PRIVATE_ADDRESS, 5}};
-
 std::optional<unsigned>
 AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
-  for (const auto &I : LLVMToDWARFAddrSpaceMapping)
-    if (I.first == LLVMAddrSpace)
-      return I.second;
+  // FIXME: This should likely be driven from tablegen or an ".inc" header.
+  static_assert(
+      AMDGPUAS::FLAT_ADDRESS == 0 && AMDGPUAS::GLOBAL_ADDRESS == 1 &&
+          AMDGPUAS::REGION_ADDRESS == 2 && AMDGPUAS::LOCAL_ADDRESS == 3 &&
+          AMDGPUAS::CONSTANT_ADDRESS == 4 && AMDGPUAS::PRIVATE_ADDRESS == 5,
+      "LLVMToDwarfAddrSpaceMapping entries must be in the same order as the "
+      "associated DWARF address-space values.");
+
+  // FIXME: This mapping should likely be driven from tablegen or an ".inc"
+  // header.
+  static const unsigned LLVMToDWARFAddrSpaceMapping[] = {1, 0, 2, 3, 0, 5};
+
+  if (LLVMAddrSpace < std::size(LLVMToDWARFAddrSpaceMapping))
+    return LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
   return std::nullopt;
 }
 
