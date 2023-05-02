@@ -60,7 +60,6 @@ target_link_libraries(PluginInterface
     ${llvm_libs}
     elf_common
     MemoryManager
-    OMPT
 )
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
