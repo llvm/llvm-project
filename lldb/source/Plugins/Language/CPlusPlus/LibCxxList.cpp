@@ -300,7 +300,7 @@ bool ForwardListFrontEnd::Update() {
       m_backend.GetChildMemberWithName(ConstString("__before_begin_"), true));
   if (!impl_sp)
     return false;
-  impl_sp = GetValueOfLibCXXCompressedPair(*impl_sp);
+  impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
   if (!impl_sp)
     return false;
   m_head = impl_sp->GetChildMemberWithName(ConstString("__next_"), true).get();
@@ -321,7 +321,7 @@ size_t ListFrontEnd::CalculateNumChildren() {
   ValueObjectSP size_alloc(
       m_backend.GetChildMemberWithName(ConstString("__size_alloc_"), true));
   if (size_alloc) {
-    ValueObjectSP value = GetValueOfLibCXXCompressedPair(*size_alloc);
+    ValueObjectSP value = GetFirstValueOfLibCXXCompressedPair(*size_alloc);
     if (value) {
       m_count = value->GetValueAsUnsigned(UINT32_MAX);
     }
