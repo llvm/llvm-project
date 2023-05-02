@@ -175,17 +175,18 @@ public:
   }
 
   void maybeAddDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                          bool IsModuleFile, bool IsMissing) override {
+                          bool IsModuleFile, FileManager *FileMgr,
+                          bool IsMissing) override {
     if (ReverseMapper.empty())
       return DependencyFileGenerator::maybeAddDependency(
-          Filename, FromModule, IsSystem, IsModuleFile, IsMissing);
+          Filename, FromModule, IsSystem, IsModuleFile, FileMgr, IsMissing);
 
     // We may get canonicalized paths if prefix headers/PCH are used, so make
     // sure to remap them back to original source paths.
     SmallString<256> New{Filename};
     ReverseMapper.mapInPlace(New);
     return DependencyFileGenerator::maybeAddDependency(
-        New, FromModule, IsSystem, IsModuleFile, IsMissing);
+        New, FromModule, IsSystem, IsModuleFile, FileMgr, IsMissing);
   }
 };
 
