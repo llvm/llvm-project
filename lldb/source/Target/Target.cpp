@@ -4586,6 +4586,24 @@ uint64_t TargetProperties::GetExprErrorLimit() const {
       g_target_properties[idx].default_uint_value);
 }
 
+uint64_t TargetProperties::GetExprAllocAddress() const {
+  const uint32_t idx = ePropertyExprAllocAddress;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
+uint64_t TargetProperties::GetExprAllocSize() const {
+  const uint32_t idx = ePropertyExprAllocSize;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
+uint64_t TargetProperties::GetExprAllocAlign() const {
+  const uint32_t idx = ePropertyExprAllocAlign;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
