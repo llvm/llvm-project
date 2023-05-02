@@ -102,6 +102,10 @@ set(riscv_files
   riscv_ntlh.h
   )
 
+set(sifive_files
+  sifive_vector.h
+  )
+
 set(systemz_files
   s390intrin.h
   vecintrin.h
@@ -249,6 +253,7 @@ set(files
   ${ppc_files}
   ${ppc_htm_files}
   ${riscv_files}
+  ${sifive_files}
   ${systemz_files}
   ${ve_files}
   ${x86_files}

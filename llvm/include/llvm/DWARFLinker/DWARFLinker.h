@@ -49,17 +49,23 @@ public:
   /// section.
   virtual bool hasValidRelocs() = 0;
 
-  /// Checks that the specified variable \p DIE references live code section.
-  /// Allowed kind of input die: DW_TAG_variable, DW_TAG_constant.
-  /// \returns true and sets Info.InDebugMap if it is the case.
-  virtual bool isLiveVariable(const DWARFDie &DIE,
-                              CompileUnit::DIEInfo &Info) = 0;
+  /// Checks that the specified variable \p DIE references the live code
+  /// section and returns the relocation adjustment value (to get the linked
+  /// address this value might be added to the source variable address).
+  /// Allowed kinds of input DIE: DW_TAG_variable, DW_TAG_constant.
+  /// \returns relocation adjustment value or std::nullopt if there is no
+  /// corresponding live address.
+  virtual std::optional<int64_t>
+  getVariableRelocAdjustment(const DWARFDie &DIE) = 0;
 
-  /// Checks that the specified subprogram \p DIE references live code section.
-  /// Allowed kind of input die: DW_TAG_subprogram, DW_TAG_label.
-  /// \returns true and sets Info.InDebugMap if it is the case.
-  virtual bool isLiveSubprogram(const DWARFDie &DIE,
-                                CompileUnit::DIEInfo &Info) = 0;
+  /// Checks that the specified subprogram \p DIE references the live code
+  /// section and returns the relocation adjustment value (to get the linked
+  /// address this value might be added to the source subprogram address).
+  /// Allowed kinds of input DIE: DW_TAG_subprogram, DW_TAG_label.
+  /// \returns relocation adjustment value or std::nullopt if there is no
+  /// corresponding live address.
+  virtual std::optional<int64_t>
+  getSubprogramRelocAdjustment(const DWARFDie &DIE) = 0;
 
   /// Apply the valid relocations to the buffer \p Data, taking into
   /// account that Data is at \p BaseOffset in the .debug_info section.

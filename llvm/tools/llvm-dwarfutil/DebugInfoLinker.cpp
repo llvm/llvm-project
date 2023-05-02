@@ -70,8 +70,8 @@ public:
   // should be renamed into has valid address ranges
   bool hasValidRelocs() override { return !DWARFAddressRanges.empty(); }
 
-  bool isLiveSubprogram(const DWARFDie &DIE,
-                        CompileUnit::DIEInfo &Info) override {
+  std::optional<int64_t>
+  getSubprogramRelocAdjustment(const DWARFDie &DIE) override {
     assert((DIE.getTag() == dwarf::DW_TAG_subprogram ||
             DIE.getTag() == dwarf::DW_TAG_label) &&
            "Wrong type of input die");
@@ -80,18 +80,16 @@ public:
             dwarf::toAddress(DIE.find(dwarf::DW_AT_low_pc))) {
       if (!isDeadAddress(*LowPC, DIE.getDwarfUnit()->getVersion(),
                          Opts.Tombstone,
-                         DIE.getDwarfUnit()->getAddressByteSize())) {
-        Info.AddrAdjust = 0;
-        Info.InDebugMap = true;
-        return true;
-      }
+                         DIE.getDwarfUnit()->getAddressByteSize()))
+        // Relocation value for the linked binary is 0.
+        return 0;
     }
 
-    return false;
+    return std::nullopt;
   }
 
-  bool isLiveVariable(const DWARFDie &DIE,
-                      CompileUnit::DIEInfo &Info) override {
+  std::optional<int64_t>
+  getVariableRelocAdjustment(const DWARFDie &DIE) override {
     assert((DIE.getTag() == dwarf::DW_TAG_variable ||
             DIE.getTag() == dwarf::DW_TAG_constant) &&
            "Wrong type of input die");
@@ -114,11 +112,9 @@ public:
                                      DIE.getDwarfUnit()->getAddressByteSize()));
             });
 
-        if (HasLiveAddresses) {
-          Info.AddrAdjust = 0;
-          Info.InDebugMap = true;
-          return true;
-        }
+        if (HasLiveAddresses)
+          // Relocation value for the linked binary is 0.
+          return 0;
       }
     } else {
       // FIXME: missing DW_AT_location is OK here, but other errors should be
@@ -126,7 +122,7 @@ public:
       consumeError(Loc.takeError());
     }
 
-    return false;
+    return std::nullopt;
   }
 
   bool applyValidRelocs(MutableArrayRef<char>, uint64_t, bool) override {
