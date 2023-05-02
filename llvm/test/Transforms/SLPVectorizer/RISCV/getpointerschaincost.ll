@@ -69,7 +69,7 @@ entry:
   ret void
 }
 
-; FIXME: When computing the scalar pointers chain cost here, there is a cost of
+; When computing the scalar pointers chain cost here, there is a cost of
 ; 1 for the base pointer, and the rest can be folded in, so the scalar cost
 ; should be 1.
 define void @h(ptr %dest, i32 %i) {
@@ -86,7 +86,7 @@ entry:
 ; YAML-NEXT: Function:        h
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-5'
+; YAML-NEXT:   - Cost:            '-2'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '2'
   %p1 = getelementptr [4 x i32], ptr %dest, i32 %i, i32 0

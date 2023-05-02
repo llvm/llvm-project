@@ -7394,7 +7394,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // stay in vectorized code due to uses outside of these scalar
       // loads/stores.
       ScalarCost = TTI->getPointersChainCost(
-          Ptrs, BasePtr, TTI::PointersChainInfo::getUnitStride(), CostKind);
+          Ptrs, BasePtr, TTI::PointersChainInfo::getUnitStride(), ScalarTy,
+          CostKind);
 
       SmallVector<const Value *> PtrsRetainedInVecCode;
       for (Value *V : Ptrs) {
@@ -7420,7 +7421,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       VecCost = TTI->getPointersChainCost(
           PtrsRetainedInVecCode, BasePtr,
-          TTI::PointersChainInfo::getKnownStride(), CostKind);
+          TTI::PointersChainInfo::getKnownStride(), VecTy, CostKind);
     } else {
       // Case 1: Ptrs are the arguments of loads that we are going to transform
       // into masked gather load intrinsic.
@@ -7436,7 +7437,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               ? TTI::PointersChainInfo::getUnknownStride()
               : TTI::PointersChainInfo::getKnownStride();
 
-      ScalarCost = TTI->getPointersChainCost(Ptrs, BasePtr, PtrsInfo, CostKind);
+      ScalarCost = TTI->getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy,
+                                             CostKind);
 
       // Remark: it not quite correct to use scalar GEP cost for a vector GEP,
       // but it's not clear how to do that without having vector GEP arguments
