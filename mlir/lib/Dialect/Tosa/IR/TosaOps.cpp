@@ -364,8 +364,7 @@ static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
 
 LogicalResult tosa::ArgMaxOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   IntegerAttr axis = attributes.get("axis").cast<IntegerAttr>();
@@ -390,8 +389,7 @@ LogicalResult tosa::ArgMaxOp::inferReturnTypeComponents(
 
 LogicalResult tosa::RFFT2dOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
 
@@ -417,8 +415,7 @@ LogicalResult tosa::RFFT2dOp::inferReturnTypeComponents(
 
 LogicalResult tosa::FFT2dOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   inferredReturnShapes.push_back(ShapedTypeComponents(operands.getShape(0)));
   inferredReturnShapes.push_back(ShapedTypeComponents(operands.getShape(1)));
@@ -427,8 +424,7 @@ LogicalResult tosa::FFT2dOp::inferReturnTypeComponents(
 
 LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Infer all dimension sizes by reducing based on inputs.
   int32_t axis =
@@ -488,8 +484,7 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
 LogicalResult tosa::EqualOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outShape;
   if (resolveBroadcastShape(operands, outShape).failed()) {
@@ -510,8 +505,7 @@ bool tosa::EqualOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 
 LogicalResult tosa::FullyConnectedOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   ShapeAdaptor weightShape = operands.getShape(1);
@@ -542,8 +536,7 @@ LogicalResult FullyConnectedOp::verify() { return verifyConvOp(*this); }
 
 LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor lhsShape = operands.getShape(0);
   ShapeAdaptor rhsShape = operands.getShape(1);
@@ -569,8 +562,7 @@ LogicalResult tosa::MatMulOp::inferReturnTypeComponents(
 
 LogicalResult tosa::PadOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   ShapeAdaptor paddingShape = operands.getShape(1);
@@ -632,8 +624,7 @@ static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
 
 LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   inferredReturnShapes.push_back(ShapedTypeComponents(
       convertToMlirShape(SliceOpAdaptor(operands, attributes).getSize())));
@@ -642,8 +633,7 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
 
 LogicalResult tosa::TableOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
 
@@ -659,8 +649,7 @@ LogicalResult tosa::TableOp::inferReturnTypeComponents(
 
 LogicalResult tosa::TileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   TileOpAdaptor adaptor(operands, attributes);
   ArrayRef<int64_t> multiples = adaptor.getMultiples();
@@ -693,8 +682,7 @@ bool tosa::ReshapeOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 
 LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ReshapeOpAdaptor adaptor(operands, attributes);
   ShapeAdaptor inputShape = operands.getShape(0);
@@ -763,8 +751,7 @@ LogicalResult tosa::TransposeOp::getConstantPerms(SmallVector<int64_t> &perms) {
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   ShapeAdaptor permsShape = operands.getShape(1);
@@ -831,8 +818,7 @@ LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
 
 LogicalResult tosa::GatherOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape;
   outputShape.resize(3, ShapedType::kDynamic);
@@ -857,8 +843,7 @@ LogicalResult tosa::GatherOp::inferReturnTypeComponents(
 
 LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ResizeOpAdaptor adaptor(operands, attributes);
   llvm::SmallVector<int64_t, 4> outputShape;
@@ -898,8 +883,7 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 
 LogicalResult tosa::ScatterOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape;
   outputShape.resize(3, ShapedType::kDynamic);
@@ -958,7 +942,7 @@ static LogicalResult ReduceInferReturnTypes(
   LogicalResult OP::inferReturnTypeComponents(                                 \
       MLIRContext *context, ::std::optional<Location> location,                \
       ValueShapeRange operands, DictionaryAttr attributes,                     \
-      OpaqueProperties properties, RegionRange regions,                        \
+      RegionRange regions,                                                     \
       SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {           \
     Type inputType =                                                           \
         operands.getType()[0].cast<TensorType>().getElementType();             \
@@ -994,7 +978,7 @@ static LogicalResult NAryInferReturnTypes(
   LogicalResult OP::inferReturnTypeComponents(                                 \
       MLIRContext *context, ::std::optional<Location> location,                \
       ValueShapeRange operands, DictionaryAttr attributes,                     \
-      OpaqueProperties properties, RegionRange regions,                        \
+      RegionRange regions,                                                     \
       SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {           \
     return NAryInferReturnTypes(operands, inferredReturnShapes);               \
   }
@@ -1078,8 +1062,7 @@ static LogicalResult poolingInferReturnTypes(
 
 LogicalResult Conv2DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
   Conv2DOp::Adaptor adaptor(operands.getValues(), attributes);
@@ -1142,8 +1125,7 @@ LogicalResult Conv2DOp::verify() { return verifyConvOp(*this); }
 
 LogicalResult Conv3DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape(5, ShapedType::kDynamic);
   Conv3DOp::Adaptor adaptor(operands.getValues(), attributes);
@@ -1216,24 +1198,21 @@ LogicalResult Conv3DOp::verify() { return verifyConvOp(*this); }
 
 LogicalResult AvgPool2dOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
 }
 
 LogicalResult MaxPool2dOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
 }
 
 LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
   DepthwiseConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
@@ -1309,8 +1288,7 @@ LogicalResult DepthwiseConv2DOp::verify() { return verifyConvOp(*this); }
 
 LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   TransposeConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
   // outputShape is mutable.
@@ -1375,8 +1353,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
 
 LogicalResult IfOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<tosa::YieldOp> yieldOps;
   for (Region *region : regions) {
@@ -1420,8 +1397,7 @@ LogicalResult IfOp::inferReturnTypeComponents(
 
 LogicalResult WhileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<tosa::YieldOp> yieldOps;
   for (auto &block : *regions[1])

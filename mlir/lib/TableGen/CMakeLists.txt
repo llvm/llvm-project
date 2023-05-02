@@ -24,7 +24,6 @@ llvm_add_library(MLIRTableGen STATIC
   Pass.cpp
   Pattern.cpp
   Predicate.cpp
-  Property.cpp
   Region.cpp
   SideEffects.cpp
   Successor.cpp

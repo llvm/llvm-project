@@ -193,23 +193,6 @@ OperationState::OperationState(Location location, StringRef name,
     : OperationState(location, OperationName(name, location.getContext()),
                      operands, types, attributes, successors, regions) {}
 
-OperationState::~OperationState() {
-  if (properties)
-    propertiesDeleter(properties);
-}
-
-LogicalResult
-OperationState::setProperties(Operation *op,
-                              InFlightDiagnostic *diagnostic) const {
-  if (LLVM_UNLIKELY(propertiesAttr)) {
-    assert(!properties);
-    return op->setPropertiesFromAttribute(propertiesAttr, diagnostic);
-  }
-  if (properties)
-    propertiesSetter(op->getPropertiesStorage(), properties);
-  return success();
-}
-
 void OperationState::addOperands(ValueRange newOperands) {
   operands.append(newOperands.begin(), newOperands.end());
 }
@@ -650,9 +633,8 @@ llvm::hash_code OperationEquivalence::computeHash(
   //   - Operation Name
   //   - Attributes
   //   - Result Types
-  llvm::hash_code hash =
-      llvm::hash_combine(op->getName(), op->getAttrDictionary(),
-                         op->getResultTypes(), op->hashProperties());
+  llvm::hash_code hash = llvm::hash_combine(
+      op->getName(), op->getAttrDictionary(), op->getResultTypes());
 
   //   - Operands
   ValueRange operands = op->getOperands();

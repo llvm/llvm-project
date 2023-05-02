@@ -340,8 +340,7 @@ static LogicalResult inferOperationTypes(OperationState &state) {
 
   if (succeeded(inferInterface->inferReturnTypes(
           context, state.location, state.operands,
-          state.attributes.getDictionary(context), state.getRawProperties(),
-          state.regions, state.types)))
+          state.attributes.getDictionary(context), state.regions, state.types)))
     return success();
 
   // Diagnostic emitted by interface.

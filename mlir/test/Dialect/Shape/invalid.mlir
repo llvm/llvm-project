@@ -98,7 +98,6 @@ func.func @shape_of(%value_arg : !shape.value_shape,
 // -----
 
 func.func @shape_of_incompatible_return_types(%value_arg : tensor<1x2xindex>) {
-  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{'shape.shape_of' op inferred type(s) 'tensor<2xindex>' are incompatible with return type(s) of operation 'tensor<3xindex>'}}
   %0 = shape.shape_of %value_arg : tensor<1x2xindex> -> tensor<3xindex>
   return
@@ -269,7 +268,6 @@ func.func @fn(%arg: !shape.shape) -> !shape.witness {
 // Test that type inference flags the wrong return type.
 
 func.func @const_shape() {
-  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{'tensor<3xindex>' are incompatible with return type(s) of operation 'tensor<2xindex>'}}
   %0 = shape.const_shape [4, 5, 6] : tensor<2xindex>
   return
@@ -278,7 +276,6 @@ func.func @const_shape() {
 // -----
 
 func.func @invalid_meet(%arg0 : !shape.shape, %arg1 : index) -> index {
-  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{requires all sizes or shapes}}
   %result = shape.meet %arg0, %arg1 : !shape.shape, index -> index
   return %result : index
@@ -287,7 +284,6 @@ func.func @invalid_meet(%arg0 : !shape.shape, %arg1 : index) -> index {
 // -----
 
 func.func @invalid_meet(%arg0 : tensor<2xindex>, %arg1 : tensor<3xindex>) -> tensor<?xindex> {
-  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{unequal shape cardinality}}
   %result = shape.meet %arg0, %arg1 : tensor<2xindex>, tensor<3xindex> -> tensor<?xindex>
   return %result : tensor<?xindex>

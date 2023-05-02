@@ -434,8 +434,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
       SmallVector<Type, 2> inferredReturnTypes;
       if (succeeded(OpTy::inferReturnTypes(
               context, std::nullopt, values, op->getAttrDictionary(),
-              op->getPropertiesStorage(), op->getRegions(),
-              inferredReturnTypes))) {
+              op->getRegions(), inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
         // TODO: Expand to regions.
         OpTy::build(b, state, values, op->getAttrs());

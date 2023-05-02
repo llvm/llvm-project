@@ -1152,7 +1152,7 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
 LogicalResult
 ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
                             ValueRange operands, DictionaryAttr attributes,
-                            OpaqueProperties properties, RegionRange,
+                            RegionRange,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
   ExtractOp::Adaptor op(operands, attributes);
   auto vectorType = op.getVector().getType().cast<VectorType>();
@@ -2084,7 +2084,7 @@ LogicalResult ShuffleOp::verify() {
 LogicalResult
 ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
                             ValueRange operands, DictionaryAttr attributes,
-                            OpaqueProperties properties, RegionRange,
+                            RegionRange,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
   ShuffleOp::Adaptor op(operands, attributes);
   auto v1Type = op.getV1().getType().cast<VectorType>();

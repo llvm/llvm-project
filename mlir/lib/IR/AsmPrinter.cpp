@@ -2575,6 +2575,7 @@ void AsmPrinter::Impl::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
   if (!filteredAttrs.empty())
     printFilteredAttributesFn(filteredAttrs);
 }
+
 void AsmPrinter::Impl::printNamedAttribute(NamedAttribute attr) {
   // Print the name without quotes if possible.
   ::printKeywordOrString(attr.getName().strref(), os);
@@ -3354,10 +3355,6 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
     os << ']';
   }
 
-  // Print the properties.
-  if (Attribute prop = op->getPropertiesAsAttribute())
-    os << " <" << prop << '>';
-
   // Print regions.
   if (op->getNumRegions() != 0) {
     os << " (";
@@ -3368,7 +3365,7 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
     os << ')';
   }
 
-  auto attrs = op->getDiscardableAttrs();
+  auto attrs = op->getAttrs();
   printOptionalAttrDict(attrs);
 
   // Print the type signature of the operation.
@@ -3512,10 +3509,6 @@ void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
 
 void OperationPrinter::printAffineMapOfSSAIds(AffineMapAttr mapAttr,
                                               ValueRange operands) {
-  if (!mapAttr) {
-    os << "<<NULL AFFINE MAP>>";
-    return;
-  }
   AffineMap map = mapAttr.getValue();
   unsigned numDims = map.getNumDims();
   auto printValueName = [&](unsigned pos, bool isSymbol) {
