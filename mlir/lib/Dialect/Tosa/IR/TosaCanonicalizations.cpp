@@ -225,7 +225,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
     for (int i = 1, s = nonZeroPerms.size(); i < s; ++i)
       if (nonZeroPerms[i - 1] > nonZeroPerms[i])
         return rewriter.notifyMatchFailure(op,
-                                           "Transpose changes memeory layout.");
+                                           "Transpose changes memory layout.");
 
     SmallVector<int64_t> newShape;
     newShape.reserve(inputTy.getRank());
