@@ -1595,7 +1595,7 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i
 
 let OtherPredicates = [isGFX12Plus] in {
   defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_global_atomic_cond_sub_u32", i32>;
-  defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64>;
+  defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
   let WaveSizePredicate = isWave32 in {
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;

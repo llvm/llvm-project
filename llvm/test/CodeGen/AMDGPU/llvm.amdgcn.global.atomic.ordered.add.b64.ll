@@ -11,7 +11,7 @@ define amdgpu_kernel void @global_atomic_ordered_add_b64_no_rtn(ptr addrspace(1)
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX12-SDAG-NEXT:    global_atomic_ordered_add_b64 v2, v[0:1], s[0:1] offset:-32
+; GFX12-SDAG-NEXT:    global_atomic_ordered_add_b64 v[0:1], v2, v[0:1], s[0:1] offset:-32 th:TH_ATOMIC_RETURN
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -21,7 +21,7 @@ define amdgpu_kernel void @global_atomic_ordered_add_b64_no_rtn(ptr addrspace(1)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
-; GFX12-GISEL-NEXT:    global_atomic_ordered_add_b64 v2, v[0:1], s[0:1] offset:-32
+; GFX12-GISEL-NEXT:    global_atomic_ordered_add_b64 v[0:1], v2, v[0:1], s[0:1] offset:-32 th:TH_ATOMIC_RETURN
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:
