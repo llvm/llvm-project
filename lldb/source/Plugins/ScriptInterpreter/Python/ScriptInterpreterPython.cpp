@@ -1739,7 +1739,7 @@ bool ScriptInterpreterPythonImpl::ScriptedThreadPlanIsStale(
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
     is_stale = LLDBSWIGPythonCallThreadPlan(generic->GetValue(), "is_stale",
-                                            nullptr, script_error);
+                                            (Event *) nullptr, script_error);
     if (script_error)
       return true;
   }
@@ -1756,7 +1756,7 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
     should_step = LLDBSWIGPythonCallThreadPlan(
-        generic->GetValue(), "should_step", nullptr, script_error);
+        generic->GetValue(), "should_step", (Event *) nullptr, script_error);
     if (script_error)
       should_step = true;
   }
@@ -1764,6 +1764,24 @@ lldb::StateType ScriptInterpreterPythonImpl::ScriptedThreadPlanGetRunState(
     return lldb::eStateStepping;
   return lldb::eStateRunning;
 }
+
+bool
+ScriptInterpreterPythonImpl::ScriptedThreadPlanGetStopDescription(
+    StructuredData::ObjectSP implementor_sp, lldb_private::Stream *stream, 
+    bool &script_error) {
+  StructuredData::Generic *generic = nullptr;
+  if (implementor_sp)
+    generic = implementor_sp->GetAsGeneric();
+  if (!generic) {
+    script_error = true;
+    return false;
+  }
+  Locker py_lock(this,
+                   Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
+  return LLDBSWIGPythonCallThreadPlan(generic->GetValue(), "stop_description", 
+      stream, script_error);
+}
+
 
 StructuredData::GenericSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointResolver(
