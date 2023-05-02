@@ -260,11 +260,6 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
     return SubstitutedAtomicExpr;
   }
 
-  // FIXME: Remove this workaround.
-  // It's necessary to investigate how we get here.
-  if (SubstitutedAtomicExpr.get()->isValueDependent())
-    return SubstitutedAtomicExpr;
-
   EnterExpressionEvaluationContext ConstantEvaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   SmallVector<PartialDiagnosticAt, 2> EvaluationDiags;
