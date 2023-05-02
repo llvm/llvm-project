@@ -5459,9 +5459,6 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
 
     if (DAG.getTargetLoweringInfo().isBeneficialToExpandPowI(
             Val, DAG.shouldOptForSize())) {
-      // Get the exponent as a positive value.
-      if (Val < 0)
-        Val = -Val;
       // We use the simple binary decomposition method to generate the multiply
       // sequence.  There are more optimal ways to do this (for example,
       // powi(x,15) generates one more multiply than it should), but this has
@@ -5481,7 +5478,8 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
 
         CurSquare = DAG.getNode(ISD::FMUL, DL, CurSquare.getValueType(),
                                 CurSquare, CurSquare);
-        Val >>= 1;
+        // Use logic right shift
+        Val = int(unsigned(Val) >> 1);
       }
 
       // If the original was negative, invert the result, producing 1/(x*x*x).
