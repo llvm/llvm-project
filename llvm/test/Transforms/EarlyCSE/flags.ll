@@ -90,3 +90,15 @@ define void @load_first_nonnull_noundef(ptr %p) {
   call void @use.ptr(ptr %v2)
   ret void
 }
+
+define ptr @store_to_load_forward(ptr %p, ptr %p2) {
+; CHECK-LABEL: @store_to_load_forward(
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0
+; CHECK-NEXT:    store ptr [[P3]], ptr [[P2:%.*]], align 8
+; CHECK-NEXT:    ret ptr [[P3]]
+;
+  %p3 = load ptr, ptr %p, !nonnull !{}
+  store ptr %p3, ptr %p2
+  %res = load ptr, ptr %p2
+  ret ptr %res
+}

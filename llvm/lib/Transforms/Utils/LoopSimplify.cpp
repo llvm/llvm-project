@@ -340,7 +340,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     // We don't need to form LCSSA recursively, because there cannot be uses
     // inside a newly created loop of defs from inner loops as those would
     // already be a use of an LCSSA phi node.
-    formLCSSA(*L, *DT, LI, SE);
+    formLCSSA(*L, *DT, LI);
 
     assert(NewOuter->isRecursivelyLCSSAForm(*DT, *LI) &&
            "LCSSA is broken after separating nested loops!");

@@ -106,6 +106,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-multiple-new-in-one-expression
+  <clang-tidy/checks/bugprone/multiple-new-in-one-expression>` check.
+
+  Finds multiple ``new`` operator calls in a single expression, where the allocated
+  memory by the first ``new`` may leak if the second allocation fails and throws exception.
+
 - New :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check.
 
