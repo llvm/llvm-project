@@ -566,7 +566,6 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vand.vx v8, v8, a1
 ; RV32MV-NEXT:    vmsltu.vv v0, v12, v8
 ; RV32MV-NEXT:    vmerge.vim v8, v10, -1, v0
-; RV32MV-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV32MV-NEXT:    vslidedown.vi v9, v8, 2
 ; RV32MV-NEXT:    vmv.x.s a1, v9
 ; RV32MV-NEXT:    slli a2, a1, 21
@@ -633,7 +632,6 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    vmerge.vim v8, v10, -1, v0
 ; RV64MV-NEXT:    vmv.x.s a1, v8
 ; RV64MV-NEXT:    andi a1, a1, 2047
-; RV64MV-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; RV64MV-NEXT:    vslidedown.vi v9, v8, 1
 ; RV64MV-NEXT:    vmv.x.s a2, v9
 ; RV64MV-NEXT:    andi a2, a2, 2047
