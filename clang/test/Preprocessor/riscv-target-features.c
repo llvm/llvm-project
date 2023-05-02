@@ -48,6 +48,7 @@
 // CHECK-NOT: __riscv_zcb {{.*$}}
 // CHECK-NOT: __riscv_zcd {{.*$}}
 // CHECK-NOT: __riscv_zcf {{.*$}}
+// CHECK-NOT: __riscv_zcmt {{.*$}}
 // CHECK-NOT: __riscv_h {{.*$}}
 // CHECK-NOT: __riscv_zvbb {{.*$}}
 // CHECK-NOT: __riscv_zvbc {{.*$}}
@@ -510,6 +511,13 @@
 // RUN: %clang -target riscv32 -march=rv32izcf1p0 -menable-experimental-extensions \
 // RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCF-EXT %s
 // CHECK-ZCF-EXT: __riscv_zcf 1000000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32izcmt1p0 -menable-experimental-extensions \
+// RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCMT-EXT %s
+// RUN: %clang -target riscv64 -march=rv64izcmt1p0 -menable-experimental-extensions \
+// RUN: -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-ZCMT-EXT %s
+// CHECK-ZCMT-EXT: __riscv_zca 1000000{{$}}
+// CHECK-ZCMT-EXT: __riscv_zcmt 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32izicsr2p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZICSR-EXT %s
