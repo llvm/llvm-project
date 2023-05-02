@@ -52,6 +52,7 @@ struct CASPluginOptions {
   std::string FirstPrefix;
   std::string SecondPrefix;
   bool SimulateMissingObjects = false;
+  bool Logging = true;
 
   Error setOption(StringRef Name, StringRef Value);
 };
@@ -69,6 +70,8 @@ Error CASPluginOptions::setOption(StringRef Name, StringRef Value) {
     UpstreamPath = Value;
   else if (Name == "simulate-missing-objects")
     SimulateMissingObjects = true;
+  else if (Name == "no-logging")
+    Logging = false;
   else
     return createStringError(errc::invalid_argument,
                              Twine("unknown option: ") + Name);
@@ -104,6 +107,7 @@ struct CASWrapper {
   std::string SecondPrefix;
   /// If true, asynchronous "download" of an object will treat it as missing.
   bool SimulateMissingObjects = false;
+  bool Logging = true;
   std::unique_ptr<UnifiedOnDiskCache> DB;
   /// Used for testing the \c globally parameter of action cache APIs. Simulates
   /// "uploading"/"downloading" objects from/to the primary on-disk path.
@@ -128,6 +132,13 @@ struct CASWrapper {
 
   /// Synchronized access to \c llvm::errs().
   void syncErrs(llvm::function_ref<void(raw_ostream &OS)> Fn) {
+    if (!Logging) {
+      // Ignore log output.
+      SmallString<32> Buf;
+      raw_svector_ostream OS(Buf);
+      Fn(OS);
+      return;
+    }
     std::unique_lock<std::mutex> LockGuard(Lock);
     Fn(errs());
     errs().flush();
@@ -247,8 +258,13 @@ CASWrapper::downstreamKey(ArrayRef<uint8_t> Key) {
   if (!UpstreamValue)
     return std::nullopt;
 
-  return DB->getGraphDB().getReference(
+  ObjectID Value = DB->getGraphDB().getReference(
       UpstreamDB->getGraphDB().getDigest(*UpstreamValue));
+  Expected<ObjectID> PutValue = DB->KVPut(Key, Value);
+  if (!PutValue)
+    return PutValue.takeError();
+  assert(*PutValue == Value);
+  return PutValue;
 }
 
 llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
@@ -269,8 +285,8 @@ llcas_cas_t llcas_cas_create(llcas_cas_options_t c_opts, char **error) {
   }
 
   return wrap(new CASWrapper{Opts.FirstPrefix, Opts.SecondPrefix,
-                             Opts.SimulateMissingObjects, std::move(*DB),
-                             std::move(UpstreamDB)});
+                             Opts.SimulateMissingObjects, Opts.Logging,
+                             std::move(*DB), std::move(UpstreamDB)});
 }
 
 void llcas_cas_dispose(llcas_cas_t c_cas) { delete unwrap(c_cas); }
@@ -502,11 +518,15 @@ void llcas_actioncache_get_for_digest_async(llcas_cas_t c_cas,
                                             llcas_digest_t c_key, bool globally,
                                             void *ctx_cb,
                                             llcas_actioncache_get_cb cb) {
+  ArrayRef Key(c_key.data, c_key.size);
+  SmallVector<uint8_t, 32> KeyBuf(Key);
+
   unwrap(c_cas)->Pool.async([=] {
     llcas_objectid_t c_value;
     char *c_err;
     llcas_lookup_result_t result = llcas_actioncache_get_for_digest(
-        c_cas, c_key, &c_value, globally, &c_err);
+        c_cas, llcas_digest_t{KeyBuf.data(), KeyBuf.size()}, &c_value, globally,
+        &c_err);
     cb(ctx_cb, result, c_value, c_err);
   });
 }
@@ -539,10 +559,14 @@ void llcas_actioncache_put_for_digest_async(llcas_cas_t c_cas,
                                             llcas_objectid_t c_value,
                                             bool globally, void *ctx_cb,
                                             llcas_actioncache_put_cb cb) {
+  ArrayRef Key(c_key.data, c_key.size);
+  SmallVector<uint8_t, 32> KeyBuf(Key);
+
   unwrap(c_cas)->Pool.async([=] {
     char *c_err;
-    bool failed = llcas_actioncache_put_for_digest(c_cas, c_key, c_value,
-                                                   globally, &c_err);
+    bool failed = llcas_actioncache_put_for_digest(
+        c_cas, llcas_digest_t{KeyBuf.data(), KeyBuf.size()}, c_value, globally,
+        &c_err);
     cb(ctx_cb, failed, c_err);
   });
 }

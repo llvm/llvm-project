@@ -16,6 +16,9 @@
       "name": "depscan-prefix-map"
     },
     {
+      "name": "libclang-cache-queries"
+    },
+    {
       "name": "deployment-target-environment-variables",
       "value": [
         "MACOSX_DEPLOYMENT_TARGET",

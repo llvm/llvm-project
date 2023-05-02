@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 
-// RUN: c-index-test core -scan-deps %t -output-dir %t/out -- \
+// RUN: c-index-test core -scan-deps -working-dir %t -output-dir %t/out -- \
 // RUN:   clang_tool -c %t/tu.c -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -fimplicit-modules -fimplicit-module-maps \
 // RUN:   -serialize-diagnostics %t/tu.diag -MD -MF %t/tu.d -o %t/tu.o \
@@ -14,7 +14,7 @@
 // NONE:      build-args:
 // NONE-SAME:   -fmodule-file={{(Mod=)?}}[[PREFIX]]/out/Mod_{{.*}}.pcm
 
-// RUN: c-index-test core -scan-deps %t -output-dir %t/out -serialize-diagnostics -- \
+// RUN: c-index-test core -scan-deps -working-dir %t -output-dir %t/out -serialize-diagnostics -- \
 // RUN:   clang_tool -c %t/tu.c -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -fimplicit-modules -fimplicit-module-maps \
 // RUN:   -serialize-diagnostics %t/tu.diag -MD -MF %t/tu.d -o %t/tu.o \
@@ -29,7 +29,7 @@
 // DIAGS:      build-args:
 // DIAGS-SAME:   -fmodule-file={{(Mod=)?}}[[PREFIX]]/out/Mod_{{.*}}.pcm
 
-// RUN: c-index-test core -scan-deps %t -output-dir %t/out -dependency-file -- \
+// RUN: c-index-test core -scan-deps -working-dir %t -output-dir %t/out -dependency-file -- \
 // RUN:   clang_tool -c %t/tu.c -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -fimplicit-modules -fimplicit-module-maps \
 // RUN:   -serialize-diagnostics %t/tu.diag -MD -MF %t/tu.d -o %t/tu.o \
@@ -44,7 +44,7 @@
 // DEPS:      build-args:
 // DEPS-SAME:   -fmodule-file={{(Mod=)?}}[[PREFIX]]/out/Mod_{{.*}}.pcm
 
-// RUN: c-index-test core -scan-deps %t -output-dir %t/out -dependency-file -dependency-target foo -- \
+// RUN: c-index-test core -scan-deps -working-dir %t -output-dir %t/out -dependency-file -dependency-target foo -- \
 // RUN:   clang_tool -c %t/tu.c -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -fimplicit-modules -fimplicit-module-maps \
 // RUN:   -serialize-diagnostics %t/tu.diag -MD -MF %t/tu.d -o %t/tu.o \
@@ -57,7 +57,7 @@
 // DEPS_MT1:      build-args:
 // DEPS_MT1-SAME:   -fmodule-file={{(Mod=)?}}[[PREFIX]]/out/Mod_{{.*}}.pcm
 
-// RUN: c-index-test core -scan-deps %t -output-dir %t/out -dependency-file -dependency-target foo -dependency-target bar -- \
+// RUN: c-index-test core -scan-deps -working-dir %t -output-dir %t/out -dependency-file -dependency-target foo -dependency-target bar -- \
 // RUN:   clang_tool -c %t/tu.c -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -fimplicit-modules -fimplicit-module-maps \
 // RUN:   -serialize-diagnostics %t/tu.diag -MD -MF %t/tu.d -o %t/tu.o \
@@ -73,7 +73,7 @@
 
 // RUN: echo 'this_target_name_is_longer_than_the_256_byte_initial_buffer_size_to_test_that_we_alloc_and_call_again_with_a_sufficient_buffer_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_end' > %t/target-name.txt
 // RUN: cat %t/target-name.txt > %t/long.txt
-// RUN: c-index-test core -scan-deps %t -output-dir %t/out -dependency-file \
+// RUN: c-index-test core -scan-deps -working-dir %t -output-dir %t/out -dependency-file \
 // RUN:     -dependency-target @%t/target-name.txt -- \
 // RUN:   clang_tool -c %t/tu.c -fmodules -fmodules-cache-path=%t/cache \
 // RUN:   -fimplicit-modules -fimplicit-module-maps \

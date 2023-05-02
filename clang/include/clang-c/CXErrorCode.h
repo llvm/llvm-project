@@ -74,6 +74,26 @@ enum CXErrorCode {
   CXError_RefactoringNameInvalid = 7
 };
 
+/**
+ * Represents an error with error code and description string.
+ */
+typedef struct CXOpaqueError *CXError;
+
+/**
+ * \returns the error code.
+ */
+CINDEX_LINKAGE enum CXErrorCode clang_Error_getCode(CXError);
+
+/**
+ * \returns the error description string.
+ */
+CINDEX_LINKAGE const char *clang_Error_getDescription(CXError);
+
+/**
+ * Dispose of a \c CXError object.
+ */
+CINDEX_LINKAGE void clang_Error_dispose(CXError);
+
 LLVM_CLANG_C_EXTERN_C_END
 
 #endif

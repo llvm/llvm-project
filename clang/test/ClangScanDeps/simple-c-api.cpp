@@ -1,4 +1,4 @@
-// RUN: c-index-test core -scan-deps %S -- clang_tool %s -I %S/Inputs | FileCheck %s
+// RUN: c-index-test core -scan-deps -working-dir %S -- clang_tool %s -I %S/Inputs | FileCheck %s
 
 #include "header.h"
 

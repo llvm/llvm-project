@@ -1,4 +1,4 @@
-// RUN: not c-index-test core -scan-deps %S -- clang_tool %s -I %S/Inputs 2>&1 | FileCheck %s
+// RUN: not c-index-test core -scan-deps -working-dir %S -- clang_tool %s -I %S/Inputs 2>&1 | FileCheck %s
 
 #include "missing.h"
 

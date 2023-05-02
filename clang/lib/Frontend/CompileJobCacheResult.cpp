@@ -70,6 +70,10 @@ Error CompileJobCacheResult::forEachLoadedOutput(
   return Error::success();
 }
 
+CompileJobCacheResult::Output CompileJobCacheResult::getOutput(size_t I) const {
+  return Output{getOutputObject(I), getOutputKind(I)};
+}
+
 std::optional<CompileJobCacheResult::Output>
 CompileJobCacheResult::getOutput(OutputKind Kind) const {
   size_t Count = getNumOutputs();

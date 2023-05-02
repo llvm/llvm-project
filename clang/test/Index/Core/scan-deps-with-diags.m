@@ -1,4 +1,4 @@
-// RUN: not c-index-test core --scan-deps %S -output-dir=%t -- \
+// RUN: not c-index-test core --scan-deps -working-dir %S -output-dir=%t -- \
 // RUN:   %clang -c %s -o %t/t.o 2> %t.err.txt
 // RUN: FileCheck -input-file=%t.err.txt %s
 
