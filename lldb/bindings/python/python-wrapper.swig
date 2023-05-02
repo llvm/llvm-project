@@ -367,6 +367,38 @@ bool lldb_private::LLDBSWIGPythonCallThreadPlan(
   return false;
 }
 
+bool lldb_private::LLDBSWIGPythonCallThreadPlan(
+    void *implementor, const char *method_name, lldb_private::Stream *stream,
+    bool &got_error) {
+  got_error = false;
+
+  PyErr_Cleaner py_err_cleaner(false);
+  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
+  auto pfunc = self.ResolveName<PythonCallable>(method_name);
+
+  if (!pfunc.IsAllocated()) 
+    return false;
+
+  auto *sb_stream = new lldb::SBStream();
+  PythonObject sb_stream_arg =
+      ToSWIGWrapper(std::unique_ptr<lldb::SBStream>(sb_stream));
+
+  PythonObject result;
+  result = pfunc(sb_stream_arg);
+
+  if (PyErr_Occurred()) {
+    printf("Error occured for call to %s.\n",
+           method_name);
+    PyErr_Print();
+    got_error = true;
+    return false;
+  }
+  if (stream)
+    stream->PutCString(sb_stream->GetData());
+  return true;
+
+}
+
 PythonObject lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,
     const StructuredDataImpl &args_impl,
