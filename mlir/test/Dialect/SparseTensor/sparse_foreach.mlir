@@ -145,23 +145,25 @@ func.func @foreach_print_slice(%A: tensor<4x4xf64, #CSR_SLICE>) {
 }>
 
 // CHECK-LABEL:   func.func @foreach_bcoo(
-// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x4x4xf64, #sparse_tensor.encoding<{{.*}}>>) {
+// CHECK-SAME:      %[[VAL_0:.*]]: tensor<4x4x4xf64, #{{.*}}>>) {
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 4 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<4x4x4xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
-// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<4x4x4xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xf64>
+// CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<4x4x4xf64, #{{.*}}>> to memref<?xindex>
+// CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<4x4x4xf64, #{{.*}}>> to memref<?xf64>
 // CHECK:           scf.for %[[VAL_7:.*]] = %[[VAL_2]] to %[[VAL_1]] step %[[VAL_3]] {
 // CHECK:             %[[VAL_8:.*]] = arith.muli %[[VAL_7]], %[[VAL_4]] : index
-// CHECK:             %[[VAL_9:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : index
-// CHECK:             %[[VAL_10:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_9]]] : memref<?xindex>
-// CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_2]] to %[[VAL_10]] step %[[VAL_3]] {
-// CHECK:               %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xf64>
-// CHECK:               "test.use"(%[[VAL_12]]) : (f64) -> ()
-// CHECK:             }
-// CHECK:           }
+// CHECK:             %[[VAL_9:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_8]]] : memref<?xindex>
+// CHECK:             %[[VAL_10:.*]] = arith.addi %[[VAL_8]], %[[VAL_3]] : index
+// CHECK:             %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_10]]] : memref<?xindex>
+// CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_9]] to %[[VAL_11]] step %[[VAL_3]] {
+// CHECK:               %[[VAL_13:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_12]]] : memref<?xf64>
+// CHECK:               "test.use"(%[[VAL_13]]) : (f64) -> ()
+// CHECK:             } {"Emitted from" = "sparse_tensor.foreach"}
+// CHECK:           } {"Emitted from" = "sparse_tensor.foreach"}
 // CHECK:           return
+// CHECK:         }
 func.func @foreach_bcoo(%A: tensor<4x4x4xf64, #BCOO>) {
   sparse_tensor.foreach in %A : tensor<4x4x4xf64, #BCOO> do {
   ^bb0(%1: index, %2: index, %3: index,  %v: f64) :
