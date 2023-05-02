@@ -13982,8 +13982,8 @@ static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
 ///  r *= v1 + v2 + v3 + v4
 /// In such a case start looking for a tree rooted in the first '+'.
 /// \Returns the new root if found, which may be nullptr if not an instruction.
-static Instruction *tryGetScondaryReductionRoot(PHINode *Phi,
-                                                Instruction *Root) {
+static Instruction *tryGetSecondaryReductionRoot(PHINode *Phi,
+                                                 Instruction *Root) {
   assert((isa<BinaryOperator>(Root) || isa<SelectInst>(Root) ||
           isa<IntrinsicInst>(Root)) &&
          "Expected binop, select, or intrinsic for reduction matching");
@@ -14033,7 +14033,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
       assert((!P || is_contained(P->operands(), Inst)) &&
              "Phi needs to use the binary operator");
       if (P && HorizontalReduction::getRdxKind(Inst) != RecurKind::None)
-        if (Instruction *NewRoot = tryGetScondaryReductionRoot(P, Inst))
+        if (Instruction *NewRoot = tryGetSecondaryReductionRoot(P, Inst))
           Inst = NewRoot;
 
       HorizontalReduction HorRdx;
