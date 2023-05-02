@@ -168,7 +168,8 @@ struct AnalysisContext {
                   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>>
                       BlockStates)
       : CFCtx(CFCtx), Analysis(Analysis), InitEnv(InitEnv),
-        Log(InitEnv.logger()), BlockStates(BlockStates) {
+        Log(*InitEnv.getDataflowAnalysisContext().getOptions().Log),
+        BlockStates(BlockStates) {
     Log.beginAnalysis(CFCtx, Analysis);
   }
   ~AnalysisContext() { Log.endAnalysis(); }
