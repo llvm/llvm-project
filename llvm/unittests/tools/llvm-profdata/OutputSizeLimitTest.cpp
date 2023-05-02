@@ -123,24 +123,6 @@ static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
   RETURN_IF_ERROR(sys::fs::file_size(Temp.path(), FileSize));
   EXPECT_LE(FileSize, SizeLimit);
 
-  // For compact binary format, function names are stored as MD5, so we cannot
-  // directly match the samples of the new profile with the old profile. A
-  // simple way is to convert the old profile to compact binary format and read
-  // it back
-  if (Format == llvm::sampleprof::SPF_Compact_Binary) {
-    TempFile CompBinary("compbinary", "afdo", "", true);
-    {
-      DEF_VAR_RETURN_IF_ERROR(
-          Writer, SampleProfileWriter::create(
-                      CompBinary.path(), llvm::sampleprof::SPF_Compact_Binary));
-      RETURN_IF_ERROR(Writer->write(OldProfiles));
-    }
-    VAR_RETURN_IF_ERROR(Reader, SampleProfileReader::create(
-                                    CompBinary.path().str(), Context, *FS));
-    RETURN_IF_ERROR(Reader->read());
-    OldProfiles = Reader->getProfiles();
-  }
-
   // For every sample in the new profile, confirm it is in the old profile and
   // unchanged.
   for (auto Sample : NewProfiles) {
@@ -166,13 +148,6 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitBinary) {
   for (size_t OutputSizeLimit : {250, 249, 248, 237, 236, 223, 200})
     ASSERT_THAT_EXPECTED(
         RunTest(Input1, OutputSizeLimit, llvm::sampleprof::SPF_Binary),
-        Succeeded());
-}
-
-TEST(TestOutputSizeLimit, TestOutputSizeLimitCompBinary) {
-  for (size_t OutputSizeLimit : {277, 276, 275, 264, 263, 250, 200})
-    ASSERT_THAT_EXPECTED(
-        RunTest(Input1, OutputSizeLimit, llvm::sampleprof::SPF_Compact_Binary),
         Succeeded());
 }
 
