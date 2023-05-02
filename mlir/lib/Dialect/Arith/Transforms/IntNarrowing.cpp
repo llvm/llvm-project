@@ -216,6 +216,93 @@ FailureOr<unsigned> calculateBitsRequired(Value value,
   return calculateBitsRequired(value.getType());
 }
 
+/// Base pattern for arith binary ops.
+/// Example:
+/// ```
+///   %lhs = arith.extsi %a : i8 to i32
+///   %rhs = arith.extsi %b : i8 to i32
+///   %r = arith.addi %lhs, %rhs : i32
+/// ==>
+///   %lhs = arith.extsi %a : i8 to i16
+///   %rhs = arith.extsi %b : i8 to i16
+///   %add = arith.addi %lhs, %rhs : i16
+///   %r = arith.extsi %add : i16 to i32
+/// ```
+template <typename BinaryOp>
+struct BinaryOpNarrowingPattern : NarrowingPattern<BinaryOp> {
+  using NarrowingPattern<BinaryOp>::NarrowingPattern;
+
+  /// Returns the number of bits required to represent the full result, assuming
+  /// that both operands are `operandBits`-wide. Derived classes must implement
+  /// this, taking into account `BinaryOp` semantics.
+  virtual unsigned getResultBitsProduced(unsigned operandBits) const = 0;
+
+  LogicalResult matchAndRewrite(BinaryOp op,
+                                PatternRewriter &rewriter) const final {
+    Type origTy = op.getType();
+    FailureOr<unsigned> resultBits = calculateBitsRequired(origTy);
+    if (failed(resultBits))
+      return failure();
+
+    // For the optimization to apply, we expect the lhs to be an extension op,
+    // and for the rhs to either be the same extension op or a constant.
+    FailureOr<ExtensionOp> ext = ExtensionOp::from(op.getLhs().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    FailureOr<unsigned> lhsBitsRequired =
+        calculateBitsRequired(ext->getIn(), ext->getKind());
+    if (failed(lhsBitsRequired) || *lhsBitsRequired >= *resultBits)
+      return failure();
+
+    FailureOr<unsigned> rhsBitsRequired =
+        calculateBitsRequired(op.getRhs(), ext->getKind());
+    if (failed(rhsBitsRequired) || *rhsBitsRequired >= *resultBits)
+      return failure();
+
+    // Negotiate a common bit requirements for both lhs and rhs, accounting for
+    // the result requiring more bits than the operands.
+    unsigned commonBitsRequired =
+        getResultBitsProduced(std::max(*lhsBitsRequired, *rhsBitsRequired));
+    FailureOr<Type> narrowTy = this->getNarrowType(commonBitsRequired, origTy);
+    if (failed(narrowTy) || calculateBitsRequired(*narrowTy) >= *resultBits)
+      return failure();
+
+    Location loc = op.getLoc();
+    Value newLhs =
+        rewriter.createOrFold<arith::TruncIOp>(loc, *narrowTy, op.getLhs());
+    Value newRhs =
+        rewriter.createOrFold<arith::TruncIOp>(loc, *narrowTy, op.getRhs());
+    Value newAdd = rewriter.create<BinaryOp>(loc, newLhs, newRhs);
+    ext->recreateAndReplace(rewriter, op, newAdd);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// AddIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct AddIPattern final : BinaryOpNarrowingPattern<arith::AddIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits + 1;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// MulIOp Pattern
+//===----------------------------------------------------------------------===//
+
+struct MulIPattern final : BinaryOpNarrowingPattern<arith::MulIOp> {
+  using BinaryOpNarrowingPattern::BinaryOpNarrowingPattern;
+
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return 2 * operandBits;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // *IToFPOp Patterns
 //===----------------------------------------------------------------------===//
@@ -538,7 +625,8 @@ void populateArithIntNarrowingPatterns(
                ExtensionOverTranspose, ExtensionOverFlatTranspose>(
       patterns.getContext(), options, PatternBenefit(2));
 
-  patterns.add<SIToFPPattern, UIToFPPattern>(patterns.getContext(), options);
+  patterns.add<AddIPattern, MulIPattern, SIToFPPattern, UIToFPPattern>(
+      patterns.getContext(), options);
 }
 
 } // namespace mlir::arith
