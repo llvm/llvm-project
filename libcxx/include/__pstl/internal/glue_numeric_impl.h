@@ -18,8 +18,6 @@
 #include "numeric_fwd.h"
 #include "utils.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace std {
 
 // [reduce]
@@ -318,7 +316,5 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 }
 
 } // namespace std
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_GLUE_NUMERIC_IMPL_H_ */

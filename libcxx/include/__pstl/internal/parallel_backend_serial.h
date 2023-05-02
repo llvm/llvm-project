@@ -16,8 +16,6 @@
 
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl
 {
 namespace __serial_backend
@@ -129,7 +127,5 @@ __parallel_invoke(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, 
 
 } // namespace __serial_backend
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_PARALLEL_BACKEND_SERIAL_H */

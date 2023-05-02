@@ -21,8 +21,6 @@
 
 #include "execution_impl.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace std {
 
 // [alg.find.end]
@@ -1190,7 +1188,5 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, bool> lexicog
 }
 
 } // namespace std
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_GLUE_ALGORITHM_IMPL_H */
