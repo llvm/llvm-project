@@ -54,11 +54,11 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
                                     StringRef Mcpu,
                                     std::vector<StringRef> &Features) {
   bool Is64Bit = Triple.isRISCV64();
-  llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
-  if (!llvm::RISCV::checkCPUKind(CPUKind, Is64Bit)) {
+  if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
     // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
-    if (llvm::RISCV::checkCPUKind(CPUKind, !Is64Bit))
-      D.Diag(clang::diag::err_drv_invalid_riscv_cpu_name_for_target) << Mcpu << Is64Bit;
+    if (llvm::RISCV::parseCPU(Mcpu, !Is64Bit))
+      D.Diag(clang::diag::err_drv_invalid_riscv_cpu_name_for_target)
+          << Mcpu << Is64Bit;
     else
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Mcpu;
