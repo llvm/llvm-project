@@ -1,41 +1,106 @@
+#include "llvm/Support/Yk.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 
 bool YkAllocLLVMBCSection;
-static cl::opt<bool, true> YkAllocLLVMBCSectionParser(
-    "yk-alloc-llvmbc-section", cl::desc("Make the `.llvmbc` section loadable"),
-    cl::NotHidden, cl::location(YkAllocLLVMBCSection));
+namespace {
+struct CreateYkAllocLLVMBCSectionParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-alloc-llvmbc-section",
+        cl::desc("Make the `.llvmbc` section loadable"), cl::NotHidden,
+        cl::location(YkAllocLLVMBCSection));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>, CreateYkAllocLLVMBCSectionParser>
+    YkAllocLLVMBCSectionParser;
 
 bool YkAllocLLVMBBAddrMapSection;
-static cl::opt<bool, true> YkAllocLLVMBBAddrMapSectionParser(
-    "yk-alloc-llvmbbaddrmap-section",
-    cl::desc("Make the `.llvmbbaddrmap` section loadable"), cl::NotHidden,
-    cl::location(YkAllocLLVMBBAddrMapSection));
+namespace {
+struct CreateYkAllocLLVMBBAddrMapSectionParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-alloc-llvmbbaddrmap-section",
+        cl::desc("Make the `.llvmbbaddrmap` section loadable"), cl::NotHidden,
+        cl::location(YkAllocLLVMBBAddrMapSection));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>,
+                     CreateYkAllocLLVMBBAddrMapSectionParser>
+    YkAllocLLVMBBAddrMapSectionParser;
 
 bool YkExtendedLLVMBBAddrMapSection;
-static cl::opt<bool, true> YkExtendedLLVMBBAddrMapSectionParser(
-    "yk-extended-llvmbbaddrmap-section",
-    cl::desc("Use the extended Yk `.llvmbbaddrmap` section format"),
-    cl::NotHidden, cl::location(YkExtendedLLVMBBAddrMapSection));
+namespace {
+struct CreateYkExtendedLLVMBBAddrMapSectionParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-extended-llvmbbaddrmap-section",
+        cl::desc("Use the extended Yk `.llvmbbaddrmap` section format"),
+        cl::NotHidden, cl::location(YkExtendedLLVMBBAddrMapSection));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>,
+                     CreateYkExtendedLLVMBBAddrMapSectionParser>
+    YkExtendedLLVMBBAddrMapSectionParser;
 
 bool YkStackMapOffsetFix;
-static cl::opt<bool, true> YkStackMapOffsetFixParser(
-    "yk-stackmap-offset-fix",
-    cl::desc("Apply a fix to stackmaps that corrects the reported instruction "
-             "offset in the presence of calls. (deprecated by "
-             "yk-stackmap-spillreloads-fix)"),
-    cl::NotHidden, cl::location(YkStackMapOffsetFix));
+namespace {
+struct CreateYkStackMapOffsetFixParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-stackmap-offset-fix",
+        cl::desc(
+            "Apply a fix to stackmaps that corrects the reported instruction "
+            "offset in the presence of calls. (deprecated by "
+            "yk-stackmap-spillreloads-fix)"),
+        cl::NotHidden, cl::location(YkStackMapOffsetFix));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>, CreateYkStackMapOffsetFixParser>
+    YkStackMapOffsetFixParser;
 
 bool YkStackMapAdditionalLocs;
-static cl::opt<bool, true> YkStackMapAdditionalLocsParser(
-    "yk-stackmap-add-locs",
-    cl::desc("Encode additional locations for registers into stackmaps."),
-    cl::NotHidden, cl::location(YkStackMapAdditionalLocs));
+namespace {
+struct CreateYkStackMapAdditionalLocsParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-stackmap-add-locs",
+        cl::desc("Encode additional locations for registers into stackmaps."),
+        cl::NotHidden, cl::location(YkStackMapAdditionalLocs));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>, CreateYkStackMapAdditionalLocsParser>
+    YkStackMapAdditionalLocsParser;
 
 bool YkStackmapsSpillReloadsFix;
-static cl::opt<bool, true> YkStackMapSpillFixParser(
-    "yk-stackmap-spillreloads-fix",
-    cl::desc("Revert stackmaps and its operands after the register allocator "
-             "has emitted spill reloads."),
-    cl::NotHidden, cl::location(YkStackmapsSpillReloadsFix));
+namespace {
+struct CreateYkStackmapsSpillReloadsFixParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-stackmap-spillreloads-fix",
+        cl::desc(
+            "Revert stackmaps and its operands after the register allocator "
+            "has emitted spill reloads."),
+        cl::NotHidden, cl::location(YkStackmapsSpillReloadsFix));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>,
+                     CreateYkStackmapsSpillReloadsFixParser>
+    YkStackmapsSpillFixParser;
+
+void llvm::initYkOptions() {
+  *YkAllocLLVMBCSectionParser;
+  *YkAllocLLVMBBAddrMapSectionParser;
+  *YkExtendedLLVMBBAddrMapSectionParser;
+  *YkStackMapOffsetFixParser;
+  *YkStackMapAdditionalLocsParser;
+  *YkStackmapsSpillFixParser;
+}
