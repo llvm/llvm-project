@@ -103,26 +103,23 @@ define void @store_v6i16(ptr %p, <6 x i16> %v) {
 define void @store_v6f16(ptr %p, <6 x half> %v) {
 ; RV32-LABEL: store_v6f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    lh a2, 4(a1)
-; RV32-NEXT:    lhu a3, 0(a1)
+; RV32-NEXT:    lh a2, 20(a1)
+; RV32-NEXT:    lhu a3, 16(a1)
 ; RV32-NEXT:    slli a2, a2, 16
 ; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    lh a3, 12(a1)
 ; RV32-NEXT:    lhu a4, 8(a1)
-; RV32-NEXT:    lh a5, 20(a1)
-; RV32-NEXT:    lhu a1, 16(a1)
+; RV32-NEXT:    lh a5, 4(a1)
+; RV32-NEXT:    lhu a1, 0(a1)
 ; RV32-NEXT:    slli a3, a3, 16
 ; RV32-NEXT:    or a3, a4, a3
 ; RV32-NEXT:    slli a5, a5, 16
 ; RV32-NEXT:    or a1, a1, a5
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    sw a3, 4(sp)
-; RV32-NEXT:    sw a2, 0(sp)
-; RV32-NEXT:    mv a1, sp
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    vslidedown.vi v9, v8, 2
@@ -131,7 +128,6 @@ define void @store_v6f16(ptr %p, <6 x half> %v) {
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: store_v6f16:
