@@ -6033,31 +6033,34 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
   default:
     return true;
   case Instruction::UDiv:
-  case Instruction::URem: {
-    // x / y is undefined if y == 0.
-    const APInt *V;
-    if (match(Inst->getOperand(1), m_APInt(V)))
-      return *V != 0;
-    return false;
-  }
+  case Instruction::URem:
   case Instruction::SDiv:
   case Instruction::SRem: {
-    // x / y is undefined if y == 0 or x == INT_MIN and y == -1
-    const APInt *Numerator, *Denominator;
-    if (!match(Inst->getOperand(1), m_APInt(Denominator)))
+    // x / y is undefined if y == 0 or y is poison.
+    const DataLayout &DL = Inst->getModule()->getDataLayout();
+    if (!isGuaranteedNotToBePoison(Inst->getOperand(1), AC, CtxI, DT) ||
+        !isKnownNonZero(Inst->getOperand(1), DL, /*Depth*/ 0, AC, CtxI, DT))
       return false;
-    // We cannot hoist this division if the denominator is 0.
-    if (*Denominator == 0)
-      return false;
-    // It's safe to hoist if the denominator is not 0 or -1.
-    if (!Denominator->isAllOnes())
+
+    // Unsigned case only needs to avoid denominator == 0 or poison.
+    if (Opcode == Instruction::UDiv || Opcode == Instruction::URem)
       return true;
-    // At this point we know that the denominator is -1.  It is safe to hoist as
-    // long we know that the numerator is not INT_MIN.
-    if (match(Inst->getOperand(0), m_APInt(Numerator)))
-      return !Numerator->isMinSignedValue();
-    // The numerator *might* be MinSignedValue.
-    return false;
+
+    // x s/ y is also undefined if x == INT_MIN and y == -1
+    KnownBits KnownDenominator =
+        computeKnownBits(Inst->getOperand(1), DL, /*Depth*/ 0, AC, CtxI, DT);
+
+    // It's safe to hoist if the denominator is not 0 or -1.
+    if (!KnownDenominator.Zero.isZero())
+      return true;
+
+    // At this point denominator may be -1.  It is safe to hoist as
+    // long we know that the numerator is neither poison nor INT_MIN.
+    if (!isGuaranteedNotToBePoison(Inst->getOperand(0), AC, CtxI, DT))
+      return false;
+    KnownBits KnownNumerator =
+        computeKnownBits(Inst->getOperand(0), DL, /*Depth*/ 0, AC, CtxI, DT);
+    return !KnownNumerator.getSignedMinValue().isMinSignedValue();
   }
   case Instruction::Load: {
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);
