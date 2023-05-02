@@ -40,6 +40,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/Yk.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <optional>
@@ -2672,6 +2673,7 @@ static void initCommonOptions() {
   initWithColorOptions();
   initDebugOptions();
   initRandomSeedOptions();
+  initYkOptions();
 }
 
 OptionCategory &cl::getGeneralCategory() {
