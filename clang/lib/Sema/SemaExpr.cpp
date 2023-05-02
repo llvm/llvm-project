@@ -4924,7 +4924,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // Build an unanalyzed expression if either operand is type-dependent.
   if (getLangOpts().CPlusPlus && ArgExprs.size() == 1 &&
       (base->isTypeDependent() ||
-       Expr::hasAnyTypeDependentArguments(ArgExprs))) {
+       Expr::hasAnyTypeDependentArguments(ArgExprs)) &&
+      !isa<PackExpansionExpr>(ArgExprs[0])) {
     return new (Context) ArraySubscriptExpr(
         base, ArgExprs.front(),
         getDependentArraySubscriptType(base, ArgExprs.front(), getASTContext()),
@@ -4958,7 +4959,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // to overload resolution and so should not take this path.
   if (getLangOpts().CPlusPlus && !base->getType()->isObjCObjectPointerType() &&
       ((base->getType()->isRecordType() ||
-        (ArgExprs.size() != 1 || ArgExprs[0]->getType()->isRecordType())))) {
+        (ArgExprs.size() != 1 || isa<PackExpansionExpr>(ArgExprs[0]) ||
+         ArgExprs[0]->getType()->isRecordType())))) {
     return CreateOverloadedArraySubscriptExpr(lbLoc, rbLoc, base, ArgExprs);
   }
 
