@@ -326,7 +326,9 @@ GOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
     case GOFF::ESD_EXE_Unspecified:
       return SymbolRef::ST_Unknown;
     }
+    llvm_unreachable("Unhandled ESDExecutable");
   }
+  llvm_unreachable("Unhandled ESDSymbolType");
 }
 
 Expected<section_iterator>
