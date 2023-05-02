@@ -168,8 +168,8 @@ macro(add_tablegen target project)
       build_native_tool(${target} ${project}_TABLEGEN_EXE DEPENDS ${target})
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
-      add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
-      set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
+      add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no
       # need to build this tablegen.
