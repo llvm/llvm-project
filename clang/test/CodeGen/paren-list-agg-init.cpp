@@ -90,6 +90,15 @@ namespace gh61145 {
   };
 }
 
+namespace gh62266 {
+  // CHECK-DAG: [[STRUCT_H:%.*H.*]] = type { i32, i32 }
+  template <int J>
+  struct H {
+    int i;
+    int j = J;
+  };
+}
+
 // CHECK-DAG: [[A1:@.*a1.*]] = internal constant [[STRUCT_A]] { i8 3, double 2.000000e+00 }, align 8
 constexpr A a1(3.1, 2.0);
 // CHECK-DAG: [[A2:@.*a2.*]] = internal constant [[STRUCT_A]] { i8 99, double 0.000000e+00 }, align 8
@@ -419,5 +428,19 @@ namespace gh61145 {
   void foo() {
     make1<0>();
     make2<0>();
+  }
+}
+
+namespace gh62266 {
+  // CHECK: define {{.*}} void {{.*foo20.*}}
+  // CHECK-NEXT: entry:
+  // CHECK-NEXT: [[H:%.*h.*]] = alloca [[STRUCT_H]], align 4
+  // CHECK-NEXT: [[I:%.*i.*]] = getelementptr inbounds [[STRUCT_H]], ptr [[H]], i32 0, i32 0
+  // CHECK-NEXT: store i32 1, ptr [[I]], align 4
+  // CHECK-NEXT: [[J:%.*j.*]] = getelementptr inbounds [[STRUCT_H]], ptr [[H]], i32 0, i32 1
+  // CHECK-NEXT: store i32 2, ptr [[J]], align 4
+  // CHECK-NEXT: ret void
+  void foo20() {
+    H<2> h(1);
   }
 }
