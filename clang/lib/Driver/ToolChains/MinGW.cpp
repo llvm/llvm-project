@@ -135,7 +135,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("arm64pe");
     break;
   default:
-    llvm_unreachable("Unsupported target architecture.");
+    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }
 
   Arg *SubsysArg =
