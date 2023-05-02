@@ -138,6 +138,7 @@ let Predicates = [HasStdExtZvbb] in {
   def  VREV8_V  : VALUVs2<0b010010, 0b01001, OPMVV, "vrev8.v">;
   defm VROL_V   : VALU_IV_V_X<"vrol", 0b010101>;
   defm VROR_V   : VROR_IV_V_X_I<"vror", 0b010100>;
+  let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV in
   defm VWSLL_V  : VALU_IV_V_X_I<"vwsll", 0b110101, uimm5>;
 } // Predicates = [HasStdExtZvbb]
 

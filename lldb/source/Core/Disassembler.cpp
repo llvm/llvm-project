@@ -253,7 +253,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
     if (target_sp) {
       Status error;
       OptionValueSP value_sp = target_sp->GetDebugger().GetPropertyValue(
-          &exe_ctx, "target.process.thread.step-avoid-regexp", false, error);
+          &exe_ctx, "target.process.thread.step-avoid-regexp", error);
       if (value_sp && value_sp->GetType() == OptionValue::eTypeRegex) {
         OptionValueRegex *re = value_sp->GetAsRegex();
         if (re) {
@@ -755,7 +755,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   char buffer[1024];
 
   auto option_value_sp = std::make_shared<OptionValueDictionary>();
-  static ConstString encoding_key("data_encoding");
+  static constexpr llvm::StringLiteral encoding_key("data_encoding");
   OptionValue::Type data_type = OptionValue::eTypeInvalid;
 
   while (!done) {
@@ -802,7 +802,6 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         return option_value_sp;
       }
 
-      ConstString const_key(key.c_str());
       // Check value to see if it's the start of an array or dictionary.
 
       lldb::OptionValueSP value_sp;
@@ -838,15 +837,14 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         value_sp = std::make_shared<OptionValueString>(value.c_str(), "");
       }
 
-      if (const_key == encoding_key) {
+      if (key == encoding_key) {
         // A 'data_encoding=..." is NOT a normal key-value pair; it is meta-data
-        // indicating the
-        // data type of an upcoming array (usually the next bit of data to be
-        // read in).
-        if (strcmp(value.c_str(), "uint32_t") == 0)
+        // indicating the data type of an upcoming array (usually the next bit
+        // of data to be read in).
+        if (llvm::StringRef(value) == "uint32_t")
           data_type = OptionValue::eTypeUInt64;
       } else
-        option_value_sp->GetAsDictionary()->SetValueForKey(const_key, value_sp,
+        option_value_sp->GetAsDictionary()->SetValueForKey(key, value_sp,
                                                            false);
     }
   }
@@ -910,7 +908,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
     return false;
   }
 
-  SetDescription(value_sp->GetStringValue());
+  SetDescription(value_sp->GetStringValue().value_or(""));
 
   value_sp = data_dictionary->GetValueForKey(triple_key);
   if (!value_sp) {
@@ -920,7 +918,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
   }
 
   ArchSpec arch;
-  arch.SetTriple(llvm::Triple(value_sp->GetStringValue()));
+  arch.SetTriple(llvm::Triple(value_sp->GetStringValue().value_or("")));
 
   bool success = false;
   std::unique_ptr<EmulateInstruction> insn_emulator_up(

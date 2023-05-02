@@ -3186,7 +3186,24 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return Vec;
   }
 
-  return SDValue();
+  // For constant vectors, use generic constant pool lowering.  Otherwise,
+  // we'd have to materialize constants in GPRs just to move them into the
+  // vector.
+  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()))
+    return SDValue();
+
+  // We can use a series of vslide1down instructions to move values in GPRs
+  // into the appropriate place in the result vector.  We use slide1down
+  // to avoid the register group overlap constraint of vslide1up.
+  if (VT.isFloatingPoint())
+    // TODO: Use vfslide1down.
+    return SDValue();
+
+  SDValue Vec = DAG.getUNDEF(ContainerVT);
+  for (const SDValue &V : Op->ops())
+    Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, ContainerVT,
+                      DAG.getUNDEF(ContainerVT), Vec, V, Mask, VL);
+  return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
 
 static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Passthru,

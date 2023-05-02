@@ -108,7 +108,6 @@ public:
   // Subclasses can override these functions
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
-                                          bool will_modify,
                                           Status &error) const {
     error.SetErrorStringWithFormat("'%s' is not a value subvalue", name.str().c_str());
     return lldb::OptionValueSP();
@@ -181,10 +180,6 @@ public:
   static lldb::OptionValueSP
   CreateValueFromCStringForTypeMask(const char *value_cstr, uint32_t type_mask,
                                     Status &error);
-
-  // Get this value as a uint64_t value if it is encoded as a boolean, uint64_t
-  // or int64_t. Other types will cause "fail_value" to be returned
-  uint64_t GetUInt64Value(uint64_t fail_value, bool *success_ptr);
 
   OptionValueArch *GetAsArch();
 
@@ -262,15 +257,15 @@ public:
 
   const OptionValueFormatEntity *GetAsFormatEntity() const;
 
-  bool GetBooleanValue(bool fail_value = false) const;
+  std::optional<bool> GetBooleanValue() const;
 
   bool SetBooleanValue(bool new_value);
 
-  char GetCharValue(char fail_value) const;
+  std::optional<char> GetCharValue() const;
 
   char SetCharValue(char new_value);
 
-  int64_t GetEnumerationValue(int64_t fail_value = -1) const;
+  std::optional<int64_t> GetEnumerationValue() const;
 
   bool SetEnumerationValue(int64_t value);
 
@@ -280,13 +275,11 @@ public:
 
   FileSpecList GetFileSpecListValue() const;
 
-  lldb::Format
-  GetFormatValue(lldb::Format fail_value = lldb::eFormatDefault) const;
+  std::optional<lldb::Format> GetFormatValue() const;
 
   bool SetFormatValue(lldb::Format new_value);
 
-  lldb::LanguageType GetLanguageValue(
-      lldb::LanguageType fail_value = lldb::eLanguageTypeUnknown) const;
+  std::optional<lldb::LanguageType> GetLanguageValue() const;
 
   bool SetLanguageValue(lldb::LanguageType new_language);
 
@@ -294,16 +287,15 @@ public:
 
   const RegularExpression *GetRegexValue() const;
 
-  int64_t GetSInt64Value(int64_t fail_value = 0) const;
+  std::optional<int64_t> GetSInt64Value() const;
 
   bool SetSInt64Value(int64_t new_value);
 
-  llvm::StringRef GetStringValue(llvm::StringRef fail_value) const;
-  llvm::StringRef GetStringValue() const { return GetStringValue(llvm::StringRef()); }
+  std::optional<llvm::StringRef> GetStringValue() const;
 
   bool SetStringValue(llvm::StringRef new_value);
 
-  uint64_t GetUInt64Value(uint64_t fail_value = 0) const;
+  std::optional<uint64_t> GetUInt64Value() const;
 
   bool SetUInt64Value(uint64_t new_value);
 

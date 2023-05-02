@@ -282,6 +282,11 @@ public:
     return (unsigned) Imm.Val;
   }
 
+  unsigned getFpReg() const {
+    assert(isEvenRegNumber() && "Invalid access!");
+    return (unsigned)(Imm.Val >> 1);
+  }
+
   unsigned getVSReg() const {
     assert(isVSRegNumber() && "Invalid access!");
     return (unsigned) Imm.Val;
@@ -500,6 +505,11 @@ public:
   void addRegF8RCOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(FRegs[getReg()]));
+  }
+
+  void addRegFpRCOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(FpRegs[getFpReg()]));
   }
 
   void addRegVFRCOperands(MCInst &Inst, unsigned N) const {

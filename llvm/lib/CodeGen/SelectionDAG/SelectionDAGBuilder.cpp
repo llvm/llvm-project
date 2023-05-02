@@ -5451,7 +5451,7 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
   // it's beneficial on the target, otherwise we end up lowering to a call to
   // __powidf2 (for example).
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    int Val = RHSC->getSExtValue();
+    int64_t Val = RHSC->getSExtValue();
 
     // powi(x, 0) -> 1.0
     if (Val == 0)

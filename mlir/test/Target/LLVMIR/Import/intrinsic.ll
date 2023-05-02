@@ -355,6 +355,17 @@ define void @masked_expand_compress_intrinsics(ptr %0, <7 x i1> %1, <7 x float> 
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @trap_intrinsics
+define void @trap_intrinsics() {
+  ; CHECK: "llvm.intr.trap"() : () -> ()
+  call void @llvm.trap()
+  ; CHECK: "llvm.intr.debugtrap"() : () -> ()
+  call void @llvm.debugtrap()
+  ; CHECK: "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+  call void @llvm.ubsantrap(i8 1)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @memcpy_test
 define void @memcpy_test(i32 %0, ptr %1, ptr %2) {
   ; CHECK: %[[FALSE:.+]] = llvm.mlir.constant(false) : i1
@@ -743,6 +754,9 @@ declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, i32 immarg, <7 x i
 declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
 declare <7 x float> @llvm.masked.expandload.v7f32(ptr, <7 x i1>, <7 x float>)
 declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr, <7 x i1>)
+declare void @llvm.trap()
+declare void @llvm.debugtrap()
+declare void @llvm.ubsantrap(i8 immarg)
 declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg)
 declare void @llvm.memmove.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1 immarg)

@@ -97,8 +97,8 @@ ModuleListProperties::ModuleListProperties() {
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
   const uint32_t idx = ePropertyEnableExternalLookup;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
@@ -108,13 +108,13 @@ bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
 
 bool ModuleListProperties::GetEnableBackgroundLookup() const {
   const uint32_t idx = ePropertyEnableBackgroundLookup;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
   return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr,
                                                 ePropertyClangModulesCachePath)
       ->GetCurrentValue();
 }
@@ -126,7 +126,7 @@ bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
   return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr,
                                                 ePropertyLLDBIndexCachePath)
       ->GetCurrentValue();
 }
@@ -138,8 +138,8 @@ bool ModuleListProperties::SetLLDBIndexCachePath(const FileSpec &path) {
 
 bool ModuleListProperties::GetEnableLLDBIndexCache() const {
   const uint32_t idx = ePropertyEnableLLDBIndexCache;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
@@ -149,26 +149,26 @@ bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {
   const uint32_t idx = ePropertyLLDBIndexCacheMaxByteSize;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxPercent() {
   const uint32_t idx = ePropertyLLDBIndexCacheMaxPercent;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheExpirationDays() {
   const uint32_t idx = ePropertyLLDBIndexCacheExpirationDays;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value);
 }
 
 void ModuleListProperties::UpdateSymlinkMappings() {
   FileSpecList list = m_collection_sp
                           ->GetPropertyAtIndexAsOptionValueFileSpecList(
-                              nullptr, false, ePropertySymLinkPaths)
+                              nullptr, ePropertySymLinkPaths)
                           ->GetCurrentValue();
   llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
   const bool notify = false;
@@ -188,8 +188,8 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
 
 bool ModuleListProperties::GetLoadSymbolOnDemand() {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}

@@ -85,6 +85,18 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+static bool isVSlideInstr(const MachineInstr &MI) {
+  switch (getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VSLIDEDOWN_VX:
+  case RISCV::VSLIDEDOWN_VI:
+  case RISCV::VSLIDEUP_VX:
+  case RISCV::VSLIDEUP_VI:
+    return true;
+  }
+}
+
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -818,6 +830,11 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       .addImm(Info.encodeVTYPE());
 }
 
+static bool isLMUL1OrSmaller(RISCVII::VLMUL LMUL) {
+  auto [LMul, Fractional] = RISCVVType::decodeVLMUL(LMUL);
+  return Fractional || LMul == 1;
+}
+
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
 /// before MI.
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
@@ -841,6 +858,27 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     if (VRegDef && VRegDef->isImplicitDef() &&
         CurInfo.getSEW() >= Require.getSEW()) {
       Used.SEW = false;
+      Used.TailPolicy = false;
+    }
+  }
+
+  // A slidedown/slideup with a VL of 1 whose destination is an IMPLICIT_DEF
+  // can use any VL/SEW combination which writes at least the first element.
+  // Notes:
+  // * VL=1 is special only because we have existing support for zero vs
+  //   non-zero VL.  We could generalize this if we had a VL > C predicate.
+  // * The LMUL1 restriction is for machines whose latency may depend on VL.
+  // * As above, this is only legal for IMPLICIT_DEF, not TA.
+  if (isVSlideInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
+      isLMUL1OrSmaller(CurInfo.getVLMUL())) {
+    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
+    if (VRegDef && VRegDef->isImplicitDef() &&
+        CurInfo.getSEW() >= Require.getSEW()) {
+      Used.VLAny = false;
+      Used.VLZeroness = true;
+      Used.SEW = false;
+      Used.LMUL = false;
+      Used.SEWLMULRatio = false;
       Used.TailPolicy = false;
     }
   }

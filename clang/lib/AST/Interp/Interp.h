@@ -744,6 +744,9 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Pops the value from the stack.
+/// 2) Writes the value to the local variable with the
+///    given offset.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool SetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   S.Current->setLocal<T>(I, S.Stk.pop<T>());

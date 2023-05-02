@@ -79,30 +79,28 @@ public:
   // not be a path to a property path that refers to a property within a
   // property
   virtual const Property *GetProperty(const ExecutionContext *exe_ctx,
-                                      bool will_modify,
+
                                       ConstString name) const;
 
   virtual const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
-                                             bool will_modify,
+
                                              uint32_t idx) const;
 
   // Property can be be a property path like
   // "target.process.extra-startup-command"
-  virtual const Property *GetPropertyAtPath(const ExecutionContext *exe_ctx,
-                                            bool will_modify,
-    llvm::StringRef property_path) const;
+  virtual const Property *
+  GetPropertyAtPath(const ExecutionContext *exe_ctx,
+
+                    llvm::StringRef property_path) const;
 
   virtual lldb::OptionValueSP
-  GetPropertyValueAtIndex(const ExecutionContext *exe_ctx, bool will_modify,
-                          uint32_t idx) const;
+  GetPropertyValueAtIndex(const ExecutionContext *exe_ctx, uint32_t idx) const;
 
   virtual lldb::OptionValueSP GetValueForKey(const ExecutionContext *exe_ctx,
-                                             ConstString key,
-                                             bool value_will_be_modified) const;
+                                             ConstString key) const;
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                   llvm::StringRef name,
-                                  bool value_will_be_modified,
                                   Status &error) const override;
 
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
@@ -125,8 +123,9 @@ public:
   bool SetPropertyAtIndexFromArgs(const ExecutionContext *exe_ctx, uint32_t idx,
                                   const Args &args);
 
-  bool GetPropertyAtIndexAsBoolean(const ExecutionContext *exe_ctx,
-                                   uint32_t idx, bool fail_value) const;
+  std::optional<bool>
+  GetPropertyAtIndexAsBoolean(const ExecutionContext *exe_ctx,
+                              uint32_t idx) const;
 
   bool SetPropertyAtIndexAsBoolean(const ExecutionContext *exe_ctx,
                                    uint32_t idx, bool new_value);
@@ -135,9 +134,9 @@ public:
   GetPropertyAtIndexAsOptionValueDictionary(const ExecutionContext *exe_ctx,
                                             uint32_t idx) const;
 
-  int64_t GetPropertyAtIndexAsEnumeration(const ExecutionContext *exe_ctx,
-                                          uint32_t idx,
-                                          int64_t fail_value) const;
+  std::optional<int64_t>
+  GetPropertyAtIndexAsEnumeration(const ExecutionContext *exe_ctx,
+                                  uint32_t idx) const;
 
   bool SetPropertyAtIndexAsEnumeration(const ExecutionContext *exe_ctx,
                                        uint32_t idx, int64_t new_value);
@@ -158,32 +157,34 @@ public:
   GetPropertyAtIndexAsOptionValueUInt64(const ExecutionContext *exe_ctx,
                                         uint32_t idx) const;
 
-  int64_t GetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx,
-                                     uint32_t idx, int64_t fail_value) const;
+  std::optional<int64_t>
+  GetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx,
+                             uint32_t idx) const;
 
   bool SetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx, uint32_t idx,
                                   int64_t new_value);
 
-  uint64_t GetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx,
-                                      uint32_t idx, uint64_t fail_value) const;
+  std::optional<uint64_t>
+  GetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx,
+                             uint32_t idx) const;
 
   bool SetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx, uint32_t idx,
                                   uint64_t new_value);
 
-  llvm::StringRef GetPropertyAtIndexAsString(const ExecutionContext *exe_ctx,
-                                         uint32_t idx,
-                                         llvm::StringRef fail_value) const;
+  std::optional<llvm::StringRef>
+  GetPropertyAtIndexAsString(const ExecutionContext *exe_ctx,
+                             uint32_t idx) const;
 
   bool SetPropertyAtIndexAsString(const ExecutionContext *exe_ctx, uint32_t idx,
                                   llvm::StringRef new_value);
 
   OptionValueString *
   GetPropertyAtIndexAsOptionValueString(const ExecutionContext *exe_ctx,
-                                        bool will_modify, uint32_t idx) const;
+                                        uint32_t idx) const;
 
   OptionValueFileSpec *
   GetPropertyAtIndexAsOptionValueFileSpec(const ExecutionContext *exe_ctx,
-                                          bool will_modify, uint32_t idx) const;
+                                          uint32_t idx) const;
 
   FileSpec GetPropertyAtIndexAsFileSpec(const ExecutionContext *exe_ctx,
                                         uint32_t idx) const;
@@ -191,11 +192,13 @@ public:
   bool SetPropertyAtIndexAsFileSpec(const ExecutionContext *exe_ctx,
                                     uint32_t idx, const FileSpec &file_spec);
 
-  OptionValuePathMappings *GetPropertyAtIndexAsOptionValuePathMappings(
-      const ExecutionContext *exe_ctx, bool will_modify, uint32_t idx) const;
+  OptionValuePathMappings *
+  GetPropertyAtIndexAsOptionValuePathMappings(const ExecutionContext *exe_ctx,
+                                              uint32_t idx) const;
 
-  OptionValueFileSpecList *GetPropertyAtIndexAsOptionValueFileSpecList(
-      const ExecutionContext *exe_ctx, bool will_modify, uint32_t idx) const;
+  OptionValueFileSpecList *
+  GetPropertyAtIndexAsOptionValueFileSpecList(const ExecutionContext *exe_ctx,
+                                              uint32_t idx) const;
 
   void AppendProperty(ConstString name, llvm::StringRef desc, bool is_global,
                       const lldb::OptionValueSP &value_sp);

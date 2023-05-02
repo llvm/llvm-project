@@ -60,7 +60,7 @@ class SettingsCommandTestCase(TestBase):
         self.assertEqual(self.dbg.GetSelectedTarget().GetNumBreakpoints(), 1)
 
     def test_append_target_env_vars(self):
-        """Test that 'append target.run-args' works."""
+        """Test that 'append target.env-vars' works."""
         # Append the env-vars.
         self.runCmd('settings append target.env-vars MY_ENV_VAR=YES')
         # And add hooks to restore the settings during tearDown().
@@ -268,7 +268,7 @@ class SettingsCommandTestCase(TestBase):
                 found_env_var = True
                 break
         self.assertTrue(found_env_var,
-                        "MY_ENV_VAR was not set in LunchInfo object")
+                        "MY_ENV_VAR was not set in LaunchInfo object")
 
         self.assertEqual(launch_info.GetNumArguments(), 3)
         self.assertEqual(launch_info.GetArgumentAtIndex(0), "A")
