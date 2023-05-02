@@ -496,7 +496,7 @@ public:
   }
 
   void VisitReturnStmt(const ReturnStmt *S) {
-    if (!Env.getAnalysisOptions().ContextSensitiveOpts)
+    if (!Env.getDataflowAnalysisContext().getOptions().ContextSensitiveOpts)
       return;
 
     auto *Ret = S->getRetValue();
@@ -863,12 +863,13 @@ private:
   // `F` of `S`. The type `E` must be either `CallExpr` or `CXXConstructExpr`.
   template <typename E>
   void transferInlineCall(const E *S, const FunctionDecl *F) {
-    const auto &Options = Env.getAnalysisOptions();
+    const auto &Options = Env.getDataflowAnalysisContext().getOptions();
     if (!(Options.ContextSensitiveOpts &&
           Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
       return;
 
-    const ControlFlowContext *CFCtx = Env.getControlFlowContext(F);
+    const ControlFlowContext *CFCtx =
+        Env.getDataflowAnalysisContext().getControlFlowContext(F);
     if (!CFCtx)
       return;
 
