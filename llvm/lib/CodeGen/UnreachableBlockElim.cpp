@@ -120,16 +120,14 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
       while (BB.succ_begin() != BB.succ_end()) {
         MachineBasicBlock* succ = *BB.succ_begin();
 
-        MachineBasicBlock::iterator start = succ->begin();
-        while (start != succ->end() && start->isPHI()) {
-          for (unsigned i = start->getNumOperands() - 1; i >= 2; i-=2)
-            if (start->getOperand(i).isMBB() &&
-                start->getOperand(i).getMBB() == &BB) {
-              start->removeOperand(i);
-              start->removeOperand(i-1);
+        for (MachineInstr &Phi : succ->phis()) {
+          for (unsigned i = Phi.getNumOperands() - 1; i >= 2; i -= 2) {
+            if (Phi.getOperand(i).isMBB() &&
+                Phi.getOperand(i).getMBB() == &BB) {
+              Phi.removeOperand(i);
+              Phi.removeOperand(i - 1);
             }
-
-          start++;
+          }
         }
 
         BB.removeSuccessor(BB.succ_begin());
