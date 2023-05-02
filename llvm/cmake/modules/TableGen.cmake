@@ -6,6 +6,12 @@ include(LLVMDistributionSupport)
 
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+
+  # Override ${project} with ${project}_TABLEGEN_PROJECT
+  if(NOT "${${project}_TABLEGEN_PROJECT}" STREQUAL "")
+    set(project ${${project}_TABLEGEN_PROJECT})
+  endif()
+
   # Validate calling context.
   if(NOT ${project}_TABLEGEN_EXE)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
@@ -153,8 +159,15 @@ macro(add_tablegen target project)
       set(${project}_TABLEGEN_DEFAULT "${LLVM_NATIVE_TOOL_DIR}/${target}${LLVM_HOST_EXECUTABLE_SUFFIX}")
     endif()
   endif()
-  set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
+
+  if(ADD_TABLEGEN_EXPORT)
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
+  else()
+    # Internal tablegen
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}")
+    set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL ON)
+  endif()
 
   # Effective tblgen executable to be used:
   set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN} PARENT_SCOPE)
@@ -168,8 +181,8 @@ macro(add_tablegen target project)
       build_native_tool(${target} ${project}_TABLEGEN_EXE DEPENDS ${target})
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
-      add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
-      set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
+      add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no
       # need to build this tablegen.
