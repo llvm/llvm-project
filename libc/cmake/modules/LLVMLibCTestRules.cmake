@@ -568,6 +568,7 @@ endif()
 #     ARGS <list of command line arguments to be passed to the test>
 #     ENV <list of environment variables to set before running the test>
 #     COMPILE_OPTIONS <list of special compile options for the test>
+#     LINK_LIBRARIES <list of linking libraries for this target>
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
 #   )
 function(add_libc_hermetic_test test_name)
@@ -579,7 +580,7 @@ function(add_libc_hermetic_test test_name)
     "HERMETIC_TEST"
     "" # No optional arguments
     "SUITE" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LOADER_ARGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -660,13 +661,15 @@ function(add_libc_hermetic_test test_name)
   target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
   target_link_libraries(
     ${fq_build_target_name}
-    libc.startup.${LIBC_TARGET_OS}.crt1
-    LibcHermeticTestMain LibcHermeticTest
-    # The NVIDIA 'nvlink' linker does not currently support static libraries.
-    $<$<NOT:$<BOOL:${LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>)
+    PRIVATE
+      ${HERMETIC_TEST_LINK_LIBRARIES}
+      libc.startup.${LIBC_TARGET_OS}.crt1
+      LibcHermeticTestMain LibcHermeticTest
+      # The NVIDIA 'nvlink' linker does not currently support static libraries.
+      $<$<NOT:$<BOOL:${LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>)
   add_dependencies(${fq_build_target_name}
                    LibcHermeticTest
-                   ${HERMETIC_TEST_DEPENDS})
+                   ${fq_deps_list})
 
   # Tests on the GPU require an external loader utility to launch the kernel.
   if(TARGET libc.utils.gpu.loader)
