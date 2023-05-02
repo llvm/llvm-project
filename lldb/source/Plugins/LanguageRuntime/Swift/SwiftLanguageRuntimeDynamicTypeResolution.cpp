@@ -1042,6 +1042,24 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
               type.GetMangledTypeName().GetCString());
     return {};
   }
+  if (llvm::isa<swift::reflection::BuiltinTypeInfo>(ti)) {
+    // This logic handles Swift Builtin types. By handling them now, the cost of
+    // unnecessarily loading ASTContexts can be avoided. Builtin types are
+    // assumed to be internal "leaf" types, having no children. Or,
+    // alternatively, opaque types.
+    //
+    // However, some imported Clang types (specifically enums) will also produce
+    // `BuiltinTypeInfo` instances. These types are not to be handled here.
+    swift::Demangle::Context dem;
+    NodePointer root = SwiftLanguageRuntime::DemangleSymbolAsNode(
+        type.GetMangledTypeName().GetStringRef(), dem);
+    using Kind = Node::Kind;
+    auto *builtin_type =
+        swift_demangle::nodeAtPath(root, {Kind::Global, Kind::TypeMangling,
+                                          Kind::Type, Kind::BuiltinTypeName});
+    if (builtin_type)
+      return 0;
+  }
   // Structs and Tuples.
   if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
     LLDB_LOGF(GetLog(LLDBLog::Types), "%s: RecordTypeInfo(num_fields=%i)",
