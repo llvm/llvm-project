@@ -16,8 +16,6 @@
 #include "execution_defs.h"
 #include "pstl_config.h"
 
-_PSTL_HIDE_FROM_ABI_PUSH
-
 namespace __pstl {
 namespace __internal {
 
@@ -62,32 +60,30 @@ using __tag_type =
                               __serial_tag<_IsVector>>::type;
 
 template <class... _IteratorTypes>
-__serial_tag</*_IsVector = */ std::false_type>
+_LIBCPP_HIDE_FROM_ABI __serial_tag</*_IsVector = */ std::false_type>
 __select_backend(__pstl::execution::sequenced_policy, _IteratorTypes&&...) {
   return {};
 }
 
 template <class... _IteratorTypes>
-__serial_tag<__internal::__are_random_access_iterators<_IteratorTypes...>>
+_LIBCPP_HIDE_FROM_ABI __serial_tag<__internal::__are_random_access_iterators<_IteratorTypes...>>
 __select_backend(__pstl::execution::unsequenced_policy, _IteratorTypes&&...) {
   return {};
 }
 
 template <class... _IteratorTypes>
-__tag_type</*_IsVector = */ std::false_type, _IteratorTypes...>
+_LIBCPP_HIDE_FROM_ABI __tag_type</*_IsVector = */ std::false_type, _IteratorTypes...>
 __select_backend(__pstl::execution::parallel_policy, _IteratorTypes&&...) {
   return {};
 }
 
 template <class... _IteratorTypes>
-__tag_type<__internal::__are_random_access_iterators<_IteratorTypes...>, _IteratorTypes...>
+_LIBCPP_HIDE_FROM_ABI __tag_type<__internal::__are_random_access_iterators<_IteratorTypes...>, _IteratorTypes...>
 __select_backend(__pstl::execution::parallel_unsequenced_policy, _IteratorTypes&&...) {
   return {};
 }
 
 } // namespace __internal
 } // namespace __pstl
-
-_PSTL_HIDE_FROM_ABI_POP
 
 #endif /* _PSTL_EXECUTION_IMPL_H */

@@ -70,6 +70,8 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
+  __algorithm/pstl_fill.h
+  __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
@@ -613,6 +615,7 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
+  __std_mbstate_t.h
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h

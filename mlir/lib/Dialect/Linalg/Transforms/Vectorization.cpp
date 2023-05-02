@@ -1423,8 +1423,10 @@ mlir::linalg::maskedVectorize(RewriterBase &rewriter, tensor::PadOp padOp,
     return rewriter.notifyMatchFailure(
         padOp, "result tensor shape must match input vector sizes");
   }
-  if (llvm::any_of(padOp.getStaticLow(),
-                   [](int64_t val) { return val != 0; })) {
+  if (llvm::any_of(padOp.getLow(), [](Value v) {
+        std::optional<int64_t> res = getConstantIntValue(v);
+        return !res.has_value() || res.value() != 0;
+      })) {
     LDBG("low pad must all be zero: " << padOp << "\n");
     return rewriter.notifyMatchFailure(padOp, "low pad must all be zero");
   }

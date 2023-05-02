@@ -8,9 +8,6 @@
 
 // REQUIRES: has-clang-tidy
 
-// FIXME: This should pass with the PSTL enabled
-// XFAIL: with-pstl
-
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
 

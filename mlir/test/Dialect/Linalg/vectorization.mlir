@@ -2836,19 +2836,21 @@ func.func @test_masked_vectorize_pad(
     -> tensor<2x4xf32>
 {
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+  //  CHECK-DAG: %[[c0_2:.*]] = arith.constant 0 : index
   //  CHECK-DAG: %[[c42:.*]] = arith.constant 4.243000e+01 : f32
   //  CHECK-DAG: %[[empty:.*]] = tensor.empty() : tensor<2x4xf32>
   //      CHECK: %[[d0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[d1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
   //      CHECK: %[[mask:.*]] = vector.create_mask %[[d0]], %[[d1]] : vector<2x4xi1>
   //      CHECK: %[[masked_read:.*]] = vector.mask %[[mask]] {
-  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0]], %[[c0]]], %[[c42]]
+  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[c0_2]], %[[c0_2]]], %[[c42]]
   // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<2x4xf32>
   // CHECK-SAME: } : vector<2x4xi1> -> vector<2x4xf32>
-  //      CHECK: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0]], %[[c0]]]
+  //      CHECK: vector.transfer_write %[[masked_read]], %[[empty]][%[[c0_2]], %[[c0_2]]]
   // CHECK-SAME:   {in_bounds = [true, true]} : vector<2x4xf32>, tensor<2x4xf32>
   %cst = arith.constant 42.43 : f32
-  %1 = tensor.pad %0 low[0, 0] high[%h0, %h1]  {
+  %c0 = arith.constant 0 : index
+  %1 = tensor.pad %0 low[0, %c0] high[%h0, %h1]  {
     ^bb0(%hh1: index, %hh2: index):
       tensor.yield %cst : f32
     } : tensor<?x?xf32> to tensor<2x4xf32>
@@ -2860,6 +2862,27 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     : (!pdl.operation) -> !pdl.operation
   transform.structured.masked_vectorize %0 vector_sizes [2, 4]
+}
+
+// -----
+
+// CHECK-LABEL: func @test_masked_pad_static_dynamic
+func.func @test_masked_pad_static_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
+                  %pad_value: f32) -> tensor<6x?x?x?xf32> {
+  // CHECK: tensor.pad
+  %0 = tensor.pad %arg0 low[2, %low, 3, 3] high[3, 3, %high, 2] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+      tensor.yield %pad_value : f32
+    } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
+  return %0 : tensor<6x?x?x?xf32>
+}
+
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1  { vectorize_padding }
 }
 
 // -----
