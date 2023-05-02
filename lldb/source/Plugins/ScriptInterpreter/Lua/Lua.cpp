@@ -131,14 +131,13 @@ llvm::Error Lua::CheckSyntax(llvm::StringRef buffer) {
 }
 
 llvm::Error Lua::LoadModule(llvm::StringRef filename) {
-  FileSpec file(filename);
+  const FileSpec file(filename);
   if (!FileSystem::Instance().Exists(file)) {
     return llvm::make_error<llvm::StringError>("invalid path",
                                                llvm::inconvertibleErrorCode());
   }
 
-  llvm::StringRef module_extension = file.GetFileNameExtension();
-  if (module_extension != ".lua") {
+  if (file.GetFileNameExtension() != ".lua") {
     return llvm::make_error<llvm::StringError>("invalid extension",
                                                llvm::inconvertibleErrorCode());
   }
