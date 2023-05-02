@@ -9,6 +9,10 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   SDNodeProperties.cpp
   VTEmitter.cpp
   PARTIAL_SOURCES_INTENDED
+
+  LINK_COMPONENTS
+  Support
+  TableGen
   )
 set_target_properties(LLVMTableGenCommon PROPERTIES FOLDER "Tablegenning")
 
