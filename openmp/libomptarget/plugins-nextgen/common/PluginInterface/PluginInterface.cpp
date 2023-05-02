@@ -385,10 +385,12 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       NumGroups = std::min(static_cast<uint64_t>(NumTeamsClause[0]), NumGroups);
     } else {
       // num_teams clause is not specified. Choose lower of tripcount-based
-      // num-groups and a value that maximizes occupancy.
+      // num-groups and a value that maximizes occupancy. At this point, aim to
+      // have 16 wavefronts in a CU.
+      // TODO: This logic needs to be moved to the AMDGPU plugin.
       uint64_t NumWavesInGroup = NumThreads / GenericDevice.getWarpSize();
       uint64_t MaxOccupancyFactor =
-          NumWavesInGroup ? (32 / NumWavesInGroup) : 32;
+          NumWavesInGroup ? (16 / NumWavesInGroup) : 16;
       NumGroups = std::min(NumGroups, MaxOccupancyFactor * DeviceNumCUs);
     }
     return NumGroups;
