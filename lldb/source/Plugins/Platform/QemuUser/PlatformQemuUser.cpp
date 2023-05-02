@@ -41,8 +41,9 @@ public:
   }
 
   llvm::StringRef GetArchitecture() {
-    return m_collection_sp->GetPropertyAtIndexAsString(
-        nullptr, ePropertyArchitecture, "");
+    return m_collection_sp
+        ->GetPropertyAtIndexAsString(nullptr, ePropertyArchitecture)
+        .value_or("");
   }
 
   FileSpec GetEmulatorPath() {

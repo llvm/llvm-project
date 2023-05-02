@@ -99,9 +99,10 @@ public:
   }
 
   EnableJITLoaderGDB GetEnable() const {
-    return (EnableJITLoaderGDB)m_collection_sp->GetPropertyAtIndexAsEnumeration(
-        nullptr, ePropertyEnable,
-        g_jitloadergdb_properties[ePropertyEnable].default_uint_value);
+    return (EnableJITLoaderGDB)m_collection_sp
+        ->GetPropertyAtIndexAsEnumeration(nullptr, ePropertyEnable)
+        .value_or(
+            g_jitloadergdb_properties[ePropertyEnable].default_uint_value);
   }
 };
 } // namespace

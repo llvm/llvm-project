@@ -125,8 +125,9 @@ public:
   bool SetPropertyAtIndexFromArgs(const ExecutionContext *exe_ctx, uint32_t idx,
                                   const Args &args);
 
-  bool GetPropertyAtIndexAsBoolean(const ExecutionContext *exe_ctx,
-                                   uint32_t idx, bool fail_value) const;
+  std::optional<bool>
+  GetPropertyAtIndexAsBoolean(const ExecutionContext *exe_ctx,
+                              uint32_t idx) const;
 
   bool SetPropertyAtIndexAsBoolean(const ExecutionContext *exe_ctx,
                                    uint32_t idx, bool new_value);
@@ -135,9 +136,9 @@ public:
   GetPropertyAtIndexAsOptionValueDictionary(const ExecutionContext *exe_ctx,
                                             uint32_t idx) const;
 
-  int64_t GetPropertyAtIndexAsEnumeration(const ExecutionContext *exe_ctx,
-                                          uint32_t idx,
-                                          int64_t fail_value) const;
+  std::optional<int64_t>
+  GetPropertyAtIndexAsEnumeration(const ExecutionContext *exe_ctx,
+                                  uint32_t idx) const;
 
   bool SetPropertyAtIndexAsEnumeration(const ExecutionContext *exe_ctx,
                                        uint32_t idx, int64_t new_value);
@@ -158,21 +159,23 @@ public:
   GetPropertyAtIndexAsOptionValueUInt64(const ExecutionContext *exe_ctx,
                                         uint32_t idx) const;
 
-  int64_t GetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx,
-                                     uint32_t idx, int64_t fail_value) const;
+  std::optional<int64_t>
+  GetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx,
+                             uint32_t idx) const;
 
   bool SetPropertyAtIndexAsSInt64(const ExecutionContext *exe_ctx, uint32_t idx,
                                   int64_t new_value);
 
-  uint64_t GetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx,
-                                      uint32_t idx, uint64_t fail_value) const;
+  std::optional<uint64_t>
+  GetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx,
+                             uint32_t idx) const;
 
   bool SetPropertyAtIndexAsUInt64(const ExecutionContext *exe_ctx, uint32_t idx,
                                   uint64_t new_value);
 
-  llvm::StringRef GetPropertyAtIndexAsString(const ExecutionContext *exe_ctx,
-                                         uint32_t idx,
-                                         llvm::StringRef fail_value) const;
+  std::optional<llvm::StringRef>
+  GetPropertyAtIndexAsString(const ExecutionContext *exe_ctx,
+                             uint32_t idx) const;
 
   bool SetPropertyAtIndexAsString(const ExecutionContext *exe_ctx, uint32_t idx,
                                   llvm::StringRef new_value);

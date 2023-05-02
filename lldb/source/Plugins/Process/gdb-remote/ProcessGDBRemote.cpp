@@ -142,8 +142,8 @@ public:
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyPacketTimeout;
-    return m_collection_sp->GetPropertyAtIndexAsUInt64(
-        nullptr, idx, g_processgdbremote_properties[idx].default_uint_value);
+    return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
+        .value_or(g_processgdbremote_properties[idx].default_uint_value);
   }
 
   bool SetPacketTimeout(uint64_t timeout) {
@@ -158,14 +158,14 @@ public:
 
   bool GetUseSVR4() const {
     const uint32_t idx = ePropertyUseSVR4;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(
-        nullptr, idx,
-        g_processgdbremote_properties[idx].default_uint_value != 0);
+    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+        .value_or(g_processgdbremote_properties[idx].default_uint_value != 0);
   }
 
   bool GetUseGPacketForReading() const {
     const uint32_t idx = ePropertyUseGPacketForReading;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, true);
+    return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+        .value_or(true);
   }
 };
 
