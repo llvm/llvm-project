@@ -110,6 +110,16 @@ LogicalResult tensor::getOrCreateDestinations(OpBuilder &b, Location loc,
   return success();
 }
 
+bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
+  if (auto rtp1 = tp1.dyn_cast<RankedTensorType>()) {
+    if (auto rtp2 = tp2.dyn_cast<RankedTensorType>())
+      return rtp1.getShape() == rtp2.getShape() &&
+             rtp1.getElementType() == rtp2.getElementType();
+    return false;
+  }
+  return tp1 == tp2; // default implementation
+}
+
 /// Compute the dropped dimensions of a rank-reducing tensor.extract_slice op or
 /// rank-extending tensor.insert_slice op.
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
@@ -150,6 +160,53 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
   assert(shapePos == static_cast<int64_t>(reducedShape.size()) &&
          "dimension mismatch");
   return droppedDims;
+}
+
+//===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+bool BitcastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
+  auto aT = dyn_cast<TensorType>(a);
+  auto bT = dyn_cast<TensorType>(b);
+  if (!aT || !bT)
+    return false;
+
+  if (aT.getElementTypeBitWidth() != bT.getElementTypeBitWidth())
+    return false;
+
+  return succeeded(verifyCompatibleShape(aT, bT));
+}
+
+namespace {
+
+/// Replaces chains of two tensor.bitcast operations by a single tensor.bitcast
+/// operation.
+struct ChainedTensorBitcast : public OpRewritePattern<BitcastOp> {
+  using OpRewritePattern<BitcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BitcastOp tensorBitcast,
+                                PatternRewriter &rewriter) const final {
+    auto tensorBitcastOperand =
+        tensorBitcast.getOperand().getDefiningOp<BitcastOp>();
+    if (!tensorBitcastOperand)
+      return failure();
+
+    auto resultType = cast<TensorType>(tensorBitcast.getType());
+    rewriter.replaceOpWithNewOp<BitcastOp>(tensorBitcast, resultType,
+                                           tensorBitcastOperand.getOperand());
+    return success();
+  }
+};
+
+} // namespace
+
+void BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<ChainedTensorBitcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1343,18 +1400,6 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
-// Checks if types are the same, but ignoring encoding on ranked tensors.
-static bool isSameTypesWithoutEncoding(Type tp1, Type tp2) {
-  if (auto rtp1 = tp1.dyn_cast<RankedTensorType>()) {
-    if (auto rtp2 = tp2.dyn_cast<RankedTensorType>())
-      return rtp1.getShape() == rtp2.getShape() &&
-             rtp1.getElementType() == rtp2.getElementType();
-    return false;
-  }
-  // Default implementation.
-  return tp1 == tp2;
-}
-
 template <typename TensorReshapeOp, bool isExpansion = std::is_same<
                                         TensorReshapeOp, ExpandShapeOp>::value>
 static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
@@ -1367,7 +1412,7 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       CollapseShapeOp::inferCollapsedType(expandedType, maps);
-  if (!isSameTypesWithoutEncoding(collapsedType, expectedType))
+  if (!isSameTypeWithoutEncoding(collapsedType, expectedType))
     return op.emitOpError("expected collapsed type to be ")
            << expectedType << ", but got " << collapsedType;
   return success();

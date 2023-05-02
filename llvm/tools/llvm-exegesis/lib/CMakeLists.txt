@@ -22,6 +22,7 @@ endforeach()
 set(LLVM_LINK_COMPONENTS
   Analysis
   CodeGen
+  CodeGenTypes
   Core
   ExecutionEngine
   GlobalISel

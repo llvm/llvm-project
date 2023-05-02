@@ -15,26 +15,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-// Get this value as a uint64_t value if it is encoded as a boolean, uint64_t
-// or int64_t. Other types will cause "fail_value" to be returned
-uint64_t OptionValue::GetUInt64Value(uint64_t fail_value, bool *success_ptr) {
-  if (success_ptr)
-    *success_ptr = true;
-  switch (GetType()) {
-  case OptionValue::eTypeBoolean:
-    return static_cast<OptionValueBoolean *>(this)->GetCurrentValue();
-  case OptionValue::eTypeSInt64:
-    return static_cast<OptionValueSInt64 *>(this)->GetCurrentValue();
-  case OptionValue::eTypeUInt64:
-    return static_cast<OptionValueUInt64 *>(this)->GetCurrentValue();
-  default:
-    break;
-  }
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
-}
-
 Status OptionValue::SetSubValue(const ExecutionContext *exe_ctx,
                                 VarSetOperationType op, llvm::StringRef name,
                                 llvm::StringRef value) {
@@ -271,11 +251,10 @@ const OptionValueUUID *OptionValue::GetAsUUID() const {
   return nullptr;
 }
 
-bool OptionValue::GetBooleanValue(bool fail_value) const {
-  const OptionValueBoolean *option_value = GetAsBoolean();
-  if (option_value)
+std::optional<bool> OptionValue::GetBooleanValue() const {
+  if (const OptionValueBoolean *option_value = GetAsBoolean())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetBooleanValue(bool new_value) {
@@ -287,11 +266,10 @@ bool OptionValue::SetBooleanValue(bool new_value) {
   return false;
 }
 
-char OptionValue::GetCharValue(char fail_value) const {
-  const OptionValueChar *option_value = GetAsChar();
-  if (option_value)
+std::optional<char> OptionValue::GetCharValue() const {
+  if (const OptionValueChar *option_value = GetAsChar())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 char OptionValue::SetCharValue(char new_value) {
@@ -303,11 +281,10 @@ char OptionValue::SetCharValue(char new_value) {
   return false;
 }
 
-int64_t OptionValue::GetEnumerationValue(int64_t fail_value) const {
-  const OptionValueEnumeration *option_value = GetAsEnumeration();
-  if (option_value)
+std::optional<int64_t> OptionValue::GetEnumerationValue() const {
+  if (const OptionValueEnumeration *option_value = GetAsEnumeration())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetEnumerationValue(int64_t value) {
@@ -342,11 +319,10 @@ FileSpecList OptionValue::GetFileSpecListValue() const {
   return FileSpecList();
 }
 
-lldb::Format OptionValue::GetFormatValue(lldb::Format fail_value) const {
-  const OptionValueFormat *option_value = GetAsFormat();
-  if (option_value)
+std::optional<lldb::Format> OptionValue::GetFormatValue() const {
+  if (const OptionValueFormat *option_value = GetAsFormat())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetFormatValue(lldb::Format new_value) {
@@ -358,12 +334,10 @@ bool OptionValue::SetFormatValue(lldb::Format new_value) {
   return false;
 }
 
-lldb::LanguageType
-OptionValue::GetLanguageValue(lldb::LanguageType fail_value) const {
-  const OptionValueLanguage *option_value = GetAsLanguage();
-  if (option_value)
+std::optional<lldb::LanguageType> OptionValue::GetLanguageValue() const {
+  if (const OptionValueLanguage *option_value = GetAsLanguage())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
@@ -389,11 +363,10 @@ const RegularExpression *OptionValue::GetRegexValue() const {
   return nullptr;
 }
 
-int64_t OptionValue::GetSInt64Value(int64_t fail_value) const {
-  const OptionValueSInt64 *option_value = GetAsSInt64();
-  if (option_value)
+std::optional<int64_t> OptionValue::GetSInt64Value() const {
+  if (const OptionValueSInt64 *option_value = GetAsSInt64())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetSInt64Value(int64_t new_value) {
@@ -405,11 +378,10 @@ bool OptionValue::SetSInt64Value(int64_t new_value) {
   return false;
 }
 
-llvm::StringRef OptionValue::GetStringValue(llvm::StringRef fail_value) const {
-  const OptionValueString *option_value = GetAsString();
-  if (option_value)
+std::optional<llvm::StringRef> OptionValue::GetStringValue() const {
+  if (const OptionValueString *option_value = GetAsString())
     return option_value->GetCurrentValueAsRef();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetStringValue(llvm::StringRef new_value) {
@@ -421,11 +393,10 @@ bool OptionValue::SetStringValue(llvm::StringRef new_value) {
   return false;
 }
 
-uint64_t OptionValue::GetUInt64Value(uint64_t fail_value) const {
-  const OptionValueUInt64 *option_value = GetAsUInt64();
-  if (option_value)
+std::optional<uint64_t> OptionValue::GetUInt64Value() const {
+  if (const OptionValueUInt64 *option_value = GetAsUInt64())
     return option_value->GetCurrentValue();
-  return fail_value;
+  return {};
 }
 
 bool OptionValue::SetUInt64Value(uint64_t new_value) {

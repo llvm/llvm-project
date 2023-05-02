@@ -131,3 +131,18 @@ csrrs t1, hstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system regis
 
 csrrs t1, stimecmph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
 csrrs t1, vstimecmph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+
+csrrs t1, midelegh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, mieh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, mvienh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, mviph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, miph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, sieh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, siph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, hidelegh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, hvienh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, hviph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, hviprio1h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, hviprio2h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, vsieh, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, vsiph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled

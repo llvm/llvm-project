@@ -1100,6 +1100,12 @@ extern void __kmp_init_target_mem();
 
 /* ------------------------------------------------------------------------ */
 
+#if ENABLE_LIBOMPTARGET
+extern void __kmp_init_target_task();
+#endif
+
+/* ------------------------------------------------------------------------ */
+
 #define KMP_UINT64_MAX                                                         \
   (~((kmp_uint64)1 << ((sizeof(kmp_uint64) * (1 << 3)) - 1)))
 

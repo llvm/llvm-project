@@ -145,13 +145,16 @@ StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
       if (canBeVersioned(*sym)) {
         StringRef name = sym->getName();
         size_t pos = name.find('@');
+        std::string substr;
         if (pos == std::string::npos)
-          demangled = demangle(name.str());
-        else if (pos + 1 == name.size() || name[pos + 1] == '@')
-          demangled = demangle(name.substr(0, pos).str());
-        else
-          demangled =
-              (demangle(name.substr(0, pos).str()) + name.substr(pos)).str();
+          demangled = demangle(name);
+        else if (pos + 1 == name.size() || name[pos + 1] == '@') {
+          substr = name.substr(0, pos);
+          demangled = demangle(substr);
+        } else {
+          substr = name.substr(0, pos);
+          demangled = (demangle(substr) + name.substr(pos)).str();
+        }
         (*demangledSyms)[demangled].push_back(sym);
       }
   }

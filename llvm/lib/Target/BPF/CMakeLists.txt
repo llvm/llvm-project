@@ -41,6 +41,7 @@ add_llvm_target(BPFCodeGen
   BPFDesc
   BPFInfo
   CodeGen
+  CodeGenTypes
   Core
   IPO
   MC

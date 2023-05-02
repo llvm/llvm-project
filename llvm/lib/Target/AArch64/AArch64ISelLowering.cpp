@@ -44,6 +44,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -80,7 +81,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2139,6 +2139,38 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     }
   }
   }
+}
+
+unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  unsigned VTBits = VT.getScalarSizeInBits();
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+    case AArch64ISD::CMEQ:
+    case AArch64ISD::CMGE:
+    case AArch64ISD::CMGT:
+    case AArch64ISD::CMHI:
+    case AArch64ISD::CMHS:
+    case AArch64ISD::FCMEQ:
+    case AArch64ISD::FCMGE:
+    case AArch64ISD::FCMGT:
+    case AArch64ISD::CMEQz:
+    case AArch64ISD::CMGEz:
+    case AArch64ISD::CMGTz:
+    case AArch64ISD::CMLEz:
+    case AArch64ISD::CMLTz:
+    case AArch64ISD::FCMEQz:
+    case AArch64ISD::FCMGEz:
+    case AArch64ISD::FCMGTz:
+    case AArch64ISD::FCMLEz:
+    case AArch64ISD::FCMLTz:
+      // Compares return either 0 or all-ones
+      return VTBits;
+  }
+
+  return 1;
 }
 
 MVT AArch64TargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
@@ -19477,6 +19509,13 @@ static SDValue performVectorShiftCombine(SDNode *N,
 
   unsigned ShiftImm = N->getConstantOperandVal(1);
   assert(OpScalarSize > ShiftImm && "Invalid shift imm");
+
+  // Remove sign_extend_inreg (ashr(shl(x)) based on the number of sign bits.
+  if (N->getOpcode() == AArch64ISD::VASHR &&
+      Op.getOpcode() == AArch64ISD::VSHL &&
+      N->getOperand(1) == Op.getOperand(1))
+    if (DCI.DAG.ComputeNumSignBits(Op.getOperand(0)) > ShiftImm)
+      return Op.getOperand(0);
 
   APInt ShiftedOutBits = APInt::getLowBitsSet(OpScalarSize, ShiftImm);
   APInt DemandedMask = ~ShiftedOutBits;

@@ -22,9 +22,9 @@ static Operation *createOp(MLIRContext *context,
                            ArrayRef<Type> resultTypes = std::nullopt,
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), resultTypes,
-                           operands, std::nullopt, std::nullopt, numRegions);
+  return Operation::create(
+      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
+      operands, std::nullopt, nullptr, std::nullopt, numRegions);
 }
 
 namespace {

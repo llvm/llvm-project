@@ -939,28 +939,28 @@ void DwarfLinkerForBinary::AddressManager::printReloc(const ValidReloc &Reloc) {
                    uint64_t(Mapping.BinaryAddress));
 }
 
-void DwarfLinkerForBinary::AddressManager::fillDieInfo(
-    const ValidReloc &Reloc, CompileUnit::DIEInfo &Info) {
-  Info.AddrAdjust = relocate(Reloc);
+int64_t
+DwarfLinkerForBinary::AddressManager::getRelocValue(const ValidReloc &Reloc) {
+  int64_t AddrAdjust = relocate(Reloc);
   if (Reloc.Mapping->getValue().ObjectAddress)
-    Info.AddrAdjust -= uint64_t(*Reloc.Mapping->getValue().ObjectAddress);
-  Info.InDebugMap = true;
+    AddrAdjust -= uint64_t(*Reloc.Mapping->getValue().ObjectAddress);
+  return AddrAdjust;
 }
 
-bool DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
+std::optional<int64_t>
+DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
     const std::vector<ValidReloc> &AllRelocs, uint64_t StartOffset,
-    uint64_t EndOffset, CompileUnit::DIEInfo &Info) {
+    uint64_t EndOffset) {
   std::vector<ValidReloc> Relocs =
       getRelocations(AllRelocs, StartOffset, EndOffset);
 
   if (Relocs.size() == 0)
-    return false;
+    return std::nullopt;
 
   if (Linker.Options.Verbose)
     printReloc(Relocs[0]);
-  fillDieInfo(Relocs[0], Info);
 
-  return true;
+  return getRelocValue(Relocs[0]);
 }
 
 /// Get the starting and ending (exclusive) offset for the
@@ -984,14 +984,15 @@ getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
   return std::make_pair(Offset, End);
 }
 
-bool DwarfLinkerForBinary::AddressManager::isLiveVariable(
-    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+std::optional<int64_t>
+DwarfLinkerForBinary::AddressManager::getVariableRelocAdjustment(
+    const DWARFDie &DIE) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
   std::optional<uint32_t> LocationIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_location);
   if (!LocationIdx)
-    return false;
+    return std::nullopt;
 
   uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
   uint64_t LocationOffset, LocationEndOffset;
@@ -1000,17 +1001,18 @@ bool DwarfLinkerForBinary::AddressManager::isLiveVariable(
 
   // FIXME: Support relocations debug_addr.
   return hasValidRelocationAt(ValidDebugInfoRelocs, LocationOffset,
-                              LocationEndOffset, MyInfo);
+                              LocationEndOffset);
 }
 
-bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
-    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+std::optional<int64_t>
+DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
+    const DWARFDie &DIE) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
   std::optional<uint32_t> LowPcIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
   if (!LowPcIdx)
-    return false;
+    return std::nullopt;
 
   dwarf::Form Form = Abbrev->getFormByIndex(*LowPcIdx);
 
@@ -1021,7 +1023,7 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
     std::tie(LowPcOffset, LowPcEndOffset) =
         getAttributeOffsets(Abbrev, *LowPcIdx, Offset, *DIE.getDwarfUnit());
     return hasValidRelocationAt(ValidDebugInfoRelocs, LowPcOffset,
-                                LowPcEndOffset, MyInfo);
+                                LowPcEndOffset);
   }
   case dwarf::DW_FORM_addrx:
   case dwarf::DW_FORM_addrx1:
@@ -1034,15 +1036,14 @@ bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
       uint64_t StartOffset = *AddrOffsetSectionBase + AddrValue->getRawUValue();
       uint64_t EndOffset =
           StartOffset + DIE.getDwarfUnit()->getAddressByteSize();
-      return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset,
-                                  MyInfo);
+      return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset);
     }
 
     Linker.reportWarning("no base offset for address table", SrcFileName);
-    return false;
+    return std::nullopt;
   }
   default:
-    return false;
+    return std::nullopt;
   }
 }
 

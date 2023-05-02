@@ -95,6 +95,7 @@ add_llvm_target(X86CodeGen ${sources}
   AsmPrinter
   CFGuard
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   Instrumentation

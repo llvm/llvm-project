@@ -31,6 +31,7 @@ add_llvm_target(LoongArchCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   LoongArchDesc
   LoongArchInfo

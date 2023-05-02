@@ -1363,7 +1363,7 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
     ExecutionContext exe_ctx(
         debugger_sp->GetCommandInterpreter().GetExecutionContext());
     lldb::OptionValueSP value_sp(
-        debugger_sp->GetPropertyValue(&exe_ctx, var_name, false, error));
+        debugger_sp->GetPropertyValue(&exe_ctx, var_name, error));
     if (value_sp) {
       StreamString value_strm;
       value_sp->DumpValue(&exe_ctx, value_strm, OptionValue::eDumpOptionValue);

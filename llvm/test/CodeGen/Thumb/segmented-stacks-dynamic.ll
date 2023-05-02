@@ -27,7 +27,7 @@ false:
 ; Thumb-linux-NEXT: ldr r4, .LCPI0_0
 ; Thumb-linux-NEXT: ldr r4, [r4]
 ; Thumb-linux-NEXT: cmp	r4, r5
-; Thumb-linux-NEXT: blo	.LBB0_2
+; Thumb-linux-NEXT: bls	.LBB0_2
 
 ; Thumb-linux:      mov r4, #16
 ; Thumb-linux-NEXT: mov r5, #0
@@ -47,7 +47,7 @@ false:
 ; Thumb-android-NEXT: ldr r4, .LCPI0_0
 ; Thumb-android-NEXT: ldr r4, [r4]
 ; Thumb-android-NEXT: cmp	r4, r5
-; Thumb-android-NEXT: blo	.LBB0_2
+; Thumb-android-NEXT: bls	.LBB0_2
 
 ; Thumb-android:      mov r4, #16
 ; Thumb-android-NEXT: mov r5, #0

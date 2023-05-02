@@ -39,8 +39,10 @@ VSCode::VSCode()
            {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
            {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
-      stop_at_entry(false), is_attach(false), configuration_done_sent(false),
-      reverse_request_seq(0), waiting_for_run_in_terminal(false),
+      stop_at_entry(false), is_attach(false),
+      restarting_process_id(LLDB_INVALID_PROCESS_ID),
+      configuration_done_sent(false), reverse_request_seq(0),
+      waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
