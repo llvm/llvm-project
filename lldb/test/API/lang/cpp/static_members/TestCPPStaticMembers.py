@@ -39,8 +39,6 @@ class TestCase(TestBase):
         self.expect("expression s_c", error=True,
                     startstr="error: use of undeclared identifier 's_d'")
 
-    # We fail to lookup static members on Windows.
-    @expectedFailureAll(oslist=["windows"])
     def test_no_crash_in_IR_arithmetic(self):
         """
         Test that LLDB doesn't crash on evaluating specific expression involving
