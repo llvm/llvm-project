@@ -325,7 +325,8 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
 #endif // TARGET_OS_OSX
 
-llvm::Error Host::OpenFileInExternalEditor(const FileSpec &file_spec,
+llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
+                                           const FileSpec &file_spec,
                                            uint32_t line_no) {
 #if !TARGET_OS_OSX
   return llvm::errorCodeToError(
@@ -391,41 +392,36 @@ llvm::Error Host::OpenFileInExternalEditor(const FileSpec &file_spec,
   auto on_exit = llvm::make_scope_exit(
       [&]() { AEDisposeDesc(&(file_and_line_desc.descContent)); });
 
-  static std::optional<FSRef> g_app_fsref;
-  static std::string g_app_error;
-  static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, [&]() {
-    if (const char *external_editor = ::getenv("LLDB_EXTERNAL_EDITOR")) {
-      LLDB_LOG(log, "Looking for external editor: {0}", external_editor);
+  if (editor.empty()) {
+    if (const char *lldb_external_editor = ::getenv("LLDB_EXTERNAL_EDITOR"))
+      editor = lldb_external_editor;
+  }
 
-      FSRef app_fsref;
-      CFCString editor_name(external_editor, kCFStringEncodingUTF8);
-      long app_error = ::LSFindApplicationForInfo(
-          /*inCreator=*/kLSUnknownCreator, /*inBundleID=*/NULL,
-          /*inName=*/editor_name.get(), /*outAppRef=*/&app_fsref,
-          /*outAppURL=*/NULL);
-      if (app_error == noErr) {
-        g_app_fsref = app_fsref;
-      } else {
-        g_app_error =
-            llvm::formatv("could not find external editor \"{0}\": "
-                          "LSFindApplicationForInfo returned error {1}",
-                          external_editor, app_error)
-                .str();
-      }
-    }
-  });
+  std::optional<FSRef> app_fsref;
+  if (!editor.empty()) {
+    LLDB_LOG(log, "Looking for external editor: {0}", editor);
 
-  if (!g_app_error.empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(), g_app_error);
+    app_fsref.emplace();
+    CFCString editor_name(editor.data(), kCFStringEncodingUTF8);
+    long app_error = ::LSFindApplicationForInfo(
+        /*inCreator=*/kLSUnknownCreator, /*inBundleID=*/NULL,
+        /*inName=*/editor_name.get(), /*outAppRef=*/&(*app_fsref),
+        /*outAppURL=*/NULL);
+    if (app_error != noErr)
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          llvm::formatv("could not find external editor \"{0}\": "
+                        "LSFindApplicationForInfo returned error {1}",
+                        editor, app_error));
+  }
 
   // Build app launch parameters.
   LSApplicationParameters app_params;
   ::memset(&app_params, 0, sizeof(app_params));
   app_params.flags =
       kLSLaunchDefaults | kLSLaunchDontAddToRecents | kLSLaunchDontSwitch;
-  if (g_app_fsref)
-    app_params.application = &(g_app_fsref.value());
+  if (app_fsref)
+    app_params.application = &(*app_fsref);
 
   ProcessSerialNumber psn;
   std::array<CFURLRef, 1> file_array = {file_URL.get()};
