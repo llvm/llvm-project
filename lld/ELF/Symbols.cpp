@@ -45,7 +45,9 @@ LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
 
 // Returns a symbol for an error message.
 static std::string maybeDemangleSymbol(StringRef symName) {
-  return elf::config->demangle ? demangle(symName.str()) : symName.str();
+  if (elf::config->demangle)
+    return demangle(symName.str());
+  return symName.str();
 }
 
 std::string lld::toString(const elf::Symbol &sym) {
