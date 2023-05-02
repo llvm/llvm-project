@@ -11,6 +11,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -31,8 +32,6 @@ static cl::opt<bool> EnableSpillVGPRToAGPR(
 static constexpr unsigned SGPRBitSize = 32;
 static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
 static constexpr unsigned VGPRLaneBitSize = 32;
-// FIXME: should be replaced by a constant defined elsewhere
-static constexpr unsigned DW_ASPACE_AMDGPU_private_wave = 6;
 
 // Find a scratch register matching \p RC which is unused and available
 // throughout the function. On failure, returns a null register.
@@ -74,7 +73,8 @@ createScaledCFAInPrivateWave(const GCNSubtarget &ST,
   OSBlock << uint8_t(dwarf::DW_OP_deref_size) << uint8_t(4)
           << uint8_t(dwarf::DW_OP_lit0 + WavefrontSizeLog2)
           << uint8_t(dwarf::DW_OP_shl)
-          << uint8_t(dwarf::DW_OP_lit0 + DW_ASPACE_AMDGPU_private_wave)
+          << uint8_t(dwarf::DW_OP_lit0 +
+                     dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
           << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
 
   SmallString<20> CFIInst;
@@ -99,11 +99,12 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   MCCFIInstruction CFIInst =
       ST.enableFlatScratch()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
-          : (AspaceAlreadyDefined ? MCCFIInstruction::createLLVMDefAspaceCfa(
-                                        nullptr, DwarfStackPtrReg, 0,
-                                        DW_ASPACE_AMDGPU_private_wave)
-                                  : MCCFIInstruction::createDefCfaRegister(
-                                        nullptr, DwarfStackPtrReg));
+          : (AspaceAlreadyDefined
+                 ? MCCFIInstruction::createLLVMDefAspaceCfa(
+                       nullptr, DwarfStackPtrReg, 0,
+                       dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave)
+                 : MCCFIInstruction::createDefCfaRegister(nullptr,
+                                                          DwarfStackPtrReg));
   buildCFI(MBB, MBBI, DL, CFIInst, Flags);
 }
 
@@ -770,7 +771,8 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         dwarf::DW_CFA_def_cfa_expression,
         3, // length
         static_cast<char>(dwarf::DW_OP_lit0),
-        static_cast<char>(dwarf::DW_OP_lit0 + DW_ASPACE_AMDGPU_private_wave),
+        static_cast<char>(dwarf::DW_OP_lit0 +
+                          dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
         static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
     buildCFI(MBB, I, DL,
              MCCFIInstruction::createEscape(

@@ -14,6 +14,7 @@
 #define LLVM_TARGET_TARGETMACHINE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
@@ -321,10 +322,10 @@ public:
 
   /// Returns the DWARF address space corresponding to the given LLVM address
   /// space, or None if no such mapping exists.
-  virtual std::optional<unsigned>
+  virtual std::optional<dwarf::AddressSpace>
   mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
     if (LLVMAddrSpace == DL.getDefaultGlobalsAddressSpace())
-      return 0;
+      return dwarf::AddressSpace::DW_ASPACE_LLVM_none;
     return std::nullopt;
   }
 

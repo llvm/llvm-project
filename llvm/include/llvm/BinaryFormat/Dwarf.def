@@ -23,7 +23,7 @@
     defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
     defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
     defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                         \
-    defined HANDLE_DW_MSPACE)
+    defined HANDLE_DW_MSPACE || defined HANDLE_DW_ASPACE)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -139,6 +139,10 @@
 
 #ifndef HANDLE_DW_MSPACE
 #define HANDLE_DW_MSPACE(ID, NAME)
+#endif
+
+#ifndef HANDLE_DW_ASPACE
+#define HANDLE_DW_ASPACE(ID, CATEGORY, NAME)
 #endif
 
 HANDLE_DW_TAG(0x0000, null, 2, DWARF, DW_KIND_NONE)
@@ -623,6 +627,14 @@ HANDLE_DW_MSPACE(0x1, global)
 HANDLE_DW_MSPACE(0x2, constant)
 HANDLE_DW_MSPACE(0x3, group)
 HANDLE_DW_MSPACE(0x4, private)
+
+// https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier
+HANDLE_DW_ASPACE(0x0, LLVM, none)
+HANDLE_DW_ASPACE(0x1, LLVM_AMDGPU, generic)
+HANDLE_DW_ASPACE(0x2, LLVM_AMDGPU, region)
+HANDLE_DW_ASPACE(0x3, LLVM_AMDGPU, local)
+HANDLE_DW_ASPACE(0x5, LLVM_AMDGPU, private_lane)
+HANDLE_DW_ASPACE(0x6, LLVM_AMDGPU, private_wave)
 
 // Apple extensions.
 
@@ -1291,3 +1303,4 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_END
 #undef HANDLE_DW_SECT
 #undef HANDLE_DW_MSPACE
+#undef HANDLE_DW_ASPACE

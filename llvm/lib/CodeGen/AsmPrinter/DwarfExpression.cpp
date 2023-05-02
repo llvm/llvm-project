@@ -1002,8 +1002,7 @@ void DwarfExprAST::lowerDIOpDeref(DwarfExprAST::Node *OpNode) {
   uint64_t PointerSizeInBytes = PointerSizeInBits / 8;
 
   unsigned PointerLLVMAddrSpace = PointerResultType->getAddressSpace();
-  std::optional<unsigned> PointerDWARFAddrSpace =
-      AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
+  auto PointerDWARFAddrSpace = AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
   if (!PointerDWARFAddrSpace) {
     LLVM_DEBUG(dbgs() << "Failed to lower DIOpDeref of pointer to addrspace("
                       << PointerLLVMAddrSpace

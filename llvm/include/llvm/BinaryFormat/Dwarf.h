@@ -425,6 +425,11 @@ enum MemorySpace {
   DW_MSPACE_LLVM_hi_user = 0xffff
 };
 
+enum AddressSpace {
+#define HANDLE_DW_ASPACE(ID, CATEGORY, NAME) DW_ASPACE_##CATEGORY##_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
 enum InlineAttribute {
   // Inline codes
   DW_INL_not_inlined = 0x00,

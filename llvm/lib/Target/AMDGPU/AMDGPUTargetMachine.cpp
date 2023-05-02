@@ -751,9 +751,10 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
          AMDGPU::isFlatGlobalAddrSpace(DestAS);
 }
 
-std::optional<unsigned>
+std::optional<dwarf::AddressSpace>
 AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
-  // FIXME: This should likely be driven from tablegen or an ".inc" header.
+  using AS = dwarf::AddressSpace;
+
   static_assert(
       AMDGPUAS::FLAT_ADDRESS == 0 && AMDGPUAS::GLOBAL_ADDRESS == 1 &&
           AMDGPUAS::REGION_ADDRESS == 2 && AMDGPUAS::LOCAL_ADDRESS == 3 &&
@@ -763,7 +764,13 @@ AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
 
   // FIXME: This mapping should likely be driven from tablegen or an ".inc"
   // header.
-  static const unsigned LLVMToDWARFAddrSpaceMapping[] = {1, 0, 2, 3, 0, 5};
+  static const dwarf::AddressSpace LLVMToDWARFAddrSpaceMapping[] = {
+      AS::DW_ASPACE_LLVM_AMDGPU_generic,
+      AS::DW_ASPACE_LLVM_none,
+      AS::DW_ASPACE_LLVM_AMDGPU_region,
+      AS::DW_ASPACE_LLVM_AMDGPU_local,
+      AS::DW_ASPACE_LLVM_none,
+      AS::DW_ASPACE_LLVM_AMDGPU_private_lane};
 
   if (LLVMAddrSpace < std::size(LLVMToDWARFAddrSpaceMapping))
     return LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
