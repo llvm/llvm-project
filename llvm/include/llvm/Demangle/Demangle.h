@@ -11,7 +11,6 @@
 
 #include <cstddef>
 #include <string>
-#include <string_view>
 
 namespace llvm {
 /// This is a llvm local version of __cxa_demangle. Other than the name and
@@ -63,7 +62,7 @@ char *dlangDemangle(const char *MangledName);
 /// \param MangledName - reference to string to demangle.
 /// \returns - the demangled string, or a copy of the input string if no
 /// demangling occurred.
-std::string demangle(const std::string_view MangledName);
+std::string demangle(const std::string &MangledName);
 
 bool nonMicrosoftDemangle(const char *MangledName, std::string &Result);
 

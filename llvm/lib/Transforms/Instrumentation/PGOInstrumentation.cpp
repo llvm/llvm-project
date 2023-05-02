@@ -1330,9 +1330,9 @@ static void addCallStack(CallStackTrie &AllocTrie,
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
-  auto AllocType = getAllocType(AllocInfo->Info.getMaxAccessCount(),
-                                AllocInfo->Info.getMinSize(),
-                                AllocInfo->Info.getMinLifetime());
+  auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
+                                AllocInfo->Info.getAllocCount(),
+                                AllocInfo->Info.getTotalLifetime());
   AllocTrie.addCallStack(AllocType, StackIds);
 }
 
