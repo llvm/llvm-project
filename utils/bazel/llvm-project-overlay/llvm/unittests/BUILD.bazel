@@ -558,7 +558,7 @@ gentbl(
     name = "vt_gen",
     strip_include_prefix = "Support",
     tbl_outs = [("-gen-vt", "Support/GenVT.inc")],
-    tblgen = "//llvm:llvm-tblgen",
+    tblgen = "//llvm:llvm-min-tblgen",
     td_file = "//llvm:include/llvm/CodeGen/ValueTypes.td",
     td_srcs = [
         "//llvm:include/llvm/CodeGen/ValueTypes.td",

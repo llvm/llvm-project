@@ -572,6 +572,31 @@ cc_library(
     ],
 )
 
+cc_binary(
+    name = "llvm-min-tblgen",
+    srcs = [
+        "utils/TableGen/Attributes.cpp",
+        "utils/TableGen/CodeGenIntrinsics.cpp",
+        "utils/TableGen/DirectiveEmitter.cpp",
+        "utils/TableGen/IntrinsicEmitter.cpp",
+        "utils/TableGen/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/SDNodeProperties.cpp",
+        "utils/TableGen/TableGen.cpp",
+        "utils/TableGen/VTEmitter.cpp",
+
+        "utils/TableGen/CodeGenIntrinsics.h",
+        "utils/TableGen/SDNodeProperties.h",
+        "utils/TableGen/SequenceToOffsetTable.h",
+    ],
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Support",
+        ":TableGen",
+        ":config",
+    ],
+)
+
 cc_library(
     name = "TableGenGlobalISel",
     srcs = glob([
@@ -621,6 +646,7 @@ cc_binary(
         ":TableGen",
         ":TableGenGlobalISel",
         ":config",
+        ":intrinsic_enums_gen",
         ":llvm-tblgen-headers",
     ],
 )
@@ -628,7 +654,7 @@ cc_binary(
 gentbl(
     name = "intrinsic_enums_gen",
     tbl_outs = [("-gen-intrinsic-enums", "include/llvm/IR/IntrinsicEnums.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     td_srcs = glob([
         "include/llvm/CodeGen/*.td",
@@ -639,7 +665,7 @@ gentbl(
 gentbl(
     name = "intrinsics_impl_gen",
     tbl_outs = [("-gen-intrinsic-impl", "include/llvm/IR/IntrinsicImpl.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     td_srcs = glob([
         "include/llvm/CodeGen/*.td",
@@ -727,7 +753,7 @@ llvm_target_intrinsics_list = [
             "-gen-intrinsic-enums -intrinsic-prefix=" + target["intrinsic_prefix"],
             "include/llvm/IR/Intrinsics" + target["name"] + ".h",
         )],
-        tblgen = ":llvm-tblgen",
+        tblgen = ":llvm-min-tblgen",
         td_file = "include/llvm/IR/Intrinsics.td",
         td_srcs = glob([
             "include/llvm/CodeGen/*.td",
@@ -739,7 +765,7 @@ llvm_target_intrinsics_list = [
 gentbl(
     name = "attributes_gen",
     tbl_outs = [("-gen-attrs", "include/llvm/IR/Attributes.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Attributes.td",
     td_srcs = ["include/llvm/IR/Attributes.td"],
 )
@@ -1108,7 +1134,7 @@ cc_library(
 gentbl(
     name = "RISCVTargetParserDefGen",
     tbl_outs = [("-gen-riscv-target-def", "include/llvm/TargetParser/RISCVTargetParserDef.inc")],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "lib/Target/RISCV/RISCV.td",
     td_srcs = [
         ":common_target_td_sources",
@@ -1375,7 +1401,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-decl", "include/llvm/Frontend/OpenMP/OMP.h.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
     td_srcs = [":omp_td_files"],
 )
@@ -1386,7 +1412,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-impl", "include/llvm/Frontend/OpenMP/OMP.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenMP/OMP.td",
     td_srcs = [":omp_td_files"],
 )
@@ -1434,7 +1460,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-decl", "include/llvm/Frontend/OpenACC/ACC.h.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
     td_srcs = [":acc_td_files"],
 )
@@ -1445,7 +1471,7 @@ gentbl(
     tbl_outs = [
         ("--gen-directive-impl", "include/llvm/Frontend/OpenACC/ACC.inc"),
     ],
-    tblgen = ":llvm-tblgen",
+    tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/Frontend/OpenACC/ACC.td",
     td_srcs = [":acc_td_files"],
 )
