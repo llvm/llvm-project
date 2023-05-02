@@ -908,7 +908,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
     return false;
   }
 
-  SetDescription(value_sp->GetStringValue());
+  SetDescription(value_sp->GetStringValue().value_or(""));
 
   value_sp = data_dictionary->GetValueForKey(triple_key);
   if (!value_sp) {
@@ -918,7 +918,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
   }
 
   ArchSpec arch;
-  arch.SetTriple(llvm::Triple(value_sp->GetStringValue()));
+  arch.SetTriple(llvm::Triple(value_sp->GetStringValue().value_or("")));
 
   bool success = false;
   std::unique_ptr<EmulateInstruction> insn_emulator_up(

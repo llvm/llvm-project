@@ -297,7 +297,7 @@ bool OptionValueProperties::GetPropertyAtIndexAsBoolean(
   if (property) {
     OptionValue *value = property->GetValue().get();
     if (value)
-      return value->GetBooleanValue(fail_value);
+      return value->GetBooleanValue().value_or(fail_value);
   }
   return fail_value;
 }
@@ -330,7 +330,7 @@ int64_t OptionValueProperties::GetPropertyAtIndexAsEnumeration(
   if (property) {
     OptionValue *value = property->GetValue().get();
     if (value)
-      return value->GetEnumerationValue(fail_value);
+      return value->GetEnumerationValue().value_or(fail_value);
   }
   return fail_value;
 }
@@ -433,7 +433,7 @@ int64_t OptionValueProperties::GetPropertyAtIndexAsSInt64(
   if (property) {
     OptionValue *value = property->GetValue().get();
     if (value)
-      return value->GetSInt64Value(fail_value);
+      return value->GetSInt64Value().value_or(fail_value);
   }
   return fail_value;
 }
@@ -456,7 +456,7 @@ llvm::StringRef OptionValueProperties::GetPropertyAtIndexAsString(
   if (property) {
     OptionValue *value = property->GetValue().get();
     if (value)
-      return value->GetStringValue(fail_value);
+      return value->GetStringValue().value_or(fail_value);
   }
   return fail_value;
 }
@@ -486,7 +486,7 @@ uint64_t OptionValueProperties::GetPropertyAtIndexAsUInt64(
   if (property) {
     OptionValue *value = property->GetValue().get();
     if (value)
-      return value->GetUInt64Value(fail_value);
+      return value->GetUInt64Value().value_or(fail_value);
   }
   return fail_value;
 }
