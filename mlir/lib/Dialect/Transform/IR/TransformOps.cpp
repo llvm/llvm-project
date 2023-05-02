@@ -1510,13 +1510,17 @@ transform::SplitHandlesOp::apply(transform::TransformResults &results,
   if (numResultHandles != expectedNumResultHandles) {
     // Empty input handle corner case: always propagates empty handles in both
     // suppress and propagate modes.
-    if (numResultHandles == 0)
+    if (numResultHandles == 0) {
+      for (OpResult result : getResults())
+        results.set(result, {});
       return DiagnosedSilenceableFailure::success();
+    }
+
     // If the input handle was not empty and the number of result handles does
     // not match, this is a legit silenceable error.
     return emitSilenceableError()
            << getHandle() << " expected to contain " << expectedNumResultHandles
-           << " operation handles but it only contains " << numResultHandles
+           << " operation handles but it contains " << numResultHandles
            << " handles";
   }
   // Normal successful case.
