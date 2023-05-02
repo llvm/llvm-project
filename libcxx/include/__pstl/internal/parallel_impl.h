@@ -28,7 +28,7 @@ namespace __internal
 /** Return extremum value returned by brick f[i,j) for subranges [i,j) of [first,last)
 Each f[i,j) must return a value in [i,j). */
 template <class _BackendTag, class _ExecutionPolicy, class _Index, class _Brick, class _Compare>
-_Index
+_LIBCPP_HIDE_FROM_ABI _Index
 __parallel_find(_BackendTag __tag, _ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick __f,
                 _Compare __comp, bool __b_first)
 {
@@ -65,6 +65,7 @@ __parallel_find(_BackendTag __tag, _ExecutionPolicy&& __exec, _Index __first, _I
 //------------------------------------------------------------------------
 //! Return true if brick f[i,j) returns true for some subrange [i,j) of [first,last)
 template <class _BackendTag, class _ExecutionPolicy, class _Index, class _Brick>
+_LIBCPP_HIDE_FROM_ABI
 bool __parallel_or(_BackendTag __tag, _ExecutionPolicy&& __exec, _Index __first, _Index __last, _Brick __f) {
     std::atomic<bool> __found(false);
     __par_backend::__parallel_for(__tag, std::forward<_ExecutionPolicy>(__exec), __first, __last,
