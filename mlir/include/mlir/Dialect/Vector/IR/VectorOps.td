@@ -2587,7 +2587,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
     into 'vector.flat_transpose' operations to bring the operations closer
     to the hardware ISA.
 
-    The ‘vector.flat_transpose’ op treats the 1-D input `matrix` as
+    The `vector.flat_transpose` op treats the 1-D input `matrix` as
     a 2-D matrix with <rows> rows and <columns> columns, and returns the
     transposed matrix in flattened form in 'res'.
 
@@ -2598,8 +2598,8 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
     Example:
 
     ```mlir
-    %1 = vector.flat_transpose %0 { rows = 4: i32, columns = 4: i32 }
-       : (vector<16xf32>) -> vector<16xf32>
+    %1 = vector.flat_transpose %0 {columns = 4 : i32, rows = 4 : i32}
+       : vector<16xf32> -> vector<16xf32>
     ```
   }];
   let assemblyFormat = "$matrix attr-dict `:` type($matrix) `->` type($res)";

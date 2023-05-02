@@ -730,6 +730,10 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
 /// The \p Assume parameter indicates if we are allowed to make additional
 /// run-time assumptions.
+///
+/// Note that the analysis results are defined if-and-only-if the original
+/// memory access was defined.  If that access was dead, or UB, then the
+/// result of this function is undefined.
 std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp,

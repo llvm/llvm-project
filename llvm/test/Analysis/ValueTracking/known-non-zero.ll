@@ -10,6 +10,18 @@ declare <2 x i8> @llvm.uadd.sat.2xi8(<2 x i8>, <2 x i8>)
 declare i8 @llvm.uadd.sat.i8(i8, i8)
 declare i8 @llvm.fshr.i8(i8, i8, i8)
 declare i8 @llvm.fshl.i8(i8, i8, i8)
+declare i8 @llvm.ctlz.i8(i8, i1)
+declare i8 @llvm.cttz.i8(i8, i1)
+declare i8 @llvm.sadd.sat.i8(i8, i8)
+declare i8 @llvm.smax.i8(i8, i8)
+declare i8 @llvm.smin.i8(i8, i8)
+declare i8 @llvm.sshl.sat.i8(i8, i8)
+declare i8 @llvm.ssub.sat.i8(i8, i8)
+declare i8 @llvm.umax.i8(i8, i8)
+declare i8 @llvm.umin.i8(i8, i8)
+declare i8 @llvm.ushl.sat.i8(i8, i8)
+declare i8 @llvm.usub.sat.i8(i8, i8)
+declare float @llvm.maximum.f32(float, float)
 
 ;; Throughout use: X > Y || Y == 0 which folds to X > Y iff X known
 ;; non-zero. Do this because many of the expressions already have
@@ -284,7 +296,6 @@ define <2 x i1> @ashr_nz_bounded_cnt_vec(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i1> %r
 }
 
-
 define i1 @lshr_nz_bounded_cnt_fail(i32 %cnt, i32 %y) {
 ; CHECK-LABEL: @lshr_nz_bounded_cnt_fail(
 ; CHECK-NEXT:    [[CNT_ULT:%.*]] = icmp ult i32 [[CNT:%.*]], 20
@@ -317,9 +328,6 @@ define <2 x i1> @ashr_nz_bounded_cnt_vec_fail(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i1> %r
 }
 
-
-
-
 define i1 @lshr_nonzero_and_shift_out_zeros(i32 %cnt, i32 %y) {
 ; CHECK-LABEL: @lshr_nonzero_and_shift_out_zeros(
 ; CHECK-NEXT:    [[CNT_ULT:%.*]] = icmp ult i32 [[CNT:%.*]], 4
@@ -331,17 +339,13 @@ define i1 @lshr_nonzero_and_shift_out_zeros(i32 %cnt, i32 %y) {
 ;
   %cnt_ult = icmp ult i32 %cnt, 4
   call void @llvm.assume(i1 %cnt_ult)
-
   %val = and i32 %y, -131072
-
-  %val_nz =  icmp ne i32 %val, 0
+  %val_nz = icmp ne i32 %val, 0
   call void @llvm.assume(i1 %val_nz)
-
   %shl = lshr i32 %val, %cnt
   %r = icmp eq i32 %shl, 0
   ret i1 %r
 }
-
 
 define i1 @ashr_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 ; CHECK-LABEL: @ashr_nonzero_and_shift_out_zeros(
@@ -352,13 +356,12 @@ define i1 @ashr_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 ;
   %cnt = and i32 %ccnt, 7
   %val = and i32 %y, -131072
-  %val_nz =  icmp ne i32 %val, 0
+  %val_nz = icmp ne i32 %val, 0
   call void @llvm.assume(i1 %val_nz)
   %shl = ashr i32 %val, %cnt
   %r = icmp eq i32 %shl, 0
   ret i1 %r
 }
-
 
 define i1 @shl_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 ; CHECK-LABEL: @shl_nonzero_and_shift_out_zeros(
@@ -369,14 +372,12 @@ define i1 @shl_nonzero_and_shift_out_zeros(i32 %ccnt, i32 %y) {
 ;
   %cnt = and i32 %ccnt, 6
   %val = and i32 %y, 131071
-  %val_nz =  icmp ne i32 %val, 0
+  %val_nz = icmp ne i32 %val, 0
   call void @llvm.assume(i1 %val_nz)
   %shl = shl i32 %val, %cnt
   %r = icmp eq i32 %shl, 0
   ret i1 %r
 }
-
-
 
 define i1 @lshr_nonzero_and_shift_out_zeros_fail(i32 %cnt, i32 %y) {
 ; CHECK-LABEL: @lshr_nonzero_and_shift_out_zeros_fail(
@@ -391,17 +392,13 @@ define i1 @lshr_nonzero_and_shift_out_zeros_fail(i32 %cnt, i32 %y) {
 ;
   %cnt_ult = icmp ult i32 %cnt, 19
   call void @llvm.assume(i1 %cnt_ult)
-
   %val = and i32 %y, -131072
-
-  %val_nz =  icmp ne i32 %val, 0
+  %val_nz = icmp ne i32 %val, 0
   call void @llvm.assume(i1 %val_nz)
-
   %shl = lshr i32 %val, %cnt
   %r = icmp eq i32 %shl, 0
   ret i1 %r
 }
-
 
 define i1 @ashr_nonzero_and_shift_out_zeros_fail(i32 %ccnt, i32 %y) {
 ; CHECK-LABEL: @ashr_nonzero_and_shift_out_zeros_fail(
@@ -415,13 +412,12 @@ define i1 @ashr_nonzero_and_shift_out_zeros_fail(i32 %ccnt, i32 %y) {
 ;
   %cnt = and i32 %ccnt, 18
   %val = and i32 %y, -131072
-  %val_nz =  icmp ne i32 %val, 0
+  %val_nz = icmp ne i32 %val, 0
   call void @llvm.assume(i1 %val_nz)
   %shl = ashr i32 %val, %cnt
   %r = icmp eq i32 %shl, 0
   ret i1 %r
 }
-
 
 define i1 @shl_nonzero_and_shift_out_zeros_fail(i32 %ccnt, i32 %y) {
 ; CHECK-LABEL: @shl_nonzero_and_shift_out_zeros_fail(
@@ -435,7 +431,7 @@ define i1 @shl_nonzero_and_shift_out_zeros_fail(i32 %ccnt, i32 %y) {
 ;
   %cnt = and i32 %ccnt, 6
   %val = and i32 %y, 268435455
-  %val_nz =  icmp ne i32 %val, 0
+  %val_nz = icmp ne i32 %val, 0
   call void @llvm.assume(i1 %val_nz)
   %shl = shl i32 %val, %cnt
   %r = icmp eq i32 %shl, 0
@@ -595,5 +591,508 @@ define i1 @fshl_non_zero_fail(i8 %x, i8 %y, i8 %z, i8 %w) {
   %v = tail call i8 @llvm.fshl.i8(i8 %x, i8 %w, i8 %y)
   %or = or i8 %v, %z
   %r = icmp eq i8 %or, 0
+  ret i1 %r
+}
+
+define i1 @bitcast_nonzero(<2 x i8> %xx, i16 %ind) {
+; CHECK-LABEL: @bitcast_nonzero(
+; CHECK-NEXT:    ret i1 false
+;
+  %xa = add nuw nsw <2 x i8> %xx, <i8 1, i8 1>
+  %x = bitcast <2 x i8> %xa to i16
+  %z = or i16 %x, %ind
+  %r = icmp eq i16 %z, 0
+  ret i1 %r
+}
+
+define i1 @bitcast_todo_partial_nonzero_vec_to_int(<2 x i8> %xx, i16 %ind) {
+; CHECK-LABEL: @bitcast_todo_partial_nonzero_vec_to_int(
+; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <2 x i8> [[XX:%.*]], <i8 1, i8 0>
+; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x i8> [[XA]] to i16
+; CHECK-NEXT:    [[Z:%.*]] = or i16 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xa = add nuw nsw <2 x i8> %xx, <i8 1, i8 0>
+  %x = bitcast <2 x i8> %xa to i16
+  %z = or i16 %x, %ind
+  %r = icmp eq i16 %z, 0
+  ret i1 %r
+}
+
+define <2 x i1> @bitcast_fail_nonzero_int_to_vec(i16 %xx, <2 x i8> %ind) {
+; CHECK-LABEL: @bitcast_fail_nonzero_int_to_vec(
+; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw i16 [[XX:%.*]], 1
+; CHECK-NEXT:    [[X:%.*]] = bitcast i16 [[XA]] to <2 x i8>
+; CHECK-NEXT:    [[Z:%.*]] = or <2 x i8> [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[Z]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %xa = add nuw nsw i16 %xx, 1
+  %x = bitcast i16 %xa to <2 x i8>
+  %z = or <2 x i8> %x, %ind
+  %r = icmp eq <2 x i8> %z, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @bitcast_veci8_to_veci16(<4 x i8> %xx, <2 x i16> %ind) {
+; CHECK-LABEL: @bitcast_veci8_to_veci16(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %xa = add nuw nsw <4 x i8> %xx, <i8 1, i8 1, i8 1, i8 1>
+  %x = bitcast <4 x i8> %xa to <2 x i16>
+  %z = or <2 x i16> %x, %ind
+  %r = icmp eq <2 x i16> %z, zeroinitializer
+  ret <2 x i1> %r
+}
+
+define <3 x i1> @bitcast_veci3_to_veci4_fail_not_multiple(<4 x i3> %xx, <3 x i4> %ind) {
+; CHECK-LABEL: @bitcast_veci3_to_veci4_fail_not_multiple(
+; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <4 x i3> [[XX:%.*]], <i3 1, i3 1, i3 1, i3 1>
+; CHECK-NEXT:    [[X:%.*]] = bitcast <4 x i3> [[XA]] to <3 x i4>
+; CHECK-NEXT:    [[Z:%.*]] = or <3 x i4> [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i4> [[Z]], zeroinitializer
+; CHECK-NEXT:    ret <3 x i1> [[R]]
+;
+  %xa = add nuw nsw <4 x i3> %xx, <i3 1, i3 1, i3 1, i3 1>
+  %x = bitcast <4 x i3> %xa to <3 x i4>
+  %z = or <3 x i4> %x, %ind
+  %r = icmp eq <3 x i4> %z, zeroinitializer
+  ret <3 x i1> %r
+}
+
+define <4 x i1> @bitcast_fail_veci16_to_veci8(<2 x i16> %xx, <4 x i8> %ind) {
+; CHECK-LABEL: @bitcast_fail_veci16_to_veci8(
+; CHECK-NEXT:    [[XA:%.*]] = add nuw nsw <2 x i16> [[XX:%.*]], <i16 1, i16 1>
+; CHECK-NEXT:    [[X:%.*]] = bitcast <2 x i16> [[XA]] to <4 x i8>
+; CHECK-NEXT:    [[Z:%.*]] = or <4 x i8> [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i8> [[Z]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[R]]
+;
+  %xa = add nuw nsw <2 x i16> %xx, <i16 1, i16 1>
+  %x = bitcast <2 x i16> %xa to <4 x i8>
+  %z = or <4 x i8> %x, %ind
+  %r = icmp eq <4 x i8> %z, zeroinitializer
+  ret <4 x i1> %r
+}
+
+define i1 @bitcast_nonzero_fail_dont_check_float(float %xx, i32 %ind) {
+; CHECK-LABEL: @bitcast_nonzero_fail_dont_check_float(
+; CHECK-NEXT:    [[XA:%.*]] = call float @llvm.maximum.f32(float [[XX:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[X:%.*]] = bitcast float [[XA]] to i32
+; CHECK-NEXT:    [[Z:%.*]] = or i32 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xa = call float @llvm.maximum.f32(float %xx, float 1.000000e+00)
+  %x = bitcast float %xa to i32
+  %z = or i32 %x, %ind
+  %r = icmp eq i32 %z, 0
+  ret i1 %r
+}
+
+define i1 @ctlz_true_nonzero(i8 %xx, i8 %ind) {
+; CHECK-LABEL: @ctlz_true_nonzero(
+; CHECK-NEXT:    ret i1 false
+;
+  %xs = lshr i8 %xx, 1
+  %x = call i8 @llvm.ctlz.i8(i8 %xs, i1 true)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @ctlz_false_nonzero(i8 %xx, i8 %ind) {
+; CHECK-LABEL: @ctlz_false_nonzero(
+; CHECK-NEXT:    ret i1 false
+;
+  %xa = and i8 %xx, 127
+  %x = call i8 @llvm.ctlz.i8(i8 %xa, i1 true)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @ctlz_nonzero_fail_maybe_neg(i8 %xx, i8 %ind) {
+; CHECK-LABEL: @ctlz_nonzero_fail_maybe_neg(
+; CHECK-NEXT:    [[XS:%.*]] = ashr i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.ctlz.i8(i8 [[XS]], i1 true)
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xs = ashr i8 %xx, 1
+  %x = call i8 @llvm.ctlz.i8(i8 %xs, i1 true)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @cttz_true_nonzero(i8 %xx, i8 %ind) {
+; CHECK-LABEL: @cttz_true_nonzero(
+; CHECK-NEXT:    ret i1 false
+;
+  %xs = shl i8 %xx, 1
+  %x = call i8 @llvm.cttz.i8(i8 %xs, i1 true)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @cttz_false_nonzero(i8 %xx, i8 %ind) {
+; CHECK-LABEL: @cttz_false_nonzero(
+; CHECK-NEXT:    ret i1 false
+;
+  %xa = and i8 %xx, -2
+  %x = call i8 @llvm.cttz.i8(i8 %xa, i1 true)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @cttz_nonzero_fail_maybe_odd(i8 %xx, i8 %cnt, i8 %ind) {
+; CHECK-LABEL: @cttz_nonzero_fail_maybe_odd(
+; CHECK-NEXT:    [[XS:%.*]] = shl i8 [[XX:%.*]], [[CNT:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.cttz.i8(i8 [[XS]], i1 true)
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xs = shl i8 %xx, %cnt
+  %x = call i8 @llvm.cttz.i8(i8 %xs, i1 true)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @mul_nonzero_odd(i8 %xx, i8 %y, i8 %ind) {
+; CHECK-LABEL: @mul_nonzero_odd(
+; CHECK-NEXT:    [[Y_NZ:%.*]] = icmp ne i8 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %xo = or i8 %xx, 1
+  %y_nz = icmp ne i8 %y, 0
+  call void @llvm.assume(i1 %y_nz)
+  %x = mul i8 %xo, %y
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @mul_nonzero_odd_fail_y_maybe_zero(i8 %xx, i8 %y, i8 %ind) {
+; CHECK-LABEL: @mul_nonzero_odd_fail_y_maybe_zero(
+; CHECK-NEXT:    [[XO:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XO]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xo = or i8 %xx, 1
+  %x = mul i8 %xo, %y
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @sshl_nonzero(i8 %xx, i8 %y, i8 %ind) {
+; CHECK-LABEL: @sshl_nonzero(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_nz = icmp ne i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %x = call i8 @llvm.sshl.sat.i8(i8 %xx, i8 %y)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @sshl_nonzero_fail_x_maybe_z(i8 %xx, i8 %y, i8 %ind) {
+; CHECK-LABEL: @sshl_nonzero_fail_x_maybe_z(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.sshl.sat.i8(i8 [[XX:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = call i8 @llvm.sshl.sat.i8(i8 %xx, i8 %y)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @ushl_nonzero(i8 %xx, i8 %y, i8 %ind) {
+; CHECK-LABEL: @ushl_nonzero(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_nz = icmp ne i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %x = call i8 @llvm.ushl.sat.i8(i8 %xx, i8 %y)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @ushl_nonzero_fail_x_maybe_z(i8 %xx, i8 %y, i8 %ind) {
+; CHECK-LABEL: @ushl_nonzero_fail_x_maybe_z(
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.ushl.sat.i8(i8 [[XX:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = call i8 @llvm.ushl.sat.i8(i8 %xx, i8 %y)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_nonzero(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @ssub_sat_nonzero(
+; CHECK-NEXT:    ret i1 false
+;
+  %xa = and i8 %xx, 191
+  %yo = or i8 %yy, 64
+  %x = call i8 @llvm.ssub.sat.i8(i8 %xa, i8 %yo)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_nonzero_ne_known_bits_fail_overlap(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @ssub_sat_nonzero_ne_known_bits_fail_overlap(
+; CHECK-NEXT:    [[XA:%.*]] = and i8 [[XX:%.*]], -64
+; CHECK-NEXT:    [[YO:%.*]] = or i8 [[YY:%.*]], 64
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[XA]], i8 [[YO]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xa = and i8 %xx, 192
+  %yo = or i8 %yy, 64
+  %x = call i8 @llvm.ssub.sat.i8(i8 %xa, i8 %yo)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @usub_sat_nonzero(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @usub_sat_nonzero(
+; CHECK-NEXT:    [[Y_ULT_31:%.*]] = icmp ult i8 [[YY:%.*]], 31
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_ULT_31]])
+; CHECK-NEXT:    [[XO:%.*]] = or i8 [[XX:%.*]], 34
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[XO]], i8 [[YY]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y_ult_31 = icmp ult i8 %yy, 31
+  call void @llvm.assume(i1 %y_ult_31)
+  %xo = or i8 %xx, 34
+  %x = call i8 @llvm.usub.sat.i8(i8 %xo, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @usub_sat_nonzero_fail(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @usub_sat_nonzero_fail(
+; CHECK-NEXT:    [[XA:%.*]] = and i8 [[XX:%.*]], 16
+; CHECK-NEXT:    [[YO:%.*]] = or i8 [[YY:%.*]], 7
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[XA]], i8 [[YO]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xa = and i8 %xx, 16
+  %yo = or i8 %yy, 7
+  %x = call i8 @llvm.usub.sat.i8(i8 %xa, i8 %yo)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @sadd_sat_nonzero(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @sadd_sat_nonzero(
+; CHECK-NEXT:    [[X_STRICT_POS:%.*]] = icmp sgt i8 [[XX:%.*]], 0
+; CHECK-NEXT:    [[Y_POS:%.*]] = icmp sge i8 [[YY:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_STRICT_POS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_POS]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_strict_pos = icmp sgt i8 %xx, 0
+  %y_pos = icmp sge i8 %yy, 0
+  call void @llvm.assume(i1 %x_strict_pos)
+  call void @llvm.assume(i1 %y_pos)
+  %x = call i8 @llvm.sadd.sat.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @sadd_sat_nonzero_fail_maybe_zz(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @sadd_sat_nonzero_fail_maybe_zz(
+; CHECK-NEXT:    [[X_POS:%.*]] = icmp sge i8 [[XX:%.*]], 0
+; CHECK-NEXT:    [[Y_POS:%.*]] = icmp sge i8 [[YY:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_POS]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_POS]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[XX]], i8 [[YY]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_pos = icmp sge i8 %xx, 0
+  %y_pos = icmp sge i8 %yy, 0
+  call void @llvm.assume(i1 %x_pos)
+  call void @llvm.assume(i1 %y_pos)
+  %x = call i8 @llvm.sadd.sat.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @umax_nonzero(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @umax_nonzero(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_nz = icmp ne i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %x = call i8 @llvm.umax.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @umax_nonzero_fail_x_maybe_z(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @umax_nonzero_fail_x_maybe_z(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp sge i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.umax.i8(i8 [[XX]], i8 [[YY:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_nz = icmp sge i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %x = call i8 @llvm.umax.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @umin_nonzero(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @umin_nonzero(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    [[Y_NZ:%.*]] = icmp ne i8 [[YY:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_nz = icmp ne i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %y_nz = icmp ne i8 %yy, 0
+  call void @llvm.assume(i1 %y_nz)
+  %x = call i8 @llvm.umin.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @umin_nonzero_fail_y_maybe_z(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @umin_nonzero_fail_y_maybe_z(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.umin.i8(i8 [[XX]], i8 [[YY:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_nz = icmp ne i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %x = call i8 @llvm.umin.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @smin_nonzero(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @smin_nonzero(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp ne i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    [[Y_NZ:%.*]] = icmp ne i8 [[YY:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NZ]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_nz = icmp ne i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %y_nz = icmp ne i8 %yy, 0
+  call void @llvm.assume(i1 %y_nz)
+  %x = call i8 @llvm.umin.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @smin_nonzero_neg_arg(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @smin_nonzero_neg_arg(
+; CHECK-NEXT:    [[X_NEG:%.*]] = icmp slt i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NEG]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_neg = icmp slt i8 %xx, 0
+  call void @llvm.assume(i1 %x_neg)
+  %x = call i8 @llvm.smin.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @smin_nonzero_fail_y_maybe_z(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @smin_nonzero_fail_y_maybe_z(
+; CHECK-NEXT:    [[X_NZ:%.*]] = icmp sle i8 [[XX:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NZ]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.smin.i8(i8 [[XX]], i8 [[YY:%.*]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x_nz = icmp sle i8 %xx, 0
+  call void @llvm.assume(i1 %x_nz)
+  %x = call i8 @llvm.smin.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @smax_nonzero_pos_arg(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @smax_nonzero_pos_arg(
+; CHECK-NEXT:    ret i1 false
+;
+  %ya = and i8 %yy, 127
+  %yo = or i8 %ya, 1
+  %x = call i8 @llvm.smax.i8(i8 %xx, i8 %yo)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
+  ret i1 %r
+}
+
+define i1 @smax_nonzero_pos_arg_fail_nonstrict_pos(i8 %xx, i8 %yy, i8 %ind) {
+; CHECK-LABEL: @smax_nonzero_pos_arg_fail_nonstrict_pos(
+; CHECK-NEXT:    [[Y_POS:%.*]] = icmp sge i8 [[YY:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_POS]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.smax.i8(i8 [[XX:%.*]], i8 [[YY]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[IND:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[Z]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y_pos = icmp sge i8 %yy, 0
+  call void @llvm.assume(i1 %y_pos)
+  %x = call i8 @llvm.smax.i8(i8 %xx, i8 %yy)
+  %z = or i8 %x, %ind
+  %r = icmp eq i8 %z, 0
   ret i1 %r
 }

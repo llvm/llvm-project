@@ -445,11 +445,12 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
                                                            Value *AlignOp) {
   // Make sure the operation will be supported by the backend.
   MaybeAlign MA = cast<ConstantInt>(AlignOp)->getMaybeAlignValue();
-  if (!MA || !TLI->isLegalStridedLoadStore(*DL, DataType, *MA))
+  EVT DataTypeVT = TLI->getValueType(*DL, DataType);
+  if (!MA || !TLI->isLegalStridedLoadStore(DataTypeVT, *MA))
     return false;
 
   // FIXME: Let the backend type legalize by splitting/widening?
-  if (!TLI->isTypeLegal(TLI->getValueType(*DL, DataType)))
+  if (!TLI->isTypeLegal(DataTypeVT))
     return false;
 
   // Pointer should be a GEP.

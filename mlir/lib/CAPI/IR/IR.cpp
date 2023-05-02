@@ -524,25 +524,18 @@ void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
   unwrap(op)->print(stream, *unwrap(flags));
 }
 
-MlirBytecodeWriterResult mlirOperationWriteBytecode(MlirOperation op,
-                                                    MlirStringCallback callback,
-                                                    void *userData) {
+void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
+                                void *userData) {
   detail::CallbackOstream stream(callback, userData);
-  MlirBytecodeWriterResult res;
-  BytecodeWriterResult r = writeBytecodeToFile(unwrap(op), stream);
-  res.minVersion = r.minVersion;
-  return res;
+  // As no desired version is set, no failure can occur.
+  (void)writeBytecodeToFile(unwrap(op), stream);
 }
 
-MlirBytecodeWriterResult mlirOperationWriteBytecodeWithConfig(
+MlirLogicalResult mlirOperationWriteBytecodeWithConfig(
     MlirOperation op, MlirBytecodeWriterConfig config,
     MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
-  BytecodeWriterResult r =
-      writeBytecodeToFile(unwrap(op), stream, *unwrap(config));
-  MlirBytecodeWriterResult res;
-  res.minVersion = r.minVersion;
-  return res;
+  return wrap(writeBytecodeToFile(unwrap(op), stream, *unwrap(config)));
 }
 
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }

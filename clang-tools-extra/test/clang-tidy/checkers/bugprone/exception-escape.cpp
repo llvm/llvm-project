@@ -655,7 +655,6 @@ int directly_recursive(int n) noexcept {
 }
 
 int indirectly_recursive(int n) noexcept;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'indirectly_recursive' which should not throw exceptions
 
 int recursion_helper(int n) {
   indirectly_recursive(n);

@@ -103,7 +103,7 @@ using u32streampos = fpos<char_traits<char32_t>::state_type>;
 #include <__fwd/sstream.h>
 #include <__fwd/streambuf.h>
 #include <__fwd/string.h>
-#include <__mbstate_t.h>
+#include <__std_mbstate_t.h>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

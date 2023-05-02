@@ -328,3 +328,205 @@ func.func @extui_over_insert_3xi16_cst_i16(%a: i8) -> vector<3xi32> {
   %e = vector.insert %d, %cst [1] : i32 into vector<3xi32>
   return %e : vector<3xi32>
 }
+
+// CHECK-LABEL: func.func @extsi_over_insertelement_3xi16
+// CHECK-SAME:    (%[[ARG0:.+]]: vector<3xi16>, %[[ARG1:.+]]: i16, %[[POS:.+]]: i32)
+// CHECK-NEXT:    %[[INS:.+]] = vector.insertelement %[[ARG1]], %[[ARG0]][%[[POS]] : i32] : vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extsi %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insertelement_3xi16(%a: vector<3xi16>, %b: i16, %pos: i32) -> vector<3xi32> {
+  %c = arith.extsi %a : vector<3xi16> to vector<3xi32>
+  %d = arith.extsi %b : i16 to i32
+  %e = vector.insertelement %d, %c[%pos : i32] : vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insertelement_3xi16
+// CHECK-SAME:    (%[[ARG0:.+]]: vector<3xi16>, %[[ARG1:.+]]: i16, %[[POS:.+]]: i32)
+// CHECK-NEXT:    %[[INS:.+]] = vector.insertelement %[[ARG1]], %[[ARG0]][%[[POS]] : i32] : vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extui %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extui_over_insertelement_3xi16(%a: vector<3xi16>, %b: i16, %pos: i32) -> vector<3xi32> {
+  %c = arith.extui %a : vector<3xi16> to vector<3xi32>
+  %d = arith.extui %b : i16 to i32
+  %e = vector.insertelement %d, %c[%pos : i32] : vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_insertelement_3xi16_cst_i16
+// CHECK-SAME:    (%[[ARG:.+]]: i8, %[[POS:.+]]: i32)
+// CHECK-NEXT:    %[[CST:.+]]  = arith.constant dense<[-1, 128, 0]> : vector<3xi16>
+// CHECK-NEXT:    %[[SRCE:.+]] = arith.extsi %[[ARG]] : i8 to i32
+// CHECK-NEXT:    %[[SRCT:.+]] = arith.trunci %[[SRCE]] : i32 to i16
+// CHECK-NEXT:    %[[INS:.+]] = vector.insertelement %[[SRCT]], %[[CST]][%[[POS]] : i32] : vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insertelement_3xi16_cst_i16(%a: i8, %pos: i32) -> vector<3xi32> {
+  %cst = arith.constant dense<[-1, 128, 0]> : vector<3xi32>
+  %d = arith.extsi %a : i8 to i32
+  %e = vector.insertelement %d, %cst[%pos : i32] : vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insertelement_3xi16_cst_i16
+// CHECK-SAME:    (%[[ARG:.+]]: i8, %[[POS:.+]]: i32)
+// CHECK-NEXT:    %[[CST:.+]]  = arith.constant dense<[1, 256, 0]> : vector<3xi16>
+// CHECK-NEXT:    %[[SRCE:.+]] = arith.extui %[[ARG]] : i8 to i32
+// CHECK-NEXT:    %[[SRCT:.+]] = arith.trunci %[[SRCE]] : i32 to i16
+// CHECK-NEXT:    %[[INS:.+]] = vector.insertelement %[[SRCT]], %[[CST]][%[[POS]] : i32] : vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extui_over_insertelement_3xi16_cst_i16(%a: i8, %pos: i32) -> vector<3xi32> {
+  %cst = arith.constant dense<[1, 256, 0]> : vector<3xi32>
+  %d = arith.extui %a : i8 to i32
+  %e = vector.insertelement %d, %cst[%pos : i32] : vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_insert_strided_slice_1d
+// CHECK-SAME:    (%[[ARG0:.+]]: vector<3xi16>, %[[ARG1:.+]]: vector<2xi16>)
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert_strided_slice %[[ARG1]], %[[ARG0]]
+// CHECK-SAME:                    {offsets = [1], strides = [1]} : vector<2xi16> into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extsi %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_insert_strided_slice_1d(%a: vector<3xi16>, %b: vector<2xi16>) -> vector<3xi32> {
+  %c = arith.extsi %a : vector<3xi16> to vector<3xi32>
+  %d = arith.extsi %b : vector<2xi16> to vector<2xi32>
+  %e = vector.insert_strided_slice %d, %c {offsets = [1], strides = [1]} : vector<2xi32> into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insert_strided_slice_1d
+// CHECK-SAME:    (%[[ARG0:.+]]: vector<3xi16>, %[[ARG1:.+]]: vector<2xi16>)
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert_strided_slice %[[ARG1]], %[[ARG0]]
+// CHECK-SAME:                    {offsets = [1], strides = [1]} : vector<2xi16> into vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]] = arith.extui %[[INS]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extui_over_insert_strided_slice_1d(%a: vector<3xi16>, %b: vector<2xi16>) -> vector<3xi32> {
+  %c = arith.extui %a : vector<3xi16> to vector<3xi32>
+  %d = arith.extui %b : vector<2xi16> to vector<2xi32>
+  %e = vector.insert_strided_slice %d, %c {offsets = [1], strides = [1]} : vector<2xi32> into vector<3xi32>
+  return %e : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_insert_strided_slice_cst_2d
+// CHECK-SAME:    (%[[ARG:.+]]: vector<1x2xi8>)
+// CHECK-NEXT:    %[[CST:.+]]  = arith.constant
+// CHECK-SAME{LITERAL}:            dense<[[-1, 128, 0], [-129, 42, 1337]]> : vector<2x3xi16>
+// CHECK-NEXT:    %[[SRCE:.+]] = arith.extsi %[[ARG]] : vector<1x2xi8> to vector<1x2xi32>
+// CHECK-NEXT:    %[[SRCT:.+]] = arith.trunci %[[SRCE]] : vector<1x2xi32> to vector<1x2xi16>
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert_strided_slice %[[SRCT]], %[[CST]]
+// CHECK-SAME:                    {offsets = [0, 1], strides = [1, 1]} : vector<1x2xi16> into vector<2x3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[INS]] : vector<2x3xi16> to vector<2x3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<2x3xi32>
+func.func @extsi_over_insert_strided_slice_cst_2d(%a: vector<1x2xi8>) -> vector<2x3xi32> {
+  %cst = arith.constant dense<[[-1, 128, 0], [-129, 42, 1337]]> : vector<2x3xi32>
+  %d = arith.extsi %a : vector<1x2xi8> to vector<1x2xi32>
+  %e = vector.insert_strided_slice %d, %cst {offsets = [0, 1], strides = [1, 1]} : vector<1x2xi32> into vector<2x3xi32>
+  return %e : vector<2x3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_insert_strided_slice_cst_2d
+// CHECK-SAME:    (%[[ARG:.+]]: vector<1x2xi8>)
+// CHECK-NEXT:    %[[CST:.+]]  = arith.constant
+// CHECK-SAME{LITERAL}:            dense<[[1, 128, 0], [256, 42, 1337]]> : vector<2x3xi16>
+// CHECK-NEXT:    %[[SRCE:.+]] = arith.extui %[[ARG]] : vector<1x2xi8> to vector<1x2xi32>
+// CHECK-NEXT:    %[[SRCT:.+]] = arith.trunci %[[SRCE]] : vector<1x2xi32> to vector<1x2xi16>
+// CHECK-NEXT:    %[[INS:.+]] = vector.insert_strided_slice %[[SRCT]], %[[CST]]
+// CHECK-SAME:                    {offsets = [0, 1], strides = [1, 1]} : vector<1x2xi16> into vector<2x3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[INS]] : vector<2x3xi16> to vector<2x3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<2x3xi32>
+func.func @extui_over_insert_strided_slice_cst_2d(%a: vector<1x2xi8>) -> vector<2x3xi32> {
+  %cst = arith.constant dense<[[1, 128, 0], [256, 42, 1337]]> : vector<2x3xi32>
+  %d = arith.extui %a : vector<1x2xi8> to vector<1x2xi32>
+  %e = vector.insert_strided_slice %d, %cst {offsets = [0, 1], strides = [1, 1]} : vector<1x2xi32> into vector<2x3xi32>
+  return %e : vector<2x3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_broadcast_3xi16
+// CHECK-SAME:    (%[[ARG:.+]]: i16)
+// CHECK-NEXT:    %[[BCST:.+]] = vector.broadcast %[[ARG]] : i16 to vector<3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[BCST]] : vector<3xi16> to vector<3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3xi32>
+func.func @extsi_over_broadcast_3xi16(%a: i16) -> vector<3xi32> {
+  %b = arith.extsi %a : i16 to i32
+  %r = vector.broadcast %b : i32 to vector<3xi32>
+  return %r : vector<3xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_broadcast_2x3xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<3xi16>)
+// CHECK-NEXT:    %[[BCST:.+]] = vector.broadcast %[[ARG]] : vector<3xi16> to vector<2x3xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[BCST]] : vector<2x3xi16> to vector<2x3xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<2x3xi32>
+func.func @extui_over_broadcast_2x3xi16(%a: vector<3xi16>) -> vector<2x3xi32> {
+  %b = arith.extui %a : vector<3xi16> to vector<3xi32>
+  %r = vector.broadcast %b : vector<3xi32> to vector<2x3xi32>
+  return %r : vector<2x3xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_shape_cast_2x3xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<2x3xi16>)
+// CHECK-NEXT:    %[[CAST:.+]] = vector.shape_cast %[[ARG]] : vector<2x3xi16> to vector<3x2xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[CAST]] : vector<3x2xi16> to vector<3x2xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3x2xi32>
+func.func @extsi_over_shape_cast_2x3xi16(%a: vector<2x3xi16>) -> vector<3x2xi32> {
+  %b = arith.extsi %a : vector<2x3xi16> to vector<2x3xi32>
+  %r = vector.shape_cast %b : vector<2x3xi32> to vector<3x2xi32>
+  return %r : vector<3x2xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_shape_cast_5x2x3xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<5x2x3xi16>)
+// CHECK-NEXT:    %[[CAST:.+]] = vector.shape_cast %[[ARG]] : vector<5x2x3xi16> to vector<2x3x5xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[CAST]] : vector<2x3x5xi16> to vector<2x3x5xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<2x3x5xi32>
+func.func @extui_over_shape_cast_5x2x3xi16(%a: vector<5x2x3xi16>) -> vector<2x3x5xi32> {
+  %b = arith.extui %a : vector<5x2x3xi16> to vector<5x2x3xi32>
+  %r = vector.shape_cast %b : vector<5x2x3xi32> to vector<2x3x5xi32>
+  return %r : vector<2x3x5xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_transpose_2x3xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<2x3xi16>)
+// CHECK-NEXT:    %[[TRAN:.+]] = vector.transpose %[[ARG]], [1, 0] : vector<2x3xi16> to vector<3x2xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[TRAN]] : vector<3x2xi16> to vector<3x2xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<3x2xi32>
+func.func @extsi_over_transpose_2x3xi16(%a: vector<2x3xi16>) -> vector<3x2xi32> {
+  %b = arith.extsi %a : vector<2x3xi16> to vector<2x3xi32>
+  %r = vector.transpose %b, [1, 0] : vector<2x3xi32> to vector<3x2xi32>
+  return %r : vector<3x2xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_transpose_5x2x3xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<5x2x3xi16>)
+// CHECK-NEXT:    %[[TRAN:.+]] = vector.transpose %[[ARG]], [1, 2, 0] : vector<5x2x3xi16> to vector<2x3x5xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[TRAN]] : vector<2x3x5xi16> to vector<2x3x5xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<2x3x5xi32>
+func.func @extui_over_transpose_5x2x3xi16(%a: vector<5x2x3xi16>) -> vector<2x3x5xi32> {
+  %b = arith.extui %a : vector<5x2x3xi16> to vector<5x2x3xi32>
+  %r = vector.transpose %b, [1, 2, 0] : vector<5x2x3xi32> to vector<2x3x5xi32>
+  return %r : vector<2x3x5xi32>
+}
+
+// CHECK-LABEL: func.func @extsi_over_flat_transpose_16xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<16xi16>)
+// CHECK-NEXT:    %[[TRAN:.+]] = vector.flat_transpose %[[ARG]] {columns = 4 : i32, rows = 4 : i32} : vector<16xi16> -> vector<16xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[TRAN]] : vector<16xi16> to vector<16xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<16xi32>
+func.func @extsi_over_flat_transpose_16xi16(%a: vector<16xi16>) -> vector<16xi32> {
+  %b = arith.extsi %a : vector<16xi16> to vector<16xi32>
+  %r = vector.flat_transpose %b {columns = 4 : i32, rows = 4 : i32} : vector<16xi32> -> vector<16xi32>
+  return %r : vector<16xi32>
+}
+
+// CHECK-LABEL: func.func @extui_over_flat_transpose_16xi16
+// CHECK-SAME:    (%[[ARG:.+]]: vector<16xi16>)
+// CHECK-NEXT:    %[[TRAN:.+]] = vector.flat_transpose %[[ARG]] {columns = 8 : i32, rows = 2 : i32} : vector<16xi16> -> vector<16xi16>
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[TRAN]] : vector<16xi16> to vector<16xi32>
+// CHECK-NEXT:    return %[[RET]] : vector<16xi32>
+func.func @extui_over_flat_transpose_16xi16(%a: vector<16xi16>) -> vector<16xi32> {
+  %b = arith.extui %a : vector<16xi16> to vector<16xi32>
+  %r = vector.flat_transpose %b {columns = 8 : i32, rows = 2 : i32} : vector<16xi32> -> vector<16xi32>
+  return %r : vector<16xi32>
+}
