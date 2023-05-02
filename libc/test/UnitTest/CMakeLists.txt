@@ -126,5 +126,5 @@ add_dependencies(
 foreach(lib LibcFPTestHelpers LibcMemoryHelpers LibcPrintfHelpers LibcScanfHelpers)
   target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
   target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
-target_link_libraries(${lib} LibcUnitTest)
+  target_link_libraries(${lib} LibcUnitTest)
 endforeach()
