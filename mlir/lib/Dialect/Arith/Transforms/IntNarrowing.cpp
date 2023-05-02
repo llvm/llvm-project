@@ -249,6 +249,26 @@ using UIToFPPattern = IToFPPattern<arith::UIToFPOp, ExtensionKind::Zero>;
 // Patterns to Commute Extension Ops
 //===----------------------------------------------------------------------===//
 
+struct ExtensionOverBroadcast final : NarrowingPattern<vector::BroadcastOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getSource().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getResultVectorType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newBroadcast =
+        rewriter.create<vector::BroadcastOp>(op.getLoc(), newTy, ext->getIn());
+    ext->recreateAndReplace(rewriter, op, newBroadcast);
+    return success();
+  }
+};
+
 struct ExtensionOverExtract final : NarrowingPattern<vector::ExtractOp> {
   using NarrowingPattern::NarrowingPattern;
 
@@ -421,6 +441,68 @@ struct ExtensionOverInsertStridedSlice final
   }
 };
 
+struct ExtensionOverShapeCast final : NarrowingPattern<vector::ShapeCastOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getSource().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getResultVectorType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newCast =
+        rewriter.create<vector::ShapeCastOp>(op.getLoc(), newTy, ext->getIn());
+    ext->recreateAndReplace(rewriter, op, newCast);
+    return success();
+  }
+};
+
+struct ExtensionOverTranspose final : NarrowingPattern<vector::TransposeOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getVector().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getResultVectorType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newTranspose = rewriter.create<vector::TransposeOp>(
+        op.getLoc(), newTy, ext->getIn(), op.getTransp());
+    ext->recreateAndReplace(rewriter, op, newTranspose);
+    return success();
+  }
+};
+
+struct ExtensionOverFlatTranspose final
+    : NarrowingPattern<vector::FlatTransposeOp> {
+  using NarrowingPattern::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(vector::FlatTransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<ExtensionOp> ext =
+        ExtensionOp::from(op.getMatrix().getDefiningOp());
+    if (failed(ext))
+      return failure();
+
+    VectorType origTy = op.getType();
+    VectorType newTy =
+        origTy.cloneWith(origTy.getShape(), ext->getInElementType());
+    Value newTranspose = rewriter.create<vector::FlatTransposeOp>(
+        op.getLoc(), newTy, ext->getIn(), op.getRowsAttr(),
+        op.getColumnsAttr());
+    ext->recreateAndReplace(rewriter, op, newTranspose);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Pass Definitions
 //===----------------------------------------------------------------------===//
@@ -449,9 +531,11 @@ void populateArithIntNarrowingPatterns(
     RewritePatternSet &patterns, const ArithIntNarrowingOptions &options) {
   // Add commute patterns with a higher benefit. This is to expose more
   // optimization opportunities to narrowing patterns.
-  patterns.add<ExtensionOverExtract, ExtensionOverExtractElement,
-               ExtensionOverExtractStridedSlice, ExtensionOverInsert,
-               ExtensionOverInsertElement, ExtensionOverInsertStridedSlice>(
+  patterns.add<ExtensionOverBroadcast, ExtensionOverExtract,
+               ExtensionOverExtractElement, ExtensionOverExtractStridedSlice,
+               ExtensionOverInsert, ExtensionOverInsertElement,
+               ExtensionOverInsertStridedSlice, ExtensionOverShapeCast,
+               ExtensionOverTranspose, ExtensionOverFlatTranspose>(
       patterns.getContext(), options, PatternBenefit(2));
 
   patterns.add<SIToFPPattern, UIToFPPattern>(patterns.getContext(), options);
