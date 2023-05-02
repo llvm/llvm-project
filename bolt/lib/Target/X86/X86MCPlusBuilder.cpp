@@ -50,17 +50,6 @@ static cl::opt<bool> X86StripRedundantAddressSize(
 
 namespace {
 
-unsigned getShortBranchOpcode(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return Opcode;
-  case X86::JMP_2: return X86::JMP_1;
-  case X86::JMP_4: return X86::JMP_1;
-  case X86::JCC_2: return X86::JCC_1;
-  case X86::JCC_4: return X86::JCC_1;
-  }
-}
-
 unsigned getShortArithOpcode(unsigned Opcode) {
   return X86::getShortOpcodeArith(Opcode);
 }
@@ -2866,6 +2855,21 @@ public:
   }
 
   MCPhysReg getX86R11() const override { return X86::R11; }
+
+  unsigned getShortBranchOpcode(unsigned Opcode) const override {
+    switch (Opcode) {
+    default:
+      return Opcode;
+    case X86::JMP_2:
+      return X86::JMP_1;
+    case X86::JMP_4:
+      return X86::JMP_1;
+    case X86::JCC_2:
+      return X86::JCC_1;
+    case X86::JCC_4:
+      return X86::JCC_1;
+    }
+  }
 
   MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
     // FIXME: this should depend on the calling convention.
