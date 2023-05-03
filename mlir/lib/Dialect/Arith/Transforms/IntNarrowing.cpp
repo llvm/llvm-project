@@ -368,6 +368,29 @@ struct DivUIPattern final : BinaryOpNarrowingPattern<arith::DivUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// Min/Max Patterns
+//===----------------------------------------------------------------------===//
+
+template <typename MinMaxOp, ExtensionKind Kind>
+struct MinMaxPattern final : BinaryOpNarrowingPattern<MinMaxOp> {
+  using BinaryOpNarrowingPattern<MinMaxOp>::BinaryOpNarrowingPattern;
+
+  bool isSupported(ExtensionOp ext) const override {
+    return ext.getKind() == Kind;
+  }
+
+  // Min/max returns one of the arguments and does not require any extra result
+  // bits.
+  unsigned getResultBitsProduced(unsigned operandBits) const override {
+    return operandBits;
+  }
+};
+using MaxSIPattern = MinMaxPattern<arith::MaxSIOp, ExtensionKind::Sign>;
+using MaxUIPattern = MinMaxPattern<arith::MaxUIOp, ExtensionKind::Zero>;
+using MinSIPattern = MinMaxPattern<arith::MinSIOp, ExtensionKind::Sign>;
+using MinUIPattern = MinMaxPattern<arith::MinUIOp, ExtensionKind::Zero>;
+
+//===----------------------------------------------------------------------===//
 // *IToFPOp Patterns
 //===----------------------------------------------------------------------===//
 
@@ -690,7 +713,8 @@ void populateArithIntNarrowingPatterns(
       patterns.getContext(), options, PatternBenefit(2));
 
   patterns.add<AddIPattern, SubIPattern, MulIPattern, DivSIPattern,
-               DivUIPattern, SIToFPPattern, UIToFPPattern>(
+               DivUIPattern, MaxSIPattern, MaxUIPattern, MinSIPattern,
+               MinUIPattern, SIToFPPattern, UIToFPPattern>(
       patterns.getContext(), options);
 }
 
