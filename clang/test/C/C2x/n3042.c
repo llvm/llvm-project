@@ -1,10 +1,7 @@
 // RUN: %clang_cc1 -verify -ffreestanding -Wno-unused -std=c2x %s
 
-/* WG14 N3042: partial
+/* WG14 N3042: full
  * Introduce the nullptr constant
- *
- * Claiming partial support for this feature until the WG14 NB comments can be
- * resolved to know what the correct behavior really should be.
  */
 
 #include <stddef.h>
@@ -21,25 +18,17 @@
 void questionable_behaviors() {
   nullptr_t val;
 
-  // FIXME: This code is intended to be rejected by C and is accepted by C++.
-  // We've filed an NB comment with WG14 about the incompatibility.
+  // This code is intended to be rejected by C and is accepted by C++. We filed
+  // an NB comment asking for this to be changed, but WG14 declined.
   (void)(1 ? val : 0);     // expected-error {{non-pointer operand type 'int' incompatible with nullptr}}
   (void)(1 ? nullptr : 0); // expected-error {{non-pointer operand type 'int' incompatible with nullptr}}
 
-  // FIXME: This code is intended to be accepted by C and is rejected by C++.
-  // We're following the C++ semantics until WG14 has resolved the NB comments
-  // we've filed about the incompatibility.
-  _Bool another = val;    // expected-error {{initializing 'bool' with an expression of incompatible type 'nullptr_t'}}
-  another = val;          // expected-error {{assigning to 'bool' from incompatible type 'nullptr_t'}}
-  _Bool again = nullptr;  // expected-error {{initializing 'bool' with an expression of incompatible type 'nullptr_t'}}
-  again = nullptr;        // expected-error {{assigning to 'bool' from incompatible type 'nullptr_t'}}
-
-  // FIXME: This code is intended to be rejected by C and is accepted by C++.
-  // We've filed an NB comment with WG14 about the incompatibility.
-  val = 0; // expected-error {{assigning to 'nullptr_t' from incompatible type 'int'}}
-
-  // Not accepted in C++ but might want to accept in C as a null pointer constant?
-  val = (void *)0; // expected-error {{assigning to 'nullptr_t' from incompatible type 'void *'}}
+  // This code is intended to be accepted by C and is rejected by C++. We filed
+  // an NB comment asking for this to be changed, but WG14 declined.
+  _Bool another = val;    // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  another = val;          // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  _Bool again = nullptr;  // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
+  again = nullptr;        // expected-warning {{implicit conversion of nullptr constant to 'bool'}}
 }
 
 void test() {
@@ -66,6 +55,14 @@ void test() {
 
   // How about the null pointer named constant?
   &nullptr; // expected-error {{cannot take the address of an rvalue of type 'nullptr_t'}}
+
+  // Assignment from a null pointer constant to a nullptr_t is valid.
+  null_val = 0;
+  null_val = (void *)0;
+
+  // Assignment from a nullptr_t to a pointer is also valid.
+  typed_ptr = null_val;
+  void *other_ptr = null_val;
 
   // Can it be used in all the places a scalar can be used?
   if (null_val) {}
@@ -162,18 +159,15 @@ void test() {
 }
 
 // Can we use it as a function parameter?
-void null_param(nullptr_t); // expected-note 2 {{passing argument to parameter here}}
+void null_param(nullptr_t);
 
 void other_test() {
   // Can we call the function properly?
   null_param(nullptr);
 
-  // Do we get reasonable diagnostics when we can't call the function?
-  null_param((void *)0); // expected-error {{passing 'void *' to parameter of incompatible type 'nullptr_t'}}
-
-  // FIXME: The paper requires this to be rejected, but it is accepted in C++.
-  // This should be addressed after WG14 has processed national body comments.
-  null_param(0);         // expected-error {{passing 'int' to parameter of incompatible type 'nullptr_t'}}
+  // We can pass any kind of null pointer constant.
+  null_param((void *)0);
+  null_param(0);
 }
 
 
@@ -182,3 +176,7 @@ void format_specifiers() {
   // Don't warn when using nullptr with %p.
   printf("%p", nullptr);
 }
+
+// Ensure that conversion from a null pointer constant to nullptr_t is
+// valid in a constant expression.
+static_assert((nullptr_t){} == 0);
