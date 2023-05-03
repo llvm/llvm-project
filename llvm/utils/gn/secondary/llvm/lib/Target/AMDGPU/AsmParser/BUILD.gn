@@ -8,8 +8,9 @@ tablegen("AMDGPUGenAsmMatcher") {
 
 static_library("AsmParser") {
   output_name = "LLVMAMDGPUAsmParser"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":AMDGPUGenAsmMatcher",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",

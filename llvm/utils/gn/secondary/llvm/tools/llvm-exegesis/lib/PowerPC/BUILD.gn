@@ -7,8 +7,9 @@ tablegen("PPCGenExegesis") {
 
 static_library("PowerPC") {
   output_name = "LLVMExegesisPowerPC"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":PPCGenExegesis",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/TargetParser",
 
     # Exegesis reaches inside the Target/PowerPC tablegen internals and must
