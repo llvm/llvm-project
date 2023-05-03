@@ -226,6 +226,11 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   if (ShouldGenerateLocation(D) && GenLoc(D, /*IncludeOffset=*/isLocal(D)))
     return;
 
+  if (D->getType().isNull()) {
+    IgnoreResults = true;
+    return;
+  }
+
   const unsigned StartSize = Buf.size();
   VisitDeclContext(D->getDeclContext());
   if (Buf.size() == StartSize)
