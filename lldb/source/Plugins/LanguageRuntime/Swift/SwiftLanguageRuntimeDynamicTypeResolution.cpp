@@ -1054,9 +1054,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     NodePointer root = SwiftLanguageRuntime::DemangleSymbolAsNode(
         type.GetMangledTypeName().GetStringRef(), dem);
     using Kind = Node::Kind;
-    auto *builtin_type =
-        swift_demangle::nodeAtPath(root, {Kind::Global, Kind::TypeMangling,
-                                          Kind::Type, Kind::BuiltinTypeName});
+    auto *builtin_type = swift_demangle::nodeAtPath(
+        root, {Kind::TypeMangling, Kind::Type, Kind::BuiltinTypeName});
     if (builtin_type)
       return 0;
   }
