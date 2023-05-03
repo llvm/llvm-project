@@ -3795,10 +3795,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
           }
         }
 
-      // No result available from the runtime, fallback to the AST.
-      // This can happen in two cases:
-      // 1. MultiPayloadEnums not currently supported by Swift reflection
-      // 2. Some clang imported enums
+      // No result available from the runtime, fallback to the AST. This occurs
+      // for some Clang imported enums
       if (auto *swift_ast_context = GetSwiftASTContext())
         return swift_ast_context->DumpTypeValue(
             ReconstructType(type), s, format, data, data_offset, data_byte_size,
