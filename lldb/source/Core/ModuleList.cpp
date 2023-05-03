@@ -205,7 +205,7 @@ bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode
 
 FileSpec ModuleListProperties::GetSwiftMetadataCachePath() const {
   return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr,
                                                 ePropertySwiftMetadataCachePath)
       ->GetCurrentValue();
 }

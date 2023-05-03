@@ -4596,8 +4596,8 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
 }
 
 bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4610,8 +4610,8 @@ bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
 }
 
 bool TargetProperties::GetSwiftUseReflectionSymbols() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4624,8 +4624,8 @@ bool TargetProperties::GetSwiftUseReflectionSymbols() const {
 }
 
 bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4638,8 +4638,8 @@ bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
 }
 
 bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4652,8 +4652,8 @@ bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
 }
 
 bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
-  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
-      nullptr, false, ePropertyExperimental);
+  const Property *exp_property =
+      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
@@ -4943,8 +4943,7 @@ FileSpecList TargetProperties::GetDebugFileSearchPaths() {
 FileSpec &TargetProperties::GetSDKPath() {
   const uint32_t idx = ePropertySDKPath;
   OptionValueFileSpec *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(NULL, false,
-                                                               idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(NULL, idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4952,8 +4951,7 @@ FileSpec &TargetProperties::GetSDKPath() {
 FileSpecList TargetProperties::GetSwiftFrameworkSearchPaths() {
   const uint32_t idx = ePropertySwiftFrameworkSearchPaths;
   OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, false,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4961,8 +4959,7 @@ FileSpecList TargetProperties::GetSwiftFrameworkSearchPaths() {
 FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
   const uint32_t idx = ePropertySwiftModuleSearchPaths;
   OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, false,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
