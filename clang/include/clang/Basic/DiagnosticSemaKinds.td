@@ -6232,6 +6232,9 @@ def ext_variable_sized_type_in_struct : ExtWarn<
 
 def ext_c99_flexible_array_member : Extension<
   "flexible array members are a C99 feature">, InGroup<C99>;
+// Flexible array members in unions are not supported, but union case is still
+// present in the diagnostic so it matches TagTypeKind enum and can be emitted
+// with Diag(...) << ... << SomeTagDecl->getTagKind().
 def err_flexible_array_virtual_base : Error<
   "flexible array member %0 not allowed in "
   "%select{struct|interface|union|class|enum}1 which has a virtual base class">;
@@ -6254,15 +6257,10 @@ def ext_flexible_array_empty_aggregate_ms : Extension<
   InGroup<MicrosoftFlexibleArray>;
 def err_flexible_array_union : Error<
   "flexible array member %0 in a union is not allowed">;
-def ext_flexible_array_union_ms : Extension<
-  "flexible array member %0 in a union is a Microsoft extension">,
-  InGroup<MicrosoftFlexibleArray>;
 def ext_flexible_array_empty_aggregate_gnu : Extension<
   "flexible array member %0 in otherwise empty "
   "%select{struct|interface|union|class|enum}1 is a GNU extension">,
   InGroup<GNUEmptyStruct>;
-def ext_flexible_array_union_gnu : Extension<
-  "flexible array member %0 in a union is a GNU extension">, InGroup<GNUFlexibleArrayUnionMember>;
 
 def err_flexible_array_not_at_end : Error<
   "flexible array member %0 with type %1 is not at the end of"

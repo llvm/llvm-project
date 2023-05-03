@@ -14,8 +14,8 @@ struct PR28407
 struct C {
    int l;
    union {
-       int c1[];   /* expected-warning {{flexible array member 'c1' in a union is a Microsoft extension}}  */
-       char c2[];  /* expected-warning {{flexible array member 'c2' in a union is a Microsoft extension}} */
+       int c1[];   /* expected-error {{flexible array member 'c1' in a union is not allowed}} */
+       char c2[];  /* expected-error {{flexible array member 'c2' in a union is not allowed}} */
    };
 };
 
