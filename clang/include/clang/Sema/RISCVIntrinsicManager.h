@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_SEMA_RISCVINTRINSICMANAGER_H
 #define LLVM_CLANG_SEMA_RISCVINTRINSICMANAGER_H
 
+#include <cstdint>
+
 namespace clang {
 class LookupResult;
 class IdentifierInfo;
