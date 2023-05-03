@@ -193,10 +193,10 @@ define i1 @combine_setcc_ne_vecreduce_and_v8i1(<8 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    uminv b0, v0.8b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <8 x i8> %a, zeroinitializer
   %cast = bitcast <8 x i1> %cmp1 to i8
@@ -208,10 +208,10 @@ define i1 @combine_setcc_ne_vecreduce_and_v16i1(<16 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    uminv b0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <16 x i8> %a, zeroinitializer
   %cast = bitcast <16 x i1> %cmp1 to i16
@@ -223,12 +223,14 @@ define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v32i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <32 x i8> %a, zeroinitializer
   %cast = bitcast <32 x i1> %cmp1 to i32
@@ -240,16 +242,18 @@ define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
 ; CHECK-LABEL: combine_setcc_ne_vecreduce_and_v64i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmtst v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmtst v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    cmeq v3.16b, v3.16b, #0
 ; CHECK-NEXT:    cmeq v2.16b, v2.16b, #0
 ; CHECK-NEXT:    bic v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tst w8, #0x1
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret
   %cmp1 = icmp ne <64 x i8> %a, zeroinitializer
   %cast = bitcast <64 x i1> %cmp1 to i64
