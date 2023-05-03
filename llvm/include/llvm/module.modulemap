@@ -23,6 +23,7 @@ module LLVM_CodeGenTypes {
   }
   module MVT {
     header "CodeGen/MachineValueType.h" export *
+    extern module LLVM_Extern_CodeGenTypes_Gen "module.extern.modulemap"
   }
 }
 
