@@ -658,7 +658,11 @@ function(add_libc_hermetic_test test_name)
   target_compile_options(${fq_build_target_name}
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
 
-  target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  else()
+    target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
+  endif()
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
