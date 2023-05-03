@@ -2994,6 +2994,8 @@ private:
           Fortran::common::visitors{
               // [1] Plain old assignment.
               [&](const Fortran::evaluate::Assignment::Intrinsic &) {
+                if (Fortran::evaluate::HasVectorSubscript(assign.lhs))
+                  TODO(loc, "assignment to vector subscripted entity");
                 Fortran::lower::StatementContext stmtCtx;
                 hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
                     loc, *this, assign.rhs, localSymbols, stmtCtx);
