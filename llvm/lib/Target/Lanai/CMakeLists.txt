@@ -34,6 +34,7 @@ add_llvm_target(LanaiCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   LanaiAsmParser
   LanaiDesc

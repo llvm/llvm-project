@@ -8,7 +8,7 @@ add_llvm_component_library(LLVMAMDGPUUtils
   LINK_COMPONENTS
   Analysis
   BinaryFormat
-  CodeGen
+  CodeGenTypes
   Core
   MC
   Support

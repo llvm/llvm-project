@@ -13,7 +13,7 @@ add_llvm_component_library(LLVMPowerPCDesc
 
   LINK_COMPONENTS
   BinaryFormat
-  CodeGen
+  CodeGenTypes
   MC
   PowerPCInfo
   Support

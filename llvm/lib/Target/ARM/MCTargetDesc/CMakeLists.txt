@@ -18,7 +18,7 @@ add_llvm_component_library(LLVMARMDesc
   ARMInfo
   ARMUtils
   BinaryFormat
-  CodeGen
+  CodeGenTypes
   MC
   MCDisassembler
   Support

@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
   CodeGen
+  CodeGenTypes
   Core
   InstCombine
   MC

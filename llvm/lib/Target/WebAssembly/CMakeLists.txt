@@ -66,6 +66,7 @@ add_llvm_target(WebAssemblyCodeGen
   AsmPrinter
   BinaryFormat
   CodeGen
+  CodeGenTypes
   Core
   MC
   Scalar

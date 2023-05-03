@@ -9,7 +9,7 @@ add_llvm_component_library(LLVMWebAssemblyDesc
   WebAssemblyWasmObjectWriter.cpp
 
   LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   MC
   Support
   TargetParser

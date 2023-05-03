@@ -77,6 +77,7 @@ add_llvm_target(ARMCodeGen
   AsmPrinter
   CFGuard
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   IPO

@@ -26,7 +26,7 @@ add_tablegen(llvm-min-tblgen LLVM_HEADERS
 set_target_properties(llvm-min-tblgen PROPERTIES FOLDER "Tablegenning")
 
 set(LLVM_LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   Support
   )
 

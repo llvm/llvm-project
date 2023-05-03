@@ -100,6 +100,7 @@ add_llvm_target(AArch64CodeGen
   AsmPrinter
   CFGuard
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   MC

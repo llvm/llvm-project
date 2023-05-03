@@ -18,7 +18,7 @@ add_llvm_component_library(LLVMX86Desc
 
   LINK_COMPONENTS
   BinaryFormat
-  CodeGen
+  CodeGenTypes
   MC
   MCDisassembler
   Support
