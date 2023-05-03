@@ -23,7 +23,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace mlir;
@@ -222,20 +221,20 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           //  omp.section {
           //      fir.allocate for `private`/`firstprivate`
           //      <More operations here>
-          //      scf.if %true {
+          //      fir.if %true {
           //          ^%lpv_update_blk
           //      }
           //  }
           // }
           //
           // To keep code consistency while handling privatization
-          // through this control flow, add a `scf.if` operation
+          // through this control flow, add a `fir.if` operation
           // that always evaluates to true, in order to create
           // a dedicated sub-region in `omp.section` where
           // lastprivate FIR can reside. Later canonicalizations
           // will optimize away this operation.
 
-          mlir::scf::IfOp ifOp = firOpBuilder.create<mlir::scf::IfOp>(
+          auto ifOp = firOpBuilder.create<fir::IfOp>(
               op->getLoc(),
               firOpBuilder.createIntegerConstant(
                   op->getLoc(), firOpBuilder.getIntegerType(1), 0x1),
@@ -280,7 +279,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
         // omp.wsloop {            ...
         //    ...                  store
         //    store       ===>     %cmp = llvm.icmp "eq" %iv %ub
-        //    omp.yield            scf.if %cmp {
+        //    omp.yield            fir.if %cmp {
         // }                         ^%lpv_update_blk:
         //                         }
         //                         omp.yield
@@ -295,8 +294,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
               op->getRegion(0).front().getArguments()[0],
               mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0]);
         }
-        mlir::scf::IfOp ifOp = firOpBuilder.create<mlir::scf::IfOp>(
-            op->getLoc(), cmpOp, /*else*/ false);
+        auto ifOp =
+            firOpBuilder.create<fir::IfOp>(op->getLoc(), cmpOp, /*else*/ false);
         firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
         lastPrivIP = firOpBuilder.saveInsertionPoint();
       } else {
