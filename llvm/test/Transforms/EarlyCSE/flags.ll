@@ -93,7 +93,7 @@ define void @load_first_nonnull_noundef(ptr %p) {
 
 define ptr @store_to_load_forward(ptr %p, ptr %p2) {
 ; CHECK-LABEL: @store_to_load_forward(
-; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[P3:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !0
 ; CHECK-NEXT:    store ptr [[P3]], ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
