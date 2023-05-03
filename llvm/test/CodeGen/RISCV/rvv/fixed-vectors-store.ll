@@ -119,7 +119,7 @@ define void @store_v6f16(ptr %p, <6 x half> %v) {
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a0)
 ; RV32-NEXT:    vslidedown.vi v9, v8, 2

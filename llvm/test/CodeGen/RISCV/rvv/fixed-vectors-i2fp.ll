@@ -223,7 +223,7 @@ define <3 x float> @si2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX8RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX8RV32-NEXT:    vadd.vv v8, v8, v8
 ; LMULMAX8RV32-NEXT:    vsra.vi v8, v8, 1
 ; LMULMAX8RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -240,7 +240,7 @@ define <3 x float> @si2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX8RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX8RV64-NEXT:    vadd.vv v8, v8, v8
 ; LMULMAX8RV64-NEXT:    vsra.vi v8, v8, 1
 ; LMULMAX8RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -257,7 +257,7 @@ define <3 x float> @si2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX1RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX1RV32-NEXT:    vadd.vv v8, v8, v8
 ; LMULMAX1RV32-NEXT:    vsra.vi v8, v8, 1
 ; LMULMAX1RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -274,7 +274,7 @@ define <3 x float> @si2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX1RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX1RV64-NEXT:    vadd.vv v8, v8, v8
 ; LMULMAX1RV64-NEXT:    vsra.vi v8, v8, 1
 ; LMULMAX1RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -296,7 +296,7 @@ define <3 x float> @ui2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX8RV32-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX8RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX8RV32-NEXT:    li a0, 127
 ; LMULMAX8RV32-NEXT:    vand.vx v8, v8, a0
 ; LMULMAX8RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -313,7 +313,7 @@ define <3 x float> @ui2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX8RV64-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX8RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX8RV64-NEXT:    li a0, 127
 ; LMULMAX8RV64-NEXT:    vand.vx v8, v8, a0
 ; LMULMAX8RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -330,7 +330,7 @@ define <3 x float> @ui2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX1RV32-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX1RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX1RV32-NEXT:    li a0, 127
 ; LMULMAX1RV32-NEXT:    vand.vx v8, v8, a0
 ; LMULMAX1RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
@@ -347,7 +347,7 @@ define <3 x float> @ui2fp_v3i7_v3f32(<3 x i7> %x) {
 ; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a0
-; LMULMAX1RV64-NEXT:    vslide1down.vx v8, v8, a0
+; LMULMAX1RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; LMULMAX1RV64-NEXT:    li a0, 127
 ; LMULMAX1RV64-NEXT:    vand.vx v8, v8, a0
 ; LMULMAX1RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
