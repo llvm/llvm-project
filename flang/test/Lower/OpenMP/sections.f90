@@ -131,7 +131,7 @@ subroutine lastprivate()
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: scf.if %[[true]] {
+!CHECK: fir.if %[[true]] {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
 !CHECK: }
@@ -168,7 +168,7 @@ subroutine lastprivate()
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: scf.if %true {
+!CHECK: fir.if %true {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
 !CHECK: }
@@ -205,7 +205,7 @@ subroutine lastprivate()
 !CHECK: %[[const:.*]] = arith.constant 1 : i32
 !CHECK: %[[result:.*]] = arith.addi %[[temp]], %[[const]] : i32
 !CHECK: fir.store %[[result]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: scf.if %true {
+!CHECK: fir.if %true {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[X]] : !fir.ref<i32>
 !CHECK: omp.barrier
