@@ -21,6 +21,7 @@
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/ODSSupport.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -42,6 +43,36 @@
 
 using namespace mlir;
 using namespace test;
+
+Attribute MyPropStruct::asAttribute(MLIRContext *ctx) const {
+  return StringAttr::get(ctx, content);
+}
+LogicalResult MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
+                                        InFlightDiagnostic *diag) {
+  StringAttr strAttr = attr.dyn_cast<StringAttr>();
+  if (!strAttr) {
+    if (diag)
+      *diag << "Expect StringAttr but got " << attr;
+    return failure();
+  }
+  prop.content = strAttr.getValue();
+  return success();
+}
+llvm::hash_code MyPropStruct::hash() const {
+  return hash_value(StringRef(content));
+}
+
+static LogicalResult setPropertiesFromAttribute(PropertiesWithCustomPrint &prop,
+                                                Attribute attr,
+                                                InFlightDiagnostic *diagnostic);
+static DictionaryAttr
+getPropertiesAsAttribute(MLIRContext *ctx,
+                         const PropertiesWithCustomPrint &prop);
+static llvm::hash_code computeHash(const PropertiesWithCustomPrint &prop);
+static void customPrintProperties(OpAsmPrinter &p,
+                                  const PropertiesWithCustomPrint &prop);
+static ParseResult customParseProperties(OpAsmParser &parser,
+                                         PropertiesWithCustomPrint &prop);
 
 void test::registerTestDialect(DialectRegistry &registry) {
   registry.insert<TestDialect>();
@@ -514,7 +545,7 @@ Operation *TestDialect::materializeConstant(OpBuilder &builder, Attribute value,
 ::mlir::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    ::mlir::RegionRange regions,
+    OpaqueProperties properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
   return ::mlir::success();
@@ -1264,7 +1295,7 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  if (adaptor.getOp() && !(*this)->hasAttr("attr")) {
+  if (adaptor.getOp() && !(*this)->getAttr("attr")) {
     // The folder adds "attr" if not present.
     (*this)->setAttr("attr", adaptor.getOp());
     return getResult();
@@ -1297,7 +1328,7 @@ OpFoldResult TestOpFoldWithFoldAdaptor::fold(FoldAdaptor adaptor) {
 
 LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1312,16 +1343,17 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   returnTypes.clear();
   return OpWithRefineTypeInterfaceOp::refineReturnTypes(
-      context, location, operands, attributes, regions, returnTypes);
+      context, location, operands, attributes, properties, regions,
+      returnTypes);
 }
 
 LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
     MLIRContext *, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &returnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
     return emitOptionalError(location, "operand type mismatch ",
@@ -1340,7 +1372,8 @@ LogicalResult OpWithRefineTypeInterfaceOp::refineReturnTypes(
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
     MLIRContext *context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
@@ -1795,6 +1828,59 @@ OpFoldResult ManualCppOpWithFold::fold(ArrayRef<Attribute> attributes) {
   if (!attributes.empty())
     return attributes.front();
   return nullptr;
+}
+
+static LogicalResult
+setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
+                           InFlightDiagnostic *diagnostic) {
+  DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
+  if (!dict) {
+    if (diagnostic)
+      *diagnostic << "expected DictionaryAttr to set TestProperties";
+    return failure();
+  }
+  auto label = dict.getAs<mlir::StringAttr>("label");
+  if (!label) {
+    if (diagnostic)
+      *diagnostic << "expected StringAttr for key `label`";
+    return failure();
+  }
+  auto valueAttr = dict.getAs<IntegerAttr>("value");
+  if (!valueAttr) {
+    if (diagnostic)
+      *diagnostic << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+
+  prop.label = std::make_shared<std::string>(label.getValue());
+  prop.value = valueAttr.getValue().getSExtValue();
+  return success();
+}
+static DictionaryAttr
+getPropertiesAsAttribute(MLIRContext *ctx,
+                         const PropertiesWithCustomPrint &prop) {
+  SmallVector<NamedAttribute> attrs;
+  Builder b{ctx};
+  attrs.push_back(b.getNamedAttr("label", b.getStringAttr(*prop.label)));
+  attrs.push_back(b.getNamedAttr("value", b.getI32IntegerAttr(prop.value)));
+  return b.getDictionaryAttr(attrs);
+}
+static llvm::hash_code computeHash(const PropertiesWithCustomPrint &prop) {
+  return llvm::hash_combine(prop.value, StringRef(*prop.label));
+}
+static void customPrintProperties(OpAsmPrinter &p,
+                                  const PropertiesWithCustomPrint &prop) {
+  p.printKeywordOrString(*prop.label);
+  p << " is " << prop.value;
+}
+static ParseResult customParseProperties(OpAsmParser &parser,
+                                         PropertiesWithCustomPrint &prop) {
+  std::string label;
+  if (parser.parseKeywordOrString(&label) || parser.parseKeyword("is") ||
+      parser.parseInteger(prop.value))
+    return failure();
+  prop.label = std::make_shared<std::string>(std::move(label));
+  return success();
 }
 
 #include "TestOpEnums.cpp.inc"

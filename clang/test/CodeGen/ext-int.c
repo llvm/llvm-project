@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -triple i386-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN32
 // RUN: %clang_cc1 -triple i386-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN32
 
+//GH62207
+unsigned _BitInt(1) GlobSize1 = 0;
+// CHECK: @GlobSize1 = {{.*}}global i1 false
+
 void GenericTest(_BitInt(3) a, unsigned _BitInt(3) b, _BitInt(4) c) {
   // CHECK: define {{.*}}void @GenericTest
   int which = _Generic(a, _BitInt(3): 1, unsigned _BitInt(3) : 2, _BitInt(4) : 3);

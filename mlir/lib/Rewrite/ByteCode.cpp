@@ -1613,8 +1613,8 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
     // TODO: Handle failure.
     if (failed(inferInterface->inferReturnTypes(
             state.getContext(), state.location, state.operands,
-            state.attributes.getDictionary(state.getContext()), state.regions,
-            state.types)))
+            state.attributes.getDictionary(state.getContext()),
+            state.getRawProperties(), state.regions, state.types)))
       return;
   } else {
     // Otherwise, this is a fixed number of results.

@@ -31,7 +31,7 @@ class TestUniquePtr(TestBase):
             "s",
             result_type=ptr_type,
             result_summary="3",
-            result_children=[ValueCheck(name="__value_")])
+            result_children=[ValueCheck(name="pointer")])
         self.expect_expr("*s", result_type="int", result_value="3")
         self.expect_expr("*s = 5", result_type="int", result_value="5")
         self.expect_expr("*s", result_type="int", result_value="5")

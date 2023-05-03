@@ -46,6 +46,38 @@ lldb::ValueObjectSP lldb_private::formatters::GetChildMemberWithName(
   return {};
 }
 
+lldb::ValueObjectSP
+lldb_private::formatters::GetFirstValueOfLibCXXCompressedPair(
+    ValueObject &pair) {
+  ValueObjectSP value;
+  ValueObjectSP first_child = pair.GetChildAtIndex(0, true);
+  if (first_child)
+    value = first_child->GetChildMemberWithName(ConstString("__value_"), true);
+  if (!value) {
+    // pre-r300140 member name
+    value = pair.GetChildMemberWithName(ConstString("__first_"), true);
+  }
+  return value;
+}
+
+lldb::ValueObjectSP
+lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
+    ValueObject &pair) {
+  ValueObjectSP value;
+  if (pair.GetNumChildren() > 1) {
+    ValueObjectSP second_child = pair.GetChildAtIndex(1, true);
+    if (second_child) {
+      value =
+          second_child->GetChildMemberWithName(ConstString("__value_"), true);
+    }
+  }
+  if (!value) {
+    // pre-r300140 member name
+    value = pair.GetChildMemberWithName(ConstString("__second_"), true);
+  }
+  return value;
+}
+
 bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
@@ -170,7 +202,7 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ptr_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
+  ptr_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
   if (!ptr_sp)
     return false;
 
@@ -658,7 +690,9 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
 
 size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     CalculateNumChildren() {
-  return (m_value_ptr_sp ? 1 : 0);
+  if (m_value_ptr_sp)
+    return m_deleter_sp ? 2 : 1;
+  return 0;
 }
 
 lldb::ValueObjectSP
@@ -670,7 +704,10 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
   if (idx == 0)
     return m_value_ptr_sp;
 
-  if (idx == 1) {
+  if (idx == 1)
+    return m_deleter_sp;
+
+  if (idx == 2) {
     Status status;
     auto value_sp = m_value_ptr_sp->Dereference(status);
     if (status.Success()) {
@@ -691,7 +728,15 @@ bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!ptr_sp)
     return false;
 
-  m_value_ptr_sp = GetValueOfLibCXXCompressedPair(*ptr_sp);
+  // Retrieve the actual pointer and the deleter, and clone them to give them
+  // user-friendly names.
+  ValueObjectSP value_pointer_sp = GetFirstValueOfLibCXXCompressedPair(*ptr_sp);
+  if (value_pointer_sp)
+    m_value_ptr_sp = value_pointer_sp->Clone(ConstString("pointer"));
+
+  ValueObjectSP deleter_sp = GetSecondValueOfLibCXXCompressedPair(*ptr_sp);
+  if (deleter_sp)
+    m_deleter_sp = deleter_sp->Clone(ConstString("deleter"));
 
   return false;
 }
@@ -703,10 +748,12 @@ bool lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
 
 size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (name == "__value_")
+  if (name == "pointer")
     return 0;
-  if (name == "$$dereference$$")
+  if (name == "deleter")
     return 1;
+  if (name == "$$dereference$$")
+    return 2;
   return UINT32_MAX;
 }
 

@@ -33,6 +33,7 @@ add_llvm_target(DirectXCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   DXILBitWriter
   DirectXDesc

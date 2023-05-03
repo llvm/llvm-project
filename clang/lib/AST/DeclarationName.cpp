@@ -117,12 +117,12 @@ static void printCXXConstructorDestructorName(QualType ClassType,
   Policy.adjustForCPlusPlus();
 
   if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
-    OS << *ClassRec->getDecl();
+    ClassRec->getDecl()->printName(OS, Policy);
     return;
   }
   if (Policy.SuppressTemplateArgsInCXXConstructors) {
     if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
-      OS << *InjTy->getDecl();
+      InjTy->getDecl()->printName(OS, Policy);
       return;
     }
   }

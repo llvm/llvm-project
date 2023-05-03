@@ -466,6 +466,11 @@ public:
 
   virtual MCPhysReg getX86R11() const { llvm_unreachable("not implemented"); }
 
+  virtual unsigned getShortBranchOpcode(unsigned Opcode) const {
+    llvm_unreachable("not implemented");
+    return 0;
+  }
+
   /// Create increment contents of target by 1 for Instrumentation
   virtual InstructionListType createInstrIncMemory(const MCSymbol *Target,
                                                    MCContext *Ctx,

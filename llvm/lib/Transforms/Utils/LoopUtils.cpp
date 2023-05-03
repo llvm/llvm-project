@@ -769,7 +769,7 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   // exit blocks.  If that happened, we need to rebuild LCSSA on the outermost
   // loop which might have a had a block removed.
   if (OutermostLoop != L)
-    formLCSSARecursively(*OutermostLoop, DT, &LI, &SE);
+    formLCSSARecursively(*OutermostLoop, DT, &LI);
 }
 
 

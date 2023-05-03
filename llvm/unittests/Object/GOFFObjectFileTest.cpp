@@ -43,10 +43,10 @@ void constructInvalidGOFF(size_t Size) {
 } // namespace
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectValidSize) {
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
-  GOFFData[80] = 0x03;
-  GOFFData[81] = 0x40;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
+  GOFFData[80] = (char)0x03;
+  GOFFData[81] = (char)0x40;
   constructValidGOFF(160);
   constructValidGOFF(0);
 }
@@ -61,11 +61,11 @@ TEST(GOFFObjectFileTest, MissingHDR) {
   char GOFFData[GOFF::RecordLength * 2] = {0x00};
 
   // ESD record.
-  GOFFData[0] = 0x03;
+  GOFFData[0] = (char)0x03;
 
   // END record.
-  GOFFData[GOFF::RecordLength] = 0x03;
-  GOFFData[GOFF::RecordLength + 1] = 0x40;
+  GOFFData[GOFF::RecordLength] = (char)0x03;
+  GOFFData[GOFF::RecordLength + 1] = (char)0x40;
 
   StringRef Data(GOFFData, GOFF::RecordLength * 2);
 
@@ -82,11 +82,11 @@ TEST(GOFFObjectFileTest, MissingEND) {
   char GOFFData[GOFF::RecordLength * 2] = {0x00};
 
   // HDR record.
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFData[GOFF::RecordLength] = 0x03;
+  GOFFData[GOFF::RecordLength] = (char)0x03;
 
   StringRef Data(GOFFData, GOFF::RecordLength * 2);
 
@@ -102,20 +102,20 @@ TEST(GOFFObjectFileTest, GetSymbolName) {
   char GOFFData[GOFF::RecordLength * 3] = {0x00};
 
   // HDR record.
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFData[GOFF::RecordLength] = 0x03;
-  GOFFData[GOFF::RecordLength + 3] = 0x02;
-  GOFFData[GOFF::RecordLength + 7] = 0x01;
-  GOFFData[GOFF::RecordLength + 11] = 0x01;
-  GOFFData[GOFF::RecordLength + 71] = 0x05; // Size of symbol name.
-  GOFFData[GOFF::RecordLength + 72] = 0xC8; // Symbol name is Hello.
-  GOFFData[GOFF::RecordLength + 73] = 0x85;
-  GOFFData[GOFF::RecordLength + 74] = 0x93;
-  GOFFData[GOFF::RecordLength + 75] = 0x93;
-  GOFFData[GOFF::RecordLength + 76] = 0x96;
+  GOFFData[GOFF::RecordLength] = (char)0x03;
+  GOFFData[GOFF::RecordLength + 3] = (char)0x02;
+  GOFFData[GOFF::RecordLength + 7] = (char)0x01;
+  GOFFData[GOFF::RecordLength + 11] = (char)0x01;
+  GOFFData[GOFF::RecordLength + 71] = (char)0x05; // Size of symbol name.
+  GOFFData[GOFF::RecordLength + 72] = (char)0xC8; // Symbol name is Hello.
+  GOFFData[GOFF::RecordLength + 73] = (char)0x85;
+  GOFFData[GOFF::RecordLength + 74] = (char)0x93;
+  GOFFData[GOFF::RecordLength + 75] = (char)0x93;
+  GOFFData[GOFF::RecordLength + 76] = (char)0x96;
 
   // END record.
   GOFFData[GOFF::RecordLength * 2] = 0x03;
@@ -144,21 +144,21 @@ TEST(GOFFObjectFileTest, ConcatenatedGOFFFile) {
   char GOFFData[GOFF::RecordLength * 6] = {0x00};
 
   // HDR record.
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
   // ESD record.
-  GOFFData[GOFF::RecordLength] = 0x03;
+  GOFFData[GOFF::RecordLength] = (char)0x03;
   // END record.
-  GOFFData[GOFF::RecordLength * 2] = 0x03;
-  GOFFData[GOFF::RecordLength * 2 + 1] = 0x40;
+  GOFFData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 2 + 1] = (char)0x40;
   // HDR record.
-  GOFFData[GOFF::RecordLength * 3] = 0x03;
-  GOFFData[GOFF::RecordLength * 3 + 1] = 0xF0;
+  GOFFData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 3 + 1] = (char)0xF0;
   // ESD record.
-  GOFFData[GOFF::RecordLength * 4] = 0x03;
+  GOFFData[GOFF::RecordLength * 4] = (char)0x03;
   // END record.
-  GOFFData[GOFF::RecordLength * 5] = 0x03;
-  GOFFData[GOFF::RecordLength * 5 + 1] = 0x40;
+  GOFFData[GOFF::RecordLength * 5] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 5 + 1] = (char)0x40;
 
   StringRef Data(GOFFData, GOFF::RecordLength * 6);
 
@@ -173,34 +173,34 @@ TEST(GOFFObjectFileTest, ContinuationGetSymbolName) {
   char GOFFContData[GOFF::RecordLength * 4] = {0x00};
 
   // HDR record.
-  GOFFContData[0] = 0x03;
-  GOFFContData[1] = 0xF0;
+  GOFFContData[0] = (char)0x03;
+  GOFFContData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFContData[GOFF::RecordLength] = 0x03;
-  GOFFContData[GOFF::RecordLength + 1] = 0x01;
-  GOFFContData[GOFF::RecordLength + 3] = 0x02;
-  GOFFContData[GOFF::RecordLength + 7] = 0x01;
-  GOFFContData[GOFF::RecordLength + 11] = 0x01;
-  GOFFContData[GOFF::RecordLength + 71] = 0x0A; // Size of symbol name.
-  GOFFContData[GOFF::RecordLength + 72] = 0xC8; // Symbol name is HelloWorld.
-  GOFFContData[GOFF::RecordLength + 73] = 0x85;
-  GOFFContData[GOFF::RecordLength + 74] = 0x93;
-  GOFFContData[GOFF::RecordLength + 75] = 0x93;
-  GOFFContData[GOFF::RecordLength + 76] = 0x96;
-  GOFFContData[GOFF::RecordLength + 77] = 0xA6;
-  GOFFContData[GOFF::RecordLength + 78] = 0x96;
-  GOFFContData[GOFF::RecordLength + 79] = 0x99;
+  GOFFContData[GOFF::RecordLength] = (char)0x03;
+  GOFFContData[GOFF::RecordLength + 1] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 3] = (char)0x02;
+  GOFFContData[GOFF::RecordLength + 7] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 11] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 71] = (char)0x0A; // Size of symbol name.
+  GOFFContData[GOFF::RecordLength + 72] = (char)0xC8; // Symbol name is HelloWorld.
+  GOFFContData[GOFF::RecordLength + 73] = (char)0x85;
+  GOFFContData[GOFF::RecordLength + 74] = (char)0x93;
+  GOFFContData[GOFF::RecordLength + 75] = (char)0x93;
+  GOFFContData[GOFF::RecordLength + 76] = (char)0x96;
+  GOFFContData[GOFF::RecordLength + 77] = (char)0xA6;
+  GOFFContData[GOFF::RecordLength + 78] = (char)0x96;
+  GOFFContData[GOFF::RecordLength + 79] = (char)0x99;
 
   // ESD continuation record.
-  GOFFContData[GOFF::RecordLength * 2] = 0x03;
-  GOFFContData[GOFF::RecordLength * 2 + 1] = 0x02; // No further continuations.
-  GOFFContData[GOFF::RecordLength * 2 + 3] = 0x93;
-  GOFFContData[GOFF::RecordLength * 2 + 4] = 0x84;
+  GOFFContData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 2 + 1] = (char)0x02; // No further continuations.
+  GOFFContData[GOFF::RecordLength * 2 + 3] = (char)0x93;
+  GOFFContData[GOFF::RecordLength * 2 + 4] = (char)0x84;
 
   // END record.
-  GOFFContData[GOFF::RecordLength * 3] = 0x03;
-  GOFFContData[GOFF::RecordLength * 3 + 1] = 0x40;
+  GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
   StringRef Data(GOFFContData, GOFF::RecordLength * 4);
 
@@ -224,34 +224,34 @@ TEST(GOFFObjectFileTest, ContinuationBitNotSet) {
   char GOFFContData[GOFF::RecordLength * 4] = {0x00};
 
   // HDR record.
-  GOFFContData[0] = 0x03;
-  GOFFContData[1] = 0xF0;
+  GOFFContData[0] = (char)0x03;
+  GOFFContData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFContData[GOFF::RecordLength] = 0x03;
-  GOFFContData[GOFF::RecordLength + 1] = 0x01;
-  GOFFContData[GOFF::RecordLength + 3] = 0x02;
-  GOFFContData[GOFF::RecordLength + 7] = 0x01;
-  GOFFContData[GOFF::RecordLength + 11] = 0x01;
-  GOFFContData[GOFF::RecordLength + 71] = 0x0A; // Size of symbol name.
-  GOFFContData[GOFF::RecordLength + 72] = 0xC8; // Symbol name is HelloWorld.
-  GOFFContData[GOFF::RecordLength + 73] = 0x85;
-  GOFFContData[GOFF::RecordLength + 74] = 0x93;
-  GOFFContData[GOFF::RecordLength + 75] = 0x93;
-  GOFFContData[GOFF::RecordLength + 76] = 0x96;
-  GOFFContData[GOFF::RecordLength + 77] = 0xA6;
-  GOFFContData[GOFF::RecordLength + 78] = 0x96;
-  GOFFContData[GOFF::RecordLength + 79] = 0x99;
+  GOFFContData[GOFF::RecordLength] = (char)0x03;
+  GOFFContData[GOFF::RecordLength + 1] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 3] = (char)0x02;
+  GOFFContData[GOFF::RecordLength + 7] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 11] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 71] = (char)0x0A; // Size of symbol name.
+  GOFFContData[GOFF::RecordLength + 72] = (char)0xC8; // Symbol name is HelloWorld.
+  GOFFContData[GOFF::RecordLength + 73] = (char)0x85;
+  GOFFContData[GOFF::RecordLength + 74] = (char)0x93;
+  GOFFContData[GOFF::RecordLength + 75] = (char)0x93;
+  GOFFContData[GOFF::RecordLength + 76] = (char)0x96;
+  GOFFContData[GOFF::RecordLength + 77] = (char)0xA6;
+  GOFFContData[GOFF::RecordLength + 78] = (char)0x96;
+  GOFFContData[GOFF::RecordLength + 79] = (char)0x99;
 
   // ESD continuation record.
-  GOFFContData[GOFF::RecordLength * 2] = 0x03;
-  GOFFContData[GOFF::RecordLength * 2 + 1] = 0x00;
-  GOFFContData[GOFF::RecordLength * 2 + 3] = 0x93;
-  GOFFContData[GOFF::RecordLength * 2 + 4] = 0x84;
+  GOFFContData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 2 + 1] = (char)0x00;
+  GOFFContData[GOFF::RecordLength * 2 + 3] = (char)0x93;
+  GOFFContData[GOFF::RecordLength * 2 + 4] = (char)0x84;
 
   // END record.
-  GOFFContData[GOFF::RecordLength * 3] = 0x03;
-  GOFFContData[GOFF::RecordLength * 3 + 1] = 0x40;
+  GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
   StringRef Data(GOFFContData, GOFF::RecordLength * 4);
 
@@ -268,34 +268,34 @@ TEST(GOFFObjectFileTest, ContinuationRecordNotTerminated) {
   char GOFFContData[GOFF::RecordLength * 4] = {0x00};
 
   // HDR record.
-  GOFFContData[0] = 0x03;
-  GOFFContData[1] = 0xF0;
+  GOFFContData[0] = (char)0x03;
+  GOFFContData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFContData[GOFF::RecordLength] = 0x03;
-  GOFFContData[GOFF::RecordLength + 1] = 0x01;
-  GOFFContData[GOFF::RecordLength + 3] = 0x02;
-  GOFFContData[GOFF::RecordLength + 7] = 0x01;
-  GOFFContData[GOFF::RecordLength + 11] = 0x01;
-  GOFFContData[GOFF::RecordLength + 71] = 0x0A; // Size of symbol name.
-  GOFFContData[GOFF::RecordLength + 72] = 0xC8; // Symbol name is HelloWorld.
-  GOFFContData[GOFF::RecordLength + 73] = 0x85;
-  GOFFContData[GOFF::RecordLength + 74] = 0x93;
-  GOFFContData[GOFF::RecordLength + 75] = 0x93;
-  GOFFContData[GOFF::RecordLength + 76] = 0x96;
-  GOFFContData[GOFF::RecordLength + 77] = 0xA6;
-  GOFFContData[GOFF::RecordLength + 78] = 0x96;
-  GOFFContData[GOFF::RecordLength + 79] = 0x99;
+  GOFFContData[GOFF::RecordLength] = (char)0x03;
+  GOFFContData[GOFF::RecordLength + 1] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 3] = (char)0x02;
+  GOFFContData[GOFF::RecordLength + 7] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 11] = (char)0x01;
+  GOFFContData[GOFF::RecordLength + 71] = (char)0x0A; // Size of symbol name.
+  GOFFContData[GOFF::RecordLength + 72] = (char)0xC8; // Symbol name is HelloWorld.
+  GOFFContData[GOFF::RecordLength + 73] = (char)0x85;
+  GOFFContData[GOFF::RecordLength + 74] = (char)0x93;
+  GOFFContData[GOFF::RecordLength + 75] = (char)0x93;
+  GOFFContData[GOFF::RecordLength + 76] = (char)0x96;
+  GOFFContData[GOFF::RecordLength + 77] = (char)0xA6;
+  GOFFContData[GOFF::RecordLength + 78] = (char)0x96;
+  GOFFContData[GOFF::RecordLength + 79] = (char)0x99;
 
   // ESD continuation record.
-  GOFFContData[GOFF::RecordLength * 2] = 0x03;
-  GOFFContData[GOFF::RecordLength * 2 + 1] = 0x03; // Continued bit set.
-  GOFFContData[GOFF::RecordLength * 2 + 3] = 0x93;
-  GOFFContData[GOFF::RecordLength * 2 + 4] = 0x84;
+  GOFFContData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 2 + 1] = (char)0x03; // Continued bit set.
+  GOFFContData[GOFF::RecordLength * 2 + 3] = (char)0x93;
+  GOFFContData[GOFF::RecordLength * 2 + 4] = (char)0x84;
 
   // END record.
-  GOFFContData[GOFF::RecordLength * 3] = 0x03;
-  GOFFContData[GOFF::RecordLength * 3 + 1] = 0x40;
+  GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
   StringRef Data(GOFFContData, GOFF::RecordLength * 4);
 
@@ -317,19 +317,19 @@ TEST(GOFFObjectFileTest, PrevNotContinued) {
   char GOFFContData[GOFF::RecordLength * 4] = {0x00};
 
   // HDR record.
-  GOFFContData[0] = 0x03;
-  GOFFContData[1] = 0xF0;
+  GOFFContData[0] = (char)0x03;
+  GOFFContData[1] = (char)0xF0;
 
   // ESD record, with continued bit not set.
-  GOFFContData[GOFF::RecordLength] = 0x03;
+  GOFFContData[GOFF::RecordLength] = (char)0x03;
 
   // ESD continuation record.
-  GOFFContData[GOFF::RecordLength * 2] = 0x03;
-  GOFFContData[GOFF::RecordLength * 2 + 1] = 0x02;
+  GOFFContData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 2 + 1] = (char)0x02;
 
   // END record.
-  GOFFContData[GOFF::RecordLength * 3] = 0x03;
-  GOFFContData[GOFF::RecordLength * 3 + 1] = 0x40;
+  GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
   StringRef Data(GOFFContData, GOFF::RecordLength * 4);
 
@@ -347,20 +347,20 @@ TEST(GOFFObjectFileTest, ContinuationTypeMismatch) {
   char GOFFContData[GOFF::RecordLength * 4] = {0x00};
 
   // HDR record.
-  GOFFContData[0] = 0x03;
-  GOFFContData[1] = 0xF0;
+  GOFFContData[0] = (char)0x03;
+  GOFFContData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFContData[GOFF::RecordLength] = 0x03;
-  GOFFContData[GOFF::RecordLength + 1] = 0x01; // Continued to next record.
+  GOFFContData[GOFF::RecordLength] = (char)0x03;
+  GOFFContData[GOFF::RecordLength + 1] = (char)0x01; // Continued to next record.
 
   // END continuation record.
-  GOFFContData[GOFF::RecordLength * 2] = 0x03;
-  GOFFContData[GOFF::RecordLength * 2 + 1] = 0x42;
+  GOFFContData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 2 + 1] = (char)0x42;
 
   // END record.
-  GOFFContData[GOFF::RecordLength * 3] = 0x03;
-  GOFFContData[GOFF::RecordLength * 3 + 1] = 0x40;
+  GOFFContData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFContData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
   StringRef Data(GOFFContData, GOFF::RecordLength * 4);
 
@@ -378,31 +378,31 @@ TEST(GOFFObjectFileTest, TwoSymbols) {
   char GOFFData[GOFF::RecordLength * 4] = {0x00};
 
   // HDR record.
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
 
   // ESD record 1.
-  GOFFData[GOFF::RecordLength] = 0x03;
-  GOFFData[GOFF::RecordLength + 3] = 0x00;
-  GOFFData[GOFF::RecordLength + 7] = 0x01;  // ESDID.
-  GOFFData[GOFF::RecordLength + 71] = 0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength + 72] = 0xa7; // Symbol name is x.
+  GOFFData[GOFF::RecordLength] = (char)0x03;
+  GOFFData[GOFF::RecordLength + 3] = (char)0x00;
+  GOFFData[GOFF::RecordLength + 7] = (char)0x01;  // ESDID.
+  GOFFData[GOFF::RecordLength + 71] = (char)0x01; // Size of symbol name.
+  GOFFData[GOFF::RecordLength + 72] = (char)0xa7; // Symbol name is x.
 
   // ESD record 2.
-  GOFFData[GOFF::RecordLength * 2] = 0x03;
-  GOFFData[GOFF::RecordLength * 2 + 3] = 0x03;
-  GOFFData[GOFF::RecordLength * 2 + 7] = 0x02;  // ESDID.
-  GOFFData[GOFF::RecordLength * 2 + 11] = 0x01; // Parent ESDID.
-  GOFFData[GOFF::RecordLength * 2 + 71] = 0x05; // Size of symbol name.
-  GOFFData[GOFF::RecordLength * 2 + 72] = 0xC8; // Symbol name is Hello.
-  GOFFData[GOFF::RecordLength * 2 + 73] = 0x85;
-  GOFFData[GOFF::RecordLength * 2 + 74] = 0x93;
-  GOFFData[GOFF::RecordLength * 2 + 75] = 0x93;
-  GOFFData[GOFF::RecordLength * 2 + 76] = 0x96;
+  GOFFData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 2 + 3] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 2 + 7] = (char)0x02;  // ESDID.
+  GOFFData[GOFF::RecordLength * 2 + 11] = (char)0x01; // Parent ESDID.
+  GOFFData[GOFF::RecordLength * 2 + 71] = (char)0x05; // Size of symbol name.
+  GOFFData[GOFF::RecordLength * 2 + 72] = (char)0xC8; // Symbol name is Hello.
+  GOFFData[GOFF::RecordLength * 2 + 73] = (char)0x85;
+  GOFFData[GOFF::RecordLength * 2 + 74] = (char)0x93;
+  GOFFData[GOFF::RecordLength * 2 + 75] = (char)0x93;
+  GOFFData[GOFF::RecordLength * 2 + 76] = (char)0x96;
 
   // END record.
-  GOFFData[GOFF::RecordLength * 3] = 0x03;
-  GOFFData[GOFF::RecordLength * 3 + 1] = 0x40;
+  GOFFData[GOFF::RecordLength * 3] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 3 + 1] = (char)0x40;
 
   StringRef Data(GOFFData, GOFF::RecordLength * 4);
 
@@ -426,20 +426,20 @@ TEST(GOFFObjectFileTest, InvalidSymbolType) {
   char GOFFData[GOFF::RecordLength * 3] = {0x00};
 
   // HDR record.
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFData[GOFF::RecordLength] = 0x03;
-  GOFFData[GOFF::RecordLength + 3] = 0x05;
-  GOFFData[GOFF::RecordLength + 7] = 0x01;
-  GOFFData[GOFF::RecordLength + 11] = 0x01;
-  GOFFData[GOFF::RecordLength + 71] = 0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength + 72] = 0xC8; // Symbol name.
+  GOFFData[GOFF::RecordLength] = (char)0x03;
+  GOFFData[GOFF::RecordLength + 3] = (char)0x05;
+  GOFFData[GOFF::RecordLength + 7] = (char)0x01;
+  GOFFData[GOFF::RecordLength + 11] = (char)0x01;
+  GOFFData[GOFF::RecordLength + 71] = (char)0x01; // Size of symbol name.
+  GOFFData[GOFF::RecordLength + 72] = (char)0xC8; // Symbol name.
 
   // END record.
-  GOFFData[GOFF::RecordLength * 2] = 0x03;
-  GOFFData[GOFF::RecordLength * 2 + 1] = 0x40;
+  GOFFData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 2 + 1] = (char)0x40;
 
   StringRef Data(GOFFData, GOFF::RecordLength * 3);
 
@@ -469,21 +469,21 @@ TEST(GOFFObjectFileTest, InvalidERSymbolType) {
   char GOFFData[GOFF::RecordLength * 3] = {0x00};
 
   // HDR record.
-  GOFFData[0] = 0x03;
-  GOFFData[1] = 0xF0;
+  GOFFData[0] = (char)0x03;
+  GOFFData[1] = (char)0xF0;
 
   // ESD record.
-  GOFFData[GOFF::RecordLength] = 0x03;
-  GOFFData[GOFF::RecordLength + 3] = 0x04;
-  GOFFData[GOFF::RecordLength + 7] = 0x01;
-  GOFFData[GOFF::RecordLength + 11] = 0x01;
-  GOFFData[GOFF::RecordLength + 63] = 0x03; // Unknown executable type.
-  GOFFData[GOFF::RecordLength + 71] = 0x01; // Size of symbol name.
-  GOFFData[GOFF::RecordLength + 72] = 0xC8; // Symbol name.
+  GOFFData[GOFF::RecordLength] = (char)0x03;
+  GOFFData[GOFF::RecordLength + 3] = (char)0x04;
+  GOFFData[GOFF::RecordLength + 7] = (char)0x01;
+  GOFFData[GOFF::RecordLength + 11] = (char)0x01;
+  GOFFData[GOFF::RecordLength + 63] = (char)0x03; // Unknown executable type.
+  GOFFData[GOFF::RecordLength + 71] = (char)0x01; // Size of symbol name.
+  GOFFData[GOFF::RecordLength + 72] = (char)0xC8; // Symbol name.
 
   // END record.
-  GOFFData[GOFF::RecordLength * 2] = 0x03;
-  GOFFData[GOFF::RecordLength * 2 + 1] = 0x40;
+  GOFFData[GOFF::RecordLength * 2] = (char)0x03;
+  GOFFData[GOFF::RecordLength * 2 + 1] = (char)0x40;
 
   StringRef Data(GOFFData, GOFF::RecordLength * 3);
 

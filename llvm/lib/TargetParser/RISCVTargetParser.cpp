@@ -27,64 +27,62 @@ enum CPUKind : unsigned {
 
 struct CPUInfo {
   StringLiteral Name;
-  CPUKind Kind;
   StringLiteral DefaultMarch;
-  bool isInvalid() const { return DefaultMarch.empty(); }
   bool is64Bit() const { return DefaultMarch.starts_with("rv64"); }
 };
 
 constexpr CPUInfo RISCVCPUInfo[] = {
 #define PROC(ENUM, NAME, DEFAULT_MARCH)                              \
-  {NAME, CK_##ENUM, DEFAULT_MARCH},
+  {NAME, DEFAULT_MARCH},
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 };
 
-static CPUKind getCPUByName(StringRef CPU) {
-  return llvm::StringSwitch<CPUKind>(CPU)
-#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-      .Default(CK_INVALID);
+static const CPUInfo *getCPUInfoByName(StringRef CPU) {
+  for (auto &C : RISCVCPUInfo)
+    if (C.Name == CPU)
+      return &C;
+  return nullptr;
 }
 
 bool parseCPU(StringRef CPU, bool IsRV64) {
-  CPUKind Kind = getCPUByName(CPU);
+  const CPUInfo *Info = getCPUInfoByName(CPU);
 
-  if (Kind == CK_INVALID)
+  if (!Info)
     return false;
-  return RISCVCPUInfo[static_cast<unsigned>(Kind)].is64Bit() == IsRV64;
+  return Info->is64Bit() == IsRV64;
 }
 
 bool parseTuneCPU(StringRef TuneCPU, bool IsRV64) {
-  CPUKind Kind = llvm::StringSwitch<CPUKind>(TuneCPU)
-#define PROC(ENUM, NAME, DEFAULT_MARCH) .Case(NAME, CK_##ENUM)
+  std::optional<CPUKind> Kind =
+      llvm::StringSwitch<std::optional<CPUKind>>(TuneCPU)
 #define TUNE_PROC(ENUM, NAME) .Case(NAME, CK_##ENUM)
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-      .Default(CK_INVALID);
+  #include "llvm/TargetParser/RISCVTargetParserDef.inc"
+      .Default(std::nullopt);
 
-  if (Kind == CK_INVALID)
-    return false;
-#define TUNE_PROC(ENUM, NAME)                                                  \
-  if (Kind == CK_##ENUM)                                                       \
+  if (Kind.has_value())
     return true;
-#include "llvm/TargetParser/RISCVTargetParserDef.inc"
-  return RISCVCPUInfo[static_cast<unsigned>(Kind)].is64Bit() == IsRV64;
+
+  // Fallback to parsing as a CPU.
+  return parseCPU(TuneCPU, IsRV64);
 }
 
 StringRef getMArchFromMcpu(StringRef CPU) {
-  CPUKind Kind = getCPUByName(CPU);
-  return RISCVCPUInfo[static_cast<unsigned>(Kind)].DefaultMarch;
+  const CPUInfo *Info = getCPUInfoByName(CPU);
+  if (!Info)
+    return "";
+  return Info->DefaultMarch;
 }
 
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
   for (const auto &C : RISCVCPUInfo) {
-    if (C.Kind != CK_INVALID && IsRV64 == C.is64Bit())
+    if (IsRV64 == C.is64Bit())
       Values.emplace_back(C.Name);
   }
 }
 
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
   for (const auto &C : RISCVCPUInfo) {
-    if (C.Kind != CK_INVALID && IsRV64 == C.is64Bit())
+    if (IsRV64 == C.is64Bit())
       Values.emplace_back(C.Name);
   }
 #define TUNE_PROC(ENUM, NAME) Values.emplace_back(StringRef(NAME));

@@ -374,6 +374,17 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr<f32>, %mask: vector
   llvm.return
 }
 
+// CHECK-LABEL: @trap_intrinsics
+llvm.func @trap_intrinsics() {
+  // CHECK: call void @llvm.trap()
+  "llvm.intr.trap"() : () -> ()
+  // CHECK: call void @llvm.debugtrap()
+  "llvm.intr.debugtrap"() : () -> ()
+  // CHECK: call void @llvm.ubsantrap(i8 1)
+  "llvm.intr.ubsantrap"() {failureKind = 1 : i8} : () -> ()
+  llvm.return
+}
+
 // CHECK-LABEL: @memcpy_test
 llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr<i8>, %arg3: !llvm.ptr<i8>) {
   %i1 = llvm.mlir.constant(false) : i1
@@ -788,6 +799,9 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
 // CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(ptr nocapture, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr nocapture, <7 x i1>)
+// CHECK-DAG: declare void @llvm.trap()
+// CHECK-DAG: declare void @llvm.debugtrap()
+// CHECK-DAG: declare void @llvm.ubsantrap(i8 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 // CHECK-DAG: declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64 immarg, i1 immarg)
 // CHECK-DAG: declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)

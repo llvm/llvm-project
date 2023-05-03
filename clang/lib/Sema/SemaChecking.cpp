@@ -4641,6 +4641,127 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
         (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors);
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
   }
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8mf2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u8m8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16mf4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16mf2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u16m8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32mf2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u32m8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_i_se_u64m8:
+    // bit_27_26, bit_24_20, bit_11_7, simm5
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_iv_se:
+    // bit_27_26, bit_11_7, vs2, simm5
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_i:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_i_se:
+    // bit_27_26, bit_24_20, simm5
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaBuiltinConstantArgRange(TheCall, 2, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_iv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_iv_se:
+    // bit_27_26, vs2, simm5
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 2, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_ivv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_ivw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_ivw_se:
+    // bit_27_26, vd, vs2, simm5
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 3, -16, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8mf8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8mf4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8mf2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u8m8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16mf4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16mf2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u16m8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32mf2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u32m8:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m1:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m2:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m4:
+  case RISCVVector::BI__builtin_rvv_sf_vc_x_se_u64m8:
+    // bit_27_26, bit_24_20, bit_11_7, xs1
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+  case RISCVVector::BI__builtin_rvv_sf_vc_xv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_vv_se:
+    // bit_27_26, bit_11_7, vs2, xs1/vs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_x:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_x_se:
+    // bit_27_26, bit_24-20, xs1
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case RISCVVector::BI__builtin_rvv_sf_vc_vvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_xvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_vvw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_xvw_se:
+    // bit_27_26, vd, vs2, xs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vv_se:
+    // bit_27_26, vs2, xs1/vs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_xvw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_vvw_se:
+    // bit_27_26, vd, vs2, xs1/vs1
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3);
+  case RISCVVector::BI__builtin_rvv_sf_vc_fv_se:
+    // bit_26, bit_11_7, vs2, fs1
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 1) ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case RISCVVector::BI__builtin_rvv_sf_vc_fvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_fvw_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvw:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvv_se:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fvw_se:
+    // bit_26, vd, vs2, fs1
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fv:
+  case RISCVVector::BI__builtin_rvv_sf_vc_v_fv_se:
+    // bit_26, vs2, fs1
+    return SemaBuiltinConstantArgRange(TheCall, 0, 0, 1);
   // Check if byteselect is in [0, 3]
   case RISCV::BI__builtin_riscv_aes32dsi_32:
   case RISCV::BI__builtin_riscv_aes32dsmi_32:

@@ -69,8 +69,8 @@ def OpC : NS_Op<"op_c"> {
 
 /// Test that an attribute contraint was generated.
 // CHECK:    static ::mlir::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:      if (attr && !((attrPred(attr, *op)))) {
-// CHECK-NEXT:   return op->emitOpError("attribute '") << attrName
+// CHECK:      if (attr && !((attrPred(attr, *op))))
+// CHECK-NEXT:   return getDiag() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: an attribute";
 
 /// Test that duplicate attribute constraint was not generated.
@@ -78,8 +78,9 @@ def OpC : NS_Op<"op_c"> {
 
 /// Test that a attribute constraint with a different description was generated.
 // CHECK:    static ::mlir::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:      if (attr && !((attrPred(attr, *op)))) {
-// CHECK-NEXT:   return op->emitOpError("attribute '") << attrName
+// CHECK:    static ::mlir::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK:      if (attr && !((attrPred(attr, *op))))
+// CHECK-NEXT:   return getDiag() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: another attribute";
 
 /// Test that a successor contraint was generated.

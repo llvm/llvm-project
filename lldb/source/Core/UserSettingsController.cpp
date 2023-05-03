@@ -32,11 +32,10 @@ using namespace lldb_private;
 
 lldb::OptionValueSP
 Properties::GetPropertyValue(const ExecutionContext *exe_ctx,
-                             llvm::StringRef path, bool will_modify,
-                             Status &error) const {
+                             llvm::StringRef path, Status &error) const {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp)
-    return properties_sp->GetSubValue(exe_ctx, path, will_modify, error);
+    return properties_sp->GetSubValue(exe_ctx, path, error);
   return lldb::OptionValueSP();
 }
 

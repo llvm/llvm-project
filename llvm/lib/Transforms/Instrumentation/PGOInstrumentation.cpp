@@ -484,14 +484,14 @@ struct SelectInstVisitor : public InstVisitor<SelectInstVisitor> {
 /// Note that the CFG can be a multi-graph. So there might be multiple edges
 /// with the same SrcBB and DestBB.
 struct PGOEdge {
-  const BasicBlock *SrcBB;
-  const BasicBlock *DestBB;
+  BasicBlock *SrcBB;
+  BasicBlock *DestBB;
   uint64_t Weight;
   bool InMST = false;
   bool Removed = false;
   bool IsCritical = false;
 
-  PGOEdge(const BasicBlock *Src, const BasicBlock *Dest, uint64_t W = 1)
+  PGOEdge(BasicBlock *Src, BasicBlock *Dest, uint64_t W = 1)
       : SrcBB(Src), DestBB(Dest), Weight(W) {}
 
   /// Return the information string of an edge.
@@ -786,8 +786,8 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   if (E->InMST || E->Removed)
     return nullptr;
 
-  BasicBlock *SrcBB = const_cast<BasicBlock *>(E->SrcBB);
-  BasicBlock *DestBB = const_cast<BasicBlock *>(E->DestBB);
+  BasicBlock *SrcBB = E->SrcBB;
+  BasicBlock *DestBB = E->DestBB;
   // For a fake edge, instrument the real BB.
   if (SrcBB == nullptr)
     return DestBB;
@@ -988,11 +988,10 @@ namespace {
 
 // This class represents a CFG edge in profile use compilation.
 struct PGOUseEdge : public PGOEdge {
+  using PGOEdge::PGOEdge;
+
   bool CountValid = false;
   uint64_t CountValue = 0;
-
-  PGOUseEdge(const BasicBlock *Src, const BasicBlock *Dest, uint64_t W = 1)
-      : PGOEdge(Src, Dest, W) {}
 
   // Set edge count value
   void setEdgeCount(uint64_t Value) {

@@ -78,8 +78,8 @@ public:
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyKDPPacketTimeout;
-    return m_collection_sp->GetPropertyAtIndexAsUInt64(
-        NULL, idx, g_processkdp_properties[idx].default_uint_value);
+    return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+        g_processkdp_properties[idx].default_uint_value);
   }
 };
 
@@ -887,7 +887,7 @@ public:
           "the --command option must be set to a valid command byte");
     } else {
       const uint64_t command_byte =
-          m_command_byte.GetOptionValue().GetUInt64Value(0);
+          m_command_byte.GetOptionValue().GetUInt64Value().value_or(0);
       if (command_byte > 0 && command_byte <= UINT8_MAX) {
         ProcessKDP *process =
             (ProcessKDP *)m_interpreter.GetExecutionContext().GetProcessPtr();

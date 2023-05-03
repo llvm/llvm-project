@@ -13,6 +13,7 @@ add_llvm_component_library(LLVMMIRParser
   AsmParser
   BinaryFormat
   CodeGen
+  CodeGenTypes
   Core
   MC
   Support

@@ -226,7 +226,7 @@ class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string
   let isCodeGenOnly = 1;
 }
 
-class PseudoQuietFCMP<RegisterClass Ty>
+class PseudoQuietFCMP<DAGOperand Ty>
     : Pseudo<(outs GPR:$rd), (ins Ty:$rs1, Ty:$rs2), []> {
   let hasSideEffects = 1;
   let mayLoad = 0;

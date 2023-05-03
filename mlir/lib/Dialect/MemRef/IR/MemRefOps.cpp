@@ -15,6 +15,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -1354,9 +1355,10 @@ void ExtractAlignedPointerAsIndexOp::getAsmResultNames(
 /// shape of the source.
 LogicalResult ExtractStridedMetadataOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
-  ExtractStridedMetadataOpAdaptor extractAdaptor(operands, attributes, regions);
+  ExtractStridedMetadataOpAdaptor extractAdaptor(
+      operands, attributes, *properties.as<EmptyProperties *>(), regions);
   auto sourceType = extractAdaptor.getSource().getType().dyn_cast<MemRefType>();
   if (!sourceType)
     return failure();

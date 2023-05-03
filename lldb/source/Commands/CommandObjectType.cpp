@@ -111,7 +111,7 @@ const char *FormatCategoryToString(FormatCategoryItem item, bool long_name) {
     return "format";
   }
   llvm_unreachable("Fully covered switch above!");
-};
+}
 
 #define LLDB_OPTIONS_type_summary_add
 #include "CommandOptions.inc"
@@ -770,11 +770,11 @@ protected:
   FormatCategoryItem m_formatter_kind;
 
   Options *GetOptions() override { return &m_options; }
-  
-  static constexpr const char *g_short_help_template  = 
+
+  static constexpr const char *g_short_help_template =
       "Delete an existing %s for a type.";
 
-  static constexpr const char *g_long_help_template =  
+  static constexpr const char *g_long_help_template =
       "Delete an existing %s for a type.  Unless you specify a "
       "specific category or all categories, only the "
       "'default' category is searched.  The names must be exactly as "
@@ -783,9 +783,9 @@ protected:
 public:
   CommandObjectTypeFormatterDelete(CommandInterpreter &interpreter,
                                    FormatCategoryItem formatter_kind)
-      : CommandObjectParsed(interpreter, 
+      : CommandObjectParsed(interpreter,
                             FormatCategoryToString(formatter_kind, false)),
-                            m_formatter_kind(formatter_kind) {
+        m_formatter_kind(formatter_kind) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -795,10 +795,10 @@ public:
     type_arg.push_back(type_style_arg);
 
     m_arguments.push_back(type_arg);
-    
+
     const char *kind = FormatCategoryToString(formatter_kind, true);
     const char *short_kind = FormatCategoryToString(formatter_kind, false);
-      
+
     StreamString s;
     s.Printf(g_short_help_template, kind);
     SetHelp(s.GetData());

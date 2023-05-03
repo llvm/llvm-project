@@ -36,6 +36,7 @@ add_llvm_target(AVRCodeGen
   AVRInfo
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   MC
   SelectionDAG

@@ -103,6 +103,10 @@ bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
 }
 
+bool Dialect::usePropertiesForAttributes() const {
+  return def->getValueAsBit("usePropertiesForAttributes");
+}
+
 bool Dialect::operator==(const Dialect &other) const {
   return def == other.def;
 }

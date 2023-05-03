@@ -94,7 +94,8 @@ void tools::CrossWindows::Linker::ConstructJob(
   CmdArgs.push_back("-m");
   switch (TC.getArch()) {
   default:
-    llvm_unreachable("unsupported architecture");
+    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
+    break;
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     // FIXME: this is incorrect for WinCE

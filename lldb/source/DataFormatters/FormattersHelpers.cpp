@@ -126,14 +126,3 @@ lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
 
   return data_addr;
 }
-
-lldb::ValueObjectSP
-lldb_private::formatters::GetValueOfLibCXXCompressedPair(ValueObject &pair) {
-  ValueObjectSP value =
-      pair.GetChildMemberWithName(ConstString("__value_"), true);
-  if (!value) {
-    // pre-r300140 member name
-    value = pair.GetChildMemberWithName(ConstString("__first_"), true);
-  }
-  return value;
-}

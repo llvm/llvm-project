@@ -112,6 +112,14 @@ static DecodeStatus DecodeF8RCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, FRegs);
 }
 
+static DecodeStatus DecodeFpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  assert(RegNo <= 30 && "Expecting a register number no more than 30.");
+  assert((RegNo & 1) == 0 && "Expecting an even register number.");
+  return decodeRegisterClass(Inst, RegNo >> 1, FpRegs);
+}
+
 static DecodeStatus DecodeVFRCRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
