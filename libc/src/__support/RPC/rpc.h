@@ -248,6 +248,9 @@ LIBC_INLINE cpp::optional<Port> Client::try_open(uint16_t opcode) {
   if (lock->fetch_or(1, cpp::MemoryOrder::RELAXED))
     return cpp::nullopt;
 
+  // The mailbox state must be read with the lock held.
+  atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
+
   uint32_t in = inbox->load(cpp::MemoryOrder::RELAXED);
   uint32_t out = outbox->load(cpp::MemoryOrder::RELAXED);
 
@@ -284,6 +287,9 @@ LIBC_INLINE cpp::optional<Port> Server::try_open() {
   // Attempt to acquire the lock on this index.
   if (lock->fetch_or(1, cpp::MemoryOrder::RELAXED))
     return cpp::nullopt;
+
+  // The mailbox state must be read with the lock held.
+  atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
 
   in = inbox->load(cpp::MemoryOrder::RELAXED);
   out = outbox->load(cpp::MemoryOrder::RELAXED);
