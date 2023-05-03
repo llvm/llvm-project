@@ -360,7 +360,7 @@ __DEVICE__ unsigned int __isLocal(const void *p) {
 // __clang_cuda_texture_intrinsics.h must be included first in order to provide
 // implementation for __nv_tex_surf_handler that CUDA's headers depend on.
 // The implementation requires c++11 and only works with CUDA-9 or newer.
-#if __cplusplus >= 201103L && CUDA_VERSION >= 9000
+#if __cplusplus >= 201103L && CUDA_VERSION >= 9000 && CUDA_VERSION < 12000
 // clang-format off
 #include <__clang_cuda_texture_intrinsics.h>
 // clang-format on
