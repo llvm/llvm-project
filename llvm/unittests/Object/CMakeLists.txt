@@ -21,3 +21,8 @@ add_llvm_unittest(ObjectTests
   )
 
 target_link_libraries(ObjectTests PRIVATE LLVMTestingSupport)
+
+if (MSVC)
+  # Disable warning C4309: '=': truncation of constant value
+  set_source_files_properties(GOFFObjectFileTest.cpp PROPERTIES COMPILE_FLAGS -wd4309)
+endif()
