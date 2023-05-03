@@ -51,7 +51,7 @@ func.func @test_unary_f32(%arg0 : tensor<4xf32>) -> () {
   // CHECK: "tosa.reciprocal"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
   %7 = "tosa.reciprocal"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
 
-  // CHECK: "tosa.reverse"(%arg0) {axis = 0 : i64} : (tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: "tosa.reverse"(%arg0) <{axis = 0 : i64}> : (tensor<4xf32>) -> tensor<4xf32>
   %8 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xf32>) -> tensor<?xf32>
 
   // CHECK: "tosa.rsqrt"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
@@ -87,7 +87,7 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>) -> () {
   // CHECK: "tosa.negate"(%arg0) : (tensor<4xi32>) -> tensor<4xi32>
   %4 = "tosa.negate"(%arg0) : (tensor<4xi32>) -> tensor<*xi32>
 
-  // CHECK: "tosa.reverse"(%arg0) {axis = 0 : i64} : (tensor<4xi32>) -> tensor<4xi32>
+  // CHECK: "tosa.reverse"(%arg0) <{axis = 0 : i64}> : (tensor<4xi32>) -> tensor<4xi32>
   %5 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xi32>) -> tensor<?xi32>
 
   // CHECK: "tosa.rescale"(%arg0) {{.+}} : (tensor<4xi32>) -> tensor<4xi16>
@@ -111,7 +111,7 @@ func.func @test_binary_scalar_f32(%arg0 : tensor<4xf32>, %arg1 : tensor<f32>) ->
   // CHECK: "tosa.minimum"(%arg0, %arg1) : (tensor<4xf32>, tensor<f32>) -> tensor<4xf32>
   %2 = "tosa.minimum"(%arg0, %arg1) : (tensor<4xf32>, tensor<f32>) -> tensor<*xf32>
 
-  // CHECK: "tosa.mul"(%arg0, %arg1) {shift = 0 : i32} : (tensor<4xf32>, tensor<f32>) -> tensor<4xf32>
+  // CHECK: "tosa.mul"(%arg0, %arg1) <{shift = 0 : i32}> : (tensor<4xf32>, tensor<f32>) -> tensor<4xf32>
   %3 = "tosa.mul"(%arg0, %arg1) { shift = 0 : i32 }: (tensor<4xf32>, tensor<f32>) -> tensor<*xf32>
 
   // CHECK: "tosa.pow"(%arg0, %arg1) : (tensor<4xf32>, tensor<f32>) -> tensor<4xf32>
@@ -145,7 +145,7 @@ func.func @test_binary_broadcast_f32(%arg0 : tensor<4xf32>, %arg1 : tensor<1xf32
   // CHECK: "tosa.minimum"(%arg0, %arg1) : (tensor<4xf32>, tensor<1xf32>) -> tensor<4xf32>
   %2 = "tosa.minimum"(%arg0, %arg1) : (tensor<4xf32>, tensor<1xf32>) -> tensor<*xf32>
 
-  // CHECK: "tosa.mul"(%arg0, %arg1) {shift = 0 : i32} : (tensor<4xf32>, tensor<1xf32>) -> tensor<4xf32>
+  // CHECK: "tosa.mul"(%arg0, %arg1) <{shift = 0 : i32}> : (tensor<4xf32>, tensor<1xf32>) -> tensor<4xf32>
   %3 = "tosa.mul"(%arg0, %arg1) { shift = 0 : i32 } : (tensor<4xf32>, tensor<1xf32>) -> tensor<*xf32>
 
   // CHECK: "tosa.pow"(%arg0, %arg1) : (tensor<4xf32>, tensor<1xf32>) -> tensor<4xf32>
@@ -173,14 +173,14 @@ func.func @test_binary_i32(%arg0 : tensor<4xi32>, %arg1 : tensor<i32>) -> () {
   // CHECK: "tosa.add"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
   %0 = "tosa.add"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
 
-  // CHECK: "tosa.bitwise_and"(%arg0, %arg1) {shift = 0 : i32} : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
-  %1 = "tosa.bitwise_and"(%arg0, %arg1) { shift = 0 : i32 }: (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK: "tosa.bitwise_and"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
+  %1 = "tosa.bitwise_and"(%arg0, %arg1): (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
 
-  // CHECK: "tosa.bitwise_or"(%arg0, %arg1) {shift = 0 : i32} : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
-  %2 = "tosa.bitwise_or"(%arg0, %arg1) { shift = 0 : i32 }: (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK: "tosa.bitwise_or"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
+  %2 = "tosa.bitwise_or"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
 
-  // CHECK: "tosa.bitwise_xor"(%arg0, %arg1) {shift = 0 : i32} : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
-  %3 = "tosa.bitwise_xor"(%arg0, %arg1) { shift = 0 : i32 }: (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK: "tosa.bitwise_xor"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
+  %3 = "tosa.bitwise_xor"(%arg0, %arg1): (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
 
   // CHECK: "tosa.equal"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi1>
   %4 = "tosa.equal"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<*xi1>
@@ -203,7 +203,7 @@ func.func @test_binary_i32(%arg0 : tensor<4xi32>, %arg1 : tensor<i32>) -> () {
   // CHECK: "tosa.minimum"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
   %10 = "tosa.minimum"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
 
-  // CHECK: "tosa.mul"(%arg0, %arg1) {shift = 0 : i32} : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
+  // CHECK: "tosa.mul"(%arg0, %arg1) <{shift = 0 : i32}> : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
   %11 = "tosa.mul"(%arg0, %arg1) { shift = 0 : i32 }: (tensor<4xi32>, tensor<i32>) -> tensor<*xi32>
 
   // CHECK: "tosa.pow"(%arg0, %arg1) : (tensor<4xi32>, tensor<i32>) -> tensor<4xi32>
@@ -245,10 +245,10 @@ func.func @test_select_i32(%arg0 : tensor<4xi1>, %arg1 : tensor<i32>, %arg2 : te
 
 // CHECK-LABEL: @test_static_argmax
 func.func @test_static_argmax(%arg0 : tensor<2x3xi32>) -> () {
-  // CHECK: "tosa.argmax"(%arg0) {axis = 0 : i64} : (tensor<2x3xi32>) -> tensor<3xi32>
+  // CHECK: "tosa.argmax"(%arg0) <{axis = 0 : i64}> : (tensor<2x3xi32>) -> tensor<3xi32>
   %0 = "tosa.argmax"(%arg0) {axis = 0 : i64} : (tensor<2x3xi32>) -> tensor<?xi32>
 
-  // CHECK: "tosa.argmax"(%arg0) {axis = 1 : i64} : (tensor<2x3xi32>) -> tensor<2xi32>
+  // CHECK: "tosa.argmax"(%arg0) <{axis = 1 : i64}> : (tensor<2x3xi32>) -> tensor<2xi32>
   %1 = "tosa.argmax"(%arg0) {axis = 1 : i64} : (tensor<2x3xi32>) -> tensor<?xi32>
   return
 }
@@ -257,10 +257,10 @@ func.func @test_static_argmax(%arg0 : tensor<2x3xi32>) -> () {
 
 // CHECK-LABEL: @test_dynamic_argmax
 func.func @test_dynamic_argmax(%arg0 : tensor<2x?xi32>) -> () {
-  // CHECK: "tosa.argmax"(%arg0) {axis = 0 : i64} : (tensor<2x?xi32>) -> tensor<?xi32>
+  // CHECK: "tosa.argmax"(%arg0) <{axis = 0 : i64}> : (tensor<2x?xi32>) -> tensor<?xi32>
   %0 = "tosa.argmax"(%arg0) {axis = 0 : i64} : (tensor<2x?xi32>) -> tensor<?xi32>
 
-  // CHECK: "tosa.argmax"(%arg0) {axis = 1 : i64} : (tensor<2x?xi32>) -> tensor<2xi32>
+  // CHECK: "tosa.argmax"(%arg0) <{axis = 1 : i64}> : (tensor<2x?xi32>) -> tensor<2xi32>
   %1 = "tosa.argmax"(%arg0) {axis = 1 : i64} : (tensor<2x?xi32>) -> tensor<?xi32>
   return
 }
@@ -372,13 +372,13 @@ func.func @test_table_dynamic(%arg0 : tensor<4x?xi16>, %arg1 : tensor<513xi16>) 
 
 // CHECK-LABEL: @test_static_reshape
 func.func @test_static_reshape(%arg0 : tensor<4x4xi32>) -> () {
-  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x4xi32>) -> tensor<16xi32>
+  // CHECK: "tosa.reshape"(%arg0) <{new_shape = array<i64: 16>}> : (tensor<4x4xi32>) -> tensor<16xi32>
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x4xi32>)  -> tensor<?xi32>
 
-  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x4xi32>) -> tensor<16xi32>
+  // CHECK: "tosa.reshape"(%arg0) <{new_shape = array<i64: -1>}> : (tensor<4x4xi32>) -> tensor<16xi32>
   %1 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x4xi32>)  -> tensor<?xi32>
 
-  // CHECK: "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x4xi32>) -> tensor<2x8xi32>
+  // CHECK: "tosa.reshape"(%arg0) <{new_shape = array<i64: 2, -1>}> : (tensor<4x4xi32>) -> tensor<2x8xi32>
   %2 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x4xi32>)  -> tensor<?x?xi32>
 
   return
@@ -387,13 +387,13 @@ func.func @test_static_reshape(%arg0 : tensor<4x4xi32>) -> () {
 
 // CHECK-LABEL: @test_dynamic_reshape
 func.func @test_dynamic_reshape(%arg0 : tensor<4x?xi32>) -> () {
-  // CHECK: %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x?xi32>) -> tensor<16xi32>
+  // CHECK: %0 = "tosa.reshape"(%arg0) <{new_shape = array<i64: 16>}> : (tensor<4x?xi32>) -> tensor<16xi32>
   %0 = "tosa.reshape"(%arg0) {new_shape = array<i64: 16>} : (tensor<4x?xi32>)  -> tensor<?xi32>
 
-  // CHECK: %1 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x?xi32>) -> tensor<?xi32>
+  // CHECK: %1 = "tosa.reshape"(%arg0) <{new_shape = array<i64: -1>}> : (tensor<4x?xi32>) -> tensor<?xi32>
   %1 = "tosa.reshape"(%arg0) {new_shape = array<i64: -1>} : (tensor<4x?xi32>)  -> tensor<?xi32>
 
-  // CHECK: %2 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x?xi32>) -> tensor<2x?xi32>
+  // CHECK: %2 = "tosa.reshape"(%arg0) <{new_shape = array<i64: 2, -1>}> : (tensor<4x?xi32>) -> tensor<2x?xi32>
   %2 = "tosa.reshape"(%arg0) {new_shape = array<i64: 2, -1>} : (tensor<4x?xi32>)  -> tensor<?x?xi32>
 
   return
@@ -403,19 +403,19 @@ func.func @test_dynamic_reshape(%arg0 : tensor<4x?xi32>) -> () {
 
 // CHECK: @test_reduce_binary
 func.func @test_reduce_binary(%arg0 : tensor<2x3x?x?xi1>) -> () {
-  // CHECK: "tosa.reduce_all"(%arg0) {axis = 0 : i64} : (tensor<2x3x?x?xi1>) -> tensor<1x3x?x?xi1>
+  // CHECK: "tosa.reduce_all"(%arg0) <{axis = 0 : i64}> : (tensor<2x3x?x?xi1>) -> tensor<1x3x?x?xi1>
   %0 = "tosa.reduce_all"(%arg0) {axis = 0 : i64} : (tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1>
 
-  // CHECK: "tosa.reduce_all"(%arg0) {axis = 1 : i64} : (tensor<2x3x?x?xi1>) -> tensor<2x1x?x?xi1>
+  // CHECK: "tosa.reduce_all"(%arg0) <{axis = 1 : i64}> : (tensor<2x3x?x?xi1>) -> tensor<2x1x?x?xi1>
   %1 = "tosa.reduce_all"(%arg0) {axis = 1 : i64} : (tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1>
 
-  // CHECK: "tosa.reduce_all"(%arg0) {axis = 2 : i64} : (tensor<2x3x?x?xi1>) -> tensor<2x3x1x?xi1>
+  // CHECK: "tosa.reduce_all"(%arg0) <{axis = 2 : i64}> : (tensor<2x3x?x?xi1>) -> tensor<2x3x1x?xi1>
   %2 = "tosa.reduce_all"(%arg0) {axis = 2 : i64} : (tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1>
 
-  // CHECK: "tosa.reduce_all"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xi1>) -> tensor<2x3x?x1xi1>
+  // CHECK: "tosa.reduce_all"(%arg0) <{axis = 3 : i64}> : (tensor<2x3x?x?xi1>) -> tensor<2x3x?x1xi1>
   %3 = "tosa.reduce_all"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1>
 
-  // CHECK: "tosa.reduce_any"(%arg0) {axis = 0 : i64} : (tensor<2x3x?x?xi1>) -> tensor<1x3x?x?xi1>
+  // CHECK: "tosa.reduce_any"(%arg0) <{axis = 0 : i64}> : (tensor<2x3x?x?xi1>) -> tensor<1x3x?x?xi1>
   %4 = "tosa.reduce_any"(%arg0) {axis = 0 : i64} : (tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1>
 
   return
@@ -425,25 +425,25 @@ func.func @test_reduce_binary(%arg0 : tensor<2x3x?x?xi1>) -> () {
 
 // CHECK: @test_reduce_float
 func.func @test_reduce_float(%arg0 : tensor<2x3x?x?xf32>) -> () {
-  // CHECK: "tosa.reduce_sum"(%arg0) {axis = 0 : i64} : (tensor<2x3x?x?xf32>) -> tensor<1x3x?x?xf32>
+  // CHECK: "tosa.reduce_sum"(%arg0) <{axis = 0 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<1x3x?x?xf32>
   %0 = "tosa.reduce_sum"(%arg0) {axis = 0 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  // CHECK: "tosa.reduce_sum"(%arg0) {axis = 1 : i64} : (tensor<2x3x?x?xf32>) -> tensor<2x1x?x?xf32>
+  // CHECK: "tosa.reduce_sum"(%arg0) <{axis = 1 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<2x1x?x?xf32>
   %1 = "tosa.reduce_sum"(%arg0) {axis = 1 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  // CHECK: "tosa.reduce_sum"(%arg0) {axis = 2 : i64} : (tensor<2x3x?x?xf32>) -> tensor<2x3x1x?xf32>
+  // CHECK: "tosa.reduce_sum"(%arg0) <{axis = 2 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<2x3x1x?xf32>
   %2 = "tosa.reduce_sum"(%arg0) {axis = 2 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  // CHECK: "tosa.reduce_sum"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
+  // CHECK: "tosa.reduce_sum"(%arg0) <{axis = 3 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
   %3 = "tosa.reduce_sum"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  // CHECK: "tosa.reduce_max"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
+  // CHECK: "tosa.reduce_max"(%arg0) <{axis = 3 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
   %4 = "tosa.reduce_max"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  // CHECK: "tosa.reduce_min"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
+  // CHECK: "tosa.reduce_min"(%arg0) <{axis = 3 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
   %5 = "tosa.reduce_min"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  // CHECK: "tosa.reduce_prod"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
+  // CHECK: "tosa.reduce_prod"(%arg0) <{axis = 3 : i64}> : (tensor<2x3x?x?xf32>) -> tensor<2x3x?x1xf32>
   %6 = "tosa.reduce_prod"(%arg0) {axis = 3 : i64} : (tensor<2x3x?x?xf32>) -> tensor<?x?x?x?xf32>
 
   return
@@ -453,7 +453,7 @@ func.func @test_reduce_float(%arg0 : tensor<2x3x?x?xf32>) -> () {
 
 // CHECK-LABEL: @test_concat
 func.func @test_concat(%arg0 : tensor<1x2xf32>, %arg1 : tensor<2x2xf32>) -> () {
-  // CHECK: "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<1x2xf32>, tensor<2x2xf32>) -> tensor<3x2xf32>
+  // CHECK: "tosa.concat"(%arg0, %arg1) <{axis = 0 : i64}> : (tensor<1x2xf32>, tensor<2x2xf32>) -> tensor<3x2xf32>
   %0 = "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<1x2xf32>, tensor<2x2xf32>) -> tensor<?x?xf32>
 
   return
@@ -463,7 +463,7 @@ func.func @test_concat(%arg0 : tensor<1x2xf32>, %arg1 : tensor<2x2xf32>) -> () {
 
 // CHECK-LABEL: @test_concat_dynamic
 func.func @test_concat_dynamic(%arg0 : tensor<1x2xf32>, %arg1 : tensor<2x?xf32>) -> () {
-  // CHECK: "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<1x2xf32>, tensor<2x?xf32>) -> tensor<3x2xf32>
+  // CHECK: "tosa.concat"(%arg0, %arg1) <{axis = 0 : i64}> : (tensor<1x2xf32>, tensor<2x?xf32>) -> tensor<3x2xf32>
   %0 = "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<1x2xf32>, tensor<2x?xf32>) -> tensor<?x?xf32>
 
   return
@@ -473,7 +473,7 @@ func.func @test_concat_dynamic(%arg0 : tensor<1x2xf32>, %arg1 : tensor<2x?xf32>)
 
 // CHECK-LABEL: @test_concat_dynamic_axis
 func.func @test_concat_dynamic_axis(%arg0 : tensor<?x2xf32>, %arg1 : tensor<2x2xf32>) -> () {
-  // CHECK: "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<?x2xf32>, tensor<2x2xf32>) -> tensor<?x2xf32>
+  // CHECK: "tosa.concat"(%arg0, %arg1) <{axis = 0 : i64}> : (tensor<?x2xf32>, tensor<2x2xf32>) -> tensor<?x2xf32>
   %0 = "tosa.concat"(%arg0, %arg1) {axis = 0 : i64} : (tensor<?x2xf32>, tensor<2x2xf32>) -> tensor<?x?xf32>
 
   return
@@ -483,7 +483,7 @@ func.func @test_concat_dynamic_axis(%arg0 : tensor<?x2xf32>, %arg1 : tensor<2x2x
 
 // CHECK-LABEL: @test_concat_axis_1
 func.func @test_concat_axis_1(%arg0 : tensor<2x1xf32>, %arg1 : tensor<2x2xf32>) -> () {
-  // CHECK: "tosa.concat"(%arg0, %arg1) {axis = 1 : i64} : (tensor<2x1xf32>, tensor<2x2xf32>) -> tensor<2x3xf32>
+  // CHECK: "tosa.concat"(%arg0, %arg1) <{axis = 1 : i64}> : (tensor<2x1xf32>, tensor<2x2xf32>) -> tensor<2x3xf32>
   %0 = "tosa.concat"(%arg0, %arg1) {axis = 1 : i64} : (tensor<2x1xf32>, tensor<2x2xf32>) -> tensor<?x?xf32>
 
   return
@@ -522,7 +522,7 @@ func.func @test_padding_simple(%arg0 : tensor<1x2xf32>) -> () {
 
 // CHECK-LABEL: @test_slice
 func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
-  // CHECK: "tosa.slice"(%arg0) {size = array<i64: 2>, start = array<i64: 1>} : (tensor<?xi32>) -> tensor<2xi32>
+  // CHECK: "tosa.slice"(%arg0) <{size = array<i64: 2>, start = array<i64: 1>}> : (tensor<?xi32>) -> tensor<2xi32>
   %0 = "tosa.slice"(%arg0) { size = array<i64: 2>, start = array<i64: 1> } : (tensor<?xi32>) -> tensor<?xi32>
   return
 }
@@ -531,7 +531,7 @@ func.func @test_slice(%arg0 : tensor<?xi32>) -> () {
 
 // CHECK-LABEL: @test_slice_dynamic
 func.func @test_slice_dynamic(%arg0 : tensor<10x?x2xf32>) -> () {
-  // CHECK: "tosa.slice"(%arg0) {size = array<i64: 7, -1, 1>, start = array<i64: 1, 0, 0>} : (tensor<10x?x2xf32>) -> tensor<7x?x1xf32>
+  // CHECK: "tosa.slice"(%arg0) <{size = array<i64: 7, -1, 1>, start = array<i64: 1, 0, 0>}> : (tensor<10x?x2xf32>) -> tensor<7x?x1xf32>
   %0 = "tosa.slice"(%arg0) {size = array<i64: 7, -1, 1>, start = array<i64: 1, 0, 0>} : (tensor<10x?x2xf32>) -> tensor<?x?x?xf32>
   return
 }
@@ -540,8 +540,8 @@ func.func @test_slice_dynamic(%arg0 : tensor<10x?x2xf32>) -> () {
 
 // CHECK-LABEL: @test_tile
 func.func @test_tile(%arg0 : tensor<2x3x?xi32>) -> () {
-  // CHECK: "tosa.tile"(%arg0) {multiples = array<i64: 2, 1, 5>} : (tensor<2x3x?xi32>) -> tensor<4x3x?xi32>
-  %0 = "tosa.tile"(%arg0) {multiples = array<i64: 2, 1, 5>} : (tensor<2x3x?xi32>)  -> (tensor<?x?x?xi32>)
+  // CHECK: "tosa.tile"(%arg0) <{multiples = array<i64: 2, 1, 5>}> : (tensor<2x3x?xi32>) -> tensor<4x3x?xi32>
+  %0 = "tosa.tile"(%arg0) <{multiples = array<i64: 2, 1, 5>}> : (tensor<2x3x?xi32>)  -> (tensor<?x?x?xi32>)
   return
 }
 
