@@ -140,11 +140,10 @@ define <6 x half> @load_v6f16(ptr %p) {
 ; RV64-LABEL: load_v6f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ld a2, 0(a1)
-; RV64-NEXT:    addi a1, a1, 8
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v8, (a1), zero
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a2
+; RV64-NEXT:    ld a1, 8(a1)
+; RV64-NEXT:    vslide1down.vx v8, v8, a2
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    addi a0, a0, 8
