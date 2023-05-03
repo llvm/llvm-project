@@ -8,8 +8,9 @@ tablegen("ARMGenAsmMatcher") {
 
 static_library("AsmParser") {
   output_name = "LLVMARMAsmParser"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":ARMGenAsmMatcher",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",

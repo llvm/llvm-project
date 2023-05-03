@@ -8,8 +8,9 @@ tablegen("LanaiGenAsmMatcher") {
 
 static_library("AsmParser") {
   output_name = "LLVMLanaiAsmParser"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":LanaiGenAsmMatcher",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",
