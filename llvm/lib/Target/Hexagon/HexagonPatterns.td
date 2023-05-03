@@ -117,8 +117,8 @@ def usat: PatFrag<(ops node:$V, node:$Ty), (HexagonUSAT node:$V, node:$Ty)>;
 
 // Pattern fragments to extract the low and high subregisters from a
 // 64-bit value.
-def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_lo)>;
-def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG (i64 $Rs), isub_hi)>;
+def LoReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG $Rs, isub_lo)>;
+def HiReg: OutPatFrag<(ops node:$Rs), (EXTRACT_SUBREG $Rs, isub_hi)>;
 
 def IsOrAdd: PatFrag<(ops node:$A, node:$B), (or node:$A, node:$B), [{
   return isOrEquivalentToAdd(N);
@@ -1123,6 +1123,12 @@ def: Pat<(bswap I32:$Rs),  (A2_swiz I32:$Rs)>;
 def: Pat<(bswap I64:$Rss), (Combinew (A2_swiz (LoReg $Rss)),
                                      (A2_swiz (HiReg $Rss)))>;
 
+def: Pat<(bswap V2I16:$Rs), (A2_combine_lh (A2_swiz $Rs), (A2_swiz $Rs))>;
+def: Pat<(bswap V2I32:$Rs), (Combinew (A2_swiz (HiReg $Rs)),
+                                      (A2_swiz (LoReg $Rs)))>;
+def: Pat<(bswap V4I16:$Rs), (A2_orp (S2_lsr_i_vh $Rs, 8),
+                                    (S2_asl_i_vh $Rs, 8))>;
+
 def: Pat<(shl s6_0ImmPred:$s6, I32:$Rt),  (S4_lsli imm:$s6, I32:$Rt)>;
 def: Pat<(shl I32:$Rs, (i32 16)),         (A2_aslh I32:$Rs)>;
 def: Pat<(sra I32:$Rs, (i32 16)),         (A2_asrh I32:$Rs)>;
@@ -1853,6 +1859,20 @@ def: Pat<(i32 (ctpop I32:$Rs)),   (S5_popcountp (A4_combineir 0, I32:$Rs))>;
 
 def: Pat<(bitreverse I32:$Rs),    (S2_brev I32:$Rs)>;
 def: Pat<(bitreverse I64:$Rss),   (S2_brevp I64:$Rss)>;
+
+def: Pat<(bitreverse V4I8:$Rs),   (A2_swiz (S2_brev $Rs))>;
+def: Pat<(bitreverse V8I8:$Rs),   (Combinew (A2_swiz (LoReg (S2_brevp $Rs))),
+                                            (A2_swiz (HiReg (S2_brevp $Rs))))>;
+def: Pat<(bitreverse V2I16:$Rs),  (A2_combine_lh (S2_brev $Rs),
+                                                 (S2_brev $Rs))>;
+def: Pat<(bitreverse V4I16:$Rs),
+         (Combinew (A2_combine_lh (LoReg (S2_brevp $Rs)),
+                                  (LoReg (S2_brevp $Rs))),
+                   (A2_combine_lh (HiReg (S2_brevp $Rs)),
+                                  (HiReg (S2_brevp $Rs))))>;
+def: Pat<(bitreverse V2I32:$Rs),
+         (Combinew (i32 (LoReg (S2_brevp $Rs))),
+                   (i32 (HiReg (S2_brevp $Rs))))>;
 
 let AddedComplexity = 20 in { // Complexity greater than and/or/xor
   def: Pat<(and I32:$Rs, IsNPow2_32:$V),
