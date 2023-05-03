@@ -805,7 +805,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
       unsigned NumElems = numStructUnionElements(ILE->getType());
-      if (!RDecl->isUnion() && RDecl->hasFlexibleArrayMember())
+      if (RDecl->hasFlexibleArrayMember())
         ++NumElems;
       if (!VerifyOnly && ILE->getNumInits() < NumElems)
         ILE->resizeInits(SemaRef.Context, NumElems);
