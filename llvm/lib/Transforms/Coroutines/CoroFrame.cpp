@@ -2877,31 +2877,37 @@ void coro::salvageDebugInfo(
   if (!Storage)
     return;
 
-  // Store a pointer to the coroutine frame object in an alloca so it
-  // is available throughout the function when producing unoptimized
-  // code. Extending the lifetime this way is correct because the
-  // variable has been declared by a dbg.declare intrinsic.
-  //
-  // Avoid to create the alloca would be eliminated by optimization
-  // passes and the corresponding dbg.declares would be invalid.
-  if (!OptimizeFrame)
-    if (auto *Arg = dyn_cast<Argument>(Storage)) {
-      auto &Cached = ArgToAllocaMap[Arg];
-      if (!Cached) {
-        Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
-                                      Arg->getName() + ".debug");
-        Builder.CreateStore(Storage, Cached);
-      }
-      Storage = Cached;
-      // FIXME: LLVM lacks nuanced semantics to differentiate between
-      // memory and direct locations at the IR level. The backend will
-      // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
-      // location. Thus, if there are deref and offset operations in the
-      // expression, we need to add a DW_OP_deref at the *start* of the
-      // expression to first load the contents of the alloca before
-      // adjusting it with the expression.
-      Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+  auto *StorageAsArg = dyn_cast<Argument>(Storage);
+  const bool IsSwiftAsyncArg =
+      StorageAsArg && StorageAsArg->hasAttribute(Attribute::SwiftAsync);
+
+  // Swift async arguments are described by an entry value of the ABI-defined
+  // register containing the coroutine context.
+  if (IsSwiftAsyncArg && !Expr->isEntryValue())
+    Expr = DIExpression::prepend(Expr, DIExpression::EntryValue);
+
+  // If the coroutine frame is an Argument, store it in an alloca to improve
+  // its availability (e.g. registers may be clobbered).
+  // Avoid this if optimizations are enabled (they would remove the alloca) or
+  // if the value is guaranteed to be available through other means (e.g. swift
+  // ABI guarantees).
+  if (StorageAsArg && !OptimizeFrame && !IsSwiftAsyncArg) {
+    auto &Cached = ArgToAllocaMap[StorageAsArg];
+    if (!Cached) {
+      Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
+                                    Storage->getName() + ".debug");
+      Builder.CreateStore(Storage, Cached);
     }
+    Storage = Cached;
+    // FIXME: LLVM lacks nuanced semantics to differentiate between
+    // memory and direct locations at the IR level. The backend will
+    // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
+    // location. Thus, if there are deref and offset operations in the
+    // expression, we need to add a DW_OP_deref at the *start* of the
+    // expression to first load the contents of the alloca before
+    // adjusting it with the expression.
+    Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
+  }
 
   DVI->replaceVariableLocationOp(OriginalStorage, Storage);
   DVI->setExpression(Expr);
