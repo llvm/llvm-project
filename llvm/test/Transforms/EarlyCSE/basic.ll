@@ -137,14 +137,17 @@ declare i32 @func(ptr%P) readonly
 ;; Simple call CSE'ing.
 define i32 @test5(ptr%P) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P:%.*]])
+; CHECK-NEXT:    [[V1:%.*]] = call i32 @func(ptr [[P:%.*]]), !prof !0
 ; CHECK-NEXT:    ret i32 0
 ;
-  %V1 = call i32 @func(ptr %P)
-  %V2 = call i32 @func(ptr %P)
+  %V1 = call i32 @func(ptr %P), !prof !0
+  %V2 = call i32 @func(ptr %P), !prof !1
   %Diff = sub i32 %V1, %V2
   ret i32 %Diff
 }
+
+!0 = !{!"branch_weights", i32 95}
+!1 = !{!"branch_weights", i32 95}
 
 ;; Trivial Store->load forwarding
 define i32 @test6(ptr%P) {

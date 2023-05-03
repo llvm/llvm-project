@@ -658,7 +658,7 @@ function(add_libc_hermetic_test test_name)
   target_compile_options(${fq_build_target_name}
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
 
-  target_link_options(${fq_build_target_name} PRIVATE -nostdlib -static)
+  target_link_options(${fq_build_target_name} PRIVATE -nolibc -nostartfiles -nostdlib++ -static)
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
@@ -693,10 +693,17 @@ endfunction(add_libc_hermetic_test)
 
 # A convenience function to add both a unit test as well as a hermetic test.
 function(add_libc_test test_name)
-  if(LIBC_ENABLE_UNITTESTS)
-    add_libc_unittest(${test_name}.__unit__ ${ARGN})
+  cmake_parse_arguments(
+    "LIBC_TEST"
+    "UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
+    "" # Single value arguments
+    "" # Multi-value arguments
+    ${ARGN}
+  )
+  if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
+    add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
   endif()
-  if(LIBC_ENABLE_HERMETIC_TESTS)
-    add_libc_hermetic_test(${test_name}.__hermetic__ ${ARGN})
+  if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
+    add_libc_hermetic_test(${test_name}.__hermetic__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
   endif()
 endfunction(add_libc_test)

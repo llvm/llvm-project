@@ -107,7 +107,7 @@ static std::string getPrintableName(StringRef Name) {
   std::string OutputName = "'";
   OutputName += Name;
   OutputName += "'";
-  std::string DemangledName(demangle(Name));
+  std::string DemangledName(demangle(Name.str()));
   if (Name != DemangledName) {
     OutputName += " aka ";
     OutputName += DemangledName;

@@ -4727,22 +4727,54 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcNan);
         break;
       }
-      case Intrinsic::minnum:
+
       case Intrinsic::maxnum:
+      case Intrinsic::minnum:
       case Intrinsic::minimum:
       case Intrinsic::maximum: {
-        KnownFPClass Known2;
-        computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
-                            Known, Depth + 1, Q, TLI);
-        computeKnownFPClass(II->getArgOperand(1), DemandedElts, InterestedClasses,
-                            Known2, Depth + 1, Q, TLI);
+        KnownFPClass KnownLHS, KnownRHS;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownLHS, Depth + 1, Q, TLI);
+        computeKnownFPClass(II->getArgOperand(1), DemandedElts,
+                            InterestedClasses, KnownRHS, Depth + 1, Q, TLI);
 
-        bool NeverNaN = Known.isKnownNeverNaN() || Known2.isKnownNeverNaN();
-        Known |= Known2;
+        bool NeverNaN =
+            KnownLHS.isKnownNeverNaN() || KnownRHS.isKnownNeverNaN();
+        Known = KnownLHS | KnownRHS;
 
         // If either operand is not NaN, the result is not NaN.
         if (NeverNaN && (IID == Intrinsic::minnum || IID == Intrinsic::maxnum))
           Known.knownNot(fcNan);
+
+        if (IID == Intrinsic::maxnum) {
+          // If at least one operand is known to be positive, the result must be
+          // positive.
+          if ((KnownLHS.cannotBeOrderedLessThanZero() &&
+               KnownLHS.isKnownNeverNaN()) ||
+              (KnownRHS.cannotBeOrderedLessThanZero() &&
+               KnownRHS.isKnownNeverNaN()))
+            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        } else if (IID == Intrinsic::maximum) {
+          // If at least one operand is known to be positive, the result must be
+          // positive.
+          if (KnownLHS.cannotBeOrderedLessThanZero() ||
+              KnownRHS.cannotBeOrderedLessThanZero())
+            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+        } else if (IID == Intrinsic::minnum) {
+          // If at least one operand is known to be negative, the result must be
+          // negative.
+          if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
+               KnownLHS.isKnownNeverNaN()) ||
+              (KnownRHS.cannotBeOrderedGreaterThanZero() &&
+               KnownRHS.isKnownNeverNaN()))
+            Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+        } else {
+          // If at least one operand is known to be negative, the result must be
+          // negative.
+          if (KnownLHS.cannotBeOrderedGreaterThanZero() ||
+              KnownRHS.cannotBeOrderedGreaterThanZero())
+            Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+          }
 
         // Fixup zero handling if denormals could be returned as a zero.
         //

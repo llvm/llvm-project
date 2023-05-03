@@ -4109,6 +4109,10 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
 
   MVT SVT = VT.getSimpleVT();
 
+  // Not for i1 vectors.
+  if (SVT.getScalarType() == MVT::i1)
+    return false;
+
   int Dummy1, Dummy2;
   return (isElementRotate(Dummy1, Dummy2, M) > 0) ||
          isInterleaveShuffle(M, SVT, Dummy1, Dummy2, Subtarget);

@@ -637,7 +637,9 @@ LogicalResult tosa::SliceOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   inferredReturnShapes.push_back(ShapedTypeComponents(
-      convertToMlirShape(SliceOpAdaptor(operands, attributes).getSize())));
+      convertToMlirShape(SliceOpAdaptor(operands, attributes,
+                                        *properties.as<Properties *>(), regions)
+                             .getSize())));
   return success();
 }
 
@@ -663,7 +665,8 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  TileOpAdaptor adaptor(operands, attributes);
+  TileOpAdaptor adaptor(operands, attributes, *properties.as<Properties *>(),
+                        regions);
   ArrayRef<int64_t> multiples = adaptor.getMultiples();
   ShapeAdaptor inputShape = operands.getShape(0);
   SmallVector<int64_t> outputShape;
@@ -697,7 +700,8 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ReshapeOpAdaptor adaptor(operands, attributes);
+  ReshapeOpAdaptor adaptor(operands, attributes, *properties.as<Properties *>(),
+                           regions);
   ShapeAdaptor inputShape = operands.getShape(0);
   Type inputType = getElementTypeOrSelf(operands.getType()[0]);
   llvm::SmallVector<int64_t> newShapeValue =
@@ -861,7 +865,8 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ResizeOpAdaptor adaptor(operands, attributes);
+  ResizeOpAdaptor adaptor(operands, attributes, *properties.as<Properties *>(),
+                          regions);
   llvm::SmallVector<int64_t, 4> outputShape;
   outputShape.resize(4, ShapedType::kDynamic);
 
@@ -1083,7 +1088,8 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
-  Conv2DOp::Adaptor adaptor(operands.getValues(), attributes);
+  Conv2DOp::Adaptor adaptor(operands, attributes,
+                            *properties.as<Properties *>(), regions);
 
   int64_t inputWidth = ShapedType::kDynamic;
   int64_t inputHeight = ShapedType::kDynamic;
@@ -1147,7 +1153,8 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape(5, ShapedType::kDynamic);
-  Conv3DOp::Adaptor adaptor(operands.getValues(), attributes);
+  Conv3DOp::Adaptor adaptor(operands, attributes,
+                            *properties.as<Properties *>(), regions);
 
   int64_t inputWidth = ShapedType::kDynamic;
   int64_t inputHeight = ShapedType::kDynamic;
@@ -1237,7 +1244,8 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
-  DepthwiseConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
+  DepthwiseConv2DOp::Adaptor adaptor(operands, attributes,
+                                     *properties.as<Properties *>(), regions);
 
   int64_t inputWidth = ShapedType::kDynamic;
   int64_t inputHeight = ShapedType::kDynamic;
@@ -1313,7 +1321,8 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  TransposeConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
+  TransposeConv2DOp::Adaptor adaptor(operands, attributes,
+                                     *properties.as<Properties *>(), regions);
   // outputShape is mutable.
   llvm::SmallVector<int64_t> outputShape =
       convertToMlirShape(adaptor.getOutShape());
