@@ -120,7 +120,7 @@ template <auto Func> struct StrrchrTest : public __llvm_libc::testing::Test {
   }
 
   void findsLastBehindFirstNullTerminator() {
-    const char src[6] = {'a', 'a', '\0', 'b', '\0', 'c'};
+    static const char src[6] = {'a', 'a', '\0', 'b', '\0', 'c'};
     // 'b' is behind a null terminator, so should not be found.
     ASSERT_STREQ(Func(src, 'b'), nullptr);
     // Same goes for 'c'.
