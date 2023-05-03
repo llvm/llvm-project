@@ -21,7 +21,7 @@ executable("llvm-min-tblgen") {
 }
 
 executable("llvm-tblgen") {
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":llvm-min-tblgen-sources",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Support",
