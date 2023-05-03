@@ -4602,8 +4602,10 @@ bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftReadMetadataFromFileCache, true);
+    return exp_values
+        ->GetPropertyAtIndexAsBoolean(nullptr,
+                                      ePropertySwiftReadMetadataFromFileCache)
+        .value_or(true);
 
   return true;
 }
@@ -4614,8 +4616,10 @@ bool TargetProperties::GetSwiftUseReflectionSymbols() const {
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftUseReflectionSymbols, true);
+    return exp_values
+        ->GetPropertyAtIndexAsBoolean(nullptr,
+                                      ePropertySwiftUseReflectionSymbols)
+        .value_or(true);
   else
     return true;
 }
@@ -4626,8 +4630,10 @@ bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftReadMetadataFromDSYM, true);
+    return exp_values
+        ->GetPropertyAtIndexAsBoolean(nullptr,
+                                      ePropertySwiftReadMetadataFromDSYM)
+        .value_or(true);
 
   return true;
 }
@@ -4638,8 +4644,10 @@ bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftDiscoverImplicitSearchPaths, true);
+    return exp_values
+        ->GetPropertyAtIndexAsBoolean(nullptr,
+                                      ePropertySwiftDiscoverImplicitSearchPaths)
+        .value_or(true);
 
   return true;
 }
@@ -4650,8 +4658,10 @@ bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values->GetPropertyAtIndexAsBoolean(
-        nullptr, ePropertySwiftEnableBareSlashRegex, true);
+    return exp_values
+        ->GetPropertyAtIndexAsBoolean(nullptr,
+                                      ePropertySwiftEnableBareSlashRegex)
+        .value_or(true);
 
   return true;
 }
@@ -4661,15 +4671,15 @@ EnableSwiftCxxInterop TargetProperties::GetEnableSwiftCxxInterop() const {
 
   EnableSwiftCxxInterop enable_interop =
       (EnableSwiftCxxInterop)m_experimental_properties_up->GetValueProperties()
-          ->GetPropertyAtIndexAsEnumeration(
-              nullptr, idx, g_target_properties[idx].default_uint_value);
+          ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+          .value_or(g_target_properties[idx].default_uint_value);
   return enable_interop;
 }
 
 bool TargetProperties::GetSwiftAutoImportFrameworks() const {
   const uint32_t idx = ePropertySwiftAutoImportFrameworks;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_target_properties[idx].default_uint_value != 0);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
@@ -4960,8 +4970,8 @@ FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
 
 llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
   const uint32_t idx = ePropertySwiftExtraClangFlags;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx,
-                                                     llvm::StringRef());
+  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx)
+      .value_or(llvm::StringRef());
 }
 
 FileSpecList TargetProperties::GetClangModuleSearchPaths() {
@@ -4981,8 +4991,8 @@ bool TargetProperties::GetEnableAutoImportClangModules() const {
 
 bool TargetProperties::GetUseAllCompilerFlags() const {
   const uint32_t idx = ePropertyUseAllCompilerFlags;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      NULL, idx, g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(NULL, idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetUseAllCompilerFlags(bool b) {
@@ -5365,8 +5375,8 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 
 bool TargetProperties::GetEnableTrampolineSupport() const {
   const uint32_t idx = ePropertyEnableTrampolineSupport;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
