@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___CHRONO_CONVERT_TO_TM_H
 #define _LIBCPP___CHRONO_CONVERT_TO_TM_H
 
+#include <__chrono/calendar.h>
 #include <__chrono/concepts.h>
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
@@ -106,6 +107,8 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
       return std::__convert_to_tm<_Tm>(__value);
     else if constexpr (same_as<typename _ChronoT::clock, chrono::file_clock>)
       return std::__convert_to_tm<_Tm>(_ChronoT::clock::to_sys(__value));
+    else if constexpr (same_as<typename _ChronoT::clock, chrono::local_t>)
+      return std::__convert_to_tm<_Tm>(chrono::sys_time<typename _ChronoT::duration>{__value.time_since_epoch()});
     else
       static_assert(sizeof(_ChronoT) == 0, "TODO: Add the missing clock specialization");
   } else if constexpr (chrono::__is_duration<_ChronoT>::value) {

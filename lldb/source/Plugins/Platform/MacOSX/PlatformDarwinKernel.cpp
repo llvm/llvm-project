@@ -421,7 +421,7 @@ PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
   static constexpr llvm::StringLiteral g_kdk_suffix = ".kdk";
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
-  FileSpec file_spec(path);
+  const FileSpec file_spec(path);
   if (ft == llvm::sys::fs::file_type::directory_file &&
       (file_spec.GetFileNameExtension() == g_sdk_suffix ||
        file_spec.GetFileNameExtension() == g_kdk_suffix)) {
@@ -482,7 +482,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   static constexpr llvm::StringLiteral g_kext_suffix = ".kext";
   static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
 
-  FileSpec file_spec(path);
+  const FileSpec file_spec(path);
   llvm::StringRef file_spec_extension = file_spec.GetFileNameExtension();
 
   Log *log = GetLog(LLDBLog::Platform);
@@ -691,7 +691,7 @@ bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
 // it should iterate over every binary in the DWARF subdir
 // and return them all.
 std::vector<FileSpec>
-PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(FileSpec dsym_bundle) {
+PlatformDarwinKernel::GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle) {
   std::vector<FileSpec> results;
   static constexpr llvm::StringLiteral g_dsym_suffix = ".dSYM";
   if (dsym_bundle.GetFileNameExtension() != g_dsym_suffix) {

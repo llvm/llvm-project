@@ -107,6 +107,14 @@ bool lldb_private::LLDBSWIGPythonCallThreadPlan(void *implementor,
   return false;
 }
 
+bool 
+lldb_private::LLDBSWIGPythonCallThreadPlan(void *implementor,
+                                                const char *method_name,
+                                                Stream *event_sp,
+                                                bool &got_error) {
+  return false;
+}
+
 python::PythonObject
 lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,

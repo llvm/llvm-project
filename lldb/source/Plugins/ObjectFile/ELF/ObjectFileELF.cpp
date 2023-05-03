@@ -623,7 +623,7 @@ size_t ObjectFileELF::GetModuleSpecifications(
             if (!gnu_debuglink_crc) {
               LLDB_SCOPED_TIMERF(
                   "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                  file.GetLastPathComponent().AsCString(),
+                  file.GetFilename().AsCString(),
                   (length - file_offset) / 1024);
 
               // For core files - which usually don't happen to have a

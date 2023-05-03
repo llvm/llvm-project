@@ -53,6 +53,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -259,13 +260,30 @@ INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 
 bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
                                  RegScavenger *RS) const {
+  /// Check if \p Op is known to access an address not on the function's stack .
+  /// At the moment, accesses where the underlying object is a global or a
+  /// function argument are considered non-stack accesses. Note that the
+  /// caller's stack may get accessed when passing an argument via the stack,
+  /// but not the stack of the current function.
+  ///
+  auto IsKnownNonStackPtr = [](MachineMemOperand *Op) {
+    if (Op->getValue()) {
+      const Value *UO = getUnderlyingObject(Op->getValue());
+      if (!UO)
+        return false;
+      if (auto *Arg = dyn_cast<Argument>(UO))
+        return !Arg->hasPassPointeeByValueCopyAttr();
+      return isa<GlobalValue>(UO);
+    }
+    return false;
+  };
   // This prevents premature stack popping when occurs a indirect stack
-  // access. It is overly aggressive for the moment.
-  // TODO: - Obvious non-stack loads and store, such as global values,
-  //         are known to not access the stack.
+  // access.  It is overly aggressive for the moment.
+  // TODO:
   //       - Further, data dependency and alias analysis can validate
   //         that load and stores never derive from the stack pointer.
-  if (MI.mayLoadOrStore())
+  if (MI.mayLoadOrStore() && (MI.isCall() || MI.hasUnmodeledSideEffects() ||
+                              !all_of(MI.memoperands(), IsKnownNonStackPtr)))
     return true;
 
   if (MI.getOpcode() == FrameSetupOpcode ||

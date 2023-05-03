@@ -27,6 +27,7 @@ namespace hlfir {
 
 class AssociateOp;
 class ElementalOp;
+class ElementalAddrOp;
 class YieldElementOp;
 
 /// Is this an SSA value type for the value of a Fortran procedure
@@ -389,6 +390,11 @@ convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
              const hlfir::Entity &entity, mlir::Type targetType);
+
+/// Clone an hlfir.elemental_addr into an hlfir.elemental value.
+hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::ElementalAddrOp elementalAddrOp);
 
 } // namespace hlfir
 

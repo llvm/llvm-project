@@ -223,6 +223,7 @@ copy("Headers") {
     "serializeintrin.h",
     "sgxintrin.h",
     "shaintrin.h",
+    "sifive_vector.h",
     "smmintrin.h",
     "stdalign.h",
     "stdarg.h",

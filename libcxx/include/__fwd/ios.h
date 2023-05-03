@@ -19,21 +19,21 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_ios;
+class _LIBCPP_TEMPLATE_VIS basic_ios;
 
-typedef basic_ios<char>              ios;
+typedef basic_ios<char> ios;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_ios<wchar_t>           wios;
+typedef basic_ios<wchar_t> wios;
 #endif
 
 template <class _CharT, class _Traits>
-    class _LIBCPP_PREFERRED_NAME(ios) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wios)) basic_ios;
+class _LIBCPP_PREFERRED_NAME(ios) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wios)) basic_ios;
 
 #if defined(_NEWLIB_VERSION)
 // On newlib, off_t is 'long int'
-typedef long int streamoff;         // for char_traits in <string>
+typedef long int streamoff; // for char_traits in <string>
 #else
-typedef long long streamoff;        // for char_traits in <string>
+typedef long long streamoff; // for char_traits in <string>
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
