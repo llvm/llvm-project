@@ -1019,13 +1019,11 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
 
     DenseMap<Register, RegSubRegPair> LocalVRMap;
     SmallVector<std::pair<Register, RegSubRegPair>, 4> CopyInfos;
-    MachineBasicBlock::iterator I = TailBB->begin();
     // Process PHI instructions first.
-    while (I != TailBB->end() && I->isPHI()) {
+    for (MachineInstr &MI : make_early_inc_range(TailBB->phis())) {
       // Replace the uses of the def of the PHI with the register coming
       // from PredBB.
-      MachineInstr *MI = &*I++;
-      processPHI(MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, false);
+      processPHI(&MI, TailBB, PredBB, LocalVRMap, CopyInfos, UsedByPhi, false);
     }
     appendCopies(PredBB, CopyInfos, Copies);
   }

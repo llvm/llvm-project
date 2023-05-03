@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   AsmPrinter
   CodeGen
+  CodeGenTypes
   DWARFLinker
   DebugInfoDWARF
   MC

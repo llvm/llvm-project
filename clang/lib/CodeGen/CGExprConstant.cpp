@@ -1730,7 +1730,7 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   // Zero-extend bool.
-  if (C->getType()->isIntegerTy(1)) {
+  if (C->getType()->isIntegerTy(1) && !destType->isBitIntType()) {
     llvm::Type *boolTy = CGM.getTypes().ConvertTypeForMem(destType);
     return llvm::ConstantExpr::getZExt(C, boolTy);
   }

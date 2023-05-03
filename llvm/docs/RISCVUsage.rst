@@ -103,7 +103,7 @@ on support follow.
      ``Zdinx``        Assembly Support
      ``Zfh``          Supported
      ``Zfhmin``       Supported
-     ``Zfinx``        Assembly Support
+     ``Zfinx``        Supported
      ``Zhinx``        Assembly Support
      ``Zhinxmin``     Assembly Support
      ``Zicbom``       Assembly Support

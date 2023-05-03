@@ -92,8 +92,9 @@ class ProcessOptionValueProperties
 public:
   ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
 
-  const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
-                                     uint32_t idx) const override {
+  const Property *
+  GetPropertyAtIndex(uint32_t idx,
+                     const ExecutionContext *exe_ctx) const override {
     // When getting the value for a key from the process options, we will
     // always try and grab the setting from the current process if there is
     // one. Else we just use the one from this instance.
@@ -189,170 +190,169 @@ ProcessProperties::~ProcessProperties() = default;
 
 bool ProcessProperties::GetDisableMemoryCache() const {
   const uint32_t idx = ePropertyDisableMemCache;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 uint64_t ProcessProperties::GetMemoryCacheLineSize() const {
   const uint32_t idx = ePropertyMemCacheLineSize;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_process_properties[idx].default_uint_value);
 }
 
 Args ProcessProperties::GetExtraStartupCommands() const {
   Args args;
   const uint32_t idx = ePropertyExtraStartCommand;
-  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, args);
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
   return args;
 }
 
 void ProcessProperties::SetExtraStartupCommands(const Args &args) {
   const uint32_t idx = ePropertyExtraStartCommand;
-  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, args);
+  m_collection_sp->SetPropertyAtIndexFromArgs(idx, args);
 }
 
 FileSpec ProcessProperties::GetPythonOSPluginPath() const {
   const uint32_t idx = ePropertyPythonOSPluginPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
 }
 
 uint32_t ProcessProperties::GetVirtualAddressableBits() const {
   const uint32_t idx = ePropertyVirtualAddressableBits;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_process_properties[idx].default_uint_value);
 }
 
 void ProcessProperties::SetVirtualAddressableBits(uint32_t bits) {
   const uint32_t idx = ePropertyVirtualAddressableBits;
-  m_collection_sp->SetPropertyAtIndexAsUInt64(nullptr, idx, bits);
+  m_collection_sp->SetPropertyAtIndexAsUInt64(idx, bits);
 }
 void ProcessProperties::SetPythonOSPluginPath(const FileSpec &file) {
   const uint32_t idx = ePropertyPythonOSPluginPath;
-  m_collection_sp->SetPropertyAtIndexAsFileSpec(nullptr, idx, file);
+  m_collection_sp->SetPropertyAtIndexAsFileSpec(idx, file);
 }
 
 bool ProcessProperties::GetIgnoreBreakpointsInExpressions() const {
   const uint32_t idx = ePropertyIgnoreBreakpointsInExpressions;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 void ProcessProperties::SetIgnoreBreakpointsInExpressions(bool ignore) {
   const uint32_t idx = ePropertyIgnoreBreakpointsInExpressions;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, ignore);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, ignore);
 }
 
 bool ProcessProperties::GetUnwindOnErrorInExpressions() const {
   const uint32_t idx = ePropertyUnwindOnErrorInExpressions;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 void ProcessProperties::SetUnwindOnErrorInExpressions(bool ignore) {
   const uint32_t idx = ePropertyUnwindOnErrorInExpressions;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, ignore);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, ignore);
 }
 
 bool ProcessProperties::GetStopOnSharedLibraryEvents() const {
   const uint32_t idx = ePropertyStopOnSharedLibraryEvents;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 void ProcessProperties::SetStopOnSharedLibraryEvents(bool stop) {
   const uint32_t idx = ePropertyStopOnSharedLibraryEvents;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, stop);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, stop);
 }
 
 bool ProcessProperties::GetDisableLangRuntimeUnwindPlans() const {
   const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 void ProcessProperties::SetDisableLangRuntimeUnwindPlans(bool disable) {
   const uint32_t idx = ePropertyDisableLangRuntimeUnwindPlans;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, disable);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, disable);
   m_process->Flush();
 }
 
 bool ProcessProperties::GetDetachKeepsStopped() const {
   const uint32_t idx = ePropertyDetachKeepsStopped;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 void ProcessProperties::SetDetachKeepsStopped(bool stop) {
   const uint32_t idx = ePropertyDetachKeepsStopped;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, stop);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, stop);
 }
 
 bool ProcessProperties::GetWarningsOptimization() const {
   const uint32_t idx = ePropertyWarningOptimization;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 bool ProcessProperties::GetWarningsUnsupportedLanguage() const {
   const uint32_t idx = ePropertyWarningUnsupportedLanguage;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
-  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-                       .value_or(g_process_properties[idx].default_uint_value);
+  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_process_properties[idx].default_uint_value);
   return std::chrono::seconds(value);
 }
 
 std::chrono::seconds ProcessProperties::GetInterruptTimeout() const {
   const uint32_t idx = ePropertyInterruptTimeout;
-  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-                       .value_or(g_process_properties[idx].default_uint_value);
+  uint64_t value = m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_process_properties[idx].default_uint_value);
   return std::chrono::seconds(value);
 }
 
 bool ProcessProperties::GetSteppingRunsAllThreads() const {
   const uint32_t idx = ePropertySteppingRunsAllThreads;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_process_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_process_properties[idx].default_uint_value != 0);
 }
 
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
   const bool fail_value = true;
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (!exp_values)
     return fail_value;
 
   return exp_values
-      ->GetPropertyAtIndexAsBoolean(nullptr, ePropertyOSPluginReportsAllThreads)
+      ->GetPropertyAtIndexAsBoolean(ePropertyOSPluginReportsAllThreads)
       .value_or(fail_value);
 }
 
 void ProcessProperties::SetOSPluginReportsAllThreads(bool does_report) {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    exp_values->SetPropertyAtIndexAsBoolean(
-        nullptr, ePropertyOSPluginReportsAllThreads, does_report);
+    exp_values->SetPropertyAtIndexAsBoolean(ePropertyOSPluginReportsAllThreads,
+                                            does_report);
 }
 
 FollowForkMode ProcessProperties::GetFollowForkMode() const {
   const uint32_t idx = ePropertyFollowForkMode;
-  return (FollowForkMode)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+  return (FollowForkMode)m_collection_sp->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_process_properties[idx].default_uint_value);
 }
 
@@ -480,7 +480,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
 
   // Allow the platform to override the default cache line size
   OptionValueSP value_sp =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyMemCacheLineSize)
+      m_collection_sp->GetPropertyAtIndex(ePropertyMemCacheLineSize)
           ->GetValue();
   uint32_t platform_cache_line_size =
       target_sp->GetPlatform()->GetDefaultMemoryCacheLineSize();

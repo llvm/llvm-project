@@ -24,11 +24,11 @@ namespace parallel {
 #if LLVM_ENABLE_THREADS
 
 #ifdef _WIN32
-static thread_local unsigned threadIndex;
+static thread_local unsigned threadIndex = UINT_MAX;
 
-unsigned getThreadIndex() { return threadIndex; }
+unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #else
-thread_local unsigned threadIndex;
+thread_local unsigned threadIndex = UINT_MAX;
 #endif
 
 namespace detail {
@@ -99,10 +99,13 @@ public:
 
   void add(std::function<void()> F, bool Sequential = false) override {
     {
-      bool UseSequentialQueue =
-          Sequential || parallel::strategy.ThreadsRequested == 1;
+      if (parallel::strategy.ThreadsRequested == 1) {
+        F();
+        return;
+      }
+
       std::lock_guard<std::mutex> Lock(Mutex);
-      if (UseSequentialQueue)
+      if (Sequential)
         WorkQueueSequential.emplace_front(std::move(F));
       else
         WorkQueue.emplace_back(std::move(F));
@@ -217,13 +220,9 @@ void TaskGroup::spawn(std::function<void()> F, bool Sequential) {
 
 void llvm::parallelFor(size_t Begin, size_t End,
                        llvm::function_ref<void(size_t)> Fn) {
-  // If we have zero or one items, then do not incur the overhead of spinning up
-  // a task group.  They are surprisingly expensive, and because they do not
-  // support nested parallelism, a single entry task group can block parallel
-  // execution underneath them.
 #if LLVM_ENABLE_THREADS
-  auto NumItems = End - Begin;
-  if (NumItems > 1 && parallel::strategy.ThreadsRequested != 1) {
+  if (parallel::strategy.ThreadsRequested != 1) {
+    auto NumItems = End - Begin;
     // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
     // overhead on large inputs.
     auto TaskSize = NumItems / parallel::detail::MaxTasksPerGroup;

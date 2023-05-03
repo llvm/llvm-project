@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMARCDisassembler
 
   LINK_COMPONENTS
   ARCInfo
+  CodeGenTypes
   MCDisassembler
   Support
 
