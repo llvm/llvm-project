@@ -440,8 +440,9 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   return {std::move(UnusedIncludes), std::move(MissingIncludes)};
 }
 
-Fix removeAllUnusedIncludes(llvm::ArrayRef<Diag> UnusedIncludes) {
-  assert(!UnusedIncludes.empty());
+std::optional<Fix> removeAllUnusedIncludes(llvm::ArrayRef<Diag> UnusedIncludes) {
+  if (UnusedIncludes.empty())
+    return std::nullopt;
 
   Fix RemoveAll;
   RemoveAll.Message = "remove all unused includes";
@@ -465,8 +466,10 @@ Fix removeAllUnusedIncludes(llvm::ArrayRef<Diag> UnusedIncludes) {
   }
   return RemoveAll;
 }
-Fix addAllMissingIncludes(llvm::ArrayRef<Diag> MissingIncludeDiags) {
-  assert(!MissingIncludeDiags.empty());
+std::optional<Fix>
+addAllMissingIncludes(llvm::ArrayRef<Diag> MissingIncludeDiags) {
+  if (MissingIncludeDiags.empty())
+    return std::nullopt;
 
   Fix AddAllMissing;
   AddAllMissing.Message = "add all missing includes";
@@ -516,15 +519,11 @@ std::vector<Diag> generateIncludeCleanerDiagnostic(
     llvm::StringRef Code) {
   std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
       AST.tuPath(), Findings.UnusedIncludes, Code);
-  std::optional<Fix> RemoveAllUnused;;
-  if (UnusedIncludes.size() > 1)
-    RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
+  std::optional<Fix> RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
 
   std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
       AST, Findings.MissingIncludes, Code);
-  std::optional<Fix> AddAllMissing;
-  if (MissingIncludeDiags.size() > 1)
-    AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
+  std::optional<Fix> AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
 
   std::optional<Fix> FixAll;
   if (RemoveAllUnused && AddAllMissing)
@@ -535,11 +534,16 @@ std::vector<Diag> generateIncludeCleanerDiagnostic(
     Out->Fixes.push_back(*F);
   };
   for (auto &Diag : MissingIncludeDiags) {
-    AddBatchFix(AddAllMissing, &Diag);
+    AddBatchFix(MissingIncludeDiags.size() > 1
+                    ? AddAllMissing
+                    : std::nullopt,
+                &Diag);
     AddBatchFix(FixAll, &Diag);
   }
   for (auto &Diag : UnusedIncludes) {
-    AddBatchFix(RemoveAllUnused, &Diag);
+    AddBatchFix(UnusedIncludes.size() > 1 ? RemoveAllUnused
+                                          : std::nullopt,
+                &Diag);
     AddBatchFix(FixAll, &Diag);
   }
 
