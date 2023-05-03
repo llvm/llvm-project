@@ -179,6 +179,7 @@ Design Documents
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy
    DesignDocs/NoexceptPolicy
+   DesignDocs/PSTLIntegration
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
    DesignDocs/UnspecifiedBehaviorRandomization
