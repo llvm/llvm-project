@@ -2374,3 +2374,5 @@ let HasMasked = false, HasVL = false, IRName = "" in {
     }
   }
 }
+
+include "riscv_sifive_vector.td"
