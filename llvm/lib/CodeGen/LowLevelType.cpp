@@ -1,4 +1,4 @@
-//===-- llvm/Support/LowLevelType.cpp -------------------------------------===//
+//===-- llvm/CodeGen/LowLevelType.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/LowLevelTypeImpl.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 

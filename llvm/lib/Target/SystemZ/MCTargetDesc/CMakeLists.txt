@@ -7,6 +7,7 @@ add_llvm_component_library(LLVMSystemZDesc
   SystemZMCTargetDesc.cpp
 
   LINK_COMPONENTS
+  CodeGen
   MC
   Support
   SystemZInfo
