@@ -16,6 +16,7 @@ class Callback {
 public:
   virtual void Invoke() const {}
   void operator()() const { Invoke(); }
+
 protected:
   ~Callback() = default;
 };
@@ -101,12 +102,11 @@ public:
   }
 
   OptionValueDictionary *GetDictionary() {
-    return GetPropertyAtIndexAsOptionValueDictionary(nullptr, m_dict_index);
+    return GetPropertyAtIndexAsOptionValueDictionary(m_dict_index);
   }
 
   OptionValueFileSpecList *GetFileList() {
-    return GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                       m_file_list_index);
+    return GetPropertyAtIndexAsOptionValueFileSpecList(m_file_list_index);
   }
 
 private:
@@ -170,5 +170,6 @@ TEST(TestProperties, DeepCopy) {
   dict_copy_ptr->SetValueFromString("C=3", eVarSetOperationAppend);
 
   // Trigger the callback second time.
-  file_list_copy_ptr->SetValueFromString("0 another/path", eVarSetOperationReplace);
+  file_list_copy_ptr->SetValueFromString("0 another/path",
+                                         eVarSetOperationReplace);
 }

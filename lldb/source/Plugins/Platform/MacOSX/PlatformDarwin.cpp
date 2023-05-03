@@ -136,7 +136,7 @@ public:
   const char *GetIgnoredExceptions() const {
     const uint32_t idx = ePropertyIgnoredExceptions;
     const OptionValueString *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueString(nullptr, idx);
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(idx);
     assert(option_value);
     return option_value->GetCurrentValue();
   }
@@ -144,7 +144,7 @@ public:
   OptionValueString *GetIgnoredExceptionValue() {
     const uint32_t idx = ePropertyIgnoredExceptions;
     OptionValueString *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueString(nullptr, idx);
+        m_collection_sp->GetPropertyAtIndexAsOptionValueString(idx);
     assert(option_value);
     return option_value;
   }

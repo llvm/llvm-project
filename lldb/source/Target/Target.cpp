@@ -4450,8 +4450,9 @@ class TargetOptionValueProperties
 public:
   TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
 
-  const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
-                                     uint32_t idx) const override {
+  const Property *
+  GetPropertyAtIndex(uint32_t idx,
+                     const ExecutionContext *exe_ctx = nullptr) const override {
     // When getting the value for a key from the target options, we will always
     // try and grab the setting from the current target if there is one. Else
     // we just use the one from this instance.
@@ -4573,12 +4574,12 @@ void TargetProperties::UpdateLaunchInfoFromProperties() {
 bool TargetProperties::GetInjectLocalVariables(
     ExecutionContext *exe_ctx) const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(exe_ctx, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars)
+        ->GetPropertyAtIndexAsBoolean(ePropertyInjectLocalVars, exe_ctx)
         .value_or(true);
   else
     return true;
@@ -4587,12 +4588,12 @@ bool TargetProperties::GetInjectLocalVariables(
 void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
                                                bool b) {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(exe_ctx, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    exp_values->SetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars,
-                                            true);
+    exp_values->SetPropertyAtIndexAsBoolean(ePropertyInjectLocalVars, true,
+                                            exe_ctx);
 }
 
 bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
@@ -4683,7 +4684,7 @@ bool TargetProperties::GetSwiftAutoImportFrameworks() const {
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   OptionValueArch *value = m_collection_sp->GetPropertyAtIndexAsOptionValueArch(
-      nullptr, ePropertyDefaultArch);
+      ePropertyDefaultArch);
   if (value)
     return value->GetCurrentValue();
   return ArchSpec();
@@ -4691,82 +4692,82 @@ ArchSpec TargetProperties::GetDefaultArchitecture() const {
 
 void TargetProperties::SetDefaultArchitecture(const ArchSpec &arch) {
   OptionValueArch *value = m_collection_sp->GetPropertyAtIndexAsOptionValueArch(
-      nullptr, ePropertyDefaultArch);
+      ePropertyDefaultArch);
   if (value)
     return value->SetCurrentValue(arch, true);
 }
 
 bool TargetProperties::GetMoveToNearestCode() const {
   const uint32_t idx = ePropertyMoveToNearestCode;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 lldb::DynamicValueType TargetProperties::GetPreferDynamicValue() const {
   const uint32_t idx = ePropertyPreferDynamic;
   return (lldb::DynamicValueType)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
   const uint32_t idx = ePropertyPreferDynamic;
-  return m_collection_sp->SetPropertyAtIndexAsEnumeration(nullptr, idx, d);
+  return m_collection_sp->SetPropertyAtIndexAsEnumeration(idx, d);
 }
 
 bool TargetProperties::GetPreloadSymbols() const {
   const uint32_t idx = ePropertyPreloadSymbols;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetPreloadSymbols(bool b) {
   const uint32_t idx = ePropertyPreloadSymbols;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool TargetProperties::GetDisableASLR() const {
   const uint32_t idx = ePropertyDisableASLR;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDisableASLR(bool b) {
   const uint32_t idx = ePropertyDisableASLR;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool TargetProperties::GetInheritTCC() const {
   const uint32_t idx = ePropertyInheritTCC;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetInheritTCC(bool b) {
   const uint32_t idx = ePropertyInheritTCC;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool TargetProperties::GetDetachOnError() const {
   const uint32_t idx = ePropertyDetachOnError;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDetachOnError(bool b) {
   const uint32_t idx = ePropertyDetachOnError;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool TargetProperties::GetDisableSTDIO() const {
   const uint32_t idx = ePropertyDisableSTDIO;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDisableSTDIO(bool b) {
   const uint32_t idx = ePropertyDisableSTDIO;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 const char *TargetProperties::GetDisassemblyFlavor() const {
@@ -4775,7 +4776,7 @@ const char *TargetProperties::GetDisassemblyFlavor() const {
 
   x86DisassemblyFlavor flavor_value =
       (x86DisassemblyFlavor)m_collection_sp
-          ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+          ->GetPropertyAtIndexAsEnumeration(idx)
           .value_or(g_target_properties[idx].default_uint_value);
   return_value = g_x86_dis_flavor_value_types[flavor_value].string_value;
   return return_value;
@@ -4783,31 +4784,30 @@ const char *TargetProperties::GetDisassemblyFlavor() const {
 
 InlineStrategy TargetProperties::GetInlineStrategy() const {
   const uint32_t idx = ePropertyInlineStrategy;
-  return (InlineStrategy)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+  return (InlineStrategy)m_collection_sp->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 llvm::StringRef TargetProperties::GetArg0() const {
   const uint32_t idx = ePropertyArg0;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx)
-      .value_or(g_target_properties[idx].default_cstr_value);
+  return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
+      g_target_properties[idx].default_cstr_value);
 }
 
 void TargetProperties::SetArg0(llvm::StringRef arg) {
   const uint32_t idx = ePropertyArg0;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, arg);
+  m_collection_sp->SetPropertyAtIndexAsString(idx, arg);
   m_launch_info.SetArg0(arg);
 }
 
 bool TargetProperties::GetRunArguments(Args &args) const {
   const uint32_t idx = ePropertyRunArgs;
-  return m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, args);
+  return m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
 }
 
 void TargetProperties::SetRunArguments(const Args &args) {
   const uint32_t idx = ePropertyRunArgs;
-  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, args);
+  m_collection_sp->SetPropertyAtIndexFromArgs(idx, args);
   m_launch_info.GetArguments() = args;
 }
 
@@ -4815,7 +4815,7 @@ Environment TargetProperties::ComputeEnvironment() const {
   Environment env;
 
   if (m_target &&
-      m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, ePropertyInheritEnv)
+      m_collection_sp->GetPropertyAtIndexAsBoolean(ePropertyInheritEnv)
           .value_or(
               g_target_properties[ePropertyInheritEnv].default_uint_value !=
               0)) {
@@ -4827,14 +4827,13 @@ Environment TargetProperties::ComputeEnvironment() const {
   }
 
   Args property_unset_env;
-  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyUnsetEnvVars,
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyUnsetEnvVars,
                                             property_unset_env);
   for (const auto &var : property_unset_env)
     env.erase(var.ref());
 
   Args property_env;
-  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEnvVars,
-                                            property_env);
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyEnvVars, property_env);
   for (const auto &KV : Environment(property_env))
     env[KV.first()] = KV.second;
 
@@ -4851,8 +4850,7 @@ Environment TargetProperties::GetInheritedEnvironment() const {
   if (m_target == nullptr)
     return environment;
 
-  if (!m_collection_sp
-           ->GetPropertyAtIndexAsBoolean(nullptr, ePropertyInheritEnv)
+  if (!m_collection_sp->GetPropertyAtIndexAsBoolean(ePropertyInheritEnv)
            .value_or(
                g_target_properties[ePropertyInheritEnv].default_uint_value !=
                0))
@@ -4867,7 +4865,7 @@ Environment TargetProperties::GetInheritedEnvironment() const {
     environment[KV.first()] = KV.second;
 
   Args property_unset_environment;
-  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyUnsetEnvVars,
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyUnsetEnvVars,
                                             property_unset_environment);
   for (const auto &var : property_unset_environment)
     environment.erase(var.ref());
@@ -4877,7 +4875,7 @@ Environment TargetProperties::GetInheritedEnvironment() const {
 
 Environment TargetProperties::GetTargetEnvironment() const {
   Args property_environment;
-  m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, ePropertyEnvVars,
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyEnvVars,
                                             property_environment);
   Environment environment;
   for (const auto &KV : Environment(property_environment))
@@ -4889,35 +4887,33 @@ Environment TargetProperties::GetTargetEnvironment() const {
 void TargetProperties::SetEnvironment(Environment env) {
   // TODO: Get rid of the Args intermediate step
   const uint32_t idx = ePropertyEnvVars;
-  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, Args(env));
+  m_collection_sp->SetPropertyAtIndexFromArgs(idx, Args(env));
 }
 
 bool TargetProperties::GetSkipPrologue() const {
   const uint32_t idx = ePropertySkipPrologue;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 PathMappingList &TargetProperties::GetSourcePathMap() const {
   const uint32_t idx = ePropertySourceMap;
   OptionValuePathMappings *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(nullptr,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValuePathMappings(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
 
 bool TargetProperties::GetAutoSourceMapRelative() const {
   const uint32_t idx = ePropertyAutoSourceMapRelative;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::AppendExecutableSearchPaths(const FileSpec &dir) {
   const uint32_t idx = ePropertyExecutableSearchPaths;
   OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
   assert(option_value);
   option_value->AppendCurrentValue(dir);
 }
@@ -4925,8 +4921,7 @@ void TargetProperties::AppendExecutableSearchPaths(const FileSpec &dir) {
 FileSpecList TargetProperties::GetExecutableSearchPaths() {
   const uint32_t idx = ePropertyExecutableSearchPaths;
   const OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4934,8 +4929,7 @@ FileSpecList TargetProperties::GetExecutableSearchPaths() {
 FileSpecList TargetProperties::GetDebugFileSearchPaths() {
   const uint32_t idx = ePropertyDebugFileSearchPaths;
   const OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4973,16 +4967,15 @@ llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
 FileSpecList TargetProperties::GetClangModuleSearchPaths() {
   const uint32_t idx = ePropertyClangModuleSearchPaths;
   const OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
-                                                                   idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
 
 bool TargetProperties::GetEnableAutoImportClangModules() const {
   const uint32_t idx = ePropertyAutoImportClangModules;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetUseAllCompilerFlags() const {
@@ -4998,39 +4991,38 @@ void TargetProperties::SetUseAllCompilerFlags(bool b) {
 
 ImportStdModule TargetProperties::GetImportStdModule() const {
   const uint32_t idx = ePropertyImportStdModule;
-  return (ImportStdModule)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+  return (ImportStdModule)m_collection_sp->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 DynamicClassInfoHelper TargetProperties::GetDynamicClassInfoHelper() const {
   const uint32_t idx = ePropertyDynamicClassInfoHelper;
   return (DynamicClassInfoHelper)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::GetEnableAutoApplyFixIts() const {
   const uint32_t idx = ePropertyAutoApplyFixIts;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 uint64_t TargetProperties::GetNumberOfRetriesWithFixits() const {
   const uint32_t idx = ePropertyRetriesWithFixIts;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::GetEnableNotifyAboutFixIts() const {
   const uint32_t idx = ePropertyNotifyAboutFixIts;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
 }
 
 void TargetProperties::CheckJITObjectsDir() {
@@ -5046,7 +5038,7 @@ void TargetProperties::CheckJITObjectsDir() {
   if (exists && is_directory && writable)
     return;
 
-  m_collection_sp->GetPropertyAtIndex(nullptr, ePropertySaveObjectsDir)
+  m_collection_sp->GetPropertyAtIndex(ePropertySaveObjectsDir)
       ->GetValue()
       ->Clear();
 
@@ -5068,77 +5060,77 @@ void TargetProperties::CheckJITObjectsDir() {
 
 bool TargetProperties::GetEnableSyntheticValue() const {
   const uint32_t idx = ePropertyEnableSynthetic;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 uint32_t TargetProperties::GetMaxZeroPaddingInFloatFormat() const {
   const uint32_t idx = ePropertyMaxZeroPaddingInFloatFormat;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_target_properties[idx].default_uint_value);
 }
 
 uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenCount;
-  return m_collection_sp->GetPropertyAtIndexAsSInt64(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsSInt64(idx).value_or(
+      g_target_properties[idx].default_uint_value);
 }
 
 std::pair<uint32_t, bool>
 TargetProperties::GetMaximumDepthOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenDepth;
   auto *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(nullptr, idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(idx);
   bool is_default = !option_value->OptionWasSet();
   return {option_value->GetCurrentValue(), is_default};
 }
 
 uint32_t TargetProperties::GetMaximumSizeOfStringSummary() const {
   const uint32_t idx = ePropertyMaxSummaryLength;
-  return m_collection_sp->GetPropertyAtIndexAsSInt64(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsSInt64(idx).value_or(
+      g_target_properties[idx].default_uint_value);
 }
 
 uint32_t TargetProperties::GetMaximumMemReadSize() const {
   const uint32_t idx = ePropertyMaxMemReadSize;
-  return m_collection_sp->GetPropertyAtIndexAsSInt64(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsSInt64(idx).value_or(
+      g_target_properties[idx].default_uint_value);
 }
 
 FileSpec TargetProperties::GetStandardInputPath() const {
   const uint32_t idx = ePropertyInputPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
 }
 
 void TargetProperties::SetStandardInputPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyInputPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
+  m_collection_sp->SetPropertyAtIndexAsString(idx, path);
 }
 
 FileSpec TargetProperties::GetStandardOutputPath() const {
   const uint32_t idx = ePropertyOutputPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
 }
 
 void TargetProperties::SetStandardOutputPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyOutputPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
+  m_collection_sp->SetPropertyAtIndexAsString(idx, path);
 }
 
 FileSpec TargetProperties::GetStandardErrorPath() const {
   const uint32_t idx = ePropertyErrorPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
 }
 
 void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
   const uint32_t idx = ePropertyErrorPath;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
+  m_collection_sp->SetPropertyAtIndexAsString(idx, path);
 }
 
 LanguageType TargetProperties::GetLanguage() const {
   OptionValueLanguage *value =
       m_collection_sp->GetPropertyAtIndexAsOptionValueLanguage(
-          nullptr, ePropertyLanguage);
+          ePropertyLanguage);
   if (value)
     return value->GetCurrentValue();
   return LanguageType();
@@ -5147,7 +5139,7 @@ LanguageType TargetProperties::GetLanguage() const {
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
   const uint32_t idx = ePropertyExprPrefix;
   OptionValueFileSpec *file =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(idx);
   if (file) {
     DataBufferSP data_sp(file->GetFileContents());
     if (data_sp)
@@ -5160,92 +5152,92 @@ llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
 
 uint64_t TargetProperties::GetExprErrorLimit() const {
   const uint32_t idx = ePropertyExprErrorLimit;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value);
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
+      g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetUseHexImmediates() const {
   const uint32_t idx = ePropertyUseHexImmediates;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetUseFastStepping() const {
   const uint32_t idx = ePropertyUseFastStepping;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetDisplayExpressionsInCrashlogs() const {
   const uint32_t idx = ePropertyDisplayExpressionsInCrashlogs;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 LoadScriptFromSymFile TargetProperties::GetLoadScriptFromSymbolFile() const {
   const uint32_t idx = ePropertyLoadScriptFromSymbolFile;
   return (LoadScriptFromSymFile)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 LoadCWDlldbinitFile TargetProperties::GetLoadCWDlldbinitFile() const {
   const uint32_t idx = ePropertyLoadCWDlldbinitFile;
   return (LoadCWDlldbinitFile)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 Disassembler::HexImmediateStyle TargetProperties::GetHexImmediateStyle() const {
   const uint32_t idx = ePropertyHexImmediateStyle;
   return (Disassembler::HexImmediateStyle)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 MemoryModuleLoadLevel TargetProperties::GetMemoryModuleLoadLevel() const {
   const uint32_t idx = ePropertyMemoryModuleLoadLevel;
   return (MemoryModuleLoadLevel)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_target_properties[idx].default_uint_value);
 }
 
 bool TargetProperties::GetUserSpecifiedTrapHandlerNames(Args &args) const {
   const uint32_t idx = ePropertyTrapHandlerNames;
-  return m_collection_sp->GetPropertyAtIndexAsArgs(nullptr, idx, args);
+  return m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
 }
 
 void TargetProperties::SetUserSpecifiedTrapHandlerNames(const Args &args) {
   const uint32_t idx = ePropertyTrapHandlerNames;
-  m_collection_sp->SetPropertyAtIndexFromArgs(nullptr, idx, args);
+  m_collection_sp->SetPropertyAtIndexFromArgs(idx, args);
 }
 
 bool TargetProperties::GetDisplayRuntimeSupportValues() const {
   const uint32_t idx = ePropertyDisplayRuntimeSupportValues;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDisplayRuntimeSupportValues(bool b) {
   const uint32_t idx = ePropertyDisplayRuntimeSupportValues;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool TargetProperties::GetDisplayRecognizedArguments() const {
   const uint32_t idx = ePropertyDisplayRecognizedArguments;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetDisplayRecognizedArguments(bool b) {
   const uint32_t idx = ePropertyDisplayRecognizedArguments;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 const ProcessLaunchInfo &TargetProperties::GetProcessLaunchInfo() const {
@@ -5282,19 +5274,19 @@ void TargetProperties::SetProcessLaunchInfo(
 
 bool TargetProperties::GetRequireHardwareBreakpoints() const {
   const uint32_t idx = ePropertyRequireHardwareBreakpoints;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetRequireHardwareBreakpoints(bool b) {
   const uint32_t idx = ePropertyRequireHardwareBreakpoints;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 bool TargetProperties::GetAutoInstallMainExecutable() const {
   const uint32_t idx = ePropertyAutoInstallMainExecutable;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::Arg0ValueChangedCallback() {
@@ -5364,8 +5356,8 @@ uint32_t EvaluateExpressionOptions::GetExpressionNumber() const {
 
 bool TargetProperties::GetDebugUtilityExpression() const {
   const uint32_t idx = ePropertyDebugUtilityExpression;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
-      .value_or(g_target_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
+      g_target_properties[idx].default_uint_value != 0);
 }
 
 bool TargetProperties::GetEnableTrampolineSupport() const {
@@ -5376,7 +5368,7 @@ bool TargetProperties::GetEnableTrampolineSupport() const {
 
 void TargetProperties::SetDebugUtilityExpression(bool debug) {
   const uint32_t idx = ePropertyDebugUtilityExpression;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, debug);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, debug);
 }
 
 // Target::TargetEventData

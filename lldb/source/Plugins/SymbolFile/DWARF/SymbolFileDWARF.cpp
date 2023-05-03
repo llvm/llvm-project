@@ -126,8 +126,7 @@ public:
   }
 
   bool IgnoreFileIndexes() const {
-    return m_collection_sp
-        ->GetPropertyAtIndexAsBoolean(nullptr, ePropertyIgnoreIndexes)
+    return m_collection_sp->GetPropertyAtIndexAsBoolean(ePropertyIgnoreIndexes)
         .value_or(false);
   }
 };
