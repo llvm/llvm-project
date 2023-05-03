@@ -111,11 +111,7 @@ define double @ext_maximum_v4f64(<2 x double> %x) nounwind {
 ; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    cmpunordsd %xmm0, %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; CHECK-NEXT:    andpd %xmm0, %xmm2
-; CHECK-NEXT:    andnpd %xmm1, %xmm0
-; CHECK-NEXT:    orpd %xmm2, %xmm0
+; CHECK-NEXT:    movapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> <double 42.0, double 43.0>)
   %r = extractelement <2 x double> %v, i32 1
@@ -128,11 +124,7 @@ define float @ext_minimum_v4f32(<4 x float> %x) nounwind {
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    minss %xmm0, %xmm1
-; CHECK-NEXT:    cmpunordss %xmm0, %xmm0
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    andps %xmm0, %xmm2
-; CHECK-NEXT:    andnps %xmm1, %xmm0
-; CHECK-NEXT:    orps %xmm2, %xmm0
+; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.minimum.v4f32(<4 x float> %x, <4 x float> <float 0.0, float 1.0, float 2.0, float 42.0>)
   %r = extractelement <4 x float> %v, i32 1
