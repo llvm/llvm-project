@@ -152,18 +152,18 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
     // Prune unneeded PHI entries.
     SmallPtrSet<MachineBasicBlock*, 8> preds(BB.pred_begin(),
                                              BB.pred_end());
-    MachineBasicBlock::iterator phi = BB.begin();
-    while (phi != BB.end() && phi->isPHI()) {
-      for (unsigned i = phi->getNumOperands() - 1; i >= 2; i-=2)
-        if (!preds.count(phi->getOperand(i).getMBB())) {
-          phi->removeOperand(i);
-          phi->removeOperand(i-1);
+    for (MachineInstr &Phi : make_early_inc_range(BB.phis())) {
+      for (unsigned i = Phi.getNumOperands() - 1; i >= 2; i -= 2) {
+        if (!preds.count(Phi.getOperand(i).getMBB())) {
+          Phi.removeOperand(i);
+          Phi.removeOperand(i - 1);
           ModifiedPHI = true;
         }
+      }
 
-      if (phi->getNumOperands() == 3) {
-        const MachineOperand &Input = phi->getOperand(1);
-        const MachineOperand &Output = phi->getOperand(0);
+      if (Phi.getNumOperands() == 3) {
+        const MachineOperand &Input = Phi.getOperand(1);
+        const MachineOperand &Output = Phi.getOperand(0);
         Register InputReg = Input.getReg();
         Register OutputReg = Output.getReg();
         assert(Output.getSubReg() == 0 && "Cannot have output subregister");
@@ -182,16 +182,13 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
             // insert a COPY instead of simply replacing the output
             // with the input.
             const TargetInstrInfo *TII = F.getSubtarget().getInstrInfo();
-            BuildMI(BB, BB.getFirstNonPHI(), phi->getDebugLoc(),
+            BuildMI(BB, BB.getFirstNonPHI(), Phi.getDebugLoc(),
                     TII->get(TargetOpcode::COPY), OutputReg)
                 .addReg(InputReg, getRegState(Input), InputSub);
           }
-          phi++->eraseFromParent();
+          Phi.eraseFromParent();
         }
-        continue;
       }
-
-      ++phi;
     }
   }
 
