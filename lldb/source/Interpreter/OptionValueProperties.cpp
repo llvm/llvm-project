@@ -291,15 +291,13 @@ bool OptionValueProperties::SetPropertyAtIndexFromArgs(
   return false;
 }
 
-bool OptionValueProperties::GetPropertyAtIndexAsBoolean(
-    const ExecutionContext *exe_ctx, uint32_t idx, bool fail_value) const {
-  const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->GetBooleanValue().value_or(fail_value);
+std::optional<bool> OptionValueProperties::GetPropertyAtIndexAsBoolean(
+    const ExecutionContext *exe_ctx, uint32_t idx) const {
+  if (const Property *property = GetPropertyAtIndex(exe_ctx, false, idx)) {
+    if (OptionValue *value = property->GetValue().get())
+      return value->GetBooleanValue();
   }
-  return fail_value;
+  return {};
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsBoolean(
@@ -324,15 +322,13 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueDictionary(
   return nullptr;
 }
 
-int64_t OptionValueProperties::GetPropertyAtIndexAsEnumeration(
-    const ExecutionContext *exe_ctx, uint32_t idx, int64_t fail_value) const {
-  const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->GetEnumerationValue().value_or(fail_value);
+std::optional<int64_t> OptionValueProperties::GetPropertyAtIndexAsEnumeration(
+    const ExecutionContext *exe_ctx, uint32_t idx) const {
+  if (const Property *property = GetPropertyAtIndex(exe_ctx, false, idx)) {
+    if (OptionValue *value = property->GetValue().get())
+      return value->GetEnumerationValue();
   }
-  return fail_value;
+  return {};
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsEnumeration(
@@ -427,15 +423,13 @@ OptionValueUInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueUInt64(
   return nullptr;
 }
 
-int64_t OptionValueProperties::GetPropertyAtIndexAsSInt64(
-    const ExecutionContext *exe_ctx, uint32_t idx, int64_t fail_value) const {
-  const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->GetSInt64Value().value_or(fail_value);
+std::optional<int64_t> OptionValueProperties::GetPropertyAtIndexAsSInt64(
+    const ExecutionContext *exe_ctx, uint32_t idx) const {
+  if (const Property *property = GetPropertyAtIndex(exe_ctx, false, idx)) {
+    if (OptionValue *value = property->GetValue().get())
+      return value->GetSInt64Value();
   }
-  return fail_value;
+  return {};
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsSInt64(
@@ -449,16 +443,14 @@ bool OptionValueProperties::SetPropertyAtIndexAsSInt64(
   return false;
 }
 
-llvm::StringRef OptionValueProperties::GetPropertyAtIndexAsString(
-    const ExecutionContext *exe_ctx, uint32_t idx,
-    llvm::StringRef fail_value) const {
-  const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->GetStringValue().value_or(fail_value);
+std::optional<llvm::StringRef>
+OptionValueProperties::GetPropertyAtIndexAsString(
+    const ExecutionContext *exe_ctx, uint32_t idx) const {
+  if (const Property *property = GetPropertyAtIndex(exe_ctx, false, idx)) {
+    if (OptionValue *value = property->GetValue().get())
+      return value->GetStringValue();
   }
-  return fail_value;
+  return {};
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsString(
@@ -480,15 +472,13 @@ OptionValueString *OptionValueProperties::GetPropertyAtIndexAsOptionValueString(
   return nullptr;
 }
 
-uint64_t OptionValueProperties::GetPropertyAtIndexAsUInt64(
-    const ExecutionContext *exe_ctx, uint32_t idx, uint64_t fail_value) const {
-  const Property *property = GetPropertyAtIndex(exe_ctx, false, idx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->GetUInt64Value().value_or(fail_value);
+std::optional<uint64_t> OptionValueProperties::GetPropertyAtIndexAsUInt64(
+    const ExecutionContext *exe_ctx, uint32_t idx) const {
+  if (const Property *property = GetPropertyAtIndex(exe_ctx, false, idx)) {
+    if (OptionValue *value = property->GetValue().get())
+      return value->GetUInt64Value();
   }
-  return fail_value;
+  return {};
 }
 
 bool OptionValueProperties::SetPropertyAtIndexAsUInt64(

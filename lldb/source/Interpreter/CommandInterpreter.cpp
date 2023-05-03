@@ -147,14 +147,14 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
   const uint32_t idx = ePropertyExpandRegexAliases;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetPromptOnQuit() const {
   const uint32_t idx = ePropertyPromptOnQuit;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetPromptOnQuit(bool enable) {
@@ -164,8 +164,8 @@ void CommandInterpreter::SetPromptOnQuit(bool enable) {
 
 bool CommandInterpreter::GetSaveSessionOnQuit() const {
   const uint32_t idx = ePropertySaveSessionOnQuit;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
@@ -175,8 +175,8 @@ void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
 
 bool CommandInterpreter::GetOpenTranscriptInEditor() const {
   const uint32_t idx = ePropertyOpenTranscriptInEditor;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetOpenTranscriptInEditor(bool enable) {
@@ -196,8 +196,8 @@ void CommandInterpreter::SetSaveSessionDirectory(llvm::StringRef path) {
 
 bool CommandInterpreter::GetEchoCommands() const {
   const uint32_t idx = ePropertyEchoCommands;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommands(bool enable) {
@@ -207,8 +207,8 @@ void CommandInterpreter::SetEchoCommands(bool enable) {
 
 bool CommandInterpreter::GetEchoCommentCommands() const {
   const uint32_t idx = ePropertyEchoCommentCommands;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommentCommands(bool enable) {
@@ -247,26 +247,26 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
 
 bool CommandInterpreter::GetStopCmdSourceOnError() const {
   const uint32_t idx = ePropertyStopCmdSourceOnError;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetSpaceReplPrompts() const {
   const uint32_t idx = ePropertySpaceReplPrompts;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetRepeatPreviousCommand() const {
   const uint32_t idx = ePropertyRepeatPreviousCommand;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetRequireCommandOverwrite() const {
   const uint32_t idx = ePropertyRequireCommandOverwrite;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+      .value_or(g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::Initialize() {
