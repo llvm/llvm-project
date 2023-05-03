@@ -3,6 +3,8 @@
 ; RUN:   -target-abi=ilp32d | FileCheck -check-prefixes=CHECKIFD,RV32IFD %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64d | FileCheck -check-prefixes=CHECKIFD,RV64IFD %s
+; RUN: llc -mtriple=riscv64 -mattr=+zdinx -verify-machineinstrs < %s \
+; RUN:   -target-abi=lp64 | FileCheck -check-prefixes=RV64IZFINXZDINX %s
 
 define signext i32 @test_floor_si32(double %x) {
 ; CHECKIFD-LABEL: test_floor_si32:
@@ -13,6 +15,15 @@ define signext i32 @test_floor_si32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_floor_si32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.w.d a1, a0, rdn
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %b
@@ -66,6 +77,15 @@ define i64 @test_floor_si64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_floor_si64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a0, rdn
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %b
@@ -80,6 +100,15 @@ define signext i32 @test_floor_ui32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_floor_ui32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a1, a0, rdn
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %b
@@ -119,6 +148,15 @@ define i64 @test_floor_ui64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_floor_ui64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a1, a0, rdn
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.floor.f64(double %x)
   %b = call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %b
@@ -133,6 +171,15 @@ define signext i32 @test_ceil_si32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_ceil_si32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.w.d a1, a0, rup
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.ceil.f64(double %x)
   %b = call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %b
@@ -186,6 +233,15 @@ define i64 @test_ceil_si64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_ceil_si64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a0, rup
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.ceil.f64(double %x)
   %b = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %b
@@ -200,6 +256,15 @@ define signext i32 @test_ceil_ui32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_ceil_ui32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a1, a0, rup
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.ceil.f64(double %x)
   %b = call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %b
@@ -239,6 +304,15 @@ define i64 @test_ceil_ui64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_ceil_ui64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a1, a0, rup
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.ceil.f64(double %x)
   %b = call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %b
@@ -253,6 +327,15 @@ define signext i32 @test_trunc_si32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_trunc_si32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.w.d a1, a0, rtz
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.trunc.f64(double %x)
   %b = call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %b
@@ -306,6 +389,15 @@ define i64 @test_trunc_si64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_trunc_si64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a0, rtz
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.trunc.f64(double %x)
   %b = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %b
@@ -320,6 +412,15 @@ define signext i32 @test_trunc_ui32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_trunc_ui32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a1, a0, rtz
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.trunc.f64(double %x)
   %b = call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %b
@@ -359,6 +460,15 @@ define i64 @test_trunc_ui64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_trunc_ui64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a1, a0, rtz
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.trunc.f64(double %x)
   %b = call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %b
@@ -373,6 +483,15 @@ define signext i32 @test_round_si32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_round_si32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.w.d a1, a0, rmm
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.round.f64(double %x)
   %b = call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %b
@@ -426,6 +545,15 @@ define i64 @test_round_si64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_round_si64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a0, rmm
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.round.f64(double %x)
   %b = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %b
@@ -440,6 +568,15 @@ define signext i32 @test_round_ui32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_round_ui32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a1, a0, rmm
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.round.f64(double %x)
   %b = call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %b
@@ -479,6 +616,15 @@ define i64 @test_round_ui64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_round_ui64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a1, a0, rmm
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.round.f64(double %x)
   %b = call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %b
@@ -493,6 +639,15 @@ define signext i32 @test_roundeven_si32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_roundeven_si32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.w.d a1, a0, rne
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.roundeven.f64(double %x)
   %b = call i32 @llvm.fptosi.sat.i32.f64(double %a)
   ret i32 %b
@@ -546,6 +701,15 @@ define i64 @test_roundeven_si64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_roundeven_si64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.l.d a1, a0, rne
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.roundeven.f64(double %x)
   %b = call i64 @llvm.fptosi.sat.i64.f64(double %a)
   ret i64 %b
@@ -560,6 +724,15 @@ define signext i32 @test_roundeven_ui32(double %x) {
 ; CHECKIFD-NEXT:    addi a1, a1, -1
 ; CHECKIFD-NEXT:    and a0, a1, a0
 ; CHECKIFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_roundeven_ui32:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.wu.d a1, a0, rne
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.roundeven.f64(double %x)
   %b = call i32 @llvm.fptoui.sat.i32.f64(double %a)
   ret i32 %b
@@ -599,6 +772,15 @@ define i64 @test_roundeven_ui64(double %x) nounwind {
 ; RV64IFD-NEXT:    addi a1, a1, -1
 ; RV64IFD-NEXT:    and a0, a1, a0
 ; RV64IFD-NEXT:    ret
+;
+; RV64IZFINXZDINX-LABEL: test_roundeven_ui64:
+; RV64IZFINXZDINX:       # %bb.0:
+; RV64IZFINXZDINX-NEXT:    fcvt.lu.d a1, a0, rne
+; RV64IZFINXZDINX-NEXT:    feq.d a0, a0, a0
+; RV64IZFINXZDINX-NEXT:    seqz a0, a0
+; RV64IZFINXZDINX-NEXT:    addi a0, a0, -1
+; RV64IZFINXZDINX-NEXT:    and a0, a0, a1
+; RV64IZFINXZDINX-NEXT:    ret
   %a = call double @llvm.roundeven.f64(double %x)
   %b = call i64 @llvm.fptoui.sat.i64.f64(double %a)
   ret i64 %b
