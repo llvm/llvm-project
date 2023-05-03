@@ -823,15 +823,8 @@ entry:
 define void @rshrn_v8i32i8_5(<8 x i32> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v8i32i8_5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.4h, #16
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    add v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    add v0.4h, v0.4h, v2.4h
-; CHECK-NEXT:    ushr v1.4h, v1.4h, #5
-; CHECK-NEXT:    ushr v0.4h, v0.4h, #5
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #5
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -845,15 +838,8 @@ entry:
 define void @rshrn_v4i64i16_4(<4 x i64> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v4i64i16_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2s, #8
-; CHECK-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-NEXT:    add v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    ushr v1.2s, v1.2s, #4
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #4
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #4
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -867,10 +853,8 @@ entry:
 define void @rshrn_v4i16_5(<4 x i16> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v4i16_5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.4h, #16
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ushr v0.4h, v0.4h, #5
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #5
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -903,11 +887,8 @@ entry:
 define void @rshrn_v1i64_5(<1 x i64> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v1i64_5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #16 // =0x10
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    add d0, d0, d1
-; CHECK-NEXT:    ushr d0, d0, #5
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    rshrn v0.2s, v0.2d, #5
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
