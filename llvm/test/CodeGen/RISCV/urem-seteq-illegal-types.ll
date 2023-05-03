@@ -537,7 +537,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    lui a1, %hi(.LCPI4_0)
 ; RV32MV-NEXT:    addi a1, a1, %lo(.LCPI4_0)
 ; RV32MV-NEXT:    vle16.v v9, (a1)
-; RV32MV-NEXT:    vslide1down.vx v8, v8, a0
+; RV32MV-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32MV-NEXT:    vid.v v10
 ; RV32MV-NEXT:    vsub.vv v8, v8, v10
 ; RV32MV-NEXT:    vmul.vv v8, v8, v9
@@ -598,7 +598,7 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    lui a1, %hi(.LCPI4_0)
 ; RV64MV-NEXT:    addi a1, a1, %lo(.LCPI4_0)
 ; RV64MV-NEXT:    vle16.v v9, (a1)
-; RV64MV-NEXT:    vslide1down.vx v8, v8, a0
+; RV64MV-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64MV-NEXT:    vid.v v10
 ; RV64MV-NEXT:    vsub.vv v8, v8, v10
 ; RV64MV-NEXT:    vmul.vv v8, v8, v9
