@@ -18690,7 +18690,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       if (Record) {
         // Flexible array member.
         // Microsoft and g++ is more permissive regarding flexible array.
-        // It will accept flexible array as the sole element of a struct/class.
+        // It will accept flexible array in union and also
+        // as the sole element of a struct/class.
         unsigned DiagID = 0;
         if (!Record->isUnion() && !IsLastField) {
           Diag(FD->getLocation(), diag::err_flexible_array_not_at_end)
@@ -18700,7 +18701,11 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
           EnclosingDecl->setInvalidDecl();
           continue;
         } else if (Record->isUnion())
-          DiagID = diag::err_flexible_array_union;
+          DiagID = getLangOpts().MicrosoftExt
+                       ? diag::ext_flexible_array_union_ms
+                       : getLangOpts().CPlusPlus
+                             ? diag::ext_flexible_array_union_gnu
+                             : diag::err_flexible_array_union;
         else if (NumNamedMembers < 1)
           DiagID = getLangOpts().MicrosoftExt
                        ? diag::ext_flexible_array_empty_aggregate_ms

@@ -267,6 +267,7 @@ def ExtraSemi : DiagGroup<"extra-semi", [CXX98CompatExtraSemi,
                                          CXX11ExtraSemi]>;
 
 def GNUFlexibleArrayInitializer : DiagGroup<"gnu-flexible-array-initializer">;
+def GNUFlexibleArrayUnionMember : DiagGroup<"gnu-flexible-array-union-member">;
 def GNUFoldingConstant : DiagGroup<"gnu-folding-constant">;
 def FormatInsufficientArgs : DiagGroup<"format-insufficient-args">;
 def FormatExtraArgs : DiagGroup<"format-extra-args">;
@@ -1136,7 +1137,7 @@ def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
                             GNUConditionalOmittedOperand, GNUDesignator,
                             GNUEmptyStruct,
                             VLAExtension, GNUFlexibleArrayInitializer,
-                            GNUFoldingConstant,
+                            GNUFlexibleArrayUnionMember, GNUFoldingConstant,
                             GNUImaginaryConstant, GNUIncludeNext,
                             GNULabelsAsValue, GNULineMarker, GNUNullPointerArithmetic,
                             GNUOffsetofExtensions, GNUPointerArith,

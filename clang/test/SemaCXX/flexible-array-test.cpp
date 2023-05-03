@@ -16,7 +16,7 @@ void QMap<Key, T>::insert(const Key &, const T &avalue)
 
 struct Rec {
   union { // expected-warning-re {{variable sized type '{{.*}}' not at the end of a struct or class is a GNU extension}}
-    int u0[]; // expected-error {{flexible array member 'u0' in a union is not allowed}}
+    int u0[];
   };
   int x;
 } rec;
@@ -63,7 +63,7 @@ class A {
 
 union B {
   int s;
-  char c[]; // expected-error {{flexible array member 'c' in a union is not allowed}}
+  char c[];
 };
 
 class C {
