@@ -1,5 +1,28 @@
 // RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
+// CHECK-LABEL: @tensor_bitcast_chain_ok
+// CHECK-SAME: %[[IN:.*]]: tensor<2xi32>
+func.func @tensor_bitcast_chain_ok(%input: tensor<2xi32>) -> tensor<2xf32> {
+  // CHECK-NEXT: %[[RES:.*]] = tensor.bitcast %[[IN]] : tensor<2xi32> to tensor<2xf32>
+  %0 = tensor.bitcast %input : tensor<2xi32> to tensor<2xui32>
+  %1 = tensor.bitcast %0 : tensor<2xui32> to tensor<2xf32>
+  // CHECK-NEXT: return %[[RES]]
+  return %1 : tensor<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @tensor_bitcast_chain_nop
+// CHECK-SAME: %[[IN:.*]]: tensor<4xi32>
+func.func @tensor_bitcast_chain_nop(%input: tensor<4xi32>) -> tensor<4xi32> {
+  %0 = tensor.bitcast %input : tensor<4xi32> to tensor<4xui32>
+  %1 = tensor.bitcast %0 : tensor<4xui32> to tensor<4xi32>
+  // CHECK-NEXT: return %[[IN]]
+  return %1 : tensor<4xi32>
+}
+
+// -----
+
 // Checks that NOP casts are removed.
 // CHECK-LABEL: cast_values
 func.func @cast_values(%arg0: tensor<*xi32>) -> tensor<2xi32> {

@@ -54,6 +54,35 @@ class Tensor_OpWithOffsetSizesAndStrides<string mnemonic,
 }
 
 //===----------------------------------------------------------------------===//
+// BitcastOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_BitcastOp : Tensor_Op<"bitcast", [
+    DeclareOpInterfaceMethods<CastOpInterface>,
+    Pure
+  ]> {
+  let summary = "tensor bitcast operation";
+  let description = [{
+    Bitcast a tensor from one type to another type of equivalent element width.
+    If both are ranked, then the rank should be the same and static dimensions
+    should match. 
+
+    Example:
+
+    ```mlir
+    // Bitcast from unsigned to signed or signless integer.
+    %2 = tensor.bitcast %1 : tensor<4xui32> to tensor<4xi32>
+    ```
+  }];
+
+  let arguments = (ins AnyTensor:$source);
+  let results = (outs AnyTensor:$dest);
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
