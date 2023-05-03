@@ -505,3 +505,13 @@ func.func @canonicalize_concat_slice_on_non_concat_axis(%arg0 : tensor<1x12x12xf
   %2 = "tosa.slice"(%0) {size = array<i64: 1, 3, 12>, start = array<i64: 1, 3, 12>} : (tensor<1x12x24xf32>) -> tensor<1x3x12xf32>
   return %1, %2 : tensor<1x6x12xf32>, tensor<1x3x12xf32>
 }
+
+// -----
+
+// CHECK-LABEL
+func.func @fold_log_exp(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
+  // CHECK: return %arg{{.*}} : tensor<?x1xf32>
+  %0 = "tosa.exp"(%arg0) : (tensor<?x1xf32>) -> tensor<?x1xf32>
+  %1 = "tosa.log"(%0) : (tensor<?x1xf32>) -> tensor<?x1xf32>
+  return %1 : tensor<?x1xf32>
+}
