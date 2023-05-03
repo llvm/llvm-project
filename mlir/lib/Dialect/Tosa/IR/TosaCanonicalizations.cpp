@@ -996,3 +996,13 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
 
   return getInput1();
 }
+
+OpFoldResult tosa::LogOp::fold(FoldAdaptor adaptor) {
+  auto input = getInput1();
+  // Element-wise log(exp(x)) = x
+  if (auto op = input.getDefiningOp<tosa::ExpOp>()) {
+    return op.getInput1();
+  }
+
+  return {};
+}
