@@ -82,8 +82,6 @@ static const RVVIntrinsicRecord RVSiFiveVectorIntrinsicRecords[] = {
 static ArrayRef<PrototypeDescriptor>
 ProtoSeq2ArrayRef(IntrinsicKind K, uint16_t Index, uint8_t Length) {
   switch (K) {
-  default:
-    llvm_unreachable("Unsupported intrinsic kind.");
   case IntrinsicKind::RVV:
     return ArrayRef(&RVVSignatureTable[Index], Length);
   case IntrinsicKind::SIFIVE_VECTOR:
