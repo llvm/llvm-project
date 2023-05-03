@@ -11,10 +11,6 @@ target triple = "i686-pc-windows-msvc18.0.0"
 define x86_thiscallcc void @stackRealignment(ptr %this) {
 ; SHRINK-WRAP-LABEL: stackRealignment:
 ; SHRINK-WRAP:       # %bb.0: # %entry
-; SHRINK-WRAP-NEXT:    pushl %ebp
-; SHRINK-WRAP-NEXT:    movl %esp, %ebp
-; SHRINK-WRAP-NEXT:    andl $-8, %esp
-; SHRINK-WRAP-NEXT:    subl $16, %esp
 ; SHRINK-WRAP-NEXT:    movl (%ecx), %eax
 ; SHRINK-WRAP-NEXT:    cmpl $33, %eax
 ; SHRINK-WRAP-NEXT:    movl $42, %edx
@@ -22,6 +18,10 @@ define x86_thiscallcc void @stackRealignment(ptr %this) {
 ; SHRINK-WRAP-NEXT:  # %bb.1: # %entry
 ; SHRINK-WRAP-NEXT:    movl $128, %edx
 ; SHRINK-WRAP-NEXT:  LBB0_2: # %entry
+; SHRINK-WRAP-NEXT:    pushl %ebp
+; SHRINK-WRAP-NEXT:    movl %esp, %ebp
+; SHRINK-WRAP-NEXT:    andl $-8, %esp
+; SHRINK-WRAP-NEXT:    subl $16, %esp
 ; SHRINK-WRAP-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; SHRINK-WRAP-NEXT:    cmpl $32, %eax
 ; SHRINK-WRAP-NEXT:    jl LBB0_4
