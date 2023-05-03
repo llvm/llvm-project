@@ -284,11 +284,9 @@ public:
     if (CachedResourceDir != Cache.end())
       return CachedResourceDir->second;
 
-    std::vector<StringRef> PrintResourceDirArgs{ClangBinaryName};
-    if (ClangCLMode)
-      PrintResourceDirArgs.push_back("/clang:-print-resource-dir");
-    else
-      PrintResourceDirArgs.push_back("-print-resource-dir");
+    const std::array<StringRef, 2> PrintResourceDirArgs{
+        ClangBinaryName,
+        ClangCLMode ? "/clang:-print-resource-dir" : "-print-resource-dir"};
 
     llvm::SmallString<64> OutputFile, ErrorFile;
     llvm::sys::fs::createTemporaryFile("print-resource-dir-output",
