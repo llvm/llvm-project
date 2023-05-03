@@ -40,6 +40,7 @@ cc_test(
     deps = [
         "//llvm:Support",
         "//mlir:IR",
+        "//mlir:Parser",
         "//mlir:Support",
         "//mlir/test:TestDialect",
         "//third-party/unittest:gmock",
