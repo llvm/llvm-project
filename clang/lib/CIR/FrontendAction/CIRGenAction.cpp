@@ -100,12 +100,14 @@ class CIRGenConsumer : public clang::ASTConsumer {
   std::unique_ptr<raw_pwrite_stream> outputStream;
 
   ASTContext *astContext{nullptr};
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> gen;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType action,
                  CompilerInstance &compilerInstance,
                  DiagnosticsEngine &diagnosticsEngine,
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                  const HeaderSearchOptions &headerSearchOptions,
                  CodeGenOptions &codeGenOptions,
                  const TargetOptions &targetOptions,
@@ -117,11 +119,9 @@ public:
         headerSearchOptions(headerSearchOptions),
         codeGenOptions(codeGenOptions), targetOptions(targetOptions),
         langOptions(langOptions), feOptions(feOptions),
-
-        outputStream(std::move(os)),
-
-        gen(std::make_unique<CIRGenerator>(diagnosticsEngine, codeGenOptions)) {
-  }
+        outputStream(std::move(os)), FS(VFS),
+        gen(std::make_unique<CIRGenerator>(diagnosticsEngine, std::move(VFS),
+                                           codeGenOptions)) {}
 
   void Initialize(ASTContext &ctx) override {
     assert(!astContext && "initialized multiple times");
@@ -256,8 +256,8 @@ public:
 
       emitBackendOutput(compilerInstance, codeGenOptions,
                         C.getTargetInfo().getDataLayoutString(),
-                        llvmModule.get(), BackendAction::Backend_EmitLL,
-                        nullptr, std::move(outputStream));
+                        llvmModule.get(), BackendAction::Backend_EmitLL, FS,
+                        std::move(outputStream));
       break;
     }
     case CIRGenAction::OutputType::EmitObj: {
@@ -268,8 +268,8 @@ public:
       llvmModule->setTargetTriple(targetOptions.Triple);
       emitBackendOutput(compilerInstance, codeGenOptions,
                         C.getTargetInfo().getDataLayoutString(),
-                        llvmModule.get(), BackendAction::Backend_EmitObj,
-                        nullptr, std::move(outputStream));
+                        llvmModule.get(), BackendAction::Backend_EmitObj, FS,
+                        std::move(outputStream));
       break;
     }
     case CIRGenAction::OutputType::EmitAssembly: {
@@ -281,7 +281,7 @@ public:
       emitBackendOutput(compilerInstance, codeGenOptions,
                         C.getTargetInfo().getDataLayoutString(),
                         llvmModule.get(), BackendAction::Backend_EmitAssembly,
-                        nullptr, std::move(outputStream));
+                        FS, std::move(outputStream));
       break;
     }
     case CIRGenAction::OutputType::None:
@@ -361,9 +361,9 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &ci, StringRef inputFile) {
     out = getOutputStream(ci, inputFile, action);
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
-      action, ci, ci.getDiagnostics(), ci.getHeaderSearchOpts(),
-      ci.getCodeGenOpts(), ci.getTargetOpts(), ci.getLangOpts(),
-      ci.getFrontendOpts(), std::move(out));
+      action, ci, ci.getDiagnostics(), &ci.getVirtualFileSystem(),
+      ci.getHeaderSearchOpts(), ci.getCodeGenOpts(), ci.getTargetOpts(),
+      ci.getLangOpts(), ci.getFrontendOpts(), std::move(out));
   cgConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and

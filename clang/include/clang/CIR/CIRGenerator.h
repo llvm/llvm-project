@@ -18,7 +18,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CodeGenOptions.h"
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 #include <memory>
 
@@ -42,6 +44,8 @@ class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
   clang::DiagnosticsEngine &Diags;
   clang::ASTContext *astCtx;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+      fs; // Only used for debug info.
 
   const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
 
@@ -73,6 +77,7 @@ private:
 
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,
+               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                const clang::CodeGenOptions &CGO);
   ~CIRGenerator();
   void Initialize(clang::ASTContext &Context) override;

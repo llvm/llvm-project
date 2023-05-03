@@ -31,8 +31,10 @@ using namespace clang;
 void CIRGenerator::anchor() {}
 
 CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
+                           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
                            const CodeGenOptions &CGO)
-    : Diags(diags), codeGenOpts{CGO}, HandlingTopLevelDecls(0) {}
+    : Diags(diags), fs(std::move(vfs)), codeGenOpts{CGO},
+      HandlingTopLevelDecls(0) {}
 CIRGenerator::~CIRGenerator() {
   // There should normally not be any leftover inline method definitions.
   assert(DeferredInlineMemberFuncDefs.empty() || Diags.hasErrorOccurred());
