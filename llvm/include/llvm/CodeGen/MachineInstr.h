@@ -120,7 +120,7 @@ private:
 
   // Operands are allocated by an ArrayRecycler.
   MachineOperand *Operands = nullptr;   // Pointer to the first operand.
-  unsigned NumOperands = 0;             // Number of operands on instruction.
+  uint16_t NumOperands = 0;             // Number of operands on instruction.
 
   uint16_t Flags = 0;                   // Various bits of additional
                                         // information about machine

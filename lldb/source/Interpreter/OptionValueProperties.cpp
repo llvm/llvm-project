@@ -22,10 +22,6 @@ using namespace lldb_private;
 
 OptionValueProperties::OptionValueProperties(ConstString name) : m_name(name) {}
 
-size_t OptionValueProperties::GetNumProperties() const {
-  return m_properties.size();
-}
-
 void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
   for (const auto &definition : defs) {
     Property property(definition);
