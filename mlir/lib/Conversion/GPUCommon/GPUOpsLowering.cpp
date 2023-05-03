@@ -11,7 +11,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -486,8 +486,7 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
         return operand;
       return rewriter.create<LLVM::ExtractElementOp>(loc, operand, index);
     };
-    auto scalarOperands =
-        llvm::to_vector(llvm::map_range(operands, extractElement));
+    auto scalarOperands = llvm::map_to_vector(operands, extractElement);
     Operation *scalarOp =
         rewriter.create(loc, name, scalarOperands, elementType, op->getAttrs());
     rewriter.create<LLVM::InsertElementOp>(loc, result, scalarOp->getResult(0),
