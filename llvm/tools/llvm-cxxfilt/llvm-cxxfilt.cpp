@@ -84,11 +84,11 @@ static std::string demangle(const std::string &Mangled) {
   char *Undecorated = nullptr;
 
   if (Types)
-    Undecorated = itaniumDemangle(DecoratedStr, nullptr);
+    Undecorated = itaniumDemangle(DecoratedStr);
 
   if (!Undecorated && strncmp(DecoratedStr, "__imp_", 6) == 0) {
     Prefix = "import thunk for ";
-    Undecorated = itaniumDemangle(DecoratedStr + 6, nullptr);
+    Undecorated = itaniumDemangle(DecoratedStr + 6);
   }
 
   Result = Undecorated ? Prefix + Undecorated : Mangled;
