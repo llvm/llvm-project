@@ -225,9 +225,8 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
     return;
   }
 
-  if (!emission.IsConstantAggregate) {
+  if (!emission.IsConstantAggregate)
     llvm_unreachable("NYI");
-  }
 
   llvm_unreachable("NYI");
 }

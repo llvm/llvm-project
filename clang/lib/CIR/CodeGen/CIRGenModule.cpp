@@ -91,10 +91,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
     : builder(context, *this), astCtx(astctx), langOpts(astctx.getLangOpts()),
-      codeGenOpts(CGO), theModule{mlir::ModuleOp::create(
-                            builder.getUnknownLoc())},
-      Diags(Diags), target(astCtx.getTargetInfo()),
-      ABI(createCXXABI(*this)), genTypes{*this}, VTables{*this} {
+      codeGenOpts(CGO),
+      theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
+      target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
+      VTables{*this} {
 
   // Initialize the type cache.
   VoidTy = ::mlir::IntegerType::get(builder.getContext(), 8);
