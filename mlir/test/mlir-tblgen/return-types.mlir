@@ -24,6 +24,7 @@ func.func @testCreateFunctions(%arg0 : tensor<10xf32, !test.smpla>, %arg1 : tens
 // -----
 
 func.func @testReturnTypeOpInterface(%arg0 : tensor<10xf32>) {
+  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{incompatible with return type}}
   %bad = "test.op_with_infer_type_if"(%arg0, %arg0) : (tensor<10xf32>, tensor<10xf32>) -> tensor<*xf32>
   return
@@ -32,6 +33,7 @@ func.func @testReturnTypeOpInterface(%arg0 : tensor<10xf32>) {
 // -----
 
 func.func @testReturnTypeOpInterfaceMismatch(%arg0 : tensor<10xf32>, %arg1 : tensor<20xf32>) {
+  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{operand type mismatch}}
   %bad = "test.op_with_infer_type_if"(%arg0, %arg1) : (tensor<10xf32>, tensor<20xf32>) -> tensor<*xf32>
   return
@@ -40,6 +42,7 @@ func.func @testReturnTypeOpInterfaceMismatch(%arg0 : tensor<10xf32>, %arg1 : ten
 // -----
 
 func.func @testReturnTypeOpInterface(%arg0 : tensor<10xf32>) {
+  // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{required first operand and result to match}}
   %bad = "test.op_with_refine_type_if"(%arg0, %arg0) : (tensor<10xf32>, tensor<10xf32>) -> tensor<*xf32>
   return
