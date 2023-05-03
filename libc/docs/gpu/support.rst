@@ -85,17 +85,17 @@ stdlib.h
 Function Name  Available  RPC Required
 =============  =========  ============
 abs            |check|
-atoi           |check|
-atof           |check|
-atol           |check|
-atoll          |check|
+atoi           
+atof           
+atol           
+atoll          
 labs           |check|
 llabs          |check|
-strtod         |check|
-strtof         |check|
-strtol         |check|
-strtold        |check|
-strtoll        |check|
-strtoul        |check|
-strtoull       |check|
+strtod         
+strtof         
+strtol         
+strtold        
+strtoll        
+strtoul        
+strtoull       
 =============  =========  ============
