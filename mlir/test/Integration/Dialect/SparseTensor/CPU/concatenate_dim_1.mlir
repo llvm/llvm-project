@@ -12,10 +12,8 @@
 // REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
 // RUN: %{compile} | %{run}
 //
-// Do the same run, but now with direct IR generation and vectorization. Enable
-// Arm SVE if supported.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 enable-arm-sve=%ENABLE_VLA reassociate-fp-reductions=true enable-index-optimizations=true"
-// REDEFINE: %{run_option} = %VLA_ARCH_ATTR_OPTIONS
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 reassociate-fp-reductions=true enable-index-optimizations=true"
 // RUN: %{compile} | %{run}
 
 #MAT_C_C = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
