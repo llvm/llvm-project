@@ -996,7 +996,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       return false;
 
     // TODO: Should images get their own address space?
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
 
     if (RsrcIntr->IsImage)
       Info.align.reset();
@@ -1086,7 +1086,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
@@ -1133,7 +1133,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType()); // XXX: what is correct VT?
 
-    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_FAT_POINTER;
+    Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
     Info.flags |= MachineMemOperand::MOLoad |
                   MachineMemOperand::MODereferenceable;
@@ -1325,7 +1325,7 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE) {
     // If the offset isn't a multiple of 4, it probably isn't going to be
     // correctly aligned.
     // FIXME: Can we get the real alignment here?
