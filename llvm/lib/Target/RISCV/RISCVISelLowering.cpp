@@ -120,6 +120,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
   if (Subtarget.hasStdExtD())
     addRegisterClass(MVT::f64, &RISCV::FPR64RegClass);
+  if (Subtarget.hasStdExtZfinx())
+    addRegisterClass(MVT::f32, &RISCV::GPRF32RegClass);
 
   static const MVT::SimpleValueType BoolVecVTs[] = {
       MVT::nxv1i1,  MVT::nxv2i1,  MVT::nxv4i1, MVT::nxv8i1,
@@ -407,7 +409,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
   }
 
-  if (Subtarget.hasStdExtF()) {
+  if (Subtarget.hasStdExtFOrZfinx()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
     setOperationAction(FPRndMode, MVT::f32,
                        Subtarget.hasStdExtZfa() ? Legal : Custom);
@@ -424,7 +426,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
   }
 
-  if (Subtarget.hasStdExtF() && Subtarget.is64Bit())
+  if (Subtarget.hasStdExtFOrZfinx() && Subtarget.is64Bit())
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
   if (Subtarget.hasStdExtD()) {
@@ -462,7 +464,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
   }
 
-  if (Subtarget.hasStdExtF()) {
+  if (Subtarget.hasStdExtFOrZfinx()) {
     setOperationAction({ISD::FP_TO_UINT_SAT, ISD::FP_TO_SINT_SAT}, XLenVT,
                        Custom);
 
@@ -1071,7 +1073,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       if (Subtarget.hasStdExtZfhOrZfhmin())
         setOperationAction(ISD::BITCAST, MVT::f16, Custom);
-      if (Subtarget.hasStdExtF())
+      if (Subtarget.hasStdExtFOrZfinx())
         setOperationAction(ISD::BITCAST, MVT::f32, Custom);
       if (Subtarget.hasStdExtD())
         setOperationAction(ISD::BITCAST, MVT::f64, Custom);
@@ -1122,7 +1124,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setTargetDAGCombine(ISD::SRA);
 
-  if (Subtarget.hasStdExtF())
+  if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM});
 
   if (Subtarget.hasStdExtZbb())
@@ -1135,7 +1137,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::BITREVERSE);
   if (Subtarget.hasStdExtZfhOrZfhmin())
     setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
-  if (Subtarget.hasStdExtF())
+  if (Subtarget.hasStdExtFOrZfinx())
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
@@ -1795,7 +1797,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (VT == MVT::f16)
     IsLegalVT = Subtarget.hasStdExtZfhOrZfhmin();
   else if (VT == MVT::f32)
-    IsLegalVT = Subtarget.hasStdExtF();
+    IsLegalVT = Subtarget.hasStdExtFOrZfinx();
   else if (VT == MVT::f64)
     IsLegalVT = Subtarget.hasStdExtD();
 
@@ -1859,7 +1861,7 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                       EVT VT) const {
   // Use f32 to pass f16 if it is legal and Zfh/Zfhmin is not enabled.
   // We might still end up using a GPR but that will be decided based on ABI.
-  if (VT == MVT::f16 && Subtarget.hasStdExtF() &&
+  if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
       !Subtarget.hasStdExtZfhOrZfhmin())
     return MVT::f32;
 
@@ -1871,7 +1873,7 @@ unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context
                                                            EVT VT) const {
   // Use f32 to pass f16 if it is legal and Zfh/Zfhmin is not enabled.
   // We might still end up using a GPR but that will be decided based on ABI.
-  if (VT == MVT::f16 && Subtarget.hasStdExtF() &&
+  if (VT == MVT::f16 && Subtarget.hasStdExtFOrZfinx() &&
       !Subtarget.hasStdExtZfhOrZfhmin())
     return 1;
 
@@ -4395,7 +4397,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return FPConv;
     }
     if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
-        Subtarget.hasStdExtF()) {
+        Subtarget.hasStdExtFOrZfinx()) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
@@ -9099,7 +9101,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
     } else if (VT == MVT::i32 && Op0VT == MVT::f32 && Subtarget.is64Bit() &&
-               Subtarget.hasStdExtF()) {
+               Subtarget.hasStdExtFOrZfinx()) {
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
@@ -12642,6 +12644,7 @@ static bool isSelectPseudo(MachineInstr &MI) {
   case RISCV::Select_GPR_Using_CC_GPR:
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR32_Using_CC_GPR:
+  case RISCV::Select_FPR32INX_Using_CC_GPR:
   case RISCV::Select_FPR64_Using_CC_GPR:
     return true;
   }
@@ -13027,6 +13030,14 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
     FSGNJXOpc = RISCV::FSGNJX_S;
     RC = &RISCV::FPR32RegClass;
     break;
+  case RISCV::PseudoFROUND_S_INX:
+    CmpOpc = RISCV::FLT_S_INX;
+    F2IOpc = RISCV::FCVT_W_S_INX;
+    I2FOpc = RISCV::FCVT_S_W_INX;
+    FSGNJOpc = RISCV::FSGNJ_S_INX;
+    FSGNJXOpc = RISCV::FSGNJX_S_INX;
+    RC = &RISCV::GPRF32RegClass;
+    break;
   case RISCV::PseudoFROUND_D:
     assert(Subtarget.is64Bit() && "Expected 64-bit GPR.");
     CmpOpc = RISCV::FLT_D;
@@ -13124,6 +13135,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_GPR_Using_CC_GPR:
   case RISCV::Select_FPR16_Using_CC_GPR:
   case RISCV::Select_FPR32_Using_CC_GPR:
+  case RISCV::Select_FPR32INX_Using_CC_GPR:
   case RISCV::Select_FPR64_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
@@ -13136,8 +13148,12 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitQuietFCMP(MI, BB, RISCV::FLT_H, RISCV::FEQ_H, Subtarget);
   case RISCV::PseudoQuietFLE_S:
     return emitQuietFCMP(MI, BB, RISCV::FLE_S, RISCV::FEQ_S, Subtarget);
+  case RISCV::PseudoQuietFLE_S_INX:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_S_INX, RISCV::FEQ_S_INX, Subtarget);
   case RISCV::PseudoQuietFLT_S:
     return emitQuietFCMP(MI, BB, RISCV::FLT_S, RISCV::FEQ_S, Subtarget);
+  case RISCV::PseudoQuietFLT_S_INX:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_S_INX, RISCV::FEQ_S_INX, Subtarget);
   case RISCV::PseudoQuietFLE_D:
     return emitQuietFCMP(MI, BB, RISCV::FLE_D, RISCV::FEQ_D, Subtarget);
   case RISCV::PseudoQuietFLT_D:
@@ -13323,6 +13339,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                      RISCV::PseudoVFCVT_F_X_V_MF4_MASK);
   case RISCV::PseudoFROUND_H:
   case RISCV::PseudoFROUND_S:
+  case RISCV::PseudoFROUND_S_INX:
   case RISCV::PseudoFROUND_D:
     return emitFROUND(MI, BB, Subtarget);
   }
@@ -15573,7 +15590,7 @@ bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
     return VT.isVector() ? Subtarget.hasVInstructionsF16()
                          : Subtarget.hasStdExtZfh();
   case MVT::f32:
-    return Subtarget.hasStdExtF();
+    return Subtarget.hasStdExtFOrZfinx();
   case MVT::f64:
     return Subtarget.hasStdExtD();
   default:

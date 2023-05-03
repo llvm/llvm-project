@@ -5,6 +5,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   -disable-strictnode-mutation -target-abi=lp64f \
 ; RUN:   | FileCheck -check-prefixes=CHECKIF,RV64IF %s
+; RUN: llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs < %s \
+; RUN:   -disable-strictnode-mutation -target-abi=ilp32 \
+; RUN:   | FileCheck -check-prefixes=CHECKIZFINX,RV32IZFINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs < %s \
+; RUN:   -disable-strictnode-mutation -target-abi=lp64 \
+; RUN:   | FileCheck -check-prefixes=CHECKIZFINX,RV64IZFINX %s
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   -disable-strictnode-mutation | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
@@ -19,6 +25,11 @@ define i32 @fcvt_w_s(float %a) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.w.s a0, fa0, rtz
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fcvt_w_s:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.w.s a0, a0, rtz
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s:
 ; RV32I:       # %bb.0:
@@ -47,6 +58,11 @@ define i32 @fcvt_wu_s(float %a) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fcvt_wu_s:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s:
 ; RV32I:       # %bb.0:
@@ -79,6 +95,13 @@ define i32 @fcvt_wu_s_multiple_use(float %x, ptr %y) nounwind {
 ; CHECKIF-NEXT:    seqz a1, a0
 ; CHECKIF-NEXT:    add a0, a0, a1
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fcvt_wu_s_multiple_use:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.wu.s a0, a0, rtz
+; CHECKIZFINX-NEXT:    seqz a1, a0
+; CHECKIZFINX-NEXT:    add a0, a0, a1
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_multiple_use:
 ; RV32I:       # %bb.0:
@@ -113,6 +136,11 @@ define float @fcvt_s_w(i32 %a) nounwind strictfp {
 ; CHECKIF-NEXT:    fcvt.s.w fa0, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcvt_s_w:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.s.w a0, a0
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_s_w:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -143,6 +171,12 @@ define float @fcvt_s_w_load(ptr %p) nounwind strictfp {
 ; CHECKIF-NEXT:    fcvt.s.w fa0, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcvt_s_w_load:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    lw a0, 0(a0)
+; CHECKIZFINX-NEXT:    fcvt.s.w a0, a0
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_s_w_load:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -172,6 +206,11 @@ define float @fcvt_s_wu(i32 %a) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fcvt_s_wu:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.s.wu a0, a0
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu:
 ; RV32I:       # %bb.0:
@@ -208,6 +247,18 @@ define float @fcvt_s_wu_load(ptr %p) nounwind strictfp {
 ; RV64IF-NEXT:    lwu a0, 0(a0)
 ; RV64IF-NEXT:    fcvt.s.wu fa0, a0
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fcvt_s_wu_load:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    lw a0, 0(a0)
+; RV32IZFINX-NEXT:    fcvt.s.wu a0, a0
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_s_wu_load:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    lwu a0, 0(a0)
+; RV64IZFINX-NEXT:    fcvt.s.wu a0, a0
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu_load:
 ; RV32I:       # %bb.0:
@@ -248,6 +299,20 @@ define i64 @fcvt_l_s(float %a) nounwind strictfp {
 ; RV64IF-NEXT:    fcvt.l.s a0, fa0, rtz
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: fcvt_l_s:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call __fixsfdi@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_l_s:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.l.s a0, a0, rtz
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_l_s:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -284,6 +349,20 @@ define i64 @fcvt_lu_s(float %a) nounwind strictfp {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fcvt_lu_s:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call __fixunssfdi@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_lu_s:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.lu.s a0, a0, rtz
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_lu_s:
 ; RV32I:       # %bb.0:
@@ -322,6 +401,20 @@ define float @fcvt_s_l(i64 %a) nounwind strictfp {
 ; RV64IF-NEXT:    fcvt.s.l fa0, a0
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: fcvt_s_l:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call __floatdisf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_s_l:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.s.l a0, a0
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_s_l:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -359,6 +452,20 @@ define float @fcvt_s_lu(i64 %a) nounwind strictfp {
 ; RV64IF-NEXT:    fcvt.s.lu fa0, a0
 ; RV64IF-NEXT:    ret
 ;
+; RV32IZFINX-LABEL: fcvt_s_lu:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi sp, sp, -16
+; RV32IZFINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZFINX-NEXT:    call __floatundisf@plt
+; RV32IZFINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZFINX-NEXT:    addi sp, sp, 16
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_s_lu:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fcvt.s.lu a0, a0
+; RV64IZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_s_lu:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -386,6 +493,11 @@ define float @fcvt_s_w_i8(i8 signext %a) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.s.w fa0, a0
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fcvt_s_w_i8:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.s.w a0, a0
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_w_i8:
 ; RV32I:       # %bb.0:
@@ -415,6 +527,11 @@ define float @fcvt_s_wu_i8(i8 zeroext %a) nounwind strictfp {
 ; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcvt_s_wu_i8:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.s.wu a0, a0
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_s_wu_i8:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -443,6 +560,11 @@ define float @fcvt_s_w_i16(i16 signext %a) nounwind strictfp {
 ; CHECKIF-NEXT:    fcvt.s.w fa0, a0
 ; CHECKIF-NEXT:    ret
 ;
+; CHECKIZFINX-LABEL: fcvt_s_w_i16:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.s.w a0, a0
+; CHECKIZFINX-NEXT:    ret
+;
 ; RV32I-LABEL: fcvt_s_w_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
@@ -470,6 +592,11 @@ define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind strictfp {
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.s.wu fa0, a0
 ; CHECKIF-NEXT:    ret
+;
+; CHECKIZFINX-LABEL: fcvt_s_wu_i16:
+; CHECKIZFINX:       # %bb.0:
+; CHECKIZFINX-NEXT:    fcvt.s.wu a0, a0
+; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu_i16:
 ; RV32I:       # %bb.0:
@@ -508,6 +635,22 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64IF-NEXT:    fcvt.s.w fa5, a0
 ; RV64IF-NEXT:    fsw fa5, 0(a1)
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fcvt_s_w_demanded_bits:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi a0, a0, 1
+; RV32IZFINX-NEXT:    fcvt.s.w a2, a0
+; RV32IZFINX-NEXT:    sw a2, 0(a1)
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_s_w_demanded_bits:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addiw a2, a0, 1
+; RV64IZFINX-NEXT:    addi a0, a0, 1
+; RV64IZFINX-NEXT:    fcvt.s.w a0, a0
+; RV64IZFINX-NEXT:    sw a0, 0(a1)
+; RV64IZFINX-NEXT:    mv a0, a2
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_w_demanded_bits:
 ; RV32I:       # %bb.0:
@@ -565,6 +708,20 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64IF-NEXT:    fcvt.s.wu fa5, a0
 ; RV64IF-NEXT:    fsw fa5, 0(a1)
 ; RV64IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fcvt_s_wu_demanded_bits:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    addi a0, a0, 1
+; RV32IZFINX-NEXT:    fcvt.s.wu a2, a0
+; RV32IZFINX-NEXT:    sw a2, 0(a1)
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fcvt_s_wu_demanded_bits:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    addiw a0, a0, 1
+; RV64IZFINX-NEXT:    fcvt.s.wu a2, a0
+; RV64IZFINX-NEXT:    sw a2, 0(a1)
+; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_s_wu_demanded_bits:
 ; RV32I:       # %bb.0:
