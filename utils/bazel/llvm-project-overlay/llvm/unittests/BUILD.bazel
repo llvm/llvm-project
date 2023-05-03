@@ -770,6 +770,7 @@ cc_test(
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
+        "//llvm:CodeGen",
         "//llvm:CodeGenTypes",
         "//llvm:Exegesis",
         "//llvm:MC",
