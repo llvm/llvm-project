@@ -1922,9 +1922,7 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    psubusw %xmm1, %xmm3
 ; SSE2-NEXT:    psubusw %xmm0, %xmm1
-; SSE2-NEXT:    paddw %xmm0, %xmm1
-; SSE2-NEXT:    psubw %xmm0, %xmm3
-; SSE2-NEXT:    paddw %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm1, %xmm3
 ; SSE2-NEXT:    psrlw $1, %xmm3
 ; SSE2-NEXT:    pmullw %xmm2, %xmm3
 ; SSE2-NEXT:    paddw %xmm3, %xmm0
