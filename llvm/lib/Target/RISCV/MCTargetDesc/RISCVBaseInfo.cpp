@@ -36,7 +36,7 @@ namespace RISCVInsnOpcode {
 } // namespace RISCVInsnOpcode
 
 namespace RISCVABI {
-ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
+ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
