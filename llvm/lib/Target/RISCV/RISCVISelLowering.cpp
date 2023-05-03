@@ -122,6 +122,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f64, &RISCV::FPR64RegClass);
   if (Subtarget.hasStdExtZfinx())
     addRegisterClass(MVT::f32, &RISCV::GPRF32RegClass);
+  if (Subtarget.hasStdExtZdinx()) {
+    if (Subtarget.is64Bit())
+      addRegisterClass(MVT::f64, &RISCV::GPRF64RegClass);
+  }
 
   static const MVT::SimpleValueType BoolVecVTs[] = {
       MVT::nxv1i1,  MVT::nxv2i1,  MVT::nxv4i1, MVT::nxv8i1,
@@ -429,7 +433,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtFOrZfinx() && Subtarget.is64Bit())
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
 
-  if (Subtarget.hasStdExtD()) {
+  if (Subtarget.hasStdExtDOrZdinx()) {
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
 
     if (Subtarget.hasStdExtZfa()) {
@@ -1075,7 +1079,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::BITCAST, MVT::f16, Custom);
       if (Subtarget.hasStdExtFOrZfinx())
         setOperationAction(ISD::BITCAST, MVT::f32, Custom);
-      if (Subtarget.hasStdExtD())
+      if (Subtarget.hasStdExtDOrZdinx())
         setOperationAction(ISD::BITCAST, MVT::f64, Custom);
     }
   }
@@ -1799,7 +1803,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   else if (VT == MVT::f32)
     IsLegalVT = Subtarget.hasStdExtFOrZfinx();
   else if (VT == MVT::f64)
-    IsLegalVT = Subtarget.hasStdExtD();
+    IsLegalVT = Subtarget.hasStdExtDOrZdinx();
 
   if (!IsLegalVT)
     return false;
@@ -12670,6 +12674,7 @@ static bool isSelectPseudo(MachineInstr &MI) {
   case RISCV::Select_FPR32_Using_CC_GPR:
   case RISCV::Select_FPR32INX_Using_CC_GPR:
   case RISCV::Select_FPR64_Using_CC_GPR:
+  case RISCV::Select_FPR64INX_Using_CC_GPR:
     return true;
   }
 }
@@ -13071,6 +13076,15 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
     FSGNJXOpc = RISCV::FSGNJX_D;
     RC = &RISCV::FPR64RegClass;
     break;
+  case RISCV::PseudoFROUND_D_INX:
+    assert(Subtarget.is64Bit() && "Expected 64-bit GPR.");
+    CmpOpc = RISCV::FLT_D_INX;
+    F2IOpc = RISCV::FCVT_L_D_INX;
+    I2FOpc = RISCV::FCVT_D_L_INX;
+    FSGNJOpc = RISCV::FSGNJ_D_INX;
+    FSGNJXOpc = RISCV::FSGNJX_D_INX;
+    RC = &RISCV::GPRF64RegClass;
+    break;
   }
 
   const BasicBlock *BB = MBB->getBasicBlock();
@@ -13161,6 +13175,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::Select_FPR32_Using_CC_GPR:
   case RISCV::Select_FPR32INX_Using_CC_GPR:
   case RISCV::Select_FPR64_Using_CC_GPR:
+  case RISCV::Select_FPR64INX_Using_CC_GPR:
     return emitSelectPseudo(MI, BB, Subtarget);
   case RISCV::BuildPairF64Pseudo:
     return emitBuildPairF64Pseudo(MI, BB, Subtarget);
@@ -13180,8 +13195,12 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitQuietFCMP(MI, BB, RISCV::FLT_S_INX, RISCV::FEQ_S_INX, Subtarget);
   case RISCV::PseudoQuietFLE_D:
     return emitQuietFCMP(MI, BB, RISCV::FLE_D, RISCV::FEQ_D, Subtarget);
+  case RISCV::PseudoQuietFLE_D_INX:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_D_INX, RISCV::FEQ_D_INX, Subtarget);
   case RISCV::PseudoQuietFLT_D:
     return emitQuietFCMP(MI, BB, RISCV::FLT_D, RISCV::FEQ_D, Subtarget);
+  case RISCV::PseudoQuietFLT_D_INX:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_D_INX, RISCV::FEQ_D_INX, Subtarget);
 
     // =========================================================================
     // VFCVT
@@ -13365,6 +13384,7 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case RISCV::PseudoFROUND_S:
   case RISCV::PseudoFROUND_S_INX:
   case RISCV::PseudoFROUND_D:
+  case RISCV::PseudoFROUND_D_INX:
     return emitFROUND(MI, BB, Subtarget);
   }
 }
@@ -15616,7 +15636,7 @@ bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   case MVT::f32:
     return Subtarget.hasStdExtFOrZfinx();
   case MVT::f64:
-    return Subtarget.hasStdExtD();
+    return Subtarget.hasStdExtDOrZdinx();
   default:
     break;
   }
