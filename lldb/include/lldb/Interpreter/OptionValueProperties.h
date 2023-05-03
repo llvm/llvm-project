@@ -68,8 +68,6 @@ public:
 
   // Subclass specific functions
 
-  virtual size_t GetNumProperties() const;
-
   // Get the index of a property given its exact name in this property
   // collection, "name" can't be a path to a property path that refers to a
   // property within a property
@@ -205,10 +203,12 @@ public:
 
 protected:
   Property *ProtectedGetPropertyAtIndex(uint32_t idx) {
+    assert(idx < m_properties.size() && "invalid property index");
     return ((idx < m_properties.size()) ? &m_properties[idx] : nullptr);
   }
 
   const Property *ProtectedGetPropertyAtIndex(uint32_t idx) const {
+    assert(idx < m_properties.size() && "invalid property index");
     return ((idx < m_properties.size()) ? &m_properties[idx] : nullptr);
   }
 
