@@ -7281,8 +7281,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       if (info->demangled_name != nullptr)
         free(info->demangled_name);
       int status;
-      info->demangled_name =
-          itaniumDemangle(SymbolName + 1, nullptr, nullptr, &status);
+      info->demangled_name = itaniumDemangle(SymbolName + 1, &status);
       if (info->demangled_name != nullptr) {
         *ReferenceName = info->demangled_name;
         *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
@@ -7381,8 +7380,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     if (info->demangled_name != nullptr)
       free(info->demangled_name);
     int status;
-    info->demangled_name =
-        itaniumDemangle(SymbolName + 1, nullptr, nullptr, &status);
+    info->demangled_name = itaniumDemangle(SymbolName + 1, &status);
     if (info->demangled_name != nullptr) {
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;

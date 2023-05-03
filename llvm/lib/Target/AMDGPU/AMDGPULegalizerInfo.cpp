@@ -131,6 +131,28 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
   };
 }
 
+// Increase the number of vector elements to reach the next legal RegClass.
+static LegalizeMutation moreElementsToNextExistingRegClass(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    const unsigned NumElts = Ty.getNumElements();
+    const unsigned EltSize = Ty.getElementType().getSizeInBits();
+    const unsigned MaxNumElts = MaxRegisterSize / EltSize;
+
+    assert(EltSize == 32 || EltSize == 64);
+    assert(Ty.getSizeInBits() < MaxRegisterSize);
+
+    unsigned NewNumElts;
+    // Find the nearest legal RegClass that is larger than the current type.
+    for (NewNumElts = NumElts; NewNumElts < MaxNumElts; ++NewNumElts) {
+      if (SIRegisterInfo::getSGPRClassForBitWidth(NewNumElts * EltSize))
+        break;
+    }
+
+    return std::pair(TypeIdx, LLT::fixed_vector(NewNumElts, EltSize));
+  };
+}
+
 static LLT getBitcastRegisterType(const LLT Ty) {
   const unsigned Size = Ty.getSizeInBits();
 
@@ -212,6 +234,15 @@ static bool isRegisterType(LLT Ty) {
 static LegalityPredicate isRegisterType(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     return isRegisterType(Query.Types[TypeIdx]);
+  };
+}
+
+// RegisterType that doesn't have a corresponding RegClass.
+static LegalityPredicate isIllegalRegisterType(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    LLT Ty = Query.Types[TypeIdx];
+    return isRegisterType(Ty) &&
+           !SIRegisterInfo::getSGPRClassForBitWidth(Ty.getSizeInBits());
   };
 }
 
@@ -1455,10 +1486,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           const LLT VecTy = Query.Types[VecTypeIdx];
           const LLT IdxTy = Query.Types[IdxTypeIdx];
           const unsigned EltSize = EltTy.getSizeInBits();
+          const bool isLegalVecType =
+              !!SIRegisterInfo::getSGPRClassForBitWidth(VecTy.getSizeInBits());
           return (EltSize == 32 || EltSize == 64) &&
                   VecTy.getSizeInBits() % 32 == 0 &&
                   VecTy.getSizeInBits() <= MaxRegisterSize &&
-                  IdxTy.getSizeInBits() == 32;
+                  IdxTy.getSizeInBits() == 32 &&
+                  isLegalVecType;
         })
       .bitcastIf(all(sizeIsMultipleOf32(VecTypeIdx), scalarOrEltNarrowerThan(VecTypeIdx, 32)),
                  bitcastToVectorElement32(VecTypeIdx))
@@ -1484,6 +1518,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(IdxTypeIdx, S32, S32)
       .clampMaxNumElements(VecTypeIdx, S32, 32)
       // TODO: Clamp elements for 64-bit vectors?
+      .moreElementsIf(
+        isIllegalRegisterType(VecTypeIdx),
+        moreElementsToNextExistingRegClass(VecTypeIdx))
       // It should only be necessary with variable indexes.
       // As a last resort, lower to the stack
       .lower();
@@ -1538,7 +1575,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalForCartesianProduct(AllS64Vectors, {S64})
     .clampNumElements(0, V16S32, V32S32)
     .clampNumElements(0, V2S64, V16S64)
-    .fewerElementsIf(isWideVec16(0), changeTo(0, V2S16));
+    .fewerElementsIf(isWideVec16(0), changeTo(0, V2S16))
+    .moreElementsIf(
+      isIllegalRegisterType(0),
+      moreElementsToNextExistingRegClass(0));
 
   if (ST.hasScalarPackInsts()) {
     BuildVector

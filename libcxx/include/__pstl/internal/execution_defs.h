@@ -48,11 +48,8 @@ struct is_execution_policy<__pstl::execution::parallel_unsequenced_policy> : std
 template <>
 struct is_execution_policy<__pstl::execution::unsequenced_policy> : std::true_type {};
 
-#if defined(_PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT)
 template <class _Tp>
 constexpr bool is_execution_policy_v = __pstl::execution::is_execution_policy<_Tp>::value;
-#endif
-
 } // namespace v1
 } // namespace execution
 

@@ -19,24 +19,24 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_istream;
+class _LIBCPP_TEMPLATE_VIS basic_istream;
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_iostream;
+class _LIBCPP_TEMPLATE_VIS basic_iostream;
 
-typedef basic_istream<char>          istream;
-typedef basic_iostream<char>         iostream;
+typedef basic_istream<char> istream;
+typedef basic_iostream<char> iostream;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_istream<wchar_t>       wistream;
-typedef basic_iostream<wchar_t>      wiostream;
+typedef basic_istream<wchar_t> wistream;
+typedef basic_iostream<wchar_t> wiostream;
 #endif
 
 template <class _CharT, class _Traits>
-    class _LIBCPP_PREFERRED_NAME(istream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wistream)) basic_istream;
+class _LIBCPP_PREFERRED_NAME(istream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wistream)) basic_istream;
 
 template <class _CharT, class _Traits>
-    class _LIBCPP_PREFERRED_NAME(iostream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wiostream)) basic_iostream;
+class _LIBCPP_PREFERRED_NAME(iostream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wiostream)) basic_iostream;
 
 _LIBCPP_END_NAMESPACE_STD
 

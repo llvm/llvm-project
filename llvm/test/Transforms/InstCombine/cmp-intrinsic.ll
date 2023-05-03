@@ -9,6 +9,7 @@ declare i33 @llvm.cttz.i33(i33, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i8 @llvm.umax.i8(i8, i8)
 declare i8 @llvm.uadd.sat.i8(i8, i8)
+declare i8 @llvm.ssub.sat.i8(i8, i8)
 declare i33 @llvm.ctlz.i33(i33, i1)
 declare i8 @llvm.ctpop.i8(i8)
 declare i11 @llvm.ctpop.i11(i11)
@@ -878,5 +879,99 @@ define i1 @uadd_sat_ne_zero_fail_multiuse(i8 %x, i8 %y) {
   %m = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y)
   call void @use8(i8 %m)
   %r = icmp ne i8 %m, 0
+  ret i1 %r
+}
+
+
+define i1 @ssub_sat_ne_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_ne_zero(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp ne i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_ne_fail_nonzero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_ne_fail_nonzero(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[M]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp ne i8 %m, 4
+  ret i1 %r
+}
+
+define i1 @ssub_sat_eq_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_eq_zero(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp eq i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_sle_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_sle_zero(
+; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp sle i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_sge_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_sge_zero(
+; CHECK-NEXT:    [[R:%.*]] = icmp sge i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp sge i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_slt_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_slt_zero(
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp slt i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_slt_neg1_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_slt_neg1_fail(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[M]], -1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp slt i8 %m, -1
+  ret i1 %r
+}
+
+define i1 @ssub_sat_sgt_zero(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_sgt_zero(
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp sgt i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @ssub_sat_sgt_one_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @ssub_sat_sgt_one_fail(
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[M]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = call i8 @llvm.ssub.sat.i8(i8 %x, i8 %y)
+  %r = icmp sgt i8 %m, 1
   ret i1 %r
 }

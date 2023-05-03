@@ -4,10 +4,10 @@ if(NOT (TARGET libc.src.__support.threads.mutex))
   return()
 endif()
 
-add_libc_unittest(
+add_libc_test(
   file_test
   SUITE
-    libc_support_unittests
+    libc-support-tests
   SRCS
     file_test.cpp
   LINK_LIBRARIES
@@ -21,10 +21,10 @@ add_libc_unittest(
 )
 
 if (TARGET libc.src.__support.File.platform_file)
-  add_libc_unittest(
+  add_libc_test(
     platform_file_test
     SUITE
-      libc_support_unittests
+      libc-support-tests
     SRCS
       platform_file_test.cpp
     DEPENDS
