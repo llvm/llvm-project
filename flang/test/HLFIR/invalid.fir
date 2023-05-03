@@ -518,3 +518,26 @@ func.func @bad_getextent(%arg0: !fir.shape<1>) {
   // expected-error@+1 {{'hlfir.get_extent' op dimension index out of bounds}}
   %0 = hlfir.get_extent %arg0 {dim = 1 : index} : (!fir.shape<1>) -> index
 }
+
+// -----
+func.func @bad_region_assign_1(%x: !fir.box<!fir.array<?xf32>>) {
+// expected-error@+1 {{'hlfir.region_assign' op right-hand side region must be terminated by an hlfir.yield}}
+  hlfir.region_assign {
+    %c100 = arith.constant 100 : index
+  } to {
+    hlfir.yield %x : !fir.box<!fir.array<?xf32>>
+  }
+  return
+}
+
+// -----
+func.func @bad_region_assign_2(%x: !fir.box<!fir.array<?xf32>>) {
+// expected-error@+1 {{'hlfir.region_assign' op left-hand side region must be terminated by an hlfir.yield or hlfir.elemental_addr}}
+  hlfir.region_assign {
+    hlfir.yield %x : !fir.box<!fir.array<?xf32>>
+  } to {
+    %c100 = arith.constant 100 : index
+  } user_defined_assign  (%rhs: !fir.ref<i64>) to (%lhs: !fir.ref<f32>) {
+  }
+  return
+}

@@ -814,4 +814,88 @@ def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
   let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];
 }
 
+def hlfir_RegionAssignOp : hlfir_Op<"region_assign", []> {
+  let summary = "represent a Fortran assignment using regions for the LHS and RHS evaluation";
+  let description = [{
+    This operation can represent Forall and Where assignment when inside an
+    hlfir.forall or hlfir.where "ordered assignment tree". It can
+    also represent user defined assignments and assignment to vector
+    subscripted entities without requiring the materialization of the
+    right-hand side temporary copy that may be needed to implement Fortran
+    assignment semantic.
+
+    The right-hand side and left-hand side evaluations are held in their
+    own regions terminated with hlfir.yield operations (or hlfir.elemental_addr
+    for a left-hand side with vector subscript).
+
+    An optional region may be added to implement user defined assignment.
+    This region provides two block arguments with the same type as the
+    yielded rhs and lhs entities (in that order), or the element type if this
+    is an elemental user defined assignment.
+
+    If this optional region is not provided, intrinsic assignment is performed.
+
+    Example: "X = Y",  where "=" is a user defined elemental assignment "foo"
+    taking Y by value.
+    ```
+    hlfir.region_assign {
+      hlfir.yield %y : !fir.box<!fir.array<?x!f32>>
+    } to {
+      hlfir.yield %x : !fir.box<!fir.array<?x!fir.type<t>>>
+    } user_defined_assignment (%rhs_elt: !fir.ref<f32>) to (%lhs_elt: !fir.ref<!fir.type<t>>) {
+      %0 = fir.load %rhs_elt : !fir.ref<f32>
+      fir.call @foo(%lhs_elt, %0) : (!fir.ref<!fir.type<t>>, f32) -> ()
+    }
+    ```
+
+    TODO: add optional "realloc" semantics like for hlfir.assign.
+  }];
+
+  let regions = (region  SizedRegion<1>:$rhs_region,
+                         SizedRegion<1>:$lhs_region,
+                         MaxSizedRegion<1>:$user_defined_assignment);
+
+  let extraClassDeclaration = [{
+    mlir::Value getUserAssignmentRhs() {
+      return getUserDefinedAssignment().getArguments()[0];
+    }
+    mlir::Value getUserAssignmentLhs() {
+      return getUserDefinedAssignment().getArguments()[1];
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp"]>,
+    SingleBlockImplicitTerminator<"fir::FirEndOp">]> {
+
+  let summary = "Yield a value or variable inside a forall, where or region assignment";
+
+  let description = [{
+    Terminator operation that yields an HLFIR value or variable that was computed in
+    a region and hold the yielded entity cleanup, if any, into its own region.
+    This allows representing any Fortran expression evaluation in its own region so
+    that the evaluation can easily be scheduled/moved around in a pass.
+
+    Example: "foo(x)" where foo returns an allocatable array.
+    ```
+    {
+      // In some region.
+      %0 = fir.call @foo(x) (!fir.ref<f32>) -> !fir.box<fir.heap<!fir.array<?xf32>>>
+      hlfir.yield %0 : !fir.box<!fir.heap<!fir.array<?xf32>>> cleanup {
+        %1 = fir.box_addr %0 : !fir.box<!fir.heap<!fir.array<?xf32>>> -> !fir.heap<!fir.array<?xf32>>
+        %fir.freemem %1 : !fir.heap<!fir.array<?xf32>>
+      }
+    }
+    ```
+  }];
+
+  let arguments = (ins AnyFortranEntity:$entity);
+  let regions = (region  MaxSizedRegion<1>:$cleanup);
+
+  let assemblyFormat = "$entity attr-dict `:` type($entity) custom<YieldOpCleanup>($cleanup)";
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS
