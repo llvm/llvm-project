@@ -7,7 +7,7 @@ tablegen("PPCGenExegesis") {
 
 static_library("PowerPC") {
   output_name = "LLVMExegesisPowerPC"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":PPCGenExegesis",
     "//llvm/lib/TargetParser",
 

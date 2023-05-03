@@ -48,7 +48,7 @@ group("tablegen") {
 static_library("MCTargetDesc") {
   output_name = "LLVMMipsDesc"
   public_deps = [ ":tablegen" ]
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":MipsGenAsmWriter",
     ":MipsGenMCCodeEmitter",
     "//llvm/lib/MC",

@@ -8,7 +8,7 @@ tablegen("AVRGenAsmMatcher") {
 
 static_library("AsmParser") {
   output_name = "LLVMAVRAsmParser"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":AVRGenAsmMatcher",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",

@@ -8,7 +8,7 @@ tablegen("AMDGPUGenDisassemblerTables") {
 
 static_library("Disassembler") {
   output_name = "LLVMAMDGPUDisassembler"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":AMDGPUGenDisassemblerTables",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",

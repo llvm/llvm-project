@@ -11,7 +11,7 @@ tablegen("AArch64GenAsmMatcher") {
 
 static_library("AsmParser") {
   output_name = "LLVMAArch64AsmParser"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":AArch64GenAsmMatcher",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",

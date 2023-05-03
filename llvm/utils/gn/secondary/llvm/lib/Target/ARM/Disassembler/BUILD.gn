@@ -8,7 +8,7 @@ tablegen("ARMGenDisassemblerTables") {
 
 static_library("Disassembler") {
   output_name = "LLVMARMDisassembler"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":ARMGenDisassemblerTables",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
