@@ -53,9 +53,10 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
       [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
                                                           Environment &Env) {
         return NoopAnalysis(
-            C, DataflowAnalysisOptions{UseBuiltinModel
-                                           ? Env.getAnalysisOptions()
-                                           : std::optional<BuiltinOptions>()});
+            C,
+            DataflowAnalysisOptions{
+                UseBuiltinModel ? Env.getDataflowAnalysisContext().getOptions()
+                                : std::optional<BuiltinOptions>()});
       });
   AI.ASTBuildArgs = ASTBuildArgs;
   if (Options.BuiltinOpts)
