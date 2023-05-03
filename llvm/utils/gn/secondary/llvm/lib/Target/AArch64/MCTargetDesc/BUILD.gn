@@ -57,10 +57,11 @@ group("tablegen") {
 static_library("MCTargetDesc") {
   output_name = "LLVMAArch64Desc"
   public_deps = [ ":tablegen" ]
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":AArch64GenAsmWriter",
     ":AArch64GenAsmWriter1",
     ":AArch64GenMCCodeEmitter",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AArch64/TargetInfo",

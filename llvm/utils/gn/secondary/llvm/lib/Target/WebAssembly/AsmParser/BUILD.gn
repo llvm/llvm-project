@@ -8,8 +8,9 @@ tablegen("WebAssemblyGenAsmMatcher") {
 
 static_library("AsmParser") {
   output_name = "LLVMWebAssemblyAsmParser"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":WebAssemblyGenAsmMatcher",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/Support",

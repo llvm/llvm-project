@@ -8,8 +8,9 @@ tablegen("AVRGenDisassemblerTables") {
 
 static_library("Disassembler") {
   output_name = "LLVMAVRDisassembler"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":AVRGenDisassemblerTables",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AVR:LLVMAVRCodeGen",
