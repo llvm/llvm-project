@@ -30253,9 +30253,9 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   //                 Y                       Y
   //             Num   xNaN              +0     -0
   //          ---------------         ---------------
-  //     Num  |  Max | qNaN |     +0  |  +0  |  +0  |
+  //     Num  |  Max |   Y  |     +0  |  +0  |  +0  |
   // X        ---------------  X      ---------------
-  //    xNaN  | qNaN | qNaN |     -0  |  +0  |  -0  |
+  //    xNaN  |   X  |  X/Y |     -0  |  +0  |  -0  |
   //          ---------------         ---------------
   //
   // It is achieved by means of FMAX/FMIN with preliminary checks and operand
@@ -30273,15 +30273,18 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     return false;
   };
 
-  SDValue MinMax;
   bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
   bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
-  if (DAG.getTarget().Options.NoSignedZerosFPMath ||
-      Op->getFlags().hasNoSignedZeros() || IsPreferredZero(Y) ||
-      DAG.isKnownNeverZeroFloat(X)) {
-    MinMax = DAG.getNode(MinMaxOp, DL, VT, X, Y, Op->getFlags());
+  bool IgnoreSignedZero = DAG.getTarget().Options.NoSignedZerosFPMath ||
+                          Op->getFlags().hasNoSignedZeros();
+  SDValue NewX, NewY;
+  if (IgnoreSignedZero || IsPreferredZero(Y) || DAG.isKnownNeverZeroFloat(X)) {
+    // Operands are already in right order or order does not matter.
+    NewX = X;
+    NewY = Y;
   } else if (IsPreferredZero(X) || DAG.isKnownNeverZeroFloat(Y)) {
-    MinMax = DAG.getNode(MinMaxOp, DL, VT, Y, X, Op->getFlags());
+    NewX = Y;
+    NewY = X;
   } else if ((VT == MVT::f16 || Subtarget.hasDQI()) &&
              (Op->getFlags().hasNoNaNs() || IsXNeverNaN || IsYNeverNaN)) {
     if (IsXNeverNaN)
@@ -30300,8 +30303,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                               DAG.getConstant(0, DL, MVT::v8i1), IsNanZero,
                               DAG.getIntPtrConstant(0, DL));
     SDValue NeedSwap = DAG.getBitcast(MVT::i8, Ins);
-    SDValue NewX = DAG.getSelect(DL, VT, NeedSwap, Y, X);
-    SDValue NewY = DAG.getSelect(DL, VT, NeedSwap, X, Y);
+    NewX = DAG.getSelect(DL, VT, NeedSwap, Y, X);
+    NewY = DAG.getSelect(DL, VT, NeedSwap, X, Y);
     return DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
   } else {
     SDValue IsXZero;
@@ -30330,19 +30333,26 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
       IsXZero = DAG.getSetCC(DL, SetCCType, IsXZero,
                              DAG.getConstant(0, DL, MVT::i32), ISD::SETEQ);
     }
-    SDValue NewX = DAG.getSelect(DL, VT, IsXZero, Y, X);
-    SDValue NewY = DAG.getSelect(DL, VT, IsXZero, X, Y);
-    MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
+    NewX = DAG.getSelect(DL, VT, IsXZero, Y, X);
+    NewY = DAG.getSelect(DL, VT, IsXZero, X, Y);
   }
 
-  if (Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN))
+  bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
+                   Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
+
+  // If we did no ordering operands for singed zero handling and we need
+  // to process NaN and we know that the second operand is not NaN then put
+  // it in first operand and we will not need to post handle NaN after max/min.
+  if (IgnoreSignedZero && !IgnoreNaN && DAG.isKnownNeverNaN(NewY))
+    std::swap(NewX, NewY);
+
+  SDValue MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
+
+  if (IgnoreNaN || DAG.isKnownNeverNaN(NewX))
     return MinMax;
 
-  APFloat NaNValue = APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT));
-  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, IsXNeverNaN ? Y : X,
-                               IsYNeverNaN ? X : Y, ISD::SETUO);
-  return DAG.getSelect(DL, VT, IsNaN, DAG.getConstantFP(NaNValue, DL, VT),
-                       MinMax);
+  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, NewX, NewX, ISD::SETUO);
+  return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
 }
 
 static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
