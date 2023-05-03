@@ -658,28 +658,28 @@ return:                                           ; preds = %if.end, %land.lhs.t
 define i32 @fcmpri(i32 %argc, ptr nocapture readonly %argv) #0 {
 ; CHECK-LABEL: fcmpri:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str d8, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    .cfi_offset b8, -32
 ; CHECK-NEXT:    cmp w0, #2
 ; CHECK-NEXT:    b.lt .LBB9_3
 ; CHECK-NEXT:  // %bb.1: // %land.lhs.true
 ; CHECK-NEXT:    ldr x8, [x1, #8]
 ; CHECK-NEXT:    cbz x8, .LBB9_3
 ; CHECK-NEXT:  // %bb.2:
-; CHECK-NEXT:    mov w0, #3
-; CHECK-NEXT:    b .LBB9_4
+; CHECK-NEXT:    mov w0, #3 // =0x3
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_3: // %if.end
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    str d8, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    .cfi_offset b8, -32
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    bl zoo
 ; CHECK-NEXT:    mov w19, w0
-; CHECK-NEXT:    mov w0, #-1
+; CHECK-NEXT:    mov w0, #-1 // =0xffffffff
 ; CHECK-NEXT:    bl yoo
 ; CHECK-NEXT:    cmp w19, #0
-; CHECK-NEXT:    mov w1, #2
+; CHECK-NEXT:    mov w1, #2 // =0x2
 ; CHECK-NEXT:    cinc w0, w19, gt
 ; CHECK-NEXT:    fmov d8, d0
 ; CHECK-NEXT:    bl xoo
@@ -689,9 +689,8 @@ define i32 @fcmpri(i32 %argc, ptr nocapture readonly %argv) #0 {
 ; CHECK-NEXT:    fadd d0, d8, d0
 ; CHECK-NEXT:    fcsel d0, d8, d0, gt
 ; CHECK-NEXT:    bl woo
-; CHECK-NEXT:    mov w0, #4
-; CHECK-NEXT:  .LBB9_4: // %return
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    mov w0, #4 // =0x4
 ; CHECK-NEXT:    ldr d8, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
