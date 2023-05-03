@@ -125,7 +125,7 @@ struct __fn : __range_adaptor_closure<__fn> {
 } // namespace __as_rvalue
 
 inline namespace __cpo {
-constexpr auto as_rvalue = __as_rvalue::__fn{};
+inline constexpr auto as_rvalue = __as_rvalue::__fn{};
 } // namespace __cpo
 } // namespace views
 } // namespace ranges
