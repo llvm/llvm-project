@@ -55,6 +55,7 @@ C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - Clang won't search for coroutine_traits in std::experimental namespace any more.
   Clang will only search for std::coroutine_traits for coroutines then.
+- Clang now rejects unions containing a flexible array member.
 
 ABI Changes in This Version
 ---------------------------
