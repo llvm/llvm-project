@@ -31,7 +31,7 @@ void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 /// If the frame pointer is an Argument, store it into an alloca if
 /// OptimizeFrame is false.
 void salvageDebugInfo(
-    SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     DbgVariableIntrinsic *DVI, bool OptimizeFrame);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
