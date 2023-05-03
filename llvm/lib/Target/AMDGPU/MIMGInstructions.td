@@ -241,14 +241,10 @@ class NSAHelper {
   int NSA;
 }
 
-// This class used to use !foldl to memoize the AddrAsmNames list.
-// It turned out that that was much slower than using !filter.
 class MIMGNSAHelper<int num_addrs,
                     list<RegisterClass> addr_types=!listsplat(VGPR_32, num_addrs)>
   : NSAHelper<> {
-  list<string> AddrAsmNames =
-    !foreach(i, !filter(i, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                        !lt(i, num_addrs)), "vaddr" # i);
+  list<string> AddrAsmNames = !foreach(i, !range(num_addrs), "vaddr" # i);
   let AddrIns = !dag(ins, addr_types, AddrAsmNames);
   let AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
 
@@ -267,9 +263,7 @@ class PartialNSAHelper<int num_addrs, int max_addr, RegisterClass LastAddrRC>
       !listsplat(VGPR_32, num_addrs));
 
   int VAddrCount = !if(!gt(num_addrs, max_addr), max_addr, num_addrs);
-  list<string> AddrAsmNames =
-    !foreach(i, !filter(i, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-             !lt(i, VAddrCount)), "vaddr" # i);
+  list<string> AddrAsmNames =  !foreach(i, !range(VAddrCount), "vaddr" # i);
 
   let AddrIns = !dag(ins, addr_types, AddrAsmNames);
   let AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
