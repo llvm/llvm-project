@@ -26,7 +26,9 @@
 
 ; CHECK: .loc 1 2 25 epilogue_begin
 ; CHECK-NEXT: popq %rax
+; CHECK-NEXT: .Ltmp{{.*}}:
 ; CHECK-NEXT: .cfi_def_cfa_offset 8
+; CHECK-NEXT: .loc 1 2 25 is_stmt 0
 ; CHECK-NEXT: jmp _Z6commonv
 ; CHECK-NEXT: [[LABEL:.*]]:
 
