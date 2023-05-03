@@ -77,7 +77,7 @@ static bool isExitBlock(BasicBlock *BB,
 /// rewrite the uses.
 bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     const DominatorTree &DT, const LoopInfo &LI,
-                                    ScalarEvolution *SE, IRBuilderBase &Builder,
+                                    IRBuilderBase &Builder,
                                     SmallVectorImpl<PHINode *> *PHIsToRemove) {
   SmallVector<Use *, 16> UsesToRewrite;
   SmallSetVector<PHINode *, 16> LocalPHIsToRemove;
@@ -333,8 +333,7 @@ static void computeBlocksDominatingExits(
   }
 }
 
-bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
-                     ScalarEvolution *SE) {
+bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI) {
   bool Changed = false;
 
 #ifdef EXPENSIVE_CHECKS
@@ -388,7 +387,7 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
   }
 
   IRBuilder<> Builder(L.getHeader()->getContext());
-  Changed = formLCSSAForInstructions(Worklist, DT, *LI, SE, Builder);
+  Changed = formLCSSAForInstructions(Worklist, DT, *LI, Builder);
 
   assert(L.isLCSSAForm(DT));
 
@@ -397,23 +396,22 @@ bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 
 /// Process a loop nest depth first.
 bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
-                                const LoopInfo *LI, ScalarEvolution *SE) {
+                                const LoopInfo *LI) {
   bool Changed = false;
 
   // Recurse depth-first through inner loops.
   for (Loop *SubLoop : L.getSubLoops())
-    Changed |= formLCSSARecursively(*SubLoop, DT, LI, SE);
+    Changed |= formLCSSARecursively(*SubLoop, DT, LI);
 
-  Changed |= formLCSSA(L, DT, LI, SE);
+  Changed |= formLCSSA(L, DT, LI);
   return Changed;
 }
 
 /// Process all loops in the function, inner-most out.
-static bool formLCSSAOnAllLoops(const LoopInfo *LI, const DominatorTree &DT,
-                                ScalarEvolution *SE) {
+static bool formLCSSAOnAllLoops(const LoopInfo *LI, const DominatorTree &DT) {
   bool Changed = false;
   for (const auto &L : *LI)
-    Changed |= formLCSSARecursively(*L, DT, LI, SE);
+    Changed |= formLCSSARecursively(*L, DT, LI);
   return Changed;
 }
 
@@ -427,7 +425,6 @@ struct LCSSAWrapperPass : public FunctionPass {
   // Cached analysis information for the current function.
   DominatorTree *DT;
   LoopInfo *LI;
-  ScalarEvolution *SE;
 
   bool runOnFunction(Function &F) override;
   void verifyAnalysis() const override {
@@ -484,17 +481,13 @@ char &llvm::LCSSAID = LCSSAWrapperPass::ID;
 bool LCSSAWrapperPass::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
-  SE = SEWP ? &SEWP->getSE() : nullptr;
-
-  return formLCSSAOnAllLoops(LI, *DT, SE);
+  return formLCSSAOnAllLoops(LI, *DT);
 }
 
 PreservedAnalyses LCSSAPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
-  if (!formLCSSAOnAllLoops(&LI, DT, SE))
+  if (!formLCSSAOnAllLoops(&LI, DT))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
