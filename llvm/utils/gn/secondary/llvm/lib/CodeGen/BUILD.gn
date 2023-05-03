@@ -99,6 +99,7 @@ static_library("CodeGen") {
     "LiveVariables.cpp",
     "LocalStackSlotAllocation.cpp",
     "LoopTraversal.cpp",
+    "LowLevelType.cpp",
     "LowLevelTypeUtils.cpp",
     "LowerEmuTLS.cpp",
     "MBFIWrapper.cpp",
