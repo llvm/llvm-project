@@ -23,6 +23,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   StringRef MainContents = R"(
     #include "a1.h"
     #include "sys.h"
+    #include "sys_directive.h"
   )";
   StringRef A1Contents = R"(
     #if __has_include("other.h")
@@ -32,10 +33,16 @@ TEST(IncludeTree, IncludeTreeScan) {
       #include "b1.h"
     #endif
   )";
+  StringRef SysDirectiveContents = R"(
+    #pragma clang system_header
+    #include "sys_indirect.h"
+  )";
   add("t.cpp", MainContents);
   add("a1.h", A1Contents);
   add("b1.h", "");
   add("sys/sys.h", "");
+  add("sys_directive.h", SysDirectiveContents);
+  add("sys_indirect.h", "");
   std::unique_ptr<llvm::vfs::FileSystem> VFS =
       llvm::cas::createCASProvidingFileSystem(DB, FS);
 
@@ -63,6 +70,8 @@ TEST(IncludeTree, IncludeTreeScan) {
   std::optional<IncludeTree::File> A1File;
   std::optional<IncludeTree::File> B1File;
   std::optional<IncludeTree::File> SysFile;
+  std::optional<IncludeTree::File> SysDirectiveFile;
+  std::optional<IncludeTree::File> SysIndirectFile;
 
   std::optional<IncludeTree> Main;
   ASSERT_THAT_ERROR(Root->getMainFileTree().moveInto(Main), llvm::Succeeded());
@@ -75,7 +84,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     EXPECT_EQ(FI.Filename, "t.cpp");
     EXPECT_EQ(FI.Contents, MainContents);
   }
-  ASSERT_EQ(Main->getNumIncludes(), uint32_t(3));
+  ASSERT_EQ(Main->getNumIncludes(), uint32_t(4));
 
   std::optional<IncludeTree> Predef;
   ASSERT_THAT_ERROR(Main->getIncludeTree(0).moveInto(Predef),
@@ -132,6 +141,28 @@ TEST(IncludeTree, IncludeTreeScan) {
     ASSERT_EQ(Sys->getNumIncludes(), uint32_t(0));
   }
 
+  std::optional<IncludeTree> SysDirective;
+  ASSERT_THAT_ERROR(Main->getIncludeTree(3).moveInto(SysDirective),
+                    llvm::Succeeded());
+  EXPECT_EQ(Main->getIncludeOffset(3), uint32_t(73));
+  {
+    ASSERT_THAT_ERROR(SysDirective->getBaseFile().moveInto(SysDirectiveFile),
+                      llvm::Succeeded());
+    // Note: system_header directive injects a line directive, so C_User is for
+    // the start of the file here.
+    EXPECT_EQ(SysDirective->getFileCharacteristic(), SrcMgr::C_User);
+    ASSERT_EQ(SysDirective->getNumIncludes(), uint32_t(1));
+    std::optional<IncludeTree> SysIndirect;
+    ASSERT_THAT_ERROR(SysDirective->getIncludeTree(0).moveInto(SysIndirect),
+                      llvm::Succeeded());
+    {
+      ASSERT_THAT_ERROR(SysIndirect->getBaseFile().moveInto(SysIndirectFile),
+                        llvm::Succeeded());
+      EXPECT_EQ(SysIndirect->getFileCharacteristic(), SrcMgr::C_System);
+      ASSERT_EQ(SysIndirect->getNumIncludes(), uint32_t(0));
+    }
+  }
+
   std::optional<IncludeTree::FileList> FileList;
   ASSERT_THAT_ERROR(Root->getFileList().moveInto(FileList), llvm::Succeeded());
 
@@ -143,7 +174,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   }),
                     llvm::Succeeded());
 
-  ASSERT_EQ(Files.size(), size_t(4));
+  ASSERT_EQ(Files.size(), size_t(6));
   EXPECT_EQ(Files[0].first.getRef(), MainFile->getRef());
   EXPECT_EQ(Files[0].second, MainContents.size());
   EXPECT_EQ(Files[1].first.getRef(), A1File->getRef());
@@ -152,6 +183,10 @@ TEST(IncludeTree, IncludeTreeScan) {
   EXPECT_EQ(Files[2].second, IncludeTree::FileList::FileSizeTy(0));
   EXPECT_EQ(Files[3].first.getRef(), SysFile->getRef());
   EXPECT_EQ(Files[3].second, IncludeTree::FileList::FileSizeTy(0));
+  EXPECT_EQ(Files[4].first.getRef(), SysDirectiveFile->getRef());
+  EXPECT_EQ(Files[4].second, SysDirectiveContents.size());
+  EXPECT_EQ(Files[5].first.getRef(), SysIndirectFile->getRef());
+  EXPECT_EQ(Files[5].second, IncludeTree::FileList::FileSizeTy(0));
 }
 
 TEST(IncludeTree, IncludeTreeFileList) {
