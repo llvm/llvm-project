@@ -359,3 +359,51 @@ foreach i = 0...3 in {
 //===-----------------------------------------------
 
 def SEED : SysReg<"seed", 0x015>;
+
+//===-----------------------------------------------
+// Advanced Interrupt Architecture
+//===-----------------------------------------------
+
+// Machine-level CSRs
+def : SysReg<"miselect", 0x350>;
+def : SysReg<"mireg", 0x351>;
+def : SysReg<"mtopei", 0x35C>;
+def : SysReg<"mtopi", 0xFB0>;
+def : SysReg<"mvien", 0x308>;
+def : SysReg<"mvip", 0x309>;
+let isRV32Only = 1 in {
+def : SysReg<"midelegh", 0x313>;
+def : SysReg<"mieh", 0x314>;
+def : SysReg<"mvienh", 0x318>;
+def : SysReg<"mviph", 0x319>;
+def : SysReg<"miph", 0x354>;
+} // isRV32Only
+
+// Supervisor-level CSRs
+def : SysReg<"siselect", 0x150>;
+def : SysReg<"sireg", 0x151>;
+def : SysReg<"stopei", 0x15C>;
+def : SysReg<"stopi", 0xDB0>;
+let isRV32Only = 1 in {
+def : SysReg<"sieh", 0x114>;
+def : SysReg<"siph", 0x154>;
+} // isRV32Only
+
+// Hypervisor and VS CSRs
+def : SysReg<"hvien", 0x608>;
+def : SysReg<"hvictl", 0x609>;
+def : SysReg<"hviprio1", 0x646>;
+def : SysReg<"hviprio2", 0x647>;
+def : SysReg<"vsiselect", 0x250>;
+def : SysReg<"vsireg", 0x251>;
+def : SysReg<"vstopei", 0x25C>;
+def : SysReg<"vstopi", 0xEB0>;
+let isRV32Only = 1 in {
+def : SysReg<"hidelegh", 0x613>;
+def : SysReg<"hvienh", 0x618>;
+def : SysReg<"hviph", 0x655>;
+def : SysReg<"hviprio1h", 0x656>;
+def : SysReg<"hviprio2h", 0x657>;
+def : SysReg<"vsieh", 0x214>;
+def : SysReg<"vsiph", 0x254>;
+} // isRV32Only
