@@ -314,6 +314,14 @@ public:
     return lldb::eStateStepping;
   }
 
+  virtual bool
+  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
+                                       lldb_private::Stream *stream,
+                                       bool &script_error) {
+    script_error = true;
+    return false;
+  }
+
   virtual StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
                                    const StructuredDataImpl &args_data,

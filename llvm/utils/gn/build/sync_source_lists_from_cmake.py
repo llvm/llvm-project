@@ -73,7 +73,13 @@ def sync_source_lists(write):
         # undefined behavior according to the POSIX extended regex spec.
         posix_re_escape = lambda s: re.sub(r'([.[{()\\*+?|^$])', r'\\\1', s)
         cmd = ['log', '--format=%h', '-1', '--pickaxe-regex',
-               r'-S\b%s\b' % posix_re_escape(touched_line), in_file]
+               # `\<` / `\>` cause issues on Windows (and is a GNU extension).
+               # `\b` is a GNU extension and stopped working in Apple Git-143
+               # (Xcode 13.3).
+               # `[:space:]` is over 10x faster than `^[:alnum:]` and hopefully
+               # good enough.
+               r'-S[[:space:]]%s[[:space:]]' % posix_re_escape(touched_line),
+               in_file]
         return git_out(cmd).rstrip()
 
     # Collect changes to gn files, grouped by revision.

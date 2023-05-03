@@ -139,34 +139,30 @@ if.end:                                           ; preds = %if.then, %entry
 define dso_local i32 @load_half() nounwind {
 ; RV32-LABEL: load_half:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lui a0, %hi(foo+8)
 ; RV32-NEXT:    lhu a0, %lo(foo+8)(a0)
 ; RV32-NEXT:    li a1, 140
 ; RV32-NEXT:    bne a0, a1, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %if.end
 ; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB8_2: # %if.then
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    call abort@plt
 ;
 ; RV64-LABEL: load_half:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    lui a0, %hi(foo+8)
 ; RV64-NEXT:    lhu a0, %lo(foo+8)(a0)
 ; RV64-NEXT:    li a1, 140
 ; RV64-NEXT:    bne a0, a1, .LBB8_2
 ; RV64-NEXT:  # %bb.1: # %if.end
 ; RV64-NEXT:    li a0, 0
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB8_2: # %if.then
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    call abort@plt
 entry:
   %0 = load i16, ptr getelementptr inbounds ([6 x i16], ptr @foo, i32 0, i32 4), align 2

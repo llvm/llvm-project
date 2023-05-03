@@ -48,9 +48,7 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: load_v5i8_align1:
@@ -82,9 +80,7 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    ret
   %x = load <5 x i8>, ptr %p, align 1
   ret <5 x i8> %x
@@ -140,11 +136,10 @@ define <6 x half> @load_v6f16(ptr %p) {
 ; RV64-LABEL: load_v6f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ld a2, 0(a1)
-; RV64-NEXT:    addi a1, a1, 8
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v8, (a1), zero
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v8, a2
+; RV64-NEXT:    ld a1, 8(a1)
+; RV64-NEXT:    vslide1down.vx v8, v8, a2
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    sd a2, 0(a0)
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    addi a0, a0, 8
@@ -196,8 +191,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vand.vi v8, v8, 1
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    ret
@@ -222,8 +216,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vand.vi v8, v8, 1
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    ret

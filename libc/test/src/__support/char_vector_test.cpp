@@ -71,8 +71,8 @@ TEST(LlvmLibcCharVectorTest, AppendLong) {
       "ABCDEFGHIJKLMNOPQRSTUVWXYabcdefghijklmnopqrstuvwxy";
   for (size_t i = 0; test_str[i] != '\0'; ++i) {
     ASSERT_EQ(v.length(), i);
-    v.append(test_str[i]);
+    ASSERT_TRUE(v.append(test_str[i]));
   }
-  ASSERT_STREQ(v.c_str(), test_str);
   ASSERT_EQ(v.length(), size_t(1000));
+  ASSERT_STREQ(v.c_str(), test_str);
 }

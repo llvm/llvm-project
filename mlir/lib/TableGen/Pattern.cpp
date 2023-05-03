@@ -807,15 +807,16 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
     // The operand in `either` DAG should be bound to the operation in the
     // parent DagNode.
     auto collectSymbolInEither = [&](DagNode parent, DagNode tree,
-                                     int &opArgIdx) {
+                                     int opArgIdx) {
       for (int i = 0; i < tree.getNumArgs(); ++i, ++opArgIdx) {
         if (DagNode subTree = tree.getArgAsNestedDag(i)) {
           collectBoundSymbols(subTree, infoMap, isSrcPattern);
         } else {
           auto argName = tree.getArgName(i);
-          if (!argName.empty() && argName != "_")
+          if (!argName.empty() && argName != "_") {
             verifyBind(infoMap.bindOpArgument(parent, argName, op, opArgIdx),
                        argName);
+          }
         }
       }
     };
@@ -824,6 +825,14 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
       if (auto treeArg = tree.getArgAsNestedDag(i)) {
         if (treeArg.isEither()) {
           collectSymbolInEither(tree, treeArg, opArgIdx);
+          // `either` DAG is *flattened*. For example,
+          //
+          //  (FooOp (either arg0, arg1), arg2)
+          //
+          //  can be viewed as:
+          //
+          //  (FooOp arg0, arg1, arg2)
+          ++opArgIdx;
         } else {
           // This DAG node argument is a DAG node itself. Go inside recursively.
           collectBoundSymbols(treeArg, infoMap, isSrcPattern);

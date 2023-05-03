@@ -429,12 +429,6 @@ FileSpec FileSpec::CopyByRemovingLastPathComponent() const {
   return *this;
 }
 
-ConstString FileSpec::GetLastPathComponent() const {
-  llvm::SmallString<64> current_path;
-  GetPath(current_path, false);
-  return ConstString(llvm::sys::path::filename(current_path, m_style));
-}
-
 void FileSpec::PrependPathComponent(llvm::StringRef component) {
   llvm::SmallString<64> new_path(component);
   llvm::SmallString<64> current_path;

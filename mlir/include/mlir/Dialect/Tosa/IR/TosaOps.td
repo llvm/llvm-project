@@ -1043,6 +1043,8 @@ def Tosa_LogOp : Tosa_Op<"log", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

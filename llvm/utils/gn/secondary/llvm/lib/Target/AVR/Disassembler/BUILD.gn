@@ -10,6 +10,7 @@ static_library("Disassembler") {
   output_name = "LLVMAVRDisassembler"
   deps = [
     ":AVRGenDisassemblerTables",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AVR:LLVMAVRCodeGen",

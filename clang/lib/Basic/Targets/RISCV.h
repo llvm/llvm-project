@@ -41,6 +41,7 @@ public:
     HasRISCVVTypes = true;
     MCountName = "_mcount";
     HasFloat16 = true;
+    HasStrictFP = true;
   }
 
   bool setCPU(const std::string &Name) override {

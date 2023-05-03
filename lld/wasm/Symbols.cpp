@@ -35,7 +35,7 @@ std::string maybeDemangleSymbol(StringRef name) {
   if (name == "__main_argc_argv")
     return "main";
   if (wasm::config->demangle)
-    return demangle(name);
+    return demangle(name.str());
   return name.str();
 }
 

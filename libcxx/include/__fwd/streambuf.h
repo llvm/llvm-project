@@ -19,16 +19,16 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-    class _LIBCPP_TEMPLATE_VIS basic_streambuf;
+class _LIBCPP_TEMPLATE_VIS basic_streambuf;
 
-typedef basic_streambuf<char>        streambuf;
+typedef basic_streambuf<char> streambuf;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_streambuf<wchar_t>     wstreambuf;
+typedef basic_streambuf<wchar_t> wstreambuf;
 #endif
 
 template <class _CharT, class _Traits>
-    class _LIBCPP_PREFERRED_NAME(streambuf) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstreambuf)) basic_streambuf;
+class _LIBCPP_PREFERRED_NAME(streambuf) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wstreambuf)) basic_streambuf;
 
 _LIBCPP_END_NAMESPACE_STD
 
