@@ -110,10 +110,12 @@ def testFromElementsOp():
       @func.FuncOp.from_py_func()
       def default_builder():
         c0 = arith.ConstantOp(f32, 0.0)
-        # CHECK: %[[C0:.*]] = "arith.constant"() {value = 0.000000e+00 : f32} : () -> f32
+        # CHECK: %[[C0:.*]] = "arith.constant
+        # CHECK-SAME: value = 0.000000e+00 : f32
         print(c0)
         c1 = arith.ConstantOp(f32, 1.0)
-        # CHECK: %[[C1:.*]] = "arith.constant"() {value = 1.000000e+00 : f32} : () -> f32
+        # CHECK: %[[C1:.*]] = "arith.constant
+        # CHECK-SAME: value = 1.000000e+00 : f32
         print(c1)
 
         t = tensor.FromElementsOp(RankedTensorType.get((2,), f32), [c0, c1])
