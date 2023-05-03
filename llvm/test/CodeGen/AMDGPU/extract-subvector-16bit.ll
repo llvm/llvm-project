@@ -947,16 +947,7 @@ define <8 x i16> @large_vector(ptr addrspace(3) %p, i32 %idxp) {
 ; GFX9-NEXT:    v_lshl_add_u32 v2, v1, 5, v0
 ; GFX9-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
 ; GFX9-NEXT:    ds_read2_b32 v[2:3], v2 offset0:2 offset1:3
-; GFX9-NEXT:    s_mov_b32 s4, 0xffff
-; GFX9-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-NEXT:    v_bfi_b32 v4, s4, v0, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_bfi_b32 v5, s4, v2, v2
-; GFX9-NEXT:    v_bfi_b32 v4, s4, v0, v4
-; GFX9-NEXT:    v_bfi_b32 v4, s4, v0, v4
-; GFX9-NEXT:    v_bfi_b32 v5, s4, v2, v5
-; GFX9-NEXT:    v_bfi_b32 v2, s4, v2, v5
-; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %idx = shl i32 %idxp, 4
 

@@ -1423,32 +1423,42 @@ SDValue AMDGPUTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
 
 SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
-
+  SDLoc SL(Op);
   SmallVector<SDValue, 8> Args;
   unsigned Start = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
   EVT VT = Op.getValueType();
   EVT SrcVT = Op.getOperand(0).getValueType();
 
-  // For these types, we have some TableGen patterns except if the index is 1
-  if (((SrcVT == MVT::v4f16 && VT == MVT::v2f16) ||
-       (SrcVT == MVT::v4i16 && VT == MVT::v2i16)) &&
-      Start != 1)
-    return Op;
+  if (VT.getScalarSizeInBits() == 16 && Start % 2 == 0) {
+    unsigned NumElt = VT.getVectorNumElements();
+    unsigned NumSrcElt = SrcVT.getVectorNumElements();
+    assert(NumElt % 2 == 0 && NumSrcElt % 2 == 0 && "expect legal types");
 
-  if (((SrcVT == MVT::v8f16 && VT == MVT::v4f16) ||
-       (SrcVT == MVT::v8i16 && VT == MVT::v4i16)) &&
-      (Start == 0 || Start == 4))
-    return Op;
+    // We have some TableGen patterns for when the extracted vector is exactly
+    // the low or high half of the operand.
+    if ((NumSrcElt == 2 * NumElt) && (Start == 0 || Start == NumElt))
+      return Op;
 
-  if (((SrcVT == MVT::v16f16 && VT == MVT::v8f16) ||
-       (SrcVT == MVT::v16i16 && VT == MVT::v8i16)) &&
-      (Start == 0 || Start == 8))
-    return Op;
+    // Extract 32-bit registers at a time.
+    EVT NewSrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumSrcElt / 2);
+    EVT NewVT = NumElt == 2
+                    ? MVT::i32
+                    : EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElt / 2);
+    SDValue Tmp = DAG.getNode(ISD::BITCAST, SL, NewSrcVT, Op.getOperand(0));
+
+    DAG.ExtractVectorElements(Tmp, Args, Start / 2, NumElt / 2);
+    if (NumElt == 2)
+      Tmp = Args[0];
+    else
+      Tmp = DAG.getBuildVector(NewVT, SL, Args);
+
+    return DAG.getNode(ISD::BITCAST, SL, VT, Tmp);
+  }
 
   DAG.ExtractVectorElements(Op.getOperand(0), Args, Start,
                             VT.getVectorNumElements());
 
-  return DAG.getBuildVector(Op.getValueType(), SDLoc(Op), Args);
+  return DAG.getBuildVector(Op.getValueType(), SL, Args);
 }
 
 // TODO: Handle fabs too
