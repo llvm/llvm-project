@@ -90,7 +90,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AllTokens) {
                                            "#pragma pop_macro(A)\n"
                                            "#pragma include_alias(<A>, <B>)\n"
                                            "export module m;\n"
-                                           "import m;\n",
+                                           "import m;\n"
+                                           "#pragma clang system_header\n",
                                            Out, Tokens, Directives));
   EXPECT_EQ(pp_define, Directives[0].Kind);
   EXPECT_EQ(pp_undef, Directives[1].Kind);
@@ -113,7 +114,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AllTokens) {
   EXPECT_EQ(pp_pragma_include_alias, Directives[18].Kind);
   EXPECT_EQ(cxx_export_module_decl, Directives[19].Kind);
   EXPECT_EQ(cxx_import_decl, Directives[20].Kind);
-  EXPECT_EQ(pp_eof, Directives[21].Kind);
+  EXPECT_EQ(pp_pragma_system_header, Directives[21].Kind);
+  EXPECT_EQ(pp_eof, Directives[22].Kind);
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, EmptyHash) {
