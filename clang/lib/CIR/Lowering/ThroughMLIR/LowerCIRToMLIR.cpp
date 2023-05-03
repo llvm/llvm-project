@@ -30,6 +30,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -252,7 +253,7 @@ public:
       auto MinusOne = rewriter.create<mlir::arith::ConstantOp>(
           op.getLoc(), type, mlir::IntegerAttr::get(type, -1));
       rewriter.replaceOpWithNewOp<mlir::arith::XOrIOp>(op, op.getType(),
-                                  MinusOne, op.getInput());
+                                                       MinusOne, op.getInput());
       break;
     }
     }
@@ -573,6 +574,7 @@ lowerFromCIRToMLIRToLLVMIR(mlir::ModuleOp theModule,
   if (theModule.verify().failed())
     report_fatal_error("Verification of the final LLVMIR dialect failed!");
 
+  mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
 
   LLVMContext llvmContext;
