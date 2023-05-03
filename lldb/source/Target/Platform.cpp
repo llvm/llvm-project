@@ -435,7 +435,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
     if (!dst_dir.GetFilename())
-      dst_dir.SetFilename(src.GetLastPathComponent());
+      dst_dir.SetFilename(src.GetFilename());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
     if (error.Fail()) {
