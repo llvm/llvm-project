@@ -342,9 +342,11 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
                                    expr_prefix, result_valobj_sp, error,
                                    nullptr); // fixed expression
 
-      // CommandInterpreter &ci = debugger.GetCommandInterpreter();
-
-      if (process_sp && process_sp->IsAlive()) {
+      if (llvm::Error err = OnExpressionEvaluated(exe_ctx, code, expr_options,
+                                                  execution_results,
+                                                  result_valobj_sp, error)) {
+        *error_sp << llvm::toString(std::move(err)) << "\n";
+      } else if (process_sp && process_sp->IsAlive()) {
         bool add_to_code = true;
         bool handled = false;
         if (result_valobj_sp) {
