@@ -2687,6 +2687,30 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                      DAG.getTargetConstant(FRM, DL, Subtarget.getXLenVT()));
 }
 
+static SDValue
+getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
+              EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
+              SDValue VL,
+              unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
+  if (Merge.isUndef())
+    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
+  SDValue Ops[] = {Merge, Op, Offset, Mask, VL, PolicyOp};
+  return DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VT, Ops);
+}
+
+static SDValue
+getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
+            EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
+            SDValue VL,
+            unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
+  if (Merge.isUndef())
+    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
+  SDValue Ops[] = {Merge, Op, Offset, Mask, VL, PolicyOp};
+  return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VT, Ops);
+}
+
 struct VIDSequence {
   int64_t StepNumerator;
   unsigned StepDenominator;
@@ -3157,6 +3181,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // Don't perform this optimization when optimizing for size, since
   // materializing elements and inserting them tends to cause code bloat.
   if (!DAG.shouldOptForSize() && NumScalarLoads < NumElts &&
+      (NumElts != 2 || ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) &&
       ((MostCommonCount > DominantValueCountThreshold) ||
        (ValueCounts.size() <= Log2_32(NumDefElts)))) {
     // Start by splatting the most common element.
@@ -3201,10 +3226,29 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // TODO: Use vfslide1down.
     return SDValue();
 
+  const unsigned Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
+
   SDValue Vec = DAG.getUNDEF(ContainerVT);
-  for (const SDValue &V : Op->ops())
+  unsigned UndefCount = 0;
+  for (const SDValue &V : Op->ops()) {
+    if (V.isUndef()) {
+      UndefCount++;
+      continue;
+    }
+    if (UndefCount) {
+      const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
+      Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+                          Vec, Offset, Mask, VL, Policy);
+      UndefCount = 0;
+    }
     Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, ContainerVT,
                       DAG.getUNDEF(ContainerVT), Vec, V, Mask, VL);
+  }
+  if (UndefCount) {
+    const SDValue Offset = DAG.getConstant(UndefCount, DL, Subtarget.getXLenVT());
+    Vec = getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+                        Vec, Offset, Mask, VL, Policy);
+  }
   return convertFromScalableVector(VT, Vec, DAG, Subtarget);
 }
 
@@ -3572,30 +3616,6 @@ static SDValue getDeinterleaveViaVNSRL(const SDLoc &DL, MVT VT, SDValue Src,
   if (VT.isFixedLengthVector())
     Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
   return Res;
-}
-
-static SDValue
-getVSlidedown(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
-              EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
-              SDValue VL,
-              unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
-  if (Merge.isUndef())
-    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
-  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
-  SDValue Ops[] = {Merge, Op, Offset, Mask, VL, PolicyOp};
-  return DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, VT, Ops);
-}
-
-static SDValue
-getVSlideup(SelectionDAG &DAG, const RISCVSubtarget &Subtarget, SDLoc DL,
-            EVT VT, SDValue Merge, SDValue Op, SDValue Offset, SDValue Mask,
-            SDValue VL,
-            unsigned Policy = RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED) {
-  if (Merge.isUndef())
-    Policy = RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC;
-  SDValue PolicyOp = DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
-  SDValue Ops[] = {Merge, Op, Offset, Mask, VL, PolicyOp};
-  return DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, VT, Ops);
 }
 
 // Lower the following shuffle to vslidedown.
@@ -4108,6 +4128,10 @@ bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
     return false;
 
   MVT SVT = VT.getSimpleVT();
+
+  // Not for i1 vectors.
+  if (SVT.getScalarType() == MVT::i1)
+    return false;
 
   int Dummy1, Dummy2;
   return (isElementRotate(Dummy1, Dummy2, M) > 0) ||
@@ -15900,7 +15924,7 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
 /// %v1 = shuffle %wide.vec, undef, <1, 3, 5, 7>  ; Extract odd elements
 ///
 /// Into:
-/// %ld2 = { <4 x i32>, <4 x i32> } call llvm.riscv.vlseg.v4i32.p0.i64(
+/// %ld2 = { <4 x i32>, <4 x i32> } call llvm.riscv.seg2.load.v4i32.p0.i64(
 ///                                        %ptr, i64 4)
 /// %vec0 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 0
 /// %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
@@ -15949,8 +15973,8 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 /// %sub.v0 = shuffle <8 x i32> %v0, <8 x i32> v1, <0, 1, 2, 3>
 /// %sub.v1 = shuffle <8 x i32> %v0, <8 x i32> v1, <4, 5, 6, 7>
 /// %sub.v2 = shuffle <8 x i32> %v0, <8 x i32> v1, <8, 9, 10, 11>
-/// call void llvm.riscv.vsseg3.v4i32.p0.i64(%sub.v0, %sub.v1, %sub.v2,
-///                                          %ptr, i32 4)
+/// call void llvm.riscv.seg3.store.v4i32.p0.i64(%sub.v0, %sub.v1, %sub.v2,
+///                                              %ptr, i32 4)
 ///
 /// Note that the new shufflevectors will be removed and we'll only generate one
 /// vsseg3 instruction in CodeGen.

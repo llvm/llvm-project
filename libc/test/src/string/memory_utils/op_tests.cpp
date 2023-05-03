@@ -13,8 +13,6 @@
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
 
-#include <assert.h>
-
 #if defined(LIBC_TARGET_ARCH_IS_X86_64) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #define LLVM_LIBC_HAS_UINT64
 #endif
@@ -75,7 +73,6 @@ void CopyAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
 }
 template <size_t Size, auto FnImpl>
 void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
-  assert(size == Size);
   FnImpl(as_byte(dst), as_byte(src));
 }
 
@@ -157,7 +154,6 @@ void SetAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
 }
 template <size_t Size, auto FnImpl>
 void SetBlockAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
-  assert(size == Size);
   FnImpl(as_byte(dst), value);
 }
 
@@ -235,7 +231,6 @@ int CmpAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
 }
 template <size_t Size, auto FnImpl>
 int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
-  assert(size == Size);
   return (int)FnImpl(as_byte(p1), as_byte(p2));
 }
 

@@ -18,12 +18,10 @@ define <2 x i1> @reverse_v2i1(<2 x i1> %a) {
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    vfirst.m a1, v0
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vfirst.m a0, v0
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret

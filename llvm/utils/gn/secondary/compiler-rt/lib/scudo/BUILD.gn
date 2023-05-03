@@ -20,4 +20,3 @@ group("scudo") {
   }
   testonly = true
 }
-

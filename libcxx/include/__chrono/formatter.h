@@ -603,6 +603,18 @@ public:
   }
 };
 
+template <class _Duration, __fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<chrono::local_time<_Duration>, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    // The flags are not __clock since there is no associated time-zone.
+    return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__date_time);
+  }
+};
+
 template <class _Rep, class _Period, __fmt_char_type _CharT>
 struct formatter<chrono::duration<_Rep, _Period>, _CharT> : public __formatter_chrono<_CharT> {
 public:

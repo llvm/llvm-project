@@ -361,6 +361,14 @@ def HasStdExtCOrZcf
                                    "'C' (Compressed Instructions) or "
                                    "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
+def FeatureStdExtZcmt
+    : SubtargetFeature<"experimental-zcmt", "HasStdExtZcmt", "true",
+                       "'Zcmt' (table jump instuctions for code-size reduction)", 
+                       [FeatureStdExtZca, FeatureStdExtZicsr]>; 
+def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
+                           AssemblerPredicate<(all_of FeatureStdExtZcmt),
+                           "'Zcmt' (table jump instuctions for code-size reduction)">;
+
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;

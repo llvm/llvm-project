@@ -934,3 +934,52 @@ hlfir::convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
     exv = placeTrivialInMemory(loc, builder, base, targetType);
   return {exv, cleanup};
 }
+
+/// Clone:
+/// ```
+/// hlfir.elemental_addr %shape : !fir.shape<1> {
+///   ^bb0(%i : index)
+///    .....
+///    %hlfir.yield %scalarAddress : fir.ref<T>
+/// }
+/// ```
+//
+/// into
+///
+/// ```
+/// %expr = hlfir.elemental %shape : (!fir.shape<1>) -> hlfir.expr<?xT> {
+///   ^bb0(%i : index)
+///    .....
+///    %value = fir.load %scalarAddress : fir.ref<T>
+///    %hlfir.yield_element %value : T
+///  }
+/// ```
+hlfir::ElementalOp
+hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
+                          hlfir::ElementalAddrOp elementalAddrOp) {
+  hlfir::Entity scalarAddress =
+      hlfir::Entity{mlir::cast<hlfir::YieldOp>(
+                        elementalAddrOp.getBody().back().getTerminator())
+                        .getEntity()};
+  llvm::SmallVector<mlir::Value, 1> typeParams;
+  hlfir::genLengthParameters(loc, builder, scalarAddress, typeParams);
+
+  builder.setInsertionPointAfter(elementalAddrOp);
+  auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
+                       mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+    mlir::IRMapping mapper;
+    mapper.map(elementalAddrOp.getIndices(), oneBasedIndices);
+    mlir::Operation *newOp = nullptr;
+    for (auto &op : elementalAddrOp.getBody().back().getOperations())
+      newOp = b.clone(op, mapper);
+    auto newYielOp = mlir::dyn_cast_or_null<hlfir::YieldOp>(newOp);
+    assert(newYielOp && "hlfir.elemental_addr is ill formed");
+    hlfir::Entity newAddr{newYielOp.getEntity()};
+    newYielOp->erase();
+    return hlfir::loadTrivialScalar(l, b, newAddr);
+  };
+  mlir::Type elementType = scalarAddress.getFortranElementType();
+  return hlfir::genElementalOp(loc, builder, elementType,
+                               elementalAddrOp.getShape(), typeParams,
+                               genKernel);
+}

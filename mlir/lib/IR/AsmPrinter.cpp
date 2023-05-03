@@ -3355,8 +3355,11 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
   }
 
   // Print the properties.
-  if (Attribute prop = op->getPropertiesAsAttribute())
-    os << " <" << prop << '>';
+  if (Attribute prop = op->getPropertiesAsAttribute()) {
+    os << " <";
+    Impl::printAttribute(prop);
+    os << '>';
+  }
 
   // Print regions.
   if (op->getNumRegions() != 0) {

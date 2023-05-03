@@ -35,6 +35,18 @@ namespace {
 
 /// Lower Designators to HLFIR.
 class HlfirDesignatorBuilder {
+private:
+  /// Internal entry point on the rightest part of a evaluate::Designator.
+  template <typename T>
+  hlfir::EntityWithAttributes
+  genLeafPartRef(const T &designatorNode,
+                 bool vectorSubscriptDesignatorToValue) {
+    hlfir::EntityWithAttributes result = gen(designatorNode);
+    if (vectorSubscriptDesignatorToValue)
+      return turnVectorSubscriptedDesignatorIntoValue(result);
+    return result;
+  }
+
 public:
   HlfirDesignatorBuilder(mlir::Location loc,
                          Fortran::lower::AbstractConverter &converter,
@@ -42,40 +54,62 @@ public:
                          Fortran::lower::StatementContext &stmtCtx)
       : converter{converter}, symMap{symMap}, stmtCtx{stmtCtx}, loc{loc} {}
 
+  /// Public entry points to lower a Designator<T> (given its .u member, to
+  /// avoid the template arguments which does not matter here).
+  /// This lowers a designator to an hlfir variable SSA value (that can be
+  /// assigned to), except for vector subscripted designators that are
+  /// lowered by default to hlfir.expr value since they cannot be
+  /// represented as HLFIR variable SSA values.
+
   // Character designators variant contains substrings
   using CharacterDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
                    Fortran::evaluate::TypeCategory::Character, 1>>::u);
   hlfir::EntityWithAttributes
-  gen(const CharacterDesignators &designatorVariant) {
+  gen(const CharacterDesignators &designatorVariant,
+      bool vectorSubscriptDesignatorToValue = true) {
     return std::visit(
-        [&](const auto &x) -> hlfir::EntityWithAttributes { return gen(x); },
+        [&](const auto &x) -> hlfir::EntityWithAttributes {
+          return genLeafPartRef(x, vectorSubscriptDesignatorToValue);
+        },
         designatorVariant);
   }
   // Character designators variant contains complex parts
   using RealDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
                    Fortran::evaluate::TypeCategory::Real, 4>>::u);
-  hlfir::EntityWithAttributes gen(const RealDesignators &designatorVariant) {
+  hlfir::EntityWithAttributes
+  gen(const RealDesignators &designatorVariant,
+      bool vectorSubscriptDesignatorToValue = true) {
     return std::visit(
-        [&](const auto &x) -> hlfir::EntityWithAttributes { return gen(x); },
+        [&](const auto &x) -> hlfir::EntityWithAttributes {
+          return genLeafPartRef(x, vectorSubscriptDesignatorToValue);
+        },
         designatorVariant);
   }
   // All other designators are similar
   using OtherDesignators =
       decltype(Fortran::evaluate::Designator<Fortran::evaluate::Type<
                    Fortran::evaluate::TypeCategory::Integer, 4>>::u);
-  hlfir::EntityWithAttributes gen(const OtherDesignators &designatorVariant) {
+  hlfir::EntityWithAttributes
+  gen(const OtherDesignators &designatorVariant,
+      bool vectorSubscriptDesignatorToValue = true) {
     return std::visit(
-        [&](const auto &x) -> hlfir::EntityWithAttributes { return gen(x); },
+        [&](const auto &x) -> hlfir::EntityWithAttributes {
+          return genLeafPartRef(x, vectorSubscriptDesignatorToValue);
+        },
         designatorVariant);
   }
 
   hlfir::EntityWithAttributes
-  gen(const Fortran::evaluate::NamedEntity &namedEntity) {
+  genNamedEntity(const Fortran::evaluate::NamedEntity &namedEntity,
+                 bool vectorSubscriptDesignatorToValue = true) {
     if (namedEntity.IsSymbol())
-      return gen(Fortran::evaluate::SymbolRef{namedEntity.GetLastSymbol()});
-    return gen(namedEntity.GetComponent());
+      return genLeafPartRef(
+          Fortran::evaluate::SymbolRef{namedEntity.GetLastSymbol()},
+          vectorSubscriptDesignatorToValue);
+    return genLeafPartRef(namedEntity.GetComponent(),
+                          vectorSubscriptDesignatorToValue);
   }
 
 private:
@@ -151,11 +185,29 @@ private:
   fir::FortranVariableOpInterface
   genDesignate(mlir::Type designatorType, PartInfo &partInfo,
                fir::FortranVariableFlagsAttr attributes) {
-    auto designate = getBuilder().create<hlfir::DesignateOp>(
+    fir::FirOpBuilder &builder = getBuilder();
+    // Once a part with vector subscripts has been lowered, the following
+    // hlfir.designator (for the parts on the right of the designator) must
+    // be lowered inside the hlfir.elemental_addr because they depend on the
+    // hlfir.elemental_addr indices.
+    // All the subsequent Fortran indices however, should be lowered before
+    // the hlfir.elemental_addr because they should only be evaluated once,
+    // hence, the insertion point is restored outside of the
+    // hlfir.elemental_addr after generating the hlfir.designate. Example: in
+    // "X(VECTOR)%COMP(FOO(), BAR())", the calls to bar() and foo() must be
+    // generated outside of the hlfir.elemental, but the related hlfir.designate
+    // that depends on the scalar hlfir.designate of X(VECTOR) that was
+    // generated inside the hlfir.elemental_addr should be generated in the
+    // hlfir.elemental_addr.
+    if (auto elementalAddrOp = getVectorSubscriptElementAddrOp())
+      builder.setInsertionPointToEnd(&elementalAddrOp->getBody().front());
+    auto designate = builder.create<hlfir::DesignateOp>(
         getLoc(), designatorType, partInfo.base.value().getBase(),
         partInfo.componentName, partInfo.componentShape, partInfo.subscripts,
         partInfo.substring, partInfo.complexPart, partInfo.resultShape,
         partInfo.typeParams, attributes);
+    if (auto elementalAddrOp = getVectorSubscriptElementAddrOp())
+      builder.setInsertionPoint(*elementalAddrOp);
     return mlir::cast<fir::FortranVariableOpInterface>(
         designate.getOperation());
   }
@@ -414,8 +466,20 @@ private:
     };
     auto frontEndResultShape =
         Fortran::evaluate::GetShape(converter.getFoldingContext(), arrayRef);
+    auto tryGettingExtentFromFrontEnd =
+        [&](unsigned dim) -> std::pair<mlir::Value, fir::SequenceType::Extent> {
+      // Use constant extent if possible. The main advantage to do this now
+      // is to get the best FIR array types as possible while lowering.
+      if (frontEndResultShape)
+        if (auto maybeI64 =
+                Fortran::evaluate::ToInt64(frontEndResultShape->at(dim)))
+          return {builder.createIntegerConstant(loc, idxTy, *maybeI64),
+                  *maybeI64};
+      return {mlir::Value{}, fir::SequenceType::getUnknownExtent()};
+    };
     llvm::SmallVector<mlir::Value> resultExtents;
     fir::SequenceType::Shape resultTypeShape;
+    bool sawVectorSubscripts = false;
     for (auto subscript : llvm::enumerate(arrayRef.subscript())) {
       if (const auto *triplet =
               std::get_if<Fortran::evaluate::Triplet>(&subscript.value().u)) {
@@ -432,35 +496,43 @@ private:
         ub = builder.createConvert(loc, idxTy, ub);
         mlir::Value stride = genSubscript(triplet->stride());
         stride = builder.createConvert(loc, idxTy, stride);
-        mlir::Value extent;
-        // Use constant extent if possible. The main advantage to do this now
-        // is to get the best FIR array types as possible while lowering.
-        if (frontEndResultShape)
-          if (auto maybeI64 = Fortran::evaluate::ToInt64(
-                  frontEndResultShape->at(resultExtents.size()))) {
-            resultTypeShape.push_back(*maybeI64);
-            extent = builder.createIntegerConstant(loc, idxTy, *maybeI64);
-          }
-        if (!extent) {
-          extent = builder.genExtentFromTriplet(loc, lb, ub, stride, idxTy);
-          resultTypeShape.push_back(fir::SequenceType::getUnknownExtent());
-        }
+        auto [extentValue, shapeExtent] =
+            tryGettingExtentFromFrontEnd(resultExtents.size());
+        resultTypeShape.push_back(shapeExtent);
+        if (!extentValue)
+          extentValue =
+              builder.genExtentFromTriplet(loc, lb, ub, stride, idxTy);
+        resultExtents.push_back(extentValue);
         partInfo.subscripts.emplace_back(
             hlfir::DesignateOp::Triplet{lb, ub, stride});
-        resultExtents.push_back(extent);
       } else {
         const auto &expr =
             std::get<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
                 subscript.value().u)
                 .value();
-        if (expr.Rank() > 0)
-          TODO(getLoc(), "vector subscripts in HLFIR");
-        partInfo.subscripts.push_back(genSubscript(expr));
+        hlfir::Entity subscript = genSubscript(expr);
+        partInfo.subscripts.push_back(subscript);
+        if (expr.Rank() > 0) {
+          sawVectorSubscripts = true;
+          auto [extentValue, shapeExtent] =
+              tryGettingExtentFromFrontEnd(resultExtents.size());
+          resultTypeShape.push_back(shapeExtent);
+          if (!extentValue)
+            extentValue = hlfir::genExtent(loc, builder, subscript, /*dim=*/0);
+          resultExtents.push_back(extentValue);
+        }
       }
     }
-
     assert(resultExtents.size() == resultTypeShape.size() &&
            "inconsistent hlfir.designate shape");
+
+    // For vector subscripts, create an hlfir.elemental_addr and continue
+    // lowering the designator inside it as if it was addressing an element of
+    // the vector subscripts.
+    if (sawVectorSubscripts)
+      return createVectorSubscriptElementAddrOp(partInfo, baseType,
+                                                resultExtents);
+
     mlir::Type resultType = baseType.cast<fir::SequenceType>().getEleTy();
     if (!resultTypeShape.empty()) {
       // Ranked array section. The result shape comes from the array section
@@ -625,11 +697,132 @@ private:
     return {baseType, fieldType};
   }
 
-  /// Lower a subscript expression. If it is a scalar subscript that is
-  /// a variable, it is loaded into an integer value.
+  // Compute: "lb + (i-1)*step".
+  mlir::Value computeTripletPosition(mlir::Location loc,
+                                     fir::FirOpBuilder &builder,
+                                     hlfir::DesignateOp::Triplet &triplet,
+                                     mlir::Value oneBasedIndex) {
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Value lb = builder.createConvert(loc, idxTy, std::get<0>(triplet));
+    mlir::Value step = builder.createConvert(loc, idxTy, std::get<2>(triplet));
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    oneBasedIndex = builder.createConvert(loc, idxTy, oneBasedIndex);
+    mlir::Value zeroBased =
+        builder.create<mlir::arith::SubIOp>(loc, oneBasedIndex, one);
+    mlir::Value offset =
+        builder.create<mlir::arith::MulIOp>(loc, zeroBased, step);
+    return builder.create<mlir::arith::AddIOp>(loc, lb, offset);
+  }
+
+  /// Create an hlfir.element_addr operation to deal with vector subscripted
+  /// entities. This transforms the current vector subscripted array-ref into a
+  /// a scalar array-ref that is addressing the vector subscripted part given
+  /// the one based indices of the hlfir.element_addr.
+  /// The rest of the designator lowering will continue lowering any further
+  /// parts inside the hlfir.elemental as a scalar reference.
+  /// At the end of the designator lowering, the hlfir.elemental_addr will
+  /// be turned into an hlfir.elemental value, unless the caller of this
+  /// utility requested to get the hlfir.elemental_addr instead of lowering
+  /// the designator to an mlir::Value.
+  mlir::Type createVectorSubscriptElementAddrOp(
+      PartInfo &partInfo, mlir::Type baseType,
+      llvm::ArrayRef<mlir::Value> resultExtents) {
+    fir::FirOpBuilder &builder = getBuilder();
+    mlir::Value shape = builder.genShape(loc, resultExtents);
+    // The type parameters to be added on the hlfir.elemental_addr are the ones
+    // of the whole designator (not the ones of the vector subscripted part).
+    // These are not yet known and will be added when finalizing the designator
+    // lowering.
+    auto elementalAddrOp = builder.create<hlfir::ElementalAddrOp>(loc, shape);
+    setVectorSubscriptElementAddrOp(elementalAddrOp);
+    builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
+    mlir::Region::BlockArgListType indices = elementalAddrOp.getIndices();
+    auto indicesIterator = indices.begin();
+    auto getNextOneBasedIndex = [&]() -> mlir::Value {
+      assert(indicesIterator != indices.end() && "ill formed ElementalAddrOp");
+      return *(indicesIterator++);
+    };
+    // Transform the designator into a scalar designator computing the vector
+    // subscripted entity element address given one based indices (for the shape
+    // of the vector subscripted designator).
+    for (hlfir::DesignateOp::Subscript &subscript : partInfo.subscripts) {
+      if (auto *triplet =
+              std::get_if<hlfir::DesignateOp::Triplet>(&subscript)) {
+        // subscript = (lb + (i-1)*step)
+        mlir::Value scalarSubscript = computeTripletPosition(
+            loc, builder, *triplet, getNextOneBasedIndex());
+        subscript = scalarSubscript;
+      } else {
+        hlfir::Entity valueSubscript{std::get<mlir::Value>(subscript)};
+        if (valueSubscript.isScalar())
+          continue;
+        // subscript = vector(i + (vector_lb-1))
+        hlfir::Entity scalarSubscript = hlfir::getElementAt(
+            loc, builder, valueSubscript, {getNextOneBasedIndex()});
+        scalarSubscript =
+            hlfir::loadTrivialScalar(loc, builder, scalarSubscript);
+        subscript = scalarSubscript;
+      }
+    }
+    builder.setInsertionPoint(elementalAddrOp);
+    return baseType.cast<fir::SequenceType>().getEleTy();
+  }
+
+  /// Yield the designator for the final part-ref inside the
+  /// hlfir.elemental_addr.
+  void finalizeElementAddrOp(hlfir::ElementalAddrOp elementalAddrOp,
+                             hlfir::EntityWithAttributes elementAddr) {
+    fir::FirOpBuilder &builder = getBuilder();
+    builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
+    builder.create<hlfir::YieldOp>(loc, elementAddr);
+    builder.setInsertionPointAfter(elementalAddrOp);
+  }
+
+  /// If the lowered designator has vector subscripts turn it into an
+  /// ElementalOp, otherwise, return the lowered designator. This should
+  /// only be called if the user did not request to get the
+  /// hlfir.elemental_addr. In Fortran, vector subscripted designators are only
+  /// writable on the left-hand side of an assignment and in input IO
+  /// statements. Otherwise, they are not variables (cannot be modified, their
+  /// value is taken at the place they appear).
+  hlfir::EntityWithAttributes turnVectorSubscriptedDesignatorIntoValue(
+      hlfir::EntityWithAttributes loweredDesignator) {
+    std::optional<hlfir::ElementalAddrOp> elementalAddrOp =
+        getVectorSubscriptElementAddrOp();
+    if (!elementalAddrOp)
+      return loweredDesignator;
+    finalizeElementAddrOp(*elementalAddrOp, loweredDesignator);
+    // This vector subscript designator is only being read, transform the
+    // hlfir.elemental_addr into an hlfir.elemental.  The content of the
+    // hlfir.elemental_addr is cloned, and the resulting address is loaded to
+    // get the new element value.
+    fir::FirOpBuilder &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    mlir::Value elemental =
+        hlfir::cloneToElementalOp(loc, builder, *elementalAddrOp);
+    (*elementalAddrOp)->erase();
+    setVectorSubscriptElementAddrOp(std::nullopt);
+    fir::FirOpBuilder *bldr = &builder;
+    getStmtCtx().attachCleanup(
+        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+    return hlfir::EntityWithAttributes{elemental};
+  }
+
+  /// Lower a subscript expression. If it is a scalar subscript that is a
+  /// variable, it is loaded into an integer value. If it is an array (for
+  /// vector subscripts) it is dereferenced if this is an allocatable or
+  /// pointer.
   template <typename T>
-  hlfir::EntityWithAttributes
-  genSubscript(const Fortran::evaluate::Expr<T> &expr);
+  hlfir::Entity genSubscript(const Fortran::evaluate::Expr<T> &expr);
+
+  const std::optional<hlfir::ElementalAddrOp> &
+  getVectorSubscriptElementAddrOp() const {
+    return vectorSubscriptElementAddrOp;
+  }
+  void setVectorSubscriptElementAddrOp(
+      std::optional<hlfir::ElementalAddrOp> elementalAddrOp) {
+    vectorSubscriptElementAddrOp = elementalAddrOp;
+  }
 
   mlir::Location getLoc() const { return loc; }
   Fortran::lower::AbstractConverter &getConverter() { return converter; }
@@ -640,6 +833,9 @@ private:
   Fortran::lower::AbstractConverter &converter;
   Fortran::lower::SymMap &symMap;
   Fortran::lower::StatementContext &stmtCtx;
+  // If there is a vector subscript, an elementalAddrOp is created
+  // to compute the address of the designator elements.
+  std::optional<hlfir::ElementalAddrOp> vectorSubscriptElementAddrOp{};
   mlir::Location loc;
 };
 
@@ -1253,7 +1449,7 @@ private:
     hlfir::EntityWithAttributes entity =
         HlfirDesignatorBuilder(getLoc(), getConverter(), getSymMap(),
                                getStmtCtx())
-            .gen(desc.base());
+            .genNamedEntity(desc.base());
     using ResTy = Fortran::evaluate::DescriptorInquiry::Result;
     mlir::Type resultType =
         getConverter().genType(ResTy::category, ResTy::kind);
@@ -1304,25 +1500,20 @@ private:
 };
 
 template <typename T>
-hlfir::EntityWithAttributes
+hlfir::Entity
 HlfirDesignatorBuilder::genSubscript(const Fortran::evaluate::Expr<T> &expr) {
   auto loweredExpr =
       HlfirBuilder(getLoc(), getConverter(), getSymMap(), getStmtCtx())
           .gen(expr);
-  if (!loweredExpr.isArray()) {
-    fir::FirOpBuilder &builder = getBuilder();
-    if (loweredExpr.isVariable())
+  fir::FirOpBuilder &builder = getBuilder();
+  // Skip constant conversions that litters designators and makes generated
+  // IR harder to read: directly use index constants for constant subscripts.
+  mlir::Type idxTy = builder.getIndexType();
+  if (!loweredExpr.isArray() && loweredExpr.getType() != idxTy)
+    if (auto cstIndex = fir::getIntIfConstant(loweredExpr))
       return hlfir::EntityWithAttributes{
-          hlfir::loadTrivialScalar(loc, builder, loweredExpr).getBase()};
-    // Skip constant conversions that litters designators and makes generated
-    // IR harder to read: directly use index constants for constant subscripts.
-    mlir::Type idxTy = builder.getIndexType();
-    if (loweredExpr.getType() != idxTy)
-      if (auto cstIndex = fir::getIntIfConstant(loweredExpr))
-        return hlfir::EntityWithAttributes{
-            builder.createIntegerConstant(getLoc(), idxTy, *cstIndex)};
-  }
-  return loweredExpr;
+          builder.createIntegerConstant(getLoc(), idxTy, *cstIndex)};
+  return hlfir::loadTrivialScalar(loc, builder, loweredExpr);
 }
 
 } // namespace

@@ -97,6 +97,11 @@ public:
   ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
                                 bool &script_error) override;
 
+  bool
+  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
+                                lldb_private::Stream *s,
+                                bool &script_error) override;
+
   StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
                                    const StructuredDataImpl &args_data,

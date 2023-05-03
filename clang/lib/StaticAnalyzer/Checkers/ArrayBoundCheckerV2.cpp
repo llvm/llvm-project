@@ -42,8 +42,10 @@ class ArrayBoundCheckerV2 :
   void reportTaintOOB(CheckerContext &C, ProgramStateRef errorState,
                       SVal TaintedSVal) const;
 
+  static bool isFromCtypeMacro(const Stmt *S, ASTContext &AC);
+
 public:
-  void checkLocation(SVal l, bool isLoad, const Stmt*S,
+  void checkLocation(SVal l, bool isLoad, const Stmt *S,
                      CheckerContext &C) const;
 };
 
@@ -155,6 +157,15 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   // memory access is within the extent of the base region.  Since we
   // have some flexibility in defining the base region, we can achieve
   // various levels of conservatism in our buffer overflow checking.
+
+  // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
+  //   #define isXXXXX(arg) (LOOKUP_TABLE[arg] & BITMASK_FOR_XXXXX)
+  // and incomplete analysis of these leads to false positives. As even
+  // accurate reports would be confusing for the users, just disable reports
+  // from these macros:
+  if (isFromCtypeMacro(LoadS, checkerContext.getASTContext()))
+    return;
+
   ProgramStateRef state = checkerContext.getState();
 
   SValBuilder &svalBuilder = checkerContext.getSValBuilder();
@@ -265,6 +276,25 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
   }
   auto BR = std::make_unique<PathSensitiveBugReport>(*BT, os.str(), errorNode);
   checkerContext.emitReport(std::move(BR));
+}
+
+bool ArrayBoundCheckerV2::isFromCtypeMacro(const Stmt *S, ASTContext &ACtx) {
+  SourceLocation Loc = S->getBeginLoc();
+  if (!Loc.isMacroID())
+    return false;
+
+  StringRef MacroName = Lexer::getImmediateMacroName(
+      Loc, ACtx.getSourceManager(), ACtx.getLangOpts());
+
+  if (MacroName.size() < 7 || MacroName[0] != 'i' || MacroName[1] != 's')
+    return false;
+
+  return ((MacroName == "isalnum") || (MacroName == "isalpha") ||
+          (MacroName == "isblank") || (MacroName == "isdigit") ||
+          (MacroName == "isgraph") || (MacroName == "islower") ||
+          (MacroName == "isnctrl") || (MacroName == "isprint") ||
+          (MacroName == "ispunct") || (MacroName == "isspace") ||
+          (MacroName == "isupper") || (MacroName == "isxdigit"));
 }
 
 #ifndef NDEBUG
