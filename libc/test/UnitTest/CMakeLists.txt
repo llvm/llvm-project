@@ -77,8 +77,6 @@ add_library(
   RoundingModeUtils.cpp
   RoundingModeUtils.h
 )
-target_include_directories(LibcFPTestHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
@@ -93,8 +91,6 @@ add_library(
   MemoryMatcher.h
   MemoryMatcher.cpp
 )
-target_include_directories(LibcMemoryHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcMemoryHelpers LibcUnitTest)
 add_dependencies(
   LibcMemoryHelpers
   LibcUnitTest
@@ -106,8 +102,6 @@ add_library(
   PrintfMatcher.h
   PrintfMatcher.cpp
 )
-target_include_directories(LibcPrintfHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcPrintfHelpers LibcUnitTest)
 add_dependencies(
   LibcPrintfHelpers
   LibcUnitTest
@@ -121,8 +115,6 @@ add_library(
   ScanfMatcher.h
   ScanfMatcher.cpp
 )
-target_include_directories(LibcScanfHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcScanfHelpers LibcUnitTest)
 add_dependencies(
   LibcScanfHelpers
   LibcUnitTest
@@ -130,3 +122,9 @@ add_dependencies(
   libc.src.stdio.scanf_core.core_structs
   libc.test.UnitTest.string_utils
 )
+
+foreach(lib LibcFPTestHelpers LibcMemoryHelpers LibcPrintfHelpers LibcScanfHelpers)
+  target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
+  target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
+target_link_libraries(${lib} LibcUnitTest)
+endforeach()
