@@ -11,6 +11,8 @@
 
 #include "lldb/API/SBDefines.h"
 
+#include <cstdio>
+
 namespace lldb {
 
 class LLDB_API SBFile {
