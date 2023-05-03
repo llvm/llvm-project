@@ -28,8 +28,7 @@ enum : int {
   demangle_success = 0,
 };
 
-char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
-                      int *status);
+char *itaniumDemangle(const char *mangled_name, int *status);
 
 enum MSDemangleFlags {
   MSDF_None = 0,
