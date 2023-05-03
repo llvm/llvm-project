@@ -23,10 +23,14 @@ if(UNIX AND LIBCXX_ENABLE_STATIC AND LIBCXXABI_ENABLE_STATIC)
                                       -L${CMAKE_BINARY_DIR}/lib
                                       -fuse-ld=lld
   )
-
+  option(CLANG_LINK_FLANG "Create flang install link to clang" ON)
   if(NOT CLANG_LINKS_TO_CREATE)
-    set(CLANG_LINKS_TO_CREATE clang clang++ clang-cl clang-cpp clang-${CLANG_VERSION_MAJOR} flang
+    if(CLANG_LINK_FLANG)
+      set(CLANG_LINKS_TO_CREATE clang clang++ clang-cl clang-cpp clang-${CLANG_VERSION_MAJOR} flang
                               lld)
+    else()
+      set(CLANG_LINKS_TO_CREATE clang clang++ clang-cl clang-cpp clang-${CLANG_VERSION_MAJOR} lld)
+    endif()
   endif()
 
   foreach(link ${CLANG_LINKS_TO_CREATE})

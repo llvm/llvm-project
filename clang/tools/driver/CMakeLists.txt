@@ -58,6 +58,7 @@ endif()
 
 add_dependencies(clang clang-resource-headers)
 
+option(CLANG_LINK_FLANG "Create flang install link to clang" ON)
 if(NOT CLANG_LINKS_TO_CREATE)
   if(CLANG_LINK_FLANG)
     set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp flang)
