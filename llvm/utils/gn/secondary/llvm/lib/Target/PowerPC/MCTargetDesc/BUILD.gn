@@ -41,7 +41,7 @@ static_library("MCTargetDesc") {
     ":PPCGenRegisterInfo",
     ":PPCGenSubtargetInfo",
   ]
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":PPCGenAsmWriter",
     ":PPCGenMCCodeEmitter",
     "//llvm/lib/MC",

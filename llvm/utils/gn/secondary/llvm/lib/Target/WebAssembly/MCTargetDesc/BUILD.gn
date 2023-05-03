@@ -45,7 +45,7 @@ static_library("MCTargetDesc") {
     ":WebAssemblyGenSubtargetInfo",
     ":tablegen",
   ]
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":WebAssemblyGenAsmWriter",
     ":WebAssemblyGenMCCodeEmitter",
     "//llvm/lib/MC",
