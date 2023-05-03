@@ -102,6 +102,7 @@ Clang-Tidy Checks
    `bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc.html>`_, "Yes"
    `bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast.html>`_,
    `bugprone-move-forwarding-reference <bugprone/move-forwarding-reference.html>`_, "Yes"
+   `bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression.html>`_,
    `bugprone-multiple-statement-macro <bugprone/multiple-statement-macro.html>`_,
    `bugprone-no-escape <bugprone/no-escape.html>`_,
    `bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion.html>`_,
