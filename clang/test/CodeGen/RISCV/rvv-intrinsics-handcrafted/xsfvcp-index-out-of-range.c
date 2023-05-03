@@ -5,7 +5,7 @@
 // RUN:   -target-feature +xsfvcp \
 // RUN:   -fsyntax-only -verify %s
 
-#include <riscv_vector.h>
+#include <sifive_vector.h>
 
 #define p27_26 (0b11)
 #define p26    (0b1)

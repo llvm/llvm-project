@@ -2,7 +2,7 @@
 // RUN:            2>&1 | FileCheck %s
 
 #pragma clang riscv intrinsic vvvv
-// CHECK:      warning: unexpected argument 'vvvv' to '#pragma riscv'; expected 'vector' [-Wignored-pragmas]
+// CHECK:      warning: unexpected argument 'vvvv' to '#pragma riscv'; expected 'vector' or 'sifive_vector' [-Wignored-pragmas]
 
 #pragma clang riscv what + 3241
 // CHECK:      warning: unexpected argument 'what' to '#pragma riscv'; expected 'intrinsic' [-Wignored-pragmas]

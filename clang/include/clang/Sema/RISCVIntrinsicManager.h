@@ -22,6 +22,8 @@ class Preprocessor;
 namespace sema {
 class RISCVIntrinsicManager {
 public:
+  enum class IntrinsicKind : uint8_t { RVV, SIFIVE_VECTOR };
+
   virtual ~RISCVIntrinsicManager() = default;
 
   // Create RISC-V intrinsic and insert into symbol table and return true if
