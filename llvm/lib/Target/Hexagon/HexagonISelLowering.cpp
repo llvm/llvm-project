@@ -1628,7 +1628,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     ISD::UADDO,   ISD::SSUBO,   ISD::USUBO,   ISD::SMUL_LOHI, ISD::UMUL_LOHI,
     // Logical/bit:
     ISD::AND,     ISD::OR,      ISD::XOR,     ISD::ROTL,    ISD::ROTR,
-    ISD::CTPOP,   ISD::CTLZ,    ISD::CTTZ,
+    ISD::CTPOP,   ISD::CTLZ,    ISD::CTTZ,    ISD::BSWAP,   ISD::BITREVERSE,
     // Floating point arithmetic/math functions:
     ISD::FADD,    ISD::FSUB,    ISD::FMUL,    ISD::FMA,     ISD::FDIV,
     ISD::FREM,    ISD::FNEG,    ISD::FABS,    ISD::FSQRT,   ISD::FSIN,
@@ -1701,8 +1701,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::OR,  NativeVT, Legal);
     setOperationAction(ISD::XOR, NativeVT, Legal);
 
-    if (NativeVT.getVectorElementType() != MVT::i1)
+    if (NativeVT.getVectorElementType() != MVT::i1) {
       setOperationAction(ISD::SPLAT_VECTOR, NativeVT, Legal);
+      setOperationAction(ISD::BSWAP,        NativeVT, Legal);
+      setOperationAction(ISD::BITREVERSE,   NativeVT, Legal);
+    }
   }
 
   for (MVT VT : {MVT::v8i8, MVT::v4i16, MVT::v2i32}) {
