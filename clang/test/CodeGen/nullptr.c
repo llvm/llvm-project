@@ -53,7 +53,7 @@ void test() {
   // CHECK: store ptr null, ptr %[[nullptr_t_from_int]]
 
   // Calls
-  // CHECK: call void @bool_func(i1 noundef {{(zeroext)?}} false)
+  // CHECK: call void @bool_func(i1 noundef {{(zeroext )?}}false)
   // CHECK: call void @nullptr_func(ptr null)
   // CHECK: call void @nullptr_func(ptr null)
   // CHECK: call void @nullptr_func(ptr null)
