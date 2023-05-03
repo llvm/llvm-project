@@ -105,7 +105,7 @@ public:
   }
 
   OptionValueFileSpecList *GetFileList() {
-    return GetPropertyAtIndexAsOptionValueFileSpecList(nullptr, true,
+    return GetPropertyAtIndexAsOptionValueFileSpecList(nullptr,
                                                        m_file_list_index);
   }
 
