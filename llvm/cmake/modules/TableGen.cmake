@@ -154,6 +154,13 @@ macro(add_tablegen target project)
     endif()
   endif()
 
+  # FIXME: Quick fix to reflect LLVM_TABLEGEN to llvm-min-tblgen
+  if("${target}" STREQUAL "llvm-min-tblgen"
+      AND NOT "${LLVM_TABLEGEN}" STREQUAL ""
+      AND NOT "${LLVM_TABLEGEN}" STREQUAL "llvm-tblgen")
+    set(${project}_TABLEGEN_DEFAULT "${LLVM_TABLEGEN}")
+  endif()
+
   if(ADD_TABLEGEN_EXPORT)
     set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
