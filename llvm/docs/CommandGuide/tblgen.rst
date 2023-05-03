@@ -348,6 +348,14 @@ clang-tblgen Options
 
   Generate ``riscv_vector_builtin_cg.inc`` for Clang.
 
+.. option:: -gen-riscv-sifive-vector-builtins
+
+  Generate ``riscv_sifive_vector_builtins.inc`` for Clang.
+
+.. option:: -gen-riscv-sifive-vector-builtin-codegen
+
+  Generate ``riscv_sifive_vector_builtin_cg.inc`` for Clang.
+
 .. option:: -gen-attr-docs
 
   Generate attribute documentation.
