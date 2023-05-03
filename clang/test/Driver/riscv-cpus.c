@@ -167,6 +167,20 @@
 // MTUNE-E31-MCPU-E76-SAME: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MTUNE-E31-MCPU-E76-SAME: "-tune-cpu" "sifive-e76"
 
+// mcpu with default march include experimental extensions
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x280 | FileCheck -check-prefix=MCPU-SIFIVE-X280 %s
+// MCPU-SIFIVE-X280: "-nostdsysteminc" "-target-cpu" "sifive-x280"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+c" "-target-feature" "+v"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zfh"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zba" "-target-feature" "+zbb"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+experimental-zvfh"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl128b"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl256b" "-target-feature" "+zvl32b"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl512b" "-target-feature" "+zvl64b"
+// MCPU-SIFIVE-X280-SAME: "-target-abi" "lp64d"
+
 // Check failed cases
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv321 | FileCheck -check-prefix=FAIL-MCPU-NAME %s
