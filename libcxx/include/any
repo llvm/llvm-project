@@ -721,6 +721,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <iosfwd>
 #  include <iterator>
 #  include <memory>
+#  include <stdexcept>
 #  include <type_traits>
 #  include <variant>
 #endif

@@ -10,6 +10,7 @@
 #define TEST_SUPPORT_TEST_EXECUTION_POLICIES
 
 #include <cstdlib>
+#include <exception>
 #include <execution>
 #include <type_traits>
 #include <utility>

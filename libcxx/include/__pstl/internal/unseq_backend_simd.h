@@ -11,7 +11,7 @@
 #define _PSTL_UNSEQ_BACKEND_SIMD_H
 
 #include <__functional/operations.h>
-#include <type_traits>
+#include <__utility/pair.h>
 
 #include "pstl_config.h"
 #include "utils.h"
