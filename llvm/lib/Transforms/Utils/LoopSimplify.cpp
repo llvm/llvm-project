@@ -693,12 +693,6 @@ ReprocessLoop:
     }
   }
 
-  // Changing exit conditions for blocks may affect exit counts of this loop and
-  // any of its paretns, so we must invalidate the entire subtree if we've made
-  // any changes.
-  if (Changed && SE)
-    SE->forgetTopmostLoop(L);
-
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
@@ -736,6 +730,13 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
                                AC, MSSAU, PreserveLCSSA);
+
+  // Changing exit conditions for blocks may affect exit counts of this loop and
+  // any of its parents, so we must invalidate the entire subtree if we've made
+  // any changes. Do this here rather than in simplifyOneLoop() as the top-most
+  // loop is going to be the same for all child loops.
+  if (Changed && SE)
+    SE->forgetTopmostLoop(L);
 
   return Changed;
 }
