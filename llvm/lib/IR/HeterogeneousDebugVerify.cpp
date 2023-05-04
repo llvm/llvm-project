@@ -31,25 +31,6 @@ cl::opt<bool> DisableHeterogeneousDebugVerify(
              "other than -O0"),
     cl::init(false));
 
-static int DK_IncompatibleHeterogeneousDebug =
-    getNextAvailablePluginDiagnosticKind();
-
-struct DiagnosticInfoRemovingIncompatibleHeterogeneousDebug
-    : public DiagnosticInfo {
-  DiagnosticInfoRemovingIncompatibleHeterogeneousDebug(const Module &M)
-      : DiagnosticInfo(DiagnosticKind(DK_IncompatibleHeterogeneousDebug),
-                       DS_Warning),
-        M(M) {}
-  void print(DiagnosticPrinter &DP) const override {
-    DP << M.getName()
-       << ": removing heterogeneous debug metadata while compiling above -O0";
-  }
-  static bool classof(const DiagnosticInfo *DI) {
-    return DI->getKind() == DK_IncompatibleHeterogeneousDebug;
-  }
-  const Module &M;
-};
-
 static DICompileUnit *getCUForScope(DIScope *S) {
   if (!S)
     return nullptr;
@@ -102,8 +83,7 @@ static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
     return false;
   if (OptLevel == CodeGenOpt::None && !IsNPM)
     return false;
-  M.getContext().diagnose(
-      DiagnosticInfoRemovingIncompatibleHeterogeneousDebug(M));
+
   moveGlobalLifetimesIntoGlobalExpressions(M);
 
   for (Function &F : M) {
