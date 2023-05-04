@@ -103,10 +103,10 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const {
 
   AU.addRequired<UniformityInfoWrapperPass>();
 
-  if (RequireAndPreserveDomTree)
+  if (RequireAndPreserveDomTree) {
     AU.addPreserved<DominatorTreeWrapperPass>();
-
-  AU.addPreserved<PostDominatorTreeWrapperPass>();
+    // FIXME: preserve PostDominatorTreeWrapperPass
+  }
 
   // No divergent values are changed, only blocks and branch edges.
   AU.addPreserved<UniformityInfoWrapperPass>();
