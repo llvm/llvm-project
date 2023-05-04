@@ -876,51 +876,62 @@ constexpr int ignoredDecls() {
 }
 static_assert(ignoredDecls() == 12, "");
 
-struct A{ int a; };
-constexpr int ignoredExprs() {
-  (void)(1 / 2);
-  A a;
-  a; // expected-warning {{unused}} \
-     // ref-warning {{unused}}
-  (void)a;
-  (a); // expected-warning {{unused}} \
-       // ref-warning {{unused}}
+namespace DiscardExprs {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
 
-  (void)5, (void)6;
+  struct A{ int a; };
+  constexpr int ignoredExprs() {
+    (void)(1 / 2);
+    A a;
+    a;
+    (void)a;
+    (a);
 
-  1 ? 0 : 1; // expected-warning {{unused}} \
-             // ref-warning {{unused}}
-  /// Ignored MaterializeTemporaryExpr.
-  struct B{ const int &a; };
-  (void)B{12};
-  return 0;
-}
+    /// Ignored MaterializeTemporaryExpr.
+    struct B{ const int &a; };
+    (void)B{12};
 
-/// Ignored comma expressions still have their
-/// expressions evaluated.
-constexpr int Comma(int start) {
-    int i = start;
+    (void)5, (void)6;
 
-    (void)i++;
-    (void)i++,(void)i++;
+    1 ? 0 : 1;
+    return 0;
+  }
+
+  /// Ignored comma expressions still have their
+  /// expressions evaluated.
+  constexpr int Comma(int start) {
+      int i = start;
+
+      (void)i++;
+      (void)i++,(void)i++;
+      return i;
+  }
+  constexpr int Value = Comma(5);
+  static_assert(Value == 8, "");
+
+  /// Ignored MemberExprs need to still evaluate the Base
+  /// expr.
+  constexpr A callme(int &i) {
+    ++i;
+    return A{};
+  }
+  constexpr int ignoredMemberExpr() {
+    int i = 0;
+    callme(i).a;
     return i;
-}
-constexpr int Value = Comma(5);
-static_assert(Value == 8, "");
+  }
+  static_assert(ignoredMemberExpr() == 1, "");
 
-/// Ignored MemberExprs need to still evaluate the Base
-/// expr.
-constexpr A callme(int &i) {
-  ++i;
-  return A{};
+  template <int I>
+  constexpr int foo() {
+    I;
+    return I;
+  }
+  static_assert(foo<3>() == 3, "");
+
+#pragma clang diagnostic pop
 }
-constexpr int ignoredMemberExpr() {
-  int i = 0;
-  callme(i).a; // ref-warning {{result unused}} \
-               // expected-warning {{result unused}}
-  return i;
-}
-static_assert(ignoredMemberExpr() == 1, "");
 #endif
 
 namespace PredefinedExprs {
