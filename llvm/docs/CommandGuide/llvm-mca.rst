@@ -32,13 +32,13 @@ directly into :program:`llvm-mca` for analysis:
 
 .. code-block:: bash
 
-  $ clang foo.c -O2 -target x86_64-unknown-unknown -S -o - | llvm-mca -mcpu=btver2
+  $ clang foo.c -O2 --target=x86_64 -S -o - | llvm-mca -mcpu=btver2
 
 Or for Intel syntax:
 
 .. code-block:: bash
 
-  $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
+  $ clang foo.c -O2 --target=x86_64 -masm=intel -S -o - | llvm-mca -mcpu=btver2
 
 (:program:`llvm-mca` detects Intel syntax by the presence of an `.intel_syntax`
 directive at the beginning of the input.  By default its output syntax matches
