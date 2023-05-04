@@ -6,6 +6,11 @@
 ; DBG-LABEL: 'test_scalarize_call'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
+; DBG-EMPTY:
+; DBG-NEXT: ph:
+; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
+; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -63,6 +68,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'
 
 ; DBG:       Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; DBG-NEXT:  Live-in ir<1000> = original trip-count
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop
@@ -168,6 +174,11 @@ exit:
 ; DBG-LABEL: 'first_order_recurrence_using_induction'
 ; DBG:      VPlan 'Initial VPlan for VF={1},UF>=1' {
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
+; DBG-EMPTY:
+; DBG-NEXT: ph:
+; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
+; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT: Successor(s): vector loop

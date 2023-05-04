@@ -228,20 +228,20 @@ define void @non_constant_vector_expansion(i32 %0, ptr %call) {
 ; STRIDED-LABEL: @non_constant_vector_expansion(
 ; STRIDED-NEXT:  entry:
 ; STRIDED-NEXT:    [[MUL:%.*]] = shl i32 [[TMP0:%.*]], 1
+; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; STRIDED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; STRIDED:       vector.scevcheck:
 ; STRIDED-NEXT:    br i1 true, label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
-; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 4294967264, [[TMP1]]
-; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
-; STRIDED-NEXT:    [[TMP3:%.*]] = sext i32 [[MUL]] to i64
+; STRIDED-NEXT:    [[TMP2:%.*]] = sext i32 [[MUL]] to i64
+; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 4294967264, [[TMP2]]
+; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP3]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; STRIDED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
-; STRIDED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i64 0
+; STRIDED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], 4
+; STRIDED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP1]], i64 0
 ; STRIDED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; STRIDED-NEXT:    [[VECTOR_GEP:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[DOTSPLAT]]
 ; STRIDED-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> [[VECTOR_GEP]]
