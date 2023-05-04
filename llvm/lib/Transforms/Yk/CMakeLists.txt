@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMYkPasses
   intrinsics_gen
 
   LINK_COMPONENTS
+  Analysis
   Core
   Support
 )
