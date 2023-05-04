@@ -42,11 +42,6 @@
 #define WCR_LOAD ((uint32_t)(1u << 3))
 #define WCR_STORE ((uint32_t)(1u << 4))
 
-// Enable breakpoint, watchpoint, and vector catch debug exceptions.
-// (MDE bit in the MDSCR_EL1 register.  Equivalent to the MDBGen bit in
-// DBGDSCRext in Aarch32)
-#define MDE_ENABLE ((uint32_t)(1u << 15))
-
 // Single instruction step
 // (SS bit in the MDSCR_EL1 register)
 #define SS_ENABLE ((uint32_t)(1u))
@@ -807,8 +802,6 @@ uint32_t DNBArchMachARM64::EnableHardwareBreakpoint(nub_addr_t addr,
                        (uint64_t)m_state.dbg.__bvr[i],
                        (uint32_t)m_state.dbg.__bcr[i]);
 
-      // The kernel will set the MDE_ENABLE bit in the MDSCR_EL1 for us
-      // automatically, don't need to do it here.
       kret = SetDBGState(also_set_on_task);
 
       DNBLogThreadedIf(LOG_WATCHPOINTS,
@@ -848,9 +841,10 @@ DNBArchMachARM64::AlignRequestedWatchpoint(nub_addr_t requested_addr,
 
   /// Round up \a requested_size to the next power-of-2 size, at least 8
   /// bytes
-  /// requested_size == 3  -> aligned_size == 8
-  /// requested_size == 13 -> aligned_size == 16
-  /// requested_size == 16 -> aligned_size == 16
+  /// requested_size == 8   -> aligned_size == 8
+  /// requested_size == 9   -> aligned_size == 16
+  /// requested_size == 15  -> aligned_size == 16
+  /// requested_size == 192 -> aligned_size == 256
   /// Could be `std::bit_ceil(aligned_size)` when we build with C++20?
   aligned_size = 1ULL << (addr_bit_size - __builtin_clzll(aligned_size - 1));
 
@@ -922,7 +916,7 @@ uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
     if (wps[0].aligned_size <= 8)
       return SetBASWatchpoint(wps[0], read, write, also_set_on_task);
     else
-      return INVALID_NUB_HW_INDEX;
+      return SetMASKWatchpoint(wps[0], read, write, also_set_on_task);
   }
 
   // We have multiple WatchpointSpecs
@@ -1024,15 +1018,87 @@ uint32_t DNBArchMachARM64::SetBASWatchpoint(DNBArchMachARM64::WatchpointSpec wp,
                    (uint64_t)m_state.dbg.__wvr[i],
                    (uint32_t)m_state.dbg.__wcr[i]);
 
-  // The kernel will set the MDE_ENABLE bit in the MDSCR_EL1 for us
-  // automatically, don't need to do it here.
-
   kret = SetDBGState(also_set_on_task);
   // DumpDBGState(m_state.dbg);
 
   DNBLogThreadedIf(LOG_WATCHPOINTS,
                    "DNBArchMachARM64::"
                    "SetBASWatchpoint() "
+                   "SetDBGState() => 0x%8.8x.",
+                   kret);
+
+  if (kret == KERN_SUCCESS)
+    return i;
+
+  return INVALID_NUB_HW_INDEX;
+}
+
+uint32_t
+DNBArchMachARM64::SetMASKWatchpoint(DNBArchMachARM64::WatchpointSpec wp,
+                                    bool read, bool write,
+                                    bool also_set_on_task) {
+  const uint32_t num_hw_watchpoints = NumSupportedHardwareWatchpoints();
+
+  // Read the debug state
+  kern_return_t kret = GetDBGState(false);
+  if (kret != KERN_SUCCESS)
+    return INVALID_NUB_HW_INDEX;
+
+  // Check to make sure we have the needed hardware support
+  uint32_t i = 0;
+
+  for (i = 0; i < num_hw_watchpoints; ++i) {
+    if ((m_state.dbg.__wcr[i] & WCR_ENABLE) == 0)
+      break; // We found an available hw watchpoint slot
+  }
+  if (i == num_hw_watchpoints) {
+    DNBLogThreadedIf(LOG_WATCHPOINTS,
+                     "DNBArchMachARM64::"
+                     "SetMASKWatchpoint(): All "
+                     "hardware resources (%u) are in use.",
+                     num_hw_watchpoints);
+    return INVALID_NUB_HW_INDEX;
+  }
+
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::"
+                   "SetMASKWatchpoint() "
+                   "set hardware register %d to MASK watchpoint "
+                   "aligned start address 0x%llx, aligned size %zu",
+                   i, wp.aligned_start, wp.aligned_size);
+
+  // Clear any previous LoHi joined-watchpoint that may have been in use
+  LoHi[i] = 0;
+
+  // MASK field is the number of low bits that are masked off
+  // when comparing the address with the DBGWVR<n>_EL1 values.
+  // If aligned size is 16, that means we ignore low 4 bits, 0b1111.
+  // popcount(16 - 1) give us the correct value of 4.
+  // 2GB is max watchable region, which is 31 bits (low bits 0x7fffffff
+  // masked off) -- a MASK value of 31.
+  const uint64_t mask = __builtin_popcountl(wp.aligned_size - 1) << 24;
+  // A '0b11111111' BAS value needed for mask watchpoints plus a
+  // nonzero mask value.
+  const uint64_t not_bas_wp = 0xff << 5;
+
+  m_state.dbg.__wvr[i] = wp.aligned_start;
+  m_state.dbg.__wcr[i] = mask | not_bas_wp | S_USER | // Stop only in user mode
+                         (read ? WCR_LOAD : 0) |      // Stop on read access?
+                         (write ? WCR_STORE : 0) |    // Stop on write access?
+                         WCR_ENABLE;                  // Enable this watchpoint;
+
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::SetMASKWatchpoint() "
+                   "adding watchpoint on address 0x%llx with control "
+                   "register value 0x%llx",
+                   (uint64_t)m_state.dbg.__wvr[i],
+                   (uint64_t)m_state.dbg.__wcr[i]);
+
+  kret = SetDBGState(also_set_on_task);
+
+  DNBLogThreadedIf(LOG_WATCHPOINTS,
+                   "DNBArchMachARM64::"
+                   "SetMASKWatchpoint() "
                    "SetDBGState() => 0x%8.8x.",
                    kret);
 
@@ -1068,13 +1134,10 @@ bool DNBArchMachARM64::ReenableHardwareWatchpoint_helper(uint32_t hw_index) {
 
   DNBLogThreadedIf(LOG_WATCHPOINTS,
                    "DNBArchMachARM64::"
-                   "SetBASWatchpoint( %u ) - WVR%u = "
+                   "ReenableHardwareWatchpoint_helper( %u ) - WVR%u = "
                    "0x%8.8llx  WCR%u = 0x%8.8llx",
                    hw_index, hw_index, (uint64_t)m_state.dbg.__wvr[hw_index],
                    hw_index, (uint64_t)m_state.dbg.__wcr[hw_index]);
-
-  // The kernel will set the MDE_ENABLE bit in the MDSCR_EL1 for us
-  // automatically, don't need to do it here.
 
   kret = SetDBGState(false);
 
@@ -1177,30 +1240,61 @@ uint32_t DNBArchMachARM64::GetHardwareWatchpointHit(nub_addr_t &addr) {
     uint32_t i, num = NumSupportedHardwareWatchpoints();
     for (i = 0; i < num; ++i) {
       nub_addr_t wp_addr = GetWatchAddress(debug_state, i);
-      uint32_t byte_mask = bits(debug_state.__wcr[i], 12, 5);
 
       DNBLogThreadedIf(LOG_WATCHPOINTS,
                        "DNBArchImplARM64::"
                        "GetHardwareWatchpointHit() slot: %u "
-                       "(addr = 0x%llx; byte_mask = 0x%x)",
-                       i, static_cast<uint64_t>(wp_addr), byte_mask);
+                       "(addr = 0x%llx, WCR = 0x%llx)",
+                       i, wp_addr, debug_state.__wcr[i]);
 
       if (!IsWatchpointEnabled(debug_state, i))
         continue;
 
-      if (bits(wp_addr, 48, 3) != bits(addr, 48, 3))
-        continue;
+      // DBGWCR<n>EL1.BAS are the bits of the doubleword that are watched
+      // with a BAS watchpoint.
+      uint32_t bas_bits = bits(debug_state.__wcr[i], 12, 5);
+      // DBGWCR<n>EL1.MASK is the number of bits that are masked off the
+      // virtual address when comparing to DBGWVR<n>_EL1.
+      uint32_t mask = bits(debug_state.__wcr[i], 28, 24);
 
-      // Sanity check the byte_mask
-      uint32_t lsb = LowestBitSet(byte_mask);
-      if (lsb < 0)
-        continue;
+      const bool is_bas_watchpoint = mask == 0;
 
-      uint64_t byte_to_match = bits(addr, 2, 0);
+      DNBLogThreadedIf(
+          LOG_WATCHPOINTS,
+          "DNBArchImplARM64::"
+          "GetHardwareWatchpointHit() slot: %u %s",
+          i, is_bas_watchpoint ? "is BAS watchpoint" : "is MASK watchpoint");
 
-      if (byte_mask & (1 << byte_to_match)) {
-        addr = wp_addr + lsb;
-        return i;
+      if (is_bas_watchpoint) {
+        if (bits(wp_addr, 48, 3) != bits(addr, 48, 3))
+          continue;
+      } else {
+        if (bits(wp_addr, 48, mask) == bits(addr, 48, mask)) {
+          DNBLogThreadedIf(LOG_WATCHPOINTS,
+                           "DNBArchImplARM64::"
+                           "GetHardwareWatchpointHit() slot: %u matched MASK "
+                           "ignoring %u low bits",
+                           i, mask);
+          return i;
+        }
+      }
+
+      if (is_bas_watchpoint) {
+        // Sanity check the bas_bits
+        uint32_t lsb = LowestBitSet(bas_bits);
+        if (lsb < 0)
+          continue;
+
+        uint64_t byte_to_match = bits(addr, 2, 0);
+
+        if (bas_bits & (1 << byte_to_match)) {
+          addr = wp_addr + lsb;
+          DNBLogThreadedIf(LOG_WATCHPOINTS,
+                           "DNBArchImplARM64::"
+                           "GetHardwareWatchpointHit() slot: %u matched BAS",
+                           i);
+          return i;
+        }
       }
     }
   }
