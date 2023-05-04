@@ -531,11 +531,15 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
   else
     target.GetImages().FindSymbolsWithNameAndType(name, symbol_type, sc_list);
 
+  const uint32_t num_matches = sc_list.GetSize();
   addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
 
-  for (const SymbolContext &sym_ctx : sc_list) {
-    if (symbol_load_addr != 0 || symbol_load_addr != LLDB_INVALID_ADDRESS)
-      break;
+  for (uint32_t i = 0;
+       i < num_matches &&
+       (symbol_load_addr == 0 || symbol_load_addr == LLDB_INVALID_ADDRESS);
+       i++) {
+    SymbolContext sym_ctx;
+    sc_list.GetContextAtIndex(i, sym_ctx);
 
     const Address sym_address = sym_ctx.symbol->GetAddress();
 
@@ -1143,16 +1147,19 @@ SymbolContextList ClangExpressionDeclMap::SearchFunctionsInSymbolContexts(
   // remove unwanted functions and separate out the functions we want to
   // compare and prune into a separate list. Cache the info needed about
   // the function declarations in a vector for efficiency.
+  uint32_t num_indices = sc_list.GetSize();
   SymbolContextList sc_sym_list;
   std::vector<FuncDeclInfo> decl_infos;
-  decl_infos.reserve(sc_list.GetSize());
+  decl_infos.reserve(num_indices);
   clang::DeclContext *frame_decl_ctx =
       (clang::DeclContext *)frame_decl_context.GetOpaqueDeclContext();
   TypeSystemClang *ast = llvm::dyn_cast_or_null<TypeSystemClang>(
       frame_decl_context.GetTypeSystem());
 
-  for (const SymbolContext &sym_ctx : sc_list) {
+  for (uint32_t index = 0; index < num_indices; ++index) {
     FuncDeclInfo fdi;
+    SymbolContext sym_ctx;
+    sc_list.GetContextAtIndex(index, sym_ctx);
 
     // We don't know enough about symbols to compare them, but we should
     // keep them in the list.
@@ -1287,7 +1294,11 @@ void ClangExpressionDeclMap::LookupFunction(
     Symbol *extern_symbol = nullptr;
     Symbol *non_extern_symbol = nullptr;
 
-    for (const SymbolContext &sym_ctx : sc_list) {
+    for (uint32_t index = 0, num_indices = sc_list.GetSize();
+         index < num_indices; ++index) {
+      SymbolContext sym_ctx;
+      sc_list.GetContextAtIndex(index, sym_ctx);
+
       if (sym_ctx.function) {
         CompilerDeclContext decl_ctx = sym_ctx.function->GetDeclContext();
 
@@ -1302,17 +1313,16 @@ void ClangExpressionDeclMap::LookupFunction(
         context.m_found_function_with_type_info = true;
         context.m_found_function = true;
       } else if (sym_ctx.symbol) {
-        Symbol *symbol = sym_ctx.symbol;
-        if (target && symbol->GetType() == eSymbolTypeReExported) {
-          symbol = symbol->ResolveReExportedSymbol(*target);
-          if (symbol == nullptr)
+        if (sym_ctx.symbol->GetType() == eSymbolTypeReExported && target) {
+          sym_ctx.symbol = sym_ctx.symbol->ResolveReExportedSymbol(*target);
+          if (sym_ctx.symbol == nullptr)
             continue;
         }
 
-        if (symbol->IsExternal())
-          extern_symbol = symbol;
+        if (sym_ctx.symbol->IsExternal())
+          extern_symbol = sym_ctx.symbol;
         else
-          non_extern_symbol = symbol;
+          non_extern_symbol = sym_ctx.symbol;
       }
     }
 

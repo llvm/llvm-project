@@ -146,7 +146,10 @@ protected:
     uint32_t num_matches = 0;
     // Dump all the line entries for the file in the list.
     ConstString last_module_file_name;
-    for (const SymbolContext &sc : sc_list) {
+    uint32_t num_scs = sc_list.GetSize();
+    for (uint32_t i = 0; i < num_scs; ++i) {
+      SymbolContext sc;
+      sc_list.GetContextAtIndex(i, sc);
       if (sc.comp_unit) {
         Module *module = sc.module_sp.get();
         CompileUnit *cu = sc.comp_unit;
@@ -390,7 +393,10 @@ protected:
       SymbolContextList sc_list_symbols;
       module_list.FindFunctionSymbols(name, eFunctionNameTypeAuto,
                                       sc_list_symbols);
-      for (const SymbolContext &sc : sc_list_symbols) {
+      size_t num_symbol_matches = sc_list_symbols.GetSize();
+      for (size_t i = 0; i < num_symbol_matches; i++) {
+        SymbolContext sc;
+        sc_list_symbols.GetContextAtIndex(i, sc);
         if (sc.symbol && sc.symbol->ValueIsAddress()) {
           const Address &base_address = sc.symbol->GetAddressRef();
           Function *function = base_address.CalculateSymbolContextFunction();
@@ -406,7 +412,9 @@ protected:
                                    m_options.symbol_name.c_str());
       return false;
     }
-    for (const SymbolContext &sc : sc_list_funcs) {
+    for (size_t i = 0; i < num_matches; i++) {
+      SymbolContext sc;
+      sc_list_funcs.GetContextAtIndex(i, sc);
       bool context_found_for_symbol = false;
       // Loop through all the ranges in the function.
       AddressRange range;
@@ -918,45 +926,69 @@ protected:
 
       // Displaying the source for a symbol. Search for function named name.
       FindMatchingFunctions(target, name, sc_list);
-      if (sc_list.GetSize() == 0) {
+      size_t num_matches = sc_list.GetSize();
+      if (!num_matches) {
         // If we didn't find any functions with that name, try searching for
         // symbols that line up exactly with function addresses.
         SymbolContextList sc_list_symbols;
         FindMatchingFunctionSymbols(target, name, sc_list_symbols);
-        for (const SymbolContext &sc : sc_list_symbols) {
+        size_t num_symbol_matches = sc_list_symbols.GetSize();
+
+        for (size_t i = 0; i < num_symbol_matches; i++) {
+          SymbolContext sc;
+          sc_list_symbols.GetContextAtIndex(i, sc);
           if (sc.symbol && sc.symbol->ValueIsAddress()) {
             const Address &base_address = sc.symbol->GetAddressRef();
             Function *function = base_address.CalculateSymbolContextFunction();
             if (function) {
               sc_list.Append(SymbolContext(function));
+              num_matches++;
               break;
             }
           }
         }
       }
 
-      if (sc_list.GetSize() == 0) {
+      if (num_matches == 0) {
         result.AppendErrorWithFormat("Could not find function named: \"%s\".\n",
                                      m_options.symbol_name.c_str());
         return false;
       }
 
-      std::set<SourceInfo> source_match_set;
-      bool displayed_something = false;
-      for (const SymbolContext &sc : sc_list) {
-        SourceInfo source_info(sc.GetFunctionName(),
-                               sc.GetFunctionStartLineEntry());
-        if (source_info.IsValid() &&
-            source_match_set.find(source_info) == source_match_set.end()) {
-          source_match_set.insert(source_info);
-          if (DisplayFunctionSource(sc, source_info, result))
-            displayed_something = true;
+      if (num_matches > 1) {
+        std::set<SourceInfo> source_match_set;
+
+        bool displayed_something = false;
+        for (size_t i = 0; i < num_matches; i++) {
+          SymbolContext sc;
+          sc_list.GetContextAtIndex(i, sc);
+          SourceInfo source_info(sc.GetFunctionName(),
+                                 sc.GetFunctionStartLineEntry());
+
+          if (source_info.IsValid()) {
+            if (source_match_set.find(source_info) == source_match_set.end()) {
+              source_match_set.insert(source_info);
+              if (DisplayFunctionSource(sc, source_info, result))
+                displayed_something = true;
+            }
+          }
+        }
+
+        if (displayed_something)
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+        else
+          result.SetStatus(eReturnStatusFailed);
+      } else {
+        SymbolContext sc;
+        sc_list.GetContextAtIndex(0, sc);
+        SourceInfo source_info;
+
+        if (DisplayFunctionSource(sc, source_info, result)) {
+          result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else {
+          result.SetStatus(eReturnStatusFailed);
         }
       }
-      if (displayed_something)
-        result.SetStatus(eReturnStatusSuccessFinishResult);
-      else
-        result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     } else if (m_options.address != LLDB_INVALID_ADDRESS) {
       Address so_addr;
@@ -1020,7 +1052,10 @@ protected:
           return false;
         }
       }
-      for (const SymbolContext &sc : sc_list) {
+      uint32_t num_matches = sc_list.GetSize();
+      for (uint32_t i = 0; i < num_matches; ++i) {
+        SymbolContext sc;
+        sc_list.GetContextAtIndex(i, sc);
         if (sc.comp_unit) {
           if (m_options.show_bp_locs) {
             m_breakpoint_locations.Clear();
@@ -1140,7 +1175,9 @@ protected:
         bool got_multiple = false;
         CompileUnit *test_cu = nullptr;
 
-        for (const SymbolContext &sc : sc_list) {
+        for (unsigned i = 0; i < num_matches; i++) {
+          SymbolContext sc;
+          sc_list.GetContextAtIndex(i, sc);
           if (sc.comp_unit) {
             if (test_cu) {
               if (test_cu != sc.comp_unit)

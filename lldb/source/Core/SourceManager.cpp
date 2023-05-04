@@ -359,7 +359,10 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
         executable_ptr->FindFunctions(main_name, CompilerDeclContext(),
                                       lldb::eFunctionNameTypeBase,
                                       function_options, sc_list);
-        for (const SymbolContext &sc : sc_list) {
+        size_t num_matches = sc_list.GetSize();
+        for (size_t idx = 0; idx < num_matches; idx++) {
+          SymbolContext sc;
+          sc_list.GetContextAtIndex(idx, sc);
           if (sc.function) {
             lldb_private::LineEntry line_entry;
             if (sc.function->GetAddressRange()
@@ -427,8 +430,11 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         bool got_multiple = false;
         if (num_matches != 0) {
           if (num_matches > 1) {
+            SymbolContext sc;
             CompileUnit *test_cu = nullptr;
-            for (const SymbolContext &sc : sc_list) {
+
+            for (unsigned i = 0; i < num_matches; i++) {
+              sc_list.GetContextAtIndex(i, sc);
               if (sc.comp_unit) {
                 if (test_cu) {
                   if (test_cu != sc.comp_unit)
