@@ -54,13 +54,13 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
-  case VPWidenIntOrFpInductionSC:
-  case VPWidenCanonicalIVSC:
-  case VPWidenPHISC:
   case VPBlendSC:
-  case VPWidenSC:
-  case VPWidenGEPSC:
   case VPReductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenGEPSC:
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenPHISC:
+  case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -87,13 +87,13 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
-  case VPWidenIntOrFpInductionSC:
-  case VPWidenCanonicalIVSC:
-  case VPWidenPHISC:
   case VPBlendSC:
-  case VPWidenSC:
-  case VPWidenGEPSC:
   case VPReductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenGEPSC:
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenPHISC:
+  case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -123,17 +123,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();
-  case VPWidenIntOrFpInductionSC:
-  case VPFirstOrderRecurrencePHISC:
-  case VPWidenPointerInductionSC:
-  case VPWidenCanonicalIVSC:
-  case VPWidenPHISC:
   case VPBlendSC:
-  case VPWidenSC:
-  case VPWidenGEPSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPReductionSC:
-  case VPWidenSelectSC:
-  case VPScalarIVStepsSC: {
+  case VPScalarIVStepsSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenGEPSC:
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenPHISC:
+  case VPWidenPointerInductionSC:
+  case VPWidenSC:
+  case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
