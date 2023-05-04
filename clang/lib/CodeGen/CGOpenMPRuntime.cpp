@@ -2853,7 +2853,8 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
   // Call __kmpc_for_static_fini(ident_t *loc, kmp_int32 tid);
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc,
-                         isOpenMPDistributeDirective(DKind)
+                         isOpenMPDistributeDirective(DKind) ||
+                         (DKind == OMPD_target_teams_loop)
                              ? OMP_IDENT_WORK_DISTRIBUTE
                              : isOpenMPLoopDirective(DKind)
                                    ? OMP_IDENT_WORK_LOOP
@@ -6479,6 +6480,7 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
     // Teams have no clause thread_limit
     return nullptr;
   case OMPD_target_teams:
+  case OMPD_target_teams_loop:
   case OMPD_target_teams_distribute:
     if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
       const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
@@ -6490,7 +6492,6 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       return ThreadLimit;
     }
     return nullptr;
-  case OMPD_target_teams_loop:
   case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
@@ -6681,6 +6682,7 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
     }
     return ThreadLimitVal ? ThreadLimitVal : Bld.getInt32(0);
   }
+  case OMPD_target_teams_loop:
   case OMPD_target_teams_distribute:
     if (D.hasClausesOfKind<OMPThreadLimitClause>()) {
       CodeGenFunction::RunCleanupsScope ThreadLimitScope(CGF);
@@ -6694,7 +6696,6 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
             getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal))
       return NumThreads;
     return Bld.getInt32(0);
-  case OMPD_target_teams_loop:
   case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
@@ -9338,9 +9339,9 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
     switch (D.getDirectiveKind()) {
     case OMPD_target:
-      // For now, just treat 'target teams loop' as if it's distributed.  
-      if (isOpenMPDistributeDirective(DKind) ||
-          DKind == OMPD_teams_loop)
+      // For now, treat 'target' with nested 'teams loop' as if it's
+      // distributed (target teams distribute).
+      if (isOpenMPDistributeDirective(DKind) || DKind == OMPD_teams_loop)
         return NestedDir;
       if (DKind == OMPD_teams) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
@@ -9823,9 +9824,8 @@ llvm::Value *CGOpenMPRuntime::emitTargetNumIterationsCall(
         SizeEmitter) {
   OpenMPDirectiveKind Kind = D.getDirectiveKind();
   const OMPExecutableDirective *TD = &D;
-  // Get nested teams distribute kind directive, if any.
-  // When we have a target_teams_loop, behave as if we're really a
-  // target_teams_distribute_parallel_for.
+  // Get nested teams distribute kind directive, if any. For now, treat
+  // 'target_teams_loop' as if it's really a target_teams_distribute.
   if ((!isOpenMPDistributeDirective(Kind) || !isOpenMPTeamsDirective(Kind)) &&
       Kind != OMPD_target_teams_loop)
     TD = getNestedDistributeDirective(CGM.getContext(), D);

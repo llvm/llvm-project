@@ -719,8 +719,7 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
          Kind == OMPD_teams_distribute_parallel_for_simd ||
          Kind == OMPD_teams_distribute_parallel_for ||
          Kind == OMPD_target_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_distribute_parallel_for_simd ||
-         Kind == OMPD_teams_loop || Kind == OMPD_target_teams_loop;
+         Kind == OMPD_target_teams_distribute_parallel_for_simd;
 }
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
@@ -757,11 +756,13 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_target_teams:
   case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_simd:
+  case OMPD_target_teams_loop:
     CaptureRegions.push_back(OMPD_task);
     CaptureRegions.push_back(OMPD_target);
     CaptureRegions.push_back(OMPD_teams);
     break;
   case OMPD_teams:
+  case OMPD_teams_loop:
   case OMPD_teams_distribute:
   case OMPD_teams_distribute_simd:
     CaptureRegions.push_back(OMPD_teams);
@@ -771,7 +772,6 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_task);
     CaptureRegions.push_back(OMPD_target);
     break;
-  case OMPD_teams_loop:
   case OMPD_teams_distribute_parallel_for:
   case OMPD_teams_distribute_parallel_for_simd:
     CaptureRegions.push_back(OMPD_teams);
@@ -806,7 +806,6 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_parallel);
     CaptureRegions.push_back(OMPD_taskloop);
     break;
-  case OMPD_target_teams_loop:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
     CaptureRegions.push_back(OMPD_task);

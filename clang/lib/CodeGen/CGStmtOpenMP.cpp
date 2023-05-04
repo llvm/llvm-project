@@ -8218,11 +8218,9 @@ void CodeGenFunction::EmitOMPParallelGenericLoopDirective(
 void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
     const OMPTeamsGenericLoopDirective &S) {
   // To be consistent with current behavior of 'target teams loop', emit
-  // 'teams loop' as if its constituent constructs are 'distribute,
-  // 'parallel, and 'for'.
+  // 'teams loop' as if its constituent constructs are 'teams' and 'distribute'.
   auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-    CGF.EmitOMPDistributeLoop(S, emitInnerParallelForWhenCombined,
-                              S.getDistInc());
+    CGF.EmitOMPDistributeLoop(S, emitOMPLoopBodyWithStopPoint, S.getInc());
   };
 
   // Emit teams region as a standalone region.
@@ -8236,25 +8234,22 @@ void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
                                                     CodeGenDistribute);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
-  emitCommonOMPTeamsDirective(*this, S, OMPD_distribute_parallel_for, CodeGen);
+  emitCommonOMPTeamsDirective(*this, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(*this, S,
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
 static void emitTargetTeamsGenericLoopRegion(
-    CodeGenFunction &CGF, const OMPTargetTeamsGenericLoopDirective &S,
-    PrePostActionTy &Action) {
+    CodeGenFunction &CGF, PrePostActionTy &Action,
+    const OMPTargetTeamsGenericLoopDirective &S) {
   Action.Enter(CGF);
-  // Emit 'teams loop' as if its constituent constructs are 'distribute,
-  // 'parallel, and 'for'.
   auto &&CodeGenDistribute = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-    CGF.EmitOMPDistributeLoop(S, emitInnerParallelForWhenCombined,
-                              S.getDistInc());
+    CGF.EmitOMPDistributeLoop(S, emitOMPLoopBodyWithStopPoint, S.getInc());
   };
 
   // Emit teams region as a standalone region.
-  auto &&CodeGenTeams = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
-                                                 PrePostActionTy &Action) {
+  auto &&CodeGen = [&S, &CodeGenDistribute](CodeGenFunction &CGF,
+                                            PrePostActionTy &Action) {
     Action.Enter(CGF);
     CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
@@ -8263,19 +8258,15 @@ static void emitTargetTeamsGenericLoopRegion(
         CGF, OMPD_distribute, CodeGenDistribute, /*HasCancel=*/false);
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
-
-  emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
-                              CodeGenTeams);
+  emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
-/// Emit combined directive 'target teams loop' as if its constituent
-/// constructs are 'target', 'teams', 'distribute', 'parallel', and 'for'.
 void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDirective(
     const OMPTargetTeamsGenericLoopDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    emitTargetTeamsGenericLoopRegion(CGF, S, Action);
+    emitTargetTeamsGenericLoopRegion(CGF, Action, S);
   };
   emitCommonOMPTargetDirective(*this, S, CodeGen);
 }
@@ -8285,7 +8276,7 @@ void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
     const OMPTargetTeamsGenericLoopDirective &S) {
   // Emit SPMD target parallel loop region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    emitTargetTeamsGenericLoopRegion(CGF, S, Action);
+    emitTargetTeamsGenericLoopRegion(CGF, Action, S);
   };
   llvm::Function *Fn;
   llvm::Constant *Addr;

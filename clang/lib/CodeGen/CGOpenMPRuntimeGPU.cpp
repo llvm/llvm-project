@@ -660,7 +660,6 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target:
   case OMPD_target_teams:
     return hasNestedSPMDDirective(Ctx, D);
-  case OMPD_target_teams_loop:
   case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
@@ -670,6 +669,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target_simd:
   case OMPD_target_teams_distribute_simd:
     return true;
+  case OMPD_target_teams_loop:  // treated like 'target teams distribute'
   case OMPD_target_teams_distribute:
     return false;
   case OMPD_parallel:
@@ -922,7 +922,6 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_target_teams:
   case OMPD_target_parallel:
     return hasNestedLightweightDirective(Ctx, D);
-  case OMPD_target_teams_loop:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
   case OMPD_target_teams_distribute_parallel_for:
@@ -932,6 +931,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
   case OMPD_target_simd:
   case OMPD_target_teams_distribute_simd:
     return true;
+  case OMPD_target_teams_loop:  // treated like 'target teams distribute'
   case OMPD_target_teams_distribute:
     return false;
   case OMPD_parallel:
@@ -1230,14 +1230,18 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
   const Stmt *DirectiveStmt = CGM.getOptKernelKey(D);
+  // Currently, only applies to one combined 'loop' directive, which is
+  // implemented as a combined directive that does not support SPMD. If
+  // it ends up transformed to a no-loop kernel, then it should be considered
+  // as supporting SPMD so the exec mode is correct.
+  bool SPMDIfTransformed = D.getDirectiveKind() == OMPD_target_teams_loop;
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
-  // Used by emitParallelCall
-  CGM.setIsSPMDExecutionMode(Mode);
-  if (Mode) {
+  if (Mode || SPMDIfTransformed) {
     // For AMDGPU, check if a no-loop or a Xteam reduction kernel should
     // be generated and if so, set metadata that can be used by codegen.
     // This check is done regardless of host or device codegen since the
     // signature of the offloading routine has to match across host and device.
+    bool LoopTransformed = false;
     if (CGM.getTriple().isAMDGCN()) {
       assert(CGM.getLangOpts().OpenMPIsDevice && "Unexpected host path");
       CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetNoLoopKernel(D);
@@ -1248,17 +1252,24 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
         DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
                         CGM.emitNxResult("[Xteam]", D, NxStatus));
       }
+      LoopTransformed = NxStatus == CodeGenModule::NxSuccess;
     }
+    // Update Mode to reflect when non-SPMD should be SPMD because loop
+    // has been transformed.
+    Mode |= SPMDIfTransformed && LoopTransformed;
+  }
+  // Used by emitParallelCall
+  CGM.setIsSPMDExecutionMode(Mode);
+  if (Mode)
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                    CodeGen);
-  } else {
+  else {
     emitNonSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,
                       CodeGen);
     DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
                     CGM.emitNxResult("[No-Loop/Big-Jump-Loop/Xteam]", D,
                                      CodeGenModule::NxNonSPMD));
   }
-
   setPropertyExecutionMode(CGM, OutlinedFn->getName(),
                            computeExecutionMode(Mode, DirectiveStmt, CGM));
 
