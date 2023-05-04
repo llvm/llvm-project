@@ -52,7 +52,7 @@ void initialize(int argc, char **argv, char **env, void *in, void *out,
   if (gpu::get_thread_id() == 0 && gpu::get_block_id() == 0) {
     // We need to set up the RPC client first in case any of the constructors
     // require it.
-    rpc::client.reset(&lock, in, out, buffer);
+    rpc::client.reset(gpu::get_lane_size(), &lock, in, out, buffer);
 
     // We want the fini array callbacks to be run after other atexit
     // callbacks are run. So, we register them before running the init
