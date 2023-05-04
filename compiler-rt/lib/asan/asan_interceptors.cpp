@@ -656,6 +656,7 @@ void InitializeAsanInterceptors() {
   static bool was_called_once;
   CHECK(!was_called_once);
   was_called_once = true;
+  InitializePlatformInterceptors();
   InitializeCommonInterceptors();
   InitializeSignalInterceptors();
 
@@ -740,8 +741,6 @@ void InitializeAsanInterceptors() {
 #if ASAN_INTERCEPT_VFORK
   ASAN_INTERCEPT_FUNC(vfork);
 #endif
-
-  InitializePlatformInterceptors();
 
   VReport(1, "AddressSanitizer: libc interceptors initialized\n");
 }

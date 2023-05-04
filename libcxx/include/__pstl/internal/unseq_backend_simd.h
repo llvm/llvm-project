@@ -410,8 +410,8 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
     const _Size __block_size = __lane_size / sizeof(_Tp);
     if (__n > 2 * __block_size && __block_size > 1)
     {
-        alignas(__lane_size) char __lane_[__lane_size];
-        _Tp* __lane = reinterpret_cast<_Tp*>(__lane_);
+        alignas(__lane_size) char __lane_buffer[__lane_size];
+        _Tp* __lane = reinterpret_cast<_Tp*>(__lane_buffer);
 
         // initializer
         _PSTL_PRAGMA_SIMD
@@ -421,8 +421,8 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
         }
         // main loop
         _Size __i = 2 * __block_size;
-        const _Size last_iteration = __block_size * (__n / __block_size);
-        for (; __i < last_iteration; __i += __block_size)
+        const _Size __last_iteration = __block_size * (__n / __block_size);
+        for (; __i < __last_iteration; __i += __block_size)
         {
             _PSTL_PRAGMA_SIMD
             for (_Size __j = 0; __j < __block_size; ++__j)
@@ -432,9 +432,9 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
         }
         // remainder
         _PSTL_PRAGMA_SIMD
-        for (_Size __j = 0; __j < __n - last_iteration; ++__j)
+        for (_Size __j = 0; __j < __n - __last_iteration; ++__j)
         {
-            __lane[__j] = __binary_op(__lane[__j], __f(last_iteration + __j));
+            __lane[__j] = __binary_op(__lane[__j], __f(__last_iteration + __j));
         }
         // combiner
         for (_Size __j = 0; __j < __block_size; ++__j)
@@ -480,18 +480,19 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
 template <typename _Tp, typename _BinaryOp>
 struct _Combiner
 {
-    _Tp __value;
-    _BinaryOp* __bin_op; // Here is a pointer to function because of default ctor
+    _Tp __value_;
+    _BinaryOp* __bin_op_; // Here is a pointer to function because of default ctor
 
-    _LIBCPP_HIDE_FROM_ABI _Combiner() : __value{}, __bin_op(nullptr) {}
+    _LIBCPP_HIDE_FROM_ABI _Combiner() : __value_{}, __bin_op_(nullptr) {}
     _LIBCPP_HIDE_FROM_ABI
-    _Combiner(const _Tp& value, const _BinaryOp* bin_op) : __value(value), __bin_op(const_cast<_BinaryOp*>(bin_op)) {}
-    _LIBCPP_HIDE_FROM_ABI _Combiner(const _Combiner& __obj) : __value{}, __bin_op(__obj.__bin_op) {}
+    _Combiner(const _Tp& __value, const _BinaryOp* __bin_op)
+        : __value_(__value), __bin_op_(const_cast<_BinaryOp*>(__bin_op)) {}
+    _LIBCPP_HIDE_FROM_ABI _Combiner(const _Combiner& __obj) : __value_{}, __bin_op_(__obj.__bin_op) {}
 
     _LIBCPP_HIDE_FROM_ABI void
     operator()(const _Combiner& __obj)
     {
-        __value = (*__bin_op)(__value, __obj.__value);
+        __value_ = (*__bin_op_)(__value_, __obj.__value_);
     }
 };
 
@@ -504,17 +505,17 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
             _BinaryOperation __binary_op, /*Inclusive*/ std::false_type)
 {
     typedef _Combiner<_Tp, _BinaryOperation> _CombinerType;
-    _CombinerType __init_{__init, &__binary_op};
+    _CombinerType __combined_init{__init, &__binary_op};
 
     _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
     _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
     for (_Size __i = 0; __i < __n; ++__i)
     {
-        __result[__i] = __init_.__value;
+        __result[__i] = __combined_init.__value_;
         _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init_)
-        __init_.__value = __binary_op(__init_.__value, __unary_op(__first[__i]));
+        __combined_init.__value_ = __binary_op(__combined_init.__value_, __unary_op(__first[__i]));
     }
-    return std::make_pair(__result + __n, __init_.__value);
+    return std::make_pair(__result + __n, __combined_init.__value_);
 }
 
 // Inclusive scan for "+" and arithmetic types
@@ -544,17 +545,17 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
             _BinaryOperation __binary_op, std::true_type)
 {
     typedef _Combiner<_Tp, _BinaryOperation> _CombinerType;
-    _CombinerType __init_{__init, &__binary_op};
+    _CombinerType __combined_init{__init, &__binary_op};
 
     _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
     _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
     for (_Size __i = 0; __i < __n; ++__i)
     {
-        __init_.__value = __binary_op(__init_.__value, __unary_op(__first[__i]));
+        __combined_init.__value_ = __binary_op(__combined_init.__value_, __unary_op(__first[__i]));
         _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init_)
-        __result[__i] = __init_.__value;
+        __result[__i] = __combined_init.__value_;
     }
-    return std::make_pair(__result + __n, __init_.__value);
+    return std::make_pair(__result + __n, __combined_init.__value_);
 }
 
 // [restriction] - std::iterator_traits<_ForwardIterator>::value_type should be DefaultConstructible.
@@ -571,17 +572,17 @@ __simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcep
     typedef typename std::iterator_traits<_ForwardIterator>::value_type _ValueType;
     struct _ComplexType
     {
-        _ValueType __min_val;
-        _Size __min_ind;
-        _Compare* __min_comp;
+        _ValueType __min_val_;
+        _Size __min_ind_;
+        _Compare* __min_comp_;
 
-        _LIBCPP_HIDE_FROM_ABI _ComplexType() : __min_val{}, __min_ind{}, __min_comp(nullptr) {}
-        _LIBCPP_HIDE_FROM_ABI _ComplexType(const _ValueType& val, const _Compare* comp)
-            : __min_val(val), __min_ind(0), __min_comp(const_cast<_Compare*>(comp))
+        _LIBCPP_HIDE_FROM_ABI _ComplexType() : __min_val_{}, __min_ind_{}, __min_comp_(nullptr) {}
+        _LIBCPP_HIDE_FROM_ABI _ComplexType(const _ValueType& __val, const _Compare* __comp)
+            : __min_val_(__val), __min_ind_(0), __min_comp_(const_cast<_Compare*>(__comp))
         {
         }
         _LIBCPP_HIDE_FROM_ABI _ComplexType(const _ComplexType& __obj)
-            : __min_val(__obj.__min_val), __min_ind(__obj.__min_ind), __min_comp(__obj.__min_comp)
+            : __min_val_(__obj.__min_val_), __min_ind_(__obj.__min_ind_), __min_comp_(__obj.__min_comp_)
         {
         }
 
@@ -589,11 +590,11 @@ __simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcep
         _LIBCPP_HIDE_FROM_ABI void
         operator()(const _ComplexType& __obj)
         {
-            if (!(*__min_comp)(__min_val, __obj.__min_val) &&
-                ((*__min_comp)(__obj.__min_val, __min_val) || __obj.__min_ind - __min_ind < 0))
+            if (!(*__min_comp_)(__min_val_, __obj.__min_val_) &&
+                ((*__min_comp_)(__obj.__min_val_, __min_val_) || __obj.__min_ind_ - __min_ind_ < 0))
             {
-                __min_val = __obj.__min_val;
-                __min_ind = __obj.__min_ind;
+                __min_val_ = __obj.__min_val_;
+                __min_ind_ = __obj.__min_ind_;
             }
         }
     };
@@ -605,15 +606,15 @@ __simd_min_element(_ForwardIterator __first, _Size __n, _Compare __comp) noexcep
     _PSTL_PRAGMA_SIMD_REDUCTION(__min_func : __init)
     for (_Size __i = 1; __i < __n; ++__i)
     {
-        const _ValueType __min_val = __init.__min_val;
+        const _ValueType __min_val = __init.__min_val_;
         const _ValueType __current = __first[__i];
         if (__comp(__current, __min_val))
         {
-            __init.__min_val = __current;
-            __init.__min_ind = __i;
+            __init.__min_val_ = __current;
+            __init.__min_ind_ = __i;
         }
     }
-    return __first + __init.__min_ind;
+    return __first + __init.__min_ind_;
 }
 
 // [restriction] - std::iterator_traits<_ForwardIterator>::value_type should be DefaultConstructible.
@@ -630,21 +631,23 @@ __simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noex
 
     struct _ComplexType
     {
-        _ValueType __min_val;
-        _ValueType __max_val;
-        _Size __min_ind;
-        _Size __max_ind;
+        _ValueType __min_val_;
+        _ValueType __max_val_;
+        _Size __min_ind_;
+        _Size __max_ind_;
         _Compare* __minmax_comp;
 
-        _LIBCPP_HIDE_FROM_ABI _ComplexType() : __min_val{}, __max_val{}, __min_ind{}, __max_ind{}, __minmax_comp(nullptr) {}
-        _LIBCPP_HIDE_FROM_ABI _ComplexType(const _ValueType& min_val, const _ValueType& max_val, const _Compare* comp)
-            : __min_val(min_val), __max_val(max_val), __min_ind(0), __max_ind(0),
-              __minmax_comp(const_cast<_Compare*>(comp))
+        _LIBCPP_HIDE_FROM_ABI _ComplexType()
+            : __min_val_{}, __max_val_{}, __min_ind_{}, __max_ind_{}, __minmax_comp(nullptr) {}
+        _LIBCPP_HIDE_FROM_ABI _ComplexType(
+                const _ValueType& __min_val, const _ValueType& __max_val, const _Compare* __comp)
+            : __min_val_(__min_val), __max_val_(__max_val), __min_ind_(0), __max_ind_(0),
+              __minmax_comp(const_cast<_Compare*>(__comp))
         {
         }
         _LIBCPP_HIDE_FROM_ABI _ComplexType(const _ComplexType& __obj)
-            : __min_val(__obj.__min_val), __max_val(__obj.__max_val), __min_ind(__obj.__min_ind),
-              __max_ind(__obj.__max_ind), __minmax_comp(__obj.__minmax_comp)
+            : __min_val_(__obj.__min_val_), __max_val_(__obj.__max_val_), __min_ind_(__obj.__min_ind_),
+              __max_ind_(__obj.__max_ind_), __minmax_comp(__obj.__minmax_comp)
         {
         }
 
@@ -652,27 +655,27 @@ __simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noex
         operator()(const _ComplexType& __obj)
         {
             // min
-            if ((*__minmax_comp)(__obj.__min_val, __min_val))
+            if ((*__minmax_comp)(__obj.__min_val_, __min_val_))
             {
-                __min_val = __obj.__min_val;
-                __min_ind = __obj.__min_ind;
+                __min_val_ = __obj.__min_val_;
+                __min_ind_ = __obj.__min_ind_;
             }
-            else if (!(*__minmax_comp)(__min_val, __obj.__min_val))
+            else if (!(*__minmax_comp)(__min_val_, __obj.__min_val_))
             {
-                __min_val = __obj.__min_val;
-                __min_ind = (__min_ind - __obj.__min_ind < 0) ? __min_ind : __obj.__min_ind;
+                __min_val_ = __obj.__min_val_;
+                __min_ind_ = (__min_ind_ - __obj.__min_ind_ < 0) ? __min_ind_ : __obj.__min_ind_;
             }
 
             // max
-            if ((*__minmax_comp)(__max_val, __obj.__max_val))
+            if ((*__minmax_comp)(__max_val_, __obj.__max_val_))
             {
-                __max_val = __obj.__max_val;
-                __max_ind = __obj.__max_ind;
+                __max_val_ = __obj.__max_val_;
+                __max_ind_ = __obj.__max_ind_;
             }
-            else if (!(*__minmax_comp)(__obj.__max_val, __max_val))
+            else if (!(*__minmax_comp)(__obj.__max_val_, __max_val_))
             {
-                __max_val = __obj.__max_val;
-                __max_ind = (__max_ind - __obj.__max_ind < 0) ? __obj.__max_ind : __max_ind;
+                __max_val_ = __obj.__max_val_;
+                __max_ind_ = (__max_ind_ - __obj.__max_ind_ < 0) ? __obj.__max_ind_ : __max_ind_;
             }
         }
     };
@@ -684,21 +687,21 @@ __simd_minmax_element(_ForwardIterator __first, _Size __n, _Compare __comp) noex
     _PSTL_PRAGMA_SIMD_REDUCTION(__min_func : __init)
     for (_Size __i = 1; __i < __n; ++__i)
     {
-        auto __min_val = __init.__min_val;
-        auto __max_val = __init.__max_val;
+        auto __min_val = __init.__min_val_;
+        auto __max_val = __init.__max_val_;
         auto __current = __first + __i;
         if (__comp(*__current, __min_val))
         {
-            __init.__min_val = *__current;
-            __init.__min_ind = __i;
+            __init.__min_val_ = *__current;
+            __init.__min_ind_ = __i;
         }
         else if (!__comp(*__current, __max_val))
         {
-            __init.__max_val = *__current;
-            __init.__max_ind = __i;
+            __init.__max_val_ = *__current;
+            __init.__max_ind_ = __i;
         }
     }
-    return std::make_pair(__first + __init.__min_ind, __first + __init.__max_ind);
+    return std::make_pair(__first + __init.__min_ind_, __first + __init.__max_ind_);
 }
 
 template <class _InputIterator, class _DifferenceType, class _OutputIterator1, class _OutputIterator2,

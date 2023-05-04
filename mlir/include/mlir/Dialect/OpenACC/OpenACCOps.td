@@ -293,8 +293,8 @@ def OpenACC_GetDevicePtrOp : OpenACC_DataEntryOp<"getdeviceptr",
 class OpenACC_DataExitOp<string mnemonic, string clause, list<Trait> traits = []> :
     OpenACC_Op<mnemonic, !listconcat(traits,
         [AttrSizedOperandSegments])> {
-  let arguments = (ins Optional<OpenACC_PointerLikeTypeInterface>:$varPtr,
-                       OpenACC_PointerLikeTypeInterface:$accPtr,
+  let arguments = (ins OpenACC_PointerLikeTypeInterface:$accPtr,
+                       Optional<OpenACC_PointerLikeTypeInterface>:$varPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds,
                        DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
