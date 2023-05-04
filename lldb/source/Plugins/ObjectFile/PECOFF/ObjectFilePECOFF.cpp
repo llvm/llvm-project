@@ -90,9 +90,8 @@ public:
   }
 
   llvm::Triple::EnvironmentType ABI() const {
-    return (llvm::Triple::EnvironmentType)m_collection_sp
-        ->GetPropertyAtIndexAsEnumeration(ePropertyABI)
-        .value_or(llvm::Triple::UnknownEnvironment);
+    return GetPropertyAtIndexAs<llvm::Triple::EnvironmentType>(
+        ePropertyABI, llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {
