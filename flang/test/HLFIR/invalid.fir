@@ -541,3 +541,69 @@ func.func @bad_region_assign_2(%x: !fir.box<!fir.array<?xf32>>) {
   }
   return
 }
+
+// -----
+func.func @bad_element_addr_1(%x: !fir.ref<!fir.array<20xf32>>) {
+  %c20 = arith.constant 20 : index
+  %vector_shape = fir.shape %c20 : (index) -> !fir.shape<1>
+  hlfir.region_assign {
+    hlfir.yield %x : !fir.ref<!fir.array<20xf32>>
+  } to {
+    // expected-error@+1 {{'hlfir.elemental_addr' op body must compute the address of a scalar entity}}
+    hlfir.elemental_addr %vector_shape  : !fir.shape<1> {
+      ^bb0(%i: index):
+      %c42 = arith.constant 42.0 : f32
+      hlfir.yield %c42 : f32
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_element_addr_2(%x: !fir.ref<!fir.array<20xf32>>) {
+  %c20 = arith.constant 20 : index
+  %vector_shape = fir.shape %c20 : (index) -> !fir.shape<1>
+  hlfir.region_assign {
+    hlfir.yield %x : !fir.ref<!fir.array<20xf32>>
+  } to {
+    // expected-error@+1 {{'hlfir.elemental_addr' op body must compute the address of a scalar entity}}
+    hlfir.elemental_addr %vector_shape  : !fir.shape<1> {
+      ^bb0(%i: index):
+      hlfir.yield %x : !fir.ref<!fir.array<20xf32>>
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_element_addr_3(%x: !fir.ref<!fir.array<20xf32>>) {
+  %c20 = arith.constant 20 : index
+  %vector_shape = fir.shape %c20 : (index) -> !fir.shape<1>
+  hlfir.region_assign {
+    hlfir.yield %x : !fir.ref<!fir.array<20xf32>>
+  } to {
+    // expected-error@+1 {{'hlfir.elemental_addr' op body region must be terminated by an hlfir.yield}}
+    hlfir.elemental_addr %vector_shape  : !fir.shape<1> {
+      ^bb0(%i: index):
+      %c42 = arith.constant 42.0 : f32
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_element_addr_4(%x: !fir.ref<!fir.array<20xf32>>, %y: !fir.ref<!fir.array<20x20xf32>>) {
+  %c20 = arith.constant 20 : index
+  %vector_shape = fir.shape %c20 : (index) -> !fir.shape<1>
+  hlfir.region_assign {
+    hlfir.yield %x : !fir.ref<!fir.array<20xf32>>
+  } to {
+    // expected-error@+1 {{'hlfir.elemental_addr' op body number of indices must match shape rank}}
+    hlfir.elemental_addr %vector_shape  : !fir.shape<1> {
+      ^bb0(%i: index, %j: index):
+       %elt = hlfir.designate %y(%i, %j) : (!fir.ref<!fir.array<20x20xf32>>, index, index) -> !fir.ref<f32>
+       hlfir.yield %elt : !fir.ref<f32>
+    }
+  }
+  return
+}
