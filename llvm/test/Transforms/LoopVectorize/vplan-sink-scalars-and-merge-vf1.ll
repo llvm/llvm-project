@@ -9,6 +9,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 ; CHECK-LABEL: sink_with_sideeffects
 ; CHECK:      VPlan 'Initial VPlan for VF={1},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: ir<0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop

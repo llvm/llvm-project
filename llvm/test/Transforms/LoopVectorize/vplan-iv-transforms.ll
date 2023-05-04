@@ -5,6 +5,7 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-LABEL: LV: Checking a loop in 'iv_no_binary_op_in_descriptor'
 ; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop

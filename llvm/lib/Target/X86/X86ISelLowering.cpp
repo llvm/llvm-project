@@ -1002,6 +1002,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::v4f32, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                     : &X86::VR128RegClass);
 
+    setOperationAction(ISD::FMAXIMUM,           MVT::f32, Custom);
+    setOperationAction(ISD::FMINIMUM,           MVT::f32, Custom);
+
     setOperationAction(ISD::FNEG,               MVT::v4f32, Custom);
     setOperationAction(ISD::FABS,               MVT::v4f32, Custom);
     setOperationAction(ISD::FCOPYSIGN,          MVT::v4f32, Custom);
@@ -1037,6 +1040,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                                     : &X86::VR128RegClass);
     addRegisterClass(MVT::v2i64, Subtarget.hasVLX() ? &X86::VR128XRegClass
                                                     : &X86::VR128RegClass);
+
+    setOperationAction(ISD::FMAXIMUM,           MVT::f64, Custom);
+    setOperationAction(ISD::FMINIMUM,           MVT::f64, Custom);
 
     for (auto VT : { MVT::v2i8, MVT::v4i8, MVT::v8i8,
                      MVT::v2i16, MVT::v4i16, MVT::v2i32 }) {
@@ -2124,6 +2130,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
     setOperationAction(ISD::FP_ROUND,             MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND,      MVT::f16, Custom);
+    setOperationAction(ISD::FMAXIMUM,             MVT::f16, Custom);
+    setOperationAction(ISD::FMINIMUM,             MVT::f16, Custom);
     setOperationAction(ISD::FP_EXTEND,            MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND,     MVT::f32, Legal);
 
@@ -30217,6 +30225,126 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
   return SDValue();
 }
 
+static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
+                                      SelectionDAG &DAG) {
+  assert((Op.getOpcode() == ISD::FMAXIMUM || Op.getOpcode() == ISD::FMINIMUM) &&
+         "Expected FMAXIMUM or FMINIMUM opcode");
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = Op.getValueType();
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+  SDLoc DL(Op);
+  uint64_t SizeInBits = VT.getFixedSizeInBits();
+  APInt PreferredZero = APInt::getZero(SizeInBits);
+  EVT IVT = MVT::getIntegerVT(SizeInBits);
+  X86ISD::NodeType MinMaxOp;
+  if (Op.getOpcode() == ISD::FMAXIMUM) {
+    MinMaxOp = X86ISD::FMAX;
+  } else {
+    PreferredZero.setSignBit();
+    MinMaxOp = X86ISD::FMIN;
+  }
+  EVT SetCCType =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  // The tables below show the expected result of Max in cases of NaN and
+  // signed zeros.
+  //
+  //                 Y                       Y
+  //             Num   xNaN              +0     -0
+  //          ---------------         ---------------
+  //     Num  |  Max | qNaN |     +0  |  +0  |  +0  |
+  // X        ---------------  X      ---------------
+  //    xNaN  | qNaN | qNaN |     -0  |  +0  |  -0  |
+  //          ---------------         ---------------
+  //
+  // It is achieved by means of FMAX/FMIN with preliminary checks and operand
+  // reordering.
+  //
+  // We check if any of operands is NaN and return NaN. Then we check if any of
+  // operands is zero or negative zero (for fmaximum and fminimum respectively)
+  // to ensure the correct zero is returned.
+  auto IsPreferredZero = [PreferredZero](SDValue Op) {
+    Op = peekThroughBitcasts(Op);
+    if (auto *CstOp = dyn_cast<ConstantFPSDNode>(Op))
+      return CstOp->getValueAPF().bitcastToAPInt() == PreferredZero;
+    if (auto *CstOp = dyn_cast<ConstantSDNode>(Op))
+      return CstOp->getAPIntValue() == PreferredZero;
+    return false;
+  };
+
+  SDValue MinMax;
+  bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
+  bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
+  if (DAG.getTarget().Options.NoSignedZerosFPMath ||
+      Op->getFlags().hasNoSignedZeros() || IsPreferredZero(Y) ||
+      DAG.isKnownNeverZeroFloat(X)) {
+    MinMax = DAG.getNode(MinMaxOp, DL, VT, X, Y, Op->getFlags());
+  } else if (IsPreferredZero(X) || DAG.isKnownNeverZeroFloat(Y)) {
+    MinMax = DAG.getNode(MinMaxOp, DL, VT, Y, X, Op->getFlags());
+  } else if ((VT == MVT::f16 || Subtarget.hasDQI()) &&
+             (Op->getFlags().hasNoNaNs() || IsXNeverNaN || IsYNeverNaN)) {
+    if (IsXNeverNaN)
+      std::swap(X, Y);
+    // VFPCLASSS consumes a vector type. So provide a minimal one corresponded
+    // xmm register.
+    MVT VectorType = MVT::getVectorVT(VT.getSimpleVT(), 128 / SizeInBits);
+    SDValue VX = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VectorType, X);
+    // Bits of classes:
+    // Bits  Imm8[0] Imm8[1] Imm8[2] Imm8[3] Imm8[4]  Imm8[5]  Imm8[6] Imm8[7]
+    // Class    QNAN PosZero NegZero  PosINF  NegINF Denormal Negative    SNAN
+    SDValue Imm = DAG.getTargetConstant(MinMaxOp == X86ISD::FMAX ? 0b11 : 0b101,
+                                        DL, MVT::i32);
+    SDValue IsNanZero = DAG.getNode(X86ISD::VFPCLASSS, DL, MVT::v1i1, VX, Imm);
+    SDValue Ins = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MVT::v8i1,
+                              DAG.getConstant(0, DL, MVT::v8i1), IsNanZero,
+                              DAG.getIntPtrConstant(0, DL));
+    SDValue NeedSwap = DAG.getBitcast(MVT::i8, Ins);
+    SDValue NewX = DAG.getSelect(DL, VT, NeedSwap, Y, X);
+    SDValue NewY = DAG.getSelect(DL, VT, NeedSwap, X, Y);
+    return DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
+  } else {
+    SDValue IsXZero;
+    if (Subtarget.is64Bit() || VT != MVT::f64) {
+      SDValue XInt = DAG.getNode(ISD::BITCAST, DL, IVT, X);
+      SDValue ZeroCst = DAG.getConstant(PreferredZero, DL, IVT);
+      IsXZero = DAG.getSetCC(DL, SetCCType, XInt, ZeroCst, ISD::SETEQ);
+    } else {
+      assert(VT == MVT::f64);
+      SDValue Ins = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v2f64,
+                                DAG.getConstantFP(0, DL, MVT::v2f64), X,
+                                DAG.getIntPtrConstant(0, DL));
+      SDValue VX = DAG.getNode(ISD::BITCAST, DL, MVT::v4f32, Ins);
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, VX,
+                               DAG.getIntPtrConstant(0, DL));
+      Lo = DAG.getBitcast(MVT::i32, Lo);
+      SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, VX,
+                               DAG.getIntPtrConstant(1, DL));
+      Hi = DAG.getBitcast(MVT::i32, Hi);
+      PreferredZero = APInt::getZero(SizeInBits / 2);
+      if (MinMaxOp == X86ISD::FMIN)
+        PreferredZero.setSignBit();
+      IsXZero = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
+                            DAG.getConstant(PreferredZero, DL, MVT::i32));
+      IsXZero = DAG.getNode(ISD::OR, DL, MVT::i32, Lo, IsXZero);
+      IsXZero = DAG.getSetCC(DL, SetCCType, IsXZero,
+                             DAG.getConstant(0, DL, MVT::i32), ISD::SETEQ);
+    }
+    SDValue NewX = DAG.getSelect(DL, VT, IsXZero, Y, X);
+    SDValue NewY = DAG.getSelect(DL, VT, IsXZero, X, Y);
+    MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
+  }
+
+  if (Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN))
+    return MinMax;
+
+  APFloat NaNValue = APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT));
+  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, IsXNeverNaN ? Y : X,
+                               IsYNeverNaN ? X : Y, ISD::SETUO);
+  return DAG.getSelect(DL, VT, IsNaN, DAG.getConstantFP(NaNValue, DL, VT),
+                       MinMax);
+}
+
 static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
                         SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
@@ -33969,6 +34097,9 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMIN:
   case ISD::UMAX:
   case ISD::UMIN:               return LowerMINMAX(Op, Subtarget, DAG);
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return LowerFMINIMUM_FMAXIMUM(Op, Subtarget, DAG);
   case ISD::ABS:                return LowerABS(Op, Subtarget, DAG);
   case ISD::ABDS:
   case ISD::ABDU:               return LowerABD(Op, Subtarget, DAG);

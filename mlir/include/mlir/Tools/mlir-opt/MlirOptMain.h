@@ -116,6 +116,16 @@ public:
     return success();
   }
 
+  /// Enable running the reproducer information stored in resources (if
+  /// present).
+  MlirOptMainConfig &runReproducer(bool enableReproducer) {
+    runReproducerFlag = enableReproducer;
+    return *this;
+  };
+
+  /// Return true if the reproducer should be run.
+  bool shouldRunReproducer() const { return runReproducerFlag; }
+
   /// Show the registered dialects before trying to load the input file.
   MlirOptMainConfig &showDialects(bool show) {
     showDialectsFlag = show;
@@ -182,6 +192,9 @@ protected:
 
   /// The callback to populate the pass manager.
   std::function<LogicalResult(PassManager &)> passPipelineCallback;
+
+  /// Enable running the reproducer.
+  bool runReproducerFlag = false;
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;

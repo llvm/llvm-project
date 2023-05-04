@@ -24,26 +24,26 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-LABEL: @non_constant_scalar_expansion(
 ; STRIDED-NEXT:  entry:
 ; STRIDED-NEXT:    [[MUL:%.*]] = shl i32 [[TMP0:%.*]], 1
+; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; STRIDED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
-; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 4294967264, [[TMP1]]
-; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
-; STRIDED-NEXT:    [[TMP3:%.*]] = sext i32 [[MUL]] to i64
+; STRIDED-NEXT:    [[TMP2:%.*]] = sext i32 [[MUL]] to i64
+; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 4294967264, [[TMP2]]
+; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP3]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; STRIDED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP3]]
+; STRIDED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP1]]
 ; STRIDED-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP5]]
 ; STRIDED-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 1
-; STRIDED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], [[TMP3]]
+; STRIDED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], [[TMP1]]
 ; STRIDED-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr null, i64 [[TMP7]]
 ; STRIDED-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 2
-; STRIDED-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], [[TMP3]]
+; STRIDED-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], [[TMP1]]
 ; STRIDED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP9]]
 ; STRIDED-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 3
-; STRIDED-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], [[TMP3]]
+; STRIDED-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], [[TMP1]]
 ; STRIDED-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr null, i64 [[TMP11]]
 ; STRIDED-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = add i32 30, [[DOTCAST]]

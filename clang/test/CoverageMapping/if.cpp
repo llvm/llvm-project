@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fms-extensions -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++2b -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++23 -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
 
 int nop() { return 0; }
 struct S {

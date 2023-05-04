@@ -20,16 +20,19 @@ add_libc_test(
     libc.src.__support.common
 )
 
-add_libc_test(
-  high_precision_decimal_test
-  SUITE
-    libc-support-tests
-  SRCS
-  high_precision_decimal_test.cpp
-  DEPENDS
-    libc.src.__support.high_precision_decimal
-    libc.src.__support.uint128
-)
+# This test fails with a segmentation fault on NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    high_precision_decimal_test
+    SUITE
+      libc-support-tests
+    SRCS
+    high_precision_decimal_test.cpp
+    DEPENDS
+      libc.src.__support.high_precision_decimal
+      libc.src.__support.uint128
+  )
+endif()
 
 add_libc_test(
   str_to_float_test

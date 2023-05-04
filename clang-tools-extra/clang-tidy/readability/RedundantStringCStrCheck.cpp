@@ -78,7 +78,7 @@ RedundantStringCStrCheck::RedundantStringCStrCheck(StringRef Name,
           Options.get("StringParameterFunctions", ""))) {
   if (getLangOpts().CPlusPlus20)
     StringParameterFunctions.push_back("::std::format");
-  if (getLangOpts().CPlusPlus2b)
+  if (getLangOpts().CPlusPlus23)
     StringParameterFunctions.push_back("::std::print");
 }
 
