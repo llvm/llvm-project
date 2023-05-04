@@ -121,6 +121,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx1102"},   {"gfx1102"}, GK_GFX1102, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1103"},   {"gfx1103"}, GK_GFX1103, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 };
 
 const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
@@ -241,6 +242,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1102: return {11, 0, 2};
   case GK_GFX1103: return {11, 0, 3};
   case GK_GFX1150: return {11, 5, 0};
+  case GK_GFX1151: return {11, 5, 1};
   default:         return {0, 0, 0};
   }
 }
@@ -259,6 +261,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1151:
     case GK_GFX1150:
     case GK_GFX1103:
     case GK_GFX1102:
@@ -421,6 +424,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
   // XXX - What does the member GPU mean if device name string passed here?
   if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
+    case GK_GFX1151:
     case GK_GFX1150:
     case GK_GFX1103:
     case GK_GFX1102:

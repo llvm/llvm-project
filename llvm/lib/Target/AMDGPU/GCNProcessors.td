@@ -267,3 +267,7 @@ def : ProcessorModel<"gfx1103", GFX11SpeedModel,
 def : ProcessorModel<"gfx1150", GFX11SpeedModel,
   FeatureISAVersion11_5_0.Features
 >;
+
+def : ProcessorModel<"gfx1151", GFX11SpeedModel,
+  FeatureISAVersion11_5_1.Features
+>;
