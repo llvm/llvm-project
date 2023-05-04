@@ -4598,13 +4598,12 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
 
 bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAsBoolean(nullptr,
-                                      ePropertySwiftReadMetadataFromFileCache)
+        ->GetPropertyAtIndexAsBoolean(ePropertySwiftReadMetadataFromFileCache)
         .value_or(true);
 
   return true;
@@ -4612,13 +4611,12 @@ bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
 
 bool TargetProperties::GetSwiftUseReflectionSymbols() const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAsBoolean(nullptr,
-                                      ePropertySwiftUseReflectionSymbols)
+        ->GetPropertyAtIndexAsBoolean(ePropertySwiftUseReflectionSymbols)
         .value_or(true);
   else
     return true;
@@ -4626,13 +4624,12 @@ bool TargetProperties::GetSwiftUseReflectionSymbols() const {
 
 bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAsBoolean(nullptr,
-                                      ePropertySwiftReadMetadataFromDSYM)
+        ->GetPropertyAtIndexAsBoolean(ePropertySwiftReadMetadataFromDSYM)
         .value_or(true);
 
   return true;
@@ -4640,13 +4637,12 @@ bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
 
 bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAsBoolean(nullptr,
-                                      ePropertySwiftDiscoverImplicitSearchPaths)
+        ->GetPropertyAtIndexAsBoolean(ePropertySwiftDiscoverImplicitSearchPaths)
         .value_or(true);
 
   return true;
@@ -4654,13 +4650,12 @@ bool TargetProperties::GetSwiftDiscoverImplicitSearchPaths() const {
 
 bool TargetProperties::GetSwiftEnableBareSlashRegex() const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(nullptr, ePropertyExperimental);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
     return exp_values
-        ->GetPropertyAtIndexAsBoolean(nullptr,
-                                      ePropertySwiftEnableBareSlashRegex)
+        ->GetPropertyAtIndexAsBoolean(ePropertySwiftEnableBareSlashRegex)
         .value_or(true);
 
   return true;
@@ -4671,14 +4666,14 @@ EnableSwiftCxxInterop TargetProperties::GetEnableSwiftCxxInterop() const {
 
   EnableSwiftCxxInterop enable_interop =
       (EnableSwiftCxxInterop)m_experimental_properties_up->GetValueProperties()
-          ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+          ->GetPropertyAtIndexAsEnumeration(idx)
           .value_or(g_target_properties[idx].default_uint_value);
   return enable_interop;
 }
 
 bool TargetProperties::GetSwiftAutoImportFrameworks() const {
   const uint32_t idx = ePropertySwiftAutoImportFrameworks;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_target_properties[idx].default_uint_value != 0);
 }
 
@@ -4937,7 +4932,7 @@ FileSpecList TargetProperties::GetDebugFileSearchPaths() {
 FileSpec &TargetProperties::GetSDKPath() {
   const uint32_t idx = ePropertySDKPath;
   OptionValueFileSpec *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(NULL, idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpec(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4945,7 +4940,7 @@ FileSpec &TargetProperties::GetSDKPath() {
 FileSpecList TargetProperties::GetSwiftFrameworkSearchPaths() {
   const uint32_t idx = ePropertySwiftFrameworkSearchPaths;
   OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
@@ -4953,14 +4948,14 @@ FileSpecList TargetProperties::GetSwiftFrameworkSearchPaths() {
 FileSpecList TargetProperties::GetSwiftModuleSearchPaths() {
   const uint32_t idx = ePropertySwiftModuleSearchPaths;
   OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(NULL, idx);
+      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
   assert(option_value);
   return option_value->GetCurrentValue();
 }
 
 llvm::StringRef TargetProperties::GetSwiftExtraClangFlags() const {
   const uint32_t idx = ePropertySwiftExtraClangFlags;
-  return m_collection_sp->GetPropertyAtIndexAsString(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsString(idx)
       .value_or(llvm::StringRef());
 }
 
@@ -4980,13 +4975,13 @@ bool TargetProperties::GetEnableAutoImportClangModules() const {
 
 bool TargetProperties::GetUseAllCompilerFlags() const {
   const uint32_t idx = ePropertyUseAllCompilerFlags;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(NULL, idx).value_or(
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
       g_target_properties[idx].default_uint_value != 0);
 }
 
 void TargetProperties::SetUseAllCompilerFlags(bool b) {
   const uint32_t idx = ePropertyUseAllCompilerFlags;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+  m_collection_sp->SetPropertyAtIndexAsBoolean(idx, b);
 }
 
 ImportStdModule TargetProperties::GetImportStdModule() const {
@@ -5362,7 +5357,7 @@ bool TargetProperties::GetDebugUtilityExpression() const {
 
 bool TargetProperties::GetEnableTrampolineSupport() const {
   const uint32_t idx = ePropertyEnableTrampolineSupport;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_target_properties[idx].default_uint_value != 0);
 }
 

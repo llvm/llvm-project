@@ -153,36 +153,36 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
 // BEGIN SWIFT
 bool ModuleListProperties::GetUseSwiftClangImporter() const {
   const uint32_t idx = ePropertyUseSwiftClangImporter;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::GetUseSwiftDWARFImporter() const {
   const uint32_t idx = ePropertyUseSwiftDWARFImporter;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetUseSwiftDWARFImporter(bool new_value) {
   return m_collection_sp->SetPropertyAtIndexAsBoolean(
-      nullptr, ePropertyUseSwiftDWARFImporter, new_value);
+      ePropertyUseSwiftDWARFImporter, new_value);
 }
 
 bool ModuleListProperties::GetUseSwiftTypeRefTypeSystem() const {
   const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
   const uint32_t idx = ePropertySwiftValidateTypeSystem;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetUseSwiftTypeRefTypeSystem(bool new_value) {
   return m_collection_sp->SetPropertyAtIndexAsBoolean(
-      nullptr, ePropertyUseSwiftTypeRefTypeSystem, new_value);
+      ePropertyUseSwiftTypeRefTypeSystem, new_value);
 }
 
 bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
@@ -193,42 +193,41 @@ bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
   const uint32_t idx = ePropertySwiftModuleLoadingMode;
   return (SwiftModuleLoadingMode)m_collection_sp
-      ->GetPropertyAtIndexAsEnumeration(nullptr, idx)
+      ->GetPropertyAtIndexAsEnumeration(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value);
 }
 
 bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
   return m_collection_sp->SetPropertyAtIndexAsEnumeration(
-      nullptr, ePropertySwiftModuleLoadingMode, mode);
+      ePropertySwiftModuleLoadingMode, mode);
 }
 
 FileSpec ModuleListProperties::GetSwiftMetadataCachePath() const {
   return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr,
-                                                ePropertySwiftMetadataCachePath)
+      ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertySwiftMetadataCachePath)
       ->GetCurrentValue();
 }
 
 bool ModuleListProperties::SetSwiftMetadataCachePath(const FileSpec &path) {
   return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      nullptr, ePropertySwiftMetadataCachePath, path);
+      ePropertySwiftMetadataCachePath, path);
 }
 
 bool ModuleListProperties::GetEnableSwiftMetadataCache() const {
   const uint32_t idx = ePropertyEnableSwiftMetadataCache;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value != 0);
 }
 
 uint64_t ModuleListProperties::GetSwiftMetadataCacheMaxByteSize() {
   const uint32_t idx = ePropertySwiftMetadataCacheMaxByteSize;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value);
 }
 
 uint64_t ModuleListProperties::GetSwiftMetadataCacheExpirationDays() {
   const uint32_t idx = ePropertySwiftMetadataCacheExpirationDays;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(nullptr, idx)
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx)
       .value_or(g_modulelist_properties[idx].default_uint_value);
 }
 // END SWIFT
