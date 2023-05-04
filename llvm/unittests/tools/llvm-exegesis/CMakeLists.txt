@@ -3,6 +3,7 @@ set(exegesis_includes
   )
 
 set(LLVM_LINK_COMPONENTS
+  CodeGenTypes
   MC
   MCParser
   Object

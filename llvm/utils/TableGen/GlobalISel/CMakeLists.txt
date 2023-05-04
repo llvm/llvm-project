@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   Support
   TableGen
   )

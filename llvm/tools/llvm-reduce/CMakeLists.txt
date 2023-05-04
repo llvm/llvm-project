@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   BitReader
   BitWriter
   CodeGen
+  CodeGenTypes
   Core
   IPO
   IRReader

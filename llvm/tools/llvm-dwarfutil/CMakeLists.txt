@@ -6,7 +6,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos
-  CodeGen
+  CodeGenTypes
   DWARFLinker
   DebugInfoDWARF
   MC

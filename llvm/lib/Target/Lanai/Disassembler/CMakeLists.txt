@@ -2,7 +2,7 @@ add_llvm_component_library(LLVMLanaiDisassembler
   LanaiDisassembler.cpp
 
   LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   LanaiDesc
   LanaiInfo
   MC

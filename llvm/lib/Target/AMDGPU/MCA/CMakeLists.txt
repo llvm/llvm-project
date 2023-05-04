@@ -5,7 +5,7 @@ add_llvm_component_library(LLVMAMDGPUTargetMCA
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
-  CodeGen
+  CodeGenTypes
   MC
   MCA
   MCParser

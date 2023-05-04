@@ -9,7 +9,7 @@ add_llvm_component_library(LLVMVEDesc
   VETargetStreamer.cpp
 
   LINK_COMPONENTS
-  CodeGen
+  CodeGenTypes
   MC
   Support
   TargetParser

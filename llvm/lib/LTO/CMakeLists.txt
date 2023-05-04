@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMLTO
   BitWriter
   CAS
   CodeGen
+  CodeGenTypes
   Core
   Extensions
   IPO

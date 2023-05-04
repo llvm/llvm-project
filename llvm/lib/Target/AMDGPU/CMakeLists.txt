@@ -172,6 +172,7 @@ add_llvm_target(AMDGPUCodeGen
   AsmPrinter
   BinaryFormat
   CodeGen
+  CodeGenTypes
   Core
   GlobalISel
   IPO

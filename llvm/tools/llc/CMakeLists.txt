@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   IRReader
   MC
