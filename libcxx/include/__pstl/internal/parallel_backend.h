@@ -31,7 +31,7 @@ namespace __pstl
 namespace __par_backend = __omp_backend;
 }
 #else
-_PSTL_PRAGMA_MESSAGE("Parallel backend was not specified");
+#  error "No backend set"
 #endif
 
 #endif /* _PSTL_PARALLEL_BACKEND_H */
