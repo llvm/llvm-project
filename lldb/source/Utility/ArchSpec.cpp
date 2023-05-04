@@ -543,7 +543,6 @@ void ArchSpec::Clear() {
   m_triple = llvm::Triple();
   m_core = kCore_invalid;
   m_byte_order = eByteOrderInvalid;
-  m_distribution_id.Clear();
   m_flags = 0;
 }
 
@@ -687,14 +686,6 @@ llvm::Triple::ArchType ArchSpec::GetMachine() const {
     return core_def->machine;
 
   return llvm::Triple::UnknownArch;
-}
-
-ConstString ArchSpec::GetDistributionId() const {
-  return m_distribution_id;
-}
-
-void ArchSpec::SetDistributionId(const char *distribution_id) {
-  m_distribution_id.SetCString(distribution_id);
 }
 
 uint32_t ArchSpec::GetAddressByteSize() const {
@@ -979,8 +970,6 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
 }
 
 bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
-  // explicitly ignoring m_distribution_id in this method.
-
   if (GetByteOrder() != rhs.GetByteOrder() ||
       !cores_match(GetCore(), rhs.GetCore(), true, match == ExactMatch))
     return false;

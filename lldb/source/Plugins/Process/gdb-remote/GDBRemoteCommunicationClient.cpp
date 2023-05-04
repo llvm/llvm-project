@@ -69,10 +69,10 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_vFileSize(true), m_supports_vFileMode(true),
       m_supports_vFileExists(true), m_supports_vRun(true),
 
-      m_host_arch(), m_process_arch(), m_os_build(), m_os_kernel(),
-      m_hostname(), m_gdb_server_name(), m_default_packet_timeout(0),
-      m_qSupported_response(), m_supported_async_json_packets_sp(),
-      m_qXfer_memory_map() {}
+      m_host_arch(), m_host_distribution_id(), m_process_arch(), m_os_build(),
+      m_os_kernel(), m_hostname(), m_gdb_server_name(),
+      m_default_packet_timeout(0), m_qSupported_response(),
+      m_supported_async_json_packets_sp(), m_qXfer_memory_map() {}
 
 // Destructor
 GDBRemoteCommunicationClient::~GDBRemoteCommunicationClient() {
@@ -307,6 +307,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_qSymbol_requests_done = false;
     m_supports_qModuleInfo = true;
     m_host_arch.Clear();
+    m_host_distribution_id.clear();
     m_os_version = llvm::VersionTuple();
     m_os_build.clear();
     m_os_kernel.clear();
@@ -1206,7 +1207,6 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
         std::string environment;
         std::string vendor_name;
         std::string triple;
-        std::string distribution_id;
         uint32_t pointer_byte_size = 0;
         ByteOrder byte_order = eByteOrderInvalid;
         uint32_t num_keys_decoded = 0;
@@ -1228,7 +1228,7 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             ++num_keys_decoded;
           } else if (name.equals("distribution_id")) {
             StringExtractor extractor(value);
-            extractor.GetHexByteString(distribution_id);
+            extractor.GetHexByteString(m_host_distribution_id);
             ++num_keys_decoded;
           } else if (name.equals("os_build")) {
             StringExtractor extractor(value);
@@ -1376,8 +1376,6 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
                     m_host_arch.GetTriple().getTriple().c_str(),
                     triple.c_str());
         }
-        if (!distribution_id.empty())
-          m_host_arch.SetDistributionId(distribution_id.c_str());
       }
     }
   }

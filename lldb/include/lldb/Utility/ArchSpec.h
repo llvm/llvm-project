@@ -10,7 +10,6 @@
 #define LLDB_UTILITY_ARCHSPEC_H
 
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -342,20 +341,6 @@ public:
   /// \return An LLVM arch type.
   llvm::Triple::ArchType GetMachine() const;
 
-  /// Returns the distribution id of the architecture.
-  ///
-  /// This will be something like "ubuntu", "fedora", etc. on Linux.
-  ///
-  /// \return A ConstString ref containing the distribution id,
-  ///         potentially empty.
-  ConstString GetDistributionId() const;
-
-  /// Set the distribution id of the architecture.
-  ///
-  /// This will be something like "ubuntu", "fedora", etc. on Linux. This
-  /// should be the same value returned by HostInfo::GetDistributionId ().
-  void SetDistributionId(const char *distribution_id);
-
   /// Tests if this ArchSpec is valid.
   ///
   /// \return True if the current architecture is valid, false
@@ -554,8 +539,6 @@ protected:
   // Additional arch flags which we cannot get from triple and core For MIPS
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
-
-  ConstString m_distribution_id;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.
