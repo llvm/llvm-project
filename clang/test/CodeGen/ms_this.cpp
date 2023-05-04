@@ -20,7 +20,7 @@ void t2::runc() {
       mov rax,[this]
       // CHECK: [[THIS_ADDR_T2:%.+]] = alloca ptr
       // CHECK: [[THIS1_T2:%.+]] = load ptr, ptr [[THIS_ADDR_T2]],
-      // CHECK: call void asm sideeffect inteldialect "mov rax,qword ptr $1{{.*}}ptr [[THIS1_T2]]
+      // CHECK: call void asm sideeffect inteldialect "mov rax,$1\0A\09mov rbx,[rax]\0A\09mov $0, rbx", "=*m,m,~{rax},~{rbx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(double) %num, ptr [[THIS1_T2]])
       mov rbx,[rax]
       mov num, rbx
 	   };
@@ -33,7 +33,7 @@ void t1::runc() {
        mov rax,[this]
        // CHECK: [[THIS_ADDR_T1:%.+]] = alloca ptr
        // CHECK: [[THIS1_T1:%.+]] = load ptr, ptr [[THIS_ADDR_T1]],
-       // CHECK: call void asm sideeffect inteldialect "mov rax,qword ptr $1{{.*}}ptr [[THIS1_T1]]
+       // CHECK: call void asm sideeffect inteldialect "mov rax,$1{{.*}}ptr [[THIS1_T1]]
         mov rbx,[rax]
         mov num, rbx
 	   };
@@ -46,7 +46,7 @@ struct s {
     __asm mov rax, [this]
     // CHECK: [[THIS_ADDR_S:%.+]] = alloca ptr
     // CHECK: [[THIS1_S:%.+]] = load ptr, ptr [[THIS_ADDR_S]],
-    // CHECK: call void asm sideeffect inteldialect "mov rax, qword ptr $0{{.*}}ptr [[THIS1_S]]
+    // CHECK: call void asm sideeffect inteldialect "mov rax, $0{{.*}}ptr [[THIS1_S]]
   }
 } f3;
 

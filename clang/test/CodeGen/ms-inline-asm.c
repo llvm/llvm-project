@@ -312,7 +312,7 @@ void t24_helper(void) {}
 void t24(void) {
   __asm call t24_helper
 // CHECK: t24
-// CHECK: call void asm sideeffect inteldialect "call dword ptr ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void ()) @t24_helper)
+// CHECK: call void asm sideeffect inteldialect "call ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void ()) @t24_helper)
 }
 
 void t25(void) {
@@ -684,7 +684,7 @@ void dot_operator(void){
 void call_clobber(void) {
   __asm call t41
   // CHECK-LABEL: define{{.*}} void @call_clobber
-  // CHECK: call void asm sideeffect inteldialect "call dword ptr ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (i16)) @t41)
+  // CHECK: call void asm sideeffect inteldialect "call ${0:P}", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(void (i16)) @t41)
 }
 
 void xgetbv(void) {
