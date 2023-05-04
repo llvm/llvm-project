@@ -9440,7 +9440,7 @@ def warn_cxx2b_compat_defaulted_comparison_constexpr_mismatch : Warning<
   "%select{|for which the corresponding implicit 'operator==' }0 "
   "invokes a non-constexpr comparison function is incompatible with C++ "
   "standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
+  InGroup<CXXPre23Compat>, DefaultIgnore;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;
