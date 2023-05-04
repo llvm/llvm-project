@@ -1441,11 +1441,6 @@ SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
     unsigned NumSrcElt = SrcVT.getVectorNumElements();
     assert(NumElt % 2 == 0 && NumSrcElt % 2 == 0 && "expect legal types");
 
-    // We have some TableGen patterns for when the extracted vector is exactly
-    // the low or high half of the operand.
-    if ((NumSrcElt == 2 * NumElt) && (Start == 0 || Start == NumElt))
-      return Op;
-
     // Extract 32-bit registers at a time.
     EVT NewSrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumSrcElt / 2);
     EVT NewVT = NumElt == 2
