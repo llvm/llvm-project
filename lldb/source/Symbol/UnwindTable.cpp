@@ -86,8 +86,8 @@ void UnwindTable::Initialize() {
 
 UnwindTable::~UnwindTable() = default;
 
-std::optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
-                                                         SymbolContext &sc) {
+std::optional<AddressRange>
+UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
   AddressRange range;
 
   // First check the unwind info from the object file plugin
@@ -150,9 +150,8 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
 // don't add it to the UnwindTable.  This is intended for use by target modules
 // show-unwind where we want to create new UnwindPlans, not re-use existing
 // ones.
-FuncUnwindersSP
-UnwindTable::GetUncachedFuncUnwindersContainingAddress(const Address &addr,
-                                                       SymbolContext &sc) {
+FuncUnwindersSP UnwindTable::GetUncachedFuncUnwindersContainingAddress(
+    const Address &addr, const SymbolContext &sc) {
   Initialize();
 
   auto range_or = GetAddressRange(addr, sc);
