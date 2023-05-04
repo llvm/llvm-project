@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b          %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
 
 struct S {
@@ -46,12 +46,12 @@ constexpr int g(int k) {
 static_assert(g(2) == 42, "");
 constexpr int h(int n) {  // expected-error {{constexpr function never produces a constant expression}}
   static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
-                          // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++2b extension}}
+                          // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++23 extension}}
   return m;
 }
 constexpr int i(int n) {        // expected-error {{constexpr function never produces a constant expression}}
   thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
-                                // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++2b extension}}
+                                // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
   return m;
 }
 
@@ -229,7 +229,7 @@ namespace subobject {
     // expected-note@-2 {{assignment to member 'c' of union with active member 'n'}}
   }
   constexpr bool check(D &d) { return d.c.a.y == 3; }
-  // cxx20_2b-note@-1 {{read of member 'y' of union with active member 'x'}}
+  // cxx20_23-note@-1 {{read of member 'y' of union with active member 'x'}}
 
   constexpr bool g() { D d; f(d); return d.c.a.y == 3; }
   static_assert(g(), "");
@@ -242,7 +242,7 @@ namespace subobject {
   static_assert(i(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   constexpr bool j() { D d; d.c.a.x = 3; return check(d); } // cxx14-note {{assignment to member 'x' of union with active member 'y'}}
-  // cxx20_2b-note@-1 {{in call to 'check(d)'}}
+  // cxx20_23-note@-1 {{in call to 'check(d)'}}
   static_assert(j(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -271,12 +271,12 @@ namespace null {
 
 namespace incdec {
   template<typename T> constexpr T &ref(T &&r) { return r; }
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   template<typename T> constexpr T postinc(T &&r) { return (r++, r); }
   template<typename T> constexpr T postdec(T &&r) { return (r--, r); }
 
   template int &ref<int>(int &&);
-  // cxx2b-note@-1  {{in instantiation of function template specialization}}
+  // cxx23-note@-1  {{in instantiation of function template specialization}}
 
   static_assert(postinc(0) == 1, "");
   static_assert(postdec(0) == -1, "");
@@ -345,7 +345,7 @@ namespace incdec {
   }
   constexpr int wrong_member = f({0}); // expected-error {{constant}} expected-note {{in call to 'f({.a = 0})'}}
   constexpr int vol = --ref<volatile int>(0); // expected-error {{constant}} expected-note {{decrement of volatile-qualified}}
-  // cxx20_2b-warning@-1 {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
+  // cxx20_23-warning@-1 {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
 
   constexpr int incr(int k) {
     int x = k;
@@ -877,7 +877,7 @@ namespace VirtualFromBase {
 
 namespace Lifetime {
   constexpr int &get(int &&r) { return r; }
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // cxx23-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   constexpr int f() {
     int &r = get(123);
     return r;

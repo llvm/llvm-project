@@ -17,7 +17,7 @@
 namespace __pstl
 {
 namespace __par_backend = __serial_backend;
-}
+} // namespace __pstl
 #elif defined(_PSTL_PAR_BACKEND_TBB)
 #    include "parallel_backend_tbb.h"
 namespace __pstl

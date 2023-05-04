@@ -52,7 +52,7 @@
 // CHECK-MS-CPP20: #define _MSVC_LANG 202002L
 
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=19.00 -std=c++2b -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2B
+// RUN:     -fms-compatibility-version=19.00 -std=c++23 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS-CPP2B
 // CHECK-MS-CPP2B: #define _MSC_VER 1900
 // CHECK-MS-CPP2B: #define _MSVC_LANG 202004L
 

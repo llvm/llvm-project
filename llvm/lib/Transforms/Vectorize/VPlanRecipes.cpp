@@ -54,13 +54,13 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
-  case VPWidenIntOrFpInductionSC:
-  case VPWidenCanonicalIVSC:
-  case VPWidenPHISC:
   case VPBlendSC:
-  case VPWidenSC:
-  case VPWidenGEPSC:
   case VPReductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenGEPSC:
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenPHISC:
+  case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -87,13 +87,13 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
     return false;
-  case VPWidenIntOrFpInductionSC:
-  case VPWidenCanonicalIVSC:
-  case VPWidenPHISC:
   case VPBlendSC:
-  case VPWidenSC:
-  case VPWidenGEPSC:
   case VPReductionSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenGEPSC:
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenPHISC:
+  case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
@@ -123,17 +123,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();
-  case VPWidenIntOrFpInductionSC:
-  case VPFirstOrderRecurrencePHISC:
-  case VPWidenPointerInductionSC:
-  case VPWidenCanonicalIVSC:
-  case VPWidenPHISC:
   case VPBlendSC:
-  case VPWidenSC:
-  case VPWidenGEPSC:
+  case VPFirstOrderRecurrencePHISC:
   case VPReductionSC:
-  case VPWidenSelectSC:
-  case VPScalarIVStepsSC: {
+  case VPScalarIVStepsSC:
+  case VPWidenCanonicalIVSC:
+  case VPWidenGEPSC:
+  case VPWidenIntOrFpInductionSC:
+  case VPWidenPHISC:
+  case VPWidenPointerInductionSC:
+  case VPWidenSC:
+  case VPWidenSelectSC: {
     const Instruction *I =
         dyn_cast_or_null<Instruction>(getVPSingleValue()->getUnderlyingValue());
     (void)I;
@@ -252,7 +252,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     // Get first lane of vector induction variable.
     Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
     // Get the original loop tripcount.
-    Value *ScalarTC = State.get(getOperand(1), Part);
+    Value *ScalarTC = State.get(getOperand(1), VPIteration(Part, 0));
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = VectorType::get(Int1Ty, State.VF);
@@ -288,7 +288,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     break;
   }
   case VPInstruction::CalculateTripCountMinusVF: {
-    Value *ScalarTC = State.get(getOperand(0), Part);
+    Value *ScalarTC = State.get(getOperand(0), {0, 0});
     Value *Step =
         createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
@@ -1152,7 +1152,7 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
                                  &*State.Builder.GetInsertPoint());
 
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
-    State.set(this, Res, Part);
+    State.set(this, Res, {Part, 0});
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

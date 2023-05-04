@@ -434,7 +434,7 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   std::vector<StringRef> Candidates = {
       "if", "ifdef", "ifndef", "elif", "else", "endif"
   };
-  if (LangOpts.C2x || LangOpts.CPlusPlus2b)
+  if (LangOpts.C2x || LangOpts.CPlusPlus23)
     Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
 
   if (std::optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
@@ -745,12 +745,12 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         if (!CondInfo.WasSkipping)
           SkippingRangeState.endLexPass(Hashptr);
 
-        // Warn if using `#elifdef` & `#elifndef` in not C2x & C++2b mode even
+        // Warn if using `#elifdef` & `#elifndef` in not C2x & C++23 mode even
         // if this branch is in a skipping block.
         unsigned DiagID;
         if (LangOpts.CPlusPlus)
-          DiagID = LangOpts.CPlusPlus2b ? diag::warn_cxx2b_compat_pp_directive
-                                        : diag::ext_cxx2b_pp_directive;
+          DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
+                                        : diag::ext_cxx23_pp_directive;
         else
           DiagID = LangOpts.C2x ? diag::warn_c2x_compat_pp_directive
                                 : diag::ext_c2x_pp_directive;
@@ -1256,10 +1256,10 @@ void Preprocessor::HandleDirective(Token &Result) {
 
     case tok::pp_warning:
       if (LangOpts.CPlusPlus)
-        Diag(Result, LangOpts.CPlusPlus2b
-                         ? diag::warn_cxx2b_compat_warning_directive
+        Diag(Result, LangOpts.CPlusPlus23
+                         ? diag::warn_cxx23_compat_warning_directive
                          : diag::ext_pp_warning_directive)
-            << /*C++2b*/ 1;
+            << /*C++23*/ 1;
       else
         Diag(Result, LangOpts.C2x ? diag::warn_c2x_compat_warning_directive
                                   : diag::ext_pp_warning_directive)
@@ -3423,14 +3423,14 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
                                                  : PED_Elifndef;
   ++NumElse;
 
-  // Warn if using `#elifdef` & `#elifndef` in not C2x & C++2b mode.
+  // Warn if using `#elifdef` & `#elifndef` in not C2x & C++23 mode.
   switch (DirKind) {
   case PED_Elifdef:
   case PED_Elifndef:
     unsigned DiagID;
     if (LangOpts.CPlusPlus)
-      DiagID = LangOpts.CPlusPlus2b ? diag::warn_cxx2b_compat_pp_directive
-                                    : diag::ext_cxx2b_pp_directive;
+      DiagID = LangOpts.CPlusPlus23 ? diag::warn_cxx23_compat_pp_directive
+                                    : diag::ext_cxx23_pp_directive;
     else
       DiagID = LangOpts.C2x ? diag::warn_c2x_compat_pp_directive
                             : diag::ext_c2x_pp_directive;
