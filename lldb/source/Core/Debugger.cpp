@@ -812,6 +812,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
                     GetStaticBroadcasterClass().AsCString()),
       m_forward_listener_sp(), m_clear_once() {
   m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
+  // Initialize the debugger properties as early as possible as other parts of
+  // LLDB will start querying them during construction.
+  m_collection_sp->Initialize(g_debugger_properties);
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);
@@ -833,7 +836,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
 
-  m_collection_sp->Initialize(g_debugger_properties);
   m_collection_sp->AppendProperty(
       ConstString("target"), "Settings specify to debugging targets.", true,
       Target::GetGlobalProperties().GetValueProperties());
