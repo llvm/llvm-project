@@ -47,7 +47,6 @@ class TestStepTarget(TestBase):
         thread = threads[0]
         return thread
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_end_line(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
@@ -59,7 +58,6 @@ class TestStepTarget(TestBase):
 
         self.assertEqual(frame.name, "lotsOfArgs", "Stepped to lotsOfArgs.")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_end_line_bad_name(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
@@ -81,7 +79,6 @@ class TestStepTarget(TestBase):
         frame = thread.frames[0]
         self.assertEqual(frame.name, "modifyInt", "Stepped to modifyInt.")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_command_and_block(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
@@ -97,7 +94,6 @@ class TestStepTarget(TestBase):
         frame = thread.frames[0]
         self.assertEqual(frame.name, "lotsOfArgs", "Stepped to lotsOfArgs.")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test_with_command_and_block_and_bad_name(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
