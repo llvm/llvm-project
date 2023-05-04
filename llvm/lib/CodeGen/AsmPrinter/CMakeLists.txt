@@ -33,6 +33,7 @@ add_llvm_component_library(LLVMAsmPrinter
   LINK_COMPONENTS
   Analysis
   BinaryFormat
+  BitWriter
   CodeGen
   Core
   DebugInfoCodeView
