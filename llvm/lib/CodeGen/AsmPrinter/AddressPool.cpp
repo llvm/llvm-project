@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <utility>
@@ -24,7 +25,7 @@ unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
 }
 
 MCSymbol *AddressPool::emitHeader(AsmPrinter &Asm, MCSection *Section) {
-  static const uint8_t AddrSize = Asm.getDataLayout().getPointerSize();
+  static const uint8_t AddrSize = Asm.MAI->getCodePointerSize();
 
   MCSymbol *EndLabel =
       Asm.emitDwarfUnitLength("debug_addr", "Length of contribution");
@@ -65,7 +66,7 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
             : MCSymbolRefExpr::create(I.first, Asm.OutContext);
 
   for (const MCExpr *Entry : Entries)
-    Asm.OutStreamer->emitValue(Entry, Asm.getDataLayout().getPointerSize());
+    Asm.OutStreamer->emitValue(Entry, Asm.MAI->getCodePointerSize());
 
   if (EndLabel)
     Asm.OutStreamer->emitLabel(EndLabel);
