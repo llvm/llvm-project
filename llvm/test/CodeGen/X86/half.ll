@@ -1330,22 +1330,17 @@ declare half @llvm.minnum.f16(half, half)
 define half @pr61271(half %0, half %1) #0 {
 ; CHECK-LIBCALL-LABEL: pr61271:
 ; CHECK-LIBCALL:       # %bb.0:
-; CHECK-LIBCALL-NEXT:    subq $40, %rsp
+; CHECK-LIBCALL-NEXT:    pushq %rax
 ; CHECK-LIBCALL-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-LIBCALL-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
-; CHECK-LIBCALL-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-LIBCALL-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
 ; CHECK-LIBCALL-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-LIBCALL-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
-; CHECK-LIBCALL-NEXT:    movaps %xmm0, %xmm1
-; CHECK-LIBCALL-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; CHECK-LIBCALL-NEXT:    cmpltss %xmm2, %xmm1
-; CHECK-LIBCALL-NEXT:    andps %xmm1, %xmm0
-; CHECK-LIBCALL-NEXT:    andnps %xmm2, %xmm1
-; CHECK-LIBCALL-NEXT:    orps %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    minss (%rsp), %xmm0 # 4-byte Folded Reload
 ; CHECK-LIBCALL-NEXT:    callq __truncsfhf2@PLT
-; CHECK-LIBCALL-NEXT:    addq $40, %rsp
+; CHECK-LIBCALL-NEXT:    popq %rax
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: pr61271:
@@ -1358,8 +1353,7 @@ define half @pr61271(half %0, half %1) #0 {
 ; BWON-F16C-NEXT:    movzwl %ax, %eax
 ; BWON-F16C-NEXT:    vmovd %eax, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; BWON-F16C-NEXT:    vcmpltss %xmm0, %xmm1, %xmm2
-; BWON-F16C-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vminss %xmm0, %xmm1, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vmovd %xmm0, %eax
 ; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
@@ -1381,13 +1375,8 @@ define half @pr61271(half %0, half %1) #0 {
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    movaps %xmm1, %xmm2
-; CHECK-I686-NEXT:    cmpltss %xmm0, %xmm2
-; CHECK-I686-NEXT:    andps %xmm2, %xmm1
-; CHECK-I686-NEXT:    andnps %xmm0, %xmm2
-; CHECK-I686-NEXT:    orps %xmm1, %xmm2
-; CHECK-I686-NEXT:    movss %xmm2, (%esp)
+; CHECK-I686-NEXT:    minss {{[0-9]+}}(%esp), %xmm0
+; CHECK-I686-NEXT:    movss %xmm0, (%esp)
 ; CHECK-I686-NEXT:    calll __truncsfhf2
 ; CHECK-I686-NEXT:    addl $44, %esp
 ; CHECK-I686-NEXT:    retl
