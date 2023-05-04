@@ -39,6 +39,7 @@ executable("lldb-server") {
       #deps += [ "//lldb/source/Plugins/Platform/Android" ]
     }
   }
+
   #} else if (current_os == "freebsd") {
   #deps += [ "//lldb/source/Platform/Process/FreeBSD" ]
   #deps += [ "//lldb/source/Plugins/Process/FreeBSD" ]
