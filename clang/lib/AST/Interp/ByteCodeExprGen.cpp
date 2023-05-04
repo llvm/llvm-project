@@ -445,7 +445,9 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
     const ArraySubscriptExpr *E) {
   const Expr *Base = E->getBase();
   const Expr *Index = E->getIdx();
-  PrimType IndexT = classifyPrim(Index->getType());
+
+  if (DiscardResult)
+    return this->discard(Base) && this->discard(Index);
 
   // Take pointer of LHS, add offset from RHS.
   // What's left on the stack after this is a pointer.
@@ -455,13 +457,8 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   if (!this->visit(Index))
     return false;
 
-  if (!this->emitArrayElemPtrPop(IndexT, E))
-    return false;
-
-  if (DiscardResult)
-    return this->emitPopPtr(E);
-
-  return true;
+  PrimType IndexT = classifyPrim(Index->getType());
+  return this->emitArrayElemPtrPop(IndexT, E);
 }
 
 template <class Emitter>
