@@ -8829,7 +8829,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
         CheckConstexprParameterTypes(*this, FD, CheckConstexprKind::Diagnose) &&
         !Info.Constexpr) {
       Diag(FD->getBeginLoc(),
-           getLangOpts().CPlusPlus2b
+           getLangOpts().CPlusPlus23
                ? diag::warn_cxx2b_compat_defaulted_comparison_constexpr_mismatch
                : diag::ext_defaulted_comparison_constexpr_mismatch)
           << FD->isImplicit() << (int)DCK << FD->isConsteval();
