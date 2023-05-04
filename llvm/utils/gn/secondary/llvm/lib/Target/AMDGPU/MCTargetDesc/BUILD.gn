@@ -81,12 +81,13 @@ group("tablegen") {
 static_library("MCTargetDesc") {
   output_name = "LLVMAMDGPUDesc"
   public_deps = [ ":tablegen" ]
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":AMDGPUGenAsmWriter",
     ":AMDGPUGenMCCodeEmitter",
     ":R600GenAsmWriter",
     ":R600GenMCCodeEmitter",
     "//llvm/lib/BinaryFormat",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",

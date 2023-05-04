@@ -1,7 +1,7 @@
 static_library("CodeGen") {
   output_name = "clangCodeGen"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     "//clang/include/clang/Basic:arm_cde_builtin_cg",
     "//clang/include/clang/Basic:arm_mve_builtin_cg",
     "//clang/include/clang/Basic:arm_sve_builtin_cg",
@@ -14,6 +14,7 @@ static_library("CodeGen") {
     "//clang/lib/Lex",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/Demangle",
     "//llvm/lib/Frontend/HLSL",
     "//llvm/lib/IR",
