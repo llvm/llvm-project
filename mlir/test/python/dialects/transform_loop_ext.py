@@ -33,7 +33,7 @@ def loopOutline():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
                                   [], transform.OperationType.get("scf.for"))
   with InsertionPoint(sequence.body):
-    loop.LoopOutlineOp(pdl.OperationType.get(), sequence.bodyTarget, func_name="foo")
+    loop.LoopOutlineOp(transform.AnyOpType.get(), transform.AnyOpType.get(), sequence.bodyTarget, func_name="foo")
     transform.YieldOp()
   # CHECK-LABEL: TEST: loopOutline
   # CHECK: = transform.loop.outline %
