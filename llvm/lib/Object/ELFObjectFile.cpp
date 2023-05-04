@@ -624,7 +624,8 @@ ELFObjectFileBase::getPltAddresses() const {
       T->createMCInstrAnalysis(MII.get()));
   if (!MIA)
     return {};
-  std::optional<SectionRef> Plt, RelaPlt, GotPlt;
+  std::optional<SectionRef> Plt, RelaPlt;
+  uint64_t GotBaseVA = 0;
   for (const SectionRef &Section : sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr) {
@@ -638,22 +639,27 @@ ELFObjectFileBase::getPltAddresses() const {
     else if (Name == ".rela.plt" || Name == ".rel.plt")
       RelaPlt = Section;
     else if (Name == ".got.plt")
-      GotPlt = Section;
+      GotBaseVA = Section.getAddress();
   }
-  if (!Plt || !RelaPlt || !GotPlt)
+  if (!Plt || !RelaPlt)
     return {};
   Expected<StringRef> PltContents = Plt->getContents();
   if (!PltContents) {
     consumeError(PltContents.takeError());
     return {};
   }
-  auto PltEntries = MIA->findPltEntries(Plt->getAddress(),
-                                        arrayRefFromStringRef(*PltContents),
-                                        GotPlt->getAddress(), Triple);
+  auto PltEntries = MIA->findPltEntries(
+      Plt->getAddress(), arrayRefFromStringRef(*PltContents), Triple);
+
   // Build a map from GOT entry virtual address to PLT entry virtual address.
   DenseMap<uint64_t, uint64_t> GotToPlt;
-  for (const auto &Entry : PltEntries)
-    GotToPlt.insert(std::make_pair(Entry.second, Entry.first));
+  for (auto [Plt, GotPltEntry] : PltEntries) {
+    // An x86-32 PIC PLT uses jmp DWORD PTR [ebx-offset]. Add
+    // _GLOBAL_OFFSET_TABLE_ (EBX) to get the .got.plt (or .got) entry address.
+    if (static_cast<int64_t>(GotPltEntry) < 0 && getEMachine() == ELF::EM_386)
+      GotPltEntry = ~GotPltEntry + GotBaseVA;
+    GotToPlt.insert(std::make_pair(GotPltEntry, Plt));
+  }
   // Find the relocations in the dynamic relocation table that point to
   // locations in the GOT for which we know the corresponding PLT entry.
   std::vector<std::pair<std::optional<DataRefImpl>, uint64_t>> Result;
