@@ -1,17 +1,14 @@
 add_custom_target(libc-support-tests)
 
-# This test fails with a misaigned address on NVPTX.
-if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
-  add_libc_test(
-    blockstore_test
-    SUITE
-      libc-support-tests
-    SRCS
-      blockstore_test.cpp
-    DEPENDS
-      libc.src.__support.blockstore
-  )
-endif()
+add_libc_test(
+  blockstore_test
+  SUITE
+    libc-support-tests
+  SRCS
+    blockstore_test.cpp
+  DEPENDS
+    libc.src.__support.blockstore
+)
 
 add_libc_test(
   endian_test
