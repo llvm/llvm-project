@@ -4835,7 +4835,6 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
   case TargetOpcode::G_EXTRACT:
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -4844,7 +4843,6 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_INSERT:
-  case TargetOpcode::G_INSERT_VECTOR_ELT:
   case TargetOpcode::G_FREEZE:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
