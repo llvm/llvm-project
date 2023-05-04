@@ -169,7 +169,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr &PC, unsigned BuiltinID);
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F);
 
 enum class ArithOp { Add, Sub };
 
@@ -1701,7 +1701,7 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func->getBuiltinID())) {
+  if (InterpretBuiltin(S, PC, Func)) {
     NewFrame.release();
     return true;
   }
