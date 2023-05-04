@@ -407,3 +407,8 @@ def : SysReg<"hviprio2h", 0x657>;
 def : SysReg<"vsieh", 0x214>;
 def : SysReg<"vsiph", 0x254>;
 } // isRV32Only
+
+// Jump Vector Table CSR
+//===-----------------------------------------------
+
+def : SysReg<"jvt", 0x017>;
