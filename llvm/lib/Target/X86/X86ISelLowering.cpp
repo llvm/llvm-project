@@ -1079,6 +1079,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     setOperationAction(ISD::ABDU,               MVT::v16i8, Custom);
+    setOperationAction(ISD::ABDU,               MVT::v8i16, Custom);
     setOperationAction(ISD::ABDS,               MVT::v8i16, Custom);
 
     setOperationAction(ISD::UADDSAT,            MVT::v16i8, Legal);
@@ -30243,6 +30244,12 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
     SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
     return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
   }
+
+  // abdu(lhs, rhs) -> or(usubsat(lhs,rhs), usubsat(rhs,lhs))
+  if (!IsSigned && TLI.isOperationLegal(ISD::USUBSAT, VT))
+    return DAG.getNode(ISD::OR, dl, VT,
+                       DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
+                       DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
 
   // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
   // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
