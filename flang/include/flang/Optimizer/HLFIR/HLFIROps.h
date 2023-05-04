@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "flang/Optimizer/HLFIR/HLFIROpInterfaces.h.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.h.inc"
 

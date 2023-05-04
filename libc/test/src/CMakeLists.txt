@@ -9,7 +9,7 @@ function(add_fp_unittest name)
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message("WARNING: Math test ${name} will be skipped as MPFR library is not available.")
+      message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
       return()
     endif()
   endif()

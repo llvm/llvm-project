@@ -12,10 +12,8 @@
 
 #include "pstl_config.h"
 
+#include <__atomic/atomic.h>
 #include <__pstl/internal/parallel_backend.h>
-#include <atomic>
-// This header defines the minimum set of parallel routines required to support Parallel STL,
-// implemented on top of Intel(R) Threading Building Blocks (Intel(R) TBB) library
 
 namespace __pstl
 {

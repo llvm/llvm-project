@@ -121,7 +121,8 @@ func::CallOp createFuncCall(OpBuilder &builder, Location loc, StringRef name,
 
 /// Returns the equivalent of `void*` for opaque arguments to the
 /// execution engine.
-Type getOpaquePointerType(OpBuilder &builder);
+Type getOpaquePointerType(MLIRContext *ctx);
+Type getOpaquePointerType(Builder &builder);
 
 /// Generates an uninitialized temporary buffer of the given size and
 /// type, but returns it as type `memref<? x $tp>` (rather than as type

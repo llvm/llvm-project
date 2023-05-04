@@ -671,9 +671,11 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genObjectList(privateClause->v, converter, semanticsContext, stmtCtx,
                     privateOperands);
+    } else if (std::get_if<Fortran::parser::AccClause::Reduction>(&clause.u)) {
+      // Reduction clause is left out for the moment as the clause will probably
+      // end up having its own operation.
+      TODO(clauseLocation, "OpenACC compute construct reduction lowering");
     }
-    // Reduction clause is left out for the moment as the clause will probably
-    // end up having its own operation.
   }
 
   // Prepare the operand segment size attribute and the operands value range.
@@ -888,6 +890,8 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genObjectList(firstprivateClause->v, converter, semanticsContext, stmtCtx,
                     firstprivateOperands);
+    } else if (std::get_if<Fortran::parser::AccClause::Reduction>(&clause.u)) {
+      TODO(clauseLocation, "compute construct reduction clause lowering");
     }
   }
 

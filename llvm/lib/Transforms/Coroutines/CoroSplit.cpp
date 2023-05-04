@@ -697,9 +697,9 @@ void CoroCloner::replaceSwiftErrorOps() {
 void CoroCloner::salvageDebugInfo() {
   SmallVector<DbgVariableIntrinsic *, 8> Worklist =
       collectDbgVariableIntrinsics(*NewF);
-  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.OptimizeFrame);
+    coro::salvageDebugInfo(ArgToAllocaMap, DVI, Shape.OptimizeFrame);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -1981,9 +1981,9 @@ splitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   // Salvage debug intrinsics that point into the coroutine frame in the
   // original function. The Cloner has already salvaged debug info in the new
   // coroutine funclets.
-  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
   for (auto *DDI : collectDbgVariableIntrinsics(F))
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.OptimizeFrame);
+    coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame);
 
   return Shape;
 }

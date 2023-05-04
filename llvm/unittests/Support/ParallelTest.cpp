@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/ThreadPool.h"
 #include "gtest/gtest.h"
 #include <array>
 #include <random>
@@ -101,5 +102,77 @@ TEST(Parallel, TaskGroupSequentialFor) {
   }
   EXPECT_EQ(Count, 500ul);
 }
+
+TEST(Parallel, NestedTaskGroup) {
+  // This test checks:
+  // 1. Root TaskGroup is in Parallel mode.
+  // 2. Nested TaskGroup is not in Parallel mode.
+  parallel::TaskGroup tg;
+
+  tg.spawn([&]() {
+    EXPECT_TRUE(tg.isParallel() || (parallel::strategy.ThreadsRequested == 1));
+  });
+
+  tg.spawn([&]() {
+    parallel::TaskGroup nestedTG;
+    EXPECT_FALSE(nestedTG.isParallel());
+
+    nestedTG.spawn([&]() {
+      // Check that root TaskGroup is in Parallel mode.
+      EXPECT_TRUE(tg.isParallel() ||
+                  (parallel::strategy.ThreadsRequested == 1));
+
+      // Check that nested TaskGroup is not in Parallel mode.
+      EXPECT_FALSE(nestedTG.isParallel());
+    });
+  });
+}
+
+#if LLVM_ENABLE_THREADS
+TEST(Parallel, ParallelNestedTaskGroup) {
+  // This test checks that it is possible to have several TaskGroups
+  // run from different threads in Parallel mode.
+  std::atomic<size_t> Count{0};
+
+  {
+    std::function<void()> Fn = [&]() {
+      parallel::TaskGroup tg;
+
+      tg.spawn([&]() {
+        // Check that root TaskGroup is in Parallel mode.
+        EXPECT_TRUE(tg.isParallel() ||
+                    (parallel::strategy.ThreadsRequested == 1));
+
+        // Check that nested TaskGroup is not in Parallel mode.
+        parallel::TaskGroup nestedTG;
+        EXPECT_FALSE(nestedTG.isParallel());
+        ++Count;
+
+        nestedTG.spawn([&]() {
+          // Check that root TaskGroup is in Parallel mode.
+          EXPECT_TRUE(tg.isParallel() ||
+                      (parallel::strategy.ThreadsRequested == 1));
+
+          // Check that nested TaskGroup is not in Parallel mode.
+          EXPECT_FALSE(nestedTG.isParallel());
+          ++Count;
+        });
+      });
+    };
+
+    ThreadPool Pool;
+
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+    Pool.async(Fn);
+
+    Pool.wait();
+  }
+  EXPECT_EQ(Count, 12ul);
+}
+#endif
 
 #endif

@@ -181,6 +181,7 @@ public:
     ScanInstance.getFrontendOpts().GenerateGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
+    ScanInstance.getHeaderSearchOpts().ModuleFormat = "raw";
 
     ScanInstance.setFileManager(FileMgr);
     // Support for virtual file system overlays.
@@ -309,12 +310,11 @@ DependencyScanningWorker::DependencyScanningWorker(
     : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
       EagerLoadModules(Service.shouldEagerLoadModules()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
+  // We need to read object files from PCH built outside the scanner.
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());
-  // We don't need to write object files, but the current PCH implementation
-  // requires the writer to be registered as well.
-  PCHContainerOps->registerWriter(
-      std::make_unique<ObjectFilePCHContainerWriter>());
+  // The scanner itself writes only raw ast files.
+  PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:

@@ -11,9 +11,9 @@
 #define _PSTL_UTILS_H
 
 #include <__exception/terminate.h>
-#include <iterator>
+#include <__pstl/internal/pstl_config.h>
+#include <__utility/forward.h>
 #include <new>
-#include <utility>
 
 namespace __pstl {
 namespace __internal {

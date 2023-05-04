@@ -197,6 +197,35 @@ func.func @gpu_gcn_raw_buffer_atomic_umin_i32(%value: i32, %buf: memref<64xi32>,
   func.return
 }
 
+// CHECK-LABEL: func @amdgpu_raw_buffer_atomic_cmpswap_f32
+// CHECK-SAME: (%[[src:.*]]: f32, %[[cmp:.*]]: f32, {{.*}})
+func.func @amdgpu_raw_buffer_atomic_cmpswap_f32(%src : f32, %cmp : f32, %buf : memref<64xf32>, %idx: i32) -> f32 {
+  // CHECK: %[[srcCast:.*]] = llvm.bitcast %[[src]] : f32 to i32
+  // CHECK: %[[cmpCast:.*]] = llvm.bitcast %[[cmp]] : f32 to i32
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(256 : i32)
+  // CHECK: llvm.insertelement{{.*}}%[[numRecords]]
+  // CHECK: %[[word3:.*]] = llvm.mlir.constant(159744 : i32)
+  // CHECK: %[[resource:.*]] = llvm.insertelement{{.*}}%[[word3]]
+  // CHECK: %[[dst:.*]] = rocdl.raw.buffer.atomic.cmpswap(%[[srcCast]], %[[cmpCast]], %[[resource]], %{{.*}}, %{{.*}}, %{{.*}}) : i32, vector<4xi32>
+  // CHECK: %[[dstCast:.*]] = llvm.bitcast %[[dst]] : i32 to f32
+  // CHECK: return %[[dstCast]]
+  %dst = amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true} %src, %cmp -> %buf[%idx] : f32 -> memref<64xf32>, i32
+  func.return %dst : f32
+}
+
+// CHECK-LABEL: func @amdgpu_raw_buffer_atomic_cmpswap_i64
+// CHECK-SAME: (%[[src:.*]]: i64, %[[cmp:.*]]: i64, {{.*}})
+func.func @amdgpu_raw_buffer_atomic_cmpswap_i64(%src : i64, %cmp : i64, %buf : memref<64xi64>, %idx: i32) -> i64 {
+  // CHECK: %[[numRecords:.*]] = llvm.mlir.constant(512 : i32)
+  // CHECK: llvm.insertelement{{.*}}%[[numRecords]]
+  // CHECK: %[[word3:.*]] = llvm.mlir.constant(159744 : i32)
+  // CHECK: %[[resource:.*]] = llvm.insertelement{{.*}}%[[word3]]
+  // CHECK: %[[dst:.*]] = rocdl.raw.buffer.atomic.cmpswap(%[[src]], %[[cmp]], %[[resource]], %{{.*}}, %{{.*}}, %{{.*}}) : i64, vector<4xi32>
+  // CHECK: return %[[dst]]
+  %dst = amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true} %src, %cmp -> %buf[%idx] : i64 -> memref<64xi64>, i32
+  func.return %dst : i64
+}
+
 // CHECK-LABEL: func @lds_barrier
 func.func @lds_barrier() {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "s_waitcnt lgkmcnt(0)\0As_barrier"

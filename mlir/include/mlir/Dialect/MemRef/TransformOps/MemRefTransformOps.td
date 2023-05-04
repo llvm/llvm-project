@@ -93,4 +93,45 @@ def MemRefExtractAddressComputationsOp :
         ::mlir::transform::TransformState &state);
   }];
 }
+
+def MemRefMakeLoopIndependentOp
+    : Op<Transform_Dialect, "memref.make_loop_independent",
+         [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+          TransformOpInterface, TransformEachOpTrait]> {
+  let description = [{
+    Rewrite the targeted ops such that their index-typed operands no longer
+    depend on any loop induction variable of the `num_loop` enclosing `scf.for`
+    loops. I.e., compute an upper bound that is independent of any such loop IV
+    for every tensor dimension. The transformed op could then be hoisted from
+    the `num_loop` enclosing loops. To preserve the original semantics, place a
+    `memref.subview` inside the loop.
+
+    Currently supported operations are:
+    - memref.alloca: Replaced with a new memref.alloca with upper bound sizes,
+      followed by a memref.subview.
+
+    #### Return modes
+
+    This operation fails if at least one induction variable could not be
+    eliminated. In case the targeted op is already independent of induction
+    variables, this transform succeeds and returns the unmodified target op.
+
+    Otherwise, the returned handle points to a subset of the produced ops:
+    - memref.alloca: The returned handle points to the memref.subview op.
+
+    This transform op consumes the target handle and produces a result handle.
+  }];
+
+  let arguments = (ins PDL_Operation:$target, I64Attr:$num_loops);
+  let results = (outs PDL_Operation:$transformed);
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // MEMREF_TRANSFORM_OPS

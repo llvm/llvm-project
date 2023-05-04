@@ -9,13 +9,13 @@ define <32 x i1> @vector_interleave_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vfirst.m a0, v0
-; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v10, v8, a0
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vfirst.m a0, v8
-; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV32-NEXT:    vslide1down.vx v10, v10, a0
 ; RV32-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
@@ -122,13 +122,13 @@ define <32 x i1> @vector_interleave_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vfirst.m a0, v0
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    li a2, 32
 ; RV64-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v10, v8, a0
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vfirst.m a0, v8
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV64-NEXT:    vslide1down.vx v10, v10, a0
 ; RV64-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma

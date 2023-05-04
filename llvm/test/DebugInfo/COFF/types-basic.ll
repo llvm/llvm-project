@@ -221,7 +221,8 @@
 ; CHECK:       FunctionType: f (0x1002)
 ; CHECK:       CodeOffset: ?f@@YAXMN_J@Z+0x0
 ; CHECK:       Segment: 0x0
-; CHECK:       Flags [ (0x0)
+; CHECK:       Flags [ (0x80)
+; CHECK:         HasOptimizedDebugInfo (0x80)
 ; CHECK:       ]
 ; CHECK:       DisplayName: f
 ; CHECK:       LinkageName: ?f@@YAXMN_J@Z
