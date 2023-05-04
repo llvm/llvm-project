@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
 #define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
 
+#include "src/__support/GPU/utils.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
@@ -24,6 +25,16 @@ LIBC_INLINE void sleep_briefly() {
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif
+}
+
+/// Get the first active thread inside the lane.
+LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
+  return __builtin_ffsl(lane_mask) - 1;
+}
+
+/// Conditional that is only true for a single thread in a lane.
+LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
+  return gpu::get_lane_id() == get_first_lane_id(lane_mask);
 }
 
 } // namespace rpc

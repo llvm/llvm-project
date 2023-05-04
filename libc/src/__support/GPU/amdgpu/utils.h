@@ -106,7 +106,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Returns the id of the thread inside of an AMD wavefront executing together.
 [[clang::convergent]] LIBC_INLINE uint32_t get_lane_id() {
-  if (LANE_SIZE == 64)
+  if constexpr (LANE_SIZE == 64)
     return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
   else
     return __builtin_amdgcn_mbcnt_lo(~0u, 0u);
@@ -120,6 +120,16 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 /// Copies the value from the first active thread in the wavefront to the rest.
 [[clang::convergent]] LIBC_INLINE uint32_t broadcast_value(uint32_t x) {
   return __builtin_amdgcn_readfirstlane(x);
+}
+
+[[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+  // the lane_mask & gives the nvptx semantics when lane_mask is a subset of
+  // the active threads
+  if constexpr (LANE_SIZE == 64) {
+    return lane_mask & __builtin_amdgcn_ballot_w64(x);
+  } else {
+    return lane_mask & __builtin_amdgcn_ballot_w32(x);
+  }
 }
 
 /// Waits for all the threads in the block to converge and issues a fence.
