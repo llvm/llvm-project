@@ -653,7 +653,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
     if (dlinfo.dli_sname != nullptr) {
       OS << ' ';
       int res;
-      char *d = itaniumDemangle(dlinfo.dli_sname, nullptr, nullptr, &res);
+      char *d = itaniumDemangle(dlinfo.dli_sname, &res);
       if (!d)
         OS << dlinfo.dli_sname;
       else
