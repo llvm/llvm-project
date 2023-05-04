@@ -55,6 +55,8 @@ public:
   const lldb_private::RegisterInfo *
   GetRegisterInfoArray(uint32_t &count) override;
 
+  uint64_t GetStackFrameSize() override { return 512; }
+
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------
