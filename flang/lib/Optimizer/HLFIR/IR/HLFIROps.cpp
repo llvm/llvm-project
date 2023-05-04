@@ -1032,8 +1032,8 @@ mlir::LogicalResult hlfir::RegionAssignOp::verify() {
   if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(getRhsRegion())))
     return emitOpError(
         "right-hand side region must be terminated by an hlfir.yield");
-  // TODO: allow hlfir.elemental_addr.
-  if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(getLhsRegion())))
+  if (!mlir::isa_and_nonnull<hlfir::YieldOp, hlfir::ElementalAddrOp>(
+          getTerminator(getLhsRegion())))
     return emitOpError("left-hand side region must be terminated by an "
                        "hlfir.yield or hlfir.elemental_addr");
   return mlir::success();
@@ -1052,7 +1052,6 @@ static mlir::ParseResult parseYieldOpCleanup(mlir::OpAsmParser &parser,
     hlfir::YieldOp::ensureTerminator(cleanup, parser.getBuilder(),
                                      parser.getBuilder().getUnknownLoc());
   }
-
   return mlir::success();
 }
 
@@ -1064,6 +1063,42 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
     p.printRegion(cleanup, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/false);
   }
+}
+
+//===----------------------------------------------------------------------===//
+// ElementalAddrOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
+                                   mlir::OperationState &odsState,
+                                   mlir::Value shape) {
+  odsState.addOperands(shape);
+  mlir::Region *bodyRegion = odsState.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
+    unsigned dim = shapeType.getRank();
+    mlir::Type indexType = builder.getIndexType();
+    for (unsigned d = 0; d < dim; ++d)
+      bodyRegion->front().addArgument(indexType, odsState.location);
+  }
+  // Push cleanUp region.
+  odsState.addRegion();
+}
+
+mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
+  hlfir::YieldOp yieldOp =
+      mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
+  if (!yieldOp)
+    return emitOpError("body region must be terminated by an hlfir.yield");
+  mlir::Type elementAddrType = yieldOp.getEntity().getType();
+  if (!hlfir::isFortranVariableType(elementAddrType) ||
+      hlfir::getFortranElementOrSequenceType(elementAddrType)
+          .isa<fir::SequenceType>())
+    return emitOpError("body must compute the address of a scalar entity");
+  unsigned shapeRank = getShape().getType().cast<fir::ShapeType>().getRank();
+  if (shapeRank != getIndices().size())
+    return emitOpError("body number of indices must match shape rank");
+  return mlir::success();
 }
 
 #define GET_OP_CLASSES
