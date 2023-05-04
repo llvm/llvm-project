@@ -383,6 +383,9 @@ private:
   void PrivateResume();
   void StopProfileThread();
 
+  void RefineWatchpointStopInfo(nub_thread_t tid,
+                                struct DNBThreadStopInfo *stop_info);
+
   uint32_t Flags() const { return m_flags; }
   nub_state_t DoSIGSTOP(bool clear_bps_and_wps, bool allow_running,
                         uint32_t *thread_idx_ptr);
