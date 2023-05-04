@@ -5236,7 +5236,7 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
                                         const SimplifyQuery &Q,
                                         unsigned MaxRecurse) {
   if (all_of(Mask, [](int Elem) { return Elem == PoisonMaskElem; }))
-    return UndefValue::get(RetTy);
+    return PoisonValue::get(RetTy);
 
   auto *InVecTy = cast<VectorType>(Op0->getType());
   unsigned MaskNumElts = Mask.size();
@@ -5301,11 +5301,11 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
         })) {
       assert(isa<UndefValue>(Op1) && "Expected undef operand 1 for splat");
 
-      // Shuffle mask undefs become undefined constant result elements.
+      // Shuffle mask poisons become poison constant result elements.
       SmallVector<Constant *, 16> VecC(MaskNumElts, C);
       for (unsigned i = 0; i != MaskNumElts; ++i)
         if (Indices[i] == -1)
-          VecC[i] = UndefValue::get(C->getType());
+          VecC[i] = PoisonValue::get(C->getType());
       return ConstantVector::get(VecC);
     }
   }
