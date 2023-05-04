@@ -1103,7 +1103,6 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
 
   OS << "#include <arm_bf16.h>\n";
-  OS << "typedef __bf16 bfloat16_t;\n";
 
   OS << "typedef __SVFloat32_t svfloat32_t;\n";
   OS << "typedef __SVFloat64_t svfloat64_t;\n";
