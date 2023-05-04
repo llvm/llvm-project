@@ -37,6 +37,11 @@ namespace vector {
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
+
+/// Returns two dims that are greater than one if the transposition is applied
+/// on a 2D slice. Otherwise, returns a failure.
+FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector
