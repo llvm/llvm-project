@@ -25,6 +25,15 @@ public:
 
   CIRDataLayout(mlir::ModuleOp modOp);
   bool isBigEndian() { return bigEndian; }
+
+  // `useABI` is `true` if not using prefered alignment.
+  unsigned getAlignment(mlir::Type ty, bool useABI) const {
+    return useABI ? layout.getTypeABIAlignment(ty)
+                  : layout.getTypePreferredAlignment(ty);
+  }
+  unsigned getABITypeAlign(mlir::Type ty) const {
+    return getAlignment(ty, true);
+  }
 };
 
 } // namespace cir
