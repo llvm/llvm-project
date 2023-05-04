@@ -329,6 +329,8 @@ namespace llvm {
                          "in codegen and has no size");
       case Metadata:
         llvm_unreachable("Value type is metadata.");
+      case aarch64svcount: // FIXME: Not in the td.
+        return TypeSize::Scalable(16);
       }
     }
 
