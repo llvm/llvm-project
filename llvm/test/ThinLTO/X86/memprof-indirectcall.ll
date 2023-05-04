@@ -1,7 +1,7 @@
 ;; Tests callsite context graph generation for call graph containing indirect
 ;; calls. Currently this should result in conservative behavior, such that the
 ;; indirect call receives a null call in its graph node, to prevent subsequent
-;; cloning. Also tests graph and IR cloning.
+;; cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -64,35 +64,13 @@
 ; RUN:  -r=%t.o,_ZTVN10__cxxabiv117__class_type_infoE, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
-; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
-; RUN:  --check-prefix=STATS
+; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
 
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should only create a single clone of foo, for the direct call
 ;; from main allocating cold memory.
 ; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
-
-;; Try again but with distributed ThinLTO
-; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
-; RUN:  -thinlto-distributed-indexes \
-; RUN:  -r=%t.o,main,plx \
-; RUN:  -r=%t.o,_ZdaPv, \
-; RUN:  -r=%t.o,sleep, \
-; RUN:  -r=%t.o,_Znam, \
-; RUN:  -r=%t.o,_ZTVN10__cxxabiv120__si_class_type_infoE, \
-; RUN:  -r=%t.o,_ZTVN10__cxxabiv117__class_type_infoE, \
-; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
-; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
-; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
-; RUN:  --check-prefix=STATS
-
-; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
-;; We should only create a single clone of foo, for the direct call
-;; from main allocating cold memory.
-; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
 source_filename = "indirectcall.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -382,11 +360,6 @@ uselistorder ptr @_Z3foov, { 3, 2, 1, 0 }
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 6
 ; DUMP:		Clone of [[FOO]]
-
-
-; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
-; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
 
 
 ; DOT: digraph "postbuild" {
