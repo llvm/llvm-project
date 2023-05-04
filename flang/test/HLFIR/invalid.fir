@@ -607,3 +607,38 @@ func.func @bad_element_addr_4(%x: !fir.ref<!fir.array<20xf32>>, %y: !fir.ref<!fi
   }
   return
 }
+
+// -----
+func.func @bad_forall(%x : !fir.box<!fir.array<10xf32>>, %y: f32, %bad : !fir.ref<!fir.array<10xindex>>) {
+  // expected-error@+1 {{'hlfir.forall' op region #0 ('lb_region') failed to verify constraint: single block region that yields an integer scalar value}}
+  hlfir.forall lb {
+    hlfir.yield %bad : !fir.ref<!fir.array<10xindex>>
+  } ub {
+    %c10 = arith.constant 10 : index
+    hlfir.yield %c10 : index
+  } (%i : index) {
+    hlfir.region_assign {
+      hlfir.yield %y : f32
+    } to {
+      %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      hlfir.yield %xi : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_forall_2(%x : !fir.box<!fir.array<10xf32>>, %y: f32) {
+  // expected-error@+1 {{'hlfir.forall' op body region must only contain OrderedAssignmentTreeOpInterface operations or fir.end}}
+  hlfir.forall lb {
+    %c1 = arith.constant 1 : index
+    hlfir.yield %c1 : index
+  } ub {
+    %c10 = arith.constant 10 : index
+    hlfir.yield %c10 : index
+  } (%i : index) {
+    %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+    hlfir.assign %y to %xi : f32, !fir.ref<f32>
+  }
+  return
+}

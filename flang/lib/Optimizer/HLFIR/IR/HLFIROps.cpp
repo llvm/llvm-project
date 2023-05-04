@@ -1101,5 +1101,56 @@ mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// OrderedAssignmentTreeOpInterface
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::OrderedAssignmentTreeOpInterface::verifyImpl() {
+  if (mlir::Region *body = getSubTreeRegion())
+    if (!body->empty())
+      for (mlir::Operation &op : body->front())
+        if (!mlir::isa<hlfir::OrderedAssignmentTreeOpInterface, fir::FirEndOp>(
+                op))
+          return emitOpError(
+              "body region must only contain OrderedAssignmentTreeOpInterface "
+              "operations or fir.end");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ForallOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseForallOpBody(mlir::OpAsmParser &parser,
+                                           mlir::Region &body) {
+  mlir::OpAsmParser::Argument bodyArg;
+  if (parser.parseLParen() || parser.parseArgument(bodyArg) ||
+      parser.parseColon() || parser.parseType(bodyArg.type) ||
+      parser.parseRParen())
+    return mlir::failure();
+  if (parser.parseRegion(body, {bodyArg}))
+    return mlir::failure();
+  ensureTerminator(body, parser.getBuilder(),
+                   parser.getBuilder().getUnknownLoc());
+  return mlir::success();
+}
+
+static void printForallOpBody(mlir::OpAsmPrinter &p, hlfir::ForallOp forall,
+                              mlir::Region &body) {
+  mlir::Value forallIndex = forall.getForallIndexValue();
+  p << " (" << forallIndex << ": " << forallIndex.getType() << ") ";
+  p.printRegion(body, /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/false);
+}
+
+/// Predicate implementation of YieldIntegerOrEmpty.
+static bool yieldsIntegerOrEmpty(mlir::Region &region) {
+  if (region.empty())
+    return true;
+  auto yield = mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(region));
+  return yield && fir::isa_integer(yield.getEntity().getType());
+}
+
+#include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
