@@ -32,8 +32,10 @@ Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile &Obj,
   if (!SymNameOrErr)
     return SymNameOrErr.takeError();
 
-  std::string SymName =
-      Demangle ? demangle(*SymNameOrErr) : SymNameOrErr->str();
+  std::string SymName = (*SymNameOrErr).str();
+  if (Demangle)
+    SymName = demangle(SymName);
+
   if (SymbolDescription)
     SymName = getXCOFFSymbolDescription(createSymbolInfo(Obj, *SymI), SymName);
 
