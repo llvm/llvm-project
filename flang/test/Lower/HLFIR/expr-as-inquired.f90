@@ -16,7 +16,8 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (!fir.heap<!fir.array<?xf32>>) -> i64
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : i64
 ! CHECK:  %[[VAL_8:.*]] = arith.cmpi ne, %[[VAL_6]], %[[VAL_7]] : i64
-! CHECK:  hlfir.assign %[[VAL_8]] to %[[VAL_2]]#0 : i1, !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
+! CHECK:  hlfir.assign %[[VAL_9]] to %[[VAL_2]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 ! CHECK:  return
 ! CHECK:  }
 
