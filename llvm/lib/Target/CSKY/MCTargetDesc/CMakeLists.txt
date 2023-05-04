@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMCSKYDesc
 
   LINK_COMPONENTS
   CSKYInfo
+  CodeGen
   MC
   Support
   TargetParser
