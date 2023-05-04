@@ -112,7 +112,7 @@ ThreadProperties::~ThreadProperties() = default;
 
 const RegularExpression *ThreadProperties::GetSymbolsToAvoidRegexp() {
   const uint32_t idx = ePropertyStepAvoidRegex;
-  return m_collection_sp->GetPropertyAtIndexAsOptionValueRegex(idx);
+  return GetPropertyAtIndexAs<const RegularExpression *>(idx);
 }
 
 FileSpecList ThreadProperties::GetLibrariesToAvoid() const {
@@ -125,26 +125,26 @@ FileSpecList ThreadProperties::GetLibrariesToAvoid() const {
 
 bool ThreadProperties::GetTraceEnabledState() const {
   const uint32_t idx = ePropertyEnableThreadTrace;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
-      g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 bool ThreadProperties::GetStepInAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepInAvoidsNoDebug;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
-      g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 bool ThreadProperties::GetStepOutAvoidsNoDebug() const {
   const uint32_t idx = ePropertyStepOutAvoidsNoDebug;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
-      g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_thread_properties[idx].default_uint_value != 0);
 }
 
 uint64_t ThreadProperties::GetMaxBacktraceDepth() const {
   const uint32_t idx = ePropertyMaxBacktraceDepth;
-  return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
-      g_thread_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<uint64_t>(
+      idx, g_thread_properties[idx].default_uint_value);
 }
 
 // Thread Event Data
