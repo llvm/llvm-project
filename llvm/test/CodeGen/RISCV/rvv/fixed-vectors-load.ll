@@ -48,9 +48,7 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: load_v5i8_align1:
@@ -82,9 +80,7 @@ define <5 x i8> @load_v5i8_align1(ptr %p) {
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
 ; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    ret
   %x = load <5 x i8>, ptr %p, align 1
   ret <5 x i8> %x
@@ -195,8 +191,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV32-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    vslide1down.vx v8, v8, a1
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
-; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vand.vi v8, v8, 1
 ; RV32-NEXT:    vmsne.vi v0, v8, 0
 ; RV32-NEXT:    ret
@@ -221,8 +216,7 @@ define <6 x i1> @load_v6i1(ptr %p) {
 ; RV64-NEXT:    vslide1down.vx v8, v8, a3
 ; RV64-NEXT:    vslide1down.vx v8, v8, a2
 ; RV64-NEXT:    vslide1down.vx v8, v8, a1
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
-; RV64-NEXT:    vslide1down.vx v8, v8, a0
+; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vand.vi v8, v8, 1
 ; RV64-NEXT:    vmsne.vi v0, v8, 0
 ; RV64-NEXT:    ret

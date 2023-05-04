@@ -28,8 +28,10 @@ enum : int {
   demangle_success = 0,
 };
 
-char *itaniumDemangle(const char *mangled_name, char *buf, size_t *n,
-                      int *status);
+/// Returns a non-NULL pointer to a NUL-terminated C style string
+/// that should be explicitly freed, if successful. Otherwise, may return
+/// nullptr if mangled_name is not a valid mangling or is nullptr.
+char *itaniumDemangle(const char *mangled_name);
 
 enum MSDemangleFlags {
   MSDF_None = 0,

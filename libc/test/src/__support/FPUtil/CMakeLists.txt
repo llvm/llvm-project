@@ -1,10 +1,10 @@
-add_custom_target(libc_fputil_unittests)
+add_custom_target(libc-fputil-tests)
 
 add_fp_unittest(
   dyadic_float_test
   NEED_MPFR
   SUITE
-    libc_fputil_unittests
+    libc-fputil-tests
   SRCS
     dyadic_float_test.cpp
   DEPENDS

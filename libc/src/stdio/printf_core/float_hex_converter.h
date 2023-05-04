@@ -29,9 +29,9 @@ using MantissaInt = fputil::FPBits<long double>::UIntType;
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
   // All of the letters will be defined relative to variable a, which will be
-  // the appropriate case based on the name of the conversion.
-  // Since the name of the conversion is also 'a', we can just use it directly.
-  const char a = to_conv.conv_name;
+  // the appropriate case based on the name of the conversion. This converts any
+  // conversion name into the letter 'a' with the appropriate case.
+  const char a = (to_conv.conv_name & 32) | 'A';
 
   bool is_negative;
   int exponent;

@@ -59,12 +59,14 @@ define i1 @unordered_floating_point_compare_on_v32f32(<32 x float> %a_vec) {
 ; CHECK-NEXT:    fcmgt v4.4s, v4.4s, #0.0
 ; CHECK-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    uzp1 v6.8h, v6.8h, v7.8h
-; CHECK-NEXT:    uzp1 v1.8h, v4.8h, v5.8h
+; CHECK-NEXT:    uzp1 v1.8h, v6.8h, v7.8h
+; CHECK-NEXT:    uzp1 v3.8h, v4.8h, v5.8h
 ; CHECK-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v6.16b
+; CHECK-NEXT:    uzp1 v1.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    shl v0.16b, v0.16b, #7
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    bic w0, w9, w8

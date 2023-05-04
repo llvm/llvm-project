@@ -1116,9 +1116,13 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
   for (const VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
-    for (const VPRecipeBase &Recipe : *VPBB)
-      for (VPValue *Def : Recipe.definedValues())
-        assignSlot(Def);
+    assignSlots(VPBB);
+}
+
+void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
+  for (const VPRecipeBase &Recipe : *VPBB)
+    for (VPValue *Def : Recipe.definedValues())
+      assignSlot(Def);
 }
 
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
