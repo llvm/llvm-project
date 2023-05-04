@@ -408,8 +408,6 @@ public:
   ///     A boolean value indicating whether the path was updated.
   bool RemoveLastPathComponent();
 
-  ConstString GetLastPathComponent() const;
-
 protected:
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
