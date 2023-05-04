@@ -146,7 +146,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    // TODO: Emit this only if FromT != ToT.
+    if (FromT == ToT)
+      return true;
+
     return this->emitCast(*FromT, *ToT, CE);
   }
 
@@ -188,7 +190,12 @@ bool ByteCodeExprGen<Emitter>::VisitFloatingLiteral(const FloatingLiteral *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *PE) {
-  return this->visit(PE->getSubExpr());
+  const Expr *SubExpr = PE->getSubExpr();
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  return this->visit(SubExpr);
 }
 
 template <class Emitter>
@@ -793,12 +800,10 @@ bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
   const Expr *SubExpr = E->getSubExpr();
 
   assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
-  if (!this->visit(SubExpr))
-    return false;
-
   if (DiscardResult)
-    return this->emitPopPtr(E);
-  return true;
+    return this->discard(SubExpr);
+
+  return this->visit(SubExpr);
 }
 
 template <class Emitter>
@@ -1773,6 +1778,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return DiscardResult ? this->emitPopPtr(E) : true;
     }
 
+    if (T == PT_Float) {
+      return DiscardResult ? this->emitIncfPop(getRoundingMode(E), E)
+                           : this->emitIncf(getRoundingMode(E), E);
+    }
+
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
   }
   case UO_PostDec: { // x--
@@ -1784,6 +1794,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
 
       return DiscardResult ? this->emitPopPtr(E) : true;
+    }
+
+    if (T == PT_Float) {
+      return DiscardResult ? this->emitDecfPop(getRoundingMode(E), E)
+                           : this->emitDecf(getRoundingMode(E), E);
     }
 
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
@@ -1800,9 +1815,19 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     // Post-inc and pre-inc are the same if the value is to be discarded.
-    if (DiscardResult)
+    if (DiscardResult) {
+      if (T == PT_Float)
+        return this->emitIncfPop(getRoundingMode(E), E);
       return this->emitIncPop(*T, E);
+    }
 
+    if (T == PT_Float) {
+      const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
+      this->emitLoadFloat(E);
+      this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E);
+      this->emitAddf(getRoundingMode(E), E);
+      return this->emitStoreFloat(E);
+    }
     this->emitLoad(*T, E);
     this->emitConst(1, E);
     this->emitAdd(*T, E);
@@ -1820,9 +1845,19 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     // Post-dec and pre-dec are the same if the value is to be discarded.
-    if (DiscardResult)
+    if (DiscardResult) {
+      if (T == PT_Float)
+        return this->emitDecfPop(getRoundingMode(E), E);
       return this->emitDecPop(*T, E);
+    }
 
+    if (T == PT_Float) {
+      const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
+      this->emitLoadFloat(E);
+      this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E);
+      this->emitSubf(getRoundingMode(E), E);
+      return this->emitStoreFloat(E);
+    }
     this->emitLoad(*T, E);
     this->emitConst(1, E);
     this->emitSub(*T, E);
@@ -1872,6 +1907,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
+  if (DiscardResult)
+    return true;
+
   const auto *D = E->getDecl();
 
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {

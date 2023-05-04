@@ -136,6 +136,48 @@ def AMDGPU_RawBufferStoreOp :
   let hasVerifier = 1;
 }
 
+// Raw buffer atomic compare-and-swap
+def AMDGPU_RawBufferAtomicCmpswapOp :
+    AMDGPU_Op<"raw_buffer_atomic_cmpswap", [
+      AttrSizedOperandSegments,
+      AllTypesMatch<["src", "cmp", "value"]>,
+      AllElementTypesMatch<["value", "memref"]>]>,
+    Arguments<(ins AnyTypeOf<[I32, I64, F32, F64]>:$src,
+                   AnyType:$cmp,
+                   Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
+                   Variadic<I32>:$indices,
+                   DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
+                   OptionalAttr<I32Attr>:$indexOffset,
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyType:$value)> {
+
+  let summary = "Raw Buffer Atomic compare-and-swap";
+  let description = [{
+    The `amdgpu.raw_buffer_atomic_cmpswap` op is a wrapper around the
+    buffer-based atomic compare-and-swap min available on AMD GPUs.
+
+    The index into the buffer is computed as for `memref.store` with the addition
+    of `indexOffset` (which is used to aid in emitting vectorized code) and,
+    if present `sgprOffset` (which is added after bounds checks and includes
+    any non-zero offset on the memref type).
+
+    All indexing components are given in terms of the memref's element size, not
+    the byte lengths required by the intrinsic.
+
+    Out of bounds atomic operations are ignored in hardware.
+
+    See `amdgpu.raw_buffer_load` for a description of how the underlying
+    instruction is constructed.
+  }];
+  let assemblyFormat = [{
+    attr-dict $src `,` $cmp `->` $memref `[` $indices `]`
+      (`sgprOffset` $sgprOffset^)? `:`
+      type($value) `->` type($memref) `,` type($indices)
+  }];
+  let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+}
+
 // Raw buffer atomic floating point add
 def AMDGPU_RawBufferAtomicFaddOp :
     AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
@@ -179,7 +221,7 @@ def AMDGPU_RawBufferAtomicFaddOp :
 def AMDGPU_RawBufferAtomicFmaxOp :
     AMDGPU_Op<"raw_buffer_atomic_fmax", [AllElementTypesMatch<["value", "memref"]>,
       AttrSizedOperandSegments]>,
-    Arguments<(ins F32:$value,
+    Arguments<(ins AnyTypeOf<[F32, F64]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,

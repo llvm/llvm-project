@@ -100,7 +100,7 @@ on support follow.
      ``Zbkc``         Supported
      ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
      ``Zbs``          Supported
-     ``Zdinx``        Assembly Support
+     ``Zdinx``        Assembly Support for RV32. Full support for RV64.
      ``Zfh``          Supported
      ``Zfhmin``       Supported
      ``Zfinx``        Supported

@@ -478,8 +478,7 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
     if (auto *WorkspaceEdit = Workspace->getObject("workspaceEdit")) {
       if (auto DocumentChanges = WorkspaceEdit->getBoolean("documentChanges"))
         R.DocumentChanges = *DocumentChanges;
-      if (const auto& ChangeAnnotation =
-              WorkspaceEdit->getObject("changeAnnotationSupport")) {
+      if (WorkspaceEdit->getObject("changeAnnotationSupport")) {
         R.ChangeAnnotation = true;
       }
     }

@@ -732,8 +732,16 @@ void DebugLoclistWriter::addList(AttrInfo &AttrVal,
 uint32_t DebugLoclistWriter::LoclistBaseOffset = 0;
 void DebugLoclistWriter::finalizeDWARF5(
     DebugInfoBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter) {
-  if (LocBodyBuffer->empty())
+  if (LocBodyBuffer->empty()) {
+    std::optional<AttrInfo> AttrInfoVal =
+        findAttributeInfo(CU.getUnitDIE(), dwarf::DW_AT_loclists_base);
+    // Pointing to first one, because it doesn't matter. There are no uses of it
+    // in this CU.
+    if (!isSplitDwarf() && AttrInfoVal)
+      DebugInfoPatcher.addLE32Patch(AttrInfoVal->Offset,
+                                    getDWARF5RngListLocListHeaderSize());
     return;
+  }
 
   std::unique_ptr<DebugBufferVector> LocArrayBuffer =
       std::make_unique<DebugBufferVector>();

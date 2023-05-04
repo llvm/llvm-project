@@ -3964,7 +3964,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
       TUKind, CacheCodeCompletionResults, IncludeBriefCommentsInCodeCompletion,
       /*AllowPCHWithCompilerErrors=*/true, SkipFunctionBodies, SingleFileParse,
       /*UserFilesAreVolatile=*/true, ForSerialization, RetainExcludedCB,
-      CXXIdx->getPCHContainerOperations()->getRawReader().getFormat(),
+      CXXIdx->getPCHContainerOperations()->getRawReader().getFormats().front(),
       &ErrUnit));
 
   // Early failures in LoadFromCommandLine may return with ErrUnit unset.

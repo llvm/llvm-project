@@ -29,12 +29,14 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
+#include <functional>
 #include <optional>
 
 using namespace clang;
@@ -368,9 +370,13 @@ public:
   void mangleVariableEncoding(const VarDecl *VD);
   void mangleMemberDataPointer(const CXXRecordDecl *RD, const ValueDecl *VD,
                                StringRef Prefix = "$");
+  void mangleMemberDataPointerInClassNTTP(const CXXRecordDecl *,
+                                          const ValueDecl *);
   void mangleMemberFunctionPointer(const CXXRecordDecl *RD,
                                    const CXXMethodDecl *MD,
                                    StringRef Prefix = "$");
+  void mangleMemberFunctionPointerInClassNTTP(const CXXRecordDecl *RD,
+                                              const CXXMethodDecl *MD);
   void mangleVirtualMemPtrThunk(const CXXMethodDecl *MD,
                                 const MethodVFTableLocation &ML);
   void mangleNumber(int64_t Number);
@@ -711,6 +717,28 @@ void MicrosoftCXXNameMangler::mangleMemberDataPointer(const CXXRecordDecl *RD,
     mangleNumber(VBTableOffset);
 }
 
+void MicrosoftCXXNameMangler::mangleMemberDataPointerInClassNTTP(
+    const CXXRecordDecl *RD, const ValueDecl *VD) {
+  MSInheritanceModel IM = RD->getMSInheritanceModel();
+  // <nttp-class-member-data-pointer> ::= <member-data-pointer>
+  //                                  ::= N
+  //                                  ::= 8 <postfix> @ <unqualified-name> @
+
+  if (IM != MSInheritanceModel::Single && IM != MSInheritanceModel::Multiple)
+    return mangleMemberDataPointer(RD, VD, "");
+
+  if (!VD) {
+    Out << 'N';
+    return;
+  }
+
+  Out << '8';
+  mangleNestedName(VD);
+  Out << '@';
+  mangleUnqualifiedName(VD);
+  Out << '@';
+}
+
 void
 MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
                                                      const CXXMethodDecl *MD,
@@ -773,6 +801,34 @@ MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
     mangleNumber(VBPtrOffset);
   if (inheritanceModelHasVBTableOffsetField(IM))
     mangleNumber(VBTableOffset);
+}
+
+void MicrosoftCXXNameMangler::mangleMemberFunctionPointerInClassNTTP(
+    const CXXRecordDecl *RD, const CXXMethodDecl *MD) {
+  // <nttp-class-member-function-pointer> ::= <member-function-pointer>
+  //                           ::= N
+  //                           ::= E? <virtual-mem-ptr-thunk>
+  //                           ::= E? <mangled-name> <type-encoding>
+
+  if (!MD) {
+    if (RD->getMSInheritanceModel() != MSInheritanceModel::Single)
+      return mangleMemberFunctionPointer(RD, MD, "");
+
+    Out << 'N';
+    return;
+  }
+
+  Out << "E?";
+  if (MD->isVirtual()) {
+    MicrosoftVTableContext *VTContext =
+        cast<MicrosoftVTableContext>(getASTContext().getVTableContext());
+    MethodVFTableLocation ML =
+        VTContext->getMethodVFTableLocation(GlobalDecl(MD));
+    mangleVirtualMemPtrThunk(MD, ML);
+  } else {
+    mangleName(MD);
+    mangleFunctionEncoding(MD, /*ShouldMangle=*/true);
+  }
 }
 
 void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
@@ -1188,6 +1244,11 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 //           ::= <substitution> [<postfix>]
 void MicrosoftCXXNameMangler::mangleNestedName(GlobalDecl GD) {
   const NamedDecl *ND = cast<NamedDecl>(GD.getDecl());
+
+  if (const auto *ID = dyn_cast<IndirectFieldDecl>(ND))
+    for (unsigned I = 1, IE = ID->getChainingSize(); I < IE; ++I)
+      mangleSourceName("<unnamed-tag>");
+
   const DeclContext *DC = getEffectiveDeclContext(ND);
   while (!DC->isTranslationUnit()) {
     if (isa<TagDecl>(ND) || isa<VarDecl>(ND)) {
@@ -1570,7 +1631,6 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
   //                  ::= 8 <class> <unqualified-name> @
   //                  ::= A <type> <non-negative integer>  # float
   //                  ::= B <type> <non-negative integer>  # double
-  //                  ::= E <mangled-name>             # reference to D
   //                  # pointer to member, by component value
   //                  ::= F <number> <number>
   //                  ::= G <number> <number> <number>
@@ -1615,7 +1675,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
       mangleTemplateArgValue(TPO->getType().getUnqualifiedType(),
                              TPO->getValue());
     } else {
-      mangle(ND, TA.getParamTypeForDecl()->isReferenceType() ? "$E?" : "$1?");
+      mangle(ND, "$1?");
     }
     break;
   }
@@ -1744,34 +1804,52 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
         // FIXME: This can only happen as an extension. Invent a mangling.
         break;
       } else if (auto *VD = Base.dyn_cast<const ValueDecl*>()) {
-        Out << (T->isReferenceType() ? "E" : "1");
+        Out << "E";
         mangle(VD);
       } else {
         break;
       }
     } else {
-      unsigned NumAts = 0;
-      if (T->isPointerType()) {
+      if (T->isPointerType())
         Out << "5";
-        ++NumAts;
-      }
 
-      QualType T = Base.getType();
+      SmallVector<char, 2> EntryTypes;
+      SmallVector<std::function<void()>, 2> EntryManglers;
+      QualType ET = Base.getType();
       for (APValue::LValuePathEntry E : V.getLValuePath()) {
-        // We don't know how to mangle array subscripting yet.
-        if (T->isArrayType())
-          goto mangling_unknown;
+        if (auto *AT = ET->getAsArrayTypeUnsafe()) {
+          EntryTypes.push_back('C');
+          EntryManglers.push_back([this, I = E.getAsArrayIndex()] {
+            Out << '0';
+            mangleNumber(I);
+            Out << '@';
+          });
+          ET = AT->getElementType();
+          continue;
+        }
 
         const Decl *D = E.getAsBaseOrMember().getPointer();
-        auto *FD = dyn_cast<FieldDecl>(D);
-        // We don't know how to mangle derived-to-base conversions yet.
-        if (!FD)
-          goto mangling_unknown;
+        if (auto *FD = dyn_cast<FieldDecl>(D)) {
+          ET = FD->getType();
+          if (const auto *RD = ET->getAsRecordDecl())
+            if (RD->isAnonymousStructOrUnion())
+              continue;
+        } else {
+          ET = getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+          // Bug in MSVC: fully qualified name of base class should be used for
+          // mangling to prevent collisions e.g. on base classes with same names
+          // in different namespaces.
+        }
 
-        Out << "6";
-        ++NumAts;
-        T = FD->getType();
+        EntryTypes.push_back('6');
+        EntryManglers.push_back([this, D] {
+          mangleUnqualifiedName(cast<NamedDecl>(D));
+          Out << '@';
+        });
       }
+
+      for (auto I = EntryTypes.rbegin(), E = EntryTypes.rend(); I != E; ++I)
+        Out << *I;
 
       auto *VD = Base.dyn_cast<const ValueDecl*>();
       if (!VD)
@@ -1779,11 +1857,9 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
       Out << "E";
       mangle(VD);
 
-      for (APValue::LValuePathEntry E : V.getLValuePath()) {
-        const Decl *D = E.getAsBaseOrMember().getPointer();
-        mangleUnqualifiedName(cast<FieldDecl>(D));
-      }
-      for (unsigned I = 0; I != NumAts; ++I)
+      for (const std::function<void()> &Mangler : EntryManglers)
+        Mangler();
+      if (T->isPointerType())
         Out << '@';
     }
 
@@ -1794,20 +1870,14 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     if (WithScalarType)
       mangleType(T, SourceRange(), QMM_Escape);
 
-    // FIXME: The below manglings don't include a conversion, so bail if there
-    // would be one. MSVC mangles the (possibly converted) value of the
-    // pointer-to-member object as if it were a struct, leading to collisions
-    // in some cases.
-    if (!V.getMemberPointerPath().empty())
-      break;
-
     const CXXRecordDecl *RD =
         T->castAs<MemberPointerType>()->getMostRecentCXXRecordDecl();
     const ValueDecl *D = V.getMemberPointerDecl();
     if (T->isMemberDataPointerType())
-      mangleMemberDataPointer(RD, D, "");
+      mangleMemberDataPointerInClassNTTP(RD, D);
     else
-      mangleMemberFunctionPointer(RD, cast_or_null<CXXMethodDecl>(D), "");
+      mangleMemberFunctionPointerInClassNTTP(RD,
+                                             cast_or_null<CXXMethodDecl>(D));
     return;
   }
 
@@ -1895,7 +1965,6 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     break;
   }
 
-mangling_unknown:
   DiagnosticsEngine &Diags = Context.getDiags();
   unsigned DiagID = Diags.getCustomDiagID(
       DiagnosticsEngine::Error, "cannot mangle this template argument yet");

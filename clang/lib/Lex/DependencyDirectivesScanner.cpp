@@ -652,9 +652,22 @@ bool Scanner::lexPragma(const char *&First, const char *const End) {
     return false;
   }
 
-  // #pragma clang.
-  if (!isNextIdentifierOrSkipLine("module", First, End))
+  FoundId = tryLexIdentifierOrSkipLine(First, End);
+  if (!FoundId)
     return false;
+  Id = *FoundId;
+
+  // #pragma clang system_header
+  if (Id == "system_header") {
+    lexPPDirectiveBody(First, End);
+    pushDirective(pp_pragma_system_header);
+    return false;
+  }
+
+  if (Id != "module") {
+    skipLine(First, End);
+    return false;
+  }
 
   // #pragma clang module.
   if (!isNextIdentifierOrSkipLine("import", First, End))
