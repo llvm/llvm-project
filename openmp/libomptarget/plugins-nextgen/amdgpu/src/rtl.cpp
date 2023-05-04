@@ -707,15 +707,13 @@ struct AMDGPUSignalTy {
   }
 
   /// Wait until the signal gets a zero value.
-  Error wait(const uint64_t active_timeout = 0) const {
-    if (active_timeout) {
-      hsa_signal_value_t got = 1;
-      got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
-                                      active_timeout, HSA_WAIT_STATE_ACTIVE);
-      if (got == 0)
+  Error wait(const uint64_t ActiveTimeout = 0) const {
+    if (ActiveTimeout) {
+      hsa_signal_value_t Got = 1;
+      Got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+                                      ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
+      if (Got == 0)
         return Plugin::success();
-      // printf(" BUSY_WAIT %ld EXCEEDED FOR SIGNAL:%p\n",active_timeout,
-      // &Signal);
     }
     while (hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
                                      UINT64_MAX, HSA_WAIT_STATE_BLOCKED) != 0)
@@ -1130,6 +1128,9 @@ private:
   /// Mutex to protect stream's management.
   mutable std::mutex Mutex;
 
+  /// Timeout hint for HSA actively waiting for signal value to change
+  const uint64_t StreamBusyWaitMicroseconds;
+
   /// Return the current number of asychronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -1515,7 +1516,7 @@ public:
       return Plugin::success();
 
     // Wait until all previous operations on the stream have completed.
-    if (auto Err = Slots[last()].Signal->wait(KernelBusyWaitTics))
+    if (auto Err = Slots[last()].Signal->wait(StreamBusyWaitMicroseconds))
       return Err;
 
     // Reset the stream and perform all pending post actions.
@@ -1826,9 +1827,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                1 * 1024 * 1024), // 1MB
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
                                64),
-        OMPX_KernelBusyWait("LIBOMPTARGET_AMDGPU_KERNEL_BUSYWAIT", 0),
-        OMPX_DataBusyWait("LIBOMPTARGET_AMDGPU_DATA_BUSYWAIT", 0),
         OMPX_ForceSyncRegions("OMPX_FORCE_SYNC_REGIONS", 0),
+        OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         AMDGPUStreamManager(*this), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice),
         Queues() {}
@@ -1919,8 +1919,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     const uint32_t NumQueues = std::min(OMPX_NumQueues.get(), MaxQueues);
     const uint32_t QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
 
-    KernelBusyWaitTics = OMPX_KernelBusyWait;
-    DataBusyWaitTics = OMPX_DataBusyWait;
+    KernelBusyWaitTics = OMPX_StreamBusyWait;
+    DataBusyWaitTics = OMPX_StreamBusyWait;
 
     // Construct and initialize each device queue.
     Queues = std::vector<AMDGPUQueueTy>(NumQueues);
@@ -1993,8 +1993,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  uint64_t getDataBusyWaitTics() const { return DataBusyWaitTics; }
-  uint64_t getKernelBusyWaitTics() const { return KernelBusyWaitTics; }
+  const uint64_t getStreamBusyWaitMicroseconds() const {
+    return OMPX_StreamBusyWait;
+  }
 
   Expected<std::unique_ptr<MemoryBuffer>>
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
@@ -2262,7 +2263,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
               Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
         return Err;
 
-      if (auto Err = Signal.wait(getDataBusyWaitTics()))
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
         return Err;
 
       OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(Signal.get()););
@@ -2323,7 +2324,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
               Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
         return Err;
 
-      if (auto Err = Signal.wait(getDataBusyWaitTics()))
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
         return Err;
 
       OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(Signal.get()););
@@ -2588,14 +2589,13 @@ private:
   /// will be created.
   UInt32Envar OMPX_InitialNumSignals;
 
-  /// Environment variables to set the time to wait in active state before
-  /// switching to blocked state. The default 0 goes directly to blocked state.
-  UInt32Envar OMPX_KernelBusyWait;
-  UInt32Envar OMPX_DataBusyWait;
-
   /// Envar to force synchronous target regions. The default 0 uses an
   /// asynchronous implementation.
   UInt32Envar OMPX_ForceSyncRegions;
+  /// switching to blocked state. The default 2000000 busywaits for 2 seconds
+  /// before going into a blocking HSA wait state. The unit for these variables
+  /// are microseconds.
+  UInt32Envar OMPX_StreamBusyWait;
 
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
@@ -2710,7 +2710,7 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
       SignalManager(Device.getSignalManager()),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0),
-      KernelBusyWaitTics(Device.getKernelBusyWaitTics()) {}
+      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.

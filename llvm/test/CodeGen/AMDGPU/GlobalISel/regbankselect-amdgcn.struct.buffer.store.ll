@@ -17,7 +17,7 @@ define amdgpu_ps void @struct_buffer_store__sgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr(s32) = PRED_COPY $vgpr1
   ; CHECK-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr(s32) = PRED_COPY $vgpr2
   ; CHECK-NEXT:   [[PRED_COPY7:%[0-9]+]]:sgpr(s32) = PRED_COPY $sgpr6
-  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[PRED_COPY7]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[PRED_COPY7]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -41,7 +41,7 @@ define amdgpu_ps void @struct_buffer_store__sgpr_rsrc__sgpr_val__sgpr_vindex__sg
   ; CHECK-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr(s32) = PRED_COPY [[PRED_COPY4]](s32)
   ; CHECK-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr(s32) = PRED_COPY [[PRED_COPY5]](s32)
   ; CHECK-NEXT:   [[PRED_COPY10:%[0-9]+]]:vgpr(s32) = PRED_COPY [[PRED_COPY6]](s32)
-  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY8]](s32), [[BUILD_VECTOR]](<4 x s32>), [[PRED_COPY9]](s32), [[PRED_COPY10]], [[PRED_COPY7]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY8]](s32), [[BUILD_VECTOR]](<4 x s32>), [[PRED_COPY9]](s32), [[PRED_COPY10]], [[PRED_COPY7]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -87,7 +87,7 @@ define amdgpu_ps void @struct_buffer_store__vgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR1]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[PRED_COPY7]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR1]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[PRED_COPY7]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -133,7 +133,7 @@ define amdgpu_ps void @struct_buffer_store__sgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[V_READFIRSTLANE_B32_]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[V_READFIRSTLANE_B32_]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -191,7 +191,7 @@ define amdgpu_ps void @struct_buffer_store__vgpr_rsrc__vgpr_val__vgpr_vindex__vg
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR1]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[V_READFIRSTLANE_B32_4]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; CHECK-NEXT:   G_AMDGPU_BUFFER_STORE [[PRED_COPY4]](s32), [[BUILD_VECTOR1]](<4 x s32>), [[PRED_COPY5]](s32), [[PRED_COPY6]], [[V_READFIRSTLANE_B32_4]], 0, 0, -1 :: (dereferenceable store (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}

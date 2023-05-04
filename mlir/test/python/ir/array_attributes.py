@@ -365,3 +365,20 @@ def testGetDenseElementsUI64():
     # CHECK: {{\[}}4 5 6]]
     print(np.array(attr))
 
+
+# CHECK-LABEL: TEST: testGetDenseElementsIndex
+@run
+def testGetDenseElementsIndex():
+  with Context(), Location.unknown():
+    idx_type = IndexType.get()
+    array = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+    attr = DenseElementsAttr.get(array, type=idx_type)
+    # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xindex>
+    print(attr)
+    arr = np.array(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(arr)
+    # CHECK: True
+    print(arr.dtype == np.int64)
+

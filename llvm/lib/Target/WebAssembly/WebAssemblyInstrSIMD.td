@@ -376,7 +376,7 @@ multiclass SIMDStoreLane<Vec vec, bits<32> simdop> {
            [], name#"\t${off}(${addr})$p2align, $vec, $idx",
            name#"\t$off$p2align, $idx", simdop>;
   defm STORE_LANE_#vec#_A64 :
-    SIMD_I<(outs V128:$dst),
+    SIMD_I<(outs),
            (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
                 I64:$addr, V128:$vec),
            (outs), (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx),

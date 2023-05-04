@@ -99,6 +99,8 @@ public:
   void spawn(std::function<void()> f, bool Sequential = false);
 
   void sync() const { L.sync(); }
+
+  bool isParallel() const { return Parallel; }
 };
 
 namespace detail {

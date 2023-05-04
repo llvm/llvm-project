@@ -2254,6 +2254,11 @@ class VPlan {
   /// Values used outside the plan.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
+  /// Mapping from SCEVs to the VPValues representing their expansions.
+  /// NOTE: This mapping is temporary and will be removed once all users have
+  /// been modeled in VPlan directly.
+  DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
+
 public:
   VPlan(VPBasicBlock *Entry = nullptr) : Entry(Entry) {
     if (Entry)
@@ -2415,6 +2420,19 @@ public:
 
   const MapVector<PHINode *, VPLiveOut *> &getLiveOuts() const {
     return LiveOuts;
+  }
+
+  VPValue *getSCEVExpansion(const SCEV *S) const {
+    auto I = SCEVToExpansion.find(S);
+    if (I == SCEVToExpansion.end())
+      return nullptr;
+    return I->second;
+  }
+
+  void addSCEVExpansion(const SCEV *S, VPValue *V) {
+    assert(SCEVToExpansion.find(S) == SCEVToExpansion.end() &&
+           "SCEV already expanded");
+    SCEVToExpansion[S] = V;
   }
 
 private:
