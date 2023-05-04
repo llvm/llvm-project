@@ -9426,12 +9426,21 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
-def err_incorrect_defaulted_comparison_constexpr : Error<
+def ext_defaulted_comparison_constexpr_mismatch : Extension<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
-  "three-way comparison operator}0 "
-  "cannot be declared %select{constexpr|consteval}2 because "
-  "%select{it|the corresponding implicit 'operator=='}0 "
-  "invokes a non-constexpr comparison function">;
+  "three-way comparison operator}0 that is "
+  "declared %select{constexpr|consteval}2 but"
+  "%select{|for which the corresponding implicit 'operator==' }0 "
+  "invokes a non-constexpr comparison function is a C++23 extension">,
+  InGroup<DiagGroup<"c++23-default-comp-relaxed-constexpr">>;
+def warn_cxx23_compat_defaulted_comparison_constexpr_mismatch : Warning<
+  "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
+  "three-way comparison operator}0 that is "
+  "declared %select{constexpr|consteval}2 but"
+  "%select{|for which the corresponding implicit 'operator==' }0 "
+  "invokes a non-constexpr comparison function is incompatible with C++ "
+  "standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
   "%select{|member %1|base class %1}0">;

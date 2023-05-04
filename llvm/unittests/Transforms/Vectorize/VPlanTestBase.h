@@ -78,8 +78,7 @@ protected:
     auto Plan = VPlan::createInitialVPlan(
         SE->getBackedgeTakenCount(LI->getLoopFor(LoopHeader)), *SE);
     VPlanHCFGBuilder HCFGBuilder(LI->getLoopFor(LoopHeader), LI.get(), *Plan);
-    VPBasicBlock *EntryVPBB = HCFGBuilder.buildPlainCFG();
-    Plan->setEntry(EntryVPBB);
+    HCFGBuilder.buildPlainCFG();
     return Plan;
   }
 };

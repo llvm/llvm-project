@@ -2305,12 +2305,6 @@ public:
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
-  VPBasicBlock *setEntry(VPBasicBlock *Block) {
-    Entry = Block;
-    Block->setPlan(this);
-    return Entry;
-  }
-
   /// The trip count of the original loop.
   VPValue *getTripCount() const {
     assert(TripCount && "trip count needs to be set before accessing it");
