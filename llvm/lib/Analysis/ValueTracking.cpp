@@ -4728,7 +4728,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         break;
       }
       case Intrinsic::minnum:
-      case Intrinsic::maxnum: {
+      case Intrinsic::maxnum:
+      case Intrinsic::minimum:
+      case Intrinsic::maximum: {
         KnownFPClass Known2;
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                             Known, Depth + 1, Q, TLI);
@@ -4739,7 +4741,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known |= Known2;
 
         // If either operand is not NaN, the result is not NaN.
-        if (NeverNaN)
+        if (NeverNaN && (IID == Intrinsic::minnum || IID == Intrinsic::maxnum))
           Known.knownNot(fcNan);
 
         // Fixup zero handling if denormals could be returned as a zero.
