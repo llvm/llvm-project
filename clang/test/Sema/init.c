@@ -164,3 +164,6 @@ struct vortexstruct vortexvar = { "asdf" };
 
 typedef struct { uintptr_t x : 2; } StructWithBitfield;
 StructWithBitfield bitfieldvar = { (uintptr_t)&bitfieldvar }; // expected-error {{initializer element is not a compile-time constant}}
+
+// GH61746
+union { char x[]; } r = {0}; // expected-error {{flexible array member 'x' in a union is not allowed}}
