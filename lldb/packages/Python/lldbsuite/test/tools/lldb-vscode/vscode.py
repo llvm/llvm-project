@@ -588,6 +588,15 @@ class DebugCommunication(object):
         # Caller must still call wait_for_stopped.
         return response
 
+    def request_restart(self):
+        command_dict = {
+            'command': 'restart',
+            'type': 'request',
+        }
+        response = self.send_recv(command_dict)
+        # Caller must still call wait_for_stopped.
+        return response
+
     def request_disconnect(self, terminateDebuggee=None):
         args_dict = {}
         if terminateDebuggee is not None:
