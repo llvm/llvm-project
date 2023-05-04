@@ -1055,6 +1055,34 @@ void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
     process.PrintWarningCantLoadSwiftModule(module, message);
 }
 
+/// Locate the swift-plugin-server for a plugin library,
+/// by converting  ${toolchain}/usr/(local)?/lib/swift/host/plugins
+/// into           ${toolchain}/usr/bin/swift-plugin-server
+/// FIXME: move this to Host, it may be platform-specific.
+static std::string GetPluginServer(llvm::StringRef plugin_library_path) {
+  llvm::StringRef path = llvm::sys::path::parent_path(plugin_library_path);
+  if (llvm::sys::path::filename(path) != "plugins")
+    return {};
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) != "host")
+    return {};
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) != "swift")
+    return {};
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) != "lib")
+    return {};
+  path = llvm::sys::path::parent_path(path);
+  if (llvm::sys::path::filename(path) == "local")
+    path = llvm::sys::path::parent_path(path);
+  llvm::SmallString<256> server(path);
+  llvm::sys::path::append(server, "bin", "swift-plugin-server");
+  std::string result(server);
+  if (FileSystem::Instance().Exists(result))
+    return result;
+  return {};
+}
+
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
@@ -1076,21 +1104,31 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
     return false;
 
   auto &search_path_options = invocation.getSearchPathOptions();
-  std::vector<std::string> import_search_paths;
-  llvm::StringSet<> known_import_search_paths;
-  for (auto &path : search_path_options.getImportSearchPaths()) {
-    import_search_paths.push_back(path);
-    known_import_search_paths.insert(path);
+
+#define INIT_SEARCH_PATH_SET(TYPE, ACCESSOR, NAME, KEY)                        \
+  std::vector<TYPE> NAME;                                                      \
+  llvm::StringSet<> known_##NAME;                                              \
+  for (auto &path : search_path_options.ACCESSOR) {                            \
+    NAME.push_back(path);                                                      \
+    known_##NAME.insert(path KEY);                                             \
   }
 
-  std::vector<swift::SearchPathOptions::FrameworkSearchPath>
-      framework_search_paths;
-  llvm::StringSet<> known_framework_search_paths;
-  for (auto &path : search_path_options.getFrameworkSearchPaths()) {
-    framework_search_paths.push_back(path);
-    known_framework_search_paths.insert(path.Path);
-  }
-  
+  INIT_SEARCH_PATH_SET(std::string, getImportSearchPaths(),
+                       import_search_paths, );
+  INIT_SEARCH_PATH_SET(swift::SearchPathOptions::FrameworkSearchPath,
+                       getFrameworkSearchPaths(), framework_search_paths,
+                       .Path);
+  INIT_SEARCH_PATH_SET(std::string, PluginSearchPaths, plugin_search_paths, );
+  INIT_SEARCH_PATH_SET(swift::ExternalPluginSearchPathAndServerPath,
+                       ExternalPluginSearchPaths, external_plugin_search_paths,
+                       .SearchPath);
+  INIT_SEARCH_PATH_SET(std::string, getCompilerPluginLibraryPaths(),
+                       compiler_plugin_library_paths, );
+  INIT_SEARCH_PATH_SET(swift::PluginExecutablePathAndModuleNames,
+                       getCompilerPluginExecutablePaths(),
+                       compiler_plugin_executable_paths, .ExecutablePath);
+
+ 
   // An AST section consists of one or more AST modules, optionally
   // with headers. Iterate over all AST modules.
   for (auto ast_file_data_sp : ast_file_datas) {
@@ -1133,27 +1171,89 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
       /// serialized AST.
       auto deserializeCompilerFlags = [&]() -> bool {
         auto result = invocation.loadFromSerializedAST(moduleData);
-        if (result == swift::serialization::Status::Valid) {
-          if (discover_implicit_search_paths) {
-            for (auto &searchPath : searchPaths) {
-              std::string path = remap(searchPath.Path);
-              if (!searchPath.IsFramework) {
-                if (known_import_search_paths.insert(path).second)
-                  import_search_paths.push_back(path);
-              } else {
-                swift::SearchPathOptions::FrameworkSearchPath
-                    framework_search_path(path, searchPath.IsSystem);
-                if (known_framework_search_paths.insert(path).second)
-                  framework_search_paths.push_back(framework_search_path);
-              }
+        if (result != swift::serialization::Status::Valid) {
+          error << "Could not deserialize " << info.name << ":\n"
+                << getImportFailureString(result) << "\n";
+          return false;
+        }
+        if (discover_implicit_search_paths) {
+          for (auto &searchPath : searchPaths) {
+            std::string path = remap(searchPath.Path);
+            if (!searchPath.IsFramework) {
+              if (known_import_search_paths.insert(path).second)
+                import_search_paths.push_back(path);
+            } else {
+              swift::SearchPathOptions::FrameworkSearchPath
+                  framework_search_path(path, searchPath.IsSystem);
+              if (known_framework_search_paths.insert(path).second)
+                framework_search_paths.push_back(framework_search_path);
             }
           }
-          return true;
         }
+        auto exists = [&](llvm::StringRef path) {
+          if (FileSystem::Instance().Exists(path))
+            return true;
+          HEALTH_LOG_PRINTF("Ignoring missing Swift plugin at path: %s",
+                            path.str().c_str());
+          return false;
+        };
 
-        error << "Could not deserialize " << info.name << ":\n"
-              << getImportFailureString(result) << "\n";
-        return false;
+        // Discover, rewrite, and unique compiler plugin paths.
+        for (auto path : extended_validation_info.getPluginSearchPaths()) {
+          // System plugins shipping with the compiler.
+          // Rewrite them to go through an ABI-compatible swift-plugin-server.
+          if (known_plugin_search_paths.insert(path).second) {
+            if (known_external_plugin_search_paths.insert(path).second) {
+              std::string server = GetPluginServer(path);
+              if (server.empty()) {
+                HEALTH_LOG_PRINTF("Could not find swift-plugin-server for %s",
+                                  path.str().c_str());
+                continue;
+              }
+              if (exists(path))
+                external_plugin_search_paths.push_back({path.str(), server});
+            }
+          }
+          for (auto path :
+               extended_validation_info.getExternalPluginSearchPaths()) {
+            // Sandboxed system plugins shipping with some compiler.
+            // Keep the original plugin server path, it needs to be ABI
+            // compatible with the version of SwiftSyntax used by the plugin.
+            auto plugin_server = path.split('#');
+            llvm::StringRef plugin = plugin_server.first;
+            llvm::StringRef server = plugin_server.second;
+            if (known_external_plugin_search_paths.insert(plugin).second)
+              if (exists(plugin) && exists(server))
+                external_plugin_search_paths.push_back(
+                    {plugin.str(), server.str()});
+          }
+
+          for (auto path :
+               extended_validation_info.getCompilerPluginLibraryPaths()) {
+            // Compiler plugin libraries.
+            if (known_compiler_plugin_library_paths.insert(path).second)
+              if (exists(path))
+                compiler_plugin_library_paths.push_back(path.str());
+          }
+
+          for (auto path :
+               extended_validation_info.getCompilerPluginExecutablePaths()) {
+            // Compiler plugin executables.
+            auto plugin_modules = path.split('#');
+            llvm::StringRef plugin = plugin_modules.first;
+            llvm::StringRef modules_list = plugin_modules.second;
+            llvm::SmallVector<llvm::StringRef, 0> modules;
+            modules_list.split(modules, ",");
+            std::vector<std::string> modules_vec;
+            for (auto m : modules)
+              modules_vec.push_back(m.str());
+            if (known_compiler_plugin_executable_paths.insert(path).second)
+              if (exists(plugin))
+                compiler_plugin_executable_paths.push_back(
+                    {plugin.str(), modules_vec});
+          }
+        }
+        return true;
       };
 
       got_serialized_options |= deserializeCompilerFlags();
@@ -1166,8 +1266,16 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
     }
   }
 
-  search_path_options.setImportSearchPaths(import_search_paths);
-  search_path_options.setFrameworkSearchPaths(framework_search_paths);
+  search_path_options.setImportSearchPaths(std::move(import_search_paths));
+  search_path_options.setFrameworkSearchPaths(
+      std::move(framework_search_paths));
+  // (All PluginSearchPaths were rewritten to be external.)
+  search_path_options.ExternalPluginSearchPaths =
+      std::move(external_plugin_search_paths);
+  search_path_options.setCompilerPluginLibraryPaths(
+      std::move(compiler_plugin_library_paths));
+  search_path_options.setCompilerPluginExecutablePaths(
+      std::move(compiler_plugin_executable_paths));
   return found_validation_errors;
 }
 
