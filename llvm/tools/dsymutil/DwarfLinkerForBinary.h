@@ -108,8 +108,8 @@ private:
     /// \returns resolved value.
     uint64_t relocate(const ValidReloc &Reloc) const;
 
-    /// Fill \p Info with address information for the specified \p Reloc.
-    void fillDieInfo(const ValidReloc &Reloc, CompileUnit::DIEInfo &Info);
+    /// \returns value for the specified \p Reloc.
+    int64_t getRelocValue(const ValidReloc &Reloc);
 
     /// Print contents of debug map entry for the specified \p Reloc.
     void printReloc(const ValidReloc &Reloc);
@@ -172,15 +172,15 @@ private:
     /// Checks that there is a relocation in the \p Relocs array against a
     /// debug map entry between \p StartOffset and \p NextOffset.
     ///
-    /// \returns true and sets Info.InDebugMap if it is the case.
-    bool hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
-                              uint64_t StartOffset, uint64_t EndOffset,
-                              CompileUnit::DIEInfo &Info);
+    /// \returns relocation value if relocation exist, otherwise std::nullopt.
+    std::optional<int64_t>
+    hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
+                         uint64_t StartOffset, uint64_t EndOffset);
 
-    bool isLiveVariable(const DWARFDie &DIE,
-                        CompileUnit::DIEInfo &Info) override;
-    bool isLiveSubprogram(const DWARFDie &DIE,
-                          CompileUnit::DIEInfo &Info) override;
+    std::optional<int64_t>
+    getVariableRelocAdjustment(const DWARFDie &DIE) override;
+    std::optional<int64_t>
+    getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
