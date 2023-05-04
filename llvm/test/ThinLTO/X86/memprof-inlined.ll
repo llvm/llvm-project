@@ -1,7 +1,6 @@
 ;; Test callsite context graph generation for call graph with two memprof
 ;; contexts and partial inlining, requiring generation of a new fused node to
 ;; represent the inlined sequence while matching callsite nodes onto the graph.
-;; Also tests graph and IR cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -52,33 +51,13 @@
 ; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
-; RUN:  --check-prefix=STATS
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
 
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should create clones for foo and bar for the call from main to allocate
 ;; cold memory.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
-
-;; Try again but with distributed ThinLTO
-; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
-; RUN:  -thinlto-distributed-indexes \
-; RUN:  -r=%t.o,main,plx \
-; RUN:  -r=%t.o,_ZdaPv, \
-; RUN:  -r=%t.o,sleep, \
-; RUN:  -r=%t.o,_Znam, \
-; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
-; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
-; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
-; RUN:  --check-prefix=STATS
-
-; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
-;; We should create clones for foo and bar for the call from main to allocate
-;; cold memory.
-; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
 source_filename = "inlined.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -279,11 +258,6 @@ declare i32 @sleep()
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[FOO3]] AllocTypes: Cold ContextIds: 4
 ; DUMP:         Clone of [[BAR]]
-
-
-; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
-; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
-; STATS: 2 memprof-context-disambiguation - Number of function clones created during whole program analysis
 
 
 ; DOT: digraph "postbuild" {
