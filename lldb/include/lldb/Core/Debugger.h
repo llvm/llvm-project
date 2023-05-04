@@ -500,6 +500,19 @@ public:
   SetDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
                      void *baton);
 
+  /// Manually start the global event handler thread. It is useful to plugins
+  /// that directly use the \a lldb_private namespace and want to use the
+  /// debugger's default event handler thread instead of defining their own.
+  bool StartEventHandlerThread();
+
+  /// Manually stop the debugger's default event handler.
+  void StopEventHandlerThread();
+
+  /// Force flushing the process's pending stdout and stderr to the debugger's
+  /// asynchronous stdout and stderr streams.
+  void FlushProcessOutput(Process &process, bool flush_stdout,
+                          bool flush_stderr);
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -548,10 +561,6 @@ protected:
 
   void PrintProgress(const ProgressEventData &data);
 
-  bool StartEventHandlerThread();
-
-  void StopEventHandlerThread();
-
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
                      bool cancel_top_handler = true);
 
@@ -587,8 +596,6 @@ protected:
 
   // Ensures two threads don't attempt to flush process output in parallel.
   std::mutex m_output_flush_mutex;
-  void FlushProcessOutput(Process &process, bool flush_stdout,
-                          bool flush_stderr);
 
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;

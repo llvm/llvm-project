@@ -1,8 +1,7 @@
 static_library("GlobalISel") {
   deps = [
     "//llvm/include/llvm/CodeGen:GenVT",
-    "//llvm/lib/CodeGen",
-    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen:CodeGenTypes",
     "//llvm/lib/Support",
   ]
   sources = [

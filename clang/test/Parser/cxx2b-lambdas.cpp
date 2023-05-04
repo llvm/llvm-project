@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b %s -verify
+// RUN: %clang_cc1 -std=c++23 %s -verify
 
 auto LL0 = [] {};
 auto LL1 = []() {};

@@ -709,7 +709,7 @@ static_assert([]() constexpr {
 // be properly handled after D124351
 constexpr int i = 2;
 void foo() {
-  (void)[=][[gnu::aligned(i)]] () {}; // expected-warning{{C++2b extension}}
+  (void)[=][[gnu::aligned(i)]] () {}; // expected-warning{{C++23 extension}}
   // CHECK: AlignedAttr
   // CHECK-NEXT: ConstantExpr
   // CHECK-NEXT: value: Int 2

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 %s -Wno-c++2b-extensions -verify
-// RUN: %clang_cc1 -std=c++2b %s -verify
+// RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
+// RUN: %clang_cc1 -std=c++23 %s -verify
 
 
 template <auto> struct Nothing {};

@@ -37,11 +37,11 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 
     ```mlir
     // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.opaque<"int32_t*">
+    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
 
     // Generic form of the same operation.
     %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (i32) -> !emitc.opaque<"int32_t*">
+        : (i32) -> !emitc.ptr<i32>
 
     ```
   }];
