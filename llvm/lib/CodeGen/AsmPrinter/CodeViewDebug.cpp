@@ -1160,7 +1160,14 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Function section index");
     OS.emitCOFFSectionIndex(Fn);
     OS.AddComment("Flags");
-    OS.emitInt8(0);
+    ProcSymFlags ProcFlags = ProcSymFlags::HasOptimizedDebugInfo;
+    if (FI.HasFramePointer)
+      ProcFlags |= ProcSymFlags::HasFP;
+    if (GV->hasFnAttribute(Attribute::NoReturn))
+      ProcFlags |= ProcSymFlags::IsNoReturn;
+    if (GV->hasFnAttribute(Attribute::NoInline))
+      ProcFlags |= ProcSymFlags::IsNoInline;
+    OS.emitInt8(static_cast<uint8_t>(ProcFlags));
     // Emit the function display name as a null-terminated string.
     OS.AddComment("Function name");
     // Truncate the name so we won't overflow the record length field.
@@ -1478,6 +1485,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
       CurFn->EncodedLocalFramePtrReg = EncodedFramePtrReg::StackPtr;
       CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::StackPtr;
     } else {
+      CurFn->HasFramePointer = true;
       // If there is an FP, parameters are always relative to it.
       CurFn->EncodedParamFramePtrReg = EncodedFramePtrReg::FramePtr;
       if (CurFn->HasStackRealignment) {

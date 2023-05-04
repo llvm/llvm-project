@@ -85,16 +85,25 @@ using StaticSize = int64_t;
 namespace mlir {
 namespace sparse_tensor {
 
+// NOTE: `Value::getType` doesn't check for null before trying to
+// dereference things.  Therefore we check, because an assertion-failure
+// is easier to debug than a segfault.  Presumably other `T::getType`
+// methods are similarly susceptible.
+
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
-inline RankedTensorType getRankedTensorType(T t) {
-  return t.getType().template cast<RankedTensorType>();
+inline RankedTensorType getRankedTensorType(T &&t) {
+  assert(static_cast<bool>(std::forward<T>(t)) &&
+         "getRankedTensorType got null argument");
+  return std::forward<T>(t).getType().template cast<RankedTensorType>();
 }
 
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
-inline MemRefType getMemRefType(T t) {
-  return t.getType().template cast<MemRefType>();
+inline MemRefType getMemRefType(T &&t) {
+  assert(static_cast<bool>(std::forward<T>(t)) &&
+         "getMemRefType got null argument");
+  return std::forward<T>(t).getType().template cast<MemRefType>();
 }
 
 /// Convenience method to get a sparse encoding attribute from a type.

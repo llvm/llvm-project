@@ -290,7 +290,7 @@ public:
   /// Returns the number of elements.
   unsigned getNumElems() const { return getSize() / elemSize(); }
 
-  Block *block() const { return Pointee; }
+  const Block *block() const { return Pointee; }
 
   /// Returns the index into an array.
   int64_t getIndex() const {

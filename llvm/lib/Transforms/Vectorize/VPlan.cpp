@@ -1116,9 +1116,13 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
   for (const VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
-    for (const VPRecipeBase &Recipe : *VPBB)
-      for (VPValue *Def : Recipe.definedValues())
-        assignSlot(Def);
+    assignSlots(VPBB);
+}
+
+void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
+  for (const VPRecipeBase &Recipe : *VPBB)
+    for (VPValue *Def : Recipe.definedValues())
+      assignSlot(Def);
 }
 
 bool vputils::onlyFirstLaneUsed(VPValue *Def) {
@@ -1128,13 +1132,19 @@ bool vputils::onlyFirstLaneUsed(VPValue *Def) {
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                                 ScalarEvolution &SE) {
+  if (auto *Expanded = Plan.getSCEVExpansion(Expr))
+    return Expanded;
+  VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    return Plan.getVPValueOrAddLiveIn(E->getValue());
-  if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    return Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+  else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
+    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+  else {
 
-  VPBasicBlock *Preheader = Plan.getEntry();
-  VPExpandSCEVRecipe *Step = new VPExpandSCEVRecipe(Expr, SE);
-  Preheader->appendRecipe(Step);
-  return Step;
+    VPBasicBlock *Preheader = Plan.getEntry();
+    Expanded = new VPExpandSCEVRecipe(Expr, SE);
+    Preheader->appendRecipe(Expanded->getDefiningRecipe());
+  }
+  Plan.addSCEVExpansion(Expr, Expanded);
+  return Expanded;
 }

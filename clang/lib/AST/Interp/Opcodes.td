@@ -499,10 +499,17 @@ def Inv: Opcode {
   let HasGroup = 1;
 }
 
+// Increment and decrement.
 def Inc: IntegerOpcode;
 def IncPop : IntegerOpcode;
 def Dec: IntegerOpcode;
 def DecPop: IntegerOpcode;
+
+// Float increment and decrement.
+def Incf: FloatOpcode;
+def IncfPop : FloatOpcode;
+def Decf: FloatOpcode;
+def DecfPop : FloatOpcode;
 
 // [Real] -> [Real]
 def Neg: Opcode {

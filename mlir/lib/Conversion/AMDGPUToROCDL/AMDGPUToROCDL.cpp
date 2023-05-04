@@ -10,7 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Pass/Pass.h"
@@ -62,6 +62,14 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     else
       wantedDataType = gpuOp.getODSResults(0)[0].getType();
 
+    Value atomicCmpData = Value();
+    // Operand index 1 of a load is the indices, trying to read them can crash.
+    if (storeData) {
+      Value maybeCmpData = adaptor.getODSOperands(1)[0];
+      if (maybeCmpData != memref)
+        atomicCmpData = maybeCmpData;
+    }
+
     Type llvmWantedDataType = this->typeConverter->convertType(wantedDataType);
 
     Type i32 = rewriter.getI32Type();
@@ -73,8 +81,16 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // If we want to load a vector<NxT> with total size <= 32
     // bits, use a scalar load and bitcast it. Similarly, if bitsize(T) < 32
     // and the total load size is >= 32, use a vector load of N / (bitsize(T) /
-    // 32) x i32 and bitcast.
+    // 32) x i32 and bitcast. Also, the CAS intrinsic requires integer operands,
+    // so bitcast any floats to integers.
     Type llvmBufferValType = llvmWantedDataType;
+    if (atomicCmpData) {
+      if (wantedDataType.isa<VectorType>())
+        return gpuOp.emitOpError("vector compare-and-swap does not exist");
+      if (auto floatType = wantedDataType.dyn_cast<FloatType>())
+        llvmBufferValType = this->getTypeConverter()->convertType(
+            rewriter.getIntegerType(floatType.getWidth()));
+    }
     if (auto dataVector = wantedDataType.dyn_cast<VectorType>()) {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
       uint32_t totalBits = elemBits * dataVector.getNumElements();
@@ -106,6 +122,16 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
         args.push_back(castForStore);
       } else {
         args.push_back(storeData);
+      }
+    }
+
+    if (atomicCmpData) {
+      if (llvmBufferValType != llvmWantedDataType) {
+        Value castForCmp = rewriter.create<LLVM::BitcastOp>(
+            loc, llvmBufferValType, atomicCmpData);
+        args.push_back(castForCmp);
+      } else {
+        args.push_back(atomicCmpData);
       }
     }
 
@@ -529,6 +555,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       RawBufferOpLowering<RawBufferAtomicFmaxOp, ROCDL::RawBufferAtomicFMaxOp>,
       RawBufferOpLowering<RawBufferAtomicSmaxOp, ROCDL::RawBufferAtomicSMaxOp>,
       RawBufferOpLowering<RawBufferAtomicUminOp, ROCDL::RawBufferAtomicUMinOp>,
+      RawBufferOpLowering<RawBufferAtomicCmpswapOp,
+                          ROCDL::RawBufferAtomicCmpSwap>,
       MFMAOpLowering>(converter, chipset);
 }
 

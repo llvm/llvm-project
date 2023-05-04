@@ -349,6 +349,11 @@ ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
       CI, MainFileName, OutputFileName, std::move(OS), Buffer);
 }
 
+ArrayRef<StringRef> ObjectFilePCHContainerReader::getFormats() const {
+  static StringRef Formats[] = {"obj", "raw"};
+  return Formats;
+}
+
 StringRef
 ObjectFilePCHContainerReader::ExtractPCH(llvm::MemoryBufferRef Buffer) const {
   StringRef PCH;

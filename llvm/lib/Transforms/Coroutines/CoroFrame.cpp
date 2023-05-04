@@ -1714,7 +1714,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   StructType *FrameTy = Shape.FrameTy;
   Value *FramePtr = Shape.FramePtr;
   DominatorTree DT(*F);
-  SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> DbgPtrAllocaCache;
+  SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Create a GEP with the given index into the coroutine frame for the original
   // value Orig. Appends an extra 0 index for array-allocas, preserving the
@@ -1873,7 +1873,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
                              &*Builder.GetInsertPoint());
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
-          coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.OptimizeFrame);
+          coro::salvageDebugInfo(ArgToAllocaMap, DDI, Shape.OptimizeFrame);
         }
       }
 
@@ -2815,7 +2815,7 @@ static void collectFrameAlloca(AllocaInst *AI, coro::Shape &Shape,
 }
 
 void coro::salvageDebugInfo(
-    SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
     DbgVariableIntrinsic *DVI, bool OptimizeFrame) {
   Function *F = DVI->getFunction();
   IRBuilder<> Builder(F->getContext());
@@ -2870,8 +2870,8 @@ void coro::salvageDebugInfo(
   // Avoid to create the alloca would be eliminated by optimization
   // passes and the corresponding dbg.declares would be invalid.
   if (!OptimizeFrame)
-    if (auto *Arg = dyn_cast<llvm::Argument>(Storage)) {
-      auto &Cached = DbgPtrAllocaCache[Storage];
+    if (auto *Arg = dyn_cast<Argument>(Storage)) {
+      auto &Cached = ArgToAllocaMap[Arg];
       if (!Cached) {
         Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
                                       Arg->getName() + ".debug");

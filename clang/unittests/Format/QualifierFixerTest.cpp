@@ -1343,6 +1343,29 @@ TEST_F(QualifierFixerTest, TemplatesLeft) {
                "TemplateType<Container const> t;", Style);
 }
 
+TEST_F(QualifierFixerTest, Ranges) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"const", "volatile", "type"};
+
+  // Only the first line should be formatted; the second should remain as is.
+  verifyFormat("template <typename T> const Foo f();\n"
+               "template <typename T> Foo const f();",
+               "template <typename T> Foo const f();\n"
+               "template <typename T> Foo const f();",
+               Style, {tooling::Range(0, 36)});
+
+  // Only the middle line should be formatted; the first and last should remain
+  // as is.
+  verifyFormat("template <typename T> Foo const f();\n"
+               "template <typename T> const Foo f();\n"
+               "template <typename T> Foo const f();",
+               "template <typename T> Foo const f();\n"
+               "template <typename T> Foo const f();\n"
+               "template <typename T> Foo const f();",
+               Style, {tooling::Range(37, 36)});
+}
+
 } // namespace
 } // namespace test
 } // namespace format

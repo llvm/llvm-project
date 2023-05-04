@@ -511,8 +511,14 @@ struct AMDGPUSignalTy {
   }
 
   /// Wait until the signal gets a zero value.
-  Error wait() const {
-    // TODO: Is it better to use busy waiting or blocking the thread?
+  Error wait(const uint64_t ActiveTimeout = 0) const {
+    if (ActiveTimeout) {
+      hsa_signal_value_t Got = 1;
+      Got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+                                      ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
+      if (Got == 0)
+        return Plugin::success();
+    }
     while (hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
                                      UINT64_MAX, HSA_WAIT_STATE_BLOCKED) != 0)
       ;
@@ -884,6 +890,9 @@ private:
   /// Mutex to protect stream's management.
   mutable std::mutex Mutex;
 
+  /// Timeout hint for HSA actively waiting for signal value to change
+  const uint64_t StreamBusyWaitMicroseconds;
+
   /// Return the current number of asychronous operations on the stream.
   uint32_t size() const { return NextSlot; }
 
@@ -1247,7 +1256,7 @@ public:
       return Plugin::success();
 
     // Wait until all previous operations on the stream have completed.
-    if (auto Err = Slots[last()].Signal->wait())
+    if (auto Err = Slots[last()].Signal->wait(StreamBusyWaitMicroseconds))
       return Err;
 
     // Reset the stream and perform all pending post actions.
@@ -1555,6 +1564,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                1 * 1024 * 1024), // 1MB
         OMPX_InitialNumSignals("LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS",
                                64),
+        OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         AMDGPUStreamManager(*this), AMDGPUEventManager(*this),
         AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice),
         Queues() {}
@@ -1677,6 +1687,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Agent = {0};
 
     return Plugin::success();
+  }
+
+  const uint64_t getStreamBusyWaitMicroseconds() const {
+    return OMPX_StreamBusyWait;
   }
 
   Expected<std::unique_ptr<MemoryBuffer>>
@@ -1941,7 +1955,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
               Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
         return Err;
 
-      if (auto Err = Signal.wait())
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
         return Err;
 
       if (auto Err = Signal.deinit())
@@ -1998,7 +2012,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
               Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s"))
         return Err;
 
-      if (auto Err = Signal.wait())
+      if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
         return Err;
 
       if (auto Err = Signal.deinit())
@@ -2173,6 +2187,12 @@ private:
   /// will be created.
   UInt32Envar OMPX_InitialNumSignals;
 
+  /// Environment variables to set the time to wait in active state before
+  /// switching to blocked state. The default 2000000 busywaits for 2 seconds
+  /// before going into a blocking HSA wait state. The unit for these variables
+  /// are microseconds.
+  UInt32Envar OMPX_StreamBusyWait;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -2267,7 +2287,8 @@ AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
     : Agent(Device.getAgent()), Queue(Device.getNextQueue()),
       SignalManager(Device.getSignalManager()),
       // Initialize the std::deque with some empty positions.
-      Slots(32), NextSlot(0), SyncCycle(0) {}
+      Slots(32), NextSlot(0), SyncCycle(0),
+      StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
 /// handler.

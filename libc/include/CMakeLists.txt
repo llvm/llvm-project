@@ -388,6 +388,8 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_socket_macros
+    .llvm-libc-types.struct_sockaddr
+    .llvm-libc-types.sa_family_t
 )
 
 add_gen_header(

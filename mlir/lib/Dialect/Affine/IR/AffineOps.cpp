@@ -20,6 +20,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
@@ -1360,11 +1361,11 @@ SmallVector<OpFoldResult>
 mlir::affine::makeComposedFoldedMultiResultAffineApply(
     OpBuilder &b, Location loc, AffineMap map,
     ArrayRef<OpFoldResult> operands) {
-  return llvm::to_vector(llvm::map_range(
-      llvm::seq<unsigned>(0, map.getNumResults()), [&](unsigned i) {
-        return makeComposedFoldedAffineApply(b, loc, map.getSubMap({i}),
-                                             operands);
-      }));
+  return llvm::map_to_vector(llvm::seq<unsigned>(0, map.getNumResults()),
+                             [&](unsigned i) {
+                               return makeComposedFoldedAffineApply(
+                                   b, loc, map.getSubMap({i}), operands);
+                             });
 }
 
 Value mlir::affine::makeComposedAffineMin(OpBuilder &b, Location loc,
@@ -4592,13 +4593,13 @@ void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
   result.addTypes(SmallVector<Type>(basis.size(), builder.getIndexType()));
   result.addOperands(linearIndex);
   SmallVector<Value> basisValues =
-      llvm::to_vector(llvm::map_range(basis, [&](OpFoldResult ofr) -> Value {
+      llvm::map_to_vector(basis, [&](OpFoldResult ofr) -> Value {
         std::optional<int64_t> staticDim = getConstantIntValue(ofr);
         if (staticDim.has_value())
           return builder.create<arith::ConstantIndexOp>(result.location,
                                                         *staticDim);
         return ofr.dyn_cast<Value>();
-      }));
+      });
   result.addOperands(basisValues);
 }
 

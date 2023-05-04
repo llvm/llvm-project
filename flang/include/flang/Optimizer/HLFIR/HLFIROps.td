@@ -317,6 +317,31 @@ def hlfir_ConcatOp : hlfir_Op<"concat", []> {
   let hasVerifier = 1;
 }
 
+def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "PRODUCT transformational intrinsic";
+  let description = [{
+    Multiplies the elements of an array, optionally along a particular dimension,
+    optionally if a mask is true.
+  }];
+
+  let arguments = (ins
+    AnyFortranNumericalArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
   let summary = "change the length of a character entity";
   let description = [{
@@ -814,7 +839,69 @@ def hlfir_GetExtentOp : hlfir_Op<"get_extent", [Pure]> {
   let builders = [OpBuilder<(ins "mlir::Value":$shape, "unsigned":$dim)>];
 }
 
-def hlfir_RegionAssignOp : hlfir_Op<"region_assign", []> {
+def hlfir_OrderedAssignmentTreeOpInterface : OpInterface<"OrderedAssignmentTreeOpInterface"> {
+  let description = [{
+    Interface for the operations representing Forall and Where constructs and
+    statements as an mlir::Region tree.
+
+    These operations all have in common that they have "leaf" regions that contains
+    some code that should be evaluated for "all active combinations of Forall
+    index-name values" before the next OrderedAssignmentTreeOpInterface is
+    evaluated.
+
+    These operations are ordered in a tree fashion: Some operations, like
+    hlfir.forall or hlfir.where, contain a list of OrderedAssignmentTreeOpInterface
+    that should be evaluated after the "Leaf" regions, and before the next
+    OrderedAssignmentTreeOpInterface.
+
+    Nested OrderedAssignmentTreeOpInterface operations are affected by the
+    OrderedAssignmentTreeOpInterface operations that contain them (e.g:
+    hlfir.region_assign may be masked by the value of the mask region of
+    an hlfir.where that contains it).
+
+    OrderedAssignmentTreeOpInterface operations that contain nested operation
+    must return a "sub-tree" region that contains the list of nested
+    OrderedAssignmentTreeOpInterface operations.
+
+    There is no constraints over what IR a leaf region may contain. There is also
+    no restriction regarding how many leaf regions an
+    OrderedAssignmentTreeOpInterface operation may contain.
+
+    A "sub-tree" region, if any, must contain only OrderedAssignmentTreeOpInterface
+    operations and, maybe, a fir.end terminator.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Get the OrderedAssignmentTreeOpInterface leaf regions that contain evaluation code",
+      /*retTy=*/"void",
+      /*methodName=*/"getLeafRegions",
+      /*args=*/(ins "llvm::SmallVectorImpl<mlir::Region*>&":$regions),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get the region, if any, containing the list of sub-tree OrderedAssignmentTreeOpInterface nodes",
+      /*retTy=*/"mlir::Region*",
+      /*methodName=*/"getSubTreeRegion",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+  ];
+
+  let extraClassDeclaration = [{
+    /// Interface verifier imlementation.
+    mlir::LogicalResult verifyImpl();
+  }];
+
+  let verify = [{
+    return ::mlir::cast<::hlfir::OrderedAssignmentTreeOpInterface>($_op).verifyImpl();
+  }];
+
+  let cppNamespace = "hlfir";
+}
+
+
+def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTreeOpInterface]> {
   let summary = "represent a Fortran assignment using regions for the LHS and RHS evaluation";
   let description = [{
     This operation can represent Forall and Where assignment when inside an
@@ -862,13 +949,22 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", []> {
     mlir::Value getUserAssignmentLhs() {
       return getUserDefinedAssignment().getArguments()[1];
     }
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+      regions.push_back(&getRhsRegion());
+      regions.push_back(&getLhsRegion());
+      if (!getUserDefinedAssignment().empty())
+        regions.push_back(&getUserDefinedAssignment());
+    }
+    mlir::Region* getSubTreeRegion() { return nullptr; }
+
   }];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 
-def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp", "ElementalAddrOp"]>,
+def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp",
+    "ElementalAddrOp", "ForallOp", "ForallMaskOp", "WhereOp", "ElseWhereOp"]>,
     SingleBlockImplicitTerminator<"fir::FirEndOp">]> {
 
   let summary = "Yield a value or variable inside a forall, where or region assignment";
@@ -961,5 +1057,205 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
   let hasVerifier = 1;
 }
 
+/// Define ODS constraints to verify that a region ends with a yield of a
+/// certain type.
+def YieldIntegerOrEmpty : CPred<"yieldsIntegerOrEmpty($_self)">;
+def YieldIntegerRegion : RegionConstraint<
+  And<[SizedRegion<1>.predicate, YieldIntegerOrEmpty]>,
+  "single block region that yields an integer scalar value">;
+def MaybeYieldIntegerRegion : RegionConstraint<
+  And<[MaxSizedRegion<1>.predicate, YieldIntegerOrEmpty]>,
+  "optional single block region that yields an integer scalar value">;
+
+def hlfir_ForallOp : hlfir_Op<"forall", [hlfir_OrderedAssignmentTreeOpInterface]> {
+  let summary = "represent a Fortran forall";
+  let description = [{
+    This operation allows representing Fortran forall. It computes
+    a set of "index-name" values based on lower bound, upper bound,
+    and step values whose evaluations are represented in their own
+    regions.
+
+    Operations nested in its body region are evaluated in order.
+    As opposed to a regular loop, each nested operation is
+    fully evaluated for all the values in the "active set of
+    index-name" before the next nested operation. In practice, the
+    nested operation evaluation may be fused if it is proven that
+    they do not have data dependency.
+
+    The "index-name" value is represented as the argument of the
+    body region.
+
+    The lower, upper, and step region (if provided), must be terminated
+    by hlfir.yield that yields scalar integers.
+
+    The body region must only contain other OrderedAssignmentTreeOpInterface
+    operations (like hlfir.region_assign, or other hlfir.forall).
+
+    A Fortran forall with several indices is represented as a nest
+    of hlfir.forall.
+
+    Example: FORALL(I=1:10) X(I) = FOO(I)
+    ```
+      hlfir.forall lb {
+        hlfir.yield %c1 : index
+      } ub {
+        hlfir.yield %c10 : index
+      } (%i : index) {
+        hlfir.region_assign {
+          %res = fir.call @foo(%i) : (index) -> f32
+          hlfir.yield %res : f32
+        } to {
+          %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+          hlfir.yield %xi : !fir.ref<f32>
+        }
+      }
+    ```
+
+  }];
+
+  let regions = (region  YieldIntegerRegion:$lb_region,
+                         YieldIntegerRegion:$ub_region,
+                         MaybeYieldIntegerRegion:$step_region,
+                         SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    mlir::Value getForallIndexValue() {
+      return getBody().getArguments()[0];
+    }
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+      regions.push_back(&getLbRegion());
+      regions.push_back(&getUbRegion());
+      if (!getStepRegion().empty())
+        regions.push_back(&getStepRegion());
+    }
+    mlir::Region* getSubTreeRegion() { return &getBody(); }
+  }];
+
+  let assemblyFormat = [{
+    attr-dict `lb` $lb_region
+    `ub` $ub_region
+    (`step` $step_region^)?
+    custom<ForallOpBody>($body)
+  }];
+}
+
+/// Shared definition for hlfir.forall_mask and hlfir.where
+/// that have the same structure and assembly format, but not the same
+/// constraints.
+class hlfir_AssignmentMaskOp<string mnemonic> : hlfir_Op<mnemonic,
+    [hlfir_OrderedAssignmentTreeOpInterface]> {
+  let regions = (region  SizedRegion<1>:$mask_region,
+                         SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+      regions.push_back(&getMaskRegion());
+    }
+    mlir::Region* getSubTreeRegion() { return &getBody(); }
+  }];
+
+  let assemblyFormat = [{
+    $mask_region
+    attr-dict `do`
+    custom<AssignmentMaskOpBody>($body)
+  }];
+}
+
+def hlfir_ForallMaskOp : hlfir_AssignmentMaskOp<"forall_mask"> {
+  let summary = "Represent a Fortran forall mask";
+  let description = [{
+    Fortran Forall can have a scalar mask expression that depends on the
+    Forall index-name value.
+    hlfir.forall_mask allows representing this mask. The expression
+    evaluation is held in the mask region that must yield an i1 scalar
+    value.
+    An hlfir.forall_mask must be directly nested in the body region of
+    an hlfir.forall. It is a separate operation so that it can use the
+    index SSA value defined by the hlfir.forall body region.
+
+    Example: "FORALL(I=1:10, SOME_CONDITION(I)) X(I) = FOO(I)"
+    ```
+    hlfir.forall lb {
+      hlfir.yield %c1 : index
+    } ub {
+      hlfir.yield %c10 : index
+    } (%i : index) {
+      hlfir.forall_mask {
+        %mask = fir.call @some_condition(%i) : (index) -> i1
+        hlfir.yield %mask : i1
+      } do {
+        hlfir.region_assign {
+          %res = fir.call @foo(%i) : (index) -> f32
+          hlfir.yield %res : f32
+        } to {
+          %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+          hlfir.yield %xi : !fir.ref<f32>
+        }
+      }
+    }
+    ```
+  }];
+  let hasVerifier = 1;
+}
+
+def hlfir_WhereOp : hlfir_AssignmentMaskOp<"where"> {
+  let summary = "Represent a Fortran where construct or statement";
+  let description = [{
+    Represent Fortran "where" construct or statement. The mask
+    expression evaluation is held in the mask region that must yield
+    logical array that has the same shape as all the nested
+    hlfir.region_assign left-hand sides, and all the nested hlfir.where
+    or hlfir.elsewhere masks.
+
+    The values of the where and elsewhere masks form a control mask that
+    controls all the nested hlfir.region_assign: only the array element for
+    which the related control mask value is true are assigned. Any right-hand
+    side elemental expression is only evaluated for elements where the control
+    mask is true. See Fortran standard 2018 section 10.2.3 for more detailed
+    about the control mask semantic.
+
+    An hlfir.where must not contain any hlfir.forall but it may be contained
+    in such operation. This matches Fortran rules.
+  }];
+  let hasVerifier = 1;
+}
+
+def hlfir_ElseWhereOp : hlfir_Op<"elsewhere", [Terminator,
+    ParentOneOf<["WhereOp", "ElseWhereOp"]>, hlfir_OrderedAssignmentTreeOpInterface]> {
+  let summary = "Represent a Fortran elsewhere statement";
+
+  let description = [{
+    Represent Fortran "elsewhere" construct or statement.
+
+    It has an optional mask region to hold the evaluation of Fortran
+    optional elsewhere mask expressions. If this region is provided,
+    it must satisfy the same constraints as hlfir.where mask region.
+
+    An hlfir.elsewhere must be the last operation of an hlfir.where or,
+    hlfir.elsewhere body, which is enforced by its terminator property.
+
+    Like in Fortran, an hlfir.elsewhere negate the current control mask,
+    and if provided, adds the mask the resulting control mask (with a logical
+    AND).
+  }];
+
+  let regions = (region  MaxSizedRegion<1>:$mask_region,
+                         SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+      if (!getMaskRegion().empty())
+        regions.push_back(&getMaskRegion());
+    }
+    mlir::Region* getSubTreeRegion() { return &getBody(); }
+  }];
+
+  let assemblyFormat = [{
+    (`mask` $mask_region^)?
+    attr-dict `do`
+    custom<AssignmentMaskOpBody>($body)
+  }];
+  let hasVerifier = 1;
+}
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

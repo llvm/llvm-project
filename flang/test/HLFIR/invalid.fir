@@ -297,6 +297,30 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
 }
 
 // -----
+func.func @bad_product1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.product' op result must have the same element type as ARRAY argument}}
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<f32>
+}
+
+// -----
+func.func @bad_product2(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.array<?x?x?x?x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_product3(%arg0: !hlfir.expr<?x5x?xi32>, %arg1: i32, %arg2: !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) {
+  // expected-warning@+1 {{MASK must be conformable to ARRAY}}
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?x5x?xi32>, i32, !fir.box<!fir.array<2x6x?x!fir.logical<4>>>) -> !hlfir.expr<i32>
+}
+
+// -----
+func.func @bad_product4(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.product' op result rank must be one less than ARRAY}}
+  %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<?x?xi32>
+}
+
+// -----
 func.func @bad_sum1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.sum' op result must have the same element type as ARRAY argument}}
   %0 = hlfir.sum %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<f32>
@@ -603,6 +627,148 @@ func.func @bad_element_addr_4(%x: !fir.ref<!fir.array<20xf32>>, %y: !fir.ref<!fi
       ^bb0(%i: index, %j: index):
        %elt = hlfir.designate %y(%i, %j) : (!fir.ref<!fir.array<20x20xf32>>, index, index) -> !fir.ref<f32>
        hlfir.yield %elt : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_forall(%x : !fir.box<!fir.array<10xf32>>, %y: f32, %bad : !fir.ref<!fir.array<10xindex>>) {
+  // expected-error@+1 {{'hlfir.forall' op region #0 ('lb_region') failed to verify constraint: single block region that yields an integer scalar value}}
+  hlfir.forall lb {
+    hlfir.yield %bad : !fir.ref<!fir.array<10xindex>>
+  } ub {
+    %c10 = arith.constant 10 : index
+    hlfir.yield %c10 : index
+  } (%i : index) {
+    hlfir.region_assign {
+      hlfir.yield %y : f32
+    } to {
+      %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+      hlfir.yield %xi : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_forall_2(%x : !fir.box<!fir.array<10xf32>>, %y: f32) {
+  // expected-error@+1 {{'hlfir.forall' op body region must only contain OrderedAssignmentTreeOpInterface operations or fir.end}}
+  hlfir.forall lb {
+    %c1 = arith.constant 1 : index
+    hlfir.yield %c1 : index
+  } ub {
+    %c10 = arith.constant 10 : index
+    hlfir.yield %c10 : index
+  } (%i : index) {
+    %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+    hlfir.assign %y to %xi : f32, !fir.ref<f32>
+  }
+  return
+}
+
+// -----
+func.func @bad_forall_mask(%i: index) {
+  // expected-error@+1 {{'hlfir.forall_mask' op must be inside the body region of an hlfir.forall}}
+  hlfir.forall_mask {
+    %mask = fir.call @some_condition(%i) : (index) -> i1
+    hlfir.yield %mask : i1
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_forall_mask_2(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>) {
+  %c1 = arith.constant 1 : index
+  hlfir.forall lb {
+    hlfir.yield %c1 : index
+  } ub {
+    hlfir.yield %c1 : index
+  } (%i: index) {
+    // expected-error@+1 {{'hlfir.forall_mask' op mask region must yield a scalar i1}}
+    hlfir.forall_mask {
+      hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+    } do {
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_where_1(%bad_mask: !fir.ref<!fir.array<10xf32>>) {
+  // expected-error@+1 {{'hlfir.where' op mask region must yield a logical array}}
+  hlfir.where {
+    hlfir.yield %bad_mask : !fir.ref<!fir.array<10xf32>>
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_where_2(%bad_mask: i1) {
+  // expected-error@+1 {{'hlfir.where' op mask region must yield a logical array}}
+  hlfir.where {
+    hlfir.yield %bad_mask : i1
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_where_3(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %n: index) {
+  // expected-error@+1 {{'hlfir.where' op body region must not contain hlfir.forall}}
+  hlfir.where {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+    hlfir.forall lb {
+      hlfir.yield %n : index
+    } ub {
+      hlfir.yield %n : index
+    } (%i: index) {
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_elsewhere_1(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %bad_mask: i1) {
+  hlfir.where {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+    // expected-error@+1 {{'hlfir.elsewhere' op mask region must yield a logical array when provided}}
+    hlfir.elsewhere mask {
+      hlfir.yield %bad_mask : i1
+    } do {
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_elsewhere_2(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>) {
+  // expected-error@+1 {{'hlfir.elsewhere' op expects parent op to be one of 'hlfir.where, hlfir.elsewhere'}}
+  hlfir.elsewhere mask {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_elsewhere_3(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %x: !fir.ref<!fir.array<10xf32>>, %y: !fir.box<!fir.array<?xf32>>) {
+  hlfir.where {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+    // expected-error@+1 {{'hlfir.elsewhere' op must be the last operation in the parent block}}
+    hlfir.elsewhere mask {
+      hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+    } do {
+    }
+    hlfir.region_assign {
+      hlfir.yield %y : !fir.box<!fir.array<?xf32>>
+    } to {
+      hlfir.yield %x : !fir.ref<!fir.array<10xf32>>
     }
   }
   return
