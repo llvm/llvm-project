@@ -10561,6 +10561,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":AffineTransforms",
         ":AffineUtils",
         ":ArithDialect",
         ":ArithTransforms",
@@ -10581,6 +10582,7 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":Transforms",
+        ":ValueBoundsOpInterface",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -10633,6 +10635,7 @@ cc_library(
         ":MemRefTransforms",
         ":NVGPUDialect",
         ":PDLDialect",
+        ":SCFDialect",
         ":TransformDialect",
         ":TransformUtils",
         ":VectorDialect",
