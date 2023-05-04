@@ -493,7 +493,11 @@ public:
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
-  virtual bool useMD5() { return false; }
+  bool useMD5() const { return ProfileIsMD5; }
+
+  /// Force the profile to use MD5 in Sample contexts, even if function names
+  /// are present.
+  virtual void setProfileUseMD5() { ProfileIsMD5 = true; }
 
   /// Don't read profile without context if the flag is set. This is only meaningful
   /// for ExtBinary format.
@@ -563,6 +567,10 @@ protected:
   /// Zero out the discriminator bits higher than bit MaskedBitFrom (0 based).
   /// The default is to keep all the bits.
   uint32_t MaskedBitFrom = 31;
+
+  /// Whether the profile uses MD5 for Sample Contexts and function names. This
+  /// can be one-way overriden by the user to force use MD5.
+  bool ProfileIsMD5 = false;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {
@@ -578,6 +586,9 @@ public:
 
   /// Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+  /// Text format sample profile does not support MD5 for now.
+  void setProfileUseMD5() override {}
 
 private:
   /// CSNameTable is used to save full context vectors. This serves as an
@@ -641,7 +652,10 @@ protected:
   std::error_code readSummary();
 
   /// Read the whole name table.
-  virtual std::error_code readNameTable();
+  std::error_code readNameTable();
+
+  /// Read a string indirectly via the name table.
+  ErrorOr<StringRef> readStringFromTable();
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
@@ -652,8 +666,18 @@ protected:
   /// Function name table.
   std::vector<StringRef> NameTable;
 
-  /// Read a string indirectly via the name table.
-  virtual ErrorOr<StringRef> readStringFromTable();
+  /// If MD5 is used in NameTable section, the section saves uint64_t data.
+  /// The uint64_t data has to be converted to a string and then the string
+  /// will be used to initialize StringRef in NameTable.
+  /// Note NameTable contains StringRef so it needs another buffer to own
+  /// the string data. MD5StringBuf serves as the string buffer that is
+  /// referenced by NameTable (vector of StringRef). We make sure
+  /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
+  std::vector<std::string> MD5StringBuf;
+
+  /// The starting address of NameTable containing fixed length MD5.
+  const uint8_t *MD5NameMemStart = nullptr;
+
   virtual ErrorOr<SampleContext> readSampleContextFromTable();
 
 private:
@@ -712,8 +736,7 @@ protected:
                                    FunctionSamples *FProfile);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
-  std::error_code readMD5NameTable();
-  std::error_code readNameTableSec(bool IsMD5);
+  std::error_code readNameTableSec(bool IsMD5, bool FixedLengthMD5);
   std::error_code readCSNameTableSec();
   std::error_code readProfileSymbolList();
 
@@ -723,7 +746,6 @@ protected:
                                          const SecHdrTableEntry &Entry);
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
-  ErrorOr<StringRef> readStringFromTable() override;
   ErrorOr<SampleContext> readSampleContextFromTable() override;
   ErrorOr<SampleContextFrames> readContextFromTable();
 
@@ -739,21 +761,6 @@ protected:
 
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
-
-  /// Use fixed length MD5 instead of ULEB128 encoding so NameTable doesn't
-  /// need to be read in up front and can be directly accessed using index.
-  bool FixedLengthMD5 = false;
-  /// The starting address of NameTable containing fixed length MD5.
-  const uint8_t *MD5NameMemStart = nullptr;
-
-  /// If MD5 is used in NameTable section, the section saves uint64_t data.
-  /// The uint64_t data has to be converted to a string and then the string
-  /// will be used to initialize StringRef in NameTable.
-  /// Note NameTable contains StringRef so it needs another buffer to own
-  /// the string data. MD5StringBuf serves as the string buffer that is
-  /// referenced by NameTable (vector of StringRef). We make sure
-  /// the lifetime of MD5StringBuf is not shorter than that of NameTable.
-  std::unique_ptr<std::vector<std::string>> MD5StringBuf;
 
   /// CSNameTable is used to save full context vectors. This serves as an
   /// underlying immutable buffer for all clients.
@@ -782,9 +789,6 @@ public:
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.
   bool collectFuncsFromModule() override;
-
-  /// Return whether names in the profile are all MD5 numbers.
-  bool useMD5() override { return MD5StringBuf.get(); }
 
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
