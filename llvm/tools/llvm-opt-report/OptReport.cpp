@@ -338,16 +338,11 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
 
             bool Printed = false;
             if (!NoDemangle) {
-              int Status = 0;
-              char *Demangled =
-                itaniumDemangle(FuncName.c_str(), nullptr, nullptr, &Status);
-              if (Demangled && Status == 0) {
+              if (char *Demangled = itaniumDemangle(FuncName.c_str())) {
                 OS << Demangled;
                 Printed = true;
-              }
-
-              if (Demangled)
                 std::free(Demangled);
+              }
             }
 
             if (!Printed)

@@ -8,7 +8,9 @@
 
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Transforms.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -18,6 +20,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
@@ -420,6 +423,65 @@ using SIToFPPattern = IToFPPattern<arith::SIToFPOp, ExtensionKind::Sign>;
 using UIToFPPattern = IToFPPattern<arith::UIToFPOp, ExtensionKind::Zero>;
 
 //===----------------------------------------------------------------------===//
+// Index Cast Patterns
+//===----------------------------------------------------------------------===//
+
+// These rely on the `ValueBounds` interface for index values. For example, we
+// can often statically tell index value bounds of loop induction variables.
+
+template <typename CastOp, ExtensionKind Kind>
+struct IndexCastPattern final : NarrowingPattern<CastOp> {
+  using NarrowingPattern<CastOp>::NarrowingPattern;
+
+  LogicalResult matchAndRewrite(CastOp op,
+                                PatternRewriter &rewriter) const override {
+    Value in = op.getIn();
+    // We only support scalar index -> integer casts.
+    if (!isa<IndexType>(in.getType()))
+      return failure();
+
+    // Check the lower bound in both the signed and unsigned cast case. We
+    // conservatively assume that even unsigned casts may be performed on
+    // negative indices.
+    FailureOr<int64_t> lb = ValueBoundsConstraintSet::computeConstantBound(
+        presburger::BoundType::LB, in);
+    if (failed(lb))
+      return failure();
+
+    FailureOr<int64_t> ub = ValueBoundsConstraintSet::computeConstantBound(
+        presburger::BoundType::UB, in, /*dim=*/std::nullopt,
+        /*stopCondition=*/nullptr, /*closedUB=*/true);
+    if (failed(ub))
+      return failure();
+
+    assert(*lb <= *ub && "Invalid bounds");
+    unsigned lbBitsRequired = calculateBitsRequired(APInt(64, *lb), Kind);
+    unsigned ubBitsRequired = calculateBitsRequired(APInt(64, *ub), Kind);
+    unsigned bitsRequired = std::max(lbBitsRequired, ubBitsRequired);
+
+    IntegerType resultTy = cast<IntegerType>(op.getType());
+    if (resultTy.getWidth() <= bitsRequired)
+      return failure();
+
+    FailureOr<Type> narrowTy = this->getNarrowType(bitsRequired, resultTy);
+    if (failed(narrowTy))
+      return failure();
+
+    Value newCast = rewriter.create<CastOp>(op.getLoc(), *narrowTy, op.getIn());
+
+    if (Kind == ExtensionKind::Sign)
+      rewriter.replaceOpWithNewOp<arith::ExtSIOp>(op, resultTy, newCast);
+    else
+      rewriter.replaceOpWithNewOp<arith::ExtUIOp>(op, resultTy, newCast);
+    return success();
+  }
+};
+using IndexCastSIPattern =
+    IndexCastPattern<arith::IndexCastOp, ExtensionKind::Sign>;
+using IndexCastUIPattern =
+    IndexCastPattern<arith::IndexCastUIOp, ExtensionKind::Zero>;
+
+//===----------------------------------------------------------------------===//
 // Patterns to Commute Extension Ops
 //===----------------------------------------------------------------------===//
 
@@ -714,8 +776,8 @@ void populateArithIntNarrowingPatterns(
 
   patterns.add<AddIPattern, SubIPattern, MulIPattern, DivSIPattern,
                DivUIPattern, MaxSIPattern, MaxUIPattern, MinSIPattern,
-               MinUIPattern, SIToFPPattern, UIToFPPattern>(
-      patterns.getContext(), options);
+               MinUIPattern, SIToFPPattern, UIToFPPattern, IndexCastSIPattern,
+               IndexCastUIPattern>(patterns.getContext(), options);
 }
 
 } // namespace mlir::arith

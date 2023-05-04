@@ -148,6 +148,11 @@ python::PythonObject LLDBSwigPythonCreateScriptedThreadPlan(
 bool LLDBSWIGPythonCallThreadPlan(void *implementor, const char *method_name,
                                   lldb_private::Event *event_sp,
                                   bool &got_error);
+                                  
+bool LLDBSWIGPythonCallThreadPlan(void *implementor, 
+                                  const char *method_name,
+                                  lldb_private::Stream *stream,
+                                  bool &got_error);
 
 python::PythonObject LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,

@@ -70,7 +70,7 @@ static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
 llvm::Expected<ControlFlowContext>
 ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
   CFG::BuildOptions Options;
-  Options.PruneTriviallyFalseEdges = false;
+  Options.PruneTriviallyFalseEdges = true;
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;

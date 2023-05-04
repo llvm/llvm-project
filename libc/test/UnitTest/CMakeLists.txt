@@ -71,8 +71,6 @@ add_header_library(
 
 add_library(
   LibcFPTestHelpers
-  FPExceptMatcher.cpp
-  FPExceptMatcher.h
   FPMatcher.h
   RoundingModeUtils.cpp
   RoundingModeUtils.h
@@ -84,6 +82,17 @@ add_dependencies(
   libc.src.__support.FPUtil.fp_bits
   libc.src.__support.FPUtil.fenv_impl
   libc.test.UnitTest.string_utils
+)
+add_library(
+  LibcFPExceptionHelpers
+  FPExceptMatcher.cpp
+  FPExceptMatcher.h
+)
+add_dependencies(
+  LibcFPExceptionHelpers
+  LibcUnitTest
+  libc.src.__support.FPUtil.fp_bits
+  libc.src.__support.FPUtil.fenv_impl
 )
 
 add_library(
@@ -123,7 +132,8 @@ add_dependencies(
   libc.test.UnitTest.string_utils
 )
 
-foreach(lib LibcFPTestHelpers LibcMemoryHelpers LibcPrintfHelpers LibcScanfHelpers)
+foreach(lib LibcFPTestHelpers LibcFPExceptionHelpers LibcMemoryHelpers 
+            LibcPrintfHelpers LibcScanfHelpers)
   target_include_directories(${lib} PUBLIC ${LIBC_SOURCE_DIR})
   target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
   target_link_libraries(${lib} LibcUnitTest)

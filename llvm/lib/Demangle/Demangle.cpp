@@ -48,7 +48,7 @@ std::string llvm::demangle(const std::string &MangledName) {
 bool llvm::nonMicrosoftDemangle(const char *MangledName, std::string &Result) {
   char *Demangled = nullptr;
   if (isItaniumEncoding(MangledName))
-    Demangled = itaniumDemangle(MangledName, nullptr, nullptr, nullptr);
+    Demangled = itaniumDemangle(MangledName);
   else if (isRustEncoding(MangledName))
     Demangled = rustDemangle(MangledName);
   else if (isDLangEncoding(MangledName))

@@ -315,6 +315,10 @@ public:
 template<class Duration>
   using file_time = time_point<file_clock, Duration>;   // C++20
 
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const file_time<Duration>& tp);
+
 class steady_clock
 {
 public:
@@ -335,6 +339,10 @@ template<class Duration>
   using local_time  = time_point<local_t, Duration>;
 using local_seconds = local_time<seconds>;
 using local_days    = local_time<days>;
+
+template<class charT, class traits, class Duration>     // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const local_time<Duration>& tp);
 
 // 25.8.2, class last_spec    // C++20
 struct last_spec;
@@ -692,6 +700,10 @@ bool operator>=(const time_zone& x, const time_zone& y) noexcept;
 namespace std {
   template<class Duration, class charT>
     struct formatter<chrono::sys_time<Duration>, charT>;                          // C++20
+  template<class Duration, class charT>
+    struct formatter<chrono::filetime<Duration>, charT>;                          // C++20
+  template<class Duration, class charT>
+    struct formatter<chrono::local_time<Duration>, charT>;                        // C++20
   template<class Rep, class Period, class charT>
     struct formatter<chrono::duration<Rep, Period>, charT>;                       // C++20
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20

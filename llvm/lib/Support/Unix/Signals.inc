@@ -652,13 +652,12 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 
     if (dlinfo.dli_sname != nullptr) {
       OS << ' ';
-      int res;
-      char *d = itaniumDemangle(dlinfo.dli_sname, nullptr, nullptr, &res);
-      if (!d)
-        OS << dlinfo.dli_sname;
-      else
+      if (char *d = itaniumDemangle(dlinfo.dli_sname)) {
         OS << d;
-      free(d);
+        free(d);
+      } else {
+        OS << dlinfo.dli_sname;
+      }
 
       OS << format(" + %tu", (static_cast<const char *>(StackTrace[i]) -
                               static_cast<const char *>(dlinfo.dli_saddr)));
