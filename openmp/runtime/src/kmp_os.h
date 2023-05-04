@@ -1282,9 +1282,9 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
 
 // Symbol lookup on Linux/Windows
 #if KMP_OS_WINDOWS
-extern void *__kmp_lookup_symbol(const char *name);
+extern void *__kmp_lookup_symbol(const char *name, bool next = false);
 #define KMP_DLSYM(name) __kmp_lookup_symbol(name)
-#define KMP_DLSYM_NEXT(name) nullptr
+#define KMP_DLSYM_NEXT(name) __kmp_lookup_symbol(name, true)
 #else
 #define KMP_DLSYM(name) dlsym(RTLD_DEFAULT, name)
 #define KMP_DLSYM_NEXT(name) dlsym(RTLD_NEXT, name)
