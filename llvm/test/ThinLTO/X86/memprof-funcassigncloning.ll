@@ -45,6 +45,9 @@
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
+;; -stats requires asserts
+; REQUIRES: asserts
+
 
 ; RUN: opt -thinlto-bc %s >%t.o
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
