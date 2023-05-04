@@ -76,7 +76,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} -v
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
                 RESULT_VARIABLE libc_compiler_info_result
                 OUTPUT_VARIABLE libc_compiler_info
                 ERROR_VARIABLE libc_compiler_info)
