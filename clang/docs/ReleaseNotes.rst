@@ -386,6 +386,7 @@ Bug Fixes to C++ Support
 - Fix overly aggressive lifetime checks for parenthesized aggregate
   initialization.
   (`#61567 <https://github.com/llvm/llvm-project/issues/61567>`_)
+- Fix a crash when expanding a pack as the index of a subscript expression.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
