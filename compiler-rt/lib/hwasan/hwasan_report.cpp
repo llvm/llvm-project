@@ -707,7 +707,8 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
   sptr offset =
       __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
-  CHECK(offset >= 0 && offset < static_cast<sptr>(access_size));
+  CHECK_GE(offset, 0);
+  CHECK_LT(offset, static_cast<sptr>(access_size));
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr =
       reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
