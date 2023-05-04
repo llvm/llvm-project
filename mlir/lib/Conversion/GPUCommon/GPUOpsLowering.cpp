@@ -24,7 +24,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   SmallVector<LLVM::GlobalOp, 3> workgroupBuffers;
   workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());
   for (const auto &en : llvm::enumerate(gpuFuncOp.getWorkgroupAttributions())) {
-    Value attribution = en.value();
+    BlockArgument attribution = en.value();
 
     auto type = attribution.getType().dyn_cast<MemRefType>();
     assert(type && type.hasStaticShape() && "unexpected type in attribution");
@@ -36,10 +36,17 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     auto arrayType = LLVM::LLVMArrayType::get(elementType, numElements);
     std::string name = std::string(
         llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index()));
+    uint64_t alignment = 0;
+    if (auto alignAttr =
+            gpuFuncOp
+                .getWorkgroupAttributionAttr(
+                    en.index(), LLVM::LLVMDialect::getAlignAttrName())
+                .dyn_cast_or_null<IntegerAttr>())
+      alignment = alignAttr.getInt();
     auto globalOp = rewriter.create<LLVM::GlobalOp>(
         gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
-        LLVM::Linkage::Internal, name, /*value=*/Attribute(),
-        /*alignment=*/0, workgroupAddrSpace);
+        LLVM::Linkage::Internal, name, /*value=*/Attribute(), alignment,
+        workgroupAddrSpace);
     workgroupBuffers.push_back(globalOp);
   }
 
@@ -56,7 +63,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   for (const auto &attr : gpuFuncOp->getAttrs()) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
         attr.getName() == gpuFuncOp.getFunctionTypeAttrName() ||
-        attr.getName() == gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName())
+        attr.getName() ==
+            gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName() ||
+        attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
+        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName())
       continue;
     attributes.push_back(attr);
   }
@@ -124,9 +134,15 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
           getTypeConverter()->getPointerType(elementType, allocaAddrSpace);
       Value numElements = rewriter.create<LLVM::ConstantOp>(
           gpuFuncOp.getLoc(), int64Ty, type.getNumElements());
+      uint64_t alignment = 0;
+      if (auto alignAttr =
+              gpuFuncOp
+                  .getPrivateAttributionAttr(
+                      en.index(), LLVM::LLVMDialect::getAlignAttrName())
+                  .dyn_cast_or_null<IntegerAttr>())
+        alignment = alignAttr.getInt();
       Value allocated = rewriter.create<LLVM::AllocaOp>(
-          gpuFuncOp.getLoc(), ptrType, elementType, numElements,
-          /*alignment=*/0);
+          gpuFuncOp.getLoc(), ptrType, elementType, numElements, alignment);
       auto descr = MemRefDescriptor::fromStaticShape(
           rewriter, loc, *getTypeConverter(), type, allocated);
       signatureConversion.remapInput(
