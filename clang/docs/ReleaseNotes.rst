@@ -100,6 +100,12 @@ C++23 Feature Support
   and `P2579R0 Mitigation strategies for P2036 <https://wg21.link/P2579R0>`_.
   These proposals modify how variables captured in lambdas can appear in trailing return type
   expressions and how their types are deduced therein, in all C++ language versions.
+- Implemented partial support for `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/p2448r2>`_
+  Explicitly defaulted functions no longer have to be constexpr-compatible but merely constexpr suitable.
+  We do not support outside of defaulted special memeber functions the change that constexpr functions no
+  longer have to be constexpr compatible but rather support a less restricted requirements for constexpr
+  functions. Which include allowing non-literal types as return values and paremeters, allow calling of
+  non-constexpr functions and constructors.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
