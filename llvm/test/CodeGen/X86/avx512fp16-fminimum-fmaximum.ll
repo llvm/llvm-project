@@ -10,9 +10,8 @@ define half @test_fminimum(half %x, half %y) {
 ; CHECK-LABEL: test_fminimum:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovw %xmm0, %eax
-; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    cmpl $32768, %eax # imm = 0x8000
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testw %ax, %ax
+; CHECK-NEXT:    sets %al
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm2
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
@@ -119,15 +118,14 @@ define half @test_fmaximum(half %x, half %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovw %xmm0, %eax
 ; CHECK-NEXT:    testw %ax, %ax
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    sets %al
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovaps %xmm1, %xmm2
-; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
-; CHECK-NEXT:    vmaxsh %xmm2, %xmm0, %xmm1
-; CHECK-NEXT:    vcmpunordsh %xmm0, %xmm0, %k1
+; CHECK-NEXT:    vmovaps %xmm0, %xmm2
+; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vmovsh %xmm0, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %xmm1, %xmm0
+; CHECK-NEXT:    vmaxsh %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vcmpunordsh %xmm1, %xmm1, %k1
+; CHECK-NEXT:    vmovsh %xmm1, %xmm0, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %r = call half @llvm.maximum.f16(half %x, half %y)
   ret half %r

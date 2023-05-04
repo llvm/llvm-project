@@ -19,75 +19,74 @@ declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
 define float @test_fmaximum(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fmaximum:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    je .LBB0_2
-; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    js .LBB0_2
+; SSE2-NEXT:  # %bb.1:
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-NEXT:  .LBB0_2:
-; SSE2-NEXT:    movdqa %xmm3, %xmm2
-; SSE2-NEXT:    cmpunordss %xmm3, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm4
+; SSE2-NEXT:    movdqa %xmm3, %xmm0
+; SSE2-NEXT:    cmpunordss %xmm3, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm4
 ; SSE2-NEXT:    andps %xmm3, %xmm4
-; SSE2-NEXT:    je .LBB0_4
+; SSE2-NEXT:    js .LBB0_4
 ; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:  .LBB0_4:
-; SSE2-NEXT:    maxss %xmm0, %xmm3
-; SSE2-NEXT:    andnps %xmm3, %xmm2
-; SSE2-NEXT:    orps %xmm4, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    maxss %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm3, %xmm0
+; SSE2-NEXT:    orps %xmm4, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximum:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    je .LBB0_1
+; AVX1-NEXT:    js .LBB0_1
 ; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm2
+; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
 ; AVX1-NEXT:    jmp .LBB0_3
 ; AVX1-NEXT:  .LBB0_1:
-; AVX1-NEXT:    vmovdqa %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm1, %xmm2
+; AVX1-NEXT:    vmovdqa %xmm0, %xmm1
 ; AVX1-NEXT:  .LBB0_3:
-; AVX1-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
-; AVX1-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
+; AVX1-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test_fmaximum:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    testl %eax, %eax
-; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    sets %al
 ; AVX512-NEXT:    kmovw %eax, %k1
-; AVX512-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
+; AVX512-NEXT:    vmovdqa %xmm0, %xmm2
+; AVX512-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    vcmpunordss %xmm1, %xmm1, %k1
+; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: test_fmaximum:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    vmovd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd %xmm2, %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    je .LBB0_1
+; X86-NEXT:    js .LBB0_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovdqa %xmm1, %xmm2
+; X86-NEXT:    vmovdqa %xmm2, %xmm1
 ; X86-NEXT:    jmp .LBB0_3
 ; X86-NEXT:  .LBB0_1:
-; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm0
+; X86-NEXT:    vmovdqa %xmm0, %xmm1
+; X86-NEXT:    vmovdqa %xmm2, %xmm0
 ; X86-NEXT:  .LBB0_3:
-; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm1
 ; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
@@ -201,11 +200,11 @@ define float @test_fmaximum_nnan(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fmaximum_nnan:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    addss %xmm1, %xmm0
-; SSE2-NEXT:    subss %xmm1, %xmm2
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    addss %xmm1, %xmm2
+; SSE2-NEXT:    subss %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    je .LBB4_1
+; SSE2-NEXT:    js .LBB4_1
 ; SSE2-NEXT:  # %bb.2:
 ; SSE2-NEXT:    maxss %xmm2, %xmm0
 ; SSE2-NEXT:    retq
@@ -218,16 +217,16 @@ define float @test_fmaximum_nnan(float %x, float %y) nounwind {
 ; AVX1-LABEL: test_fmaximum_nnan:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm1
+; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm2, %eax
 ; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    je .LBB4_1
+; AVX1-NEXT:    js .LBB4_1
 ; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmaxss %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    vmaxss %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ; AVX1-NEXT:  .LBB4_1:
-; AVX1-NEXT:    vmovaps %xmm2, %xmm0
-; AVX1-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmovaps %xmm0, %xmm1
+; AVX1-NEXT:    vmaxss %xmm1, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_fmaximum_nnan:
@@ -236,12 +235,12 @@ define float @test_fmaximum_nnan(float %x, float %y) nounwind {
 ; AVX512F-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm2, %eax
 ; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    sets %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovaps %xmm0, %xmm1
-; AVX512F-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm1, %xmm2, %xmm0
+; AVX512F-NEXT:    vmovaps %xmm2, %xmm1
+; AVX512F-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
+; AVX512F-NEXT:    vmovss %xmm2, %xmm0, %xmm0 {%k1}
+; AVX512F-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fmaximum_nnan:
@@ -259,21 +258,21 @@ define float @test_fmaximum_nnan(float %x, float %y) nounwind {
 ; X86-LABEL: test_fmaximum_nnan:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; X86-NEXT:    vaddss %xmm1, %xmm2, %xmm0
-; X86-NEXT:    vsubss %xmm1, %xmm2, %xmm2
-; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    vaddss %xmm0, %xmm2, %xmm1
+; X86-NEXT:    vsubss %xmm0, %xmm2, %xmm0
+; X86-NEXT:    vmovd %xmm1, %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    je .LBB4_1
+; X86-NEXT:    js .LBB4_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovaps %xmm2, %xmm1
+; X86-NEXT:    vmovaps %xmm1, %xmm2
 ; X86-NEXT:    jmp .LBB4_3
 ; X86-NEXT:  .LBB4_1:
-; X86-NEXT:    vmovaps %xmm0, %xmm1
-; X86-NEXT:    vmovaps %xmm2, %xmm0
+; X86-NEXT:    vmovaps %xmm0, %xmm2
+; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:  .LBB4_3:
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -452,20 +451,20 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; SSE2-NEXT:    divss %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    testl %eax, %eax
-; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:    je .LBB9_2
-; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    movaps %xmm0, %xmm3
+; SSE2-NEXT:    js .LBB9_2
+; SSE2-NEXT:  # %bb.1:
+; SSE2-NEXT:    movaps %xmm1, %xmm3
 ; SSE2-NEXT:  .LBB9_2:
 ; SSE2-NEXT:    movaps %xmm3, %xmm2
 ; SSE2-NEXT:    cmpunordss %xmm3, %xmm2
 ; SSE2-NEXT:    movaps %xmm2, %xmm4
 ; SSE2-NEXT:    andps %xmm3, %xmm4
-; SSE2-NEXT:    je .LBB9_4
+; SSE2-NEXT:    js .LBB9_4
 ; SSE2-NEXT:  # %bb.3:
-; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:  .LBB9_4:
-; SSE2-NEXT:    maxss %xmm0, %xmm3
+; SSE2-NEXT:    maxss %xmm1, %xmm3
 ; SSE2-NEXT:    andnps %xmm3, %xmm2
 ; SSE2-NEXT:    orps %xmm4, %xmm2
 ; SSE2-NEXT:    movaps %xmm2, %xmm0
@@ -473,20 +472,20 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ;
 ; AVX1-LABEL: test_fmaximum_combine_cmps:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vdivss %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vdivss %xmm0, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    testl %eax, %eax
-; AVX1-NEXT:    je .LBB9_1
+; AVX1-NEXT:    js .LBB9_1
 ; AVX1-NEXT:  # %bb.2:
-; AVX1-NEXT:    vmovaps %xmm2, %xmm1
+; AVX1-NEXT:    vmovaps %xmm0, %xmm2
 ; AVX1-NEXT:    jmp .LBB9_3
 ; AVX1-NEXT:  .LBB9_1:
+; AVX1-NEXT:    vmovaps %xmm1, %xmm2
 ; AVX1-NEXT:    vmovaps %xmm0, %xmm1
-; AVX1-NEXT:    vmovaps %xmm2, %xmm0
 ; AVX1-NEXT:  .LBB9_3:
-; AVX1-NEXT:    vmaxss %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
-; AVX1-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
+; AVX1-NEXT:    vcmpunordss %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_fmaximum_combine_cmps:
@@ -494,15 +493,14 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; AVX512F-NEXT:    vdivss %xmm0, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    testl %eax, %eax
-; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    sets %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
-; AVX512F-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
-; AVX512F-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
-; AVX512F-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
-; AVX512F-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
+; AVX512F-NEXT:    vmovaps %xmm0, %xmm2
+; AVX512F-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
 ; AVX512F-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512F-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512F-NEXT:    vmaxss %xmm2, %xmm1, %xmm0
+; AVX512F-NEXT:    vcmpunordss %xmm1, %xmm1, %k1
+; AVX512F-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_fmaximum_combine_cmps:
@@ -519,20 +517,20 @@ define float @test_fmaximum_combine_cmps(float %x, float %y) nounwind {
 ; X86-LABEL: test_fmaximum_combine_cmps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vdivss %xmm0, %xmm1, %xmm2
-; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vdivss %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovd %xmm1, %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    je .LBB9_1
+; X86-NEXT:    js .LBB9_1
 ; X86-NEXT:  # %bb.2:
-; X86-NEXT:    vmovaps %xmm2, %xmm1
+; X86-NEXT:    vmovaps %xmm1, %xmm2
 ; X86-NEXT:    jmp .LBB9_3
 ; X86-NEXT:  .LBB9_1:
-; X86-NEXT:    vmovaps %xmm0, %xmm1
-; X86-NEXT:    vmovaps %xmm2, %xmm0
+; X86-NEXT:    vmovaps %xmm0, %xmm2
+; X86-NEXT:    vmovaps %xmm1, %xmm0
 ; X86-NEXT:  .LBB9_3:
-; X86-NEXT:    vmaxss %xmm1, %xmm0, %xmm1
+; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
 ; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
 ; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
@@ -552,9 +550,9 @@ define float @test_fminimum(float %x, float %y) nounwind {
 ; SSE2-LABEL: test_fminimum:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
+; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    je .LBB10_2
+; SSE2-NEXT:    js .LBB10_2
 ; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:  .LBB10_2:
@@ -562,7 +560,7 @@ define float @test_fminimum(float %x, float %y) nounwind {
 ; SSE2-NEXT:    cmpunordss %xmm3, %xmm2
 ; SSE2-NEXT:    movaps %xmm2, %xmm4
 ; SSE2-NEXT:    andps %xmm3, %xmm4
-; SSE2-NEXT:    je .LBB10_4
+; SSE2-NEXT:    js .LBB10_4
 ; SSE2-NEXT:  # %bb.3:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:  .LBB10_4:
@@ -575,8 +573,8 @@ define float @test_fminimum(float %x, float %y) nounwind {
 ; AVX1-LABEL: test_fminimum:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; AVX1-NEXT:    je .LBB10_1
+; AVX1-NEXT:    testl %eax, %eax
+; AVX1-NEXT:    js .LBB10_1
 ; AVX1-NEXT:  # %bb.2:
 ; AVX1-NEXT:    vmovdqa %xmm1, %xmm2
 ; AVX1-NEXT:    jmp .LBB10_3
@@ -592,8 +590,8 @@ define float @test_fminimum(float %x, float %y) nounwind {
 ; AVX512-LABEL: test_fminimum:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    testl %eax, %eax
+; AVX512-NEXT:    sets %al
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm2
 ; AVX512-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
@@ -610,8 +608,8 @@ define float @test_fminimum(float %x, float %y) nounwind {
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; X86-NEXT:    je .LBB10_1
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    js .LBB10_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovdqa %xmm1, %xmm2
 ; X86-NEXT:    jmp .LBB10_3
@@ -705,9 +703,8 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ; SSE2-LABEL: test_fminimum_nnan:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %xmm0, %rax
-; SSE2-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; SSE2-NEXT:    cmpq %rcx, %rax
-; SSE2-NEXT:    je .LBB14_1
+; SSE2-NEXT:    testq %rax, %rax
+; SSE2-NEXT:    js .LBB14_1
 ; SSE2-NEXT:  # %bb.2:
 ; SSE2-NEXT:    minsd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -720,9 +717,8 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ; AVX1-LABEL: test_fminimum_nnan:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; AVX1-NEXT:    cmpq %rcx, %rax
-; AVX1-NEXT:    je .LBB14_1
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    js .LBB14_1
 ; AVX1-NEXT:  # %bb.2:
 ; AVX1-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -734,9 +730,8 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ; AVX512F-LABEL: test_fminimum_nnan:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovq %xmm0, %rax
-; AVX512F-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; AVX512F-NEXT:    cmpq %rcx, %rax
-; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    testq %rax, %rax
+; AVX512F-NEXT:    sets %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovapd %xmm1, %xmm2
 ; AVX512F-NEXT:    vmovsd %xmm0, %xmm2, %xmm2 {%k1}
@@ -762,12 +757,10 @@ define double @test_fminimum_nnan(double %x, double %y) "no-nans-fp-math"="true"
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
-; X86-NEXT:    vmovd %xmm2, %eax
-; X86-NEXT:    vpextrd $1, %xmm2, %ecx
-; X86-NEXT:    addl $-2147483648, %ecx # imm = 0x80000000
-; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    je .LBB14_1
+; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; X86-NEXT:    vextractps $1, %xmm2, %eax
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    js .LBB14_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovapd %xmm1, %xmm2
 ; X86-NEXT:    jmp .LBB14_3
@@ -945,9 +938,9 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    divss %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
+; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    movaps %xmm1, %xmm3
-; SSE2-NEXT:    je .LBB19_2
+; SSE2-NEXT:    js .LBB19_2
 ; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    movaps %xmm0, %xmm3
 ; SSE2-NEXT:  .LBB19_2:
@@ -955,7 +948,7 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 ; SSE2-NEXT:    cmpunordss %xmm3, %xmm2
 ; SSE2-NEXT:    movaps %xmm2, %xmm4
 ; SSE2-NEXT:    andps %xmm3, %xmm4
-; SSE2-NEXT:    je .LBB19_4
+; SSE2-NEXT:    js .LBB19_4
 ; SSE2-NEXT:  # %bb.3:
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:  .LBB19_4:
@@ -969,8 +962,8 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vdivss %xmm0, %xmm1, %xmm2
 ; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; AVX1-NEXT:    je .LBB19_1
+; AVX1-NEXT:    testl %eax, %eax
+; AVX1-NEXT:    js .LBB19_1
 ; AVX1-NEXT:  # %bb.2:
 ; AVX1-NEXT:    vmovaps %xmm2, %xmm1
 ; AVX1-NEXT:    jmp .LBB19_3
@@ -987,8 +980,8 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vdivss %xmm0, %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; AVX512F-NEXT:    sete %al
+; AVX512F-NEXT:    testl %eax, %eax
+; AVX512F-NEXT:    sets %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovaps %xmm1, %xmm2
 ; AVX512F-NEXT:    vmovss %xmm0, %xmm2, %xmm2 {%k1}
@@ -1017,8 +1010,8 @@ define float @test_fminimum_combine_cmps(float %x, float %y) nounwind {
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vdivss %xmm0, %xmm1, %xmm2
 ; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    cmpl $-2147483648, %eax # imm = 0x80000000
-; X86-NEXT:    je .LBB19_1
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    js .LBB19_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovaps %xmm2, %xmm1
 ; X86-NEXT:    jmp .LBB19_3
