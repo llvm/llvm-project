@@ -242,14 +242,6 @@ static void ParseArgs(int argc, char **argv) {
   if (auto *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
     CommandLine.insert(CommandLine.end(), A->getValues().begin(),
                        A->getValues().end());
-
-  Verbose = Args.hasArg(OPT_verbose);
-
-  RoundTripArgs = Args.hasArg(OPT_round_trip_args);
-
-  if (auto *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
-    CommandLine.insert(CommandLine.end(), A->getValues().begin(),
-                       A->getValues().end());
 }
 
 class SharedStream {
