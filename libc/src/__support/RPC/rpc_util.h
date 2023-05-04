@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
 #define LLVM_LIBC_SRC_SUPPORT_RPC_RPC_UTILS_H
 
+#include "src/__support/GPU/utils.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
