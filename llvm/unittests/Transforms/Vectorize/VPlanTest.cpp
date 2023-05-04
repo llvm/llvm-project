@@ -239,6 +239,7 @@ TEST(VPInstructionTest, releaseOperandsAtDeletion) {
 }
 TEST(VPBasicBlockTest, getPlan) {
   {
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *VPBB1 = new VPBasicBlock();
     VPBasicBlock *VPBB2 = new VPBasicBlock();
     VPBasicBlock *VPBB3 = new VPBasicBlock();
@@ -254,8 +255,8 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(VPBB2, VPBB4);
     VPBlockUtils::connectBlocks(VPBB3, VPBB4);
 
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
 
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, VPBB2->getPlan());
@@ -264,6 +265,7 @@ TEST(VPBasicBlockTest, getPlan) {
   }
 
   {
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     // VPBasicBlock is the entry into the VPlan, followed by a region.
     VPBasicBlock *R1BB1 = new VPBasicBlock();
     VPBasicBlock *R1BB2 = new VPBasicBlock();
@@ -273,8 +275,9 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBasicBlock *VPBB1 = new VPBasicBlock();
     VPBlockUtils::connectBlocks(VPBB1, R1);
 
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
+
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, R1->getPlan());
     EXPECT_EQ(&Plan, R1BB1->getPlan());
@@ -282,6 +285,8 @@ TEST(VPBasicBlockTest, getPlan) {
   }
 
   {
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
+
     VPBasicBlock *R1BB1 = new VPBasicBlock();
     VPBasicBlock *R1BB2 = new VPBasicBlock();
     VPRegionBlock *R1 = new VPRegionBlock(R1BB1, R1BB2, "R1");
@@ -300,8 +305,9 @@ TEST(VPBasicBlockTest, getPlan) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
     VPBlockUtils::connectBlocks(R2, VPBB2);
 
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
+
     EXPECT_EQ(&Plan, VPBB1->getPlan());
     EXPECT_EQ(&Plan, R1->getPlan());
     EXPECT_EQ(&Plan, R1BB1->getPlan());
@@ -322,6 +328,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     //    \    /
     //    VPBB4
     //
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *VPBB1 = new VPBasicBlock();
     VPBasicBlock *VPBB2 = new VPBasicBlock();
     VPBasicBlock *VPBB3 = new VPBasicBlock();
@@ -339,8 +346,8 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB2, FromIterator[1]);
 
     // Use Plan to properly clean up created blocks.
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
   }
 
   {
@@ -362,6 +369,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     //      |
     //    R2BB2
     //
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *VPBB0 = new VPBasicBlock("VPBB0");
     VPBasicBlock *R1BB1 = new VPBasicBlock();
     VPBasicBlock *R1BB2 = new VPBasicBlock();
@@ -438,8 +446,8 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R1, FromIterator[7]);
 
     // Use Plan to properly clean up created blocks.
-    VPlan Plan;
-    Plan.setEntry(VPBB0);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB0);
   }
 
   {
@@ -463,6 +471,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     //   |
     //  VPBB2
     //
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *R1BB1 = new VPBasicBlock("R1BB1");
     VPBasicBlock *R1BB2 = new VPBasicBlock("R1BB2");
     VPBasicBlock *R1BB3 = new VPBasicBlock("R1BB3");
@@ -520,8 +529,8 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[9]);
 
     // Use Plan to properly clean up created blocks.
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
   }
 
   {
@@ -535,6 +544,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     //      R2BB2
     //   }
     //
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *R2BB1 = new VPBasicBlock("R2BB1");
     VPBasicBlock *R2BB2 = new VPBasicBlock("R2BB2");
     VPRegionBlock *R2 = new VPRegionBlock(R2BB1, R2BB2, "R2");
@@ -567,8 +577,8 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[4]);
 
     // Use Plan to properly clean up created blocks.
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
   }
 
   {
@@ -590,6 +600,7 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     //   |
     //  VPBB2
     //
+    VPBasicBlock *VPPH = new VPBasicBlock("ph");
     VPBasicBlock *R3BB1 = new VPBasicBlock("R3BB1");
     VPRegionBlock *R3 = new VPRegionBlock(R3BB1, R3BB1, "R3");
 
@@ -658,13 +669,17 @@ TEST(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(VPBB1, FromIterator[3]);
 
     // Use Plan to properly clean up created blocks.
-    VPlan Plan;
-    Plan.setEntry(VPBB1);
+    auto TC = std::make_unique<VPValue>();
+    VPlan Plan(VPPH, &*TC, VPBB1);
   }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(VPBasicBlockTest, print) {
+  VPInstruction *TC = new VPInstruction(Instruction::Add, {});
+  VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
+  VPBB0->appendRecipe(TC);
+
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
   VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
   VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
@@ -694,8 +709,7 @@ TEST(VPBasicBlockTest, print) {
     EXPECT_EQ("EMIT br <badref> <badref>", I3Dump);
   }
 
-  VPlan Plan;
-  Plan.setEntry(VPBB1);
+  VPlan Plan(VPBB0, TC, VPBB1);
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan.printDOT(OS);
@@ -706,17 +720,22 @@ node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
-    "bb1:\l" +
+    "preheader:\l" +
     "  EMIT vp\<%1\> = add\l" +
-    "  EMIT vp\<%2\> = sub vp\<%1\>\l" +
-    "  EMIT br vp\<%1\> vp\<%2\>\l" +
+    "No successors\l"
+  ]
+  N1 [label =
+    "bb1:\l" +
+    "  EMIT vp\<%2\> = add\l" +
+    "  EMIT vp\<%3\> = sub vp\<%2\>\l" +
+    "  EMIT br vp\<%2\> vp\<%3\>\l" +
     "Successor(s): bb2\l"
   ]
-  N0 -> N1 [ label=""]
-  N1 [label =
+  N1 -> N2 [ label=""]
+  N2 [label =
     "bb2:\l" +
-    "  EMIT vp\<%4\> = mul vp\<%2\> vp\<%1\>\l" +
-    "  EMIT ret vp\<%4\>\l" +
+    "  EMIT vp\<%5\> = mul vp\<%3\> vp\<%2\>\l" +
+    "  EMIT ret vp\<%5\>\l" +
     "No successors\l"
   ]
 }
@@ -724,9 +743,9 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%1> = add
-  EMIT vp<%2> = sub vp<%1>
-  EMIT br vp<%1> vp<%2>
+  EMIT vp<%2> = add
+  EMIT vp<%3> = sub vp<%2>
+  EMIT br vp<%2> vp<%3>
 Successor(s): bb2
 )";
   std::string Block1Dump;
@@ -736,8 +755,8 @@ Successor(s): bb2
 
   // Ensure that numbering is good when dumping the second block in isolation.
   const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%4> = mul vp<%2> vp<%1>
-  EMIT ret vp<%4>
+  EMIT vp<%5> = mul vp<%3> vp<%2>
+  EMIT ret vp<%5>
 No successors
 )";
   std::string Block2Dump;
@@ -751,7 +770,7 @@ No successors
     VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
     OS.flush();
-    EXPECT_EQ("EMIT br vp<%1> vp<%2>", I3Dump);
+    EXPECT_EQ("EMIT br vp<%2> vp<%3>", I3Dump);
   }
 
   {
@@ -759,21 +778,24 @@ No successors
     raw_string_ostream OS(I4Dump);
     OS << *I4;
     OS.flush();
-    EXPECT_EQ("EMIT vp<%4> = mul vp<%2> vp<%1>", I4Dump);
+    EXPECT_EQ("EMIT vp<%5> = mul vp<%3> vp<%2>", I4Dump);
   }
 }
 
 TEST(VPBasicBlockTest, printPlanWithVFsAndUFs) {
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
 
+  VPInstruction *TC = new VPInstruction(Instruction::Sub, {});
+  VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
+  VPBB0->appendRecipe(TC);
+
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
   VPBasicBlock *VPBB1 = new VPBasicBlock();
   VPBB1->appendRecipe(I1);
   VPBB1->setName("bb1");
 
-  VPlan Plan;
+  VPlan Plan(VPBB0, TC, VPBB1);
   Plan.setName("TestPlan");
   Plan.addVF(ElementCount::getFixed(4));
-  Plan.setEntry(VPBB1);
 
   {
     std::string FullDump;
@@ -781,8 +803,14 @@ TEST(VPBasicBlockTest, printPlanWithVFsAndUFs) {
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4},UF>=1' {
+vp<%1> = original trip-count
+
+preheader:
+  EMIT vp<%1> = sub
+No successors
+
 bb1:
-  EMIT vp<%1> = add
+  EMIT vp<%2> = add
 No successors
 }
 )";
@@ -796,8 +824,14 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF>=1' {
+vp<%1> = original trip-count
+
+preheader:
+  EMIT vp<%1> = sub
+No successors
+
 bb1:
-  EMIT vp<%1> = add
+  EMIT vp<%2> = add
 No successors
 }
 )";
@@ -811,8 +845,14 @@ No successors
     Plan.print(OS);
 
     const char *ExpectedStr = R"(VPlan 'TestPlan for VF={4,vscale x 8},UF={4}' {
+vp<%1> = original trip-count
+
+preheader:
+  EMIT vp<%1> = sub
+No successors
+
 bb1:
-  EMIT vp<%1> = add
+  EMIT vp<%2> = add
 No successors
 }
 )";
@@ -1182,9 +1222,9 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(VPRecipeTest, dump) {
-  VPlan Plan;
+  VPBasicBlock *VPBB0 = new VPBasicBlock("preheader");
   VPBasicBlock *VPBB1 = new VPBasicBlock();
-  Plan.setEntry(VPBB1);
+  VPlan Plan(VPBB0, VPBB1);
 
   LLVMContext C;
 

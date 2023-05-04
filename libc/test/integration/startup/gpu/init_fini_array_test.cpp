@@ -53,7 +53,7 @@ __attribute__((destructor(1))) void reset_initval() {
   initval = 0;
 }
 
-TEST_MAIN() {
+TEST_MAIN(int argc, char **argv, char **env) {
   ASSERT_EQ(global.get(GLOBAL_INDEX), INITVAL_INITIALIZER);
   ASSERT_EQ(initval, INITVAL_INITIALIZER);
   return 0;
