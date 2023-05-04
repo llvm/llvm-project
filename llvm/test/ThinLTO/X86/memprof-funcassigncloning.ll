@@ -45,6 +45,9 @@
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
+;; -stats requires asserts
+; REQUIRES: asserts
+
 
 ; RUN: opt -thinlto-bc %s >%t.o
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
@@ -53,7 +56,9 @@
 ; RUN:  -r=%t.o,sleep, \
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:  --check-prefix=STATS
 
 
 ;; Try again but with distributed ThinLTO
@@ -64,7 +69,9 @@
 ; RUN:  -r=%t.o,sleep, \
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:  --check-prefix=STATS
 
 
 source_filename = "funcassigncloning.ll"
@@ -221,3 +228,8 @@ uselistorder ptr @_Znam, { 1, 0 }
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[ENEW2CLONE]] to Caller: [[C]] AllocTypes: Cold ContextIds: 5
 ; DUMP: 	Clone of [[ENEW2ORIG]]
+
+
+; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
