@@ -526,7 +526,7 @@ define void @gep_v16i8(ptr %base, ptr %base16, <16 x i8> %ind8, <16 x i32> %ind3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %gepbsb, i32 2, <16 x i1> %mask, <16 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 224 for instruction: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %resbs, <16 x ptr> %gepbsb, i32 2, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 74 for instruction: %indzext4 = zext <16 x i8> %ind8 to <16 x i32>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep4 = getelementptr i8, ptr %base, <16 x i32> %indzext
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %gep4 = getelementptr i8, ptr %base, <16 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %indtrunc = trunc <16 x i32> %ind32 to <16 x i8>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %indtrunc, <16 x ptr> %gep4, i32 2, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
