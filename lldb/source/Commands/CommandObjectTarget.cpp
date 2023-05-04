@@ -957,21 +957,29 @@ protected:
                 compile_units.GetFileSpecAtIndex(cu_idx), sc_list);
         }
 
-        for (const SymbolContext &sc : sc_list) {
-          if (sc.comp_unit) {
-            const bool can_create = true;
-            VariableListSP comp_unit_varlist_sp(
-                sc.comp_unit->GetVariableList(can_create));
-            if (comp_unit_varlist_sp)
-              DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp, s);
-          } else if (sc.module_sp) {
-            // Get all global variables for this module
-            lldb_private::RegularExpression all_globals_regex(
-                llvm::StringRef(".")); // Any global with at least one character
-            VariableList variable_list;
-            sc.module_sp->FindGlobalVariables(all_globals_regex, UINT32_MAX,
-                                              variable_list);
-            DumpGlobalVariableList(m_exe_ctx, sc, variable_list, s);
+        const uint32_t num_scs = sc_list.GetSize();
+        if (num_scs > 0) {
+          SymbolContext sc;
+          for (uint32_t sc_idx = 0; sc_idx < num_scs; ++sc_idx) {
+            if (sc_list.GetContextAtIndex(sc_idx, sc)) {
+              if (sc.comp_unit) {
+                const bool can_create = true;
+                VariableListSP comp_unit_varlist_sp(
+                    sc.comp_unit->GetVariableList(can_create));
+                if (comp_unit_varlist_sp)
+                  DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp,
+                                         s);
+              } else if (sc.module_sp) {
+                // Get all global variables for this module
+                lldb_private::RegularExpression all_globals_regex(
+                    llvm::StringRef(
+                        ".")); // Any global with at least one character
+                VariableList variable_list;
+                sc.module_sp->FindGlobalVariables(all_globals_regex, UINT32_MAX,
+                                                  variable_list);
+                DumpGlobalVariableList(m_exe_ctx, sc, variable_list, s);
+              }
+            }
           }
         }
       }
@@ -1298,22 +1306,22 @@ static uint32_t DumpCompileUnitLineTable(CommandInterpreter &interpreter,
     num_matches = module->ResolveSymbolContextsForFileSpec(
         file_spec, 0, false, eSymbolContextCompUnit, sc_list);
 
-    bool first_module = true;
-    for (const SymbolContext &sc : sc_list) {
-      if (!first_module)
-        strm << "\n\n";
+    for (uint32_t i = 0; i < num_matches; ++i) {
+      SymbolContext sc;
+      if (sc_list.GetContextAtIndex(i, sc)) {
+        if (i > 0)
+          strm << "\n\n";
 
-      strm << "Line table for " << sc.comp_unit->GetPrimaryFile() << " in `"
-           << module->GetFileSpec().GetFilename() << "\n";
-      LineTable *line_table = sc.comp_unit->GetLineTable();
-      if (line_table)
-        line_table->GetDescription(
-            &strm, interpreter.GetExecutionContext().GetTargetPtr(),
-            desc_level);
-      else
-        strm << "No line table";
-
-      first_module = false;
+        strm << "Line table for " << sc.comp_unit->GetPrimaryFile() << " in `"
+             << module->GetFileSpec().GetFilename() << "\n";
+        LineTable *line_table = sc.comp_unit->GetLineTable();
+        if (line_table)
+          line_table->GetDescription(
+              &strm, interpreter.GetExecutionContext().GetTargetPtr(),
+              desc_level);
+        else
+          strm << "No line table";
+      }
     }
   }
   return num_matches;
@@ -1560,21 +1568,23 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
 }
 
 static void DumpSymbolContextList(ExecutionContextScope *exe_scope,
-                                  Stream &strm,
-                                  const SymbolContextList &sc_list,
+                                  Stream &strm, SymbolContextList &sc_list,
                                   bool verbose, bool all_ranges) {
   strm.IndentMore();
-  bool first_module = true;
-  for (const SymbolContext &sc : sc_list) {
-    if (!first_module)
-      strm.EOL();
 
-    AddressRange range;
+  const uint32_t num_matches = sc_list.GetSize();
 
-    sc.GetAddressRange(eSymbolContextEverything, 0, true, range);
+  for (uint32_t i = 0; i < num_matches; ++i) {
+    SymbolContext sc;
+    if (sc_list.GetContextAtIndex(i, sc)) {
+      AddressRange range;
 
-    DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm);
-    first_module = false;
+      sc.GetAddressRange(eSymbolContextEverything, 0, true, range);
+
+      DumpAddress(exe_scope, range.GetBaseAddress(), verbose, all_ranges, strm);
+      if (i != (num_matches - 1))
+        strm.EOL();
+    }
   }
   strm.IndentLess();
 }
@@ -3358,13 +3368,16 @@ protected:
       return false;
     }
 
-    if (sc_list.GetSize() == 0) {
+    size_t num_matches = sc_list.GetSize();
+    if (num_matches == 0) {
       result.AppendErrorWithFormat("no unwind data found that matches '%s'.",
                                    m_options.m_str.c_str());
       return false;
     }
 
-    for (const SymbolContext &sc : sc_list) {
+    for (uint32_t idx = 0; idx < num_matches; idx++) {
+      SymbolContext sc;
+      sc_list.GetContextAtIndex(idx, sc);
       if (sc.symbol == nullptr && sc.function == nullptr)
         continue;
       if (!sc.module_sp || sc.module_sp->GetObjectFile() == nullptr)
