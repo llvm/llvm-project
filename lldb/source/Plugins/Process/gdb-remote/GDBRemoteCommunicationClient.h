@@ -583,6 +583,7 @@ protected:
   uint32_t m_addressing_bits = 0;
 
   ArchSpec m_host_arch;
+  std::string m_host_distribution_id;
   ArchSpec m_process_arch;
   UUID m_process_standalone_uuid;
   lldb::addr_t m_process_standalone_value = LLDB_INVALID_ADDRESS;

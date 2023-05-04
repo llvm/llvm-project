@@ -582,22 +582,24 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
   if (!name.empty())
     os << formatv("{0} = {1};\n", name, castedName);
 
-  for (int i = 0, e = tree.getNumArgs(), nextOperand = 0; i != e; ++i) {
-    auto opArg = op.getArg(i);
+  for (int i = 0, opArgIdx = 0, e = tree.getNumArgs(), nextOperand = 0; i != e;
+       ++i, ++opArgIdx) {
+    auto opArg = op.getArg(opArgIdx);
     std::string argName = formatv("op{0}", depth + 1);
 
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
       if (argTree.isEither()) {
-        emitEitherOperandMatch(tree, argTree, castedName, i, nextOperand,
+        emitEitherOperandMatch(tree, argTree, castedName, opArgIdx, nextOperand,
                                depth);
+        ++opArgIdx;
         continue;
       }
       if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
         if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
                                "variadic operand #{1} unsupported now",
-                               op.getOperationName(), i);
+                               op.getOperationName(), opArgIdx);
           PrintFatalError(loc, error);
         }
       }
@@ -627,11 +629,10 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
       emitOperandMatch(tree, castedName, operandName.str(),
                        /*operandMatcher=*/tree.getArgAsLeaf(i),
-                       /*argName=*/tree.getArgName(i),
-                       /*argIndex=*/i);
+                       /*argName=*/tree.getArgName(i), opArgIdx);
       ++nextOperand;
     } else if (opArg.is<NamedAttribute *>()) {
-      emitAttributeMatch(tree, opName, i, depth);
+      emitAttributeMatch(tree, opName, opArgIdx, depth);
     } else {
       PrintFatalError(loc, "unhandled case when matching op");
     }

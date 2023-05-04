@@ -87,6 +87,7 @@ ProtoSeq2ArrayRef(IntrinsicKind K, uint16_t Index, uint8_t Length) {
   case IntrinsicKind::SIFIVE_VECTOR:
     return ArrayRef(&RVSiFiveVectorSignatureTable[Index], Length);
   }
+  llvm_unreachable("Unhandled IntrinsicKind");
 }
 
 static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {

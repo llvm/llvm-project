@@ -546,6 +546,17 @@ void RTNAME(Assign)(Descriptor &to, const Descriptor &from,
 void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
+  // Initialize the "to" if it is of derived type that needs initialization.
+  if (const DescriptorAddendum * addendum{to.Addendum()}) {
+    if (const auto *derived{addendum->derivedType()}) {
+      if (!derived->noInitializationNeeded()) {
+        if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
+            StatOk) {
+          return;
+        }
+      }
+    }
+  }
   Assign(to, from, terminator, PolymorphicLHS);
 }
 

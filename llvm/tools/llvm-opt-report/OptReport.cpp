@@ -339,8 +339,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
             bool Printed = false;
             if (!NoDemangle) {
               int Status = 0;
-              char *Demangled =
-                itaniumDemangle(FuncName.c_str(), nullptr, nullptr, &Status);
+              char *Demangled = itaniumDemangle(FuncName.c_str(), &Status);
               if (Demangled && Status == 0) {
                 OS << Demangled;
                 Printed = true;

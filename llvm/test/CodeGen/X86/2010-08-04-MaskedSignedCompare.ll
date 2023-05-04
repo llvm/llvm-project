@@ -9,7 +9,6 @@
 define dso_local i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq g_16(%rip), %rax
 ; CHECK-NEXT:    sbbl %eax, %eax
@@ -22,6 +21,7 @@ define dso_local i32 @main() nounwind {
 ; CHECK-NEXT:  .LBB0_1: # %entry.if.end_crit_edge
 ; CHECK-NEXT:    movl g_38(%rip), %esi
 ; CHECK-NEXT:  .LBB0_3: # %if.end
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq printf@PLT

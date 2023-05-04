@@ -1238,10 +1238,9 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
 
     FileSpec platform_pull_upart(platform_file);
     std::vector<std::string> path_parts;
-    path_parts.push_back(
-        platform_pull_upart.GetLastPathComponent().AsCString());
+    path_parts.push_back(platform_pull_upart.GetFilename().AsCString());
     while (platform_pull_upart.RemoveLastPathComponent()) {
-      ConstString part = platform_pull_upart.GetLastPathComponent();
+      ConstString part = platform_pull_upart.GetFilename();
       path_parts.push_back(part.AsCString());
     }
     const size_t path_parts_size = path_parts.size();

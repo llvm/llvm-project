@@ -1564,9 +1564,11 @@ int64_t DynamicReloc::computeAddend() const {
     assert(sym != nullptr);
     return addend;
   case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA:
-    return InputSection::getRelocTargetVA(inputSec->file, type, addend,
-                                          getOffset(), *sym, expr);
+  case AgainstSymbolWithTargetVA: {
+    uint64_t ca = InputSection::getRelocTargetVA(inputSec->file, type, addend,
+                                                 getOffset(), *sym, expr);
+    return config->is64 ? ca : SignExtend64<32>(ca);
+  }
   case MipsMultiGotPage:
     assert(sym == nullptr);
     return getMipsPageAddr(outputSec->addr) + addend;

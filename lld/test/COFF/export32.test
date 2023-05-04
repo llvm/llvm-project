@@ -89,7 +89,7 @@
 # CHECK7:      Export Table:
 # CHECK7:      DLL name: export32.test.tmp.dll
 # CHECK7:      Ordinal      RVA  Name
-# CHECK7-NEXT:       1        0
+# CHECK7-NEXT:       1   0x1010  exportfn3
 # CHECK7-NEXT:       2   0x1010  foo
 
 --- !COFF

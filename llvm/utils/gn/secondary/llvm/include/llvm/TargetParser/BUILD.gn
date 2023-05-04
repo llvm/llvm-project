@@ -4,6 +4,7 @@ tablegen("RISCVTargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-riscv-target-def" ]
   td_file = "//llvm/lib/Target/RISCV/RISCV.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 group("gen") {
