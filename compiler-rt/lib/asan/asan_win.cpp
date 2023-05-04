@@ -194,9 +194,12 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
 }
 
 void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  // Only asan on 64-bit Windows supports committing shadow memory on demand.
+#if SANITIZER_WINDOWS64
   // Since asan's mapping is compacting, the shadow chunk may be
   // not page-aligned, so we only flush the page-aligned portion.
   ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+#endif
 }
 
 // ---------------------- TSD ---------------- {{{
