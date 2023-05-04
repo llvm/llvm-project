@@ -223,24 +223,7 @@ public:
     if (DeclLoc == nullptr)
       return;
 
-    // If the value is already an lvalue, don't double-wrap it.
-    if (isa_and_nonnull<ReferenceValue>(Env.getValue(*DeclLoc))) {
-      // We only expect to encounter a `ReferenceValue` for a reference type
-      // (always) or for `BindingDecl` (sometimes). For the latter, we can't
-      // rely on type, because their type does not indicate whether they are a
-      // reference type. The assert is not strictly necessary, since we don't
-      // depend on its truth to proceed. But, it verifies our assumptions,
-      // which, if violated, probably indicate a problem elsewhere.
-      assert((VD->getType()->isReferenceType() || isa<BindingDecl>(VD)) &&
-             "Only reference-typed declarations or `BindingDecl`s should map "
-             "to `ReferenceValue`s");
-      Env.setStorageLocation(*S, *DeclLoc);
-    } else {
-      auto &Loc = Env.createStorageLocation(*S);
-      auto &Val = Env.create<ReferenceValue>(*DeclLoc);
-      Env.setStorageLocation(*S, Loc);
-      Env.setValue(Loc, Val);
-    }
+    Env.setStorageLocation(*S, *DeclLoc);
   }
 
   void VisitDeclStmt(const DeclStmt *S) {
@@ -248,55 +231,69 @@ public:
     // is safe.
     const auto &D = *cast<VarDecl>(S->getSingleDecl());
 
+    ProcessVarDecl(D);
+  }
+
+  void ProcessVarDecl(const VarDecl &D) {
     // Static local vars are already initialized in `Environment`.
     if (D.hasGlobalStorage())
       return;
 
-    // The storage location for `D` could have been created earlier, before the
-    // variable's declaration statement (for example, in the case of
-    // BindingDecls).
-    auto *MaybeLoc = Env.getStorageLocation(D, SkipPast::None);
-    if (MaybeLoc == nullptr) {
-      MaybeLoc = &Env.createStorageLocation(D);
-      Env.setStorageLocation(D, *MaybeLoc);
-    }
-    auto &Loc = *MaybeLoc;
-
-    const Expr *InitExpr = D.getInit();
-    if (InitExpr == nullptr) {
-      // No initializer expression - associate `Loc` with a new value.
-      if (Value *Val = Env.createValue(D.getType()))
-        Env.setValue(Loc, *Val);
-      return;
-    }
-
     if (D.getType()->isReferenceType()) {
-      // Initializing a reference variable - do not create a reference to
-      // reference.
-      // FIXME: reuse the ReferenceValue instead of creating a new one.
-      if (auto *InitExprLoc =
-              Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
-        auto &Val = Env.create<ReferenceValue>(*InitExprLoc);
-        Env.setValue(Loc, Val);
+      // If this is the holding variable for a `BindingDecl`, we may already
+      // have a storage location set up -- so check. (See also explanation below
+      // where we process the `BindingDecl`.)
+      if (Env.getStorageLocation(D) == nullptr) {
+        const Expr *InitExpr = D.getInit();
+        assert(InitExpr != nullptr);
+        if (auto *InitExprLoc =
+                Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
+          Env.setStorageLocation(D, *InitExprLoc);
+        } else {
+          // Even though we have an initializer, we might not get an
+          // InitExprLoc, for example if the InitExpr is a CallExpr for which we
+          // don't have a function body. In this case, we just invent a storage
+          // location and value -- it's the best we can do.
+          StorageLocation &Loc =
+              Env.createStorageLocation(D.getType().getNonReferenceType());
+          Env.setStorageLocation(D, Loc);
+          if (Value *Val = Env.createValue(D.getType().getNonReferenceType()))
+            Env.setValue(Loc, *Val);
+        }
       }
-    } else if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
-      Env.setValue(Loc, *InitExprVal);
-    }
+    } else {
+      // Not a reference type.
 
-    if (Env.getValue(Loc) == nullptr) {
-      // We arrive here in (the few) cases where an expression is intentionally
-      // "uninterpreted". There are two ways to handle this situation: propagate
-      // the status, so that uninterpreted initializers result in uninterpreted
-      // variables, or provide a default value. We choose the latter so that
-      // later refinements of the variable can be used for reasoning about the
-      // surrounding code.
-      //
-      // FIXME. If and when we interpret all language cases, change this to
-      // assert that `InitExpr` is interpreted, rather than supplying a default
-      // value (assuming we don't update the environment API to return
-      // references).
-      if (Value *Val = Env.createValue(D.getType()))
-        Env.setValue(Loc, *Val);
+      assert(Env.getStorageLocation(D) == nullptr);
+      StorageLocation &Loc = Env.createStorageLocation(D);
+      Env.setStorageLocation(D, Loc);
+
+      const Expr *InitExpr = D.getInit();
+      if (InitExpr == nullptr) {
+        // No initializer expression - associate `Loc` with a new value.
+        if (Value *Val = Env.createValue(D.getType()))
+          Env.setValue(Loc, *Val);
+        return;
+      }
+
+      if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None))
+        Env.setValue(Loc, *InitExprVal);
+
+      if (Env.getValue(Loc) == nullptr) {
+        // We arrive here in (the few) cases where an expression is
+        // intentionally "uninterpreted". There are two ways to handle this
+        // situation: propagate the status, so that uninterpreted initializers
+        // result in uninterpreted variables, or provide a default value. We
+        // choose the latter so that later refinements of the variable can be
+        // used for reasoning about the surrounding code.
+        //
+        // FIXME. If and when we interpret all language cases, change this to
+        // assert that `InitExpr` is interpreted, rather than supplying a
+        // default value (assuming we don't update the environment API to return
+        // references).
+        if (Value *Val = Env.createValue(D.getType()))
+          Env.setValue(Loc, *Val);
+      }
     }
 
     // `DecompositionDecl` must be handled after we've interpreted the loc
@@ -322,15 +319,16 @@ public:
           if (auto *Loc = Env.getStorageLocation(*ME, SkipPast::Reference))
             Env.setStorageLocation(*B, *Loc);
         } else if (auto *VD = B->getHoldingVar()) {
-          // Holding vars are used to back the BindingDecls of tuple-like
-          // types. The holding var declarations appear *after* this statement,
-          // so we have to create a location for them here to share with `B`. We
-          // don't visit the binding, because we know it will be a DeclRefExpr
-          // to `VD`. Note that, by construction of the AST, `VD` will always be
-          // a reference -- either lvalue or rvalue.
-          auto &VDLoc = Env.createStorageLocation(*VD);
-          Env.setStorageLocation(*VD, VDLoc);
-          Env.setStorageLocation(*B, VDLoc);
+          // Holding vars are used to back the `BindingDecl`s of tuple-like
+          // types. The holding var declarations appear after the
+          // `DecompositionDecl`, so we have to explicitly process them here
+          // to know their storage location. They will be processed a second
+          // time when we visit their `VarDecl`s, so we have code that protects
+          // against this above.
+          ProcessVarDecl(*VD);
+          auto *VDLoc = Env.getStorageLocation(*VD);
+          assert(VDLoc != nullptr);
+          Env.setStorageLocation(*B, *VDLoc);
         }
       }
     }
@@ -539,15 +537,7 @@ public:
         if (VarDeclLoc == nullptr)
           return;
 
-        if (VarDeclLoc->getType()->isReferenceType()) {
-          assert(isa_and_nonnull<ReferenceValue>(Env.getValue((*VarDeclLoc))) &&
-                 "reference-typed declarations map to `ReferenceValue`s");
-          Env.setStorageLocation(*S, *VarDeclLoc);
-        } else {
-          auto &Loc = Env.createStorageLocation(*S);
-          Env.setStorageLocation(*S, Loc);
-          Env.setValue(Loc, Env.create<ReferenceValue>(*VarDeclLoc));
-        }
+        Env.setStorageLocation(*S, *VarDeclLoc);
         return;
       }
     }
