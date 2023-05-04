@@ -86,7 +86,8 @@ public:
                                     bool write, bool also_set_on_task) override;
   uint32_t SetBASWatchpoint(WatchpointSpec wp, bool read, bool write,
                             bool also_set_on_task);
-  uint32_t SetMASKWatchpoint(WatchpointSpec wp);
+  uint32_t SetMASKWatchpoint(WatchpointSpec wp, bool read, bool write,
+                             bool also_set_on_task);
   bool DisableHardwareWatchpoint(uint32_t hw_break_index,
                                  bool also_set_on_task) override;
   bool DisableHardwareWatchpoint_helper(uint32_t hw_break_index,
