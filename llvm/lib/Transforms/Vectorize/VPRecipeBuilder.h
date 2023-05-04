@@ -21,8 +21,6 @@ class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
 
-using VPRecipeOrVPValueTy = PointerUnion<VPRecipeBase *, VPValue *>;
-
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
   /// The loop that we evaluate.
@@ -88,8 +86,8 @@ class VPRecipeBuilder {
   /// or a new VPBlendRecipe otherwise. Currently all such phi nodes are turned
   /// into a sequence of select instructions as the vectorizer currently
   /// performs full if-conversion.
-  VPRecipeOrVPValueTy tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands,
-                                 VPlanPtr &Plan);
+  VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands,
+                            VPlanPtr &Plan);
 
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
@@ -103,9 +101,6 @@ class VPRecipeBuilder {
   VPRecipeBase *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
                            VPBasicBlock *VPBB, VPlanPtr &Plan);
 
-  /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
-  VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
-
 public:
   VPRecipeBuilder(Loop *OrigLoop, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
@@ -116,12 +111,11 @@ public:
 
   /// Check if an existing VPValue can be used for \p Instr or a recipe can be
   /// create for \p I withing the given VF \p Range. If an existing VPValue can
-  /// be used or if a recipe can be created, return it. Otherwise return a
-  /// VPRecipeOrVPValueTy with nullptr.
-  VPRecipeOrVPValueTy tryToCreateWidenRecipe(Instruction *Instr,
-                                             ArrayRef<VPValue *> Operands,
-                                             VFRange &Range, VPBasicBlock *VPBB,
-                                             VPlanPtr &Plan);
+  /// be used or if a recipe can be created, return it.
+  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
+                                       ArrayRef<VPValue *> Operands,
+                                       VFRange &Range, VPBasicBlock *VPBB,
+                                       VPlanPtr &Plan);
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
@@ -165,8 +159,7 @@ public:
   /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
   /// last operand. Range.End may be decreased to ensure same recipe behavior
   /// from \p Range.Start to \p Range.End.
-  VPRecipeOrVPValueTy handleReplication(Instruction *I, VFRange &Range,
-                                        VPlan &Plan);
+  VPRecipeBase *handleReplication(Instruction *I, VFRange &Range, VPlan &Plan);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.
