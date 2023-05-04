@@ -288,8 +288,8 @@ INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
                                  RegScavenger *RS) const {
   /// Check if \p Op is known to access an address not on the function's stack .
-  /// At the moment, accesses where the underlying object is a global or a
-  /// function argument are considered non-stack accesses. Note that the
+  /// At the moment, accesses where the underlying object is a global, function
+  /// argument, or jump table are considered non-stack accesses. Note that the
   /// caller's stack may get accessed when passing an argument via the stack,
   /// but not the stack of the current function.
   ///
@@ -302,6 +302,8 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
         return !Arg->hasPassPointeeByValueCopyAttr();
       return isa<GlobalValue>(UO);
     }
+    if (const PseudoSourceValue *PSV = Op->getPseudoValue())
+      return PSV->isJumpTable();
     return false;
   };
   // This prevents premature stack popping when occurs a indirect stack
