@@ -831,7 +831,7 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
   // For everyhing else, use local variables.
   if (SubExprT) {
     if (std::optional<unsigned> LocalIndex = allocateLocalPrimitive(
-            SubExpr, *SubExprT, /*IsMutable=*/true, /*IsExtended=*/true)) {
+            SubExpr, *SubExprT, /*IsConst=*/true, /*IsExtended=*/true)) {
       if (!this->visitInitializer(SubExpr))
         return false;
       this->emitSetLocal(*SubExprT, *LocalIndex, E);

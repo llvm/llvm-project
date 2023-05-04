@@ -20,7 +20,7 @@ define <2 x i1> @reverse_v2i1(<2 x i1> %a) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -45,7 +45,7 @@ define <4 x i1> @reverse_v4i1(<4 x i1> %a) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vslide1down.vx v8, v9, a0
 ; CHECK-NEXT:    vfirst.m a0, v0
-; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -82,7 +82,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV32-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -115,7 +115,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-256-NEXT:    srli a0, a0, 31
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vfirst.m a0, v0
-; RV32-BITS-256-NEXT:    seqz a0, a0
+; RV32-BITS-256-NEXT:    snez a0, a0
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -148,7 +148,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV32-BITS-512-NEXT:    srli a0, a0, 31
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vfirst.m a0, v0
-; RV32-BITS-512-NEXT:    seqz a0, a0
+; RV32-BITS-512-NEXT:    snez a0, a0
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -181,7 +181,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV64-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -214,7 +214,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-256-NEXT:    srli a0, a0, 63
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vfirst.m a0, v0
-; RV64-BITS-256-NEXT:    seqz a0, a0
+; RV64-BITS-256-NEXT:    snez a0, a0
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -247,7 +247,7 @@ define <8 x i1> @reverse_v8i1(<8 x i1> %a) {
 ; RV64-BITS-512-NEXT:    srli a0, a0, 63
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vfirst.m a0, v0
-; RV64-BITS-512-NEXT:    seqz a0, a0
+; RV64-BITS-512-NEXT:    snez a0, a0
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -308,7 +308,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV32-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -365,7 +365,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV32-BITS-256-NEXT:    srli a0, a0, 31
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vfirst.m a0, v0
-; RV32-BITS-256-NEXT:    seqz a0, a0
+; RV32-BITS-256-NEXT:    snez a0, a0
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -422,7 +422,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV32-BITS-512-NEXT:    srli a0, a0, 31
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vfirst.m a0, v0
-; RV32-BITS-512-NEXT:    seqz a0, a0
+; RV32-BITS-512-NEXT:    snez a0, a0
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -479,7 +479,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV64-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -536,7 +536,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV64-BITS-256-NEXT:    srli a0, a0, 63
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vfirst.m a0, v0
-; RV64-BITS-256-NEXT:    seqz a0, a0
+; RV64-BITS-256-NEXT:    snez a0, a0
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -593,7 +593,7 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 ; RV64-BITS-512-NEXT:    srli a0, a0, 63
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vfirst.m a0, v0
-; RV64-BITS-512-NEXT:    seqz a0, a0
+; RV64-BITS-512-NEXT:    snez a0, a0
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -702,7 +702,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    srli a0, a0, 31
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV32-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -807,7 +807,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV32-BITS-256-NEXT:    srli a0, a0, 31
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vfirst.m a0, v0
-; RV32-BITS-256-NEXT:    seqz a0, a0
+; RV32-BITS-256-NEXT:    snez a0, a0
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -912,7 +912,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV32-BITS-512-NEXT:    srli a0, a0, 31
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vfirst.m a0, v0
-; RV32-BITS-512-NEXT:    seqz a0, a0
+; RV32-BITS-512-NEXT:    snez a0, a0
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -1017,7 +1017,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV64-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -1122,7 +1122,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV64-BITS-256-NEXT:    srli a0, a0, 63
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vfirst.m a0, v0
-; RV64-BITS-256-NEXT:    seqz a0, a0
+; RV64-BITS-256-NEXT:    snez a0, a0
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -1227,7 +1227,7 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; RV64-BITS-512-NEXT:    srli a0, a0, 63
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vfirst.m a0, v0
-; RV64-BITS-512-NEXT:    seqz a0, a0
+; RV64-BITS-512-NEXT:    snez a0, a0
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -1434,7 +1434,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    srli a1, a1, 31
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV32-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV32-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -1637,7 +1637,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV32-BITS-256-NEXT:    srli a1, a1, 31
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-BITS-256-NEXT:    vfirst.m a0, v0
-; RV32-BITS-256-NEXT:    seqz a0, a0
+; RV32-BITS-256-NEXT:    snez a0, a0
 ; RV32-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -1840,7 +1840,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV32-BITS-512-NEXT:    srli a1, a1, 31
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32-BITS-512-NEXT:    vfirst.m a0, v0
-; RV32-BITS-512-NEXT:    seqz a0, a0
+; RV32-BITS-512-NEXT:    snez a0, a0
 ; RV32-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV32-BITS-512-NEXT:    vmsne.vi v0, v8, 0
@@ -2040,7 +2040,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    srli a0, a0, 63
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vfirst.m a0, v0
-; RV64-BITS-UNKNOWN-NEXT:    seqz a0, a0
+; RV64-BITS-UNKNOWN-NEXT:    snez a0, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-UNKNOWN-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-UNKNOWN-NEXT:    vmsne.vi v0, v8, 0
@@ -2240,7 +2240,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV64-BITS-256-NEXT:    srli a0, a0, 63
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vfirst.m a0, v0
-; RV64-BITS-256-NEXT:    seqz a0, a0
+; RV64-BITS-256-NEXT:    snez a0, a0
 ; RV64-BITS-256-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-256-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-256-NEXT:    vmsne.vi v0, v8, 0
@@ -2440,7 +2440,7 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; RV64-BITS-512-NEXT:    srli a0, a0, 63
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vfirst.m a0, v0
-; RV64-BITS-512-NEXT:    seqz a0, a0
+; RV64-BITS-512-NEXT:    snez a0, a0
 ; RV64-BITS-512-NEXT:    vslide1down.vx v8, v8, a0
 ; RV64-BITS-512-NEXT:    vand.vi v8, v8, 1
 ; RV64-BITS-512-NEXT:    vmsne.vi v0, v8, 0

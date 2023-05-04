@@ -1338,20 +1338,49 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
     return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
                                 /*polymorphic=*/false);
   };
-  const std::string intrinsicName = callContext.getProcedureName();
-  if (intrinsicName == "sum") {
+
+  auto buildSumOperation = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Type resultTy, mlir::Value array,
+                              mlir::Value dim, mlir::Value mask) {
+    return builder.create<hlfir::SumOp>(loc, resultTy, array, dim, mask);
+  };
+
+  auto buildProductOperation = [](fir::FirOpBuilder &builder,
+                                  mlir::Location loc, mlir::Type resultTy,
+                                  mlir::Value array, mlir::Value dim,
+                                  mlir::Value mask) {
+    return builder.create<hlfir::ProductOp>(loc, resultTy, array, dim, mask);
+  };
+
+  auto buildReductionIntrinsic =
+      [&](PreparedActualArguments &loweredActuals, mlir::Location loc,
+          fir::FirOpBuilder &builder, CallContext &callContext,
+          std::function<mlir::Operation *(fir::FirOpBuilder &, mlir::Location,
+                                          mlir::Type, mlir::Value, mlir::Value,
+                                          mlir::Value)>
+              buildFunc) -> std::optional<hlfir::EntityWithAttributes> {
+    // shared logic for building the product and sum operations
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
     assert(operands.size() == 3);
+    // dim, mask can be NULL if these arguments were not given
     mlir::Value array = operands[0];
     mlir::Value dim = operands[1];
     if (dim)
       dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
     mlir::Value mask = operands[2];
     mlir::Type resultTy = computeResultType(array, *callContext.resultType);
-    // dim, mask can be NULL if these arguments were not given
-    hlfir::SumOp sumOp =
-        builder.create<hlfir::SumOp>(loc, resultTy, array, dim, mask);
-    return {hlfir::EntityWithAttributes{sumOp.getResult()}};
+    auto *intrinsicOp = buildFunc(builder, loc, resultTy, array, dim, mask);
+    return {hlfir::EntityWithAttributes{intrinsicOp->getResult(0)}};
+  };
+
+  const std::string intrinsicName = callContext.getProcedureName();
+  if (intrinsicName == "sum") {
+    return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
+                                   buildSumOperation);
+  }
+  if (intrinsicName == "product") {
+    return buildReductionIntrinsic(loweredActuals, loc, builder, callContext,
+                                   buildProductOperation);
   }
   if (intrinsicName == "matmul") {
     llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
