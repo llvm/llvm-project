@@ -2,8 +2,6 @@ SROA breaks MIOpen
 Revert "[SROA] Create additional vector type candidates based on store and load slices"
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
-Revert "[AMDGPU] Remove extract_subvector patterns"  
-
 breaks rccl build:
 Revert "Implement P2361 Unevaluated string literals"
 
