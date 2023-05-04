@@ -897,8 +897,25 @@ namespace DiscardExprs {
     1 ? 0 : 1;
     __is_trivial(int);
 
+    (int){1};
+    (int[]){1,2,3};
+
     return 0;
   }
+
+  constexpr int oh_my(int x) {
+    (int){ x++ };
+    return x;
+  }
+  static_assert(oh_my(0) == 1, "");
+
+  constexpr int oh_my2(int x) {
+    int y{x++};
+    return x;
+  }
+
+  static_assert(oh_my2(0) == 1, "");
+
 
   /// Ignored comma expressions still have their
   /// expressions evaluated.
