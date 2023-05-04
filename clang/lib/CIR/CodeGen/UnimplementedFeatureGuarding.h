@@ -75,6 +75,7 @@ struct UnimplementedFeature {
   static bool ehStack() { return false; }
   static bool isVarArg() { return false; }
   static bool setNonGC() { return false; }
+  static bool armComputeVolatileBitfields() { return false; }
 };
 } // namespace cir
 
