@@ -1,4 +1,4 @@
-//===- Support/MachineValueType.h - Machine-Level types ---------*- C++ -*-===//
+//===- CodeGen/MachineValueType.h - Machine-Level types ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MACHINEVALUETYPE_H
-#define LLVM_SUPPORT_MACHINEVALUETYPE_H
+#ifndef LLVM_CODEGEN_MACHINEVALUETYPE_H
+#define LLVM_CODEGEN_MACHINEVALUETYPE_H
 
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1607,4 +1607,4 @@ namespace llvm {
 
 } // end namespace llvm
 
-#endif // LLVM_SUPPORT_MACHINEVALUETYPE_H
+#endif // LLVM_CODEGEN_MACHINEVALUETYPE_H
