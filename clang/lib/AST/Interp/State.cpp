@@ -11,6 +11,7 @@
 #include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/OptionalDiagnostic.h"
 
 using namespace clang;
 using namespace clang::interp;
