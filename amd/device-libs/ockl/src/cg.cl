@@ -12,7 +12,7 @@
 #define AL(P,S) __opencl_atomic_load((__global atomic_uint *)P, memory_order_relaxed, S)
 #define AA(P,V,S) __opencl_atomic_fetch_add((__global atomic_uint *)P, V, memory_order_relaxed, S)
 
-#define AVOID_GWS() (__oclc_ISA_version == 9400 || __oclc_ISA_version == 9401)
+#define AVOID_GWS() (__oclc_ISA_version == 9400 || __oclc_ISA_version == 9401 || __oclc_ISA_version == 9402)
 
 // XXX do not change these two structs without changing the language runtime
 struct mg_sync {
