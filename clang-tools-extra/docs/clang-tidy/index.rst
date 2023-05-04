@@ -211,6 +211,8 @@ An overview of all the command-line options:
                                      format to stderr. When this option is passed,
                                      these per-TU profiles are instead stored as JSON.
     --system-headers               - Display the errors from system headers.
+                                     This option overrides the 'SystemHeaders' option
+                                     in .clang-tidy file, if any.
     --use-color                    - Use colors in diagnostics. If not set, colors
                                      will be used if the terminal connected to
                                      standard output supports colors.
