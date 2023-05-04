@@ -6598,9 +6598,9 @@ protected:
   /// Smart shuffle instruction emission, walks through shuffles trees and
   /// tries to find the best matching vector for the actual shuffle
   /// instruction.
-  template <typename ShuffleBuilderTy>
-  static Value *createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
-                              ShuffleBuilderTy &Builder) {
+  template <typename T, typename ShuffleBuilderTy>
+  static T createShuffle(Value *V1, Value *V2, ArrayRef<int> Mask,
+                         ShuffleBuilderTy &Builder) {
     assert(V1 && "Expected at least one vector value.");
     if (V2)
       Builder.resizeToMatch(V1, V2);
@@ -6699,21 +6699,21 @@ protected:
             isa<ShuffleVectorInst>(Op1) &&
             cast<ShuffleVectorInst>(Op1)->getShuffleMask() ==
                 ArrayRef(CombinedMask1))))
-        return Op1;
+        return Builder.createIdentity(Op1);
       return Builder.createShuffleVector(
           Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
           CombinedMask1);
     }
     if (isa<PoisonValue>(V1))
-      return PoisonValue::get(FixedVectorType::get(
-          cast<VectorType>(V1->getType())->getElementType(), Mask.size()));
+      return Builder.createPoison(
+          cast<VectorType>(V1->getType())->getElementType(), Mask.size());
     SmallVector<int> NewMask(Mask.begin(), Mask.end());
     bool IsIdentity = peekThroughShuffles(V1, NewMask, /*SinglePermute=*/true);
     assert(V1 && "Expected non-null value after looking through shuffles.");
 
     if (!IsIdentity)
       return Builder.createShuffleVector(V1, NewMask);
-    return V1;
+    return Builder.createIdentity(V1);
   }
 };
 } // namespace
@@ -6923,6 +6923,90 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     return Cost;
   }
 
+  class ShuffleCostBuilder {
+    const TargetTransformInfo &TTI;
+
+    static bool isEmptyOrIdentity(ArrayRef<int> Mask, unsigned VF) {
+      int Limit = 2 * VF;
+      return Mask.empty() ||
+             (VF == Mask.size() &&
+              all_of(Mask, [Limit](int Idx) { return Idx < Limit; }) &&
+              ShuffleVectorInst::isIdentityMask(Mask));
+    }
+
+  public:
+    ShuffleCostBuilder(const TargetTransformInfo &TTI) : TTI(TTI) {}
+    ~ShuffleCostBuilder() = default;
+    InstructionCost createShuffleVector(Value *V1, Value *,
+                                        ArrayRef<int> Mask) const {
+      // Empty mask or identity mask are free.
+      unsigned VF =
+          cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
+      if (isEmptyOrIdentity(Mask, VF))
+        return TTI::TCC_Free;
+      return TTI.getShuffleCost(
+          TTI::SK_PermuteTwoSrc,
+          FixedVectorType::get(
+              cast<VectorType>(V1->getType())->getElementType(), Mask.size()),
+          Mask);
+    }
+    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask) const {
+      // Empty mask or identity mask are free.
+      if (isEmptyOrIdentity(Mask, Mask.size()))
+        return TTI::TCC_Free;
+      return TTI.getShuffleCost(
+          TTI::SK_PermuteSingleSrc,
+          FixedVectorType::get(
+              cast<VectorType>(V1->getType())->getElementType(), Mask.size()),
+          Mask);
+    }
+    InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
+    InstructionCost createPoison(Type *Ty, unsigned VF) const {
+      return TTI::TCC_Free;
+    }
+    void resizeToMatch(Value *&, Value *&) const {}
+  };
+
+  /// Smart shuffle instruction emission, walks through shuffles trees and
+  /// tries to find the best matching vector for the actual shuffle
+  /// instruction.
+  InstructionCost
+  createShuffle(const PointerUnion<Value *, const TreeEntry *> &P1,
+                const PointerUnion<Value *, const TreeEntry *> &P2,
+                ArrayRef<int> Mask) {
+    ShuffleCostBuilder Builder(TTI);
+    Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
+    unsigned CommonVF = 0;
+    if (!V1) {
+      const TreeEntry *E = P1.get<const TreeEntry *>();
+      unsigned VF = E->getVectorFactor();
+      if (V2) {
+        unsigned V2VF = cast<FixedVectorType>(V2->getType())->getNumElements();
+        if (V2VF != VF && V2VF == E->Scalars.size())
+          VF = E->Scalars.size();
+      } else if (!P2.isNull()) {
+        const TreeEntry *E2 = P2.get<const TreeEntry *>();
+        if (E->Scalars.size() == E2->Scalars.size())
+          CommonVF = VF = E->Scalars.size();
+      }
+      V1 = Constant::getNullValue(
+          FixedVectorType::get(E->Scalars.front()->getType(), VF));
+    }
+    if (!V2 && !P2.isNull()) {
+      const TreeEntry *E = P2.get<const TreeEntry *>();
+      unsigned VF = E->getVectorFactor();
+      unsigned V1VF = cast<FixedVectorType>(V1->getType())->getNumElements();
+      if (!CommonVF && V1VF == E->Scalars.size())
+        CommonVF = E->Scalars.size();
+      if (CommonVF)
+        VF = CommonVF;
+      V2 = Constant::getNullValue(
+          FixedVectorType::get(E->Scalars.front()->getType(), VF));
+    }
+    return BaseShuffleAnalysis::createShuffle<InstructionCost>(V1, V2, Mask,
+                                                               Builder);
+  }
+
 public:
   ShuffleCostEstimator(TargetTransformInfo &TTI,
                        ArrayRef<Value *> VectorizedVals, BoUpSLP &R,
@@ -7053,19 +7137,10 @@ public:
     if (all_of(CommonMask, [=](int Idx) { return Idx < Limit; }) &&
         ShuffleVectorInst::isIdentityMask(CommonMask))
       return Cost;
-    Type *ScalarTy;
-    if (auto *V = InVectors.front().dyn_cast<Value *>())
-      ScalarTy = cast<VectorType>(V->getType())->getElementType();
-    else
-      ScalarTy = InVectors.front()
-                     .get<const TreeEntry *>()
-                     ->Scalars.front()
-                     ->getType();
     return Cost +
-           TTI.getShuffleCost(InVectors.size() == 2 ? TTI::SK_PermuteTwoSrc
-                                                    : TTI::SK_PermuteSingleSrc,
-                              FixedVectorType::get(ScalarTy, CommonMask.size()),
-                              CommonMask);
+           createShuffle(InVectors.front(),
+                         InVectors.size() == 2 ? InVectors.back() : nullptr,
+                         CommonMask);
   }
 
   ~ShuffleCostEstimator() {
@@ -9172,6 +9247,10 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
       }
       return Vec;
     }
+    Value *createIdentity(Value *V) { return V; }
+    Value *createPoison(Type *Ty, unsigned VF) {
+      return PoisonValue::get(FixedVectorType::get(Ty, VF));
+    }
     /// Resizes 2 input vector to match the sizes, if the they are not equal
     /// yet. The smallest vector is resized to the size of the larger vector.
     void resizeToMatch(Value *&V1, Value *&V2) {
@@ -9204,7 +9283,8 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
     assert(V1 && "Expected at least one vector value.");
     ShuffleIRBuilder ShuffleBuilder(Builder, R.GatherShuffleExtractSeq,
                                     R.CSEBlocks);
-    return BaseShuffleAnalysis::createShuffle(V1, V2, Mask, ShuffleBuilder);
+    return BaseShuffleAnalysis::createShuffle<Value *>(V1, V2, Mask,
+                                                       ShuffleBuilder);
   }
 
   /// Transforms mask \p CommonMask per given \p Mask to make proper set after
