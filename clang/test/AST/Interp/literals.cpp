@@ -876,7 +876,7 @@ constexpr int ignoredDecls() {
 }
 static_assert(ignoredDecls() == 12, "");
 
-struct A{};
+struct A{ int a; };
 constexpr int ignoredExprs() {
   (void)(1 / 2);
   A a;
@@ -908,6 +908,19 @@ constexpr int Comma(int start) {
 constexpr int Value = Comma(5);
 static_assert(Value == 8, "");
 
+/// Ignored MemberExprs need to still evaluate the Base
+/// expr.
+constexpr A callme(int &i) {
+  ++i;
+  return A{};
+}
+constexpr int ignoredMemberExpr() {
+  int i = 0;
+  callme(i).a; // ref-warning {{result unused}} \
+               // expected-warning {{result unused}}
+  return i;
+}
+static_assert(ignoredMemberExpr() == 1, "");
 #endif
 
 namespace PredefinedExprs {
