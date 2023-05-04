@@ -1,7 +1,7 @@
 import("//llvm/lib/Target/targets.gni")
 
 executable("llvm-exegesis") {
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     "lib",
     "//llvm/lib/CodeGen",
     "//llvm/lib/ExecutionEngine",

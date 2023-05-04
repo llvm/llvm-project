@@ -1,6 +1,6 @@
 static_library("MCA") {
   output_name = "LLVMTargetX86MCA"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/MCA",

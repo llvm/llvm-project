@@ -6,7 +6,7 @@ tablegen("Options") {
 }
 
 executable("llvm-dwarfutil") {
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":Options",
     "//llvm/lib/DWARFLinker",
     "//llvm/lib/DWARFLinkerParallel",

@@ -54,7 +54,7 @@ static_library("MCTargetDesc") {
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
   ]
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":X86GenAsmWriter",
     ":X86GenAsmWriter1",
     "//llvm/lib/MC",
