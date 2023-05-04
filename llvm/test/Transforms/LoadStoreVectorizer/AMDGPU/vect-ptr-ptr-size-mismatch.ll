@@ -82,7 +82,7 @@ entry:
   %a.ascast = addrspacecast ptr addrspace(5) %p to ptr
   %b.ascast = addrspacecast ptr addrspace(5) %gep2 to ptr
   %tmp1 = load i8, ptr %a.ascast, align 1
-  %tmp2 = load i8, ptr %b.ascast, align 1
+  %tmp2 = load i8, ptr %b.ascast, align 2
   unreachable
 }
 

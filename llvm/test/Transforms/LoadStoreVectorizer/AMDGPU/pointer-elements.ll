@@ -42,6 +42,54 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: @merge_ptr_i32(
+; CHECK: load <4 x i32>
+; CHECK: store <4 x i32>
+define amdgpu_kernel void @merge_ptr_i32(ptr addrspace(3) nocapture %a, ptr addrspace(3) nocapture readonly %b) #0 {
+entry:
+  %a.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 0
+  %a.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 1
+  %a.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 2
+
+  %b.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 0
+  %b.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 1
+  %b.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 2
+
+  %ld.0 = load i32, ptr addrspace(3) %b.0, align 16
+  %ld.1 = load ptr addrspace(3), ptr addrspace(3) %b.1, align 4
+  %ld.2 = load <2 x i32>, ptr addrspace(3) %b.2, align 8
+
+  store i32 0, ptr addrspace(3) %a.0, align 16
+  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+  store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.2, align 8
+
+  ret void
+}
+
+; CHECK-LABEL: @merge_ptr_i32_vec_first(
+; CHECK: load <4 x i32>
+; CHECK: store <4 x i32>
+define amdgpu_kernel void @merge_ptr_i32_vec_first(ptr addrspace(3) nocapture %a, ptr addrspace(3) nocapture readonly %b) #0 {
+entry:
+  %a.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 0
+  %a.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 2
+  %a.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %a, i64 3
+
+  %b.0 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 0
+  %b.1 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 2
+  %b.2 = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %b, i64 3
+
+  %ld.0 = load <2 x i32>, ptr addrspace(3) %b.0, align 16
+  %ld.1 = load ptr addrspace(3), ptr addrspace(3) %b.1, align 8
+  %ld.2 = load i32, ptr addrspace(3) %b.2, align 4
+
+  store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.0, align 16
+  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 8
+  store i32 0, ptr addrspace(3) %a.2, align 4
+
+  ret void
+}
+
 ; CHECK-LABEL: @merge_load_i64_ptr64(
 ; CHECK: load <2 x i64>
 ; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 1
