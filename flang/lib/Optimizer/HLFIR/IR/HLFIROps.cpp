@@ -960,5 +960,111 @@ mlir::LogicalResult hlfir::GetExtentOp::verify() {
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// RegionAssignOp
+//===----------------------------------------------------------------------===//
+
+/// Add a fir.end terminator to a parsed region if it does not already has a
+/// terminator.
+static void ensureTerminator(mlir::Region &region, mlir::Builder &builder,
+                             mlir::Location loc) {
+  // Borrow YielOp::ensureTerminator MLIR generated implementation to add a
+  // fir.end if there is no terminator. This has nothing to do with YielOp,
+  // other than the fact that yieldOp has the
+  // SingleBlocklicitTerminator<"fir::FirEndOp"> interface that
+  // cannot be added on other HLFIR operations with several regions which are
+  // not all terminated the same way.
+  hlfir::YieldOp::ensureTerminator(region, builder, loc);
+}
+
+mlir::ParseResult hlfir::RegionAssignOp::parse(mlir::OpAsmParser &parser,
+                                               mlir::OperationState &result) {
+  mlir::Region &rhsRegion = *result.addRegion();
+  if (parser.parseRegion(rhsRegion))
+    return mlir::failure();
+  mlir::Region &lhsRegion = *result.addRegion();
+  if (parser.parseKeyword("to") || parser.parseRegion(lhsRegion))
+    return mlir::failure();
+  mlir::Region &userDefinedAssignmentRegion = *result.addRegion();
+  if (succeeded(parser.parseOptionalKeyword("user_defined_assign"))) {
+    mlir::OpAsmParser::Argument rhsArg, lhsArg;
+    if (parser.parseLParen() || parser.parseArgument(rhsArg) ||
+        parser.parseColon() || parser.parseType(rhsArg.type) ||
+        parser.parseRParen() || parser.parseKeyword("to") ||
+        parser.parseLParen() || parser.parseArgument(lhsArg) ||
+        parser.parseColon() || parser.parseType(lhsArg.type) ||
+        parser.parseRParen())
+      return mlir::failure();
+    if (parser.parseRegion(userDefinedAssignmentRegion, {rhsArg, lhsArg}))
+      return mlir::failure();
+    ensureTerminator(userDefinedAssignmentRegion, parser.getBuilder(),
+                     result.location);
+  }
+  return mlir::success();
+}
+
+void hlfir::RegionAssignOp::print(mlir::OpAsmPrinter &p) {
+  p << " ";
+  p.printRegion(getRhsRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+  p << " to ";
+  p.printRegion(getLhsRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+  if (!getUserDefinedAssignment().empty()) {
+    p << " user_defined_assign ";
+    mlir::Value userAssignmentRhs = getUserAssignmentRhs();
+    mlir::Value userAssignmentLhs = getUserAssignmentLhs();
+    p << " (" << userAssignmentRhs << ": " << userAssignmentRhs.getType()
+      << ") to (";
+    p << userAssignmentLhs << ": " << userAssignmentLhs.getType() << ") ";
+    p.printRegion(getUserDefinedAssignment(), /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
+  }
+}
+
+static mlir::Operation *getTerminator(mlir::Region &region) {
+  if (region.empty() || region.back().empty())
+    return nullptr;
+  return &region.back().back();
+}
+
+mlir::LogicalResult hlfir::RegionAssignOp::verify() {
+  if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(getRhsRegion())))
+    return emitOpError(
+        "right-hand side region must be terminated by an hlfir.yield");
+  // TODO: allow hlfir.elemental_addr.
+  if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(getLhsRegion())))
+    return emitOpError("left-hand side region must be terminated by an "
+                       "hlfir.yield or hlfir.elemental_addr");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseYieldOpCleanup(mlir::OpAsmParser &parser,
+                                             mlir::Region &cleanup) {
+  if (succeeded(parser.parseOptionalKeyword("cleanup"))) {
+    if (parser.parseRegion(cleanup, /*arguments=*/{},
+                           /*argTypes=*/{}))
+      return mlir::failure();
+    hlfir::YieldOp::ensureTerminator(cleanup, parser.getBuilder(),
+                                     parser.getBuilder().getUnknownLoc());
+  }
+
+  return mlir::success();
+}
+
+template <typename YieldOp>
+static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
+                                mlir::Region &cleanup) {
+  if (!cleanup.empty()) {
+    p << "cleanup ";
+    p.printRegion(cleanup, /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
+  }
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
