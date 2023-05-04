@@ -87,7 +87,7 @@ constexpr __unsequenced_policy __unseq{__disable_user_instantiations_tag{}};
 #  if _LIBCPP_STD_VER >= 20
 
 struct unsequenced_policy {
-  constexpr explicit unsequenced_policy(__disable_user_instantiations_tag) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit unsequenced_policy(__disable_user_instantiations_tag) {}
   unsequenced_policy(const unsequenced_policy&)            = delete;
   unsequenced_policy& operator=(const unsequenced_policy&) = delete;
 };
