@@ -64,15 +64,6 @@ template <class _Index, class _DifferenceType, class _Pred>
 _LIBCPP_HIDE_FROM_ABI bool
 __simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
 {
-#if defined(_PSTL_EARLYEXIT_PRESENT)
-    _DifferenceType __i;
-    _PSTL_PRAGMA_VECTOR_UNALIGNED
-    _PSTL_PRAGMA_SIMD_EARLYEXIT
-    for (__i = 0; __i < __n; ++__i)
-        if (__pred(__first[__i]))
-            break;
-    return __i < __n;
-#else
     _DifferenceType __block_size = 4 < __n ? 4 : __n;
     const _Index __last = __first + __n;
     while (__last != __first)
@@ -97,32 +88,18 @@ __simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
         }
     }
     return false;
-#endif
 }
 
 template <class _Index, class _DifferenceType, class _Compare>
 _LIBCPP_HIDE_FROM_ABI _Index
 __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept
 {
-#if defined(_PSTL_EARLYEXIT_PRESENT)
-    _DifferenceType __i = __begin;
-    _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
-        _PSTL_PRAGMA_SIMD_EARLYEXIT for (; __i < __end; ++__i)
-    {
-        if (__comp(__first, __i))
-        {
-            break;
-        }
-    }
-    return __first + __i;
-#else
     // Experiments show good block sizes like this
     const _DifferenceType __block_size = 8;
     alignas(__lane_size) _DifferenceType __lane[__block_size] = {0};
     while (__end - __begin >= __block_size)
     {
         _DifferenceType __found = 0;
-        _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
             _PSTL_PRAGMA_SIMD_REDUCTION(|
                                         : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size;
                                                         ++__i)
@@ -157,22 +134,12 @@ __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Co
         ++__begin;
     }
     return __first + __end;
-#endif //_PSTL_EARLYEXIT_PRESENT
 }
 
 template <class _Index1, class _DifferenceType, class _Index2, class _Pred>
 _LIBCPP_HIDE_FROM_ABI std::pair<_Index1, _Index2>
 __simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pred) noexcept
 {
-#if defined(_PSTL_EARLYEXIT_PRESENT)
-    _DifferenceType __i = 0;
-    _PSTL_PRAGMA_VECTOR_UNALIGNED
-    _PSTL_PRAGMA_SIMD_EARLYEXIT
-    for (; __i < __n; ++__i)
-        if (__pred(__first1[__i], __first2[__i]))
-            break;
-    return std::make_pair(__first1 + __i, __first2 + __i);
-#else
     const _Index1 __last1 = __first1 + __n;
     const _Index2 __last2 = __first2 + __n;
     // Experiments show good block sizes like this
@@ -182,7 +149,6 @@ __simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pr
     {
         _DifferenceType __found = 0;
         _DifferenceType __i;
-        _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
             _PSTL_PRAGMA_SIMD_REDUCTION(|
                                         : __found) for (__i = 0; __i < __block_size; ++__i)
         {
@@ -211,7 +177,6 @@ __simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pr
             return std::make_pair(__first1, __first2);
 
     return std::make_pair(__last1, __last2);
-#endif //_PSTL_EARLYEXIT_PRESENT
 }
 
 template <class _Index, class _DifferenceType, class _Pred>
@@ -241,7 +206,6 @@ __simd_unique_copy(_InputIterator __first, _DifferenceType __n, _OutputIterator 
     _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 1; __i < __n; ++__i)
     {
-        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
         if (!__pred(__first[__i], __first[__i - 1]))
         {
             __result[__cnt] = __first[__i];
@@ -271,7 +235,6 @@ __simd_copy_if(_InputIterator __first, _DifferenceType __n, _OutputIterator __re
     _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
-        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
         if (__pred(__first[__i]))
         {
             __result[__cnt] = __first[__i];
@@ -322,7 +285,6 @@ __simd_copy_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIterator
     {
         if (__mask[__i])
         {
-            _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
             {
                 __assigner(__first + __i, __result + __cnt);
                 ++__cnt;
@@ -340,7 +302,6 @@ __simd_partition_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIte
     _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
-        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(__cnt_true : 1, __cnt_false : 1)
         if (__mask[__i])
         {
             __out_true[__cnt_true] = __first[__i];
@@ -386,17 +347,6 @@ __simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, boo
     typedef typename std::iterator_traits<_Index>::difference_type _DifferenceType;
     _DifferenceType __i = 0;
 
-#if defined(_PSTL_EARLYEXIT_PRESENT)
-    //Some compiler versions fail to compile the following loop when iterators are used. Indices are used instead
-    const _DifferenceType __n = __last - __first - 1;
-    _PSTL_PRAGMA_VECTOR_UNALIGNED
-    _PSTL_PRAGMA_SIMD_EARLYEXIT
-    for (; __i < __n; ++__i)
-        if (__pred(__first[__i], __first[__i + 1]))
-            break;
-
-    return __i < __n ? __first + __i : __last;
-#else
     // Experiments show good block sizes like this
     //TODO: to consider tuning block_size for various data types
     const _DifferenceType __block_size = 8;
@@ -404,7 +354,6 @@ __simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, boo
     while (__last - __first >= __block_size)
     {
         _DifferenceType __found = 0;
-        _PSTL_PRAGMA_VECTOR_UNALIGNED // Do not generate peel loop part
             _PSTL_PRAGMA_SIMD_REDUCTION(|
                                         : __found) for (__i = 0; __i < __block_size - 1; ++__i)
         {
@@ -437,7 +386,6 @@ __simd_adjacent_find(_Index __first, _Index __last, _BinaryPredicate __pred, boo
             return __first;
 
     return __last;
-#endif
 }
 
 // It was created to reduce the code inside std::enable_if
@@ -559,13 +507,11 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
     _CombinerType __init_{__init, &__binary_op};
 
     _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
-
     _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
     for (_Size __i = 0; __i < __n; ++__i)
     {
         __result[__i] = __init_.__value;
         _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init_)
-        _PSTL_PRAGMA_FORCEINLINE
         __init_.__value = __binary_op(__init_.__value, __unary_op(__first[__i]));
     }
     return std::make_pair(__result + __n, __init_.__value);
@@ -601,11 +547,9 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
     _CombinerType __init_{__init, &__binary_op};
 
     _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
-
     _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
     for (_Size __i = 0; __i < __n; ++__i)
     {
-        _PSTL_PRAGMA_FORCEINLINE
         __init_.__value = __binary_op(__init_.__value, __unary_op(__first[__i]));
         _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init_)
         __result[__i] = __init_.__value;
@@ -768,7 +712,6 @@ __simd_partition_copy(_InputIterator __first, _DifferenceType __n, _OutputIterat
     _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 0; __i < __n; ++__i)
     {
-        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(__cnt_true : 1, __cnt_false : 1)
         if (__pred(__first[__i]))
         {
             __out_true[__cnt_true] = __first[__i];
@@ -849,7 +792,6 @@ __simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredi
     _PSTL_PRAGMA_SIMD
     for (_DifferenceType __i = 1; __i < __n; ++__i)
     {
-        _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(__cnt : 1)
         if (!__pred(__current[__i]))
         {
             __current[__cnt] = std::move(__current[__i]);
