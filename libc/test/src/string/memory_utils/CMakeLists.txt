@@ -1,7 +1,8 @@
+# This test uses too much memory to be made hermetic.
 add_libc_unittest(
   utils_test
   SUITE
-    libc_string_unittests
+    libc-string-tests
   SRCS
     op_tests.cpp
     utils_test.cpp
