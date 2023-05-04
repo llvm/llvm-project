@@ -4,7 +4,7 @@
 
 union VariableSizeUnion {
   int s;
-  char c[]; //expected-error {{flexible array member 'c' in a union is not allowed}}
+  char c[];
 };
 
 @interface LastUnionIvar {
