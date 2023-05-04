@@ -107,16 +107,55 @@ template <bool InvertInbox> struct Process {
   }
 
   /// Attempt to claim the lock at index. Return true on lock taken.
+  /// lane_mask is a bitmap of the threads in the warp that would hold the
+  /// single lock on success, e.g. the result of gpu::get_lane_mask()
   /// The lock is held when the zeroth bit of the uint32_t at lock[index]
   /// is set, and available when that bit is clear. Bits [1, 32) are zero.
   /// Or with one is a no-op when the lock is already held.
-  LIBC_INLINE bool try_lock(uint64_t, uint64_t index) {
-    return lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED) == 0;
+  [[clang::convergent]] LIBC_INLINE bool try_lock(uint64_t lane_mask,
+                                                  uint64_t index) {
+    // On amdgpu, test and set to lock[index] and a sync_lane would suffice
+    // On volta, need to handle differences between the threads running and
+    // the threads that were detected in the previous call to get_lane_mask()
+    //
+    // All threads in lane_mask try to claim the lock. At most one can succeed.
+    // There may be threads active which are not in lane mask which must not
+    // succeed in taking the lock, as otherwise it will leak. This is handled
+    // by making threads which are not in lane_mask or with 0, a no-op.
+    uint32_t id = gpu::get_lane_id();
+    bool id_in_lane_mask = lane_mask & (1ul << id);
+
+    // All threads in the warp call fetch_or. Possibly at the same time.
+    bool before =
+        lock[index].fetch_or(id_in_lane_mask, cpp::MemoryOrder::RELAXED);
+    uint64_t packed = gpu::ballot(lane_mask, before);
+
+    // If every bit set in lane_mask is also set in packed, every single thread
+    // in the warp failed to get the lock. Ballot returns unset for threads not
+    // in the lane mask.
+    //
+    // Cases, per thread:
+    // mask==0 -> unspecified before, discarded by ballot -> 0
+    // mask==1 and before==0 (success), set zero by ballot -> 0
+    // mask==1 and before==1 (failure), set one by ballot -> 1
+    //
+    // mask != packed implies at least one of the threads got the lock
+    // atomic semantics of fetch_or mean at most one of the threads for the lock
+    return lane_mask != packed;
   }
 
   // Unlock the lock at index.
-  LIBC_INLINE void unlock(uint64_t, uint64_t index) {
-    lock[index].store(0, cpp::MemoryOrder::RELAXED);
+  [[clang::convergent]] LIBC_INLINE void unlock(uint64_t lane_mask,
+                                                uint64_t index) {
+    // Wait for other threads in the warp to finish using the lock
+    gpu::sync_lane(lane_mask);
+
+    // Use exactly one thread to clear the bit at position 0 in lock[index]
+    // Must restrict to a single thread to avoid one thread dropping the lock,
+    // then an unrelated warp claiming the lock, then a second thread in this
+    // warp dropping the lock again.
+    uint32_t and_mask = ~(rpc::is_first_lane(lane_mask) ? 1 : 0);
+    lock[index].fetch_and(and_mask, cpp::MemoryOrder::RELAXED);
   }
 };
 
