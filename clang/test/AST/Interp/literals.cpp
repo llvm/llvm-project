@@ -462,14 +462,36 @@ namespace IncDec {
   }
   static_assert(incBool(), "");
 
+  template<typename T, bool Inc>
   constexpr int uninit() {
-    int a;
-    ++a; // ref-note {{increment of uninitialized}} \
-         // FIXME: Should also be rejected by new interpreter
+    T a;
+    if constexpr (Inc)
+      ++a; // ref-note 2{{increment of uninitialized}} \
+           // expected-note 2{{increment of object outside its lifetime}}
+    else
+      --a; // ref-note 2{{decrement of uninitialized}} \
+           // expected-note 2{{decrement of object outside its lifetime}}
     return 1;
   }
-  static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'uninit()'}}
+  static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                          // ref-note {{in call to 'uninit()'}} \
+                                          // expected-error {{not an integral constant expression}} \
+                                          // expected-note {{in call to 'uninit()'}}
+
+  static_assert(uninit<int, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to 'uninit()'}} \
+                                           // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to 'uninit()'}}
+
+  static_assert(uninit<float, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                            // ref-note {{in call to 'uninit()'}} \
+                                            // expected-error {{not an integral constant expression}} \
+                                            // expected-note {{in call to 'uninit()'}}
+
+  static_assert(uninit<float, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{in call to 'uninit()'}} \
+                                             // expected-error {{not an integral constant expression}} \
+                                             // expected-note {{in call to 'uninit()'}}
 
   constexpr int OverFlow() { // ref-error {{never produces a constant expression}} \
                              // expected-error {{never produces a constant expression}}
