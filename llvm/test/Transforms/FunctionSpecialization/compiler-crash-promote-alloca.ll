@@ -4,7 +4,7 @@
 ; while attempting to promote the alloca in `entry`.
 ; CHECK: bar.1
 
-@block = internal global [8 x i8] zeroinitializer, align 1
+@block = internal constant [8 x i8] zeroinitializer, align 1
 
 define dso_local void @entry() {
   %1 = alloca i32, align 4
