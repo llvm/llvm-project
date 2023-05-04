@@ -22,7 +22,7 @@ if(LIBC_TARGET_ARCHITECTURE_IS_GPU AND
   return()
 endif()
 
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_subdirectory(src)
   add_subdirectory(utils)
 endif()
