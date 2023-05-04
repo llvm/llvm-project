@@ -61,7 +61,11 @@ void *memset(void *ptr, int value, size_t count) {
 // This is needed if the test was compiled with '-fno-use-cxa-atexit'.
 int atexit(void (*func)(void)) { return __llvm_libc::atexit(func); }
 
+constexpr uint64_t ALIGNMENT = alignof(uintptr_t);
+
 void *malloc(size_t s) {
+  // Keep the bump pointer aligned on an eight byte boundary.
+  s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
   void *mem = ptr;
   ptr += s;
   return mem;
