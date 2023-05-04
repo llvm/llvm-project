@@ -316,7 +316,7 @@ Instruction *RandomIRBuilder::connectToSink(BasicBlock &BB,
       std::shuffle(Dominators.begin(), Dominators.end(), Rand);
       for (BasicBlock *Dom : Dominators) {
         for (Instruction &I : *Dom) {
-          if (PointerType *PtrTy = dyn_cast<PointerType>(I.getType()))
+          if (isa<PointerType>(I.getType()))
             return new StoreInst(V, &I, Insts.back());
         }
       }
