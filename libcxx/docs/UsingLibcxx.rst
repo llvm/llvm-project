@@ -523,3 +523,32 @@ Standard. Libc++ retroactively updates the Unicode Standard in older C++
 versions. This allows the library to have better estimates for newly introduced
 Unicode code points, without requiring the user to use the latest C++ version
 in their code base.
+=======
+Turning off ASan annotation in containers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``__asan_annotate_container_with_allocator`` is a customization point to allow users to disable
+`Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators. This may be necessary for allocators that access allocated memory.
+This customization point exists only when ``_LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS`` Feature Test Macro is defined.
+
+For allocators not running destructors, it is also possible to `bulk-unpoison memory <https://github.com/google/sanitizers/wiki/AddressSanitizerManualPoisoning>`_ instead of disabling annotations altogether.
+
+The struct may be specialized for user-defined allocators. It is a `Cpp17UnaryTypeTrait <http://eel.is/c++draft/type.traits#meta.rqmts>`_ with a base characteristic of ``true_type`` if the container is allowed to use annotations and ``false_type`` otherwise.
+
+The annotations for a ``user_allocator`` can be disabled like this:
+
+.. code-block:: cpp
+
+  #ifdef _LIBCPP_HAS_ASAN_CONTAINER_ANNOTATIONS_FOR_ALL_ALLOCATORS
+  template <class T>
+  struct std::__asan_annotate_container_with_allocator<user_allocator<T>> : std::false_type {};
+  #endif
+
+Why may I want to turn it off?
+------------------------------
+
+There are a few reasons why you may want to turn off annotations for an allocator.
+Unpoisoning may not be an option, if (for example) you are not maintaining the allocator.
+
+* You are using allocator, which does not call destructor during deallocation.
+* You are aware that memory allocated with an allocator may be accessed, even when unused by container.
