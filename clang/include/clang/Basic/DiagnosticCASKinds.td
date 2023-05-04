@@ -40,6 +40,8 @@ def err_cas_cannot_parse_include_tree_id : Error<
   "CAS cannot parse include-tree-id '%0'">, DefaultFatal;
 def err_cas_missing_include_tree_id : Error<
   "CAS missing expected include-tree '%0'">, DefaultFatal;
+def err_cas_cannot_load_api_notes_include_tree : Error<
+  "cannot load APINotes from include-tree-id '%0'">, DefaultFatal;
 
 def warn_clang_cache_disabled_caching: Warning<
   "caching disabled because %0">,

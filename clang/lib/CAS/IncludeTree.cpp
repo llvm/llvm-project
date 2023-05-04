@@ -566,13 +566,15 @@ llvm::Error IncludeTree::ModuleMap::forEachModule(
   });
 }
 
-static constexpr char HasPCH = 0x01;
-static constexpr char HasModuleMap = 0x02;
+static constexpr char HasPCH = 1;
+static constexpr char HasModuleMap = 1 << 1;
+static constexpr char HasAPINotes = 1 << 2;
 
 Expected<IncludeTreeRoot>
 IncludeTreeRoot::create(ObjectStore &DB, ObjectRef MainFileTree,
                         ObjectRef FileList, Optional<ObjectRef> PCHRef,
-                        Optional<ObjectRef> ModuleMapRef) {
+                        Optional<ObjectRef> ModuleMapRef,
+                        Optional<ObjectRef> APINotesRef) {
   assert(IncludeTree::isValid(DB, MainFileTree));
   assert(IncludeTree::FileList::isValid(DB, FileList));
   assert(!ModuleMapRef || IncludeTree::ModuleMap::isValid(DB, *ModuleMapRef));
@@ -582,12 +584,16 @@ IncludeTreeRoot::create(ObjectStore &DB, ObjectRef MainFileTree,
     Data[0] |= HasPCH;
   if (ModuleMapRef)
     Data[0] |= HasModuleMap;
+  if (APINotesRef)
+    Data[0] |= HasAPINotes;
 
   SmallVector<ObjectRef> Refs = {MainFileTree, FileList};
   if (PCHRef)
     Refs.push_back(*PCHRef);
   if (ModuleMapRef)
     Refs.push_back(*ModuleMapRef);
+  if (APINotesRef)
+    Refs.push_back(*APINotesRef);
 
   return IncludeTreeBase::create(DB, Refs, Data);
 }
@@ -610,6 +616,11 @@ std::optional<unsigned> IncludeTreeRoot::getPCHRefIndex() const {
 std::optional<unsigned> IncludeTreeRoot::getModuleMapRefIndex() const {
   if (getData()[0] & HasModuleMap)
     return (getData()[0] & HasPCH) ? 3u : 2u;
+  return std::nullopt;
+}
+std::optional<unsigned> IncludeTreeRoot::getAPINotesRefIndex() const {
+  if (getData()[0] & HasAPINotes)
+    return 2 + (getPCHRefIndex() ? 1 : 0) + (getModuleMapRefIndex() ? 1 : 0);
   return std::nullopt;
 }
 
@@ -743,6 +754,46 @@ llvm::Error IncludeTree::ModuleMap::print(llvm::raw_ostream &OS,
   return forEachModule([&](Module M) { return M.print(OS, Indent); });
 }
 
+llvm::Expected<IncludeTree::APINotes>
+IncludeTree::APINotes::create(ObjectStore &DB,
+                              ArrayRef<ObjectRef> APINoteList) {
+  assert(APINoteList.size() < 2 && "Too many APINotes added");
+  return IncludeTreeBase::create(DB, APINoteList, {});
+}
+
+llvm::Expected<IncludeTree::APINotes>
+IncludeTree::APINotes::get(ObjectStore &DB, ObjectRef Ref) {
+  auto Node = DB.getProxy(Ref);
+  if (!Node)
+    return Node.takeError();
+  if (!isValid(*Node))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "not an APINodes node kind");
+  return APINotes(std::move(*Node));
+}
+
+llvm::Error IncludeTree::APINotes::print(llvm::raw_ostream &OS,
+                                         unsigned Indent) {
+  return forEachReference([&](ObjectRef Ref) -> llvm::Error {
+    auto Node = getCAS().getProxy(Ref);
+    if (!Node)
+      return Node.takeError();
+    OS.indent(Indent) << Node->getID() << "\n";
+    OS.indent(Indent) << Node->getData() << "\n";
+    return llvm::Error::success();
+  });
+}
+
+llvm::Error IncludeTree::APINotes::forEachAPINotes(
+    llvm::function_ref<llvm::Error(StringRef)> CB) {
+  return forEachReference([&](ObjectRef Ref) {
+    auto N = getCAS().getProxy(Ref);
+    if (!N)
+      return N.takeError();
+    return CB(N->getData());
+  });
+}
+
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (Optional<ObjectRef> PCHRef = getPCHRef()) {
     OS.indent(Indent) << "(PCH) ";
@@ -766,6 +817,14 @@ llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
   Optional<IncludeTree::FileList> List;
   if (llvm::Error E = getFileList().moveInto(List))
     return E;
+  Optional<IncludeTree::APINotes> APINotes;
+  if (llvm::Error E = getAPINotes().moveInto(APINotes))
+    return E;
+  if (APINotes) {
+    OS.indent(Indent) << "APINotes:\n";
+    if (llvm::Error E = APINotes->print(OS, Indent))
+      return E;
+  }
   return List->print(OS, Indent);
 }
 

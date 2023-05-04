@@ -3638,6 +3638,11 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
   }
   for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
     Opts.ModuleSearchPaths.push_back(A->getValue());
+
+  if (Args.hasFlag(OPT_fapinotes, OPT_fno_apinotes, false) &&
+      Args.hasArg(OPT_fcas_include_tree))
+    diags.Report(diag::err_drv_incompatible_option_include_tree)
+        << "-fapinotes";
 }
 
 static void GeneratePointerAuthArgs(LangOptions &Opts,

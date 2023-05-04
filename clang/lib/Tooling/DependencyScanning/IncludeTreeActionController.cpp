@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CachingActions.h"
+#include "clang/APINotes/APINotesManager.h"
+#include "clang/APINotes/APINotesReader.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -127,6 +129,7 @@ private:
   Optional<cas::ObjectRef> PredefinesBufferRef;
   Optional<cas::ObjectRef> ModuleIncludesBufferRef;
   Optional<cas::ObjectRef> ModuleMapRef;
+  Optional<cas::ObjectRef> APINotesRef;
   /// When the builder is created from an existing tree, the main include tree.
   Optional<cas::ObjectRef> MainIncludeTreeRef;
   SmallVector<FilePPState> IncludeStack;
@@ -634,6 +637,7 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
 
   if (!ScanInstance.getLangOpts().CurrentModule.empty()) {
     SmallVector<cas::ObjectRef> Modules;
+    SmallVector<cas::ObjectRef> APINotes;
     auto AddModule = [&](Module *M) -> llvm::Error {
       Expected<cas::IncludeTree::Module> Mod = getIncludeTreeModule(DB, M);
       if (!Mod)
@@ -644,6 +648,23 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     if (Module *M = ScanInstance.getPreprocessor().getCurrentModule()) {
       if (Error E = AddModule(M))
         return std::move(E);
+
+      // If it is currently module, load its APINotes.
+      api_notes::APINotesManager ANM(ScanInstance.getSourceManager(),
+                                     ScanInstance.getLangOpts());
+      auto Notes = ANM.getCurrentModuleAPINotes(
+          M, ScanInstance.getLangOpts().APINotesModules,
+          ScanInstance.getAPINotesOpts().ModuleSearchPaths);
+      for (auto *File : Notes) {
+        if (auto Buf =
+                ScanInstance.getSourceManager().getMemoryBufferForFileOrNone(
+                    File)) {
+          auto Note = DB.storeFromString({}, Buf->getBuffer());
+          if (!Note)
+            return Note.takeError();
+          APINotes.push_back(*Note);
+        }
+      }
     } else {
       // When building a TU or PCH, we can have headers files that are part of
       // both the public and private modules that are included textually. In
@@ -663,6 +684,13 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     if (!ModMap)
       return ModMap.takeError();
     ModuleMapRef = ModMap->getRef();
+
+    if (!APINotes.empty()) {
+      auto ModAPINotes = cas::IncludeTree::APINotes::create(DB, APINotes);
+      if (!ModAPINotes)
+        return ModAPINotes.takeError();
+      APINotesRef = ModAPINotes->getRef();
+    }
   }
 
   auto FileList =
@@ -671,7 +699,8 @@ IncludeTreeBuilder::finishIncludeTree(CompilerInstance &ScanInstance,
     return FileList.takeError();
 
   return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef(),
-                                      FileList->getRef(), PCHRef, ModuleMapRef);
+                                      FileList->getRef(), PCHRef, ModuleMapRef,
+                                      APINotesRef);
 }
 
 Error IncludeTreeBuilder::addModuleInputs(ASTReader &Reader) {

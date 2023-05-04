@@ -680,6 +680,8 @@ def err_drv_target_variant_invalid : Error<
 
 def err_drv_inputs_and_include_tree : Error<
   "passing input files is incompatible with '-fcas-include-tree'">;
+def err_drv_incompatible_option_include_tree : Error<
+  "passing incompatible option '%0' with '-fcas-include-tree'">;
 
 def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;

@@ -57,6 +57,7 @@ public:
   class Module;
   class ModuleImport;
   class ModuleMap;
+  class APINotes;
 
   Expected<File> getBaseFile();
 
@@ -644,6 +645,46 @@ private:
   friend class IncludeTreeRoot;
 };
 
+/// A list of \c APINotes that is compiled and loaded.
+class IncludeTree::APINotes : public IncludeTreeBase<APINotes> {
+public:
+  static constexpr StringRef getNodeKind() { return "APIN"; }
+
+  llvm::Error
+  forEachAPINotes(llvm::function_ref<llvm::Error(StringRef)> Callback);
+
+  static Expected<APINotes> create(ObjectStore &DB,
+                                   ArrayRef<ObjectRef> APINoteList);
+
+  static Expected<APINotes> get(ObjectStore &CAS, ObjectRef Ref);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+private:
+  friend class IncludeTreeBase<APINotes>;
+  friend class IncludeTreeRoot;
+
+  explicit APINotes(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  static bool isValid(const ObjectProxy &Node) {
+    if (!IncludeTreeBase::isValid(Node))
+      return false;
+    IncludeTreeBase Base(Node);
+    return Base.getData().empty() && Base.getNumReferences() < 2;
+  }
+
+  static bool isValid(ObjectStore &CAS, ObjectRef Ref) {
+    auto Node = CAS.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+};
+
 /// Represents the include-tree result for a translation unit.
 class IncludeTreeRoot : public IncludeTreeBase<IncludeTreeRoot> {
 public:
@@ -661,6 +702,12 @@ public:
 
   Optional<ObjectRef> getModuleMapRef() const {
     if (auto Index = getModuleMapRefIndex())
+      return getReference(*Index);
+    return std::nullopt;
+  }
+
+  Optional<ObjectRef> getAPINotesRef() const {
+    if (auto Index = getAPINotesRefIndex())
       return getReference(*Index);
     return std::nullopt;
   }
@@ -699,10 +746,20 @@ public:
     return std::nullopt;
   }
 
+  Expected<Optional<IncludeTree::APINotes>> getAPINotes() {
+    if (Optional<ObjectRef> Ref = getAPINotesRef()) {
+      auto Node = getCAS().getProxy(*Ref);
+      if (!Node)
+        return Node.takeError();
+      return IncludeTree::APINotes(*Node);
+    }
+    return std::nullopt;
+  }
+
   static Expected<IncludeTreeRoot>
   create(ObjectStore &DB, ObjectRef MainFileTree, ObjectRef FileList,
-         Optional<ObjectRef> PCHRef,
-         Optional<ObjectRef> ModuleMapRef);
+         Optional<ObjectRef> PCHRef, Optional<ObjectRef> ModuleMapRef,
+         Optional<ObjectRef> APINotesRef);
 
   static Expected<IncludeTreeRoot> get(ObjectStore &DB, ObjectRef Ref);
 
@@ -729,6 +786,7 @@ private:
 
   std::optional<unsigned> getPCHRefIndex() const;
   std::optional<unsigned> getModuleMapRefIndex() const;
+  std::optional<unsigned> getAPINotesRefIndex() const;
 
   explicit IncludeTreeRoot(ObjectProxy Node)
       : IncludeTreeBase(std::move(Node)) {
