@@ -106,6 +106,7 @@ New Targets
 -----------
  - gfx940
  - gfx941
+ - gfx942
  - gfx1036
 
 Removed Targets
