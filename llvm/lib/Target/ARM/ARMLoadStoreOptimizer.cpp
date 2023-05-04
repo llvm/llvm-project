@@ -2797,8 +2797,7 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     };
 
     if (MI.isDebugValue()) {
-      auto *DILocalVar = MI.getDebugVariable();
-      assert(DILocalVar &&
+      assert(MI.getDebugVariable() &&
              "DBG_VALUE or DBG_VALUE_LIST must contain a DILocalVariable");
 
       auto DbgVar = createDebugVariableFromMachineInstr(&MI);
