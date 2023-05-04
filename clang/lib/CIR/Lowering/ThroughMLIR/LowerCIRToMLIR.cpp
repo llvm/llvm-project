@@ -223,7 +223,6 @@ public:
     assert(type.isa<mlir::IntegerType>() && "operand type not supported yet");
 
     switch (op.getKind()) {
-      llvm_unreachable("NYI");
     case mlir::cir::UnaryOpKind::Inc: {
       auto One = rewriter.create<mlir::arith::ConstantOp>(
           op.getLoc(), type, mlir::IntegerAttr::get(type, 1));

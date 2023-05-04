@@ -391,8 +391,6 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
         // We might have to widen integers, but we should never truncate.
         assert(ArgInfo.getCoerceToType() == V.getType() && "widening NYI");
 
-        mlir::FunctionType CIRFuncTy = getTypes().GetFunctionType(CallInfo);
-
         // If the argument doesn't match, perform a bitcast to coerce it. This
         // can happen due to trivial type mismatches.
         if (FirstCIRArg < CIRFuncTy.getNumInputs() &&

@@ -36,9 +36,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Value.h"
-#include "clang/CIR/Dialect/IR/CIRAttrs.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 using namespace clang;
 namespace cir {
