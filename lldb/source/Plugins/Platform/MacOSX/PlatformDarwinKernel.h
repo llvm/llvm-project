@@ -137,7 +137,8 @@ protected:
   // with the binary inside it ('.../foo.dSYM/Contents/Resources/DWARF/foo').
   // A dSYM bundle may have multiple DWARF binaries in them, so a vector
   // of matches is returned.
-  static std::vector<FileSpec> GetDWARFBinaryInDSYMBundle(FileSpec dsym_bundle);
+  static std::vector<FileSpec>
+  GetDWARFBinaryInDSYMBundle(const FileSpec &dsym_bundle);
 
   Status GetSharedModuleKext(const ModuleSpec &module_spec, Process *process,
                              lldb::ModuleSP &module_sp,
