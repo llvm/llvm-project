@@ -102,6 +102,75 @@ func.func @addi_extsi_3xi8_cst(%lhs: vector<3xi8>) -> vector<3xi32> {
 }
 
 //===----------------------------------------------------------------------===//
+// arith.subi
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @subi_extsi_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extsi %[[ARG0]] : i8 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extsi %[[ARG1]] : i8 to i32
+// CHECK-NEXT:    %[[LHS:.+]]  = arith.trunci %[[EXT0]] : i32 to i16
+// CHECK-NEXT:    %[[RHS:.+]]  = arith.trunci %[[EXT1]] : i32 to i16
+// CHECK-NEXT:    %[[SUB:.+]]  = arith.subi %[[LHS]], %[[RHS]] : i16
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[SUB]] : i16 to i32
+// CHECK-NEXT:    return %[[RET]] : i32
+func.func @subi_extsi_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extsi %lhs : i8 to i32
+  %b = arith.extsi %rhs : i8 to i32
+  %r = arith.subi %a, %b : i32
+  return %r : i32
+}
+
+// This patterns should only apply to `arith.subi` ops with sign-extended
+// arguments.
+//
+// CHECK-LABEL: func.func @subi_extui_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extui %[[ARG0]] : i8 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extui %[[ARG1]] : i8 to i32
+// CHECK-NEXT:    %[[SUB:.+]]  = arith.subi %[[EXT0]], %[[EXT1]] : i32
+// CHECK-NEXT:    return %[[SUB]] : i32
+func.func @subi_extui_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extui %lhs : i8 to i32
+  %b = arith.extui %rhs : i8 to i32
+  %r = arith.subi %a, %b : i32
+  return %r : i32
+}
+
+// This case should not get optimized because of mixed extensions.
+//
+// CHECK-LABEL: func.func @subi_mixed_ext_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extsi %[[ARG0]] : i8 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extui %[[ARG1]] : i8 to i32
+// CHECK-NEXT:    %[[ADD:.+]]  = arith.subi %[[EXT0]], %[[EXT1]] : i32
+// CHECK-NEXT:    return %[[ADD]] : i32
+func.func @subi_mixed_ext_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extsi %lhs : i8 to i32
+  %b = arith.extui %rhs : i8 to i32
+  %r = arith.subi %a, %b : i32
+  return %r : i32
+}
+
+// arith.subi produces one more bit of result than the operand bitwidth.
+//
+// CHECK-LABEL: func.func @subi_extsi_i24
+// CHECK-SAME:    (%[[ARG0:.+]]: i16, %[[ARG1:.+]]: i16)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extsi %[[ARG0]] : i16 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extsi %[[ARG1]] : i16 to i32
+// CHECK-NEXT:    %[[LHS:.+]]  = arith.trunci %[[EXT0]] : i32 to i24
+// CHECK-NEXT:    %[[RHS:.+]]  = arith.trunci %[[EXT1]] : i32 to i24
+// CHECK-NEXT:    %[[ADD:.+]]  = arith.subi %[[LHS]], %[[RHS]] : i24
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[ADD]] : i24 to i32
+// CHECK-NEXT:    return %[[RET]] : i32
+func.func @subi_extsi_i24(%lhs: i16, %rhs: i16) -> i32 {
+  %a = arith.extsi %lhs : i16 to i32
+  %b = arith.extsi %rhs : i16 to i32
+  %r = arith.subi %a, %b : i32
+  return %r : i32
+}
+
+//===----------------------------------------------------------------------===//
 // arith.muli
 //===----------------------------------------------------------------------===//
 
@@ -181,6 +250,92 @@ func.func @muli_extsi_3xi8_cst(%lhs: vector<3xi8>) -> vector<3xi32> {
   %a = arith.extsi %lhs : vector<3xi8> to vector<3xi32>
   %r = arith.muli %a, %cst : vector<3xi32>
   return %r : vector<3xi32>
+}
+
+//===----------------------------------------------------------------------===//
+// arith.divsi
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @divsi_extsi_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extsi %[[ARG0]] : i8 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extsi %[[ARG1]] : i8 to i32
+// CHECK-NEXT:    %[[LHS:.+]]  = arith.trunci %[[EXT0]] : i32 to i16
+// CHECK-NEXT:    %[[RHS:.+]]  = arith.trunci %[[EXT1]] : i32 to i16
+// CHECK-NEXT:    %[[SUB:.+]]  = arith.divsi %[[LHS]], %[[RHS]] : i16
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[SUB]] : i16 to i32
+// CHECK-NEXT:    return %[[RET]] : i32
+func.func @divsi_extsi_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extsi %lhs : i8 to i32
+  %b = arith.extsi %rhs : i8 to i32
+  %r = arith.divsi %a, %b : i32
+  return %r : i32
+}
+
+// This patterns should only apply to `arith.divsi` ops with sign-extended
+// arguments.
+//
+// CHECK-LABEL: func.func @divsi_extui_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extui %[[ARG0]] : i8 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extui %[[ARG1]] : i8 to i32
+// CHECK-NEXT:    %[[SUB:.+]]  = arith.divsi %[[EXT0]], %[[EXT1]] : i32
+// CHECK-NEXT:    return %[[SUB]] : i32
+func.func @divsi_extui_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extui %lhs : i8 to i32
+  %b = arith.extui %rhs : i8 to i32
+  %r = arith.divsi %a, %b : i32
+  return %r : i32
+}
+
+// arith.divsi produces one more bit of result than the operand bitwidth.
+//
+// CHECK-LABEL: func.func @divsi_extsi_i24
+// CHECK-SAME:    (%[[ARG0:.+]]: i16, %[[ARG1:.+]]: i16)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extsi %[[ARG0]] : i16 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extsi %[[ARG1]] : i16 to i32
+// CHECK-NEXT:    %[[LHS:.+]]  = arith.trunci %[[EXT0]] : i32 to i24
+// CHECK-NEXT:    %[[RHS:.+]]  = arith.trunci %[[EXT1]] : i32 to i24
+// CHECK-NEXT:    %[[ADD:.+]]  = arith.divsi %[[LHS]], %[[RHS]] : i24
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extsi %[[ADD]] : i24 to i32
+// CHECK-NEXT:    return %[[RET]] : i32
+func.func @divsi_extsi_i24(%lhs: i16, %rhs: i16) -> i32 {
+  %a = arith.extsi %lhs : i16 to i32
+  %b = arith.extsi %rhs : i16 to i32
+  %r = arith.divsi %a, %b : i32
+  return %r : i32
+}
+
+//===----------------------------------------------------------------------===//
+// arith.divui
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @divui_extui_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[SUB:.+]]  = arith.divui %[[ARG0]], %[[ARG1]] : i8
+// CHECK-NEXT:    %[[RET:.+]]  = arith.extui %[[SUB]] : i8 to i32
+// CHECK-NEXT:    return %[[RET]] : i32
+func.func @divui_extui_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extui %lhs : i8 to i32
+  %b = arith.extui %rhs : i8 to i32
+  %r = arith.divui %a, %b : i32
+  return %r : i32
+}
+
+// This patterns should only apply to `arith.divui` ops with zero-extended
+// arguments.
+//
+// CHECK-LABEL: func.func @divui_extsi_i8
+// CHECK-SAME:    (%[[ARG0:.+]]: i8, %[[ARG1:.+]]: i8)
+// CHECK-NEXT:    %[[EXT0:.+]] = arith.extsi %[[ARG0]] : i8 to i32
+// CHECK-NEXT:    %[[EXT1:.+]] = arith.extsi %[[ARG1]] : i8 to i32
+// CHECK-NEXT:    %[[SUB:.+]]  = arith.divui %[[EXT0]], %[[EXT1]] : i32
+// CHECK-NEXT:    return %[[SUB]] : i32
+func.func @divui_extsi_i8(%lhs: i8, %rhs: i8) -> i32 {
+  %a = arith.extsi %lhs : i8 to i32
+  %b = arith.extsi %rhs : i8 to i32
+  %r = arith.divui %a, %b : i32
+  return %r : i32
 }
 
 //===----------------------------------------------------------------------===//
