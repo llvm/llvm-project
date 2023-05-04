@@ -365,31 +365,20 @@ public:
 
 using Demangler = itanium_demangle::ManglingParser<DefaultAllocator>;
 
-char *llvm::itaniumDemangle(const char *MangledName, int *Status) {
-  if (MangledName == nullptr) {
-    if (Status)
-      *Status = demangle_invalid_args;
+char *llvm::itaniumDemangle(const char *MangledName) {
+  if (!MangledName)
     return nullptr;
-  }
 
-  int InternalStatus = demangle_success;
   Demangler Parser(MangledName, MangledName + std::strlen(MangledName));
   Node *AST = Parser.parse();
+  if (!AST)
+    return nullptr;
 
-  char *Buf;
-  if (AST == nullptr)
-    InternalStatus = demangle_invalid_mangled_name;
-  else {
-    OutputBuffer OB;
-    assert(Parser.ForwardTemplateRefs.empty());
-    AST->print(OB);
-    OB += '\0';
-    Buf = OB.getBuffer();
-  }
-
-  if (Status)
-    *Status = InternalStatus;
-  return InternalStatus == demangle_success ? Buf : nullptr;
+  OutputBuffer OB;
+  assert(Parser.ForwardTemplateRefs.empty());
+  AST->print(OB);
+  OB += '\0';
+  return OB.getBuffer();
 }
 
 ItaniumPartialDemangler::ItaniumPartialDemangler()
