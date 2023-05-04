@@ -82,6 +82,9 @@ struct CIRRecordLowering final {
     return astContext.getTargetInfo().getABI().starts_with("aapcs");
   }
 
+  /// Helper function to check if the target machine is BigEndian.
+  bool isBE() const { return astContext.getTargetInfo().isBigEndian(); }
+
   /// The Microsoft bitfield layout rule allocates discrete storage
   /// units of the field's formal type and only combines adjacent
   /// fields of the same formal type.  We want to emit a layout with
@@ -364,7 +367,7 @@ void CIRRecordLowering::computeVolatileBitfields() {
     return;
 
   for ([[maybe_unused]] auto &I : bitFields) {
-    llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::armComputeVolatileBitfields());
   }
 }
 
