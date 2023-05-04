@@ -10,5 +10,4 @@
 #
 ##===----------------------------------------------------------------------===##
 
-add_subdirectory(OMPT)
 add_subdirectory(PluginInterface)
