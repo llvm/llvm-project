@@ -239,6 +239,7 @@ void StructType::computeSizeAndAlignment(
   if (size || align || padded)
     return;
 
+  // This is a similar algorithm to LLVM's StructLayout.
   unsigned structSize = 0;
   llvm::Align structAlignment{1};
   [[maybe_unused]] bool isPadded = false;
@@ -248,6 +249,8 @@ void StructType::computeSizeAndAlignment(
   // Loop over each of the elements, placing them in memory.
   for (unsigned i = 0, e = numElements; i != e; ++i) {
     auto ty = members[i];
+
+    // This matches LLVM since it uses the ABI instead of preferred alignment.
     const llvm::Align tyAlign =
         llvm::Align(getPacked() ? 1 : dataLayout.getTypeABIAlignment(ty));
 
