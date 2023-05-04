@@ -73,6 +73,8 @@ void tooling::dependencies::configureInvocationForCaching(
     // above resets \p HeaderSearchOptions) when properly supporting
     // `-gmodules`.
     CI.getCodeGenOpts().DebugTypeExtRefs = false;
+    // Clear APINotes options.
+    CI.getAPINotesOpts().ModuleSearchPaths = {};
   } else {
     FileSystemOpts.CASFileSystemRootID = std::move(RootID);
     FileSystemOpts.CASFileSystemWorkingDirectory = std::move(WorkingDir);

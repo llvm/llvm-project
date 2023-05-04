@@ -23,9 +23,11 @@
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include <sys/stat.h>
@@ -114,6 +116,27 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
   }
 
   // Load the binary form we just compiled.
+  auto reader = APINotesReader::get(std::move(compiledBuffer), SwiftVersion);
+  assert(reader && "Could not load the API notes we just generated?");
+  return reader;
+}
+
+std::unique_ptr<APINotesReader>
+APINotesManager::loadAPINotes(StringRef Buffer) {
+  llvm::SmallVector<char, 1024> apiNotesBuffer;
+  std::unique_ptr<llvm::MemoryBuffer> compiledBuffer;
+  SourceMgrAdapter srcMgrAdapter(
+      SourceMgr, SourceMgr.getDiagnostics(), diag::err_apinotes_message,
+      diag::warn_apinotes_message, diag::note_apinotes_message, nullptr);
+  llvm::raw_svector_ostream OS(apiNotesBuffer);
+
+  if (api_notes::compileAPINotes(Buffer, nullptr, OS,
+                                 srcMgrAdapter.getDiagHandler(),
+                                 srcMgrAdapter.getDiagContext()))
+    return nullptr;
+
+  compiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+      StringRef(apiNotesBuffer.data(), apiNotesBuffer.size()));
   auto reader = APINotesReader::get(std::move(compiledBuffer), SwiftVersion);
   assert(reader && "Could not load the API notes we just generated?");
   return reader;
@@ -226,33 +249,21 @@ static bool hasPrivateSubmodules(const Module *module) {
   });
 }
 
-bool APINotesManager::loadCurrentModuleAPINotes(
+llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINotes(
     Module *module, bool lookInModule, ArrayRef<std::string> searchPaths) {
-  assert(!CurrentModuleReaders[0] &&
-         "Already loaded API notes for the current module?");
-
   FileManager &fileMgr = SourceMgr.getFileManager();
   auto moduleName = module->getTopLevelModuleName();
+  llvm::SmallVector<const FileEntry *, 2> APINotes;
 
   // First, look relative to the module itself.
   if (lookInModule) {
-    bool foundAny = false;
-    unsigned numReaders = 0;
-
     // Local function to try loading an API notes file in the given directory.
     auto tryAPINotes = [&](const DirectoryEntry *dir, bool wantPublic) {
-      if (auto file = findAPINotesFile(dir, moduleName, wantPublic)) {
-        foundAny = true;
-
+      if (auto *file = findAPINotesFile(dir, moduleName, wantPublic)) {
         if (!wantPublic)
           checkPrivateAPINotesName(SourceMgr.getDiagnostics(), file, module);
 
-        // Try to load the API notes file.
-        CurrentModuleReaders[numReaders] = loadAPINotes(file).release();
-        if (CurrentModuleReaders[numReaders]) {
-          module->APINotesFile = file->getName().str();
-          ++numReaders;
-        }
+        APINotes.push_back(file);
       }
     };
 
@@ -298,27 +309,52 @@ bool APINotesManager::loadCurrentModuleAPINotes(
         tryAPINotes(module->Directory, /*wantPublic=*/false);
     }
 
-    if (foundAny)
-      return numReaders > 0;
+    if (!APINotes.empty())
+      return APINotes;
   }
 
   // Second, look for API notes for this module in the module API
   // notes search paths.
   for (const auto &searchPath : searchPaths) {
     if (auto searchDir = fileMgr.getDirectory(searchPath)) {
-      if (auto file = findAPINotesFile(*searchDir, moduleName)) {
-        CurrentModuleReaders[0] = loadAPINotes(file).release();
-        if (!getCurrentModuleReaders().empty()) {
-          module->APINotesFile = file->getName().str();
-          return true;
-        }
-        return false;
+      if (auto *file = findAPINotesFile(*searchDir, moduleName)) {
+        APINotes.push_back(file);
+        return APINotes;
       }
     }
   }
 
   // Didn't find any API notes.
-  return false;
+  return APINotes;
+}
+
+
+bool APINotesManager::loadCurrentModuleAPINotes(
+    Module *module, bool lookInModule, ArrayRef<std::string> searchPaths) {
+  assert(!CurrentModuleReaders[0] &&
+         "Already loaded API notes for the current module?");
+
+  auto APINotes = getCurrentModuleAPINotes(module, lookInModule, searchPaths);
+  unsigned numReaders = 0;
+  for (auto *file : APINotes) {
+    CurrentModuleReaders[numReaders++] = loadAPINotes(file).release();
+    if (!getCurrentModuleReaders().empty())
+      module->APINotesFile = file->getName().str();
+  }
+
+  return numReaders > 0;
+}
+
+bool APINotesManager::loadCurrentModuleAPINotesFromBuffer(
+    ArrayRef<StringRef> Buffers) {
+  unsigned NumReader = 0;
+  for (auto Buf : Buffers) {
+    auto Reader = loadAPINotes(Buf);
+    assert(Reader && "Could not load the API notes we just generated?");
+
+    CurrentModuleReaders[NumReader++] = Reader.release();
+  }
+  return NumReader;
 }
 
 llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocation Loc) {
