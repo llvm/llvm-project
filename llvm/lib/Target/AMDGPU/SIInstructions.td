@@ -1356,66 +1356,6 @@ foreach Index = 0-15 in {
 }
 
 
-def : Pat <
-  (extract_subvector v4i16:$vec, (i32 0)),
-  (v2i16 (EXTRACT_SUBREG v4i16:$vec, sub0))
->;
-
-def : Pat <
-  (extract_subvector v4i16:$vec, (i32 2)),
-  (v2i16 (EXTRACT_SUBREG v4i16:$vec, sub1))
->;
-
-def : Pat <
-  (extract_subvector v4f16:$vec, (i32 0)),
-  (v2f16 (EXTRACT_SUBREG v4f16:$vec, sub0))
->;
-
-def : Pat <
-  (extract_subvector v4f16:$vec, (i32 2)),
-  (v2f16 (EXTRACT_SUBREG v4f16:$vec, sub1))
->;
-
-def : Pat <
-  (extract_subvector v8i16:$vec, (i32 0)),
-  (v4i16 (EXTRACT_SUBREG v8i16:$vec, sub0_sub1))
->;
-
-def : Pat <
-  (extract_subvector v8i16:$vec, (i32 4)),
-  (v4i16 (EXTRACT_SUBREG v8i16:$vec, sub2_sub3))
->;
-
-def : Pat <
-  (extract_subvector v8f16:$vec, (i32 0)),
-  (v4f16 (EXTRACT_SUBREG v8f16:$vec, sub0_sub1))
->;
-
-def : Pat <
-  (extract_subvector v8f16:$vec, (i32 4)),
-  (v4f16 (EXTRACT_SUBREG v8f16:$vec, sub2_sub3))
->;
-
-def : Pat <
-  (extract_subvector v16i16:$vec, (i32 0)),
-  (v8i16 (EXTRACT_SUBREG v16i16:$vec, sub0_sub1_sub2_sub3))
->;
-
-def : Pat <
-  (extract_subvector v16i16:$vec, (i32 8)),
-  (v8i16 (EXTRACT_SUBREG v16i16:$vec, sub4_sub5_sub6_sub7))
->;
-
-def : Pat <
-  (extract_subvector v16f16:$vec, (i32 0)),
-  (v8f16 (EXTRACT_SUBREG v16f16:$vec, sub0_sub1_sub2_sub3))
->;
-
-def : Pat <
-  (extract_subvector v16f16:$vec, (i32 8)),
-  (v8f16 (EXTRACT_SUBREG v16f16:$vec, sub4_sub5_sub6_sub7))
->;
-
 foreach Index = 0-31 in {
   def Extract_Element_v32i32_#Index : Extract_Element <
     i32, v32i32, Index, !cast<SubRegIndex>(sub#Index)
