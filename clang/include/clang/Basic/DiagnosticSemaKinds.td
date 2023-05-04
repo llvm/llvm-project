@@ -9431,15 +9431,15 @@ def ext_defaulted_comparison_constexpr_mismatch : Extension<
   "three-way comparison operator}0 that is "
   "declared %select{constexpr|consteval}2 but"
   "%select{|for which the corresponding implicit 'operator==' }0 "
-  "invokes a non-constexpr comparison function is a C++2b extension">,
-  InGroup<DiagGroup<"c++2b-default-comp-relaxed-constexpr">>;
-def warn_cxx2b_compat_defaulted_comparison_constexpr_mismatch : Warning<
+  "invokes a non-constexpr comparison function is a C++23 extension">,
+  InGroup<DiagGroup<"c++23-default-comp-relaxed-constexpr">>;
+def warn_cxx23_compat_defaulted_comparison_constexpr_mismatch : Warning<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
   "three-way comparison operator}0 that is "
   "declared %select{constexpr|consteval}2 but"
   "%select{|for which the corresponding implicit 'operator==' }0 "
   "invokes a non-constexpr comparison function is incompatible with C++ "
-  "standards before C++2b">,
+  "standards before C++23">,
   InGroup<CXXPre23Compat>, DefaultIgnore;
 def note_defaulted_comparison_not_constexpr : Note<
   "non-constexpr comparison function would be used to compare "
