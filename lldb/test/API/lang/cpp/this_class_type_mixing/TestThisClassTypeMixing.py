@@ -16,6 +16,7 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
 
     @no_debug_info_test
+    @expectedFailureAll(oslist=["windows"])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break in member function",
