@@ -1268,7 +1268,7 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
 
     auto &file_spec = module_sp->GetFileSpec();
     found_logging_support_module =
-        (file_spec.GetLastPathComponent() == logging_module_name);
+        (file_spec.GetFilename() == logging_module_name);
     if (found_logging_support_module)
       break;
   }
