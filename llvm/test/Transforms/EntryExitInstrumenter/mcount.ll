@@ -99,6 +99,13 @@ define ptr @tailcaller2() #8 {
 ; CHECK: ret
 }
 
+;; naked functions are not instrumented, otherwise the argument registers
+;; and the return address register (if present) would be clobbered.
+define void @naked() naked { entry: ret void }
+; CHECK-LABEL:      define void @naked(
+; CHECK-LABEL-NEXT: entry:
+; CHECK-LABEL-NEXT:   ret void
+
 ; The attributes are "consumed" when the instrumentation is inserted.
 ; CHECK: attributes
 ; CHECK-NOT: instrument-function
