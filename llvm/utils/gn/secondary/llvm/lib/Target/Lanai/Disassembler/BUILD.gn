@@ -8,8 +8,9 @@ tablegen("LanaiGenDisassemblerTables") {
 
 static_library("Disassembler") {
   output_name = "LLVMLanaiDisassembler"
-  deps = ["//llvm/lib/CodeGen",
+  deps = [
     ":LanaiGenDisassemblerTables",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",
     "//llvm/lib/Target/Lanai/MCTargetDesc",
