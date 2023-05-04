@@ -105,6 +105,7 @@ can lead to errors when saving temp files.
 New Targets
 -----------
  - gfx940
+ - gfx941
  - gfx1036
 
 Removed Targets
