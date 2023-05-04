@@ -29,6 +29,11 @@ struct LaunchParameters {
 int load(int argc, char **argv, char **evnp, void *image, size_t size,
          const LaunchParameters &params);
 
+/// Return \p V aligned "upwards" according to \p Align.
+template <typename V, typename A> inline V align_up(V val, A align) {
+  return ((val + V(align) - 1) / V(align)) * V(align);
+}
+
 /// Copy the system's argument vector to GPU memory allocated using \p alloc.
 template <typename Allocator>
 void *copy_argument_vector(int argc, char **argv, Allocator alloc) {

@@ -287,6 +287,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   hsa_amd_memory_fill(dev_ret, 0, sizeof(int));
 
   // Allocate finegrained memory for the RPC server and client to share.
+  uint32_t wavefront_size = 0;
+  if (hsa_status_t err = hsa_agent_get_info(
+          dev_agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &wavefront_size))
+    handle_error(err);
   void *server_inbox;
   void *server_outbox;
   void *buffer;
@@ -299,7 +303,10 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
           /*flags=*/0, &server_outbox))
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool, sizeof(__llvm_libc::rpc::Buffer),
+          finegrained_pool,
+          align_up(sizeof(__llvm_libc::rpc::Header) +
+                       (wavefront_size * sizeof(__llvm_libc::rpc::Buffer)),
+                   alignof(__llvm_libc::rpc::Packet)),
           /*flags=*/0, &buffer))
     handle_error(err);
   hsa_amd_agents_allow_access(1, &dev_agent, nullptr, server_inbox);
@@ -351,7 +358,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(&lock, server_inbox, server_outbox, buffer);
+  server.reset(wavefront_size, &lock, server_inbox, server_outbox, buffer);
 
   // Initialize the packet header and set the doorbell signal to begin execution
   // by the HSA runtime.
