@@ -814,4 +814,18 @@ constexpr int ignoredDecls() {
   return F{12}.a;
 }
 static_assert(ignoredDecls() == 12, "");
+
+struct A{};
+constexpr int ignoredExprs() {
+  (void)(1 / 2);
+  A a;
+  a; // expected-warning {{unused}} \
+     // ref-warning {{unused}}
+  (void)a;
+  (a); // expected-warning {{unused}} \
+       // ref-warning {{unused}}
+
+  return 0;
+}
+
 #endif

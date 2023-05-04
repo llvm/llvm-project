@@ -252,7 +252,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
   let arguments = (ins TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
+                       OptionalAttr<DictArrayAttr>:$private_attrib_attrs);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -279,11 +281,17 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
       return attr ? attr.getInt() : 0;
     }
 
+    /// Return the index of the first workgroup attribution in the block argument
+    /// list.
+    unsigned getFirstWorkgroupAttributionIndex() {
+      return getFunctionType().getNumInputs();
+    }
+
     /// Returns a list of block arguments that correspond to buffers located in
     /// the workgroup memory
     ArrayRef<BlockArgument> getWorkgroupAttributions() {
       auto begin =
-          std::next(getBody().args_begin(), getFunctionType().getNumInputs());
+          std::next(getBody().args_begin(), getFirstWorkgroupAttributionIndex());
       auto end = std::next(begin, getNumWorkgroupAttributions());
       return {begin, end};
     }
@@ -292,26 +300,76 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     /// workgroup memory.
     BlockArgument addWorkgroupAttribution(Type type, Location loc);
 
+    /// Get the workgroup attribution attribute dictionary for the attribution
+    /// at index `index`, counted from the start of the workgroup attributions.
+    DictionaryAttr getworkgroupAttributionAttrs(unsigned index);
+
+    /// Set the workgroup attribution attribute dictionary for the attribution
+    /// at index `index`, counted from the start of the workgroup attributions.
+    void setworkgroupAttributionAttrs(unsigned index, DictionaryAttr value);
+
+    /// Get an attribute for a workgroup attribution. `index` is counted
+    /// from the start of the workgroup attributions, not the start of the block.
+    Attribute getWorkgroupAttributionAttr(unsigned index, StringAttr name);
+    Attribute getWorkgroupAttributionAttr(unsigned index, StringRef name) {
+      return getWorkgroupAttributionAttr(index, StringAttr::get((*this)->getContext(), name));
+    }
+
+    /// Set an attribute for a workgroup attribution. `index` is counted
+    /// from the start of the workgroup attributions, not the start of the block.
+    /// A null `value` removes an attributino attribute.
+    void setWorkgroupAttributionAttr(unsigned index, StringAttr name, Attribute value);
+    void setWorkgroupAttributionAttr(unsigned index, StringRef name, Attribute value) {
+      return setWorkgroupAttributionAttr(index, StringAttr::get((*this)->getContext(), name), value);
+    }
+
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
       return getBody().getNumArguments() - getFunctionType().getNumInputs() -
           getNumWorkgroupAttributions();
     }
 
+    /// Returns the index of the first private buffer in the block argument list.
+    unsigned getFirstPrivateAttributionIndex() {
+      // Buffers on the private memory always come after buffers on the workgroup
+      // memory.
+      return getFunctionType().getNumInputs() + getNumWorkgroupAttributions();
+    }
+
     /// Returns a list of block arguments that correspond to buffers located in
     /// the private memory.
     ArrayRef<BlockArgument> getPrivateAttributions() {
-      // Buffers on the private memory always come after buffers on the workgroup
-      // memory.
       auto begin =
-          std::next(getBody().args_begin(),
-                    getFunctionType().getNumInputs() + getNumWorkgroupAttributions());
+          std::next(getBody().args_begin(), getFirstPrivateAttributionIndex());
       return {begin, getBody().args_end()};
     }
 
     /// Adds a new block argument that corresponds to buffers located in
     /// private memory.
     BlockArgument addPrivateAttribution(Type type, Location loc);
+
+    /// Get the private attribution attribute dictionary for the attribution
+    /// at index `index`, counted from the start of the private attributions.
+    DictionaryAttr getPrivateAttributionAttrs(unsigned index);
+
+    /// Set the private attribution attribute dictionary for the attribution
+    /// at index `index`, counted from the start of the private attributions.
+    void setPrivateAttributionAttrs(unsigned index, DictionaryAttr value);
+
+    /// Get an attribute for a private attribution. `index` is counted
+    /// from the start of the private attributions, not the start of the block.
+    Attribute getPrivateAttributionAttr(unsigned index, StringAttr name);
+    Attribute getPrivateAttributionAttr(unsigned index, StringRef name) {
+      return getPrivateAttributionAttr(index, StringAttr::get((*this)->getContext(), name));
+    }
+
+    /// Set an attribute for a private attribution. `index` is counted
+    /// from the start of the private attributions, not the start of the block.
+    /// A null `value` removes an attribute.
+    void setPrivateAttributionAttr(unsigned index, StringAttr name, Attribute value);
+    void setPrivateAttributionAttr(unsigned index, StringRef name, Attribute value) {
+      return setPrivateAttributionAttr(index, StringAttr::get((*this)->getContext(), name), value);
+    }
 
     /// Returns the name of the attribute containing the number of buffers
     /// located in the workgroup memory.

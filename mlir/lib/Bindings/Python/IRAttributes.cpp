@@ -710,6 +710,10 @@ public:
       // f16
       return bufferInfo<uint16_t>(shapedType, "e");
     }
+    if (mlirTypeIsAIndex(elementType)) {
+      // Same as IndexType::kInternalStorageBitWidth
+      return bufferInfo<int64_t>(shapedType);
+    }
     if (mlirTypeIsAInteger(elementType) &&
         mlirIntegerTypeGetWidth(elementType) == 32) {
       if (mlirIntegerTypeIsSignless(elementType) ||

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/AutoUpgrade.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
@@ -4963,9 +4964,10 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
 
 std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   Triple T(TT);
-  // For AMDGPU we uprgrade older DataLayouts to include the default globals
-  // address space of 1.
-  if (T.isAMDGPU() && !DL.contains("-G") && !DL.startswith("G")) {
+  // The only data layout upgrades needed for pre-GCN are setting the address
+  // space of globals to 1.
+  if (T.isAMDGPU() && !T.isAMDGCN() && !DL.contains("-G") &&
+      !DL.startswith("G")) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 
@@ -4978,6 +4980,31 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   }
 
   std::string Res = DL.str();
+  // AMDGCN data layout upgrades.
+  if (T.isAMDGCN()) {
+    // Define address spaces for constants.
+    if (!DL.contains("-G") && !DL.starts_with("G"))
+      Res.append(Res.empty() ? "G1" : "-G1");
+
+    // Add missing non-integral declarations.
+    // This goes before adding new address spaces to prevent incoherent string
+    // values.
+    if (!DL.contains("-ni") && !DL.startswith("ni"))
+      Res.append("-ni:7:8");
+    // Update ni:7 to ni:7:8.
+    if (DL.ends_with("ni:7"))
+      Res.append(":8");
+
+    // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
+    // resources) An empty data layout has already been upgraded to G1 by now.
+    if (!DL.contains("-p7") && !DL.startswith("p7"))
+      Res.append("-p7:160:256:256:32");
+    if (!DL.contains("-p8") && !DL.startswith("p8"))
+      Res.append("-p8:128:128");
+
+    return Res;
+  }
+
   if (!T.isX86())
     return Res;
 

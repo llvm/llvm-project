@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_AMDGPUTOROCDL_CHIPSET_H_
-#define MLIR_CONVERSION_AMDGPUTOROCDL_CHIPSET_H_
+#ifndef MLIR_DIALECT_AMDGPU_UTILS_CHIPSET_H_
+#define MLIR_DIALECT_AMDGPU_UTILS_CHIPSET_H_
 
 #include "mlir/Support/LogicalResult.h"
 

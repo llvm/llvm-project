@@ -914,6 +914,9 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
 static void addPltEntries(const ObjectFile &Obj,
                           std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
                           StringSaver &Saver) {
+  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
+  if (!ElfObj)
+    return;
   std::optional<SectionRef> Plt;
   for (const SectionRef &Section : Obj.sections()) {
     Expected<StringRef> SecNameOrErr = Section.getName();
@@ -926,26 +929,24 @@ static void addPltEntries(const ObjectFile &Obj,
   }
   if (!Plt)
     return;
-  if (auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj)) {
-    for (auto PltEntry : ElfObj->getPltAddresses()) {
-      if (PltEntry.first) {
-        SymbolRef Symbol(*PltEntry.first, ElfObj);
-        uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
-        if (Expected<StringRef> NameOrErr = Symbol.getName()) {
-          if (!NameOrErr->empty())
-            AllSymbols[*Plt].emplace_back(
-                PltEntry.second, Saver.save((*NameOrErr + "@plt").str()),
-                SymbolType);
-          continue;
-        } else {
-          // The warning has been reported in disassembleObject().
-          consumeError(NameOrErr.takeError());
-        }
+  for (auto PltEntry : ElfObj->getPltAddresses()) {
+    if (PltEntry.first) {
+      SymbolRef Symbol(*PltEntry.first, ElfObj);
+      uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
+      if (Expected<StringRef> NameOrErr = Symbol.getName()) {
+        if (!NameOrErr->empty())
+          AllSymbols[*Plt].emplace_back(
+              PltEntry.second, Saver.save((*NameOrErr + "@plt").str()),
+              SymbolType);
+        continue;
+      } else {
+        // The warning has been reported in disassembleObject().
+        consumeError(NameOrErr.takeError());
       }
-      reportWarning("PLT entry at 0x" + Twine::utohexstr(PltEntry.second) +
-                        " references an invalid symbol",
-                    Obj.getFileName());
     }
+    reportWarning("PLT entry at 0x" + Twine::utohexstr(PltEntry.second) +
+                      " references an invalid symbol",
+                  Obj.getFileName());
   }
 }
 

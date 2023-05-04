@@ -10,8 +10,9 @@
 #ifndef _PSTL_PARALLEL_BACKEND_UTILS_H
 #define _PSTL_PARALLEL_BACKEND_UTILS_H
 
-#include <iterator>
-#include <utility>
+#include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
+
 #include "utils.h"
 
 #include "pstl_config.h"

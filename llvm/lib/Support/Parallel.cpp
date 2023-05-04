@@ -99,11 +99,6 @@ public:
 
   void add(std::function<void()> F, bool Sequential = false) override {
     {
-      if (parallel::strategy.ThreadsRequested == 1) {
-        F();
-        return;
-      }
-
       std::lock_guard<std::mutex> Lock(Mutex);
       if (Sequential)
         WorkQueueSequential.emplace_front(std::move(F));
@@ -185,18 +180,17 @@ Executor *Executor::getDefaultExecutor() {
 } // namespace detail
 #endif
 
-static std::atomic<int> TaskGroupInstances;
-
 // Latch::sync() called by the dtor may cause one thread to block. If is a dead
 // lock if all threads in the default executor are blocked. To prevent the dead
-// lock, only allow the first TaskGroup to run tasks parallelly. In the scenario
+// lock, only allow the root TaskGroup to run tasks parallelly. In the scenario
 // of nested parallel_for_each(), only the outermost one runs parallelly.
-TaskGroup::TaskGroup() : Parallel(TaskGroupInstances++ == 0) {}
+TaskGroup::TaskGroup()
+    : Parallel((parallel::strategy.ThreadsRequested != 1) &&
+               (threadIndex == UINT_MAX)) {}
 TaskGroup::~TaskGroup() {
   // We must ensure that all the workloads have finished before decrementing the
   // instances count.
   L.sync();
-  --TaskGroupInstances;
 }
 
 void TaskGroup::spawn(std::function<void()> F, bool Sequential) {

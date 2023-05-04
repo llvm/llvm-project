@@ -11,7 +11,7 @@
 
 #include <__algorithm/any_of.h>
 #include <__config>
-#include <__functional/not_fn.h>
+#include <__iterator/iterator_traits.h>
 #include <__pstl/internal/parallel_impl.h>
 #include <__pstl/internal/unseq_backend_simd.h>
 #include <__type_traits/enable_if.h>
@@ -58,7 +58,9 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
 all_of(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred __pred) {
-  return !std::any_of(__policy, __first, __last, std::not_fn(__pred));
+  return !std::any_of(__policy, __first, __last, [&](__iter_reference<_ForwardIterator> __value) {
+    return !__pred(__value);
+  });
 }
 
 template <class _ExecutionPolicy,

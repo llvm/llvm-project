@@ -10,8 +10,7 @@
 #ifndef _PSTL_EXECUTION_IMPL_H
 #define _PSTL_EXECUTION_IMPL_H
 
-#include <iterator>
-#include <type_traits>
+#include <__iterator/iterator_traits.h>
 
 #include "execution_defs.h"
 #include "pstl_config.h"
