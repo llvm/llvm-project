@@ -30,7 +30,19 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
 
   // Check that AMDGPU targets add -G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "e-p:32:32-G1");
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"), "e-p:64:64-G1");
+  // and that ANDGCN adds p7 and p8 as well.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"),
+            "e-p:64:64-G1-p7:160:256:256:32-p8:128:128-ni:7:8");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G1", "amdgcn"),
+            "e-p:64:64-G1-p7:160:256:256:32-p8:128:128-ni:7:8");
+  // but that r600 does not.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G1", "r600"), "e-p:32:32-G1");
+
+  // Check that AMDGCN makes address space 8 non-integral if there's an existing
+  // non-integrality declaration.
+  EXPECT_EQ(UpgradeDataLayoutString(
+                "e-p:64:64-G1-p7:160:256:256:32-p8:128:128-ni:7", "amdgcn"),
+            "e-p:64:64-G1-p7:160:256:256:32-p8:128:128-ni:7:8");
 
   // Check that RISCV64 upgrades -n64 to -n32:64.
   EXPECT_EQ(UpgradeDataLayoutString("e-m:e-p:64:64-i64:64-i128:128-n64-S128",
@@ -59,9 +71,20 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
   // Check that AMDGPU targets don't add -G1 if there is already a -G flag.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "r600"), "e-p:32:32-G2");
   EXPECT_EQ(UpgradeDataLayoutString("G2", "r600"), "G2");
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G2", "amdgcn"), "e-p:64:64-G2");
-  EXPECT_EQ(UpgradeDataLayoutString("G2-e-p:64:64", "amdgcn"), "G2-e-p:64:64");
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G0", "amdgcn"), "e-p:64:64-G0");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G2", "amdgcn"),
+            "e-p:64:64-G2-p7:160:256:256:32-p8:128:128-ni:7:8");
+  EXPECT_EQ(UpgradeDataLayoutString("G2-e-p:64:64", "amdgcn"),
+            "G2-e-p:64:64-p7:160:256:256:32-p8:128:128-ni:7:8");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G0", "amdgcn"),
+            "e-p:64:64-G0-p7:160:256:256:32-p8:128:128-ni:7:8");
+
+  // Check that AMDGCN targets don't add already declared address space 7.
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64", "amdgcn"),
+            "e-p:64:64-p7:64:64-G1-p8:128:128-ni:7:8");
+  EXPECT_EQ(UpgradeDataLayoutString("p7:64:64-G2-e-p:64:64", "amdgcn"),
+            "p7:64:64-G2-e-p:64:64-p8:128:128-ni:7:8");
+  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-p7:64:64-G1", "amdgcn"),
+            "e-p:64:64-p7:64:64-G1-p8:128:128-ni:7:8");
 }
 
 TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
@@ -73,7 +96,8 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
 
   // Check that AMDGPU targets add G1 if it's not present.
   EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "G1");
-  EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"), "G1");
+  EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"),
+            "G1-p7:160:256:256:32-p8:128:128-ni:7:8");
 }
 
 } // end namespace

@@ -675,6 +675,7 @@ supported for the ``amdgcn`` target.
      Private                           5               private     scratch          32      0xFFFFFFFF
      Constant 32-bit                   6               *TODO*                               0x00000000
      Buffer Fat Pointer (experimental) 7               *TODO*
+     Buffer Resource (experimental)    8               *TODO*
      Streamout Registers               128             N/A         GS_REGS
      ================================= =============== =========== ================ ======= ============================
 
@@ -783,6 +784,26 @@ supported for the ``amdgcn`` target.
   *pointer*), allowing normal LLVM load/store/atomic operations to be used to
   model the buffer descriptors used heavily in graphics workloads targeting
   the backend.
+
+  The buffer descriptor used to construct a buffer fat pointer must be *raw*:
+  the stride must be 0, the "add tid" flag bust be 0, the swizzle enable bits
+  must be off, and the extent must be measured in bytes. (On subtargets where
+  bounds checking may be disabled, buffer fat pointers may choose to enable
+  it or not).
+
+**Buffer Resource**
+  The buffer resource is an experimental address space that is currently unsupported
+  in the backend. It exposes a non-integral pointer that will represent a 128-bit
+  buffer descriptor resource.
+
+  Since, in general, a buffer resource supports complex addressing modes that cannot
+  be easily represented in LLVM (such as implicit swizzled access to structured
+  buffers), it is **illegal** to perform non-trivial address computations, such as
+  ``getelementptr`` operations, on buffer resources. They may be passed to
+  AMDGPU buffer intrinsics, and they may be converted to and from ``i128``.
+
+  Casting a buffer resource to a bufer fat pointer is permitted and adds an offset
+  of 0.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
