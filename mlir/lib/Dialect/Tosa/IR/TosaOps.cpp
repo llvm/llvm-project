@@ -491,14 +491,15 @@ LogicalResult tosa::EqualOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  auto elementType = IntegerType::get(context, /*width=*/1);
+
   llvm::SmallVector<int64_t> outShape;
   if (resolveBroadcastShape(operands, outShape).failed()) {
-    inferredReturnShapes.push_back(ShapedTypeComponents());
+    inferredReturnShapes.push_back(ShapedTypeComponents(elementType));
     return success();
   }
 
-  inferredReturnShapes.push_back(
-      ShapedTypeComponents(outShape, IntegerType::get(context, /*width=*/1)));
+  inferredReturnShapes.push_back(ShapedTypeComponents(outShape, elementType));
   return success();
 }
 
