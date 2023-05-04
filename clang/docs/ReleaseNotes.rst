@@ -93,7 +93,7 @@ C++20 Feature Support
   error again in the future once there is a less fragile way to mark a module
   as being part of the implementation rather than a user module.
 
-C++2b Feature Support
+C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
 - Implemented `P2036R3: Change scope of lambda trailing-return-type <https://wg21.link/P2036R3>`_
@@ -181,6 +181,8 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- The flag ``-std=c++23`` has been added. This behaves the same as the existing
+  flag ``-std=c++2b``.
 
 Deprecated Compiler Flags
 -------------------------
@@ -386,7 +388,7 @@ Bug Fixes to C++ Support
   (`#58674 <https://github.com/llvm/llvm-project/issues/58674>`_)
 - Fix incorrect deletion of the default constructor of unions in some
   cases. (`#48416 <https://github.com/llvm/llvm-project/issues/48416>`_)
-- No longer issue a pre-C++2b compatibility warning in ``-pedantic`` mode
+- No longer issue a pre-C++23 compatibility warning in ``-pedantic`` mode
   regading overloaded `operator[]` with more than one parmeter or for static
   lambdas. (`#61582 <https://github.com/llvm/llvm-project/issues/61582>`_)
 - Stop stripping CV qualifiers from the type of ``this`` when capturing it by value in
