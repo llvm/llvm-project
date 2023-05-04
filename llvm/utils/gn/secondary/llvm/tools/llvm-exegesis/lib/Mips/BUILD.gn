@@ -7,7 +7,7 @@ tablegen("MipsGenExegesis") {
 
 static_library("Mips") {
   output_name = "LLVMExegesisMips"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":MipsGenExegesis",
     "//llvm/lib/TargetParser",
 

@@ -1,6 +1,6 @@
 static_library("MCA") {
   output_name = "LLVMAMDGPUTargetMCA"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     "//llvm/lib/Target/AMDGPU/MCTargetDesc",
     "//llvm/lib/Target/AMDGPU/Utils",
     "//llvm/lib/TargetParser",

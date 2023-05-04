@@ -8,7 +8,7 @@ tablegen("WebAssemblyGenDisassemblerTables") {
 
 static_library("Disassembler") {
   output_name = "LLVMWebAssemblyDisassembler"
-  deps = [
+  deps = ["//llvm/lib/CodeGen",
     ":WebAssemblyGenDisassemblerTables",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
