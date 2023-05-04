@@ -138,3 +138,12 @@ foreach(lib LibcFPTestHelpers LibcFPExceptionHelpers LibcMemoryHelpers
   target_compile_options(${lib} PRIVATE -fno-exceptions -fno-rtti)
   target_link_libraries(${lib} LibcUnitTest)
 endforeach()
+
+# The GPU needs these flags applied to override the system triple.
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  foreach(lib LibcMemoryHelpers)
+    target_include_directories(${lib} PRIVATE ${LIBC_BUILD_DIR}/include)
+    target_compile_options(${lib}
+        PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} -ffreestanding -nostdlib -nostdlib++)
+  endforeach()
+endif()

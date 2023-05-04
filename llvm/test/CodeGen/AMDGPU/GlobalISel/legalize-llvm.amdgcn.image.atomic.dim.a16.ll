@@ -21,7 +21,7 @@ define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.swap.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.swap.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_swap_1d
@@ -40,7 +40,7 @@ define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.swap.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.swap.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_swap_1d
@@ -59,7 +59,7 @@ define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.swap.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.swap.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -85,7 +85,7 @@ define amdgpu_ps float @atomic_add_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_1d
@@ -104,7 +104,7 @@ define amdgpu_ps float @atomic_add_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_1d
@@ -123,7 +123,7 @@ define amdgpu_ps float @atomic_add_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -149,7 +149,7 @@ define amdgpu_ps float @atomic_sub_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.sub.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.sub.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_sub_1d
@@ -168,7 +168,7 @@ define amdgpu_ps float @atomic_sub_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.sub.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.sub.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_sub_1d
@@ -187,7 +187,7 @@ define amdgpu_ps float @atomic_sub_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.sub.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.sub.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -213,7 +213,7 @@ define amdgpu_ps float @atomic_smin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_smin_1d
@@ -232,7 +232,7 @@ define amdgpu_ps float @atomic_smin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_smin_1d
@@ -251,7 +251,7 @@ define amdgpu_ps float @atomic_smin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -278,7 +278,7 @@ define amdgpu_ps float @atomic_umin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_umin_1d
@@ -297,7 +297,7 @@ define amdgpu_ps float @atomic_umin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_umin_1d
@@ -316,7 +316,7 @@ define amdgpu_ps float @atomic_umin_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umin.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -342,7 +342,7 @@ define amdgpu_ps float @atomic_smax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_smax_1d
@@ -361,7 +361,7 @@ define amdgpu_ps float @atomic_smax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_smax_1d
@@ -380,7 +380,7 @@ define amdgpu_ps float @atomic_smax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.smax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -406,7 +406,7 @@ define amdgpu_ps float @atomic_umax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_umax_1d
@@ -425,7 +425,7 @@ define amdgpu_ps float @atomic_umax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_umax_1d
@@ -444,7 +444,7 @@ define amdgpu_ps float @atomic_umax_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.umax.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -470,7 +470,7 @@ define amdgpu_ps float @atomic_and_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.and.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.and.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_and_1d
@@ -489,7 +489,7 @@ define amdgpu_ps float @atomic_and_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.and.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.and.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_and_1d
@@ -508,7 +508,7 @@ define amdgpu_ps float @atomic_and_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.and.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.and.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -534,7 +534,7 @@ define amdgpu_ps float @atomic_or_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) {
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.or.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.or.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_or_1d
@@ -553,7 +553,7 @@ define amdgpu_ps float @atomic_or_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) {
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.or.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.or.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_or_1d
@@ -572,7 +572,7 @@ define amdgpu_ps float @atomic_or_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) {
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.or.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.or.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -598,7 +598,7 @@ define amdgpu_ps float @atomic_xor_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.xor.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.xor.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_xor_1d
@@ -617,7 +617,7 @@ define amdgpu_ps float @atomic_xor_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.xor.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.xor.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_xor_1d
@@ -636,7 +636,7 @@ define amdgpu_ps float @atomic_xor_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.xor.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.xor.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -662,7 +662,7 @@ define amdgpu_ps float @atomic_inc_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.inc.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.inc.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_inc_1d
@@ -681,7 +681,7 @@ define amdgpu_ps float @atomic_inc_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.inc.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.inc.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_inc_1d
@@ -700,7 +700,7 @@ define amdgpu_ps float @atomic_inc_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.inc.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.inc.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -726,7 +726,7 @@ define amdgpu_ps float @atomic_dec_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.dec.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.dec.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_dec_1d
@@ -745,7 +745,7 @@ define amdgpu_ps float @atomic_dec_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.dec.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.dec.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_dec_1d
@@ -764,7 +764,7 @@ define amdgpu_ps float @atomic_dec_1d(<8 x i32> inreg %rsrc, i32 %data, i16 %s) 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.dec.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.dec.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -792,7 +792,7 @@ define amdgpu_ps float @atomic_cmpswap_1d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.1d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.1d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_cmpswap_1d
@@ -813,7 +813,7 @@ define amdgpu_ps float @atomic_cmpswap_1d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX10NSA-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.1d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.1d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_cmpswap_1d
@@ -834,7 +834,7 @@ define amdgpu_ps float @atomic_cmpswap_1d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.1d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.1d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -863,7 +863,7 @@ define amdgpu_ps float @atomic_add_2d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX9-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_2d
@@ -885,7 +885,7 @@ define amdgpu_ps float @atomic_add_2d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ; GFX10NSA-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX10NSA-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_2d
@@ -907,7 +907,7 @@ define amdgpu_ps float @atomic_add_2d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX12-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -941,7 +941,7 @@ define amdgpu_ps float @atomic_add_3d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.3d), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.3d), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_3d
@@ -968,7 +968,7 @@ define amdgpu_ps float @atomic_add_3d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.3d), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.3d), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_3d
@@ -994,7 +994,7 @@ define amdgpu_ps float @atomic_add_3d(<8 x i32> inreg %rsrc, i32 %data, i16 %s, 
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.3d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.3d), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1028,7 +1028,7 @@ define amdgpu_ps float @atomic_add_cube(<8 x i32> inreg %rsrc, i32 %data, i16 %s
   ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.cube), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.cube), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_cube
@@ -1055,7 +1055,7 @@ define amdgpu_ps float @atomic_add_cube(<8 x i32> inreg %rsrc, i32 %data, i16 %s
   ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.cube), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.cube), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_cube
@@ -1081,7 +1081,7 @@ define amdgpu_ps float @atomic_add_cube(<8 x i32> inreg %rsrc, i32 %data, i16 %s
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.cube), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.cube), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1110,7 +1110,7 @@ define amdgpu_ps float @atomic_add_1darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX9-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_1darray
@@ -1132,7 +1132,7 @@ define amdgpu_ps float @atomic_add_1darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ; GFX10NSA-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX10NSA-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_1darray
@@ -1154,7 +1154,7 @@ define amdgpu_ps float @atomic_add_1darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; GFX12-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY10]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1188,7 +1188,7 @@ define amdgpu_ps float @atomic_add_2darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darray), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darray), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_2darray
@@ -1215,7 +1215,7 @@ define amdgpu_ps float @atomic_add_2darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darray), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darray), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_2darray
@@ -1241,7 +1241,7 @@ define amdgpu_ps float @atomic_add_2darray(<8 x i32> inreg %rsrc, i32 %data, i16
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darray), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1275,7 +1275,7 @@ define amdgpu_ps float @atomic_add_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, i16 
   ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2dmsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2dmsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_2dmsaa
@@ -1302,7 +1302,7 @@ define amdgpu_ps float @atomic_add_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, i16 
   ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2dmsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2dmsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_2dmsaa
@@ -1328,7 +1328,7 @@ define amdgpu_ps float @atomic_add_2dmsaa(<8 x i32> inreg %rsrc, i32 %data, i16 
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2dmsaa), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2dmsaa), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1363,7 +1363,7 @@ define amdgpu_ps float @atomic_add_2darraymsaa(<8 x i32> inreg %rsrc, i32 %data,
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darraymsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darraymsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_2darraymsaa
@@ -1391,7 +1391,7 @@ define amdgpu_ps float @atomic_add_2darraymsaa(<8 x i32> inreg %rsrc, i32 %data,
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darraymsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darraymsaa), [[COPY8]](s32), [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_2darraymsaa
@@ -1418,7 +1418,7 @@ define amdgpu_ps float @atomic_add_2darraymsaa(<8 x i32> inreg %rsrc, i32 %data,
   ; GFX12-NEXT:   [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darraymsaa), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.2darraymsaa), [[COPY8]](s32), [[BUILD_VECTOR1]](<2 x s16>), [[BUILD_VECTOR2]](<2 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1444,7 +1444,7 @@ define amdgpu_ps float @atomic_add_1d_slc(<8 x i32> inreg %rsrc, i32 %data, i16 
   ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 2, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 2, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_add_1d_slc
@@ -1463,7 +1463,7 @@ define amdgpu_ps float @atomic_add_1d_slc(<8 x i32> inreg %rsrc, i32 %data, i16 
   ; GFX10NSA-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX10NSA-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX10NSA-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 2, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 2, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_add_1d_slc
@@ -1482,7 +1482,7 @@ define amdgpu_ps float @atomic_add_1d_slc(<8 x i32> inreg %rsrc, i32 %data, i16 
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; GFX12-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY9]](s32)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 2, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.add.1d), [[COPY8]](s32), [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), 0, 2, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1513,7 +1513,7 @@ define amdgpu_ps float @atomic_cmpswap_2d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX9-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
   ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_cmpswap_2d
@@ -1537,7 +1537,7 @@ define amdgpu_ps float @atomic_cmpswap_2d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX10NSA-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_cmpswap_2d
@@ -1561,7 +1561,7 @@ define amdgpu_ps float @atomic_cmpswap_2d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX12-NEXT:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY11]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1597,7 +1597,7 @@ define amdgpu_ps float @atomic_cmpswap_3d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX9-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.3d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.3d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_cmpswap_3d
@@ -1626,7 +1626,7 @@ define amdgpu_ps float @atomic_cmpswap_3d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX10NSA-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.3d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.3d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_cmpswap_3d
@@ -1654,7 +1654,7 @@ define amdgpu_ps float @atomic_cmpswap_3d(<8 x i32> inreg %rsrc, i32 %cmp, i32 %
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; GFX12-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[DEF]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.3d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.3d), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
@@ -1691,7 +1691,7 @@ define amdgpu_ps float @atomic_cmpswap_2darraymsaa(<8 x i32> inreg %rsrc, i32 %c
   ; GFX9-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX9-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>)
-  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2darraymsaa), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2darraymsaa), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 3 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10NSA-LABEL: name: atomic_cmpswap_2darraymsaa
@@ -1721,7 +1721,7 @@ define amdgpu_ps float @atomic_cmpswap_2darraymsaa(<8 x i32> inreg %rsrc, i32 %c
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX10NSA-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
   ; GFX10NSA-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>)
-  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2darraymsaa), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX10NSA-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2darraymsaa), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX10NSA-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX10NSA-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX12-LABEL: name: atomic_cmpswap_2darraymsaa
@@ -1750,7 +1750,7 @@ define amdgpu_ps float @atomic_cmpswap_2darraymsaa(<8 x i32> inreg %rsrc, i32 %c
   ; GFX12-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GFX12-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
   ; GFX12-NEXT:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC2]](s16), [[TRUNC3]](s16)
-  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2darraymsaa), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 7)
+  ; GFX12-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.atomic.cmpswap.2darraymsaa), [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR2]](<2 x s16>), [[BUILD_VECTOR3]](<2 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 1 :: (volatile dereferenceable load store (s32), addrspace 8)
   ; GFX12-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
   ; GFX12-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:

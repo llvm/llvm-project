@@ -203,6 +203,10 @@ def SysSelectAPI : PublicAPI<"sys/select.h"> {
                "struct timeval"];
 }
 
+def SysSocketAPI : PublicAPI<"sys/socket.h"> {
+  let Types = ["struct sockaddr", "sa_family_t"];
+}
+
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
   let Types = ["rlim_t", "struct rlimit"];
 }

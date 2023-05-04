@@ -17,7 +17,7 @@ define amdgpu_ps void @struct_buffer_store_format_f32__vgpr_val__sgpr_rsrc__vgpr
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ; GFX12-LABEL: name: struct_buffer_store_format_f32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
@@ -33,7 +33,7 @@ define amdgpu_ps void @struct_buffer_store_format_f32__vgpr_val__sgpr_rsrc__vgpr
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.f32(float %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -56,7 +56,7 @@ define amdgpu_ps void @struct_buffer_store_format_v2f32__vgpr_val__sgpr_rsrc__vg
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XY_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x s32>), align 1, addrspace 7)
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XY_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x s32>), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ; GFX12-LABEL: name: struct_buffer_store_format_v2f32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
@@ -74,7 +74,7 @@ define amdgpu_ps void @struct_buffer_store_format_v2f32__vgpr_val__sgpr_rsrc__vg
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_XY_VBUFFER_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x s32>), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_XY_VBUFFER_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, 0, implicit $exec :: (dereferenceable store (<2 x s32>), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.v2f32(<2 x float> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -98,7 +98,7 @@ define amdgpu_ps void @struct_buffer_store_format_v3f32__vgpr_val__sgpr_rsrc__vg
   ; GFX8-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XYZ_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY9]], 0, 0, 0, implicit $exec :: (dereferenceable store (<3 x s32>), align 1, addrspace 7)
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XYZ_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY9]], 0, 0, 0, implicit $exec :: (dereferenceable store (<3 x s32>), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ; GFX12-LABEL: name: struct_buffer_store_format_v3f32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
@@ -117,7 +117,7 @@ define amdgpu_ps void @struct_buffer_store_format_v3f32__vgpr_val__sgpr_rsrc__vg
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY $vgpr4
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY8]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_XYZ_VBUFFER_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY9]], 0, 0, 0, implicit $exec :: (dereferenceable store (<3 x s32>), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_XYZ_VBUFFER_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY9]], 0, 0, 0, implicit $exec :: (dereferenceable store (<3 x s32>), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.v3f32(<3 x float> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -142,7 +142,7 @@ define amdgpu_ps void @struct_buffer_store_format_v4f32__vgpr_val__sgpr_rsrc__vg
   ; GFX8-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX8-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XYZW_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY10]], 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s32>), align 1, addrspace 7)
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_XYZW_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY10]], 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s32>), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ; GFX12-LABEL: name: struct_buffer_store_format_v4f32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
@@ -162,7 +162,7 @@ define amdgpu_ps void @struct_buffer_store_format_v4f32__vgpr_val__sgpr_rsrc__vg
   ; GFX12-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY $vgpr5
   ; GFX12-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_XYZW_VBUFFER_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY10]], 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s32>), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_XYZW_VBUFFER_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY10]], 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s32>), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.v4f32(<4 x float> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -212,7 +212,7 @@ define amdgpu_ps void @struct_buffer_store_format_f32__sgpr_val__vgpr_rsrc__sgpr
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; CHECK-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; CHECK-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; CHECK-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -266,7 +266,7 @@ define amdgpu_ps void @struct_buffer_store_format_f32__sgpr_val__vgpr_rsrc__sgpr
   ; GFX8-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
@@ -320,7 +320,7 @@ define amdgpu_ps void @struct_buffer_store_format_f32__sgpr_val__vgpr_rsrc__sgpr
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -350,7 +350,7 @@ define amdgpu_ps void @struct_buffer_store_format_i32__vgpr_val__sgpr_rsrc__vgpr
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX8-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; GFX8-NEXT:   BUFFER_STORE_FORMAT_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; GFX8-NEXT:   S_ENDPGM 0
   ; GFX12-LABEL: name: struct_buffer_store_format_i32__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; GFX12: bb.1 (%ir-block.0):
@@ -366,7 +366,7 @@ define amdgpu_ps void @struct_buffer_store_format_i32__vgpr_val__sgpr_rsrc__vgpr
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
+  ; GFX12-NEXT:   BUFFER_STORE_FORMAT_X_VBUFFER_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.i32(i32 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void

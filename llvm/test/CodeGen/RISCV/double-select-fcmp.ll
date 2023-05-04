@@ -3,12 +3,19 @@
 ; RUN:   -target-abi=ilp32d | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64d | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+zdinx -verify-machineinstrs < %s \
+; RUN:   -target-abi=lp64 | FileCheck --check-prefix=CHECKRV64ZDINX %s
 
 define double @select_fcmp_false(double %a, double %b) nounwind {
 ; CHECK-LABEL: select_fcmp_false:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_false:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp false double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -23,6 +30,15 @@ define double @select_fcmp_oeq(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_oeq:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    feq.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB1_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB1_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp oeq double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -37,6 +53,15 @@ define double @select_fcmp_ogt(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ogt:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a1, a0
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB2_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB2_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ogt double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -51,6 +76,15 @@ define double @select_fcmp_oge(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_oge:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    fle.d a2, a1, a0
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB3_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB3_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp oge double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -65,6 +99,15 @@ define double @select_fcmp_olt(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_olt:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB4_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB4_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp olt double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -79,6 +122,15 @@ define double @select_fcmp_ole(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ole:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    fle.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB5_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB5_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ole double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -95,6 +147,17 @@ define double @select_fcmp_one(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_one:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    flt.d a3, a1, a0
+; CHECKRV64ZDINX-NEXT:    or a2, a3, a2
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB6_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB6_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp one double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -111,6 +174,17 @@ define double @select_fcmp_ord(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ord:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    feq.d a2, a1, a1
+; CHECKRV64ZDINX-NEXT:    feq.d a3, a0, a0
+; CHECKRV64ZDINX-NEXT:    and a2, a3, a2
+; CHECKRV64ZDINX-NEXT:    bnez a2, .LBB7_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB7_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ord double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -127,6 +201,17 @@ define double @select_fcmp_ueq(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ueq:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    flt.d a3, a1, a0
+; CHECKRV64ZDINX-NEXT:    or a2, a3, a2
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB8_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB8_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ueq double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -141,6 +226,15 @@ define double @select_fcmp_ugt(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ugt:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    fle.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB9_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB9_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -155,6 +249,15 @@ define double @select_fcmp_uge(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB10_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_uge:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB10_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB10_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp uge double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -169,6 +272,15 @@ define double @select_fcmp_ult(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ult:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    fle.d a2, a1, a0
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB11_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB11_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ult double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -183,6 +295,15 @@ define double @select_fcmp_ule(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_ule:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    flt.d a2, a1, a0
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB12_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB12_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ule double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -197,6 +318,15 @@ define double @select_fcmp_une(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_une:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    feq.d a2, a0, a1
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB13_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB13_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp une double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -213,6 +343,17 @@ define double @select_fcmp_uno(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fmv.d fa0, fa1
 ; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_uno:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    feq.d a2, a1, a1
+; CHECKRV64ZDINX-NEXT:    feq.d a3, a0, a0
+; CHECKRV64ZDINX-NEXT:    and a2, a3, a2
+; CHECKRV64ZDINX-NEXT:    beqz a2, .LBB14_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a1
+; CHECKRV64ZDINX-NEXT:  .LBB14_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp uno double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -222,6 +363,10 @@ define double @select_fcmp_true(double %a, double %b) nounwind {
 ; CHECK-LABEL: select_fcmp_true:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_true:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp true double %a, %b
   %2 = select i1 %1, double %a, double %b
   ret double %2
@@ -237,6 +382,16 @@ define i32 @i32_select_fcmp_oeq(double %a, double %b, i32 %c, i32 %d) nounwind {
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB16_2:
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: i32_select_fcmp_oeq:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    feq.d a1, a0, a1
+; CHECKRV64ZDINX-NEXT:    mv a0, a2
+; CHECKRV64ZDINX-NEXT:    bnez a1, .LBB16_2
+; CHECKRV64ZDINX-NEXT:  # %bb.1:
+; CHECKRV64ZDINX-NEXT:    mv a0, a3
+; CHECKRV64ZDINX-NEXT:  .LBB16_2:
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp oeq double %a, %b
   %2 = select i1 %1, i32 %c, i32 %d
   ret i32 %2
@@ -249,6 +404,13 @@ define i32 @select_fcmp_oeq_1_2(double %a, double %b) {
 ; CHECK-NEXT:    li a1, 2
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_oeq_1_2:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    feq.d a0, a0, a1
+; CHECKRV64ZDINX-NEXT:    li a1, 2
+; CHECKRV64ZDINX-NEXT:    sub a0, a1, a0
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp fast oeq double %a, %b
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
@@ -260,6 +422,12 @@ define signext i32 @select_fcmp_uge_negone_zero(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fle.d a0, fa0, fa1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_uge_negone_zero:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    fle.d a0, a0, a1
+; CHECKRV64ZDINX-NEXT:    addi a0, a0, -1
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, i32 -1, i32 0
   ret i32 %2
@@ -271,6 +439,12 @@ define signext i32 @select_fcmp_uge_1_2(double %a, double %b) nounwind {
 ; CHECK-NEXT:    fle.d a0, fa0, fa1
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: select_fcmp_uge_1_2:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    fle.d a0, a0, a1
+; CHECKRV64ZDINX-NEXT:    addi a0, a0, 1
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
