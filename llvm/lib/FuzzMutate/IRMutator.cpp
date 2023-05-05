@@ -56,17 +56,23 @@ void IRMutationStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   mutate(*makeSampler(IB.Rand, make_pointer_range(BB)).getSelection(), IB);
 }
 
-void IRMutator::mutateModule(Module &M, int Seed, size_t CurSize,
-                             size_t MaxSize) {
+size_t llvm::IRMutator::getModuleSize(const Module &M) {
+  return M.getInstructionCount() + M.size() + M.global_size() + M.alias_size();
+}
+
+void IRMutator::mutateModule(Module &M, int Seed, size_t MaxSize) {
   std::vector<Type *> Types;
   for (const auto &Getter : AllowedTypes)
     Types.push_back(Getter(M.getContext()));
   RandomIRBuilder IB(Seed, Types);
 
+  size_t CurSize = IRMutator::getModuleSize(M);
   auto RS = makeSampler<IRMutationStrategy *>(IB.Rand);
   for (const auto &Strategy : Strategies)
     RS.sample(Strategy.get(),
               Strategy->getWeight(CurSize, MaxSize, RS.totalWeight()));
+  if (RS.totalWeight() == 0)
+    return;
   auto Strategy = RS.getSelection();
 
   Strategy->mutate(M, IB);
