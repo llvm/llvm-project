@@ -142,6 +142,7 @@ def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
   let Inst{6-2} = index;
 }
 
+let Defs = [X1] in
 def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
                          "cm.jalt", "$index">{
   bits<8> index;
