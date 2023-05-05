@@ -73,6 +73,7 @@ bool isFortranScalarNumericalType(mlir::Type);
 bool isFortranNumericalArrayObject(mlir::Type);
 bool isFortranNumericalOrLogicalArrayObject(mlir::Type);
 bool isFortranArrayObject(mlir::Type);
+bool isFortranLogicalArrayObject(mlir::Type);
 bool isPassByRefOrIntegerType(mlir::Type);
 bool isI1Type(mlir::Type);
 // scalar i1 or logical, or sequence of logical (via (boxed?) array or expr)
