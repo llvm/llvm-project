@@ -11,8 +11,8 @@
 
 #include <mutex>
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Utility/FileSpecList.h"
 
 namespace lldb_private {
 

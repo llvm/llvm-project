@@ -23,11 +23,39 @@ struct LaunchParameters {
   uint32_t num_blocks_z;
 };
 
+/// The arguments to the '_begin' kernel.
+struct begin_args_t {
+  int argc;
+  void *argv;
+  void *envp;
+  void *inbox;
+  void *outbox;
+  void *buffer;
+};
+
+/// The arguments to the '_start' kernel.
+struct start_args_t {
+  int argc;
+  void *argv;
+  void *envp;
+  void *ret;
+};
+
+/// The arguments to the '_end' kernel.
+struct end_args_t {
+  int argc;
+};
+
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
 int load(int argc, char **argv, char **evnp, void *image, size_t size,
          const LaunchParameters &params);
+
+/// Return \p V aligned "upwards" according to \p Align.
+template <typename V, typename A> inline V align_up(V val, A align) {
+  return ((val + V(align) - 1) / V(align)) * V(align);
+}
 
 /// Copy the system's argument vector to GPU memory allocated using \p alloc.
 template <typename Allocator>

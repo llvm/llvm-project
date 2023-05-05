@@ -41,11 +41,14 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case Sparc::fixup_sparc_br19:
     return (Value >> 2) & 0x7ffff;
 
-  case Sparc::fixup_sparc_br16_2:
-    return (Value >> 2) & 0xc000;
-
-  case Sparc::fixup_sparc_br16_14:
-    return (Value >> 2) & 0x3fff;
+  case Sparc::fixup_sparc_br16: {
+    // A.3 Branch on Integer Register with Prediction (BPr)
+    // Inst{21-20} = d16hi;
+    // Inst{13-0}  = d16lo;
+    unsigned d16hi = (Value >> 16) & 0x3;
+    unsigned d16lo = (Value >> 2) & 0x3fff;
+    return (d16hi << 20) | d16lo;
+  }
 
   case Sparc::fixup_sparc_hix22:
     return (~Value >> 10) & 0x3fffff;
@@ -164,8 +167,7 @@ namespace {
         { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br22",      10,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br19",      13,     19,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_br16_2",    10,      2,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_br16_14",   18,     14,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_br16",       0,     32,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_13",        19,     13,  0 },
         { "fixup_sparc_hi22",      10,     22,  0 },
         { "fixup_sparc_lo10",      22,     10,  0 },
@@ -211,8 +213,7 @@ namespace {
         { "fixup_sparc_call30",     0,     30,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br22",       0,     22,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_br19",       0,     19,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_br16_2",    20,      2,  MCFixupKindInfo::FKF_IsPCRel },
-        { "fixup_sparc_br16_14",    0,     14,  MCFixupKindInfo::FKF_IsPCRel },
+        { "fixup_sparc_br16",      32,      0,  MCFixupKindInfo::FKF_IsPCRel },
         { "fixup_sparc_13",         0,     13,  0 },
         { "fixup_sparc_hi22",       0,     22,  0 },
         { "fixup_sparc_lo10",       0,     10,  0 },

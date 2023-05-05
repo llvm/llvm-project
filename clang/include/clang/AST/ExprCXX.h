@@ -2321,7 +2321,7 @@ public:
 
   /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
-  /// If the result is not-None, it will never wrap a nullptr.
+  /// If the result is not std::nullopt, it will never wrap a nullptr.
   std::optional<Expr *> getArraySize() {
     if (!isArray())
       return std::nullopt;
@@ -2335,7 +2335,7 @@ public:
 
   /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
-  /// If the result is not-None, it will never wrap a nullptr.
+  /// If the result is not std::nullopt, it will never wrap a nullptr.
   std::optional<const Expr *> getArraySize() const {
     if (!isArray())
       return std::nullopt;

@@ -99,23 +99,21 @@ PlatformProperties::PlatformProperties() {
 
 bool PlatformProperties::GetUseModuleCache() const {
   const auto idx = ePropertyUseModuleCache;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
-      g_platform_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_platform_properties[idx].default_uint_value != 0);
 }
 
 bool PlatformProperties::SetUseModuleCache(bool use_module_cache) {
-  return m_collection_sp->SetPropertyAtIndexAsBoolean(ePropertyUseModuleCache,
-                                                      use_module_cache);
+  return SetPropertyAtIndex(ePropertyUseModuleCache, use_module_cache);
 }
 
 FileSpec PlatformProperties::GetModuleCacheDirectory() const {
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(
-      ePropertyModuleCacheDirectory);
+  return GetPropertyAtIndexAs<FileSpec>(ePropertyModuleCacheDirectory, {});
 }
 
 bool PlatformProperties::SetModuleCacheDirectory(const FileSpec &dir_spec) {
-  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      ePropertyModuleCacheDirectory, dir_spec);
+  return m_collection_sp->SetPropertyAtIndex(ePropertyModuleCacheDirectory,
+                                             dir_spec);
 }
 
 void PlatformProperties::SetDefaultModuleCacheDirectory(

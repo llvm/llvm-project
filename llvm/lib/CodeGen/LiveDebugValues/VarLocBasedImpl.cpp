@@ -1116,7 +1116,7 @@ VarLocBasedLDV::~VarLocBasedLDV() = default;
 /// location, erase the variable from the Vars set.
 void VarLocBasedLDV::OpenRangesSet::erase(const VarLoc &VL) {
   // Erasure helper.
-  auto DoErase = [VL, this](DebugVariable VarToErase) {
+  auto DoErase = [&VL, this](DebugVariable VarToErase) {
     auto *EraseFrom = VL.isEntryBackupLoc() ? &EntryValuesBackupVars : &Vars;
     auto It = EraseFrom->find(VarToErase);
     if (It != EraseFrom->end()) {

@@ -16,6 +16,9 @@
 namespace __llvm_libc {
 namespace rpc {
 
+/// Maximum amount of data a single lane can use.
+constexpr uint64_t MAX_LANE_SIZE = 64;
+
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
 #if defined(LIBC_TARGET_ARCH_IS_NVPTX) && __CUDA_ARCH__ >= 700
@@ -35,6 +38,15 @@ LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
 /// Conditional that is only true for a single thread in a lane.
 LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
   return gpu::get_lane_id() == get_first_lane_id(lane_mask);
+}
+
+/// Conditional to indicate if this process is running on the GPU.
+LIBC_INLINE constexpr bool is_process_gpu() {
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+  return true;
+#else
+  return false;
+#endif
 }
 
 } // namespace rpc
