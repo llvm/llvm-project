@@ -195,10 +195,11 @@ public:
     unsigned Size = 0;
     unsigned Reg = 0;
     int64_t Offset = 0;
+    unsigned ExtraReg = 0;
 
     Location() = default;
-    Location(LocationType Type, unsigned Size, unsigned Reg, int64_t Offset)
-        : Type(Type), Size(Size), Reg(Reg), Offset(Offset) {}
+    Location(LocationType Type, unsigned Size, unsigned Reg, int64_t Offset, unsigned ExtraReg = 0)
+        : Type(Type), Size(Size), Reg(Reg), Offset(Offset), ExtraReg(ExtraReg) {}
   };
 
   struct LiveOutReg {
