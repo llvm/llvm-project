@@ -191,13 +191,11 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    ldr q0, [x2]
 ; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    cmeq v1.8h, v1.8h, #0
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    str q0, [x1]
 ; CHECK-NEXT:    ret
     %tmp = xor <16 x i1> zeroinitializer, <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>

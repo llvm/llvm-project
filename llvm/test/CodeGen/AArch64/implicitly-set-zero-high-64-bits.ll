@@ -51,9 +51,7 @@ entry:
 define <8 x i16> @addpv4i16(<4 x i16> noundef %a, <4 x i16> noundef %b) {
 ; CHECK-LABEL: addpv4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    addp v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %vpadd_v2.i = tail call <4 x i16> @llvm.aarch64.neon.addp.v4i16(<4 x i16> %a, <4 x i16> %b)
@@ -64,9 +62,7 @@ entry:
 define <8 x i16> @addv4i16(<4 x i16> noundef %a, <4 x i16> noundef %b) {
 ; CHECK-LABEL: addv4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %add.i = add <4 x i16> %b, %a
@@ -88,9 +84,7 @@ entry:
 define <16 x i8> @tbl1(<16 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: tbl1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %vtbl11 = tail call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> %a, <8 x i8> %b)
@@ -116,9 +110,7 @@ entry:
 define <16 x i8> @bsl(<4 x i16> noundef %a, <4 x i16> noundef %c, <4 x i16> noundef %d, <4 x i16> noundef %b) {
 ; CHECK-LABEL: bsl:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    bsl v0.8b, v1.8b, v2.8b
-; CHECK-NEXT:    mov v0.d[1], v3.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %vbsl3.i = and <4 x i16> %c, %a
@@ -133,9 +125,7 @@ entry:
 define <16 x i8> @load(ptr %a, <8 x i8> %b) {
 ; CHECK-LABEL: load:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %vtbl11 = load <8 x i8>, ptr %a
