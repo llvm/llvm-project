@@ -74,7 +74,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_logical_2(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_logical_2Ex"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant true
-! CHECK:  hlfir.assign %[[VAL_2]] to %[[VAL_1]]#0 : i1, !fir.ref<!fir.logical<4>>
+! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (i1) -> !fir.logical<4>
+! CHECK:  hlfir.assign %[[VAL_3]] to %[[VAL_1]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 
 subroutine scalar_real_2(x)
   real :: x

@@ -61,8 +61,8 @@
  <td class="partial" align="center">Partial</td>
 </tr>
 <tr>
- <td><a href="#cxx23">C++2b (tentatively C++23)</a></td>
- <td><tt>-std=c++2b</tt></td>
+ <td><a href="#cxx23">C++23</a></td>
+ <td><tt>-std=c++23</tt></td>
  <td class="partial" align="center">Partial</td>
 </tr>
 </table>
@@ -1290,12 +1290,12 @@ code. This issue is expected to be rectified soon.
 </p>
 </details>
 
-<h2 id="cxx23">C++2b implementation status</h2>
+<h2 id="cxx23">C++23 implementation status</h2>
 
-<p>Clang has support for some of the features of the C++ standard following
-C++20, informally referred to as C++2b.</p>
+<!-- TODO add link to the ISO Standard after it's published. -->
+<p>Clang has support for some of the features of the ISO C++ 2023 standard.</p>
 
-<p>You can use Clang in C++2b mode with the <code>-std=c++2b</code> option.</p>
+<p>You can use Clang in C++23 mode with the <code>-std=c++23</code> option.</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -1303,7 +1303,7 @@ C++20, informally referred to as C++2b.</p>
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Language Feature</th>
-    <th>C++2b Proposal</th>
+    <th>C++23 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
     <!-- Fall 2020 papers -->
@@ -1480,7 +1480,14 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Relaxing some constexpr restrictions</td>
       <td><a href="https://wg21.link/P2448R2">P2448R2</a></td>
-      <td class="none" align="center">No</td>
+      <td class="partial" align="center">
+        <details><summary>Clang 17 (Partial)</summary>
+	  We do not support outside of defaulted special memeber functions the change that constexpr functions no
+          longer have to be constexpr compatible but rather support a less restricted requirements for constexpr
+          functions. Which include allowing non-literal types as return values and paremeters, allow calling of
+          non-constexpr functions and constructors.
+        </details></td>
+      </td>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>

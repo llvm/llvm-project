@@ -276,12 +276,6 @@ BoolValue *getHasValue(Environment &Env, Value *OptionalVal) {
   return nullptr;
 }
 
-/// If `Type` is a reference type, returns the type of its pointee. Otherwise,
-/// returns `Type` itself.
-QualType stripReference(QualType Type) {
-  return Type->isReferenceType() ? Type->getPointeeType() : Type;
-}
-
 /// Returns true if and only if `Type` is an optional type.
 bool isOptionalType(QualType Type) {
   if (!Type->isRecordType())
@@ -339,7 +333,7 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
     return &ValueLoc;
   }
 
-  auto Ty = stripReference(Q);
+  auto Ty = Q.getNonReferenceType();
   auto *ValueVal = Env.createValue(Ty);
   if (ValueVal == nullptr)
     return nullptr;
@@ -493,11 +487,13 @@ BoolValue &valueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
   assert(F.getTemplateSpecializationArgs() != nullptr);
   assert(F.getTemplateSpecializationArgs()->size() > 0);
 
-  const int TemplateParamOptionalWrappersCount = countOptionalWrappers(
-      *MatchRes.Context,
-      stripReference(F.getTemplateSpecializationArgs()->get(0).getAsType()));
-  const int ArgTypeOptionalWrappersCount =
-      countOptionalWrappers(*MatchRes.Context, stripReference(E.getType()));
+  const int TemplateParamOptionalWrappersCount =
+      countOptionalWrappers(*MatchRes.Context, F.getTemplateSpecializationArgs()
+                                                   ->get(0)
+                                                   .getAsType()
+                                                   .getNonReferenceType());
+  const int ArgTypeOptionalWrappersCount = countOptionalWrappers(
+      *MatchRes.Context, E.getType().getNonReferenceType());
 
   // Check if this is a constructor/assignment call for `optional<T>` with
   // argument of type `U` such that `T` is constructible from `U`.

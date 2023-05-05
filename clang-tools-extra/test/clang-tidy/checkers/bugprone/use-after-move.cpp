@@ -1160,41 +1160,62 @@ void commaOperatorSequences() {
   }
 }
 
+namespace InitializerListSequences {
+
+struct S1 {
+  int i;
+  A a;
+};
+
+struct S2 {
+  A a;
+  int i;
+};
+
+struct S3 {
+  S3() {}
+  S3(int, A) {}
+  S3(A, int) {}
+};
+
 // An initializer list sequences its initialization clauses.
 void initializerListSequences() {
   {
-    struct S1 {
-      int i;
-      A a;
-    };
-    {
-      A a;
-      S1 s1{a.getInt(), std::move(a)};
-    }
-    {
-      A a;
-      S1 s1{.i = a.getInt(), .a = std::move(a)};
-    }
+    A a;
+    S1 s1{a.getInt(), std::move(a)};
   }
   {
-    struct S2 {
-      A a;
-      int i;
-    };
-    {
-      A a;
-      S2 s2{std::move(a), a.getInt()};
-      // CHECK-NOTES: [[@LINE-1]]:27: warning: 'a' used after it was moved
-      // CHECK-NOTES: [[@LINE-2]]:13: note: move occurred here
-    }
-    {
-      A a;
-      S2 s2{.a = std::move(a), .i = a.getInt()};
-      // CHECK-NOTES: [[@LINE-1]]:37: warning: 'a' used after it was moved
-      // CHECK-NOTES: [[@LINE-2]]:13: note: move occurred here
-    }
+    A a;
+    S1 s1{.i = a.getInt(), .a = std::move(a)};
+  }
+  {
+    A a;
+    S2 s2{std::move(a), a.getInt()};
+    // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+  }
+  {
+    A a;
+    S2 s2{.a = std::move(a), .i = a.getInt()};
+    // CHECK-NOTES: [[@LINE-1]]:35: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+  }
+  {
+    // Check the case where the constructed type has a constructor and the
+    // initializer list therefore manifests as a `CXXConstructExpr` instead of
+    // an `InitListExpr`.
+    A a;
+    S3 s3{a.getInt(), std::move(a)};
+  }
+  {
+    A a;
+    S3 s3{std::move(a), a.getInt()};
+    // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
   }
 }
+
+} // namespace InitializerListSequences
 
 // A declaration statement containing multiple declarations sequences the
 // initializer expressions.

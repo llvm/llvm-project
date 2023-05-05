@@ -20,12 +20,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
@@ -1870,7 +1871,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 ///         primary-expression
 ///         postfix-expression '[' expression ']'
 ///         postfix-expression '[' braced-init-list ']'
-///         postfix-expression '[' expression-list [opt] ']'  [C++2b 12.4.5]
+///         postfix-expression '[' expression-list [opt] ']'  [C++23 12.4.5]
 ///         postfix-expression '(' argument-expression-list[opt] ')'
 ///         postfix-expression '.' identifier
 ///         postfix-expression '->' identifier
@@ -1945,10 +1946,10 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 
       // We try to parse a list of indexes in all language mode first
       // and, in we find 0 or one index, we try to parse an OpenMP array
-      // section. This allow us to support C++2b multi dimensional subscript and
+      // section. This allow us to support C++23 multi dimensional subscript and
       // OpenMp sections in the same language mode.
       if (!getLangOpts().OpenMP || Tok.isNot(tok::colon)) {
-        if (!getLangOpts().CPlusPlus2b) {
+        if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
             Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);

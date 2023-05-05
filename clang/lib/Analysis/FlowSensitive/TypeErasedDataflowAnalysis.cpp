@@ -64,6 +64,8 @@ static bool isLoopHead(const CFGBlock &B) {
   return false;
 }
 
+namespace {
+
 // The return type of the visit functions in TerminatorVisitor. The first
 // element represents the terminator expression (that is the conditional
 // expression in case of a path split in the CFG). The second element
@@ -186,6 +188,8 @@ struct AnalysisContext {
   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates;
 };
 
+} // namespace
+
 /// Computes the input state for a given basic block by joining the output
 /// states of its predecessors.
 ///
@@ -277,17 +281,19 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
 }
 
 /// Built-in transfer function for `CFGStmt`.
-void builtinTransferStatement(const CFGStmt &Elt,
-                              TypeErasedDataflowAnalysisState &InputState,
-                              AnalysisContext &AC) {
+static void
+builtinTransferStatement(const CFGStmt &Elt,
+                         TypeErasedDataflowAnalysisState &InputState,
+                         AnalysisContext &AC) {
   const Stmt *S = Elt.getStmt();
   assert(S != nullptr);
   transfer(StmtToEnvMap(AC.CFCtx, AC.BlockStates), *S, InputState.Env);
 }
 
 /// Built-in transfer function for `CFGInitializer`.
-void builtinTransferInitializer(const CFGInitializer &Elt,
-                                TypeErasedDataflowAnalysisState &InputState) {
+static void
+builtinTransferInitializer(const CFGInitializer &Elt,
+                           TypeErasedDataflowAnalysisState &InputState) {
   const CXXCtorInitializer *Init = Elt.getInitializer();
   assert(Init != nullptr);
 
@@ -320,9 +326,9 @@ void builtinTransferInitializer(const CFGInitializer &Elt,
   }
 }
 
-void builtinTransfer(const CFGElement &Elt,
-                     TypeErasedDataflowAnalysisState &State,
-                     AnalysisContext &AC) {
+static void builtinTransfer(const CFGElement &Elt,
+                            TypeErasedDataflowAnalysisState &State,
+                            AnalysisContext &AC) {
   switch (Elt.getKind()) {
   case CFGElement::Statement:
     builtinTransferStatement(Elt.castAs<CFGStmt>(), State, AC);
@@ -331,7 +337,18 @@ void builtinTransfer(const CFGElement &Elt,
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
     break;
   default:
-    // FIXME: Evaluate other kinds of `CFGElement`.
+    // FIXME: Evaluate other kinds of `CFGElement`, including:
+    // - When encountering `CFGLifetimeEnds`, remove the declaration from
+    //   `Environment::DeclToLoc`. This would serve two purposes:
+    //   a) Eliminate unnecessary clutter from `Environment::DeclToLoc`
+    //   b) Allow us to implement an assertion that, when joining two
+    //      `Environments`, the two `DeclToLoc` maps never contain entries that
+    //      map the same declaration to different storage locations.
+    //   Unfortunately, however, we can't currently process `CFGLifetimeEnds`
+    //   because the corresponding CFG option `AddLifetime` is incompatible with
+    //   the option 'AddImplicitDtors`, which we already use. We will first
+    //   need to modify the CFG implementation to make these two options
+    //   compatible before we can process `CFGLifetimeEnds`.
     break;
   }
 }
@@ -344,7 +361,7 @@ void builtinTransfer(const CFGElement &Elt,
 /// user-specified analysis.
 /// `PostVisitCFG` (if provided) will be applied to the element after evaluation
 /// by the user-specified analysis.
-TypeErasedDataflowAnalysisState
+static TypeErasedDataflowAnalysisState
 transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
                  std::function<void(const CFGElement &,
                                     const TypeErasedDataflowAnalysisState &)>

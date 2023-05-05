@@ -579,7 +579,7 @@ uptr __hwasan_tag_pointer(uptr p, u8 tag) {
 void __hwasan_handle_longjmp(const void *sp_dst) {
   uptr dst = (uptr)sp_dst;
   // HWASan does not support tagged SP.
-  CHECK(GetTagFromPointer(dst) == 0);
+  CHECK_EQ(GetTagFromPointer(dst), 0);
 
   uptr sp = (uptr)__builtin_frame_address(0);
   static const uptr kMaxExpectedCleanupSize = 64 << 20;  // 64M
