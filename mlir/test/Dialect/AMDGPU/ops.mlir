@@ -74,6 +74,13 @@ func.func @raw_buffer_atomic_fadd_f32_to_rank_4(%value : f32, %dst : memref<128x
   func.return
 }
 
+// CHECK-LABEL: func @raw_buffer_atomic_cmpswap_f32
+func.func @raw_buffer_atomic_cmpswap_f32(%src : f32, %cmp : f32, %dst : memref<128x64x32x16xf32>, %offset : i32, %idx0 : i32, %idx1 : i32, %idx2 : i32, %idx3 : i32) {
+  // CHECK: amdgpu.raw_buffer_atomic_cmpswap {indexOffset = 1 : i32} %{{.*}}, %{{.*}} -> %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] sgprOffset %{{.*}} : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+  amdgpu.raw_buffer_atomic_cmpswap {boundsCheck = true, indexOffset = 1 : i32} %src, %cmp -> %dst[%idx0, %idx1, %idx2, %idx3] sgprOffset %offset : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+  func.return
+}
+
 // CHECK-LABEL: func @lds_barrier
 func.func @lds_barrier() {
   // CHECK: amdgpu.lds_barrier
