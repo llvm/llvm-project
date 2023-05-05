@@ -1046,7 +1046,6 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
     unified_section_list.AddSection(header_sp);
 
     const uint32_t nsects = m_sect_headers.size();
-    ModuleSP module_sp(GetModule());
     for (uint32_t idx = 0; idx < nsects; ++idx) {
       llvm::StringRef sect_name = GetSectionName(m_sect_headers[idx]);
       ConstString const_sect_name(sect_name);
