@@ -2798,10 +2798,9 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
 
     if (MI.isDebugValue()) {
       auto *DILocalVar = MI.getDebugVariable();
-      // TODO: This should not happen, have to fix the MIR verifier to check for
-      // such instances and fix them.
-      if (!DILocalVar)
-        continue;
+      assert(DILocalVar &&
+             "DBG_VALUE or DBG_VALUE_LIST must contain a DILocalVariable");
+
       auto DbgVar = createDebugVariableFromMachineInstr(&MI);
       // If the first operand is a register and it exists in the RegisterMap, we
       // know this is a DBG_VALUE that uses the result of a load that was moved,
