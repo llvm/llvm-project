@@ -2852,18 +2852,6 @@ SwiftLanguageRuntimeImpl::GetValueType(ValueObject &in_value,
     // object is a struct? (for a class, it's easy)
     if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsProtocol) &&
         dynamic_type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration)) {
-      if (auto ts = static_type.GetTypeSystem()
-                        .dyn_cast_or_null<TypeSystemSwiftTypeRef>())
-        static_type = ts->ReconstructType(static_type);
-      auto swift_ast_ctx =
-          static_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
-      if (!swift_ast_ctx)
-        return {};
-      if (swift_ast_ctx->IsErrorType(static_type.GetOpaqueQualType())) {
-        // ErrorType values are always a pointer
-        return Value::ValueType::LoadAddress;
-      }
-
       lldb::addr_t existential_address;
       bool use_local_buffer = false;
 
