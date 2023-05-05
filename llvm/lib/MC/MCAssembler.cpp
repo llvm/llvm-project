@@ -464,14 +464,13 @@ void MCAsmLayout::layoutFragment(MCFragment *F) {
   }
 }
 
-void MCAssembler::registerSymbol(const MCSymbol &Symbol, bool *Created) {
-  bool New = !Symbol.isRegistered();
-  if (Created)
-    *Created = New;
-  if (New) {
+bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
+  bool Changed = !Symbol.isRegistered();
+  if (Changed) {
     Symbol.setIsRegistered(true);
     Symbols.push_back(&Symbol);
   }
+  return Changed;
 }
 
 void MCAssembler::writeFragmentPadding(raw_ostream &OS,
