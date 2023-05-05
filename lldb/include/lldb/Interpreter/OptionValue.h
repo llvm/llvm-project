@@ -13,6 +13,7 @@
 #include "lldb/Utility/Cloneable.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -269,9 +270,9 @@ public:
 
   bool SetEnumerationValue(int64_t value);
 
-  FileSpec GetFileSpecValue() const;
+  std::optional<FileSpec> GetFileSpecValue() const;
 
-  bool SetFileSpecValue(const FileSpec &file_spec);
+  bool SetFileSpecValue(FileSpec file_spec);
 
   FileSpecList GetFileSpecListValue() const;
 
@@ -334,6 +335,8 @@ public:
       return GetCharValue();
     if constexpr (std::is_same_v<T, lldb::Format>)
       return GetFormatValue();
+    if constexpr (std::is_same_v<T, FileSpec>)
+      return GetFileSpecValue();
     if constexpr (std::is_same_v<T, lldb::LanguageType>)
       return GetLanguageValue();
     if constexpr (std::is_same_v<T, llvm::StringRef>)
@@ -361,6 +364,8 @@ public:
   bool SetValueAs(llvm::StringRef v) { return SetStringValue(v); }
 
   bool SetValueAs(lldb::LanguageType v) { return SetLanguageValue(v); }
+
+  bool SetValueAs(FileSpec v) { return SetFileSpecValue(v); }
 
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   bool SetValueAs(T t) {
