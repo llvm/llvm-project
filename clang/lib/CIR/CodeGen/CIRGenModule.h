@@ -519,6 +519,15 @@ public:
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
   static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
 
+  /// Emit a general error that something can't be done.
+  void Error(SourceLocation loc, StringRef error);
+
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void ErrorUnsupported(const Stmt *S, const char *Type);
+
+  /// Print out an error that codegen doesn't support the specified decl yet.
+  void ErrorUnsupported(const Decl *D, const char *Type);
+
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;

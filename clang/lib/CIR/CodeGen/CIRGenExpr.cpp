@@ -12,6 +12,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
+#include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "UnimplementedFeatureGuarding.h"
@@ -552,7 +553,22 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
     return LV;
   }
 
-  llvm_unreachable("Unhandled DeclRefExpr?");
+  // FIXME: While we're emitting a binding from an enclosing scope, all other
+  // DeclRefExprs we see should be implicitly treated as if they also refer to
+  // an enclosing scope.
+  if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
+    llvm_unreachable("NYI");
+  }
+
+  // We can form DeclRefExprs naming GUID declarations when reconstituting
+  // non-type template parameters into expressions.
+  if (const auto *GD = dyn_cast<MSGuidDecl>(ND))
+    llvm_unreachable("NYI");
+
+  if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND))
+    llvm_unreachable("NYI");
+
+  llvm_unreachable("Unhandled DeclRefExpr");
 }
 
 LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
@@ -1989,4 +2005,162 @@ mlir::cir::AllocaOp CIRGenFunction::CreateTempAlloca(mlir::Type Ty,
     assert(0 && "NYI");
   return cast<mlir::cir::AllocaOp>(
       buildAlloca(Name.str(), Ty, Loc, CharUnits()).getDefiningOp());
+}
+
+/// Given an object of the given canonical type, can we safely copy a
+/// value out of it based on its initializer?
+static bool isConstantEmittableObjectType(QualType type) {
+  assert(type.isCanonical());
+  assert(!type->isReferenceType());
+
+  // Must be const-qualified but non-volatile.
+  Qualifiers qs = type.getLocalQualifiers();
+  if (!qs.hasConst() || qs.hasVolatile())
+    return false;
+
+  // Otherwise, all object types satisfy this except C++ classes with
+  // mutable subobjects or non-trivial copy/destroy behavior.
+  if (const auto *RT = dyn_cast<RecordType>(type))
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+      if (RD->hasMutableFields() || !RD->isTrivial())
+        return false;
+
+  return true;
+}
+
+/// Can we constant-emit a load of a reference to a variable of the
+/// given type?  This is different from predicates like
+/// Decl::mightBeUsableInConstantExpressions because we do want it to apply
+/// in situations that don't necessarily satisfy the language's rules
+/// for this (e.g. C++'s ODR-use rules).  For example, we want to able
+/// to do this with const float variables even if those variables
+/// aren't marked 'constexpr'.
+enum ConstantEmissionKind {
+  CEK_None,
+  CEK_AsReferenceOnly,
+  CEK_AsValueOrReference,
+  CEK_AsValueOnly
+};
+static ConstantEmissionKind checkVarTypeForConstantEmission(QualType type) {
+  type = type.getCanonicalType();
+  if (const auto *ref = dyn_cast<ReferenceType>(type)) {
+    if (isConstantEmittableObjectType(ref->getPointeeType()))
+      return CEK_AsValueOrReference;
+    return CEK_AsReferenceOnly;
+  }
+  if (isConstantEmittableObjectType(type))
+    return CEK_AsValueOnly;
+  return CEK_None;
+}
+
+/// Try to emit a reference to the given value without producing it as
+/// an l-value.  This is just an optimization, but it avoids us needing
+/// to emit global copies of variables if they're named without triggering
+/// a formal use in a context where we can't emit a direct reference to them,
+/// for instance if a block or lambda or a member of a local class uses a
+/// const int variable or constexpr variable from an enclosing function.
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
+  ValueDecl *value = refExpr->getDecl();
+
+  // The value needs to be an enum constant or a constant variable.
+  ConstantEmissionKind CEK;
+  if (isa<ParmVarDecl>(value)) {
+    CEK = CEK_None;
+  } else if (auto *var = dyn_cast<VarDecl>(value)) {
+    CEK = checkVarTypeForConstantEmission(var->getType());
+  } else if (isa<EnumConstantDecl>(value)) {
+    CEK = CEK_AsValueOnly;
+  } else {
+    CEK = CEK_None;
+  }
+  if (CEK == CEK_None)
+    return ConstantEmission();
+
+  Expr::EvalResult result;
+  bool resultIsReference;
+  QualType resultType;
+
+  // It's best to evaluate all the way as an r-value if that's permitted.
+  if (CEK != CEK_AsReferenceOnly &&
+      refExpr->EvaluateAsRValue(result, getContext())) {
+    resultIsReference = false;
+    resultType = refExpr->getType();
+
+    // Otherwise, try to evaluate as an l-value.
+  } else if (CEK != CEK_AsValueOnly &&
+             refExpr->EvaluateAsLValue(result, getContext())) {
+    resultIsReference = true;
+    resultType = value->getType();
+
+    // Failure.
+  } else {
+    return ConstantEmission();
+  }
+
+  // In any case, if the initializer has side-effects, abandon ship.
+  if (result.HasSideEffects)
+    return ConstantEmission();
+
+  // In CUDA/HIP device compilation, a lambda may capture a reference variable
+  // referencing a global host variable by copy. In this case the lambda should
+  // make a copy of the value of the global host variable. The DRE of the
+  // captured reference variable cannot be emitted as load from the host
+  // global variable as compile time constant, since the host variable is not
+  // accessible on device. The DRE of the captured reference variable has to be
+  // loaded from captures.
+  if (CGM.getLangOpts().CUDAIsDevice && result.Val.isLValue() &&
+      refExpr->refersToEnclosingVariableOrCapture()) {
+    auto *MD = dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl);
+    if (MD && MD->getParent()->isLambda() &&
+        MD->getOverloadedOperator() == OO_Call) {
+      const APValue::LValueBase &base = result.Val.getLValueBase();
+      if (const ValueDecl *D = base.dyn_cast<const ValueDecl *>()) {
+        if (const VarDecl *VD = dyn_cast<const VarDecl>(D)) {
+          if (!VD->hasAttr<CUDADeviceAttr>()) {
+            return ConstantEmission();
+          }
+        }
+      }
+    }
+  }
+
+  // Emit as a constant.
+  // FIXME(cir): have emitAbstract build a TypedAttr instead (this requires
+  // somewhat heavy refactoring...)
+  auto C = ConstantEmitter(*this).emitAbstract(refExpr->getLocation(),
+                                               result.Val, resultType);
+  mlir::TypedAttr cstToEmit = C.dyn_cast_or_null<mlir::TypedAttr>();
+  assert(cstToEmit && "expect a typed attribute");
+
+  // Make sure we emit a debug reference to the global variable.
+  // This should probably fire even for
+  if (isa<VarDecl>(value)) {
+    if (!getContext().DeclMustBeEmitted(cast<VarDecl>(value)))
+      buildDeclRefExprDbgValue(refExpr, result.Val);
+  } else {
+    assert(isa<EnumConstantDecl>(value));
+    buildDeclRefExprDbgValue(refExpr, result.Val);
+  }
+
+  // If we emitted a reference constant, we need to dereference that.
+  if (resultIsReference)
+    return ConstantEmission::forReference(cstToEmit);
+
+  return ConstantEmission::forValue(cstToEmit);
+}
+
+CIRGenFunction::ConstantEmission
+CIRGenFunction::tryEmitAsConstant(const MemberExpr *ME) {
+  llvm_unreachable("NYI");
+}
+
+mlir::Value CIRGenFunction::buildScalarConstant(
+    const CIRGenFunction::ConstantEmission &Constant, Expr *E) {
+  assert(Constant && "not a constant");
+  if (Constant.isReference())
+    return buildLoadOfLValue(Constant.getReferenceLValue(*this, E),
+                             E->getExprLoc())
+        .getScalarVal();
+  return builder.getConstant(getLoc(E->getSourceRange()), Constant.getValue());
 }

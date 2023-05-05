@@ -782,7 +782,13 @@ void CIRGenFunction::buildInitializerForField(FieldDecl *Field, LValue LHS,
     llvm_unreachable("NYI");
     break;
   case TEK_Aggregate: {
-    llvm_unreachable("NYI");
+    AggValueSlot Slot = AggValueSlot::forLValue(
+        LHS, AggValueSlot::IsDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+        AggValueSlot::IsNotAliased, getOverlapForFieldInit(Field),
+        AggValueSlot::IsNotZeroed,
+        // Checks are made by the code that calls constructor.
+        AggValueSlot::IsSanitizerChecked);
+    buildAggExpr(Init, Slot);
     break;
   }
   }

@@ -27,7 +27,9 @@ struct incomplete;
 void yoyo(incomplete *i) {}
 
 //      CHECK: !ty_22struct2EBar22 = !cir.struct<"struct.Bar", i32, i8>
+//      CHECK: !ty_22struct2EMandalore22 = !cir.struct<"struct.Mandalore", i32, !cir.ptr<i8>, i32, #cir.recdecl.ast>
 //      CHECK: !ty_22struct2Eincomplete22 = !cir.struct<"struct.incomplete", incomplete
+//      CHECK: !ty_22class2EAdv22 = !cir.struct<"class.Adv", !ty_22struct2EMandalore22>
 //      CHECK: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo", i32, i8, !ty_22struct2EBar22>
 
 //      CHECK: cir.func linkonce_odr @_ZN3Bar6methodEv(%arg0: !cir.ptr<!ty_22struct2EBar22>
@@ -71,3 +73,38 @@ void yoyo(incomplete *i) {}
 // CHECK-NEXT:   cir.store %5, %1 : i32, cir.ptr <i32>
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
+
+typedef enum Ways {
+  ThisIsTheWay = 1000024001,
+} Ways;
+
+typedef struct Mandalore {
+    Ways             w;
+    const void*      n;
+    int              d;
+} Mandalore;
+
+class Adv {
+  Mandalore x{ThisIsTheWay};
+public:
+  Adv() {}
+};
+
+void m() { Adv C; }
+
+// CHECK: cir.func linkonce_odr @_ZN3AdvC2Ev(%arg0: !cir.ptr<!ty_22class2EAdv22>
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22class2EAdv22>, cir.ptr <!cir.ptr<!ty_22class2EAdv22>>, ["this", init] {alignment = 8 : i64}
+// CHECK:     cir.store %arg0, %0 : !cir.ptr<!ty_22class2EAdv22>, cir.ptr <!cir.ptr<!ty_22class2EAdv22>>
+// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2EAdv22>>, !cir.ptr<!ty_22class2EAdv22>
+// CHECK:     %2 = "cir.struct_element_addr"(%1) <{member_name = "x"}> : (!cir.ptr<!ty_22class2EAdv22>) -> !cir.ptr<!ty_22struct2EMandalore22>
+// CHECK:     %3 = "cir.struct_element_addr"(%2) <{member_name = "w"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<i32>
+// CHECK:     %4 = cir.const(1000024001 : i32) : i32
+// CHECK:     cir.store %4, %3 : i32, cir.ptr <i32>
+// CHECK:     %5 = "cir.struct_element_addr"(%2) <{member_name = "n"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<!cir.ptr<i8>>
+// CHECK:     %6 = cir.const(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
+// CHECK:     cir.store %6, %5 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK:     %7 = "cir.struct_element_addr"(%2) <{member_name = "d"}> : (!cir.ptr<!ty_22struct2EMandalore22>) -> !cir.ptr<i32>
+// CHECK:     %8 = cir.const(0 : i32) : i32
+// CHECK:     cir.store %8, %7 : i32, cir.ptr <i32>
+// CHECK:     cir.return
+// CHECK:   }

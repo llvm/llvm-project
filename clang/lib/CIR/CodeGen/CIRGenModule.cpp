@@ -2251,3 +2251,25 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
 
   return Offset;
 }
+
+void CIRGenModule::Error(SourceLocation loc, StringRef message) {
+  unsigned diagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+  getDiags().Report(astCtx.getFullLoc(loc), diagID) << message;
+}
+
+/// Print out an error that codegen doesn't support the specified stmt yet.
+void CIRGenModule::ErrorUnsupported(const Stmt *S, const char *Type) {
+  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
+                                               "cannot compile this %0 yet");
+  std::string Msg = Type;
+  getDiags().Report(astCtx.getFullLoc(S->getBeginLoc()), DiagID)
+      << Msg << S->getSourceRange();
+}
+
+/// Print out an error that codegen doesn't support the specified decl yet.
+void CIRGenModule::ErrorUnsupported(const Decl *D, const char *Type) {
+  unsigned DiagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error,
+                                               "cannot compile this %0 yet");
+  std::string Msg = Type;
+  getDiags().Report(astCtx.getFullLoc(D->getLocation()), DiagID) << Msg;
+}
