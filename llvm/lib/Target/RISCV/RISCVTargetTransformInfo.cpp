@@ -252,6 +252,16 @@ RISCVTTIImpl::getConstantPoolLoadCost(Type *Ty,  TTI::TargetCostKind CostKind) {
                              /*AddressSpace=*/0, CostKind);
 }
 
+static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
+                                        LLVMContext &C) {
+  assert((DataVT.getScalarSizeInBits() != 8 ||
+          DataVT.getVectorNumElements() <= 256) && "unhandled case in lowering");
+  MVT IndexVT = DataVT.changeTypeToInteger();
+  if (IndexVT.getScalarType().bitsGT(ST.getXLenVT()))
+    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+  return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
+}
+
 
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
@@ -298,8 +308,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         if (LT.first == 1 &&
             (LT.second.getScalarSizeInBits() != 8 ||
              LT.second.getVectorNumElements() <= 256)) {
-          VectorType *IdxTy = VectorType::get(IntegerType::getInt8Ty(Tp->getContext()),
-                                              Tp->getElementCount());
+          VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
           InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
           return IndexCost + getLMULCost(LT.second);
         }
@@ -317,7 +326,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
              LT.second.getVectorNumElements() <= 256)) {
           auto &C = Tp->getContext();
           auto EC = Tp->getElementCount();
-          VectorType *IdxTy = VectorType::get(IntegerType::getInt8Ty(C), EC);
+          VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
           VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
           InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
           InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
