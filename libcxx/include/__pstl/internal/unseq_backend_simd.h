@@ -11,13 +11,18 @@
 #define _PSTL_UNSEQ_BACKEND_SIMD_H
 
 #include <__functional/operations.h>
+#include <__type_traits/is_arithmetic.h>
 #include <__utility/pair.h>
+#include <cstddef>
+#include <cstdint>
 
 #include "pstl_config.h"
 #include "utils.h"
 
 // This header defines the minimum set of vector routines required
 // to support parallel STL.
+
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 namespace __pstl
 {
@@ -805,5 +810,7 @@ __simd_remove_if(_RandomAccessIterator __first, _DifferenceType __n, _UnaryPredi
 }
 } // namespace __unseq_backend
 } // namespace __pstl
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif /* _PSTL_UNSEQ_BACKEND_SIMD_H */
