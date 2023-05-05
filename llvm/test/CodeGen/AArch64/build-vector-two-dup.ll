@@ -4,24 +4,9 @@
 define <16 x i8> @test1(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    ldrb w8, [x1]
-; CHECK-NEXT:    mov v0.b[8], w8
-; CHECK-NEXT:    mov v0.b[9], w8
-; CHECK-NEXT:    mov v0.b[10], w8
-; CHECK-NEXT:    mov v0.b[11], w8
-; CHECK-NEXT:    mov v0.b[12], w8
-; CHECK-NEXT:    mov v0.b[13], w8
-; CHECK-NEXT:    mov v0.b[14], w8
-; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -75,24 +60,9 @@ entry:
 define <16 x i8> @test4(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    mov v0.b[8], w8
-; CHECK-NEXT:    mov v0.b[9], w8
-; CHECK-NEXT:    mov v0.b[10], w8
-; CHECK-NEXT:    mov v0.b[11], w8
-; CHECK-NEXT:    mov v0.b[12], w8
-; CHECK-NEXT:    mov v0.b[13], w8
-; CHECK-NEXT:    mov v0.b[14], w8
-; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    ld1r { v1.8b }, [x0]
+; CHECK-NEXT:    ld1r { v0.8b }, [x1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -128,17 +98,12 @@ entry:
 define <8 x i8> @test6(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    ldrb w8, [x1]
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ld1r { v0.8b }, [x1]
+; CHECK-NEXT:    adrp x8, .LCPI5_0
+; CHECK-NEXT:    ld1r { v1.8b }, [x0]
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    tbl v0.8b, { v1.16b }, v0.8b
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -154,17 +119,12 @@ entry:
 define <8 x i8> @test7(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test7:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    mov v0.b[2], w8
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ld1r { v0.8b }, [x0]
+; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    ld1r { v1.8b }, [x1]
+; CHECK-NEXT:    mov v1.d[1], v0.d[0]
+; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    tbl v0.8b, { v1.16b }, v0.8b
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
@@ -180,16 +140,9 @@ entry:
 define <8 x i16> @test8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    mov v0.h[2], w8
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    ldrh w8, [x1]
-; CHECK-NEXT:    mov v0.h[4], w8
-; CHECK-NEXT:    mov v0.h[5], w8
-; CHECK-NEXT:    mov v0.h[6], w8
-; CHECK-NEXT:    mov v0.h[7], w8
+; CHECK-NEXT:    ld1r { v1.4h }, [x1]
+; CHECK-NEXT:    ld1r { v0.4h }, [x0]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, ptr %a, align 1
@@ -205,12 +158,9 @@ entry:
 define <4 x i32> @test9(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
 ; CHECK-LABEL: test9:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    ldr w8, [x1]
-; CHECK-NEXT:    mov v0.s[2], w8
-; CHECK-NEXT:    mov v0.s[3], w8
+; CHECK-NEXT:    ld1r { v1.2s }, [x1]
+; CHECK-NEXT:    ld1r { v0.2s }, [x0]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 1
