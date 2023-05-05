@@ -2786,12 +2786,21 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     //
     // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
     // to erase the IMPLICIT_DEF instruction.
-    if (DefMI &&
-        DefMI->getParent() != Indexes->getMBBFromIndex(V.OtherVNI->def)) {
+    MachineBasicBlock *OtherMBB = Indexes->getMBBFromIndex(V.OtherVNI->def);
+    if (DefMI && DefMI->getParent() != OtherMBB) {
       LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " extends into "
                  << printMBBReference(*DefMI->getParent())
                  << ", keeping it.\n");
+      OtherV.ErasableImplicitDef = false;
+    } else if (OtherMBB->hasEHPadSuccessor()) {
+      // If OtherV is defined in a basic block that has EH pad successors then
+      // we get the same problem not just if OtherV is live beyond its basic
+      // block, but beyond the last call instruction in its basic block. Handle
+      // this case conservatively.
+      LLVM_DEBUG(
+          dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
+                 << " may be live into EH pad successors, keeping it.\n");
       OtherV.ErasableImplicitDef = false;
     } else {
       // We deferred clearing these lanes in case we needed to save them
