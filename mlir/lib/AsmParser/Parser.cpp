@@ -1424,7 +1424,8 @@ Operation *OperationParser::parseGenericOperation() {
   // would be "missing foo attribute" instead of something like "expects a 32
   // bits float attribute but got a 32 bits integer attribute".
   if (!properties && !result.getRawProperties()) {
-    Optional<RegisteredOperationName> info = result.name.getRegisteredInfo();
+    std::optional<RegisteredOperationName> info =
+        result.name.getRegisteredInfo();
     if (info) {
       if (failed(info->verifyInherentAttrs(result.attributes, [&]() {
             return mlir::emitError(srcLocation) << "'" << name << "' op ";
