@@ -12,6 +12,7 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/DumpDataExtractor.h"
@@ -34,8 +35,6 @@
 #include "swift/Frontend/Frontend.h"
 #include "swift/AST/ClangModuleLoader.h"
 #include "swift/Basic/Version.h"
-#include "swift/Demangling/Demangle.h"
-#include "swift/Demangling/Demangler.h"
 #include "swift/Strings.h"
 
 #include "clang/APINotes/APINotesManager.h"
@@ -50,6 +49,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace swift_demangle;
 
 char TypeSystemSwift::ID;
 char TypeSystemSwiftTypeRef::ID;
@@ -388,27 +388,6 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
   nominal->addChild(module, dem);
   nominal->addChild(identifier, dem);
   return pointee ? GetPointerTo(dem, nominal) : nominal;
-}
-
-/// \return the child of the \p Type node.
-static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
-  using namespace swift::Demangle;
-  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
-    return nullptr;
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
-    return nullptr;
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
-    return nullptr;
-  n = n->getFirstChild();
-  return n;
-}
-
-/// Demangle a mangled type name and return the child of the \p Type node.
-static swift::Demangle::NodePointer
-GetDemangledType(swift::Demangle::Demangler &dem, StringRef name) {
-  return GetType(dem.demangleSymbol(name));
 }
 
 /// Return a pair of modulename, type name for the outermost nominal type.
@@ -1251,16 +1230,24 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
     swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
     if (node->getNumChildren() != 2)
       break;
-    auto module = node->getChild(0);
-    auto ident = node->getChild(1);
-    // Builtin types.
-    if (module->hasText() && module->getText() == swift::STDLIB_NAME) {
-      if (ident->hasText() &&
-          ident->getText().startswith(swift::BUILTIN_TYPE_NAME_INT))
-        swift_flags |= eTypeIsScalar | eTypeIsInteger;
-      else if (ident->hasText() &&
-               ident->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT))
-        swift_flags |= eTypeIsScalar | eTypeIsFloat;
+    if (node->getKind() == Node::Kind::Structure) {
+      auto module = node->getChild(0);
+      auto ident = node->getChild(1);
+      // Builtin types.
+      if (module->hasText() && module->getText() == swift::STDLIB_NAME) {
+        if (ident->hasText() &&
+            ident->getText().startswith(swift::BUILTIN_TYPE_NAME_INT))
+          swift_flags |= eTypeIsScalar | eTypeIsInteger;
+        else if (ident->hasText() &&
+                 ident->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT))
+          swift_flags |= eTypeIsScalar | eTypeIsFloat;
+      }
+    } else {
+      // Variadic generic types.
+      auto typelist = node->getChild(1);
+      bool ignore;
+      auto param_flags = CollectTypeInfo(dem, typelist, ignore);
+      swift_flags |= param_flags & eTypeIsPack;
     }
 
     // Clang-imported types.

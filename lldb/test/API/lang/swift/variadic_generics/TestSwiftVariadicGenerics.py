@@ -68,21 +68,17 @@ class TestSwiftVariadicGenerics(TestBase):
                              "Pack{(Int, a.B)}", "more_vs", "= 2", "d = 2.71"
                     ])
 
+        # f8(<specialized self>)
         process.Continue()
+        # specialized global
         process.Continue()
         self.expect("target variable s",
                     substrs=["vals", "0 = 23", "1 = 2.71"])
 
-        # f8(<specialized self>)
-        #process.Continue()
-        #self.expect("frame variable",
-                    #substrs=["t", "0 = 23", "1 = 2.71"]
-        #            )
-
         # f9(s: S<repeat each T>)
-        #process.Continue()
-        #self.expect("frame variable",
-        #            substrs=["t", "0 = 23", "1 = 2.71"]
-        #            )
+        process.Continue()
+        self.expect("frame variable",
+                    substrs=["t", "0 = 23", "1 = 2.71"]
+                    )
 
         

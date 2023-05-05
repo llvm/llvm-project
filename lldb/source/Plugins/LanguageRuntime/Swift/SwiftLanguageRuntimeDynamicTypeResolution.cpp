@@ -17,6 +17,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
@@ -1657,43 +1658,20 @@ bool SwiftLanguageRuntime::IsSelf(Variable &variable) {
          node_ptr->getKind() == swift::Demangle::Node::Kind::Allocator;
 }
 
-/// Strip off SILPack(In)Direct from a mangled type name.
-static ConstString unwrapSILPackType(ConstString mangledName,
-                                     swift::Demangle::Demangler &demangler,
-                                     TypeSystemSwiftTypeRef &ts,
-                                     bool &indirect) {
-  swift::Demangle::Context dem;
-  auto node = dem.demangleSymbolAsNode(mangledName.GetStringRef());
-  if (!node || node->getKind() != swift::Demangle::Node::Kind::Global)
-    return mangledName;
-  if (node->getNumChildren() != 1)
-    return mangledName;
-  node = node->getChild(0);
-  if (!node || node->getKind() != swift::Demangle::Node::Kind::TypeMangling)
-    return mangledName;
-  if (node->getNumChildren() != 1)
-    return mangledName;
-  node = node->getChild(0);
-  if (!node || node->getKind() != swift::Demangle::Node::Kind::Type)
-    return mangledName;
-  if (node->getNumChildren() != 1)
-    return mangledName;
-  node = node->getChild(0);
-  if (!node)
-    return mangledName;
-
-  indirect = false;
-  if (node->getKind() == swift::Demangle::Node::Kind::SILPackIndirect)
-    indirect = true;
-  if (node->getKind() != swift::Demangle::Node::Kind::SILPackIndirect &&
-      node->getKind() != swift::Demangle::Node::Kind::SILPackDirect)
-    return mangledName;
-
-  if (node->getNumChildren() != 1)
-    return mangledName;
-  node = node->getChild(0);
-
-  return ts.RemangleAsType(demangler, node).GetMangledTypeName();
+static swift::Demangle::NodePointer
+CreatePackType(swift::Demangle::Demangler &dem, TypeSystemSwiftTypeRef &ts,
+               llvm::ArrayRef<TypeSystemSwift::TupleElement> elements) {
+  auto *pack = dem.createNode(Node::Kind::Pack);
+  for (const auto &element : elements) {
+    auto *type = dem.createNode(Node::Kind::Type);
+    auto *element_type = swift_demangle::GetDemangledType(
+        dem, element.element_type.GetMangledTypeName().GetStringRef());
+    if (!element_type)
+      return {};
+    type->addChild(element_type, dem);
+    pack->addChild(type, dem);
+  }
+  return pack;
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
@@ -1732,165 +1710,207 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Pack(
     if (info->expanded)
       return false;
 
-  bool indirect = false;
-  swift::Demangle::Demangler dem;
-  ConstString mangled_pack_type = pack_type.GetMangledTypeName();
-  mangled_pack_type = unwrapSILPackType(mangled_pack_type, dem, *ts, indirect);
-
-  // Find pack_type in the pack_expansions.
-  unsigned i = 0;
   Target &target = m_process.GetTarget();
   size_t ptr_size = m_process.GetAddressByteSize();
-  SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
-      nullptr;
-  for (auto &pe : signature->pack_expansions) {
-    if (pe.mangled_type == mangled_pack_type) {
-      pack_expansion = &pe;
-      break;
+  
+  swift::Demangle::Demangler dem;
+
+  auto expand_pack_type = [&](ConstString mangled_pack_type,
+                              bool indirect) -> swift::Demangle::NodePointer {
+    // Find pack_type in the pack_expansions.
+    unsigned i = 0;
+    SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
+        nullptr;
+    for (auto &pe : signature->pack_expansions) {
+      if (pe.mangled_type == mangled_pack_type) {
+        pack_expansion = &pe;
+        break;
+      }
+      ++i;
     }
-    ++i;
-  }
-  if (!pack_expansion) {
-    LLDB_LOGF(log, "cannot decode pack_expansion type: failed to find a "
-                   "matching type in the function signature");
-    return false;
-  }
+    if (!pack_expansion) {
+      LLDB_LOGF(log, "cannot decode pack_expansion type: failed to find a "
+                     "matching type in the function signature");
+      return {};
+    }
 
-  // Extract the count.
-  llvm::SmallString<16> buf;
-  llvm::raw_svector_ostream os(buf);
-  os << "$pack_count_" << signature->GetCountForValuePack(i);
-  StringRef count_var = os.str();
-  llvm::Optional<lldb::addr_t> count =
-      GetTypeMetadataForTypeNameAndFrame(count_var, *frame);
-  if (!count) {
-    LLDB_LOGF(log,
-              "cannot decode pack_expansion type: failed to find count "
-              "argument \"%s\" in frame",
-              count_var.str().c_str());
-    return false;
-  }
+    // Extract the count.
+    llvm::SmallString<16> buf;
+    llvm::raw_svector_ostream os(buf);
+    os << "$pack_count_" << signature->GetCountForValuePack(i);
+    StringRef count_var = os.str();
+    llvm::Optional<lldb::addr_t> count =
+        GetTypeMetadataForTypeNameAndFrame(count_var, *frame);
+    if (!count) {
+      LLDB_LOGF(log,
+                "cannot decode pack_expansion type: failed to find count "
+                "argument \"%s\" in frame",
+                count_var.str().c_str());
+      return {};
+    }
 
-  // Extract the metadata for the type packs in this value pack.
-  llvm::SmallDenseMap<std::pair<unsigned, unsigned>, lldb::addr_t> type_packs;
-  swift::Demangle::NodePointer dem_pack_type =
-      dem.demangleSymbol(mangled_pack_type.GetStringRef());
-  auto shape = signature->generic_params[pack_expansion->shape];
-  // Filter out all type packs in this value pack.
-  bool error = false;
-  ForEachGenericParameter(dem_pack_type, [&](unsigned depth, unsigned index) {
-    if (type_packs.count({depth, index}))
-      return;
-    for (auto p : shape.same_shape.set_bits()) {
-      // If a generic parameter that shows up in the
-      // pack_expansion has the same shape as the pack expansion
-      // it's a type pack.
-      auto &generic_param = signature->generic_params[p];
-      if (generic_param.depth == depth && generic_param.index == index) {
-        llvm::SmallString<16> buf;
-        llvm::raw_svector_ostream os(buf);
-        os << u8"$\u03C4_" << shape.depth << '_' << shape.index;
-        StringRef mds_var = os.str();
-        llvm::Optional<lldb::addr_t> mds_ptr =
-            GetTypeMetadataForTypeNameAndFrame(mds_var, *frame);
-        if (!mds_ptr) {
-          LLDB_LOGF(log,
-                    "cannot decode pack_expansion type: failed to find "
-                    "metadata "
-                    "for \"%s\" in frame",
-                    mds_var.str().c_str());
-          error = true;
-          return;
+    // Extract the metadata for the type packs in this value pack.
+    llvm::SmallDenseMap<std::pair<unsigned, unsigned>, lldb::addr_t> type_packs;
+    swift::Demangle::NodePointer dem_pack_type =
+        dem.demangleSymbol(mangled_pack_type.GetStringRef());
+    auto shape = signature->generic_params[pack_expansion->shape];
+    // Filter out all type packs in this value pack.
+    bool error = false;
+    ForEachGenericParameter(dem_pack_type, [&](unsigned depth, unsigned index) {
+      if (type_packs.count({depth, index}))
+        return;
+      for (auto p : shape.same_shape.set_bits()) {
+        // If a generic parameter that shows up in the
+        // pack_expansion has the same shape as the pack expansion
+        // it's a type pack.
+        auto &generic_param = signature->generic_params[p];
+        if (generic_param.depth == depth && generic_param.index == index) {
+          llvm::SmallString<16> buf;
+          llvm::raw_svector_ostream os(buf);
+          os << u8"$\u03C4_" << shape.depth << '_' << shape.index;
+          StringRef mds_var = os.str();
+          llvm::Optional<lldb::addr_t> mds_ptr =
+              GetTypeMetadataForTypeNameAndFrame(mds_var, *frame);
+          if (!mds_ptr) {
+            LLDB_LOGF(log,
+                      "cannot decode pack_expansion type: failed to find "
+                      "metadata "
+                      "for \"%s\" in frame",
+                      mds_var.str().c_str());
+            error = true;
+            return;
+          }
+          type_packs.insert({{depth, index}, *mds_ptr});
         }
-        type_packs.insert({{depth, index}, *mds_ptr});
       }
-    }
-  });
-  if (error)
-    return false;
+    });
+    if (error)
+      return {};
 
-  // Walk the type packs.
-  std::vector<TypeSystemSwift::TupleElement> elements;
-  for (unsigned j = 0; j < *count; ++j) {
+    // Walk the type packs.
+    std::vector<TypeSystemSwift::TupleElement> elements;
+    for (unsigned j = 0; j < *count; ++j) {
 
-    // Build the list of type substitutions.
-    swift::reflection::GenericArgumentMap substitutions;
-    for (auto it : type_packs) {
-      unsigned depth = it.first.first;
-      unsigned index = it.first.second;
-      lldb::addr_t md_ptr = it.second + j * ptr_size;
+      // Build the list of type substitutions.
+      swift::reflection::GenericArgumentMap substitutions;
+      for (auto it : type_packs) {
+        unsigned depth = it.first.first;
+        unsigned index = it.first.second;
+        lldb::addr_t md_ptr = it.second + j * ptr_size;
 
-      // Read the type metadata pointer.
-      Status status;
-      lldb::addr_t md = LLDB_INVALID_ADDRESS;
-      target.ReadMemory(md_ptr, &md, ptr_size, status, true);
-      if (!status.Success()) {
-        LLDB_LOGF(log,
-                  "cannot decode pack_expansion type: failed to read type "
-                  "pack for type %d/%d of type pack with shape %d %d",
-                  j, (unsigned)*count, depth, index);
-        return false;
+        // Read the type metadata pointer.
+        Status status;
+        lldb::addr_t md = LLDB_INVALID_ADDRESS;
+        target.ReadMemory(md_ptr, &md, ptr_size, status, true);
+        if (!status.Success()) {
+          LLDB_LOGF(log,
+                    "cannot decode pack_expansion type: failed to read type "
+                    "pack for type %d/%d of type pack with shape %d %d",
+                    j, (unsigned)*count, depth, index);
+          return {};
+        }
+
+        auto *type_ref = reflection_ctx->readTypeFromMetadata(md);
+        if (!type_ref) {
+          LLDB_LOGF(log,
+                    "cannot decode pack_expansion type: failed to decode type "
+                    "metadata for type %d/%d of type pack with shape %d %d",
+                    j, (unsigned)*count, depth, index);
+          return {};
+        }
+        substitutions.insert({{depth, index}, type_ref});
       }
+      if (substitutions.empty())
+        return {};
 
-      auto *type_ref = reflection_ctx->readTypeFromMetadata(md);
-      if (!type_ref) {
-        LLDB_LOGF(log,
-                  "cannot decode pack_expansion type: failed to decode type "
-                  "metadata for type %d/%d of type pack with shape %d %d",
-                  j, (unsigned)*count, depth, index);
-        return false;
+      // Replace all pack expansions with a singular type. Otherwise the
+      // reflection context won't accept them.
+      NodePointer pack_element = TypeSystemSwiftTypeRef::Transform(
+          dem, dem_pack_type, [](NodePointer node) {
+            if (node->getKind() != Node::Kind::PackExpansion)
+              return node;
+            assert(node->getNumChildren() == 2);
+            if (node->getNumChildren() != 2)
+              return node;
+            return node->getChild(0);
+          });
+
+      // Build a TypeRef from the demangle tree.
+      auto typeref_or_err =
+          decodeMangledType(reflection_ctx->getBuilder(), pack_element);
+      if (typeref_or_err.isError()) {
+        LLDB_LOGF(log, "Couldn't get TypeRef for %s",
+                  pack_type.GetMangledTypeName().GetCString());
+        return {};
       }
-      substitutions.insert({{depth, index}, type_ref});
+      auto typeref = typeref_or_err.getType();
+
+      // Apply the substitutions.
+      auto bound_typeref =
+          typeref->subst(reflection_ctx->getBuilder(), substitutions);
+      swift::Demangle::NodePointer node = bound_typeref->getDemangling(dem);
+      CompilerType type = ts->RemangleAsType(dem, node);
+
+      // Add the substituted type to the tuple.
+      elements.push_back({{}, type});
     }
-    if (substitutions.empty())
-      return false;
-
-    // Replace all pack expansions with a singular type. Otherwise the
-    // reflection context won't accept them.
-    NodePointer pack_element = TypeSystemSwiftTypeRef::Transform(
-        dem, dem_pack_type, [](NodePointer node) {
-          if (node->getKind() != Node::Kind::PackExpansion)
-            return node;
-          assert(node->getNumChildren() == 2);
-          if (node->getNumChildren() != 2)
-            return node;
-          return node->getChild(0);
-        });
-
-    // Build a TypeRef from the demangle tree.
-    auto typeref_or_err =
-        decodeMangledType(reflection_ctx->getBuilder(), pack_element);
-    if (typeref_or_err.isError()) {
-      LLDB_LOGF(log, "Couldn't get TypeRef for %s",
-               pack_type.GetMangledTypeName().GetCString());
-      return false;
+    if (indirect) {
+      // Create a tuple type with all the concrete types in the pack.
+      CompilerType tuple = ts->CreateTupleType(elements);
+      // TODO: Remove unnecessary mangling roundtrip.
+      // Wrap the type inside a SILPackType to mark it for GetChildAtIndex.
+      CompilerType sil_pack_type = ts->CreateSILPackType(tuple, indirect);
+      swift::Demangle::NodePointer global =
+          dem.demangleSymbol(sil_pack_type.GetMangledTypeName().GetStringRef());
+      using Kind = Node::Kind;
+      auto *dem_sil_pack_type =
+          swift_demangle::nodeAtPath(global, {Kind::TypeMangling, Kind::Type});
+      return dem_sil_pack_type;
+    } else {
+      return CreatePackType(dem, *ts, elements);
     }
-    auto typeref = typeref_or_err.getType();
+  };
 
-    // Apply the substitutions.
-    auto bound_typeref =
-        typeref->subst(reflection_ctx->getBuilder(), substitutions);
-    swift::Demangle::NodePointer node = bound_typeref->getDemangling(dem);
-    CompilerType type = ts->RemangleAsType(dem, node);
+  swift::Demangle::Context dem_ctx;
+  auto node = dem_ctx.demangleSymbolAsNode(
+      pack_type.GetMangledTypeName().GetStringRef());
 
-    // Add the substituted type to the tuple.
-    elements.push_back({{}, type});
-  }
-  // Create a tuple type with all the concrete types in the pack.
-  CompilerType tuple = ts->CreateTupleType(elements);
-  // Wrap the type inside a SILPackType to mark it for GetChildAtIndex.
-  CompilerType sil_pack_type = ts->CreateSILPackType(tuple, indirect);
-  pack_type_or_name.SetCompilerType(sil_pack_type);
-  LLDB_LOGF(log, "decoded pack_expansion type: %s",
-            tuple.GetMangledTypeName().GetCString());
+  // Expand all the pack types that appear in the incoming type,
+  // either at the root level or as arguments of bound generic types.
+  bool indirect = false;
+  auto transformed = TypeSystemSwiftTypeRef::Transform(
+      dem, node, [&](swift::Demangle::NodePointer node) {
+        if (node->getKind() == swift::Demangle::Node::Kind::SILPackIndirect)
+          indirect = true;
+        if (node->getKind() != swift::Demangle::Node::Kind::SILPackIndirect &&
+            node->getKind() != swift::Demangle::Node::Kind::SILPackDirect &&
+            node->getKind() != swift::Demangle::Node::Kind::Pack)
+          return node;
+
+        if (node->getNumChildren() != 1)
+          return node;
+        node = node->getChild(0);
+        CompilerType pack_type = ts->RemangleAsType(dem, node);
+        ConstString mangled_pack_type = pack_type.GetMangledTypeName();
+        LLDB_LOG(log, "decoded pack_expansion type: {0}", mangled_pack_type);
+        auto result = expand_pack_type(mangled_pack_type, indirect);
+        if (!result) {
+          LLDB_LOG(log, "failed to expand pack type: {0}", mangled_pack_type);
+          return node;
+        }
+        return result;
+      });
+
+  CompilerType expanded_type = ts->RemangleAsType(dem, transformed);
+  pack_type_or_name.SetCompilerType(expanded_type);
 
   lldb::addr_t addr = in_value.GetAddressOf();
   if (indirect) {
     Status status;
     addr = m_process.ReadPointerFromMemory(addr, status);
     if (status.Fail()) {
-      LLDB_LOGF(log, "failed to dereference indirect pack: %s",
-                tuple.GetMangledTypeName().GetCString());
+      LLDB_LOG(log, "failed to dereference indirect pack: {0}",
+               expanded_type.GetMangledTypeName());
       return false;
     }
   }
@@ -3129,31 +3149,30 @@ TypeAndOrName SwiftLanguageRuntimeImpl::FixUpDynamicType(
 
 bool SwiftLanguageRuntimeImpl::IsTaggedPointer(lldb::addr_t addr,
                                                CompilerType type) {
-  swift::CanType swift_can_type = GetCanonicalSwiftType(type);
-  if (!swift_can_type)
+  Demangler dem;
+  auto *root = dem.demangleSymbol(type.GetMangledTypeName().GetStringRef());
+  using Kind = Node::Kind;
+  auto *unowned_node = swift_demangle::nodeAtPath(
+      root, {Kind::TypeMangling, Kind::Type, Kind::Unowned});
+  if (!unowned_node)
     return false;
-  switch (swift_can_type->getKind()) {
-  case swift::TypeKind::UnownedStorage: {
-    Target &target = m_process.GetTarget();
-    llvm::Triple triple = target.GetArchitecture().GetTriple();
-    // On Darwin the Swift runtime stores unowned references to
-    // Objective-C objects as a pointer to a struct that has the
-    // actual object pointer at offset zero. The least significant bit
-    // of the reference pointer indicates whether the reference refers
-    // to an Objective-C or Swift object.
-    //
-    // This is a property of the Swift runtime(!). In the future it
-    // may be necessary to check for the version of the Swift runtime
-    // (or indirectly by looking at the version of the remote
-    // operating system) to determine how to interpret references.
-    if (triple.isOSDarwin())
-      // Check whether this is a reference to an Objective-C object.
-      if ((addr & 1) == 1)
-        return true;
-  } break;
-  default:
-    break;
-  }
+
+  Target &target = m_process.GetTarget();
+  llvm::Triple triple = target.GetArchitecture().GetTriple();
+  // On Darwin the Swift runtime stores unowned references to
+  // Objective-C objects as a pointer to a struct that has the
+  // actual object pointer at offset zero. The least significant bit
+  // of the reference pointer indicates whether the reference refers
+  // to an Objective-C or Swift object.
+  //
+  // This is a property of the Swift runtime(!). In the future it
+  // may be necessary to check for the version of the Swift runtime
+  // (or indirectly by looking at the version of the remote
+  // operating system) to determine how to interpret references.
+  if (triple.isOSDarwin())
+    // Check whether this is a reference to an Objective-C object.
+    if ((addr & 1) == 1)
+      return true;
   return false;
 }
 
