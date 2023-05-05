@@ -705,18 +705,10 @@ function(add_libc_test test_name)
     "" # Multi-value arguments
     ${ARGN}
   )
-  get_fq_target_name(${test_name} fq_target_name)
-  if(LIBC_TEST_UNIT_TEST_ONLY AND LIBC_TEST_HERMETIC_TEST_ONLY)
-    message(FATAL_ERROR
-            "${fq_target_name}: Only one of UNIT_TEST_ONLY and HERMETIC_TEST_ONLY can be listed.")
-  endif()
-  add_custom_target(${fq_target_name})
   if(LIBC_ENABLE_UNITTESTS AND NOT LIBC_TEST_HERMETIC_TEST_ONLY)
     add_libc_unittest(${test_name}.__unit__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
-    add_dependencies(${fq_target_name} ${fq_target_name}.__unit__)
   endif()
   if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
     add_libc_hermetic_test(${test_name}.__hermetic__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
-    add_dependencies(${fq_target_name} ${fq_target_name}.__hermetic__)
   endif()
 endfunction(add_libc_test)
