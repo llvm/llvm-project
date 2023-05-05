@@ -199,7 +199,7 @@ class SANITIZER_MUTEX HwasanThreadList {
     CHECK(IsAligned(free_space_, align));
     Thread *t = (Thread *)(free_space_ + ring_buffer_size_);
     free_space_ += thread_alloc_size_;
-    CHECK(free_space_ <= free_space_end_ && "out of thread memory");
+    CHECK_LE(free_space_, free_space_end_);
     return t;
   }
 

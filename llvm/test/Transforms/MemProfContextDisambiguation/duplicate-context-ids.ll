@@ -52,6 +52,9 @@
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
+;; -stats requires asserts
+; REQUIRES: asserts
+
 ; RUN: opt -passes=memprof-context-disambiguation \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \

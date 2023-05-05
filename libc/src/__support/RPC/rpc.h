@@ -101,14 +101,61 @@ template <bool InvertInbox> struct Process {
     return InvertInbox ? !i : i;
   }
 
-  /// Determines if this process owns the buffer for a send.
-  LIBC_INLINE static bool can_send_data(uint32_t in, uint32_t out) {
-    return in == out;
+  /// Determines if this process needs to wait for ownership of the buffer.
+  LIBC_INLINE static bool buffer_unavailable(uint32_t in, uint32_t out) {
+    return in != out;
   }
 
-  /// Determines if this process owns the buffer for a receive.
-  LIBC_INLINE static bool can_recv_data(uint32_t in, uint32_t out) {
-    return in == out;
+  /// Attempt to claim the lock at index. Return true on lock taken.
+  /// lane_mask is a bitmap of the threads in the warp that would hold the
+  /// single lock on success, e.g. the result of gpu::get_lane_mask()
+  /// The lock is held when the zeroth bit of the uint32_t at lock[index]
+  /// is set, and available when that bit is clear. Bits [1, 32) are zero.
+  /// Or with one is a no-op when the lock is already held.
+  [[clang::convergent]] LIBC_INLINE bool try_lock(uint64_t lane_mask,
+                                                  uint64_t index) {
+    // On amdgpu, test and set to lock[index] and a sync_lane would suffice
+    // On volta, need to handle differences between the threads running and
+    // the threads that were detected in the previous call to get_lane_mask()
+    //
+    // All threads in lane_mask try to claim the lock. At most one can succeed.
+    // There may be threads active which are not in lane mask which must not
+    // succeed in taking the lock, as otherwise it will leak. This is handled
+    // by making threads which are not in lane_mask or with 0, a no-op.
+    uint32_t id = gpu::get_lane_id();
+    bool id_in_lane_mask = lane_mask & (1ul << id);
+
+    // All threads in the warp call fetch_or. Possibly at the same time.
+    bool before =
+        lock[index].fetch_or(id_in_lane_mask, cpp::MemoryOrder::RELAXED);
+    uint64_t packed = gpu::ballot(lane_mask, before);
+
+    // If every bit set in lane_mask is also set in packed, every single thread
+    // in the warp failed to get the lock. Ballot returns unset for threads not
+    // in the lane mask.
+    //
+    // Cases, per thread:
+    // mask==0 -> unspecified before, discarded by ballot -> 0
+    // mask==1 and before==0 (success), set zero by ballot -> 0
+    // mask==1 and before==1 (failure), set one by ballot -> 1
+    //
+    // mask != packed implies at least one of the threads got the lock
+    // atomic semantics of fetch_or mean at most one of the threads for the lock
+    return lane_mask != packed;
+  }
+
+  // Unlock the lock at index.
+  [[clang::convergent]] LIBC_INLINE void unlock(uint64_t lane_mask,
+                                                uint64_t index) {
+    // Wait for other threads in the warp to finish using the lock
+    gpu::sync_lane(lane_mask);
+
+    // Use exactly one thread to clear the bit at position 0 in lock[index]
+    // Must restrict to a single thread to avoid one thread dropping the lock,
+    // then an unrelated warp claiming the lock, then a second thread in this
+    // warp dropping the lock again.
+    uint32_t and_mask = ~(rpc::is_first_lane(lane_mask) ? 1 : 0);
+    lock[index].fetch_and(and_mask, cpp::MemoryOrder::RELAXED);
   }
 };
 
@@ -117,8 +164,9 @@ template <bool InvertInbox> struct Process {
 /// underlying process that is guarded by a lock bit.
 template <bool T> struct Port {
   // TODO: This should be move-only.
-  LIBC_INLINE Port(Process<T> &process, uint64_t index, uint32_t out)
-      : process(process), index(index), out(out) {}
+  LIBC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint64_t index,
+                   uint32_t out)
+      : process(process), lane_mask(lane_mask), index(index), out(out) {}
   LIBC_INLINE Port(const Port &) = default;
   LIBC_INLINE Port &operator=(const Port &) = delete;
   LIBC_INLINE ~Port() = default;
@@ -135,12 +183,11 @@ template <bool T> struct Port {
     return process.buffer[index].opcode;
   }
 
-  LIBC_INLINE void close() {
-    process.lock[index].store(0, cpp::MemoryOrder::RELAXED);
-  }
+  LIBC_INLINE void close() { process.unlock(lane_mask, index); }
 
 private:
   Process<T> &process;
+  uint64_t lane_mask;
   uint64_t index;
   uint32_t out;
 };
@@ -174,7 +221,7 @@ template <bool T> template <typename F> LIBC_INLINE void Port<T>::send(F fill) {
   uint32_t in = process.load_inbox(index);
 
   // We need to wait until we own the buffer before sending.
-  while (!Process<T>::can_send_data(in, out)) {
+  while (Process<T>::buffer_unavailable(in, out)) {
     sleep_briefly();
     in = process.load_inbox(index);
   }
@@ -191,7 +238,7 @@ template <bool T> template <typename U> LIBC_INLINE void Port<T>::recv(U use) {
   uint32_t in = process.load_inbox(index);
 
   // We need to wait until we own the buffer before receiving.
-  while (!Process<T>::can_recv_data(in, out)) {
+  while (Process<T>::buffer_unavailable(in, out)) {
     sleep_briefly();
     in = process.load_inbox(index);
   }
@@ -262,8 +309,10 @@ LIBC_INLINE void Port<T>::recv_n(A alloc) {
 /// port instance uses an associated \p opcode to tell the server what to do.
 LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
   constexpr uint64_t index = 0;
+  const uint64_t lane_mask = gpu::get_lane_mask();
+
   // Attempt to acquire the lock on this index.
-  if (lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED))
+  if (!try_lock(lane_mask, index))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
@@ -274,13 +323,14 @@ LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
 
   // Once we acquire the index we need to check if we are in a valid sending
   // state.
-  if (!can_send_data(in, out)) {
-    lock[index].store(0, cpp::MemoryOrder::RELAXED);
+
+  if (buffer_unavailable(in, out)) {
+    unlock(lane_mask, index);
     return cpp::nullopt;
   }
 
   buffer->opcode = opcode;
-  return Port(*this, index, out);
+  return Port(*this, lane_mask, index, out);
 }
 
 LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
@@ -295,16 +345,18 @@ LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
 /// port if it has a pending receive operation
 LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
   constexpr uint64_t index = 0;
+  const uint64_t lane_mask = gpu::get_lane_mask();
+
   uint32_t in = load_inbox(index);
   uint32_t out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
   // The server is passive, if there is no work pending don't bother
   // opening a port.
-  if (!can_recv_data(in, out))
+  if (buffer_unavailable(in, out))
     return cpp::nullopt;
 
   // Attempt to acquire the lock on this index.
-  if (lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED))
+  if (!try_lock(lane_mask, index))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
@@ -313,12 +365,12 @@ LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
   in = load_inbox(index);
   out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
-  if (!can_recv_data(in, out)) {
-    lock[index].store(0, cpp::MemoryOrder::RELAXED);
+  if (buffer_unavailable(in, out)) {
+    unlock(lane_mask, index);
     return cpp::nullopt;
   }
 
-  return Port(*this, index, out);
+  return Port(*this, lane_mask, index, out);
 }
 
 LIBC_INLINE Server::Port Server::open() {

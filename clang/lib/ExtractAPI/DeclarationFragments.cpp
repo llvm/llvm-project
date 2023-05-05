@@ -457,7 +457,7 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   Fragments.append(")", DeclarationFragments::FragmentKind::Text);
 
   // FIXME: Handle exception specifiers: throw, noexcept
-  return Fragments;
+  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForEnumConstant(

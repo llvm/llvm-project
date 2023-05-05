@@ -33,6 +33,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/CXXFieldCollector.h"
 #include "clang/Sema/DelayedDiagnostic.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ExternalSemaSource.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/MultiplexExternalSemaSource.h"
@@ -2168,7 +2169,7 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
       new (S.Context) DeclRefExpr(S.Context, VD, false, T, VK_LValue, Loc);
   ExprResult Result;
   auto IE = InitializedEntity::InitializeBlock(Loc, T);
-  if (S.getLangOpts().CPlusPlus2b) {
+  if (S.getLangOpts().CPlusPlus23) {
     auto *E = ImplicitCastExpr::Create(S.Context, T, CK_NoOp, VarRef, nullptr,
                                        VK_XValue, FPOptionsOverride());
     Result = S.PerformCopyInitialization(IE, SourceLocation(), E);

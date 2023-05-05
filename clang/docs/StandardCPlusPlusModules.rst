@@ -434,7 +434,7 @@ The following example is not allowed:
 .. code-block:: console
 
   $ clang++ -std=c++20 M.cppm --precompile -o M.pcm
-  $ clang++ -std=c++2b Use.cpp -fprebuilt-module-path=.
+  $ clang++ -std=c++23 Use.cpp -fprebuilt-module-path=.
 
 The compiler would reject the example due to the inconsistent language options.
 Not all options are language options.
@@ -611,7 +611,7 @@ The following describes issues in the current implementation of modules.
 Please see https://github.com/llvm/llvm-project/labels/clang%3Amodules for more issues
 or file a new issue if you don't find an existing one.
 If you're going to create a new issue for standard C++ modules,
-please start the title with ``[C++20] [Modules]`` (or ``[C++2b] [Modules]``, etc)
+please start the title with ``[C++20] [Modules]`` (or ``[C++23] [Modules]``, etc)
 and add the label ``clang:modules`` (if you have permissions for that).
 
 For higher level support for proposals, you could visit https://clang.llvm.org/cxx_status.html.

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify %s
 
 namespace PR61118 {
 

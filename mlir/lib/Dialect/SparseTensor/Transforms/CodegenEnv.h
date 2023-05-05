@@ -86,6 +86,25 @@ public:
   }
 
   //
+  // LoopEmitter delegates.
+  //
+
+  TensorLevel makeTensorLevel(TensorId t, Level l) const {
+    // Make sure LoopEmitter, GenericOp, and Merger agree on the number of
+    // tensors. Merger has one more synthetic tensor for loop invariants.
+    assert(loopEmitter.getNumTensors() == linalgOp->getNumOperands() &&
+           loopEmitter.getNumTensors() == latticeMerger.getNumTensors() - 1);
+    return loopEmitter.makeTensorLevel(t, l);
+  }
+  std::pair<TensorId, Level> unpackTensorLevel(TensorLevel tl) const {
+    return loopEmitter.unpackTensorLevel(tl);
+  }
+  template <class ContainerTy>
+  auto unpackTensorLevelRange(ContainerTy &&c) const {
+    return loopEmitter.unpackTensorLevelRange(std::forward<ContainerTy>(c));
+  }
+
+  //
   // Code generation environment verify functions.
   //
 

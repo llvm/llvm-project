@@ -191,7 +191,7 @@ char unavailable __attribute__((unavailable));
         },
         {
           "kind": "text",
-          "spelling": ")"
+          "spelling": ");"
         }
       ],
       "docComment": {
