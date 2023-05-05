@@ -698,6 +698,9 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
     if (!Cmp)
       continue;
 
+    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+      continue;
+
     // We are attempting to compute known bits for the operands of an assume.
     // Do not try to use other assumptions for those recursive calls because
     // that can lead to mutual recursion and a compile-time explosion.
@@ -718,16 +721,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_EQ:
       // assume(v = a)
-      if (match(Cmp, m_c_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_c_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         Known.Zero |= RHSKnown.Zero;
         Known.One  |= RHSKnown.One;
       // assume(v & b = a)
       } else if (match(Cmp,
-                       m_c_ICmp(Pred, m_c_And(m_V, m_Value(B)), m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+                       m_c_ICmp(Pred, m_c_And(m_V, m_Value(B)), m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         KnownBits MaskKnown =
@@ -739,8 +740,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         Known.One  |= RHSKnown.One  & MaskKnown.One;
       // assume(~(v & b) = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_And(m_V, m_Value(B))),
-                                     m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+                                     m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         KnownBits MaskKnown =
@@ -752,8 +752,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         Known.One  |= RHSKnown.Zero & MaskKnown.One;
       // assume(v | b = a)
       } else if (match(Cmp,
-                       m_c_ICmp(Pred, m_c_Or(m_V, m_Value(B)), m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+                       m_c_ICmp(Pred, m_c_Or(m_V, m_Value(B)), m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         KnownBits BKnown =
@@ -765,8 +764,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         Known.One  |= RHSKnown.One  & BKnown.Zero;
       // assume(~(v | b) = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_Or(m_V, m_Value(B))),
-                                     m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+                                     m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         KnownBits BKnown =
@@ -778,8 +776,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         Known.One  |= RHSKnown.Zero & BKnown.Zero;
       // assume(v ^ b = a)
       } else if (match(Cmp,
-                       m_c_ICmp(Pred, m_c_Xor(m_V, m_Value(B)), m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+                       m_c_ICmp(Pred, m_c_Xor(m_V, m_Value(B)), m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         KnownBits BKnown =
@@ -794,8 +791,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
         Known.One  |= RHSKnown.Zero & BKnown.One;
       // assume(~(v ^ b) = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_Xor(m_V, m_Value(B))),
-                                     m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+                                     m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         KnownBits BKnown =
@@ -811,7 +807,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       // assume(v << c = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Shl(m_V, m_ConstantInt(C)),
                                      m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT) && C < BitWidth) {
+                 C < BitWidth) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -824,7 +820,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       // assume(~(v << c) = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shl(m_V, m_ConstantInt(C))),
                                      m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT) && C < BitWidth) {
+                 C < BitWidth) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         // For those bits in RHS that are known, we can propagate them inverted
@@ -836,7 +832,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       // assume(v >> c = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Shr(m_V, m_ConstantInt(C)),
                                      m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT) && C < BitWidth) {
+                 C < BitWidth) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         // For those bits in RHS that are known, we can propagate them to known
@@ -846,7 +842,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       // assume(~(v >> c) = a)
       } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shr(m_V, m_ConstantInt(C))),
                                      m_Value(A))) &&
-                 isValidAssumeForContext(I, Q.CxtI, Q.DT) && C < BitWidth) {
+                 C < BitWidth) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
         // For those bits in RHS that are known, we can propagate them inverted
@@ -857,8 +853,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_SGE:
       // assume(v >=_s c) where c is non-negative
-      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -870,8 +865,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_SGT:
       // assume(v >_s c) where c is at least -1.
-      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -883,8 +877,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_SLE:
       // assume(v <=_s c) where c is negative
-      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -896,8 +889,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_SLT:
       // assume(v <_s c) where c is non-positive
-      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -909,8 +901,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_ULE:
       // assume(v <=_u c)
-      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -920,8 +911,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       break;
     case ICmpInst::ICMP_ULT:
       // assume(v <_u c)
-      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A))) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
         KnownBits RHSKnown =
             computeKnownBits(A, Depth+1, QueryNoAC).anyextOrTrunc(BitWidth);
 
@@ -944,8 +934,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
     case ICmpInst::ICMP_NE: {
       // assume (v & b != 0) where b is a power of 2
       const APInt *BPow2;
-      if (match(Cmp, m_ICmp(Pred, m_c_And(m_V, m_Power2(BPow2)), m_Zero())) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (match(Cmp, m_ICmp(Pred, m_c_And(m_V, m_Power2(BPow2)), m_Zero()))) {
         Known.One |= BPow2->zextOrTrunc(BitWidth);
       }
     } break;
