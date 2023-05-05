@@ -979,6 +979,26 @@ static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
   return memVTFromLoadIntrData(ST->getContainedType(0), MaxNumLanes);
 }
 
+/// Map address space 7 to MVT::v5i32 because that's its in-memory
+/// representation. This return value is vector-typed because there is no
+/// MVT::i160 and it is not clear if one can be added. While this could
+/// cause issues during codegen, these address space 7 pointers will be
+/// rewritten away by then. Therefore, we can return MVT::v5i32 in order
+/// to allow pre-codegen passes that query TargetTransformInfo, often for cost
+/// modeling, to work.
+MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
+  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+    return MVT::v5i32;
+  return AMDGPUTargetLowering::getPointerTy(DL, AS);
+}
+/// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
+/// v8i32 when padding is added.
+MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
+  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+    return MVT::v8i32;
+  return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
+}
+
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
