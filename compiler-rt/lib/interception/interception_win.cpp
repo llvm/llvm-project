@@ -141,8 +141,27 @@ static const int kBranchLength =
     FIRST_32_SECOND_64(kJumpInstructionLength, kIndirectJumpInstructionLength);
 static const int kDirectBranchLength = kBranchLength + kAddressLength;
 
+#  if defined(_MSC_VER)
+#    define INTERCEPTION_FORMAT(f, a)
+#  else
+#    define INTERCEPTION_FORMAT(f, a) __attribute__((format(printf, f, a)))
+#  endif
+
+static void (*ErrorReportCallback)(const char *format, ...)
+    INTERCEPTION_FORMAT(1, 2);
+
+void SetErrorReportCallback(void (*callback)(const char *format, ...)) {
+  ErrorReportCallback = callback;
+}
+
+#  define ReportError(...)                \
+    do {                                  \
+      if (ErrorReportCallback)            \
+        ErrorReportCallback(__VA_ARGS__); \
+    } while (0)
+
 static void InterceptionFailed() {
-  // Do we have a good way to abort with an error message here?
+  ReportError("interception_win: failed due to an unrecoverable error.\n");
   // This acts like an abort when no debugger is attached. According to an old
   // comment, calling abort() leads to an infinite recursion in CheckFailed.
   __debugbreak();
@@ -657,10 +676,18 @@ static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   }
 #endif
 
-  // Unknown instruction!
-  // FIXME: Unknown instruction failures might happen when we add a new
-  // interceptor or a new compiler version. In either case, they should result
-  // in visible and readable error messages.
+  // Unknown instruction! This might happen when we add a new interceptor, use
+  // a new compiler version, or if Windows changed how some functions are
+  // compiled. In either case, we print the address and 8 bytes of instructions
+  // to notify the user about the error and to help identify the unknown
+  // instruction. Don't treat this as a fatal error, though we can break the
+  // debugger if one has been attached.
+  u8 *bytes = (u8 *)address;
+  ReportError(
+      "interception_win: unhandled instruction at %p: %02x %02x %02x %02x %02x "
+      "%02x %02x %02x\n",
+      (void *)address, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
+      bytes[5], bytes[6], bytes[7]);
   if (::IsDebuggerPresent())
     __debugbreak();
   return 0;
