@@ -10,6 +10,7 @@
 #define ASAN_TESTING_H
 
 #include "test_macros.h"
+#include <vector>
 
 #if TEST_HAS_FEATURE(address_sanitizer)
 extern "C" int __sanitizer_verify_contiguous_container
@@ -25,14 +26,34 @@ TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, 
             c.data(), c.data() + c.size(), c.data() + c.capacity()) != 0;
     return true;
 }
-
 #else
 template <typename T, typename Alloc>
 TEST_CONSTEXPR bool is_contiguous_container_asan_correct ( const std::vector<T, Alloc> &)
 {
     return true;
 }
-#endif
+#endif // TEST_HAS_FEATURE(address_sanitizer)
 
+#if TEST_HAS_FEATURE(address_sanitizer) && _LIBCPP_CLANG_VER >= 1600
+extern "C" int __sanitizer_verify_double_ended_contiguous_container(
+    const void* beg, const void* con_beg, const void* con_end, const void* end);
+extern "C" bool __sanitizer_is_annotable(const void* address, const unsigned long size);
+#include <deque>
+
+template <class T, class Alloc>
+TEST_CONSTEXPR bool is_double_ended_contiguous_container_asan_correct(const std::deque<T, Alloc>& c) {
+  if (TEST_IS_CONSTANT_EVALUATED)
+    return true;
+  if (std::is_same<Alloc, std::allocator<T> >::value)
+    return c.__verify_asan_annotations();
+  return true;
+}
+#else
+#  include <deque>
+template <class T, class Alloc>
+TEST_CONSTEXPR bool is_double_ended_contiguous_container_asan_correct(const std::deque<T, Alloc>&) {
+  return true;
+}
+#endif
 
 #endif // ASAN_TESTING_H

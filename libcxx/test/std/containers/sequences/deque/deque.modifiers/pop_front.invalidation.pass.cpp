@@ -13,6 +13,7 @@
 //  Erasing items from the beginning or the end of a deque shall not invalidate iterators
 //  to items that were not erased.
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -39,13 +40,14 @@ void test(C c)
 int main(int, char**)
 {
     std::deque<int> queue;
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 4098; ++i)
         queue.push_back(i);
 
     while (queue.size() > 1)
     {
         test(queue);
         queue.pop_back();
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(queue));
     }
 
   return 0;
