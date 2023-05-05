@@ -924,12 +924,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
     if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
+      (void)BitWidth;
       Known.setAllOnes();
       return;
     }
     if (match(Arg, m_Not(m_Specific(V))) &&
         isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
+      (void)BitWidth;
       Known.setAllZero();
       return;
     }
