@@ -43,7 +43,7 @@ namespace std {
 #  pragma GCC system_header
 #endif
 
-#if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -135,7 +135,7 @@ template <class _Tp>
 struct is_execution_policy : bool_constant<is_execution_policy_v<_Tp>> {};
 
 template <class _ExecutionPolicy>
-const auto& __remove_parallel_policy(_ExecutionPolicy&&) {
+_LIBCPP_HIDE_FROM_ABI const auto& __remove_parallel_policy(_ExecutionPolicy&&) {
   using _ExecPol = __remove_cvref_t<_ExecutionPolicy>;
   if constexpr (is_same_v<_ExecPol, execution::parallel_policy>) {
     return execution::seq;
@@ -146,6 +146,6 @@ const auto& __remove_parallel_policy(_ExecutionPolicy&&) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP_EXECUTION
