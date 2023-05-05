@@ -489,7 +489,13 @@ struct ElementalOpConversion
     : public mlir::OpConversionPattern<hlfir::ElementalOp> {
   using mlir::OpConversionPattern<hlfir::ElementalOp>::OpConversionPattern;
   explicit ElementalOpConversion(mlir::MLIRContext *ctx)
-      : mlir::OpConversionPattern<hlfir::ElementalOp>{ctx} {}
+      : mlir::OpConversionPattern<hlfir::ElementalOp>{ctx} {
+    // This pattern recursively converts nested ElementalOp's
+    // by cloning and then converting them, so we have to allow
+    // for recursive pattern application. The recursion is bounded
+    // by the nesting level of ElementalOp's.
+    setHasBoundedRewriteRecursion();
+  }
   mlir::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -568,9 +574,14 @@ public:
                     EndAssociateOpConversion, NoReassocOpConversion,
                     SetLengthOpConversion, ShapeOfOpConversion>(context);
     mlir::ConversionTarget target(*context);
+    // Note that YieldElementOp is not marked as an illegal operation.
+    // It must be erased by its parent converter and there is no explicit
+    // conversion pattern to YieldElementOp itself. If any YieldElementOp
+    // survives this pass, the verifier will detect it because it has to be
+    // a child of ElementalOp and ElementalOp's are explicitly illegal.
     target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
-                        hlfir::EndAssociateOp, hlfir::SetLengthOp,
-                        hlfir::YieldElementOp>();
+                        hlfir::EndAssociateOp, hlfir::SetLengthOp>();
+
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
       return llvm::all_of(
                  op->getResultTypes(),
