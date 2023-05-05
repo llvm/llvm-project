@@ -312,11 +312,18 @@ bool OptionValue::SetFileSpecValue(FileSpec file_spec) {
   return false;
 }
 
-FileSpecList OptionValue::GetFileSpecListValue() const {
-  const OptionValueFileSpecList *option_value = GetAsFileSpecList();
-  if (option_value)
+bool OptionValue::AppendFileSpecValue(FileSpec file_spec) {
+  if (OptionValueFileSpecList *option_value = GetAsFileSpecList()) {
+    option_value->AppendCurrentValue(file_spec);
+    return true;
+  }
+  return false;
+}
+
+std::optional<FileSpecList> OptionValue::GetFileSpecListValue() const {
+  if (const OptionValueFileSpecList *option_value = GetAsFileSpecList())
     return option_value->GetCurrentValue();
-  return FileSpecList();
+  return {};
 }
 
 std::optional<lldb::Format> OptionValue::GetFormatValue() const {

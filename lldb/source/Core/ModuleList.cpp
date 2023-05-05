@@ -161,9 +161,7 @@ uint64_t ModuleListProperties::GetLLDBIndexCacheExpirationDays() {
 
 void ModuleListProperties::UpdateSymlinkMappings() {
   FileSpecList list =
-      m_collection_sp
-          ->GetPropertyAtIndexAsOptionValueFileSpecList(ePropertySymLinkPaths)
-          ->GetCurrentValue();
+      GetPropertyAtIndexAs<FileSpecList>(ePropertySymLinkPaths, {});
   llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
   const bool notify = false;
   m_symlink_paths.Clear(notify);
