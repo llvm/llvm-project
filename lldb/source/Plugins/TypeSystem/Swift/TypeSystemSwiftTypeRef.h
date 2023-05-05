@@ -265,7 +265,8 @@ public:
                       CompilerType *original_type) override;
   /// Like \p IsImportedType(), but even returns Clang types that are also Swift
   /// builtins (int <-> Swift.Int) as Clang types.
-  CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type);
+  CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type,
+                                    bool *is_imported = nullptr);
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;

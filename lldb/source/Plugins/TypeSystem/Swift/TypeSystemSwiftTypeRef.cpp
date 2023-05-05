@@ -2786,27 +2786,48 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                                               ExecutionContext *exe_ctx) {
   LLDB_SCOPED_TIMER();
   FALLBACK(GetNumFields, (ReconstructType(type), exe_ctx));
-  if (exe_ctx)
-    if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP()))
-      if (auto num_fields =
-              runtime->GetNumFields(GetCanonicalType(type), exe_ctx))
-        // Use a lambda to intercept & unwrap the `Optional` return value from
-        // `SwiftLanguageRuntime::GetNumFields`.
-        // Optional<uint32_t> uses more lax equivalency function.
-        return [&]() -> llvm::Optional<uint32_t> {
-          auto impl = [&]() -> llvm::Optional<uint32_t> {
-            if (!type)
-              return 0;
-            return num_fields;
-          };
-          ExecutionContext exe_ctx_obj;
-          if (exe_ctx)
-            exe_ctx_obj = *exe_ctx;
-          VALIDATE_AND_RETURN(impl, GetNumFields, type, exe_ctx_obj,
-                              (ReconstructType(type), exe_ctx),
-                              (ReconstructType(type), exe_ctx));
-        }()
-                            .value_or(0);
+
+  auto impl = [&]() -> llvm::Optional<uint32_t> {
+    if (exe_ctx)
+      if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP()))
+        if (auto num_fields =
+                runtime->GetNumFields(GetCanonicalType(type), exe_ctx))
+          return num_fields;
+
+    bool is_imported = false;
+    if (auto clang_type = GetAsClangTypeOrNull(type, &is_imported)) {
+      switch (clang_type.GetTypeClass()) {
+      case lldb::eTypeClassObjCObject:
+      case lldb::eTypeClassObjCInterface:
+        // Imported ObjC types are treated as having no fields.
+        return 0;
+      default:
+        return clang_type.GetNumFields(exe_ctx);
+      }
+    } else if (is_imported) {
+      // A known imported type, but where clang has no info. Return early to
+      // avoid loading Swift ASTContexts, only to return the same zero value.
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "No CompilerType for imported Clang type %s",
+                AsMangledName(type));
+      return 0;
+    }
+    return {};
+  };
+  if (auto num_fields = impl()) {
+    // Use a lambda to intercept and unwrap the `Optional` return value.
+    // Optional<uint32_t> uses more lax equivalency function.
+    return [&]() -> llvm::Optional<uint32_t> {
+      auto impl = [&]() { return num_fields; };
+      ExecutionContext exe_ctx_obj;
+      if (exe_ctx)
+        exe_ctx_obj = *exe_ctx;
+      VALIDATE_AND_RETURN(impl, GetNumFields, type, exe_ctx_obj,
+                          (ReconstructType(type), exe_ctx),
+                          (ReconstructType(type), exe_ctx));
+    }()
+                        .getValueOr(0);
+  }
 
   LLDB_LOGF(GetLog(LLDBLog::Types),
             "Using SwiftASTContext::GetNumFields fallback for type %s",
@@ -3243,8 +3264,9 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
                       (ReconstructType(type)));
 }
 
-CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
-    lldb::opaque_compiler_type_t type) {
+CompilerType
+TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type,
+                                             bool *is_imported) {
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer node = GetDemangledType(dem, AsMangledName(type));
@@ -3261,7 +3283,9 @@ CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
       return node_clangtype.second;
   }
   CompilerType clang_type;
-  IsImportedType(type, &clang_type);
+  bool imported = IsImportedType(type, &clang_type);
+  if (is_imported)
+    *is_imported = imported;
   return clang_type;
 }
 
