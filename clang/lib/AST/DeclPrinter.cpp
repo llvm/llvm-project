@@ -455,7 +455,7 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
     else if (auto FD = dyn_cast<FunctionDecl>(*D)) {
-      if (FD->isThisDeclarationADefinition())
+      if (FD->isThisDeclarationADefinition() && !FD->isDefaulted())
         Terminator = nullptr;
       else
         Terminator = ";";
