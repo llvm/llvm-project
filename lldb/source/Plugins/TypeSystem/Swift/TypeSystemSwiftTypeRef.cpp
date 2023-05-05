@@ -2819,7 +2819,7 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
                           (ReconstructType(type), exe_ctx),
                           (ReconstructType(type), exe_ctx));
     }()
-                        .getValueOr(0);
+                        .value_or(0);
   }
 
   LLDB_LOGF(GetLog(LLDBLog::Types),
