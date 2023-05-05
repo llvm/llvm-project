@@ -251,7 +251,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[DIV:.*]] = fir.call @__divsc3(%[[A_VAL]], %[[B_VAL]]) fastmath<contract> : (!fir.complex<4>, !fir.complex<4>) -> !fir.complex<4>
+! CHECK:         %[[DIV:.*]] = fir.divc %[[A_VAL]], %[[B_VAL]] : !fir.complex<4>
 ! CHECK:         fir.store %[[DIV]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         return %[[RET]] : !fir.complex<4>
