@@ -32,6 +32,13 @@ def uimm2_lsb0 : Operand<XLenVT>,
   }];
 }
 
+def uimm8ge32 : Operand<XLenVT> {
+  let ParserMatchClass = UImmAsmOperand<8, "GE32">;
+  let DecoderMethod = "decodeUImmOperand<8>";
+  let OperandType = "OPERAND_UIMM8_GE32";
+  let OperandNamespace = "RISCVOp";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -135,7 +142,7 @@ def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
   let Inst{6-2} = index;
 }
 
-def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8:$index),
+def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
                          "cm.jalt", "$index">{
   bits<8> index;
 

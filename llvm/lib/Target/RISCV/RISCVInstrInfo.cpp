@@ -1708,6 +1708,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM8_LSB000:
           Ok = isShiftedUInt<5, 3>(Imm);
           break;
+        case RISCVOp::OPERAND_UIMM8_GE32:
+          Ok = isUInt<8>(Imm) && Imm >= 32;
+          break;
         case RISCVOp::OPERAND_UIMM9_LSB000:
           Ok = isShiftedUInt<6, 3>(Imm);
           break;
