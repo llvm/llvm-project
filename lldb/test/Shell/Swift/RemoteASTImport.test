@@ -45,7 +45,7 @@
 
 b Library.swift:10
 run
-p input
+expression input
 
 # The {{ }} avoids accidentally matching the input script!
 # CHECK-NOT: undeclared identifier {{'SYNTAX_ERROR'}}
