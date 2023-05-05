@@ -283,7 +283,7 @@ void InitThreads() {
 bool MemIsApp(uptr p) {
 // Memory outside the alias range has non-zero tags.
 #  if !defined(HWASAN_ALIASING_MODE)
-  CHECK(GetTagFromPointer(p) == 0);
+  CHECK_EQ(GetTagFromPointer(p), 0);
 #  endif
 
   return (p >= kHighMemStart && p <= kHighMemEnd) ||
