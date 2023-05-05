@@ -94,9 +94,6 @@ void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
 
 void MCSection::flushPendingLabels(MCFragment *F, uint64_t FOffset,
 				   unsigned Subsection) {
-  if (PendingLabels.empty())
-    return;
-
   // Set the fragment and fragment offset for all pending symbols in the
   // specified Subsection, and remove those symbols from the pending list.
   for (auto It = PendingLabels.begin(); It != PendingLabels.end(); ++It) {
