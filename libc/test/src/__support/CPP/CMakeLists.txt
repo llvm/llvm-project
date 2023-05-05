@@ -51,15 +51,19 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
-add_libc_test(
-  atomic_test
-  SUITE
-    libc-cpp-utils-tests
-  SRCS
-    atomic_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.atomic
-)
+
+# This test fails with invalid address space operations on sm_60
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    atomic_test
+    SUITE
+      libc-cpp-utils-tests
+    SRCS
+      atomic_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.atomic
+  )
+endif()
 
 # This test fails with a segmentation fault on NVPTX.
 if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
