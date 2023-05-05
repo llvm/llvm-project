@@ -4549,12 +4549,8 @@ void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
 }
 
 LanguageType TargetProperties::GetLanguage() const {
-  OptionValueLanguage *value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueLanguage(
-          ePropertyLanguage);
-  if (value)
-    return value->GetCurrentValue();
-  return LanguageType();
+  const uint32_t idx = ePropertyLanguage;
+  return GetPropertyAtIndexAs<LanguageType>(idx, {});
 }
 
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {

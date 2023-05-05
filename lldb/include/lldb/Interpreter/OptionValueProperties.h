@@ -109,9 +109,6 @@ public:
   OptionValueArch *GetPropertyAtIndexAsOptionValueArch(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 
-  OptionValueLanguage *GetPropertyAtIndexAsOptionValueLanguage(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
   bool
   GetPropertyAtIndexAsArgs(uint32_t idx, Args &args,
                            const ExecutionContext *exe_ctx = nullptr) const;
