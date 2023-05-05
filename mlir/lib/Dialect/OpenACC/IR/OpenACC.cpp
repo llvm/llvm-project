@@ -206,6 +206,33 @@ LogicalResult acc::DetachOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// HostOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::UpdateHostOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
+  if (getDataClause() != acc::DataClause::acc_update_host &&
+      getDataClause() != acc::DataClause::acc_update_self)
+    return emitError(
+        "data clause associated with host operation must match its intent"
+        " or specify original clause this operation was decomposed from");
+  if (!getVarPtr() || !getAccPtr())
+    return emitError("must have both host and device pointers");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DeviceOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::UpdateDeviceOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
+  if (getDataClause() != acc::DataClause::acc_update_device)
+    return emitError(
+        "data clause associated with device operation must match its intent"
+        " or specify original clause this operation was decomposed from");
+  return success();
+}
+
 template <typename StructureOp>
 static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
                                 unsigned nRegions = 1) {
@@ -595,7 +622,8 @@ LogicalResult acc::ShutdownOp::verify() {
 
 LogicalResult acc::UpdateOp::verify() {
   // At least one of host or device should have a value.
-  if (getHostOperands().empty() && getDeviceOperands().empty())
+  if (getHostOperands().empty() && getDeviceOperands().empty() &&
+      getDataClauseOperands().empty())
     return emitError(
         "at least one value must be present in hostOperands or deviceOperands");
 
@@ -616,7 +644,8 @@ LogicalResult acc::UpdateOp::verify() {
 }
 
 unsigned UpdateOp::getNumDataOperands() {
-  return getHostOperands().size() + getDeviceOperands().size();
+  return getHostOperands().size() + getDeviceOperands().size() +
+         getDataClauseOperands().size();
 }
 
 Value UpdateOp::getDataOperand(unsigned i) {
