@@ -55,7 +55,7 @@ struct S<each T> {
     let vals: (repeat each T)
 
     func f8() {
-        //print("break here")
+        print("break here")
     }
 }
 
@@ -63,8 +63,8 @@ let s = S<Int, Double>(vals: (23, 2.71))
 print("break here")
 s.f8()
 
-func f9<each T>(s: S<repeat each T>) {
-    //print("break here")
+func f9<each T>(s9: S<repeat each T>) {
+    print("break here")
 }
 
-f9(s: s)
+f9(s9: s)
