@@ -962,7 +962,7 @@ static void simplifyMinOrMaxExprWithOperands(AffineMap &map,
   // bound is redundant by checking if its highest (in case of max) and its
   // lowest (in the case of min) value is already lower than (or higher than)
   // the lower bound (or upper bound in the case of min) of another bound.
-  SmallVector<Optional<int64_t>, 4> lowerBounds, upperBounds;
+  SmallVector<std::optional<int64_t>, 4> lowerBounds, upperBounds;
   lowerBounds.reserve(map.getNumResults());
   upperBounds.reserve(map.getNumResults());
   for (AffineExpr e : map.getResults()) {

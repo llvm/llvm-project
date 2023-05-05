@@ -117,10 +117,7 @@ const RegularExpression *ThreadProperties::GetSymbolsToAvoidRegexp() {
 
 FileSpecList ThreadProperties::GetLibrariesToAvoid() const {
   const uint32_t idx = ePropertyStepAvoidLibraries;
-  const OptionValueFileSpecList *option_value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(idx);
-  assert(option_value);
-  return option_value->GetCurrentValue();
+  return GetPropertyAtIndexAs<FileSpecList>(idx, {});
 }
 
 bool ThreadProperties::GetTraceEnabledState() const {

@@ -71,7 +71,7 @@ protected:
 
   /// Returns the source location of the current opcode.
   SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    return F ? F->getSource(PC) : CurrentSource;
+    return (F && F->hasBody()) ? F->getSource(PC) : CurrentSource;
   }
 
   /// Parameter indices.

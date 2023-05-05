@@ -185,7 +185,7 @@ void CommandInterpreter::SetOpenTranscriptInEditor(bool enable) {
 
 FileSpec CommandInterpreter::GetSaveSessionDirectory() const {
   const uint32_t idx = ePropertySaveSessionDirectory;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 void CommandInterpreter::SetSaveSessionDirectory(llvm::StringRef path) {

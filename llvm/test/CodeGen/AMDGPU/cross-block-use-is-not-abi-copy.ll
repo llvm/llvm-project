@@ -213,8 +213,6 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:  .LBB4_3: ; %if.end
-; GCN-NEXT:    s_mov_b32 s4, 0xffff
-; GCN-NEXT:    v_bfi_b32 v0, s4, v0, v0
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_endpgm
