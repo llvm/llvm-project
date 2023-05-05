@@ -188,7 +188,12 @@ bool ByteCodeExprGen<Emitter>::VisitFloatingLiteral(const FloatingLiteral *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *PE) {
-  return this->visit(PE->getSubExpr());
+  const Expr *SubExpr = PE->getSubExpr();
+
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  return this->visit(SubExpr);
 }
 
 template <class Emitter>
@@ -1872,6 +1877,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
+  if (DiscardResult)
+    return true;
+
   const auto *D = E->getDecl();
 
   if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
