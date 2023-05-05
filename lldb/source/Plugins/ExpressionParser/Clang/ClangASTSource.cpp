@@ -1036,12 +1036,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
                                         lldb::eFunctionNameTypeSelector,
                                         function_options, candidate_sc_list);
 
-    for (uint32_t ci = 0, ce = candidate_sc_list.GetSize(); ci != ce; ++ci) {
-      SymbolContext candidate_sc;
-
-      if (!candidate_sc_list.GetContextAtIndex(ci, candidate_sc))
-        continue;
-
+    for (const SymbolContext &candidate_sc : candidate_sc_list) {
       if (!candidate_sc.function)
         continue;
 
@@ -1074,12 +1069,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
   if (sc_list.GetSize()) {
     // We found a good function symbol.  Use that.
 
-    for (uint32_t i = 0, e = sc_list.GetSize(); i != e; ++i) {
-      SymbolContext sc;
-
-      if (!sc_list.GetContextAtIndex(i, sc))
-        continue;
-
+    for (const SymbolContext &sc : sc_list) {
       if (!sc.function)
         continue;
 
