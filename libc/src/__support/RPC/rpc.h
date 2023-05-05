@@ -110,12 +110,12 @@ template <bool InvertInbox> struct Process {
   /// The lock is held when the zeroth bit of the uint32_t at lock[index]
   /// is set, and available when that bit is clear. Bits [1, 32) are zero.
   /// Or with one is a no-op when the lock is already held.
-  LIBC_INLINE bool try_lock(uint64_t index) {
+  LIBC_INLINE bool try_lock(uint64_t, uint64_t index) {
     return lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED) == 0;
   }
 
   // Unlock the lock at index.
-  LIBC_INLINE void unlock(uint64_t index) {
+  LIBC_INLINE void unlock(uint64_t, uint64_t index) {
     lock[index].store(0, cpp::MemoryOrder::RELAXED);
   }
 };
@@ -125,8 +125,9 @@ template <bool InvertInbox> struct Process {
 /// underlying process that is guarded by a lock bit.
 template <bool T> struct Port {
   // TODO: This should be move-only.
-  LIBC_INLINE Port(Process<T> &process, uint64_t index, uint32_t out)
-      : process(process), index(index), out(out) {}
+  LIBC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint64_t index,
+                   uint32_t out)
+      : process(process), lane_mask(lane_mask), index(index), out(out) {}
   LIBC_INLINE Port(const Port &) = default;
   LIBC_INLINE Port &operator=(const Port &) = delete;
   LIBC_INLINE ~Port() = default;
@@ -143,10 +144,11 @@ template <bool T> struct Port {
     return process.buffer[index].opcode;
   }
 
-  LIBC_INLINE void close() { process.unlock(index); }
+  LIBC_INLINE void close() { process.unlock(lane_mask, index); }
 
 private:
   Process<T> &process;
+  uint64_t lane_mask;
   uint64_t index;
   uint32_t out;
 };
@@ -268,8 +270,10 @@ LIBC_INLINE void Port<T>::recv_n(A alloc) {
 /// port instance uses an associated \p opcode to tell the server what to do.
 LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
   constexpr uint64_t index = 0;
+  const uint64_t lane_mask = gpu::get_lane_mask();
+
   // Attempt to acquire the lock on this index.
-  if (!try_lock(index))
+  if (!try_lock(lane_mask, index))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
@@ -282,12 +286,12 @@ LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
   // state.
 
   if (buffer_unavailable(in, out)) {
-    unlock(index);
+    unlock(lane_mask, index);
     return cpp::nullopt;
   }
 
   buffer->opcode = opcode;
-  return Port(*this, index, out);
+  return Port(*this, lane_mask, index, out);
 }
 
 LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
@@ -302,6 +306,8 @@ LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
 /// port if it has a pending receive operation
 LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
   constexpr uint64_t index = 0;
+  const uint64_t lane_mask = gpu::get_lane_mask();
+
   uint32_t in = load_inbox(index);
   uint32_t out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
@@ -311,7 +317,7 @@ LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
     return cpp::nullopt;
 
   // Attempt to acquire the lock on this index.
-  if (!try_lock(index))
+  if (!try_lock(lane_mask, index))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
@@ -321,11 +327,11 @@ LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
   out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
   if (buffer_unavailable(in, out)) {
-    unlock(index);
+    unlock(lane_mask, index);
     return cpp::nullopt;
   }
 
-  return Port(*this, index, out);
+  return Port(*this, lane_mask, index, out);
 }
 
 LIBC_INLINE Server::Port Server::open() {
