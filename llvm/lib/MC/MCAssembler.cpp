@@ -464,14 +464,13 @@ void MCAsmLayout::layoutFragment(MCFragment *F) {
   }
 }
 
-void MCAssembler::registerSymbol(const MCSymbol &Symbol, bool *Created) {
-  bool New = !Symbol.isRegistered();
-  if (Created)
-    *Created = New;
-  if (New) {
+bool MCAssembler::registerSymbol(const MCSymbol &Symbol) {
+  bool Changed = !Symbol.isRegistered();
+  if (Changed) {
     Symbol.setIsRegistered(true);
     Symbols.push_back(&Symbol);
   }
+  return Changed;
 }
 
 void MCAssembler::writeFragmentPadding(raw_ostream &OS,
@@ -991,18 +990,11 @@ bool MCAssembler::relaxInstruction(MCAsmLayout &Layout,
   getBackend().relaxInstruction(Relaxed, *F.getSubtargetInfo());
 
   // Encode the new instruction.
-  //
-  // FIXME-PERF: If it matters, we could let the target do this. It can
-  // probably do so more efficiently in many cases.
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getEmitter().encodeInstruction(Relaxed, Code, Fixups, *F.getSubtargetInfo());
-
-  // Update the fragment.
   F.setInst(Relaxed);
-  F.getContents() = Code;
-  F.getFixups() = Fixups;
-
+  F.getFixups().clear();
+  F.getContents().clear();
+  getEmitter().encodeInstruction(Relaxed, F.getContents(), F.getFixups(),
+                                 *F.getSubtargetInfo());
   return true;
 }
 

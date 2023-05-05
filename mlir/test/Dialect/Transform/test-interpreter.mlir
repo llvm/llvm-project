@@ -134,7 +134,6 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %f = pdl_match @const in %arg1 : (!pdl.operation) -> !pdl.operation
-    // CHECK: %{{.+}} = get_closest_isolated_parent %{{.+}}
     %m = get_closest_isolated_parent %f : (!pdl.operation) -> !pdl.operation
     test_print_remark_at_operand %m, "parent function" : !pdl.operation
   }
@@ -254,9 +253,7 @@ transform.with_pdl_patterns {
 
 func.func private @bar()
 
-// CHECK-LABEL: @erase_call
 func.func @erase_call() {
-  // CHECK-NOT: call @bar
   call @bar() : () -> ()
   return
 }
@@ -834,7 +831,7 @@ transform.sequence failures(propagate) {
   // expected-remark @below {{1}}
   transform.test_print_number_of_associated_payload_ir_ops %h#0
   %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{expected to contain 3 operation handles but it only contains 2 handles}}
+  // expected-error @below {{expected to contain 3 operation handles but it contains 2 handles}}
   %h_2:3 = split_handles %muli_2 in [3] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
 }
 
@@ -978,11 +975,22 @@ func.func @split_handles(%a: index, %b: index, %c: index) {
 transform.sequence -> !pdl.operation failures(propagate) {
 ^bb1(%fun: !pdl.operation):
   %muli = transform.structured.match ops{["arith.muli"]} in %fun : (!pdl.operation) -> !pdl.operation
-  // expected-error @below {{expected to contain 3 operation handles but it only contains 2 handles}}
+  // expected-error @below {{expected to contain 3 operation handles but it contains 2 handles}}
   %h_2:3 = split_handles %muli in [3] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
   /// Test that yield does not crash in the presence of silenceable error in
   /// propagate mode.
   yield %fun : !pdl.operation
+}
+
+// -----
+
+transform.sequence -> !transform.any_op failures(suppress) {
+^bb0(%arg0: !transform.any_op):
+  %muli = transform.structured.match ops{["arith.muli"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // Edge case propagating empty handles in splitting.
+  %0:3 = split_handles %muli in [3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  // Test does not crash when accessing the empty handle.
+  yield %0#0 : !transform.any_op
 }
 
 // -----

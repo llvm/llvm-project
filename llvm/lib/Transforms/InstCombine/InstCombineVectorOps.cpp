@@ -384,7 +384,7 @@ static APInt findDemandedEltsByAllUsers(Value *V) {
 /// return it with the canonical type if it isn't already canonical.  We
 /// arbitrarily pick 64 bit as our canonical type.  The actual bitwidth doesn't
 /// matter, we just want a consistent type to simplify CSE.
-ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
+static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
   const unsigned IndexBW = IndexC->getType()->getBitWidth();
   if (IndexBW == 64 || IndexC->getValue().getActiveBits() > 64)
     return nullptr;
@@ -2183,8 +2183,7 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
 
   // Insert into element 0 of an undef vector.
   UndefValue *UndefVec = UndefValue::get(Shuf.getType());
-  Constant *Zero = Builder.getInt32(0);
-  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, Zero);
+  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, (uint64_t)0);
 
   // Splat from element 0. Any mask element that is undefined remains undefined.
   // For example:
@@ -2779,7 +2778,6 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   ArrayRef<int> Mask = SVI.getShuffleMask();
-  Type *Int32Ty = Type::getInt32Ty(SVI.getContext());
 
   // Peek through a bitcasted shuffle operand by scaling the mask. If the
   // simulated shuffle can simplify, then this shuffle is unnecessary:
@@ -2943,8 +2941,8 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
               : Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
       if (!BCAlreadyExists)
         NewBCs[CastSrcTy] = NewBC;
-      auto *Ext = Builder.CreateExtractElement(
-          NewBC, ConstantInt::get(Int32Ty, BegIdx), SVI.getName() + ".extract");
+      auto *Ext = Builder.CreateExtractElement(NewBC, BegIdx,
+                                               SVI.getName() + ".extract");
       // The shufflevector isn't being replaced: the bitcast that used it
       // is. InstCombine will visit the newly-created instructions.
       replaceInstUsesWith(*BC, Ext);

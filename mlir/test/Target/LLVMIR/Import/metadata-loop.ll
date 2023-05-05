@@ -343,3 +343,36 @@ end:
 !1 = distinct !{!1, !2}
 !2 = !{!"llvm.loop.parallel_accesses", !0, !3}
 !3 = distinct !{}
+
+; // -----
+
+; CHECK: #[[start_loc:.*]] = loc("metadata-loop.ll":1:2)
+; CHECK: #[[end_loc:.*]] = loc("metadata-loop.ll":2:2)
+; CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
+; CHECK: #[[start_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[start_loc]]])
+; CHECK: #[[end_loc_fused:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[end_loc]]])
+; CHECK: #[[$ANNOT_ATTR:.*]] = #llvm.loop_annotation<
+; CHECK-SAME: mustProgress = true
+; CHECK-SAME: startLoc = #[[start_loc_fused]]
+; CHECK-SAME: endLoc = #[[end_loc_fused]]
+
+; CHECK-LABEL: @loop_locs
+define void @loop_locs(i64 %n, ptr %A) {
+entry:
+; CHECK: llvm.br ^{{.*}} {loop_annotation = #[[$ANNOT_ATTR]]}
+  br label %end, !llvm.loop !6
+end:
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "metadata-loop.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "loop_locs", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = !DILocation(line: 1, column: 2, scope: !3)
+!5 = !DILocation(line: 2, column: 2, scope: !3)
+
+!6 = distinct !{!6, !4, !5, !7}
+!7 = !{!"llvm.loop.mustprogress"}

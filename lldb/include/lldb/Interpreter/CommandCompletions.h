@@ -11,10 +11,10 @@
 
 #include <set>
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-private.h"
 

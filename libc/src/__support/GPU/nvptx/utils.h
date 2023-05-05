@@ -118,16 +118,19 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 #endif
 }
 
+[[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+#if __CUDA_ARCH__ >= 600
+  return __nvvm_vote_ballot_sync(lane_mask, x);
+#else
+  return lane_mask & __nvvm_vote_ballot(x);
+#endif
+}
 /// Waits for all the threads in the block to converge and issues a fence.
 [[clang::convergent]] LIBC_INLINE void sync_threads() { __syncthreads(); }
 
 /// Waits for all threads in the warp to reconverge for independent scheduling.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t mask) {
-#if __CUDA_ARCH__ >= 700
   __nvvm_bar_warp_sync(mask);
-#else
-  (void)mask;
-#endif
 }
 
 } // namespace gpu

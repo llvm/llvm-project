@@ -58,6 +58,11 @@ LIBC_INLINE uint64_t get_lane_mask() { return 1; }
 
 LIBC_INLINE uint32_t broadcast_value(uint32_t x) { return x; }
 
+LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+  (void)lane_mask;
+  return x;
+}
+
 LIBC_INLINE void sync_threads() {}
 
 LIBC_INLINE void sync_lane(uint64_t) {}

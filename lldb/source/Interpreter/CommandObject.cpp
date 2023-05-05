@@ -23,11 +23,11 @@
 
 // These are for the Sourcename completers.
 // FIXME: Make a separate file for the completers.
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 
 #include "lldb/Target/Language.h"
 
