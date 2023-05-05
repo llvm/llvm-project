@@ -229,10 +229,13 @@ TypeSP TypeSystemSwiftTypeRef::LookupClangType(
     return result;
   }
 
-  SwiftASTContext *target_holder = GetSwiftASTContext();
-  if (!target_holder)
-    return {};
-  TargetSP target_sp = target_holder->GetTargetWP().lock();
+  TargetSP target_sp = GetTargetWP().lock();
+  if (!target_sp) {
+    SwiftASTContext *target_holder = GetSwiftASTContext();
+    if (!target_holder)
+      return {};
+    target_sp = target_holder->GetTargetWP().lock();
+  }
   if (!target_sp)
     return {};
   target_sp->GetImages().ForEach([&](const ModuleSP &module) -> bool {
