@@ -10,7 +10,6 @@
 #include "llvm/ADT/StringSet.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 

@@ -8,18 +8,16 @@
 
 #ifndef LLDB_CORE_FILESPECLIST_H
 #define LLDB_CORE_FILESPECLIST_H
-#if defined(__cplusplus)
 
 #include "lldb/Utility/FileSpec.h"
 
-#include <vector>
-
 #include <cstddef>
+#include <vector>
 
 namespace lldb_private {
 class Stream;
 
-/// \class FileSpecList FileSpecList.h "lldb/Core/FileSpecList.h"
+/// \class FileSpecList FileSpecList.h "lldb/Utility/FileSpecList.h"
 /// A file collection class.
 ///
 /// A class that contains a mutable list of FileSpec objects.
@@ -84,7 +82,7 @@ public:
   ///
   /// \param[in] args
   ///     Arguments to create the FileSpec
-  template <class... Args> void EmplaceBack(Args &&... args) {
+  template <class... Args> void EmplaceBack(Args &&...args) {
     m_files.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -227,5 +225,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // #if defined(__cplusplus)
 #endif // LLDB_CORE_FILESPECLIST_H
