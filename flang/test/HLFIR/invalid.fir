@@ -642,3 +642,110 @@ func.func @bad_forall_2(%x : !fir.box<!fir.array<10xf32>>, %y: f32) {
   }
   return
 }
+
+// -----
+func.func @bad_forall_mask(%i: index) {
+  // expected-error@+1 {{'hlfir.forall_mask' op must be inside the body region of an hlfir.forall}}
+  hlfir.forall_mask {
+    %mask = fir.call @some_condition(%i) : (index) -> i1
+    hlfir.yield %mask : i1
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_forall_mask_2(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>) {
+  %c1 = arith.constant 1 : index
+  hlfir.forall lb {
+    hlfir.yield %c1 : index
+  } ub {
+    hlfir.yield %c1 : index
+  } (%i: index) {
+    // expected-error@+1 {{'hlfir.forall_mask' op mask region must yield a scalar i1}}
+    hlfir.forall_mask {
+      hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+    } do {
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_where_1(%bad_mask: !fir.ref<!fir.array<10xf32>>) {
+  // expected-error@+1 {{'hlfir.where' op mask region must yield a logical array}}
+  hlfir.where {
+    hlfir.yield %bad_mask : !fir.ref<!fir.array<10xf32>>
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_where_2(%bad_mask: i1) {
+  // expected-error@+1 {{'hlfir.where' op mask region must yield a logical array}}
+  hlfir.where {
+    hlfir.yield %bad_mask : i1
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_where_3(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %n: index) {
+  // expected-error@+1 {{'hlfir.where' op body region must not contain hlfir.forall}}
+  hlfir.where {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+    hlfir.forall lb {
+      hlfir.yield %n : index
+    } ub {
+      hlfir.yield %n : index
+    } (%i: index) {
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_elsewhere_1(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %bad_mask: i1) {
+  hlfir.where {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+    // expected-error@+1 {{'hlfir.elsewhere' op mask region must yield a logical array when provided}}
+    hlfir.elsewhere mask {
+      hlfir.yield %bad_mask : i1
+    } do {
+    }
+  }
+  return
+}
+
+// -----
+func.func @bad_elsewhere_2(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>) {
+  // expected-error@+1 {{'hlfir.elsewhere' op expects parent op to be one of 'hlfir.where, hlfir.elsewhere'}}
+  hlfir.elsewhere mask {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+  }
+  return
+}
+
+// -----
+func.func @bad_elsewhere_3(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %x: !fir.ref<!fir.array<10xf32>>, %y: !fir.box<!fir.array<?xf32>>) {
+  hlfir.where {
+    hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+  } do {
+    // expected-error@+1 {{'hlfir.elsewhere' op must be the last operation in the parent block}}
+    hlfir.elsewhere mask {
+      hlfir.yield %mask : !fir.ref<!fir.array<10x!fir.logical<4>>>
+    } do {
+    }
+    hlfir.region_assign {
+      hlfir.yield %y : !fir.box<!fir.array<?xf32>>
+    } to {
+      hlfir.yield %x : !fir.ref<!fir.array<10xf32>>
+    }
+  }
+  return
+}
