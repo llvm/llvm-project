@@ -417,6 +417,7 @@ public:
   bool isSanitizerChecked() const { return SanitizerCheckedFlag; }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(ZeroedFlag); }
+  void setZeroed(bool V = true) { ZeroedFlag = V; }
 
   NeedsGCBarriers_t requiresGCollection() const {
     return NeedsGCBarriers_t(ObjCGCFlag);

@@ -979,9 +979,48 @@ public:
                                         const clang::Stmt *thenS,
                                         const clang::Stmt *elseS);
 
+  class ConstantEmission {
+    // Cannot use mlir::TypedAttr directly here because of bit availability.
+    llvm::PointerIntPair<mlir::Attribute, 1, bool> ValueAndIsReference;
+    ConstantEmission(mlir::TypedAttr C, bool isReference)
+        : ValueAndIsReference(C, isReference) {}
+
+  public:
+    ConstantEmission() {}
+    static ConstantEmission forReference(mlir::TypedAttr C) {
+      return ConstantEmission(C, true);
+    }
+    static ConstantEmission forValue(mlir::TypedAttr C) {
+      return ConstantEmission(C, false);
+    }
+
+    explicit operator bool() const {
+      return ValueAndIsReference.getOpaqueValue() != nullptr;
+    }
+
+    bool isReference() const { return ValueAndIsReference.getInt(); }
+    LValue getReferenceLValue(CIRGenFunction &CGF, Expr *refExpr) const {
+      assert(isReference());
+      // create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
+      // CGF.getBuilder().const
+      // return CGF.MakeNaturalAlignAddrLValue(ValueAndIsReference.getPointer(),
+      //                                       refExpr->getType());
+      llvm_unreachable("NYI");
+    }
+
+    mlir::TypedAttr getValue() const {
+      assert(!isReference());
+      return ValueAndIsReference.getPointer().cast<mlir::TypedAttr>();
+    }
+  };
+
+  ConstantEmission tryEmitAsConstant(DeclRefExpr *refExpr);
+  ConstantEmission tryEmitAsConstant(const MemberExpr *ME);
+
   /// Emit the computation of the specified expression of scalar type,
   /// ignoring the result.
   mlir::Value buildScalarExpr(const clang::Expr *E);
+  mlir::Value buildScalarConstant(const ConstantEmission &Constant, Expr *E);
 
   mlir::Type getCIRType(const clang::QualType &type);
 
@@ -1046,6 +1085,7 @@ public:
   void buildStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
   mlir::Value buildToMemory(mlir::Value Value, clang::QualType Ty);
+  void buildDeclRefExprDbgValue(const DeclRefExpr *E, const APValue &Init);
 
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
@@ -1256,6 +1296,7 @@ public:
                                 const clang::CXXRecordDecl *RD);
   void initializeVTablePointer(mlir::Location loc, const VPtr &Vptr);
 
+  AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *FD);
   LValue buildLValueForField(LValue Base, const clang::FieldDecl *Field);
 
   /// Like buildLValueForField, excpet that if the Field is a reference, this

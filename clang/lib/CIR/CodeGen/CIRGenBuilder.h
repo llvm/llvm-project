@@ -163,6 +163,11 @@ public:
     return create<mlir::cir::ConstantOp>(loc, int32Ty,
                                          mlir::IntegerAttr::get(int32Ty, C));
   }
+  mlir::cir::ConstantOp getInt64(uint32_t C, mlir::Location loc) {
+    auto int64Ty = getInt64Ty();
+    return create<mlir::cir::ConstantOp>(loc, int64Ty,
+                                         mlir::IntegerAttr::get(int64Ty, C));
+  }
   mlir::Value getBool(bool state, mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(
         loc, getBoolTy(), mlir::BoolAttr::get(getContext(), state));
@@ -186,6 +191,10 @@ public:
     // TODO: dispatch creation for primitive types.
     assert(ty.isa<mlir::cir::StructType>() && "NYI for other types");
     return create<mlir::cir::ConstantOp>(loc, ty, getZeroAttr(ty));
+  }
+
+  mlir::cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
+    return create<mlir::cir::ConstantOp>(loc, attr.getType(), attr);
   }
 
   //

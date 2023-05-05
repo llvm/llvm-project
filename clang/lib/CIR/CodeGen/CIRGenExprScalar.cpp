@@ -171,8 +171,9 @@ public:
 
   // l-values
   mlir::Value VisitDeclRefExpr(DeclRefExpr *E) {
-    // FIXME: we could try to emit this as constant first, see
-    // CGF.tryEmitAsConstant(E)
+    if (CIRGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E)) {
+      return CGF.buildScalarConstant(Constant, E);
+    }
     return buildLoadOfLValue(E);
   }
 

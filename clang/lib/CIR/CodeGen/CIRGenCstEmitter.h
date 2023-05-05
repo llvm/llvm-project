@@ -98,6 +98,14 @@ public:
   /// constant.
   mlir::Attribute tryEmitAbstractForInitializer(const VarDecl &D);
 
+  /// Emit the result of the given expression as an abstract constant,
+  /// asserting that it succeeded.  This is only safe to do when the
+  /// expression is known to be a constant expression with either a fairly
+  /// simple type or a known simple form.
+  mlir::Attribute emitAbstract(const Expr *E, QualType T);
+  mlir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
+                               QualType T);
+
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
   // functions and classes.

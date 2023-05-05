@@ -64,7 +64,11 @@ public:
     StmtVisitor<AggExprEmitter>::Visit(E);
   }
 
-  void VisitStmt(Stmt *S) { llvm_unreachable("NYI"); }
+  void VisitStmt(Stmt *S) {
+    llvm::errs() << "Missing visitor for AggExprEmitter Stmt: "
+                 << S->getStmtClassName() << "\n";
+    llvm_unreachable("NYI");
+  }
   void VisitParenExpr(ParenExpr *PE) { llvm_unreachable("NYI"); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     llvm_unreachable("NYI");
@@ -131,8 +135,9 @@ public:
   }
   void VisitNoInitExpr(NoInitExpr *E) { llvm_unreachable("NYI"); }
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) { llvm_unreachable("NYI"); }
-  void VisitXCXDefaultInitExpr(CXXDefaultInitExpr *E) {
-    llvm_unreachable("NYI");
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE) {
+    CIRGenFunction::CXXDefaultInitExprScope Scope(CGF, DIE);
+    Visit(DIE->getExpr());
   }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E);
   void VisitCXXConstructExpr(const CXXConstructExpr *E);
@@ -237,12 +242,14 @@ void AggExprEmitter::buildInitializationToLValue(Expr *E, LValue LV) {
   // FIXME: Ignore result?
   // FIXME: Are initializers affected by volatile?
   if (Dest.isZeroed() && isSimpleZero(E, CGF)) {
-    // TODO(cir): LLVM codegen just returns here, do we want to
-    // do anything different when we hit this code path?
-    llvm_unreachable("NYI");
-    // Storing "i32 0" to a zero'd memory location is a noop.
+    // TODO(cir): LLVM codegen considers 'storing "i32 0" to a zero'd memory
+    // location is a noop'. Consider emitting the store to zero in CIR, as to
+    // model the actual user behavior, we can have a pass to optimize this out
+    // later.
     return;
-  } else if (isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) {
+  }
+
+  if (isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) {
     auto loc = E->getSourceRange().isValid() ? CGF.getLoc(E->getSourceRange())
                                              : *CGF.currSrcLoc;
     return buildNullInitializationToLValue(loc, LV);
@@ -658,8 +665,71 @@ void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
 //                        Helpers and dispatcher
 //===----------------------------------------------------------------------===//
 
-/// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
-/// zeros in it, emit a memset and avoid storing the individual zeros.
+/// Get an approximate count of the number of non-zero bytes that will be stored
+/// when outputting the initializer for the specified initializer expression.
+/// FIXME(cir): this can be shared with LLVM codegen.
+static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CIRGenFunction &CGF) {
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    E = MTE->getSubExpr();
+  E = E->IgnoreParenNoopCasts(CGF.getContext());
+
+  // 0 and 0.0 won't require any non-zero stores!
+  if (isSimpleZero(E, CGF))
+    return CharUnits::Zero();
+
+  // If this is an initlist expr, sum up the size of sizes of the (present)
+  // elements.  If this is something weird, assume the whole thing is non-zero.
+  const InitListExpr *ILE = dyn_cast<InitListExpr>(E);
+  while (ILE && ILE->isTransparent())
+    ILE = dyn_cast<InitListExpr>(ILE->getInit(0));
+  if (!ILE || !CGF.getTypes().isZeroInitializable(ILE->getType()))
+    return CGF.getContext().getTypeSizeInChars(E->getType());
+
+  // InitListExprs for structs have to be handled carefully.  If there are
+  // reference members, we need to consider the size of the reference, not the
+  // referencee.  InitListExprs for unions and arrays can't have references.
+  if (const RecordType *RT = E->getType()->getAs<RecordType>()) {
+    if (!RT->isUnionType()) {
+      RecordDecl *SD = RT->getDecl();
+      CharUnits NumNonZeroBytes = CharUnits::Zero();
+
+      unsigned ILEElement = 0;
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(SD))
+        while (ILEElement != CXXRD->getNumBases())
+          NumNonZeroBytes +=
+              GetNumNonZeroBytesInInit(ILE->getInit(ILEElement++), CGF);
+      for (const auto *Field : SD->fields()) {
+        // We're done once we hit the flexible array member or run out of
+        // InitListExpr elements.
+        if (Field->getType()->isIncompleteArrayType() ||
+            ILEElement == ILE->getNumInits())
+          break;
+        if (Field->isUnnamedBitField())
+          continue;
+
+        const Expr *E = ILE->getInit(ILEElement++);
+
+        // Reference values are always non-null and have the width of a pointer.
+        if (Field->getType()->isReferenceType())
+          NumNonZeroBytes += CGF.getContext().toCharUnitsFromBits(
+              CGF.getTarget().getPointerWidth(LangAS::Default));
+        else
+          NumNonZeroBytes += GetNumNonZeroBytesInInit(E, CGF);
+      }
+
+      return NumNonZeroBytes;
+    }
+  }
+
+  // FIXME: This overestimates the number of non-zero bytes for bit-fields.
+  CharUnits NumNonZeroBytes = CharUnits::Zero();
+  for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i)
+    NumNonZeroBytes += GetNumNonZeroBytesInInit(ILE->getInit(i), CGF);
+  return NumNonZeroBytes;
+}
+
+/// If the initializer is large and has a lot of zeros in it, emit a memset and
+/// avoid storing the individual zeros.
 static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
                                      CIRGenFunction &CGF) {
   // If the slot is arleady known to be zeroed, nothing to do. Don't mess with
@@ -682,7 +752,24 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
   if (Size <= CharUnits::fromQuantity(16))
     return;
 
-  llvm_unreachable("NYI");
+  // Check to see if over 3/4 of the initializer are known to be zero.  If so,
+  // we prefer to emit memset + individual stores for the rest.
+  CharUnits NumNonZeroBytes = GetNumNonZeroBytesInInit(E, CGF);
+  if (NumNonZeroBytes * 4 > Size)
+    return;
+
+  // Okay, it seems like a good idea to use an initial memset, emit the call.
+  auto &builder = CGF.getBuilder();
+  auto loc = CGF.getLoc(E->getSourceRange());
+  Address slotAddr = Slot.getAddress();
+  auto zero = builder.getZero(loc, slotAddr.getElementType());
+
+  builder.createStore(loc, zero, slotAddr);
+  // Loc = CGF.Builder.CreateElementBitCast(Loc, CGF.Int8Ty);
+  // CGF.Builder.CreateMemSet(Loc, CGF.Builder.getInt8(0), SizeVal, false);
+
+  // Tell the AggExprEmitter that the slot is known zero.
+  Slot.setZeroed();
 }
 
 AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
@@ -813,4 +900,23 @@ void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   if (CGM.getCodeGenOpts().NewStructPathTBAA) {
     assert(0 && "NYI");
   }
+}
+
+AggValueSlot::Overlap_t
+CIRGenFunction::getOverlapForFieldInit(const FieldDecl *FD) {
+  if (!FD->hasAttr<NoUniqueAddressAttr>() || !FD->getType()->isRecordType())
+    return AggValueSlot::DoesNotOverlap;
+
+  // If the field lies entirely within the enclosing class's nvsize, its tail
+  // padding cannot overlap any already-initialized object. (The only subobjects
+  // with greater addresses that might already be initialized are vbases.)
+  const RecordDecl *ClassRD = FD->getParent();
+  const ASTRecordLayout &Layout = getContext().getASTRecordLayout(ClassRD);
+  if (Layout.getFieldOffset(FD->getFieldIndex()) +
+          getContext().getTypeSize(FD->getType()) <=
+      (uint64_t)getContext().toBits(Layout.getNonVirtualSize()))
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
