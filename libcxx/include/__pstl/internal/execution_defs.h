@@ -10,7 +10,9 @@
 #ifndef _PSTL_EXECUTION_POLICY_DEFS_H
 #define _PSTL_EXECUTION_POLICY_DEFS_H
 
-#include <type_traits>
+#include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 
 #include "pstl_config.h"
 

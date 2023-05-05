@@ -10,7 +10,7 @@
 #define _LIBCPP___UTILITY_TERMINATE_ON_EXCEPTION_H
 
 #include <__config>
-#include <exception>
+#include <__exception/terminate.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
