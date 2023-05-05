@@ -32,6 +32,7 @@
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -52,10 +53,30 @@ using namespace llvm::memprof;
 
 STATISTIC(FunctionClonesAnalysis,
           "Number of function clones created during whole program analysis");
+STATISTIC(FunctionClonesThinBackend,
+          "Number of function clones created during ThinLTO backend");
+STATISTIC(FunctionsClonedThinBackend,
+          "Number of functions that had clones created during ThinLTO backend");
 STATISTIC(AllocTypeNotCold, "Number of not cold static allocations (possibly "
                             "cloned) during whole program analysis");
 STATISTIC(AllocTypeCold, "Number of cold static allocations (possibly cloned) "
                          "during whole program analysis");
+STATISTIC(AllocTypeNotColdThinBackend,
+          "Number of not cold static allocations (possibly cloned) during "
+          "ThinLTO backend");
+STATISTIC(AllocTypeColdThinBackend, "Number of cold static allocations "
+                                    "(possibly cloned) during ThinLTO backend");
+STATISTIC(OrigAllocsThinBackend,
+          "Number of original (not cloned) allocations with memprof profiles "
+          "during ThinLTO backend");
+STATISTIC(
+    AllocVersionsThinBackend,
+    "Number of allocation versions (including clones) during ThinLTO backend");
+STATISTIC(MaxAllocVersionsThinBackend,
+          "Maximum number of allocation versions created for an original "
+          "allocation during ThinLTO backend");
+STATISTIC(UnclonableAllocsThinBackend,
+          "Number of unclonable ambigous allocations during ThinLTO backend");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -77,6 +98,11 @@ static cl::opt<bool>
 static cl::opt<bool>
     VerifyNodes("memprof-verify-nodes", cl::init(false), cl::Hidden,
                 cl::desc("Perform frequent verification checks on nodes."));
+
+static cl::opt<std::string> MemProfImportSummary(
+    "memprof-import-summary",
+    cl::desc("Import summary to use for testing the ThinLTO backend via opt"),
+    cl::Hidden);
 
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
 ///
@@ -109,8 +135,8 @@ public:
   /// Assign callsite clones to functions, cloning functions as needed to
   /// accommodate the combinations of their callsite clones reached by callers.
   /// For regular LTO this clones functions and callsites in the IR, but for
-  /// ThinLTO the cloning decisions are noted in the summaries and applied
-  /// later.
+  /// ThinLTO the cloning decisions are noted in the summaries and later applied
+  /// in applyImport.
   bool assignFunctions();
 
   void dump() const;
@@ -2779,6 +2805,358 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
   return Changed;
 }
 
+static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
+    Function &F, unsigned NumClones, Module &M, OptimizationRemarkEmitter &ORE,
+    std::map<const Function *, SmallPtrSet<const GlobalAlias *, 1>>
+        &FuncToAliasMap) {
+  // The first "clone" is the original copy, we should only call this if we
+  // needed to create new clones.
+  assert(NumClones > 1);
+  SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> VMaps;
+  VMaps.reserve(NumClones - 1);
+  FunctionsClonedThinBackend++;
+  for (unsigned I = 1; I < NumClones; I++) {
+    VMaps.emplace_back(std::make_unique<ValueToValueMapTy>());
+    auto *NewF = CloneFunction(&F, *VMaps.back());
+    FunctionClonesThinBackend++;
+    // Strip memprof and callsite metadata from clone as they are no longer
+    // needed.
+    for (auto &BB : *NewF) {
+      for (auto &Inst : BB) {
+        Inst.setMetadata(LLVMContext::MD_memprof, nullptr);
+        Inst.setMetadata(LLVMContext::MD_callsite, nullptr);
+      }
+    }
+    std::string Name = getMemProfFuncName(F.getName(), I);
+    auto *PrevF = M.getFunction(Name);
+    if (PrevF) {
+      // We might have created this when adjusting callsite in another
+      // function. It should be a declaration.
+      assert(PrevF->isDeclaration());
+      NewF->takeName(PrevF);
+      PrevF->replaceAllUsesWith(NewF);
+      PrevF->eraseFromParent();
+    } else
+      NewF->setName(Name);
+    ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
+             << "created clone " << ore::NV("NewFunction", NewF));
+
+    // Now handle aliases to this function, and clone those as well.
+    if (!FuncToAliasMap.count(&F))
+      continue;
+    for (auto *A : FuncToAliasMap[&F]) {
+      std::string Name = getMemProfFuncName(A->getName(), I);
+      auto *PrevA = M.getNamedAlias(Name);
+      auto *NewA = GlobalAlias::create(A->getValueType(),
+                                       A->getType()->getPointerAddressSpace(),
+                                       A->getLinkage(), Name, NewF);
+      NewA->copyAttributesFrom(A);
+      if (PrevA) {
+        // We might have created this when adjusting callsite in another
+        // function. It should be a declaration.
+        assert(PrevA->isDeclaration());
+        NewA->takeName(PrevA);
+        PrevA->replaceAllUsesWith(NewA);
+        PrevA->eraseFromParent();
+      }
+    }
+  }
+  return VMaps;
+}
+
+// Locate the summary for F. This is complicated by the fact that it might
+// have been internalized or promoted.
+static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
+                                      const ModuleSummaryIndex *ImportSummary) {
+  // FIXME: Ideally we would retain the original GUID in some fashion on the
+  // function (e.g. as metadata), but for now do our best to locate the
+  // summary without that information.
+  ValueInfo TheFnVI = ImportSummary->getValueInfo(F.getGUID());
+  if (!TheFnVI)
+    // See if theFn was internalized, by checking index directly with
+    // original name (this avoids the name adjustment done by getGUID() for
+    // internal symbols).
+    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(F.getName()));
+  if (TheFnVI)
+    return TheFnVI;
+  // Now query with the original name before any promotion was performed.
+  StringRef OrigName =
+      ModuleSummaryIndex::getOriginalNameBeforePromote(F.getName());
+  std::string OrigId = GlobalValue::getGlobalIdentifier(
+      OrigName, GlobalValue::InternalLinkage, M.getSourceFileName());
+  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  if (TheFnVI)
+    return TheFnVI;
+  // Could be a promoted local imported from another module. We need to pass
+  // down more info here to find the original module id. For now, try with
+  // the OrigName which might have been stored in the OidGuidMap in the
+  // index. This would not work if there were same-named locals in multiple
+  // modules, however.
+  auto OrigGUID =
+      ImportSummary->getGUIDFromOriginalID(GlobalValue::getGUID(OrigName));
+  if (OrigGUID)
+    TheFnVI = ImportSummary->getValueInfo(OrigGUID);
+  return TheFnVI;
+}
+
+bool MemProfContextDisambiguation::applyImport(Module &M) {
+  assert(ImportSummary);
+  bool Changed = false;
+
+  auto IsMemProfClone = [](const Function &F) {
+    return F.getName().contains(MemProfCloneSuffix);
+  };
+
+  // We also need to clone any aliases that reference cloned functions, because
+  // the modified callsites may invoke via the alias. Keep track of the aliases
+  // for each function.
+  std::map<const Function *, SmallPtrSet<const GlobalAlias *, 1>>
+      FuncToAliasMap;
+  for (auto &A : M.aliases()) {
+    auto *Aliasee = A.getAliaseeObject();
+    if (auto *F = dyn_cast<Function>(Aliasee))
+      FuncToAliasMap[F].insert(&A);
+  }
+
+  for (auto &F : M) {
+    if (F.isDeclaration() || IsMemProfClone(F))
+      continue;
+
+    OptimizationRemarkEmitter ORE(&F);
+
+    SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> VMaps;
+    bool ClonesCreated = false;
+    unsigned NumClonesCreated = 0;
+    auto CloneFuncIfNeeded = [&](unsigned NumClones) {
+      // We should at least have version 0 which is the original copy.
+      assert(NumClones > 0);
+      // If only one copy needed use original.
+      if (NumClones == 1)
+        return;
+      // If we already performed cloning of this function, confirm that the
+      // requested number of clones matches (the thin link should ensure the
+      // number of clones for each constituent callsite is consistent within
+      // each function), before returning.
+      if (ClonesCreated) {
+        assert(NumClonesCreated == NumClones);
+        return;
+      }
+      VMaps = createFunctionClones(F, NumClones, M, ORE, FuncToAliasMap);
+      // The first "clone" is the original copy, which doesn't have a VMap.
+      assert(VMaps.size() == NumClones - 1);
+      Changed = true;
+      ClonesCreated = true;
+      NumClonesCreated = NumClones;
+    };
+
+    // Locate the summary for F.
+    ValueInfo TheFnVI = findValueInfoForFunc(F, M, ImportSummary);
+    // If not found, this could be an imported local (see comment in
+    // findValueInfoForFunc). Skip for now as it will be cloned in its original
+    // module (where it would have been promoted to global scope so should
+    // satisfy any reference in this module).
+    if (!TheFnVI)
+      continue;
+
+    auto *GVSummary =
+        ImportSummary->findSummaryInModule(TheFnVI, M.getModuleIdentifier());
+    if (!GVSummary)
+      // Must have been imported, use the first summary (might be multiple if
+      // this was a linkonce_odr).
+      GVSummary = TheFnVI.getSummaryList().front().get();
+
+    // If this was an imported alias skip it as we won't have the function
+    // summary, and it should be cloned in the original module.
+    if (isa<AliasSummary>(GVSummary))
+      continue;
+
+    auto *FS = cast<FunctionSummary>(GVSummary->getBaseObject());
+
+    if (FS->allocs().empty() && FS->callsites().empty())
+      continue;
+
+    auto SI = FS->callsites().begin();
+    auto AI = FS->allocs().begin();
+
+    // Assume for now that the instructions are in the exact same order
+    // as when the summary was created, but confirm this is correct by
+    // matching the stack ids.
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto *CB = dyn_cast<CallBase>(&I);
+        // Same handling as when creating module summary.
+        if (!mayHaveMemprofSummary(CB))
+          continue;
+
+        CallStack<MDNode, MDNode::op_iterator> CallsiteContext(
+            I.getMetadata(LLVMContext::MD_callsite));
+        auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
+
+        // Include allocs that were already assigned a memprof function
+        // attribute in the statistics.
+        if (CB->getAttributes().hasFnAttr("memprof")) {
+          assert(!MemProfMD);
+          CB->getAttributes().getFnAttr("memprof").getValueAsString() == "cold"
+              ? AllocTypeColdThinBackend++
+              : AllocTypeNotColdThinBackend++;
+          OrigAllocsThinBackend++;
+          AllocVersionsThinBackend++;
+          if (!MaxAllocVersionsThinBackend)
+            MaxAllocVersionsThinBackend = 1;
+          // Remove any remaining callsite metadata and we can skip the rest of
+          // the handling for this instruction, since no cloning needed.
+          I.setMetadata(LLVMContext::MD_callsite, nullptr);
+          continue;
+        }
+
+        if (MemProfMD) {
+          // Consult the next alloc node.
+          assert(AI != FS->allocs().end());
+          auto &AllocNode = *(AI++);
+
+          // Sanity check that the MIB stack ids match between the summary and
+          // instruction metadata.
+          auto MIBIter = AllocNode.MIBs.begin();
+          for (auto &MDOp : MemProfMD->operands()) {
+            assert(MIBIter != AllocNode.MIBs.end());
+            auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
+            auto *MIBMD = cast<const MDNode>(MDOp);
+            MDNode *StackMDNode = getMIBStackNode(MIBMD);
+            assert(StackMDNode);
+            SmallVector<unsigned> StackIdsFromMetadata;
+            CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
+            for (auto ContextIter =
+                     StackContext.beginAfterSharedPrefix(CallsiteContext);
+                 ContextIter != StackContext.end(); ++ContextIter) {
+              // If this is a direct recursion, simply skip the duplicate
+              // entries, to be consistent with how the summary ids were
+              // generated during ModuleSummaryAnalysis.
+              if (!StackIdsFromMetadata.empty() &&
+                  StackIdsFromMetadata.back() == *ContextIter)
+                continue;
+              assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
+              assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
+                     *ContextIter);
+              StackIdIndexIter++;
+            }
+            MIBIter++;
+          }
+
+          // Perform cloning if not yet done.
+          CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size());
+
+          OrigAllocsThinBackend++;
+          AllocVersionsThinBackend += AllocNode.Versions.size();
+          if (MaxAllocVersionsThinBackend < AllocNode.Versions.size())
+            MaxAllocVersionsThinBackend = AllocNode.Versions.size();
+
+          // If there is only one version that means we didn't end up
+          // considering this function for cloning, and in that case the alloc
+          // will still be none type or should have gotten the default NotCold.
+          // Skip that after calling clone helper since that does some sanity
+          // checks that confirm we haven't decided yet that we need cloning.
+          if (AllocNode.Versions.size() == 1) {
+            assert((AllocationType)AllocNode.Versions[0] ==
+                       AllocationType::NotCold ||
+                   (AllocationType)AllocNode.Versions[0] ==
+                       AllocationType::None);
+            UnclonableAllocsThinBackend++;
+            continue;
+          }
+
+          // All versions should have a singular allocation type.
+          assert(llvm::none_of(AllocNode.Versions, [](uint8_t Type) {
+            return Type == ((uint8_t)AllocationType::NotCold |
+                            (uint8_t)AllocationType::Cold);
+          }));
+
+          // Update the allocation types per the summary info.
+          for (unsigned J = 0; J < AllocNode.Versions.size(); J++) {
+            // Ignore any that didn't get an assigned allocation type.
+            if (AllocNode.Versions[J] == (uint8_t)AllocationType::None)
+              continue;
+            AllocationType AllocTy = (AllocationType)AllocNode.Versions[J];
+            AllocTy == AllocationType::Cold ? AllocTypeColdThinBackend++
+                                            : AllocTypeNotColdThinBackend++;
+            std::string AllocTypeString = getAllocTypeAttributeString(AllocTy);
+            auto A = llvm::Attribute::get(F.getContext(), "memprof",
+                                          AllocTypeString);
+            CallBase *CBClone;
+            // Copy 0 is the original function.
+            if (!J)
+              CBClone = CB;
+            else
+              // Since VMaps are only created for new clones, we index with
+              // clone J-1 (J==0 is the original clone and does not have a VMaps
+              // entry).
+              CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            CBClone->addFnAttr(A);
+            ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
+                     << ore::NV("AllocationCall", CBClone) << " in clone "
+                     << ore::NV("Caller", CBClone->getFunction())
+                     << " marked with memprof allocation attribute "
+                     << ore::NV("Attribute", AllocTypeString));
+          }
+        } else if (!CallsiteContext.empty()) {
+          // Consult the next callsite node.
+          assert(SI != FS->callsites().end());
+          auto &StackNode = *(SI++);
+
+#ifndef NDEBUG
+          // Sanity check that the stack ids match between the summary and
+          // instruction metadata.
+          auto StackIdIndexIter = StackNode.StackIdIndices.begin();
+          for (auto StackId : CallsiteContext) {
+            assert(StackIdIndexIter != StackNode.StackIdIndices.end());
+            assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
+                   StackId);
+            StackIdIndexIter++;
+          }
+#endif
+
+          // Perform cloning if not yet done.
+          CloneFuncIfNeeded(/*NumClones=*/StackNode.Clones.size());
+
+          // Should have skipped indirect calls via mayHaveMemprofSummary.
+          assert(CB->getCalledFunction());
+          assert(!IsMemProfClone(*CB->getCalledFunction()));
+
+          // Update the calls per the summary info.
+          // Save orig name since it gets updated in the first iteration
+          // below.
+          auto CalleeOrigName = CB->getCalledFunction()->getName();
+          for (unsigned J = 0; J < StackNode.Clones.size(); J++) {
+            // Do nothing if this version calls the original version of its
+            // callee.
+            if (!StackNode.Clones[J])
+              continue;
+            auto NewF = M.getOrInsertFunction(
+                getMemProfFuncName(CalleeOrigName, StackNode.Clones[J]),
+                CB->getCalledFunction()->getFunctionType());
+            CallBase *CBClone;
+            // Copy 0 is the original function.
+            if (!J)
+              CBClone = CB;
+            else
+              CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            CBClone->setCalledFunction(NewF);
+            ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
+                     << ore::NV("Call", CBClone) << " in clone "
+                     << ore::NV("Caller", CBClone->getFunction())
+                     << " assigned to call function clone "
+                     << ore::NV("Callee", NewF.getCallee()));
+          }
+        }
+        // Memprof and callsite metadata on memory allocations no longer needed.
+        I.setMetadata(LLVMContext::MD_memprof, nullptr);
+        I.setMetadata(LLVMContext::MD_callsite, nullptr);
+      }
+    }
+  }
+
+  return Changed;
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
   if (DumpCCG) {
@@ -2820,12 +3198,46 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
 bool MemProfContextDisambiguation::processModule(
     Module &M,
     function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
-  bool Changed = false;
+
+  // If we have an import summary, then the cloning decisions were made during
+  // the thin link on the index. Apply them and return.
+  if (ImportSummary)
+    return applyImport(M);
 
   ModuleCallsiteContextGraph CCG(M, OREGetter);
-  Changed = CCG.process();
+  return CCG.process();
+}
 
-  return Changed;
+MemProfContextDisambiguation::MemProfContextDisambiguation(
+    const ModuleSummaryIndex *Summary)
+    : ImportSummary(Summary) {
+  if (ImportSummary) {
+    // The MemProfImportSummary should only be used for testing ThinLTO
+    // distributed backend handling via opt, in which case we don't have a
+    // summary from the pass pipeline.
+    assert(MemProfImportSummary.empty());
+    return;
+  }
+  if (MemProfImportSummary.empty())
+    return;
+
+  auto ReadSummaryFile =
+      errorOrToExpected(MemoryBuffer::getFile(MemProfImportSummary));
+  if (!ReadSummaryFile) {
+    logAllUnhandledErrors(ReadSummaryFile.takeError(), errs(),
+                          "Error loading file '" + MemProfImportSummary +
+                              "': ");
+    return;
+  }
+  auto ImportSummaryForTestingOrErr = getModuleSummaryIndex(**ReadSummaryFile);
+  if (!ImportSummaryForTestingOrErr) {
+    logAllUnhandledErrors(ImportSummaryForTestingOrErr.takeError(), errs(),
+                          "Error parsing file '" + MemProfImportSummary +
+                              "': ");
+    return;
+  }
+  ImportSummaryForTesting = std::move(*ImportSummaryForTestingOrErr);
+  ImportSummary = ImportSummaryForTesting.get();
 }
 
 PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
