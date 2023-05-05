@@ -616,6 +616,8 @@ bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
+  if (DiscardResult)
+    return true;
   unsigned StringIndex = P.createGlobalString(E);
   return this->emitGetPtrGlobal(StringIndex, E);
 }
@@ -623,6 +625,8 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
     const CharacterLiteral *E) {
+  if (DiscardResult)
+    return true;
   return this->emitConst(E->getValue(), E);
 }
 
