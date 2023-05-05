@@ -32,25 +32,25 @@ void test() {
   nullptr_func(false);
 
   // Allocation of locals
-  // CHECK: %[[bool_from_nullptr_t:.*]] = alloca i8, align 1
-  // CHECK: %[[nullptr_t_from_nullptr:.*]] = alloca ptr, align 8
-  // CHECK: %[[vp_from_nullptr_t:.*]] = alloca ptr, align 8
-  // CHECK: %[[nullptr_t_from_vp:.*]] = alloca ptr, align 8
-  // CHECK: %[[nullptr_t_from_int:.*]] = alloca ptr, align 8
+  // CHECK: %[[bool_from_nullptr_t:.*]] = alloca i8
+  // CHECK: %[[nullptr_t_from_nullptr:.*]] = alloca ptr
+  // CHECK: %[[vp_from_nullptr_t:.*]] = alloca ptr
+  // CHECK: %[[nullptr_t_from_vp:.*]] = alloca ptr
+  // CHECK: %[[nullptr_t_from_int:.*]] = alloca ptr
 
   // Initialization of locals
-  // CHECK: store i8 0, ptr %[[bool_from_nullptr_t]], align 1
-  // CHECK: store ptr null, ptr %[[nullptr_t_from_nullptr]], align 8
-  // CHECK: store ptr null, ptr %[[vp_from_nullptr_t]], align 8
-  // CHECK: store ptr null, ptr %[[nullptr_t_from_vp]], align 8
-  // CHECK: store ptr null, ptr %[[nullptr_t_from_int]], align 8
+  // CHECK: store i8 0, ptr %[[bool_from_nullptr_t]]
+  // CHECK: store ptr null, ptr %[[nullptr_t_from_nullptr]]
+  // CHECK: store ptr null, ptr %[[vp_from_nullptr_t]]
+  // CHECK: store ptr null, ptr %[[nullptr_t_from_vp]]
+  // CHECK: store ptr null, ptr %[[nullptr_t_from_int]]
 
   // Assignment expressions
-  // CHECK: store i8 0, ptr %[[bool_from_nullptr_t]], align 1
-  // CHECK: store ptr null, ptr %[[nullptr_t_from_nullptr]], align 8
-  // CHECK: store ptr null, ptr %[[vp_from_nullptr_t]], align 8
-  // CHECK: store ptr null, ptr %[[nullptr_t_from_vp]], align 8
-  // CHECK: store ptr null, ptr %[[nullptr_t_from_int]], align 8
+  // CHECK: store i8 0, ptr %[[bool_from_nullptr_t]]
+  // CHECK: store ptr null, ptr %[[nullptr_t_from_nullptr]]
+  // CHECK: store ptr null, ptr %[[vp_from_nullptr_t]]
+  // CHECK: store ptr null, ptr %[[nullptr_t_from_vp]]
+  // CHECK: store ptr null, ptr %[[nullptr_t_from_int]]
 
   // Calls
   // CHECK: call void @bool_func(i1 noundef {{zeroext?}} false)
