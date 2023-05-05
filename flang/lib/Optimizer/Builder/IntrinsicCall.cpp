@@ -1345,18 +1345,6 @@ static constexpr MathOperation mathOperations[] = {
     {"cosh", "cosh", genF64F64FuncType, genLibCall},
     {"cosh", "ccoshf", genComplexComplexFuncType<4>, genLibCall},
     {"cosh", "ccosh", genComplexComplexFuncType<8>, genLibCall},
-    {"divc",
-     {},
-     genComplexComplexComplexFuncType<2>,
-     genComplexMathOp<mlir::complex::DivOp>},
-    {"divc",
-     {},
-     genComplexComplexComplexFuncType<3>,
-     genComplexMathOp<mlir::complex::DivOp>},
-    {"divc", "__divsc3", genComplexComplexComplexFuncType<4>, genLibCall},
-    {"divc", "__divdc3", genComplexComplexComplexFuncType<8>, genLibCall},
-    {"divc", "__divxc3", genComplexComplexComplexFuncType<10>, genLibCall},
-    {"divc", "__divtc3", genComplexComplexComplexFuncType<16>, genLibCall},
     {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
     {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
     {"erfc", "erfcf", genF32F32FuncType, genLibCall},
@@ -5671,11 +5659,6 @@ mlir::Value fir::genMin(fir::FirOpBuilder &builder, mlir::Location loc,
   return IntrinsicLibrary{builder, loc}
       .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
                                                               args);
-}
-
-mlir::Value fir::genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
-                         mlir::Type type, mlir::Value x, mlir::Value y) {
-  return IntrinsicLibrary{builder, loc}.genRuntimeCall("divc", type, {x, y});
 }
 
 mlir::Value fir::genPow(fir::FirOpBuilder &builder, mlir::Location loc,
