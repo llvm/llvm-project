@@ -22,8 +22,12 @@ add_integration_test(
     libc.src.__support.RPC.rpc_client
     libc.src.__support.GPU.utils
   LOADER_ARGS
-    --blocks 16
-    --threads 1
+    --blocks-x 2
+    --blocks-y 2
+    --blocks-z 2
+    --threads-x 4
+    --threads-y 4
+    --threads-z 4
 )
 
 add_integration_test(

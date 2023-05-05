@@ -8509,33 +8509,21 @@ VPRecipeBase *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::Add:
   case Instruction::And:
   case Instruction::AShr:
-  case Instruction::BitCast:
   case Instruction::FAdd:
   case Instruction::FCmp:
   case Instruction::FDiv:
   case Instruction::FMul:
   case Instruction::FNeg:
-  case Instruction::FPExt:
-  case Instruction::FPToSI:
-  case Instruction::FPToUI:
-  case Instruction::FPTrunc:
   case Instruction::FRem:
   case Instruction::FSub:
   case Instruction::ICmp:
-  case Instruction::IntToPtr:
   case Instruction::LShr:
   case Instruction::Mul:
   case Instruction::Or:
-  case Instruction::PtrToInt:
   case Instruction::Select:
-  case Instruction::SExt:
   case Instruction::Shl:
-  case Instruction::SIToFP:
   case Instruction::Sub:
-  case Instruction::Trunc:
-  case Instruction::UIToFP:
   case Instruction::Xor:
-  case Instruction::ZExt:
   case Instruction::Freeze:
     return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
   };
@@ -8686,6 +8674,11 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (auto *SI = dyn_cast<SelectInst>(Instr)) {
     return toVPRecipeResult(new VPWidenSelectRecipe(
         *SI, make_range(Operands.begin(), Operands.end())));
+  }
+
+  if (auto *CI = dyn_cast<CastInst>(Instr)) {
+    return toVPRecipeResult(
+        new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(), CI));
   }
 
   return toVPRecipeResult(tryToWiden(Instr, Operands, VPBB, Plan));

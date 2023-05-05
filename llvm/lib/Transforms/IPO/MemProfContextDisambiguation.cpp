@@ -23,6 +23,7 @@
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -438,8 +439,8 @@ private:
   std::map<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
 
   /// Maps to track the calls to their corresponding nodes in the graph.
-  std::map<const CallInfo, ContextNode *> AllocationCallToContextNodeMap;
-  std::map<const CallInfo, ContextNode *> NonAllocationCallToContextNodeMap;
+  MapVector<CallInfo, ContextNode *> AllocationCallToContextNodeMap;
+  MapVector<CallInfo, ContextNode *> NonAllocationCallToContextNodeMap;
 
   /// Owner of all ContextNode unique_ptrs.
   std::vector<std::unique_ptr<ContextNode>> NodeOwner;
@@ -493,6 +494,7 @@ struct IndexCall : public PointerUnion<CallsiteInfo *, AllocInfo *> {
   IndexCall(std::nullptr_t) : IndexCall() {}
   IndexCall(CallsiteInfo *StackNode) : PointerUnion(StackNode) {}
   IndexCall(AllocInfo *AllocNode) : PointerUnion(AllocNode) {}
+  IndexCall(PointerUnion PT) : PointerUnion(PT) {}
 
   IndexCall *operator->() { return this; }
 
@@ -536,6 +538,20 @@ private:
 
   const ModuleSummaryIndex &Index;
 };
+
+namespace llvm {
+template <>
+struct DenseMapInfo<typename CallsiteContextGraph<
+    ModuleCallsiteContextGraph, Function, Instruction *>::CallInfo>
+    : public DenseMapInfo<std::pair<Instruction *, unsigned>> {};
+template <>
+struct DenseMapInfo<typename CallsiteContextGraph<
+    IndexCallsiteContextGraph, FunctionSummary, IndexCall>::CallInfo>
+    : public DenseMapInfo<std::pair<IndexCall, unsigned>> {};
+template <>
+struct DenseMapInfo<IndexCall>
+    : public DenseMapInfo<PointerUnion<CallsiteInfo *, AllocInfo *>> {};
+} // end namespace llvm
 
 namespace {
 

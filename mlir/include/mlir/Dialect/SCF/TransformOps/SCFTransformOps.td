@@ -46,16 +46,22 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let summary = "Outlines a loop into a named function";
   let description = [{
-     Moves the loop into a separate function with the specified name and
-     replaces the loop in the Payload IR with a call to that function. Takes
-     care of forwarding values that are used in the loop as function arguments.
-     If the operand is associated with more than one loop, each loop will be
-     outlined into a separate function. The provided name is used as a _base_
-     for forming actual function names following SymbolTable auto-renaming
-     scheme to avoid duplicate symbols. Expects that all ops in the Payload IR
-     have a SymbolTable ancestor (typically true because of the top-level
-     module). Returns the handle to the list of outlined functions in the same
-     order as the operand handle.
+    Moves the loop into a separate function with the specified name and replaces
+    the loop in the Payload IR with a call to that function. Takes care of
+    forwarding values that are used in the loop as function arguments. If the
+    operand is associated with more than one loop, each loop will be outlined
+    into a separate function. The provided name is used as a _base_ for forming
+    actual function names following `SymbolTable` auto-renaming scheme to avoid
+    duplicate symbols. Expects that all ops in the Payload IR have a
+    `SymbolTable` ancestor (typically true because of the top-level module).
+
+    #### Return Modes
+
+    Returns a handle to the list of outlined functions and a handle to the
+    corresponding function call operations in the same order as the operand
+    handle.
+
+    Produces a definite failure if outlining failed for any of the targets.
   }];
 
   // Note that despite the name of the transform operation and related utility
@@ -63,7 +69,8 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
   // a loop.
   let arguments = (ins TransformHandleTypeInterface:$target,
                    StrAttr:$func_name);
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$function,
+                      TransformHandleTypeInterface:$call);
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";

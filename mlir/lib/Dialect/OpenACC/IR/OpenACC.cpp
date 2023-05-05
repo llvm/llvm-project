@@ -56,9 +56,8 @@ void OpenACCDialect::initialize() {
 LogicalResult acc::DataBoundsOp::verify() {
   auto extent = getExtent();
   auto upperbound = getUpperbound();
-  if (!extent && !upperbound) {
+  if (!extent && !upperbound)
     return emitError("expected extent or upperbound.");
-  }
   return success();
 }
 
@@ -66,10 +65,9 @@ LogicalResult acc::DataBoundsOp::verify() {
 // DevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DevicePtrOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_deviceptr) {
+  if (getDataClause() != acc::DataClause::acc_deviceptr)
     return emitError("data clause associated with deviceptr operation must "
                      "match its intent");
-  }
   return success();
 }
 
@@ -77,10 +75,9 @@ LogicalResult acc::DevicePtrOp::verify() {
 // PresentOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::PresentOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_present) {
+  if (getDataClause() != acc::DataClause::acc_present)
     return emitError(
         "data clause associated with present operation must match its intent");
-  }
   return success();
 }
 
@@ -91,11 +88,10 @@ LogicalResult acc::CopyinOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_copyin &&
       getDataClause() != acc::DataClause::acc_copyin_readonly &&
-      getDataClause() != acc::DataClause::acc_copy) {
+      getDataClause() != acc::DataClause::acc_copy)
     return emitError(
         "data clause associated with copyin operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  }
   return success();
 }
 
@@ -111,11 +107,10 @@ LogicalResult acc::CreateOp::verify() {
   if (getDataClause() != acc::DataClause::acc_create &&
       getDataClause() != acc::DataClause::acc_create_zero &&
       getDataClause() != acc::DataClause::acc_copyout &&
-      getDataClause() != acc::DataClause::acc_copyout_zero) {
+      getDataClause() != acc::DataClause::acc_copyout_zero)
     return emitError(
         "data clause associated with create operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  }
   return success();
 }
 
@@ -129,10 +124,9 @@ bool acc::CreateOp::isCreateZero() {
 // NoCreateOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::NoCreateOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_no_create) {
+  if (getDataClause() != acc::DataClause::acc_no_create)
     return emitError("data clause associated with no_create operation must "
                      "match its intent");
-  }
   return success();
 }
 
@@ -140,10 +134,9 @@ LogicalResult acc::NoCreateOp::verify() {
 // AttachOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::AttachOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_attach) {
+  if (getDataClause() != acc::DataClause::acc_attach)
     return emitError(
         "data clause associated with attach operation must match its intent");
-  }
   return success();
 }
 
@@ -157,9 +150,8 @@ LogicalResult acc::GetDevicePtrOp::verify() {
   if (getDataClause() != acc::DataClause::acc_getdeviceptr &&
       getDataClause() != acc::DataClause::acc_copyout &&
       getDataClause() != acc::DataClause::acc_delete &&
-      getDataClause() != acc::DataClause::acc_detach) {
+      getDataClause() != acc::DataClause::acc_detach)
     return emitError("getDevicePtr mismatch");
-  }
   return success();
 }
 
@@ -170,14 +162,12 @@ LogicalResult acc::CopyoutOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_copyout &&
       getDataClause() != acc::DataClause::acc_copyout_zero &&
-      getDataClause() != acc::DataClause::acc_copy) {
+      getDataClause() != acc::DataClause::acc_copy)
     return emitError(
         "data clause associated with copyout operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  }
-  if (!getVarPtr() || !getAccPtr()) {
+  if (!getVarPtr() || !getAccPtr())
     return emitError("must have both host and device pointers");
-  }
   return success();
 }
 
@@ -192,14 +182,12 @@ LogicalResult acc::DeleteOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_delete &&
       getDataClause() != acc::DataClause::acc_create &&
-      getDataClause() != acc::DataClause::acc_create_zero) {
+      getDataClause() != acc::DataClause::acc_create_zero)
     return emitError(
         "data clause associated with delete operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  }
-  if (!getVarPtr() && !getAccPtr()) {
+  if (!getVarPtr() && !getAccPtr())
     return emitError("must have either host or device pointer");
-  }
   return success();
 }
 
@@ -209,14 +197,12 @@ LogicalResult acc::DeleteOp::verify() {
 LogicalResult acc::DetachOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_detach &&
-      getDataClause() != acc::DataClause::acc_attach) {
+      getDataClause() != acc::DataClause::acc_attach)
     return emitError(
         "data clause associated with detach operation must match its intent"
         " or specify original clause this operation was decomposed from");
-  }
-  if (!getVarPtr() && !getAccPtr()) {
+  if (!getVarPtr() && !getAccPtr())
     return emitError("must have either host or device pointer");
-  }
   return success();
 }
 
@@ -228,10 +214,9 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
   for (unsigned i = 0; i < nRegions; ++i)
     regions.push_back(state.addRegion());
 
-  for (Region *region : regions) {
+  for (Region *region : regions)
     if (parser.parseRegion(*region, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-  }
 
   return success();
 }

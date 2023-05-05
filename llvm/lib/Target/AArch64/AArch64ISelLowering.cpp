@@ -12353,6 +12353,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   unsigned NumUndefLanes = 0;
   SDValue Value;
   SDValue ConstantValue;
+  SmallMapVector<SDValue, unsigned, 16> DifferentValueMap;
+  unsigned ConsecutiveValCount = 0;
+  SDValue PrevVal;
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
     if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
@@ -12380,6 +12383,24 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       usesOnlyOneValue = false;
       ++NumDifferentLanes;
     }
+
+    if (PrevVal != V) {
+      ConsecutiveValCount = 0;
+      PrevVal = V;
+    }
+
+    // Keep different values and its last consecutive count. For example,
+    //
+    //  t22: v16i8 = build_vector t23, t23, t23, t23, t23, t23, t23, t23,
+    //                            t24, t24, t24, t24, t24, t24, t24, t24
+    //  t23 = consecutive count 8
+    //  t24 = consecutive count 8
+    // ------------------------------------------------------------------
+    //  t22: v16i8 = build_vector t24, t24, t23, t23, t23, t23, t23, t24,
+    //                            t24, t24, t24, t24, t24, t24, t24, t24
+    //  t23 = consecutive count 5
+    //  t24 = consecutive count 9
+    DifferentValueMap[V] = ++ConsecutiveValCount;
   }
 
   if (!Value.getNode()) {
@@ -12583,6 +12604,82 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                         Op.getOperand(I), DAG.getConstant(I, dl, MVT::i64));
 
     return NewVector;
+  }
+
+  // If vector consists of two different values, try to generate two DUPs and
+  // (CONCAT_VECTORS or VECTOR_SHUFFLE).
+  if (DifferentValueMap.size() == 2 && NumUndefLanes == 0) {
+    SmallVector<SDValue, 2> Vals;
+    // Check the consecutive count of the value is the half number of vector
+    // elements. In this case, we can use CONCAT_VECTORS. For example,
+    //
+    // canUseVECTOR_CONCAT = true;
+    //  t22: v16i8 = build_vector t23, t23, t23, t23, t23, t23, t23, t23,
+    //                            t24, t24, t24, t24, t24, t24, t24, t24
+    //
+    // canUseVECTOR_CONCAT = false;
+    //  t22: v16i8 = build_vector t23, t23, t23, t23, t23, t24, t24, t24,
+    //                            t24, t24, t24, t24, t24, t24, t24, t24
+    bool canUseVECTOR_CONCAT = true;
+    for (auto Pair : DifferentValueMap) {
+      // Check different values have same length which is NumElts / 2.
+      if (Pair.second != NumElts / 2)
+        canUseVECTOR_CONCAT = false;
+      Vals.push_back(Pair.first);
+    }
+
+    // If canUseVECTOR_CONCAT is true, we can generate two DUPs and
+    // CONCAT_VECTORs. For example,
+    //
+    //  t22: v16i8 = BUILD_VECTOR t23, t23, t23, t23, t23, t23, t23, t23,
+    //                            t24, t24, t24, t24, t24, t24, t24, t24
+    // ==>
+    //    t26: v8i8 = AArch64ISD::DUP t23
+    //    t28: v8i8 = AArch64ISD::DUP t24
+    //  t29: v16i8 = concat_vectors t26, t28
+    if (canUseVECTOR_CONCAT) {
+      EVT SubVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (isTypeLegal(SubVT) && SubVT.isVector() &&
+          SubVT.getVectorNumElements() >= 2) {
+        SmallVector<SDValue, 8> Ops1(NumElts / 2, Vals[0]);
+        SmallVector<SDValue, 8> Ops2(NumElts / 2, Vals[1]);
+        SDValue DUP1 =
+            LowerBUILD_VECTOR(DAG.getBuildVector(SubVT, dl, Ops1), DAG);
+        SDValue DUP2 =
+            LowerBUILD_VECTOR(DAG.getBuildVector(SubVT, dl, Ops2), DAG);
+        SDValue CONCAT_VECTORS =
+            DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, DUP1, DUP2);
+        return CONCAT_VECTORS;
+      }
+    }
+
+    // Let's try to generate two DUPs and VECTOR_SHUFFLE. For example,
+    //
+    //  t24: v8i8 = BUILD_VECTOR t25, t25, t25, t25, t26, t26, t26, t26
+    //  ==>
+    //    t28: v8i8 = AArch64ISD::DUP t25
+    //    t30: v8i8 = AArch64ISD::DUP t26
+    //  t31: v8i8 = vector_shuffle<0,0,0,0,8,8,8,8> t28, t30
+    if (NumElts >= 8) {
+      SmallVector<int, 16> MaskVec;
+      // Build mask for VECTOR_SHUFLLE.
+      SDValue FirstLaneVal = Op.getOperand(0);
+      for (unsigned i = 0; i < NumElts; ++i) {
+        SDValue Val = Op.getOperand(i);
+        if (FirstLaneVal == Val)
+          MaskVec.push_back(0);
+        else
+          MaskVec.push_back(NumElts);
+      }
+
+      SmallVector<SDValue, 8> Ops1(NumElts, Vals[0]);
+      SmallVector<SDValue, 8> Ops2(NumElts, Vals[1]);
+      SDValue DUP1 = LowerBUILD_VECTOR(DAG.getBuildVector(VT, dl, Ops1), DAG);
+      SDValue DUP2 = LowerBUILD_VECTOR(DAG.getBuildVector(VT, dl, Ops2), DAG);
+      SDValue VECTOR_SHUFFLE =
+          DAG.getVectorShuffle(VT, dl, DUP1, DUP2, MaskVec);
+      return VECTOR_SHUFFLE;
+    }
   }
 
   // If all else fails, just use a sequence of INSERT_VECTOR_ELT when we

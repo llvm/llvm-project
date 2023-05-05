@@ -39,6 +39,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Environment.cpp
   Event.cpp
   FileSpec.cpp
+  FileSpecList.cpp
   GDBRemote.cpp
   IOObject.cpp
   LLDBAssert.cpp

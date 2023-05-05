@@ -9,6 +9,7 @@
 #ifndef LLDB_CORE_USERSETTINGSCONTROLLER_H
 #define LLDB_CORE_USERSETTINGSCONTROLLER_H
 
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -81,6 +82,27 @@ public:
   static const char *GetExperimentalSettingsName();
 
   static bool IsSettingExperimental(llvm::StringRef setting);
+
+  template <typename T>
+  T GetPropertyAtIndexAs(uint32_t idx, T default_value,
+                         const ExecutionContext *exe_ctx = nullptr) const {
+    return m_collection_sp->GetPropertyAtIndexAs<T>(idx, exe_ctx)
+        .value_or(default_value);
+  }
+
+  template <typename T, typename U = typename std::remove_pointer<T>::type,
+            std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+  const U *
+  GetPropertyAtIndexAs(uint32_t idx,
+                       const ExecutionContext *exe_ctx = nullptr) const {
+    return m_collection_sp->GetPropertyAtIndexAs<T>(idx, exe_ctx);
+  }
+
+  template <typename T>
+  bool SetPropertyAtIndex(uint32_t idx, T t,
+                          const ExecutionContext *exe_ctx = nullptr) const {
+    return m_collection_sp->SetPropertyAtIndex<T>(idx, t, exe_ctx);
+  }
 
 protected:
   lldb::OptionValuePropertiesSP m_collection_sp;

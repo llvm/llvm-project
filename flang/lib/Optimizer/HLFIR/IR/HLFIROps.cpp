@@ -1244,6 +1244,28 @@ mlir::LogicalResult hlfir::ElseWhereOp::verify() {
   return verifyWhereAndElseWhereBody(*this);
 }
 
+//===----------------------------------------------------------------------===//
+// ForallIndexOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult
+hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
+                                   mlir::PatternRewriter &rewriter) {
+  auto insertPt = rewriter.saveInsertionPoint();
+  for (mlir::Operation *user : indexOp->getResult(0).getUsers())
+    if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(user)) {
+      rewriter.setInsertionPoint(loadOp);
+      rewriter.replaceOpWithNewOp<fir::ConvertOp>(
+          user, loadOp.getResult().getType(), indexOp.getIndex());
+    }
+  rewriter.restoreInsertionPoint(insertPt);
+  if (indexOp.use_empty()) {
+    rewriter.eraseOp(indexOp);
+    return mlir::success();
+  }
+  return mlir::failure();
+}
+
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
