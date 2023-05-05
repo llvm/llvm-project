@@ -138,13 +138,13 @@ def ext_mathematical_notation : ExtWarn<
 
 def ext_delimited_escape_sequence : Extension<
   "%select{delimited|named}0 escape sequences are a "
-  "%select{Clang|C++2b}1 extension">,
+  "%select{Clang|C++23}1 extension">,
   InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
 
-def warn_cxx2b_delimited_escape_sequence : Warning<
+def warn_cxx23_delimited_escape_sequence : Warning<
   "%select{delimited|named}0 escape sequences are "
-  "incompatible with C++ standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
+  "incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
 
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;
@@ -396,10 +396,10 @@ def ext_pp_include_next_directive : Extension<
   "#include_next is a language extension">, InGroup<GNUIncludeNext>;
 
 def ext_pp_warning_directive : Extension<
-  "#warning is a %select{C2x|C++2b}0 extension">;
-def warn_cxx2b_compat_warning_directive : Warning<
-  "#warning is incompatible with C++ standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
+  "#warning is a %select{C2x|C++23}0 extension">;
+def warn_cxx23_compat_warning_directive : Warning<
+  "#warning is incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
 def warn_c2x_compat_warning_directive : Warning<
   "#warning is incompatible with C standards before C2x">,
   InGroup<CPre2xCompat>, DefaultIgnore;
@@ -739,14 +739,14 @@ def ext_c2x_pp_directive : ExtWarn<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
   "is a C2x extension">,
   InGroup<C2x>;
-def warn_cxx2b_compat_pp_directive : Warning<
+def warn_cxx23_compat_pp_directive : Warning<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C++ standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
-def ext_cxx2b_pp_directive : ExtWarn<
+  "is incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
+def ext_cxx23_pp_directive : ExtWarn<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C++2b extension">,
-  InGroup<CXX2b>;
+  "is a C++23 extension">,
+  InGroup<CXX23>;
 
 def err_pp_visibility_non_macro : Error<"no macro named %0">;
 
