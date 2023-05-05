@@ -105,7 +105,6 @@ public:
           rhsType = fir::LogicalType::get(builder.getContext(), 4);
           rhsVal = builder.createConvert(loc, rhsType, rhsVal);
         }
-
         mlir::Value temp = builder.create<fir::AllocaOp>(loc, rhsType);
         builder.create<fir::StoreOp>(loc, rhsVal, temp);
         rhsExv = temp;
