@@ -130,11 +130,7 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Waits for all threads in the warp to reconverge for independent scheduling.
 [[clang::convergent]] LIBC_INLINE void sync_lane(uint64_t mask) {
-#if __CUDA_ARCH__ >= 700
   __nvvm_bar_warp_sync(mask);
-#else
-  (void)mask;
-#endif
 }
 
 } // namespace gpu
