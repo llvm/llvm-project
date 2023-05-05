@@ -47,6 +47,13 @@ void LLT::print(raw_ostream &OS) const {
     OS << "LLT_invalid";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LLT::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif
+
 const constexpr LLT::BitFieldInfo LLT::ScalarSizeFieldInfo;
 const constexpr LLT::BitFieldInfo LLT::PointerSizeFieldInfo;
 const constexpr LLT::BitFieldInfo LLT::PointerAddressSpaceFieldInfo;
