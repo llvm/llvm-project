@@ -279,4 +279,109 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 // CHECK:   fir.result %[[RES2]]
 // CHECK: }
 
+// -----
+
+
+// Check that 2D arrays are identified and converted.
+// Source code:
+//   subroutine sum2d(a, nx, ny)
+//    real*8 :: a(:,:)
+//    integer :: nx, ny
+//    real*8 :: sum
+//    integer :: i, j
+//    sum = 0
+//    do i=1,nx
+//       do j=1,ny
+//          sum = sum + a(j,i)
+//       end do
+//    end do
+//  end subroutine sum2d
+
+  func.func @sum2d(%arg0: !fir.box<!fir.array<?x?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "nx"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ny"}) {
+    %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmoduleFsum2dEi"}
+    %1 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QMmoduleFsum2dEj"}
+    %2 = fir.alloca f64 {bindc_name = "sum", uniq_name = "_QMmoduleFsum2dEsum"}
+    %cst = arith.constant 0.000000e+00 : f64
+    fir.store %cst to %2 : !fir.ref<f64>
+    %c1_i32 = arith.constant 1 : i32
+    %3 = fir.convert %c1_i32 : (i32) -> index
+    %4 = fir.load %arg1 : !fir.ref<i32>
+    %5 = fir.convert %4 : (i32) -> index
+    %c1 = arith.constant 1 : index
+    %6 = fir.convert %3 : (index) -> i32
+    %7:2 = fir.do_loop %arg3 = %3 to %5 step %c1 iter_args(%arg4 = %6) -> (index, i32) {
+      fir.store %arg4 to %0 : !fir.ref<i32>
+      %c1_i32_0 = arith.constant 1 : i32
+      %8 = fir.convert %c1_i32_0 : (i32) -> index
+      %9 = fir.load %arg2 : !fir.ref<i32>
+      %10 = fir.convert %9 : (i32) -> index
+      %c1_1 = arith.constant 1 : index
+      %11 = fir.convert %8 : (index) -> i32
+      %12:2 = fir.do_loop %arg5 = %8 to %10 step %c1_1 iter_args(%arg6 = %11) -> (index, i32) {
+        fir.store %arg6 to %1 : !fir.ref<i32>
+        %17 = fir.load %2 : !fir.ref<f64>
+        %18 = fir.load %1 : !fir.ref<i32>
+        %19 = fir.convert %18 : (i32) -> i64
+        %c1_i64 = arith.constant 1 : i64
+        %20 = arith.subi %19, %c1_i64 : i64
+        %21 = fir.load %0 : !fir.ref<i32>
+        %22 = fir.convert %21 : (i32) -> i64
+        %c1_i64_2 = arith.constant 1 : i64
+        %23 = arith.subi %22, %c1_i64_2 : i64
+        %24 = fir.coordinate_of %arg0, %20, %23 : (!fir.box<!fir.array<?x?xf64>>, i64, i64) -> !fir.ref<f64>
+        %25 = fir.load %24 : !fir.ref<f64>
+        %26 = arith.addf %17, %25 fastmath<contract> : f64
+        fir.store %26 to %2 : !fir.ref<f64>
+        %27 = arith.addi %arg5, %c1_1 : index
+        %28 = fir.convert %c1_1 : (index) -> i32
+        %29 = fir.load %1 : !fir.ref<i32>
+        %30 = arith.addi %29, %28 : i32
+        fir.result %27, %30 : index, i32
+      }
+      fir.store %12#1 to %1 : !fir.ref<i32>
+      %13 = arith.addi %arg3, %c1 : index
+      %14 = fir.convert %c1 : (index) -> i32
+      %15 = fir.load %0 : !fir.ref<i32>
+      %16 = arith.addi %15, %14 : i32
+      fir.result %13, %16 : index, i32
+    }
+    fir.store %7#1 to %0 : !fir.ref<i32>
+    return
+  }
+
+// Note this only checks the expected transformation, not the entire generated code:
+// CHECK-LABEL: func.func @sum2d(
+// CHECK-SAME:                  %[[ARG0:.*]]: !fir.box<!fir.array<?x?xf64>> {{.*}})
+// Only inner loop should be verisoned.
+// CHECK: fir.do_loop
+// CHECK: %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[ARG0]], %[[ZERO]] : {{.*}}
+// CHECK: %[[SIZE:.*]] = arith.constant 8 : index
+// CHECK: %[[CMP:.*]] = arith.cmpi eq, %[[DIMS]]#2, %[[SIZE]]
+// CHECK: %[[IF_RES:.*]]:2 = fir.if %[[CMP]] -> {{.*}}
+// CHECK: %[[NEWARR:.*]] = fir.convert %[[ARG0]]
+// CHECK: %[[BOXADDR:.*]] = fir.box_addr %[[NEWARR]] : {{.*}} -> !fir.ref<!fir.array<?xf64>>
+// CHECK: %[[LOOP_RES:.*]]:2 = fir.do_loop {{.*}}
+// Check the 2D -> 1D coordinate conversion, should have a multiply and a final add.
+// Some other operations are checked to synch the different parts.
+// CHECK: arith.muli %[[DIMS]]#1, {{.*}}
+// CHECK: %[[OUTER_IDX:.*]] = arith.addi {{.*}}
+// CHECK: %[[INNER_IDX:.*]] = fir.convert {{.*}}
+// CHECK: %[[C2D:.*]] = arith.addi %[[OUTER_IDX]], %[[INNER_IDX]]
+// CHECK: %[[COORD:.*]] = fir.coordinate_of %[[BOXADDR]], %[[C2D]] : (!fir.ref<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+// CHECK: %{{.*}} = fir.load %[[COORD]] : !fir.ref<f64>
+// CHECK: fir.result %{{.*}}, %{{.*}}
+// CHECK: }
+// CHECK  fir.result %[[LOOP_RES]]#0, %[[LOOP_RES]]#1
+// CHECK: } else {
+// CHECK: %[[LOOP_RES2:.*]]:2 = fir.do_loop {{.*}}
+// CHECK: %[[COORD2:.*]] = fir.coordinate_of %[[ARG0]], %{{.*}} : (!fir.box<!fir.array<?x?xf64>>, i64, i64) -> !fir.ref<f64>
+// CHECK: %{{.*}}= fir.load %[[COORD2]] : !fir.ref<f64>
+// CHECK: fir.result %{{.*}}, %{{.*}}
+// CHECK: }
+// CHECK  fir.result %[[LOOP_RES2]]#0, %[[LOOP_RES2]]#1
+// CHECK: }
+// CHECK: fir.store %[[IF_RES]]#1 to %{{.*}}
+// CHECK: return
+
 } // End module
