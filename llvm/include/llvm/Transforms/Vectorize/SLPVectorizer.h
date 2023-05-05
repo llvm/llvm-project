@@ -144,6 +144,10 @@ private:
   bool vectorizeInsertElementInst(InsertElementInst *IEI, BasicBlock *BB,
                                   slpvectorizer::BoUpSLP &R);
 
+  /// Tries to vectorize \p CmpInts. \Returns true on success.
+  bool vectorizeCmpInsts(ArrayRef<CmpInst *> CmpInsts, BasicBlock *BB,
+                         slpvectorizer::BoUpSLP &R);
+
   /// Tries to vectorize constructs started from CmpInst, InsertValueInst or
   /// InsertElementInst instructions.
   bool vectorizeSimpleInstructions(InstSetVector &Instructions, BasicBlock *BB,

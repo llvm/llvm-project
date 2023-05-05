@@ -14392,18 +14392,74 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   return IsCompatibility;
 }
 
+bool SLPVectorizerPass::vectorizeCmpInsts(ArrayRef<CmpInst *> CmpInsts,
+                                          BasicBlock *BB, BoUpSLP &R) {
+  bool Changed = false;
+  // Try to find reductions first.
+  for (Instruction *I : CmpInsts) {
+    if (R.isDeleted(I))
+      continue;
+    for (Value *Op : I->operands())
+      if (auto *RootOp = dyn_cast<Instruction>(Op))
+        Changed |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
+  }
+  // Try to vectorize operands as vector bundles.
+  for (Instruction *I : CmpInsts) {
+    if (R.isDeleted(I))
+      continue;
+    Changed |= tryToVectorize(I, R);
+  }
+  // Try to vectorize list of compares.
+  // Sort by type, compare predicate, etc.
+  auto CompareSorter = [&](Value *V, Value *V2) {
+    return compareCmp<false>(V, V2, *TLI,
+                             [&R](Instruction *I) { return R.isDeleted(I); });
+  };
+
+  auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
+    if (V1 == V2)
+      return true;
+    return compareCmp<true>(V1, V2, *TLI,
+                            [&R](Instruction *I) { return R.isDeleted(I); });
+  };
+
+  SmallVector<Value *> Vals(CmpInsts.begin(), CmpInsts.end());
+  Changed |= tryToVectorizeSequence<Value>(
+      Vals, CompareSorter, AreCompatibleCompares,
+      [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
+        // Exclude possible reductions from other blocks.
+        bool ArePossiblyReducedInOtherBlock = any_of(Candidates, [](Value *V) {
+          return any_of(V->users(), [V](User *U) {
+            auto *Select = dyn_cast<SelectInst>(U);
+            return Select &&
+                   Select->getParent() != cast<Instruction>(V)->getParent();
+          });
+        });
+        if (ArePossiblyReducedInOtherBlock)
+          return false;
+        return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
+      },
+      /*LimitForRegisterSize=*/true, R);
+  return Changed;
+}
+
 bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
                                                     BasicBlock *BB, BoUpSLP &R,
                                                     bool AtTerminator) {
+  assert(all_of(Instructions,
+                [](auto *I) {
+                  return isa<CmpInst, InsertElementInst, InsertValueInst>(I);
+                }) &&
+         "This function only accepts Cmp and Insert instructions");
   bool OpsChanged = false;
-  SmallVector<Instruction *, 4> PostponedCmps;
+  SmallVector<CmpInst *, 4> PostponedCmps;
   SmallVector<WeakTrackingVH> PostponedInsts;
   // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
     if (R.isDeleted(I))
       continue;
     if (isa<CmpInst>(I)) {
-      PostponedCmps.push_back(I);
+      PostponedCmps.push_back(cast<CmpInst>(I));
       continue;
     }
     OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
@@ -14422,52 +14478,7 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
   OpsChanged |= tryToVectorize(PostponedInsts, R);
 
   if (AtTerminator) {
-    // Try to find reductions first.
-    for (Instruction *I : PostponedCmps) {
-      if (R.isDeleted(I))
-        continue;
-      for (Value *Op : I->operands())
-        if (auto *RootOp = dyn_cast<Instruction>(Op))
-          OpsChanged |= vectorizeRootInstruction(nullptr, RootOp, BB, R, TTI);
-    }
-    // Try to vectorize operands as vector bundles.
-    for (Instruction *I : PostponedCmps) {
-      if (R.isDeleted(I))
-        continue;
-      OpsChanged |= tryToVectorize(I, R);
-    }
-    // Try to vectorize list of compares.
-    // Sort by type, compare predicate, etc.
-    auto CompareSorter = [&](Value *V, Value *V2) {
-      return compareCmp<false>(V, V2, *TLI,
-                               [&R](Instruction *I) { return R.isDeleted(I); });
-    };
-
-    auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
-      if (V1 == V2)
-        return true;
-      return compareCmp<true>(V1, V2, *TLI,
-                              [&R](Instruction *I) { return R.isDeleted(I); });
-    };
-
-    SmallVector<Value *> Vals(PostponedCmps.begin(), PostponedCmps.end());
-    OpsChanged |= tryToVectorizeSequence<Value>(
-        Vals, CompareSorter, AreCompatibleCompares,
-        [this, &R](ArrayRef<Value *> Candidates, bool LimitForRegisterSize) {
-          // Exclude possible reductions from other blocks.
-          bool ArePossiblyReducedInOtherBlock =
-              any_of(Candidates, [](Value *V) {
-                return any_of(V->users(), [V](User *U) {
-                  return isa<SelectInst>(U) &&
-                         cast<SelectInst>(U)->getParent() !=
-                             cast<Instruction>(V)->getParent();
-                });
-              });
-          if (ArePossiblyReducedInOtherBlock)
-            return false;
-          return tryToVectorizeList(Candidates, R, LimitForRegisterSize);
-        },
-        /*LimitForRegisterSize=*/true, R);
+    OpsChanged |= vectorizeCmpInsts(PostponedCmps, BB, R);
     Instructions.clear();
   } else {
     Instructions.clear();
