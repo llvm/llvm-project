@@ -89,7 +89,7 @@ public:
   // LoopEmitter delegates.
   //
 
-  constexpr TensorLevel makeTensorLevel(TensorId t, Level l) const {
+  TensorLevel makeTensorLevel(TensorId t, Level l) const {
     // Make sure LoopEmitter, GenericOp, and Merger agree on the number of
     // tensors. Merger has one more synthetic tensor for loop invariants.
     assert(loopEmitter.getNumTensors() == linalgOp->getNumOperands() &&

@@ -195,7 +195,7 @@ public:
   unsigned getNumTensors() const { return tensors.size(); }
 
   /// Compresses a TensorId and Level into a TensorLevel.
-  constexpr TensorLevel makeTensorLevel(TensorId t, Level l) const {
+  TensorLevel makeTensorLevel(TensorId t, Level l) const {
     return l * getNumTensors() + t;
   }
 
