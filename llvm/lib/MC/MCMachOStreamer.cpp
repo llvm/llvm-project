@@ -534,9 +534,7 @@ void MCMachOStreamer::finishImpl() {
 
 void MCMachOStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
-  bool Created;
-  getAssembler().registerSymbol(*S, &Created);
-  if (Created)
+  if (getAssembler().registerSymbol(*S))
     S->setExternal(true);
 }
 
