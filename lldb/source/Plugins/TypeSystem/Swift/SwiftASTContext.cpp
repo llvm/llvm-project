@@ -3888,13 +3888,17 @@ void SwiftASTContext::RegisterSectionModules(
   if (!section_list)
     return;
 
+  llvm::Triple filter = GetTriple();
   auto parse_ast_section = [&](llvm::StringRef section_data_ref, size_t n,
                                size_t total) {
     llvm::SmallVector<std::string, 4> swift_modules;
-    if (!swift::parseASTSection(*loader, section_data_ref, swift_modules)) {
+    if (!swift::parseASTSection(*loader, section_data_ref, filter,
+                                swift_modules)) {
       LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "failed to parse AST section %zu/%zu in image \"%s\".", n,
-                 total, module.GetFileSpec().GetFilename().GetCString());
+                 "failed to parse AST section %zu/%zu in image \"%s\" "
+                 "(filter=\"%s\").",
+                 n, total, module.GetFileSpec().GetFilename().GetCString(),
+                 filter.str().c_str());
       return;
     }
 
@@ -3903,9 +3907,10 @@ void SwiftASTContext::RegisterSectionModules(
       module_names.push_back(module_name);
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "parsed module \"%s\" from Swift AST section %zu/%zu in "
-                 "image \"%s\".",
+                 "image \"%s\" (filter=\"%s\").",
                  module_name.c_str(), n, total,
-                 module.GetFileSpec().GetFilename().GetCString());
+                 module.GetFileSpec().GetFilename().GetCString(),
+                 filter.str().c_str());
     }
   };
 
@@ -3926,8 +3931,10 @@ void SwiftASTContext::RegisterSectionModules(
     // Grab all the AST blobs from the symbol vendor.
     auto ast_file_datas = module.GetASTData(eLanguageTypeSwift);
     LOG_PRINTF(GetLog(LLDBLog::Types),
-               "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor.",
-               GetBriefModuleName(module).c_str(), ast_file_datas.size());
+               "(\"%s\") retrieved %zu AST Data blobs from the symbol vendor "
+               "(filter=\"%s\").",
+               GetBriefModuleName(module).c_str(), ast_file_datas.size(),
+               filter.str().c_str());
 
     // Add each of the AST blobs to the vector of AST blobs for
     // the module.
