@@ -1748,12 +1748,6 @@ bool X86AsmParser::CreateMemForMSInlineAsm(
   // If we found a decl other than a VarDecl, then assume it is a FuncDecl or
   // some other label reference.
   if (Info.isKind(InlineAsmIdentifierInfo::IK_Label)) {
-    // Insert an explicit size if the user didn't have one.
-    if (!Size) {
-      Size = getPointerWidth();
-      InstInfo->AsmRewrites->emplace_back(AOK_SizeDirective, Start,
-                                          /*Len=*/0, Size);
-    }
     // Create an absolute memory reference in order to match against
     // instructions taking a PC relative operand.
     Operands.push_back(X86Operand::CreateMem(getPointerWidth(), Disp, Start,
