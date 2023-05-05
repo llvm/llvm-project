@@ -13,8 +13,16 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
        LibcDeathTestExecutors.cpp ExecuteFunctionUnix.cpp)
 endif()
 
+# The Nvidia 'nvlink' linker does not support static libraries.
+if(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  set(library_type OBJECT)
+else()
+  set(library_type STATIC)
+endif()
+
 add_library(
   LibcUnitTest
+  ${library_type}
   EXCLUDE_FROM_ALL
   ${libc_test_srcs_common}
   ${libc_death_test_srcs}
@@ -22,6 +30,7 @@ add_library(
 
 add_library(
   LibcHermeticTest
+  ${library_type}
   EXCLUDE_FROM_ALL
   ${libc_test_srcs_common}
   HermeticTestUtils.cpp
@@ -29,6 +38,7 @@ add_library(
 
 add_library(
   LibcUnitTestMain
+  ${library_type}
   EXCLUDE_FROM_ALL
   LibcTestMain.cpp
 )
@@ -36,6 +46,7 @@ add_dependencies(LibcUnitTestMain LibcUnitTest)
 
 add_library(
   LibcHermeticTestMain
+  ${library_type}
   EXCLUDE_FROM_ALL
   LibcTestMain.cpp
 )
@@ -97,6 +108,7 @@ add_dependencies(
 
 add_library(
   LibcMemoryHelpers
+  ${library_type}
   MemoryMatcher.h
   MemoryMatcher.cpp
 )
