@@ -111,10 +111,24 @@ public:
     return R->F.add(B.F, RM);
   }
 
+  static APFloat::opStatus increment(const Floating &A, llvm::RoundingMode RM,
+                                     Floating *R) {
+    APFloat One(A.F.getSemantics(), 1);
+    *R = Floating(A.F);
+    return R->F.add(One, RM);
+  }
+
   static APFloat::opStatus sub(Floating A, Floating B, llvm::RoundingMode RM,
                                Floating *R) {
     *R = Floating(A.F);
     return R->F.subtract(B.F, RM);
+  }
+
+  static APFloat::opStatus decrement(const Floating &A, llvm::RoundingMode RM,
+                                     Floating *R) {
+    APFloat One(A.F.getSemantics(), 1);
+    *R = Floating(A.F);
+    return R->F.subtract(One, RM);
   }
 
   static APFloat::opStatus mul(Floating A, Floating B, llvm::RoundingMode RM,

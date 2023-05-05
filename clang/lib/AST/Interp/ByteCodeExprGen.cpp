@@ -1776,6 +1776,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return DiscardResult ? this->emitPopPtr(E) : true;
     }
 
+    if (T == PT_Float) {
+      return DiscardResult ? this->emitIncfPop(getRoundingMode(E), E)
+                           : this->emitIncf(getRoundingMode(E), E);
+    }
+
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
   }
   case UO_PostDec: { // x--
@@ -1787,6 +1792,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
 
       return DiscardResult ? this->emitPopPtr(E) : true;
+    }
+
+    if (T == PT_Float) {
+      return DiscardResult ? this->emitDecfPop(getRoundingMode(E), E)
+                           : this->emitDecf(getRoundingMode(E), E);
     }
 
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
@@ -1803,9 +1813,19 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     // Post-inc and pre-inc are the same if the value is to be discarded.
-    if (DiscardResult)
+    if (DiscardResult) {
+      if (T == PT_Float)
+        return this->emitIncfPop(getRoundingMode(E), E);
       return this->emitIncPop(*T, E);
+    }
 
+    if (T == PT_Float) {
+      const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
+      this->emitLoadFloat(E);
+      this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E);
+      this->emitAddf(getRoundingMode(E), E);
+      return this->emitStoreFloat(E);
+    }
     this->emitLoad(*T, E);
     this->emitConst(1, E);
     this->emitAdd(*T, E);
@@ -1823,9 +1843,19 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     }
 
     // Post-dec and pre-dec are the same if the value is to be discarded.
-    if (DiscardResult)
+    if (DiscardResult) {
+      if (T == PT_Float)
+        return this->emitDecfPop(getRoundingMode(E), E);
       return this->emitDecPop(*T, E);
+    }
 
+    if (T == PT_Float) {
+      const auto &TargetSemantics = Ctx.getFloatSemantics(E->getType());
+      this->emitLoadFloat(E);
+      this->emitConstFloat(llvm::APFloat(TargetSemantics, 1), E);
+      this->emitSubf(getRoundingMode(E), E);
+      return this->emitStoreFloat(E);
+    }
     this->emitLoad(*T, E);
     this->emitConst(1, E);
     this->emitSub(*T, E);
