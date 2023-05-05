@@ -101,9 +101,22 @@ template <bool InvertInbox> struct Process {
     return InvertInbox ? !i : i;
   }
 
-  /// Determines if this process needs to wait for ownership of the buffer
+  /// Determines if this process needs to wait for ownership of the buffer.
   LIBC_INLINE static bool buffer_unavailable(uint32_t in, uint32_t out) {
     return in != out;
+  }
+
+  /// Attempt to claim the lock at index. Return true on lock taken.
+  /// The lock is held when the zeroth bit of the uint32_t at lock[index]
+  /// is set, and available when that bit is clear. Bits [1, 32) are zero.
+  /// Or with one is a no-op when the lock is already held.
+  LIBC_INLINE bool try_lock(uint64_t index) {
+    return lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED) == 0;
+  }
+
+  // Unlock the lock at index.
+  LIBC_INLINE void unlock(uint64_t index) {
+    lock[index].store(0, cpp::MemoryOrder::RELAXED);
   }
 };
 
@@ -130,9 +143,7 @@ template <bool T> struct Port {
     return process.buffer[index].opcode;
   }
 
-  LIBC_INLINE void close() {
-    process.lock[index].store(0, cpp::MemoryOrder::RELAXED);
-  }
+  LIBC_INLINE void close() { process.unlock(index); }
 
 private:
   Process<T> &process;
@@ -258,7 +269,7 @@ LIBC_INLINE void Port<T>::recv_n(A alloc) {
 LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
   constexpr uint64_t index = 0;
   // Attempt to acquire the lock on this index.
-  if (lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED))
+  if (!try_lock(index))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
@@ -271,7 +282,7 @@ LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
   // state.
 
   if (buffer_unavailable(in, out)) {
-    lock[index].store(0, cpp::MemoryOrder::RELAXED);
+    unlock(index);
     return cpp::nullopt;
   }
 
@@ -300,7 +311,7 @@ LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
     return cpp::nullopt;
 
   // Attempt to acquire the lock on this index.
-  if (lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED))
+  if (!try_lock(index))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
@@ -310,7 +321,7 @@ LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
   out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
   if (buffer_unavailable(in, out)) {
-    lock[index].store(0, cpp::MemoryOrder::RELAXED);
+    unlock(index);
     return cpp::nullopt;
   }
 
