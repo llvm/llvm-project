@@ -16,7 +16,11 @@ using namespace llvm;
 void MSP430MCAsmInfo::anchor() { }
 
 MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT) {
-  CodePointerSize = 2;
+  // Since MSP430-GCC already generates 32-bit DWARF information, we will
+  // also store 16-bit pointers as 32-bit pointers in DWARF, because using
+  // 32-bit DWARF pointers is already a working and tested path for LLDB
+  // as well.
+  CodePointerSize = 4;
   CalleeSaveStackSlotSize = 2;
 
   CommentString = ";";
