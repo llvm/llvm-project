@@ -701,9 +701,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     State.setDebugLocFromInst(CI);
 
     /// Vectorize casts.
-    Type *DestTy = (State.VF.isScalar())
-                       ? CI->getType()
-                       : VectorType::get(CI->getType(), State.VF);
+    assert(State.VF.isVector() && "not widening");
+    Type *DestTy = VectorType::get(CI->getType(), State.VF);
 
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *A = State.get(getOperand(0), Part);
