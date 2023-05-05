@@ -153,7 +153,7 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
       typeTranslator(*mlirModule->getContext()),
       debugImporter(std::make_unique<DebugImporter>(mlirModule)),
       loopAnnotationImporter(
-          std::make_unique<LoopAnnotationImporter>(builder)) {
+          std::make_unique<LoopAnnotationImporter>(*this, builder)) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
