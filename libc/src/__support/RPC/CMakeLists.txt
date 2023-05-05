@@ -10,6 +10,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.functional
     libc.src.__support.GPU.utils
 )
 

@@ -79,6 +79,10 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe =
               new VPWidenSelectRecipe(*SI, Plan->mapToVPValues(SI->operands()));
+        } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
+          NewRecipe = new VPWidenCastRecipe(
+              CI->getOpcode(), Plan->getVPValueOrAddLiveIn(CI->getOperand(0)),
+              CI->getType(), CI);
         } else {
           NewRecipe =
               new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));

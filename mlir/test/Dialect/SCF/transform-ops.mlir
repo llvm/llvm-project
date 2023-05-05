@@ -75,11 +75,11 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.loop.get_parent_for %0  : (!pdl.operation) -> !transform.op<"scf.for">
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.loop.get_parent_for %0  : (!transform.any_op) -> !transform.op<"scf.for">
   // CHECK: = transform.loop.outline %{{.*}}
-  transform.loop.outline %1 {func_name = "foo"} : (!transform.op<"scf.for">) -> !pdl.operation
+  transform.loop.outline %1 {func_name = "foo"} : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
 }
 
 // -----

@@ -34,8 +34,13 @@ ErrorOr<int> platform_opendir(const char *name) {
 }
 
 ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
-  long size =
-      __llvm_libc::syscall_impl(SYS_getdents, fd, buffer.data(), buffer.size());
+#ifdef SYS_getdents64
+  long size = __llvm_libc::syscall_impl(SYS_getdents64, fd, buffer.data(),
+                                        buffer.size());
+#else
+#error "getdents64 syscalls not available to perform a fetch dirents operation."
+#endif
+
   if (size < 0) {
     return __llvm_libc::Error(static_cast<int>(-size));
   }

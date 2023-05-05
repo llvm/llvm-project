@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/FileSpecList.h"
-
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 
-#include <utility>
-
 #include <cstdint>
+#include <utility>
 
 using namespace lldb_private;
 

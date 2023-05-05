@@ -10,7 +10,6 @@
 #include "PECallFrameInfo.h"
 #include "WindowsMiniDump.h"
 
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -25,6 +24,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -90,9 +90,8 @@ public:
   }
 
   llvm::Triple::EnvironmentType ABI() const {
-    return (llvm::Triple::EnvironmentType)m_collection_sp
-        ->GetPropertyAtIndexAsEnumeration(ePropertyABI)
-        .value_or(llvm::Triple::UnknownEnvironment);
+    return GetPropertyAtIndexAs<llvm::Triple::EnvironmentType>(
+        ePropertyABI, llvm::Triple::UnknownEnvironment);
   }
 
   OptionValueDictionary *ModuleABIMap() const {

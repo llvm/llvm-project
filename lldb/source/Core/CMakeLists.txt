@@ -36,7 +36,6 @@ add_lldb_library(lldbCore
   DynamicLoader.cpp
   EmulateInstruction.cpp
   FileLineResolver.cpp
-  FileSpecList.cpp
   FormatEntity.cpp
   Highlighter.cpp
   IOHandler.cpp

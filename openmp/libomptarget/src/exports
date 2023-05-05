@@ -64,6 +64,7 @@ VERS1.0 {
     __tgt_interop_init;
     __tgt_interop_use;
     __tgt_interop_destroy;
+    ompt_libomptarget_connect;
   local:
     *;
 };

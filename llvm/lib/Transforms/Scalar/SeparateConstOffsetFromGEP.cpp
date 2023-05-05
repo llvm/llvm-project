@@ -521,6 +521,12 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
       !haveNoCommonBitsSet(LHS, RHS, DL, nullptr, BO, DT))
     return false;
 
+  // FIXME: We don't currently support constants from the RHS of subs,
+  // when we are zero-extended, because we need a way to zero-extended
+  // them before they are negated.
+  if (ZeroExtended && !SignExtended && BO->getOpcode() == Instruction::Sub)
+    return false;
+
   // In addition, tracing into BO requires that its surrounding s/zext (if
   // any) is distributable to both operands.
   //

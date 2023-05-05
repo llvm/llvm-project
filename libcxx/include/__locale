@@ -35,9 +35,6 @@
 # include <__support/ibm/xlocale.h>
 #elif defined(__ANDROID__)
 # include <__support/android/locale_bionic.h>
-#elif defined(__sun__)
-# include <__support/solaris/xlocale.h>
-# include <xlocale.h>
 #elif defined(_NEWLIB_VERSION)
 # include <__support/newlib/xlocale.h>
 #elif defined(__OpenBSD__)
@@ -432,7 +429,7 @@ public:
     static const mask blank  = _CTYPE_B;
     static const mask __regex_word = 0x80;
 # endif
-#elif defined(__sun__) || defined(_AIX)
+#elif defined(_AIX)
     typedef unsigned int mask;
     static const mask space  = _ISSPACE;
     static const mask print  = _ISPRINT;
@@ -444,11 +441,7 @@ public:
     static const mask punct  = _ISPUNCT;
     static const mask xdigit = _ISXDIGIT;
     static const mask blank  = _ISBLANK;
-# if defined(_AIX)
     static const mask __regex_word = 0x8000;
-# else
-    static const mask __regex_word = 0x80;
-# endif
 #elif defined(_NEWLIB_VERSION)
     // Same type as Newlib's _ctype_ array in newlib/libc/include/ctype.h.
     typedef char mask;
