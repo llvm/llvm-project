@@ -39,6 +39,10 @@
 
 #define OMPT_API_ROUTINE static
 
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
+#define DEBUG_PREFIX "OMPT"
+
 //****************************************************************************
 // private data
 //****************************************************************************
@@ -56,7 +60,10 @@ static std::mutex get_record_type_mutex;
 //****************************************************************************
 
 /// Object maintaining all the callbacks in the plugin
-ompt_device_callbacks_t ompt_device_callbacks;
+OmptDeviceCallbacksTy OmptDeviceCallbacks;
+
+/// Used to indicate whether OMPT was enabled for this library
+static bool OmptEnabled = false;
 
 static double HostToDeviceSlope = .0;
 static double HostToDeviceOffset = .0;
@@ -87,14 +94,14 @@ extern void setOmptAsyncCopyProfile(bool Enable);
 extern void setGlobalOmptKernelProfile(int DeviceId, int Enable);
 extern uint64_t getSystemTimestampInNs();
 
-/// Search for FuncName inside the ompt_device_callbacks object and assign to
+/// Search for FuncName inside the OmptDeviceCallbacks object and assign to
 /// FuncPtr.
 /// IMPORTANT: This function assumes that the *caller* holds the respective lock
 /// for FuncPtr.
 template <typename FT>
 void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr) {
   if (!(*FuncPtr)) {
-    auto libomptarget_dyn_lib = ompt_device_callbacks.get_parent_dyn_lib();
+    auto libomptarget_dyn_lib = OmptDeviceCallbacks.get_parent_dyn_lib();
     if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
       return;
     void *VPtr = libomptarget_dyn_lib->getAddressOfSymbol(FuncName.c_str());
@@ -113,7 +120,7 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *device,
 
   // TODO handle device
   std::unique_lock<std::mutex> L(set_trace_mutex);
-  ompt_device_callbacks.set_trace_ompt(device, enable, etype);
+  OmptDeviceCallbacks.set_trace_ompt(device, enable, etype);
   ensureFuncPtrLoaded<libomptarget_ompt_set_trace_ompt_t>(
       "libomptarget_ompt_set_trace_ompt", &ompt_set_trace_ompt_fn);
   assert(ompt_set_trace_ompt_fn && "libomptarget_ompt_set_trace_ompt loaded");
@@ -131,16 +138,16 @@ ompt_start_trace(ompt_device_t *device, ompt_callback_buffer_request_t request,
     // protect the function pointer
     std::unique_lock<std::mutex> lck(start_trace_mutex);
     // plugin specific
-    ompt_device_callbacks.set_buffer_request(request);
-    ompt_device_callbacks.set_buffer_complete(complete);
+    OmptDeviceCallbacks.set_buffer_request(request);
+    OmptDeviceCallbacks.set_buffer_complete(complete);
     if (request && complete) {
-      ompt_device_callbacks.set_tracing_enabled(true);
+      OmptDeviceCallbacks.set_tracing_enabled(true);
       // Enable asynchronous memory copy profiling
       setOmptAsyncCopyProfile(/*Enable=*/true);
       // Enable queue dispatch profiling
       setGlobalOmptKernelProfile(
           device != nullptr
-              ? ompt_device_callbacks.lookup_device_id((ompt_device *)device)
+              ? OmptDeviceCallbacks.lookup_device_id((ompt_device *)device)
               : 0,
           /*Enable=*/1);
     }
@@ -172,7 +179,7 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *device) {
   {
     // Protect the function pointer
     std::unique_lock<std::mutex> lck(stop_trace_mutex);
-    ompt_device_callbacks.set_tracing_enabled(false);
+    OmptDeviceCallbacks.set_tracing_enabled(false);
     // Disable asynchronous memory copy profiling
     setOmptAsyncCopyProfile(/*Enable=*/false);
     // Disable queue dispatch profiling
@@ -283,22 +290,21 @@ void setOmptGrantedNumTeams(uint64_t NumTeams) {
 //****************************************************************************
 
 static ompt_get_target_info_t LIBOMPTARGET_GET_TARGET_OPID;
-const char *ompt_device_callbacks_t::documentation = 0;
 static ompt_device *devices = 0;
 
 //****************************************************************************
 // private operations
 //****************************************************************************
 
-void ompt_device_callbacks_t::resize(int number_of_devices) {
+void OmptDeviceCallbacksTy::resize(int number_of_devices) {
   devices = new ompt_device[number_of_devices];
 }
 
-ompt_device *ompt_device_callbacks_t::lookup_device(int device_num) {
+ompt_device *OmptDeviceCallbacksTy::lookup_device(int device_num) {
   return &devices[device_num];
 }
 
-int ompt_device_callbacks_t::lookup_device_id(ompt_device *device) {
+int OmptDeviceCallbacksTy::lookup_device_id(ompt_device *device) {
   for (int i = 0; i < num_devices; ++i)
     if (device == &devices[i])
       return i;
@@ -308,7 +314,7 @@ int ompt_device_callbacks_t::lookup_device_id(ompt_device *device) {
 /// Lookup function used for querying callback functions maintained
 /// by the plugin
 ompt_interface_fn_t
-ompt_device_callbacks_t::lookup(const char *InterfaceFunctionName) {
+OmptDeviceCallbacksTy::doLookup(const char *InterfaceFunctionName) {
 #define macro(fn)                                                              \
   if (strcmp(InterfaceFunctionName, #fn) == 0)                                 \
     return (ompt_interface_fn_t)fn;
@@ -316,12 +322,7 @@ ompt_device_callbacks_t::lookup(const char *InterfaceFunctionName) {
   FOREACH_TARGET_FN(macro);
 
 #undef macro
-
-  return (ompt_interface_fn_t) nullptr;
 }
-
-/// Used to indicate whether OMPT was enabled for this library
-bool OmptEnabled = false;
 
 /// This function is passed to libomptarget as part of the OMPT connector
 /// object. It is called by libomptarget during initialization of OMPT in the
@@ -342,8 +343,7 @@ static int OmptDeviceInit(ompt_function_lookup_t lookup, int initial_device_num,
   // The lookup parameter is provided by libomptarget which already has the tool
   // callbacks registered at this point. The registration call below causes the
   // same callback functions to be registered in the plugin as well.
-  ompt_device_callbacks.register_callbacks(lookup);
-
+  OmptDeviceCallbacks.registerCallbacks(lookup);
   DP("OMPT: Exit OmptDeviceInit\n");
   return 0;
 }
@@ -364,8 +364,8 @@ static void OmptDeviceFini(ompt_data_t *tool_data) {
 void OmptCallbackInit() {
   DP("OMPT: Entering OmptCallbackInit\n");
   /// Connect plugin instance with libomptarget
-  static library_ompt_connector_t libomptarget_connector("libomptarget");
-  static ompt_start_tool_result_t OmptResult;
+  OmptLibraryConnectorTy LibomptargetConnector("libomptarget");
+  ompt_start_tool_result_t OmptResult;
 
   // Initialize OmptResult with the init and fini functions that will be
   // called by the connector
@@ -374,10 +374,13 @@ void OmptCallbackInit() {
   OmptResult.tool_data.value = 0;
 
   // Initialize the device callbacks first
-  ompt_device_callbacks.init();
+  OmptDeviceCallbacks.init();
 
   // Now call connect that causes the above init/fini functions to be called
-  libomptarget_connector.connect(&OmptResult);
+  LibomptargetConnector.connect(&OmptResult);
   DP("OMPT: Exiting OmptCallbackInit\n");
 }
-#endif
+
+#pragma pop_macro("DEBUG_PREFIX")
+
+#endif // OMPT_SUPPORT

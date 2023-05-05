@@ -64,13 +64,13 @@
 #include <ompt_device_callbacks.h>
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (ompt_device_callbacks.is_enabled()) {                                  \
+    if (OmptDeviceCallbacks.is_enabled()) {                                    \
       stmts                                                                    \
     }                                                                          \
   } while (0)
 #define OMPT_IF_TRACING_ENABLED(stmts)                                         \
   do {                                                                         \
-    if (ompt_device_callbacks.is_tracing_enabled()) {                          \
+    if (OmptDeviceCallbacks.is_tracing_enabled()) {                            \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -2662,7 +2662,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (OmptEnabled || OMPX_ForceSyncRegions ||
+    /// ToDo: mhalk Add ompt::Initialized here instead of 'is_enabled'
+    if (OmptDeviceCallbacks.is_enabled() || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -2727,7 +2728,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (OmptEnabled || OMPX_ForceSyncRegions ||
+    /// ToDo: mhalk Add ompt::Initialized here instead of 'is_enabled'
+    if (OmptDeviceCallbacks.is_enabled() || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))

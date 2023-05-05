@@ -15,95 +15,99 @@
 #ifndef _OMPT_CONNECTOR_H
 #define _OMPT_CONNECTOR_H
 
-//****************************************************************************
-// global includes
-//****************************************************************************
+#ifdef OMPT_SUPPORT
+
 #include "llvm/Support/DynamicLibrary.h"
 
 #include <memory>
 #include <string>
 
-//****************************************************************************
-// local includes
-//****************************************************************************
+#include "omp-tools.h"
 
-#include <Debug.h>
-#include <omp-tools.h>
-#include <omptarget.h>
+#include "Debug.h"
+#include "omptarget.h"
 
-//****************************************************************************
-// type declarations
-//****************************************************************************
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
+#define DEBUG_PREFIX "OMPT"
 
 #define stringify(s) #s
 
 #define LIBOMPTARGET_GET_TARGET_OPID libomptarget_get_target_opid
 
-//****************************************************************************
-// type declarations
-//****************************************************************************
+/// Type for the function to be invoked for connecting two libraries.
+typedef void (*OmptConnectRtnTy)(ompt_start_tool_result_t *result);
 
-typedef void (*library_ompt_connect_t)(ompt_start_tool_result_t *result);
-
-//----------------------------------------------------------------------------
-// class library_ompt_connector_t
-// purpose:
-//
-// establish connection between openmp runtime libraries
-//
-// NOTE: This class is intended for use in attribute constructors. therefore,
-// it should be declared within the constructor function to ensure that
-// the class is initialized before it's methods are used
-//----------------------------------------------------------------------------
-
-class library_ompt_connector_t {
+/// Establish connection between openmp runtime libraries
+///
+/// This class is used to communicate between an OMPT implementation in
+/// libomptarget and libomp. It is also used to communicate between an
+/// OMPT implementation in a device-specific plugin and
+/// libomptarget. The decision whether OMPT is enabled or not needs to
+/// be made when the library is loaded before any functions in the
+/// library are invoked. For that reason, an instance of this class is
+/// intended to be defined in the constructor for libomptarget or a
+/// plugin so that the decision about whether OMPT is supposed to be
+/// enabled is known before any interface function in the library is
+/// invoked.
+class OmptLibraryConnectorTy {
 public:
-  library_ompt_connector_t(const char *ident) {
-    lib_ident.append(ident);
-    is_initialized = false;
+  /// Use \p LibName as the prefix of the global function used for connecting
+  /// two libraries, the source indicated by \p LibName and the destination
+  /// being the one that creates this object.
+  OmptLibraryConnectorTy(const char *Ident) {
+    LibIdent.append(Ident);
+    IsInitialized = false;
   }
-  library_ompt_connector_t() = delete;
-
-  void connect(ompt_start_tool_result_t *ompt_result) {
+  OmptLibraryConnectorTy() = delete;
+  /// Use \p OmptResult init to connect the two libraries denoted by this
+  /// object. The init function of \p OmptResult will be used during connection
+  /// and the fini function of \p OmptResult will be used during teardown.
+  void connect(ompt_start_tool_result_t *OmptResult) {
     initialize();
-    if (!library_ompt_connect)
+    if (!LibConnHandle)
       return;
-    library_ompt_connect(ompt_result);
+    // Call the function provided by the source library for connect
+    LibConnHandle(OmptResult);
   }
 
 private:
   void initialize() {
-    if (is_initialized)
+    if (IsInitialized)
       return;
 
-    std::string err_msg;
-    std::string lib_name = lib_ident;
-    lib_name += ".so";
+    std::string ErrMsg;
+    std::string LibName = LibIdent;
+    LibName += ".so";
 
-    DP("OMPT: Trying to load library %s\n", lib_name.c_str());
-    auto dyn_lib_handle = std::make_shared<llvm::sys::DynamicLibrary>(
-        llvm::sys::DynamicLibrary::getPermanentLibrary(lib_name.c_str(),
-                                                       &err_msg));
-    if (!dyn_lib_handle->isValid()) {
+    DP("OMPT: Trying to load library %s\n", LibName.c_str());
+    auto DynLibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+        llvm::sys::DynamicLibrary::getPermanentLibrary(LibName.c_str(),
+                                                       &ErrMsg));
+    if (!DynLibHandle->isValid()) {
       // The upper layer will bail out if the handle is null.
-      library_ompt_connect = nullptr;
+      LibConnHandle = nullptr;
     } else {
-      auto lib_conn_rtn = lib_ident + "_ompt_connect";
+      auto LibConnRtn = "ompt_" + LibIdent + "_connect";
       DP("OMPT: Trying to get address of connection routine %s\n",
-         lib_conn_rtn.c_str());
-      library_ompt_connect = reinterpret_cast<library_ompt_connect_t>(
-          dyn_lib_handle->getAddressOfSymbol(lib_conn_rtn.c_str()));
+         LibConnRtn.c_str());
+      LibConnHandle = reinterpret_cast<OmptConnectRtnTy>(
+          DynLibHandle->getAddressOfSymbol(LibConnRtn.c_str()));
     }
-    DP("OMPT: Library connection handle = %p\n", library_ompt_connect);
-    is_initialized = true;
+    DP("OMPT: Library connection handle = %p\n", LibConnHandle);
+    IsInitialized = true;
   }
 
-private:
   /// Ensure initialization occurs only once
-  bool is_initialized;
+  bool IsInitialized;
   /// Handle of connect routine provided by source library
-  library_ompt_connect_t library_ompt_connect;
-  std::string lib_ident;
+  OmptConnectRtnTy LibConnHandle;
+  /// Name of connect routine provided by source library
+  std::string LibIdent;
 };
 
-#endif
+#endif // OMPT_SUPPORT
+
+#pragma pop_macro("DEBUG_PREFIX")
+
+#endif // _OMPT_CONNECTOR_H

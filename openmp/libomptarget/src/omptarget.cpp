@@ -29,7 +29,7 @@ using llvm::SmallVector;
 #include "ompt_callback.h"
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (ompt_enabled) {                                                        \
+    if (OmptEnabled) {                                                         \
       stmts                                                                    \
     }                                                                          \
   } while (0)

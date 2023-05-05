@@ -46,7 +46,7 @@ PluginManager *PM;
 static char *ProfileTraceFile = nullptr;
 
 #ifdef OMPT_SUPPORT
-extern void ompt_init();
+extern void InitOmptLibomp();
 #endif
 
 __attribute__((constructor(101))) void init() {
@@ -73,7 +73,7 @@ __attribute__((constructor(101))) void init() {
 
 #ifdef OMPT_SUPPORT
   // Initialize OMPT first
-  ompt_init();
+  InitOmptLibomp();
 #endif
 
   PM->RTLs.loadRTLs();

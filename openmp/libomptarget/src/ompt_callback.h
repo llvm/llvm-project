@@ -132,6 +132,6 @@ private:
 
 extern thread_local OmptInterface ompt_interface;
 
-extern bool ompt_enabled;
+extern bool OmptEnabled;
 
 #endif

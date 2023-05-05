@@ -1,4 +1,4 @@
-//===-- ompt_callback.cpp - Target independent OpenMP target RTL -- C++ -*-===//
+//===-- OmptCallback.cpp - Target independent OpenMP target RTL --- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,8 @@
 // Implementation of OMPT callback interfaces for target independent layer
 //
 //===----------------------------------------------------------------------===//
+
+#ifdef OMPT_SUPPORT
 
 #include <assert.h>
 #include <atomic>
@@ -21,42 +23,51 @@
 
 #include <omp-tools.h>
 
+#include "Debug.h"
+#include "ompt-connector.h"
+#include "ompt_buffer_mgr.h"
 #include "ompt_callback.h"
+#include "ompt_device_callbacks.h"
 #include "private.h"
-
-#include <ompt-connector.h>
-#include <ompt_buffer_mgr.h>
-#include <ompt_device_callbacks.h>
 
 /*******************************************************************************
  * macros
- *******************************************************************************/
+ ******************************************************************************/
 
-#define OMPT_CALLBACK_AVAILABLE(fn) (ompt_enabled && fn)
-#define OMPT_CALLBACK(fn, args) ompt_device_callbacks.fn args
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
+#define DEBUG_PREFIX "OMPT"
+
+#define OMPT_CALLBACK_AVAILABLE(fn) (OmptEnabled && fn)
+#define OMPT_CALLBACK(fn, args) OmptDeviceCallbacks.fn args
 #define fnptr_to_ptr(x) ((void *)(uint64_t)x)
 
 /*******************************************************************************
  * type declarations
- *******************************************************************************/
+ ******************************************************************************/
 
-class libomptarget_rtl_finalizer_t {
+/// Used to maintain the finalization function that is received
+/// from the plugin during connect
+class LibomptargetRtlFinalizer {
 public:
-  libomptarget_rtl_finalizer_t() : fn(0){};
-
-  void register_rtl(ompt_finalize_t _fn) {
-    assert(fn == 0);
-    fn = _fn;
-  };
-
+  LibomptargetRtlFinalizer() : RtlFinalization(nullptr) {}
+  void registerRtl(ompt_finalize_t FinalizationFunction) {
+    assert((RtlFinalization == nullptr) &&
+           "RTL finalization may only be registered once");
+    RtlFinalization = FinalizationFunction;
+  }
   void finalize() {
-    if (fn)
-      fn(NULL);
-    fn = 0;
-  };
+    if (RtlFinalization)
+      RtlFinalization(nullptr /* tool_data */);
+    RtlFinalization = nullptr;
+  }
 
-  ompt_finalize_t fn;
+private:
+  ompt_finalize_t RtlFinalization;
 };
+
+/// Object that will maintain the RTL finalizer from the plugin
+static LibomptargetRtlFinalizer LibraryFinalizer;
 
 typedef int (*ompt_set_frame_enter_t)(void *addr, int flags, int state);
 
@@ -67,9 +78,11 @@ typedef ompt_data_t *(*ompt_get_target_task_data_t)();
  * global data
  *****************************************************************************/
 
-bool ompt_enabled = false;
+/// Used to indicate whether OMPT was enabled for this library
+bool OmptEnabled = false;
 
-ompt_device_callbacks_t ompt_device_callbacks;
+/// Object maintaining all the callbacks for this library
+OmptDeviceCallbacksTy OmptDeviceCallbacks;
 
 OmptTracingBufferMgr ompt_trace_record_buffer_mgr;
 
@@ -80,10 +93,6 @@ OmptTracingBufferMgr ompt_trace_record_buffer_mgr;
 static ompt_set_frame_enter_t ompt_set_frame_enter_fn = 0;
 static ompt_get_task_data_t ompt_get_task_data_fn = 0;
 static ompt_get_target_task_data_t ompt_get_target_task_data_fn = 0;
-
-static libomptarget_rtl_finalizer_t libomptarget_rtl_finalizer;
-
-const char *ompt_device_callbacks_t::documentation = 0;
 
 static std::atomic<uint64_t> unique_id_ticket(1);
 
@@ -135,9 +144,74 @@ void OmptInterface::ompt_state_clear(void) {
   ompt_state_set_helper(0, 0, 0, _state);
 }
 
+/// This is the function called by the higher layer (libomp) responsible
+/// for initializing OMPT in this library. This is passed to libomp
+/// as part of the OMPT connector object.
+/// \p lookup to be used to query callbacks registered with libomp
+/// \p initial_device_num Initial device num provided by libomp
+/// \p tool_data as provided by the tool
+static int ompt_libomptarget_initialize(ompt_function_lookup_t lookup,
+                                        int initial_device_num,
+                                        ompt_data_t *tool_data) {
+  DP("enter ompt_libomptarget_initialize!\n");
+  OmptEnabled = true;
+
+#define ompt_bind_name(fn)                                                     \
+  fn##_fn = (fn##_t)lookup(#fn);                                               \
+  DP("%s=%p\n", #fn, fnptr_to_ptr(fn##_fn));
+
+  ompt_bind_name(ompt_set_frame_enter);
+  ompt_bind_name(ompt_get_task_data);
+  ompt_bind_name(ompt_get_target_task_data);
+
+#undef ompt_bind_name
+
+  // The lookup parameter is provided by libomp which already has the
+  // tool callbacks registered at this point. The registration call
+  // below causes the same callback functions to be registered in
+  // libomptarget as well
+  OmptDeviceCallbacks.registerCallbacks(lookup);
+
+  DP("exit ompt_libomptarget_initialize!\n");
+  return 0;
+}
+
+/// This function is passed to libomp as part of the OMPT connector object.
+/// It is called by libomp during finalization of OMPT in libomptarget.
+static void ompt_libomptarget_finalize(ompt_data_t *data) {
+  DP("enter ompt_libomptarget_finalize!\n");
+  // Before disabling OMPT, call the finalizer (of the plugin) that was
+  // registered with this library
+  LibraryFinalizer.finalize();
+  OmptEnabled = false;
+  DP("exit ompt_libomptarget_finalize!\n");
+}
+
 /*****************************************************************************
  * OMPT private operations
  *****************************************************************************/
+/// Used to initialize callbacks implemented by the tool. This interface
+/// will lookup the callbacks table in libomp and assign them to the callbacks
+/// maintained in libomptarget.
+void InitOmptLibomp() {
+  DP("OMPT: Enter InitOmptLibomp\n");
+  // Connect with libomp
+  static OmptLibraryConnectorTy LibompConnector("libomp");
+  static ompt_start_tool_result_t OmptResult;
+
+  // Initialize OmptResult with the init and fini functions that will be
+  // called by the connector
+  OmptResult.initialize = ompt_libomptarget_initialize;
+  OmptResult.finalize = ompt_libomptarget_finalize;
+  OmptResult.tool_data.value = 0;
+
+  // Initialize the device callbacks first
+  OmptDeviceCallbacks.init();
+
+  // Now call connect that causes the above init/fini functions to be called
+  LibompConnector.connect(&OmptResult);
+  DP("OMPT: Exit InitOmptLibomp\n");
+}
 
 static uint64_t id_create() { return unique_id_ticket.fetch_add(1); }
 
@@ -193,7 +267,7 @@ void OmptInterface::target_operation_end() {
 void OmptInterface::target_data_alloc_begin(int64_t device_id,
                                             void *hst_ptr_begin, size_t size,
                                             void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_alloc, /*src_addr=*/hst_ptr_begin,
       /*src_device_num=*/omp_get_initial_device(), /*dest_addr=*/nullptr,
@@ -206,7 +280,7 @@ void OmptInterface::target_data_alloc_end(int64_t device_id,
                                           void *hst_ptr_begin,
                                           void *tgt_ptr_begin, size_t size,
                                           void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_alloc, /*src_addr=*/hst_ptr_begin,
       /*src_device_num=*/omp_get_initial_device(),
@@ -219,7 +293,7 @@ void OmptInterface::target_data_submit_begin(int64_t device_id,
                                              void *hst_ptr_begin,
                                              void *tgt_ptr_begin, size_t size,
                                              void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_transfer_to_device, /*src_addr=*/hst_ptr_begin,
       /*src_device_num=*/omp_get_initial_device(),
@@ -232,7 +306,7 @@ void OmptInterface::target_data_submit_end(int64_t device_id,
                                            void *hst_ptr_begin,
                                            void *tgt_ptr_begin, size_t size,
                                            void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_transfer_to_device, /*src_addr=*/hst_ptr_begin,
       /*src_device_num=*/omp_get_initial_device(),
@@ -244,7 +318,7 @@ void OmptInterface::target_data_submit_end(int64_t device_id,
 void OmptInterface::target_data_delete_begin(int64_t device_id,
                                              void *tgt_ptr_begin,
                                              void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_delete, /*src_addr=*/tgt_ptr_begin,
       /*src_device_num=*/device_id, /*dest_addr=*/nullptr,
@@ -255,7 +329,7 @@ void OmptInterface::target_data_delete_begin(int64_t device_id,
 
 void OmptInterface::target_data_delete_end(int64_t device_id,
                                            void *tgt_ptr_begin, void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_delete, /*src_addr=*/tgt_ptr_begin,
       /*src_device_num=*/device_id, /*dest_addr=*/nullptr,
@@ -268,7 +342,7 @@ void OmptInterface::target_data_retrieve_begin(int64_t device_id,
                                                void *hst_ptr_begin,
                                                void *tgt_ptr_begin, size_t size,
                                                void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_begin, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_transfer_from_device, /*src_addr=*/tgt_ptr_begin,
       /*src_device_num=*/device_id, /*dest_addr=*/hst_ptr_begin,
@@ -281,7 +355,7 @@ void OmptInterface::target_data_retrieve_end(int64_t device_id,
                                              void *hst_ptr_begin,
                                              void *tgt_ptr_begin, size_t size,
                                              void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_data_op_emi(
+  OmptDeviceCallbacks.ompt_callback_target_data_op_emi(
       ompt_scope_end, ompt_target_task_data, &ompt_target_data,
       ompt_target_data_transfer_from_device, /*src_addr=*/tgt_ptr_begin,
       /*src_device_num=*/device_id, /*dest_addr=*/hst_ptr_begin,
@@ -293,10 +367,10 @@ void OmptInterface::target_data_retrieve_end(int64_t device_id,
 ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
     ompt_target_data_op_t data_op, void *src_addr, int64_t src_device_num,
     void *dest_addr, int64_t dest_device_num, size_t bytes) {
-  if (!ompt_device_callbacks.is_tracing_enabled() ||
-      (!ompt_device_callbacks.is_tracing_type_enabled(
+  if (!OmptDeviceCallbacks.is_tracing_enabled() ||
+      (!OmptDeviceCallbacks.is_tracing_type_enabled(
            ompt_callback_target_data_op) &&
-       !ompt_device_callbacks.is_tracing_type_enabled(
+       !OmptDeviceCallbacks.is_tracing_type_enabled(
            ompt_callback_target_data_op_emi)))
     return nullptr;
 
@@ -336,23 +410,23 @@ void OmptInterface::set_trace_record_target_data_op(
 }
 
 void OmptInterface::target_submit_begin(unsigned int num_teams) {
-  ompt_device_callbacks.ompt_callback_target_submit_emi(
+  OmptDeviceCallbacks.ompt_callback_target_submit_emi(
       ompt_scope_begin, &ompt_target_data, num_teams, opid_create,
       &ompt_target_region_opid);
 }
 
 void OmptInterface::target_submit_end(unsigned int num_teams) {
-  ompt_device_callbacks.ompt_callback_target_submit_emi(
+  OmptDeviceCallbacks.ompt_callback_target_submit_emi(
       ompt_scope_end, &ompt_target_data, num_teams, opid_get,
       &ompt_target_region_opid);
 }
 
 ompt_record_ompt_t *
 OmptInterface::target_submit_trace_record_gen(unsigned int num_teams) {
-  if (!ompt_device_callbacks.is_tracing_enabled() ||
-      (!ompt_device_callbacks.is_tracing_type_enabled(
+  if (!OmptDeviceCallbacks.is_tracing_enabled() ||
+      (!OmptDeviceCallbacks.is_tracing_type_enabled(
            ompt_callback_target_submit) &&
-       !ompt_device_callbacks.is_tracing_type_enabled(
+       !OmptDeviceCallbacks.is_tracing_type_enabled(
            ompt_callback_target_submit_emi)))
     return nullptr;
 
@@ -384,13 +458,13 @@ void OmptInterface::set_trace_record_target_kernel(
 
 void OmptInterface::target_data_enter_begin(int64_t device_id, void *codeptr) {
   target_region_begin();
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target_enter_data, ompt_scope_begin, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_create);
 }
 
 void OmptInterface::target_data_enter_end(int64_t device_id, void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target_enter_data, ompt_scope_end, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_get);
   target_region_end();
@@ -398,14 +472,14 @@ void OmptInterface::target_data_enter_end(int64_t device_id, void *codeptr) {
 
 void OmptInterface::target_data_exit_begin(int64_t device_id, void *codeptr) {
   target_region_begin();
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target_exit_data, ompt_scope_begin, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_create);
   target_region_announce("begin");
 }
 
 void OmptInterface::target_data_exit_end(int64_t device_id, void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target_exit_data, ompt_scope_end, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_get);
   target_region_end();
@@ -413,14 +487,14 @@ void OmptInterface::target_data_exit_end(int64_t device_id, void *codeptr) {
 
 void OmptInterface::target_update_begin(int64_t device_id, void *codeptr) {
   target_region_begin();
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target_update, ompt_scope_begin, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_create);
   target_region_announce("begin");
 }
 
 void OmptInterface::target_update_end(int64_t device_id, void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target_update, ompt_scope_end, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_get);
   target_region_end();
@@ -428,14 +502,14 @@ void OmptInterface::target_update_end(int64_t device_id, void *codeptr) {
 
 void OmptInterface::target_begin(int64_t device_id, void *codeptr) {
   target_region_begin();
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target, ompt_scope_begin, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_create);
   target_region_announce("begin");
 }
 
 void OmptInterface::target_end(int64_t device_id, void *codeptr) {
-  ompt_device_callbacks.ompt_callback_target_emi(
+  OmptDeviceCallbacks.ompt_callback_target_emi(
       ompt_target, ompt_scope_end, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_get);
   target_region_end();
@@ -445,10 +519,9 @@ ompt_record_ompt_t *
 OmptInterface::target_trace_record_gen(int64_t device_id, ompt_target_t kind,
                                        ompt_scope_endpoint_t endpoint,
                                        void *code) {
-  if (!ompt_device_callbacks.is_tracing_enabled() ||
-      (!ompt_device_callbacks.is_tracing_type_enabled(ompt_callback_target) &&
-       !ompt_device_callbacks.is_tracing_type_enabled(
-           ompt_callback_target_emi)))
+  if (!OmptDeviceCallbacks.is_tracing_enabled() ||
+      (!OmptDeviceCallbacks.is_tracing_type_enabled(ompt_callback_target) &&
+       !OmptDeviceCallbacks.is_tracing_type_enabled(ompt_callback_target_emi)))
     return nullptr;
 
   ompt_record_ompt_t *data_ptr =
@@ -505,104 +578,38 @@ static void LIBOMPTARGET_GET_TARGET_OPID(uint64_t *device_num,
   *host_op_id = ompt_target_region_opid;
 }
 
-static int libomptarget_ompt_initialize(ompt_function_lookup_t lookup,
-                                        int initial_device_num,
-                                        ompt_data_t *tool_data) {
-  DP("OMPT: enter libomptarget_ompt_initialize!\n");
-
-  ompt_enabled = true;
-
-#define ompt_bind_name(fn)                                                     \
-  fn##_fn = (fn##_t)lookup(#fn);                                               \
-  DP("%s=%p\n", #fn, fnptr_to_ptr(fn##_fn));
-
-  ompt_bind_name(ompt_set_frame_enter);
-  ompt_bind_name(ompt_get_task_data);
-  ompt_bind_name(ompt_get_target_task_data);
-
-#undef ompt_bind_name
-
-  ompt_device_callbacks.register_callbacks(lookup);
-
-  DP("OMPT: exit libomptarget_ompt_initialize!\n");
-
-  return 0;
-}
-
-static void libomptarget_ompt_finalize(ompt_data_t *data) {
-  DP("enter libomptarget_ompt_finalize!\n");
-
-  libomptarget_rtl_finalizer.finalize();
-
-  ompt_enabled = false;
-
-  DP("exit libomptarget_ompt_finalize!\n");
-}
-
 // Today, this is not called from libomptarget
-ompt_device *ompt_device_callbacks_t::lookup_device(int device_num) {
+ompt_device *OmptDeviceCallbacksTy::lookup_device(int device_num) {
   assert(0 && "Lookup device should be invoked in the plugin");
   return nullptr;
 }
 
 ompt_interface_fn_t
-ompt_device_callbacks_t::lookup(const char *interface_function_name) {
-  if (strcmp(interface_function_name,
-             stringify(LIBOMPTARGET_GET_TARGET_OPID)) == 0)
+OmptDeviceCallbacksTy::doLookup(const char *InterfaceFunctionName) {
+  if (strcmp(InterfaceFunctionName, stringify(LIBOMPTARGET_GET_TARGET_OPID)) ==
+      0)
     return (ompt_interface_fn_t)LIBOMPTARGET_GET_TARGET_OPID;
 
-  return ompt_device_callbacks.lookup_callback(interface_function_name);
+  return OmptDeviceCallbacks.lookupCallback(InterfaceFunctionName);
 }
-
-#ifdef OMPT_SUPPORT
-/*****************************************************************************
- * constructor
- *****************************************************************************/
-
-void ompt_init() {
-  DP("OMPT: Entering ompt_init\n");
-  static library_ompt_connector_t libomp_connector("libomp");
-  static ompt_start_tool_result_t ompt_result;
-
-  ompt_result.initialize = libomptarget_ompt_initialize;
-  ompt_result.finalize = libomptarget_ompt_finalize;
-  ompt_result.tool_data.value = 0;
-
-  ompt_device_callbacks.init();
-  libomp_connector.connect(&ompt_result);
-
-  DP("OMPT: Exit ompt_init\n");
-}
-#endif
 
 extern "C" {
-
-void libomptarget_ompt_connect(ompt_start_tool_result_t *result) {
-  DP("OMPT: Enter libomptarget_ompt_connect: OMPT enabled == %d\n",
-     ompt_enabled);
-  if (ompt_enabled && result) {
-    libomptarget_rtl_finalizer.register_rtl(result->finalize);
-    result->initialize(ompt_device_callbacks_t::lookup, 0, NULL);
-  }
-  DP("OMPT: Leave libomptarget_ompt_connect\n");
-}
-
 // Device-independent entry point for ompt_set_trace_ompt
 ompt_set_result_t libomptarget_ompt_set_trace_ompt(ompt_device_t *device,
                                                    unsigned int enable,
                                                    unsigned int etype) {
   std::unique_lock<std::mutex> lck(set_trace_mutex);
-  return ompt_device_callbacks.set_trace_ompt(device, enable, etype);
+  return OmptDeviceCallbacks.set_trace_ompt(device, enable, etype);
 }
 
 // Device-independent entry point for ompt_start_trace
 int libomptarget_ompt_start_trace(ompt_callback_buffer_request_t request,
                                   ompt_callback_buffer_complete_t complete) {
   std::unique_lock<std::mutex> lck(start_stop_flush_trace_mutex);
-  ompt_device_callbacks.set_buffer_request(request);
-  ompt_device_callbacks.set_buffer_complete(complete);
+  OmptDeviceCallbacks.set_buffer_request(request);
+  OmptDeviceCallbacks.set_buffer_complete(complete);
   if (request && complete) {
-    ompt_device_callbacks.set_tracing_enabled(true);
+    OmptDeviceCallbacks.set_tracing_enabled(true);
     ompt_trace_record_buffer_mgr.startHelperThreads();
     return 1; // success
   }
@@ -621,7 +628,7 @@ int libomptarget_ompt_stop_trace(ompt_device_t *device) {
   int status = ompt_trace_record_buffer_mgr.flushAllBuffers(device);
   // TODO shutdown should perhaps return a status
   ompt_trace_record_buffer_mgr.shutdownHelperThreads();
-  ompt_device_callbacks.set_tracing_enabled(false);
+  OmptDeviceCallbacks.set_tracing_enabled(false);
   return status;
 }
 
@@ -671,4 +678,28 @@ ompt_record_t libomptarget_ompt_get_record_type(ompt_buffer_t *buffer,
   // fixed.
   return ompt_record_t::ompt_record_ompt;
 }
+
+/// Used for connecting libomptarget with a plugin
+void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
+  DP("OMPT: Enter ompt_libomptarget_connect\n");
+  if (OmptEnabled && result) {
+    // Cache the fini function so that it can be invoked on exit
+    LibraryFinalizer.registerRtl(result->finalize);
+    // Invoke the provided init function with the lookup function maintained
+    // in this library so that callbacks maintained by this library are
+    // retrieved.
+    result->initialize(OmptDeviceCallbacksTy::doLookup,
+                       0 /* initial_device_num */, nullptr /* tool_data */);
+  }
+  DP("OMPT: Leave ompt_libomptarget_connect\n");
 }
+}
+
+#pragma pop_macro("DEBUG_PREFIX")
+
+#else
+extern "C" {
+/// Dummy definition when OMPT is disabled
+void ompt_libomptarget_connect() {}
+}
+#endif // OMPT_SUPPORT

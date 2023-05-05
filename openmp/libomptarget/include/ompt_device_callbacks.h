@@ -1,5 +1,4 @@
-//=== ompt_device_callbacks.h - Target independent OpenMP target RTL -- C++
-//-===//
+//=== ompt_device_callbacks.h - Target independent OpenMP target RTL - C++ ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,6 +35,10 @@
   FOREACH_OMPT_NOEMI_EVENT(macro)                                              \
   FOREACH_OMPT_EMI_EVENT(macro)
 
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
+#define DEBUG_PREFIX "OMPT"
+
 /*****************************************************************************
  * implementation specific types
  *****************************************************************************/
@@ -62,14 +65,55 @@ private:
   std::atomic<bool> enabled;
 };
 
-class ompt_device_callbacks_t {
+/// Internal representation for OMPT device callback functions.
+class OmptDeviceCallbacksTy {
 public:
+  /// Initialize the enabled flag and all the callbacks
+  void init() {
+    Enabled = false;
+    num_devices = 0;
+    tracing_enabled = false;
+    tracing_type_enabled = 0;
+    parent_dyn_lib = nullptr;
+#define initName(Name, Type, Code) Name##_fn = 0;
+    FOREACH_OMPT_TARGET_CALLBACK(initName)
+#undef initName
+    ompt_callback_buffer_request_fn = 0;
+    ompt_callback_buffer_complete_fn = 0;
+  }
+
+  /// Used to register callbacks. \p Lookup is used to query a given callback
+  /// by name and the result is assigned to the corresponding callback function.
+  void registerCallbacks(ompt_function_lookup_t Lookup) {
+    Enabled = true;
+#define OmptBindCallback(Name, Type, Code)                                     \
+  Name##_fn = (Name##_t)Lookup(#Name);                                         \
+  DP("OMPT: class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));
+
+    FOREACH_OMPT_TARGET_CALLBACK(OmptBindCallback);
+#undef OmptBindCallback
+  }
+
+  /// Used to find a callback given its name
+  ompt_interface_fn_t lookupCallback(const char *InterfaceFunctionName) {
+#define OmptLookup(Name, Type, Code)                                           \
+  if (strcmp(InterfaceFunctionName, #Name) == 0)                               \
+    return (ompt_interface_fn_t)Name##_fn;
+
+    FOREACH_OMPT_TARGET_CALLBACK(OmptLookup);
+#undef OmptLookup
+    return (ompt_interface_fn_t) nullptr;
+  }
+
+  /// Wrapper function to find a callback given its name
+  static ompt_interface_fn_t doLookup(const char *InterfaceFunctionName);
+
   void ompt_callback_device_initialize(int device_num, const char *type) {
     if (ompt_callback_device_initialize_fn) {
       ompt_device *device = lookup_device(device_num);
       if (device->do_initialize()) {
         ompt_callback_device_initialize_fn(
-            device_num, type, (ompt_device_t *)device, lookup, documentation);
+            device_num, type, (ompt_device_t *)device, doLookup, nullptr);
       }
     }
   };
@@ -237,22 +281,7 @@ public:
     }
   }
 
-  void init() {
-    num_devices = 0;
-    enabled = false;
-    tracing_enabled = false;
-    tracing_type_enabled = 0;
-    parent_dyn_lib = nullptr;
-
-#define init_name(name, type, code) name##_fn = 0;
-    FOREACH_OMPT_TARGET_CALLBACK(init_name)
-#undef init_name
-
-    ompt_callback_buffer_request_fn = 0;
-    ompt_callback_buffer_complete_fn = 0;
-  }
-
-  bool is_enabled() { return enabled; }
+  bool is_enabled() { return Enabled; }
 
   bool is_tracing_enabled() { return tracing_enabled; }
   void set_tracing_enabled(bool b) { tracing_enabled = b; }
@@ -337,28 +366,6 @@ public:
     resize(number_of_devices);
   }
 
-  void register_callbacks(ompt_function_lookup_t lookup) {
-    enabled = true;
-#define ompt_bind_callback(fn, type, code)                                     \
-  fn##_fn = (fn##_t)lookup(#fn);                                               \
-  DP("OMPT: class bound %s=%p\n", #fn, ((void *)(uint64_t)fn##_fn));
-    FOREACH_OMPT_TARGET_CALLBACK(ompt_bind_callback);
-#undef ompt_bind_callback
-  };
-
-  ompt_interface_fn_t lookup_callback(const char *interface_function_name) {
-#define ompt_dolookup(fn, type, code)                                          \
-  if (strcmp(interface_function_name, #fn) == 0)                               \
-    return (ompt_interface_fn_t)fn##_fn;
-
-    FOREACH_OMPT_TARGET_CALLBACK(ompt_dolookup);
-#undef ompt_dolookup
-
-    return (ompt_interface_fn_t)0;
-  };
-
-  static ompt_interface_fn_t lookup(const char *interface_function_name);
-
   void set_buffer_request(ompt_callback_buffer_request_t callback) {
     ompt_callback_buffer_request_fn = callback;
   }
@@ -370,15 +377,13 @@ public:
   int lookup_device_id(ompt_device *device);
 
 private:
+  /// Set to true if callbacks for this library have been initialized
+  bool Enabled;
+
   int num_devices;
-  bool enabled;
   std::atomic<bool> tracing_enabled;
   std::atomic<uint64_t> tracing_type_enabled;
   std::shared_ptr<llvm::sys::DynamicLibrary> parent_dyn_lib;
-
-#define declare_name(name, type, code) name##_t name##_fn;
-  FOREACH_OMPT_TARGET_CALLBACK(declare_name)
-#undef declare_name
 
   ompt_callback_buffer_request_t ompt_callback_buffer_request_fn;
   ompt_callback_buffer_complete_t ompt_callback_buffer_complete_fn;
@@ -386,9 +391,16 @@ private:
   static ompt_device *lookup_device(int device_num);
 
   static void resize(int number_of_devices);
-  static const char *documentation;
+
+  /// Callback functions
+#define DeclareName(Name, Type, Code) Name##_t Name##_fn;
+  FOREACH_OMPT_TARGET_CALLBACK(DeclareName)
+#undef DeclareName
 };
 
-extern ompt_device_callbacks_t ompt_device_callbacks;
+/// Device callbacks object for the library that performs the instantiation
+extern OmptDeviceCallbacksTy OmptDeviceCallbacks;
+
+#pragma pop_macro("DEBUG_PREFIX")
 
 #endif

@@ -15,14 +15,12 @@
 #include <cstdlib>
 #include <limits>
 
-#include <Debug.h>
-
+#include "Debug.h"
+#include "ompt_buffer_mgr.h"
+#include "ompt_device_callbacks.h"
 #include "private.h"
 
-#include <ompt_buffer_mgr.h>
-#include <ompt_device_callbacks.h>
-
-extern ompt_device_callbacks_t ompt_device_callbacks;
+extern OmptDeviceCallbacksTy OmptDeviceCallbacks;
 
 // When set to true, helper threads terminate their work
 static bool done_tracing{false};
@@ -73,8 +71,8 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
   void *buffer = nullptr;
   size_t total_bytes;
   // TODO Move the buffer allocation to a helper thread
-  ompt_device_callbacks.ompt_callback_buffer_request(0 /* device_num */,
-                                                     &buffer, &total_bytes);
+  OmptDeviceCallbacks.ompt_callback_buffer_request(0 /* device_num */, &buffer,
+                                                   &total_bytes);
 
   // TODO Instead of asserting, turn OFF tracing
   assert(total_bytes >= rec_size && "Buffer is too small");
@@ -167,7 +165,7 @@ void OmptTracingBufferMgr::driveCompletion() {
     FlushCv.wait(flush_lock, [this] {
       return done_tracing ||
              (!Id2FlushMdMap.empty() &&
-              ompt_device_callbacks.is_tracing_enabled()) ||
+              OmptDeviceCallbacks.is_tracing_enabled()) ||
              isThisThreadFlushWaitedUpon();
     });
     if (isThisThreadFlushWaitedUpon()) {
@@ -336,10 +334,10 @@ void OmptTracingBufferMgr::dispatchCallback(void *buffer, void *first_cursor,
   // There is a small window when the buffer-completion callback may
   // be invoked even after tracing has been disabled.
   // Note that we don't want to hold a lock when dispatching the callback.
-  if (ompt_device_callbacks.is_tracing_enabled()) {
+  if (OmptDeviceCallbacks.is_tracing_enabled()) {
     DP("Dispatch callback w/ range (inclusive) to be flushed: %p -> %p\n",
        first_cursor, last_cursor);
-    ompt_device_callbacks.ompt_callback_buffer_complete(
+    OmptDeviceCallbacks.ompt_callback_buffer_complete(
         0 /* TODO device num */, buffer,
         /* bytes returned in this callback */
         (char *)getNextTR(last_cursor) - (char *)first_cursor,
@@ -357,9 +355,9 @@ void OmptTracingBufferMgr::dispatchBufferOwnedCallback(
   // There is a small window when the buffer-completion callback may
   // be invoked even after tracing has been disabled.
   // Note that we don't want to hold a lock when dispatching the callback.
-  if (ompt_device_callbacks.is_tracing_enabled()) {
+  if (OmptDeviceCallbacks.is_tracing_enabled()) {
     DP("Dispatch callback with buffer %p owned\n", flush_info.FlushBuf->Start);
-    ompt_device_callbacks.ompt_callback_buffer_complete(
+    OmptDeviceCallbacks.ompt_callback_buffer_complete(
         0, flush_info.FlushBuf->Start, 0, (ompt_buffer_cursor_t)0,
         true /* buffer owned */);
   }

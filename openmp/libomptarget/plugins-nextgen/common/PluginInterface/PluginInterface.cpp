@@ -38,13 +38,13 @@ extern void setOmptGrantedNumTeams(uint64_t NumTeams);
 #include <ompt_device_callbacks.h>
 #define OMPT_IF_ENABLED(stmts)                                                 \
   do {                                                                         \
-    if (ompt_device_callbacks.is_enabled()) {                                  \
+    if (OmptDeviceCallbacks.is_enabled()) {                                    \
       stmts                                                                    \
     }                                                                          \
   } while (0)
 #define OMPT_IF_TRACING_ENABLED(stmts)                                         \
   do {                                                                         \
-    if (ompt_device_callbacks.is_tracing_enabled()) {                          \
+    if (OmptDeviceCallbacks.is_tracing_enabled()) {                            \
       stmts                                                                    \
     }                                                                          \
   } while (0)
@@ -490,11 +490,10 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
 
-  OMPT_IF_ENABLED(
-      ompt_device_callbacks.prepare_devices(Plugin.getNumDevices());
-      ompt_device_callbacks.compute_parent_dyn_lib("libomptarget.so");
-      ompt_device_callbacks.ompt_callback_device_initialize(
-          DeviceId, getComputeUnitKind().c_str()););
+  OMPT_IF_ENABLED(OmptDeviceCallbacks.prepare_devices(Plugin.getNumDevices());
+                  OmptDeviceCallbacks.compute_parent_dyn_lib("libomptarget.so");
+                  OmptDeviceCallbacks.ompt_callback_device_initialize(
+                      DeviceId, getComputeUnitKind().c_str()););
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -543,8 +542,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
-  OMPT_IF_ENABLED(
-      ompt_device_callbacks.ompt_callback_device_finalize(DeviceId););
+  OMPT_IF_ENABLED(OmptDeviceCallbacks.ompt_callback_device_finalize(DeviceId););
 
   if (RPCHandle)
     if (auto Err = RPCHandle->deinitDevice())
@@ -592,7 +590,7 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   OMPT_IF_ENABLED(
       size_t Bytes =
           getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
-      ompt_device_callbacks.ompt_callback_device_load(
+      OmptDeviceCallbacks.ompt_callback_device_load(
           DeviceId, /*FileName=*/nullptr, /*File Offset=*/0,
           /*VmaInFile=*/nullptr, /*ImgSize=*/Bytes,
           /*HostAddr=*/InputTgtImage->ImageStart, /*DeviceAddr=*/nullptr,

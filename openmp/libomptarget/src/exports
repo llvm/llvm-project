@@ -69,7 +69,6 @@ VERS1.0 {
     __tgt_set_info_flag;
     __tgt_print_device_info;
     omp_is_coarse_grain_mem_region;
-    libomptarget_ompt_connect;
     libomptarget_ompt_set_trace_ompt;
     libomptarget_ompt_start_trace;
     libomptarget_ompt_flush_trace;
@@ -86,6 +85,7 @@ VERS1.0 {
     __tgt_interop_init;
     __tgt_interop_use;
     __tgt_interop_destroy;
+    ompt_libomptarget_connect;
   local:
     *;
 };

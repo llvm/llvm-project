@@ -908,8 +908,8 @@ static ompt_interface_fn_t libomp_target_fn_lookup(const char *s) {
   return (ompt_interface_fn_t)0;
 }
 
-_OMP_EXTERN void libomp_ompt_connect(ompt_start_tool_result_t *result) {
-  OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Enter libomp_ompt_connect\n");
+_OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
+  OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Enter ompt_libomp_connect\n");
 
   __ompt_force_initialization();
 
@@ -922,5 +922,5 @@ _OMP_EXTERN void libomp_ompt_connect(ompt_start_tool_result_t *result) {
       libomptarget_ompt_result = result;
     }
   }
-  OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Exit libomp_ompt_connect\n");
+  OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Exit ompt_libomp_connect\n");
 }
