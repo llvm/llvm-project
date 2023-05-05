@@ -2257,6 +2257,13 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         StreamString ostr;
         ostr.Printf("%" PRIu64 " %" PRIu64, pid_tid->first, pid_tid->second);
         description = std::string(ostr.GetString());
+      } else if (key.compare("addressing_bits") == 0) {
+        uint64_t addressing_bits;
+        if (!value.getAsInteger(0, addressing_bits)) {
+          addr_t address_mask = ~((1ULL << addressing_bits) - 1);
+          SetCodeAddressMask(address_mask);
+          SetDataAddressMask(address_mask);
+        }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))
