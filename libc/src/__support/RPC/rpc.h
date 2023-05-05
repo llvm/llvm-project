@@ -98,8 +98,10 @@ constexpr uint64_t default_port_count = 64;
 ///
 template <bool InvertInbox> struct Process {
   LIBC_INLINE Process() = default;
-  LIBC_INLINE Process(const Process &) = default;
-  LIBC_INLINE Process &operator=(const Process &) = default;
+  LIBC_INLINE Process(const Process &) = delete;
+  LIBC_INLINE Process &operator=(const Process &) = delete;
+  LIBC_INLINE Process(Process &&) = default;
+  LIBC_INLINE Process &operator=(Process &&) = default;
   LIBC_INLINE ~Process() = default;
 
   uint64_t port_count;
@@ -236,8 +238,10 @@ template <bool T> struct Port {
   LIBC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint64_t index,
                    uint32_t out)
       : process(process), lane_mask(lane_mask), index(index), out(out) {}
-  LIBC_INLINE Port(const Port &) = default;
+  LIBC_INLINE Port(const Port &) = delete;
   LIBC_INLINE Port &operator=(const Port &) = delete;
+  LIBC_INLINE Port(Port &&) = default;
+  LIBC_INLINE Port &operator=(Port &&) = default;
   LIBC_INLINE ~Port() = default;
 
   template <typename U> LIBC_INLINE void recv(U use);
@@ -264,8 +268,8 @@ private:
 /// The RPC client used to make requests to the server.
 struct Client : public Process<false> {
   LIBC_INLINE Client() = default;
-  LIBC_INLINE Client(const Client &) = default;
-  LIBC_INLINE Client &operator=(const Client &) = default;
+  LIBC_INLINE Client(const Client &) = delete;
+  LIBC_INLINE Client &operator=(const Client &) = delete;
   LIBC_INLINE ~Client() = default;
 
   using Port = rpc::Port<false>;
@@ -276,8 +280,8 @@ struct Client : public Process<false> {
 /// The RPC server used to respond to the client.
 struct Server : public Process<true> {
   LIBC_INLINE Server() = default;
-  LIBC_INLINE Server(const Server &) = default;
-  LIBC_INLINE Server &operator=(const Server &) = default;
+  LIBC_INLINE Server(const Server &) = delete;
+  LIBC_INLINE Server &operator=(const Server &) = delete;
   LIBC_INLINE ~Server() = default;
 
   using Port = rpc::Port<true>;
@@ -444,7 +448,7 @@ Client::try_open(uint16_t opcode) {
 LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
   for (;;) {
     if (cpp::optional<Client::Port> p = try_open(opcode))
-      return p.value();
+      return cpp::move(p.value());
     sleep_briefly();
   }
 }
@@ -488,7 +492,7 @@ Server::try_open() {
 LIBC_INLINE Server::Port Server::open() {
   for (;;) {
     if (cpp::optional<Server::Port> p = try_open())
-      return p.value();
+      return cpp::move(p.value());
     sleep_briefly();
   }
 }
