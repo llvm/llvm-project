@@ -1,7 +1,8 @@
 ;; Test callsite context graph generation for call graph with with MIBs
 ;; that have pruned contexts that partially match multiple inlined
 ;; callsite contexts, requiring duplication of context ids and nodes
-;; while matching callsite nodes onto the graph.
+;; while matching callsite nodes onto the graph. Also tests graph and IR
+;; cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -63,13 +64,36 @@
 ; RUN:  -r=%t.o,_Znam, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:  --check-prefix=STATS
 
 ; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
 ;; We should clone D once for the cold allocations via C.
 ; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
+
+;; Try again but with distributed ThinLTO
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:  -thinlto-distributed-indexes \
+; RUN:  -r=%t.o,main,plx \
+; RUN:  -r=%t.o,_ZdaPv, \
+; RUN:  -r=%t.o,sleep, \
+; RUN:  -r=%t.o,_Znam, \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
+; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:  --check-prefix=STATS
+
+; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
+; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
+;; We should clone D once for the cold allocations via C.
+; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+
+;; Check distributed index
+; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DISTRIB
 
 source_filename = "duplicate-context-ids.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -107,7 +131,13 @@ entry:
   ret ptr null
 }
 
-declare i32 @main()
+define i32 @main() {
+entry:
+  call ptr @_Z1Bv()
+  call ptr @_Z1Ev()
+  call ptr @_Z1Fv()
+  ret i32 0
+}
 
 declare void @_ZdaPv()
 
@@ -271,6 +301,11 @@ declare i32 @sleep()
 ; DUMP:         Clone of [[D]]
 
 
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
+
+
 ; DOTPRE: digraph "prestackupdate" {
 ; DOTPRE: 	label="prestackupdate";
 ; DOTPRE: 	Node[[D:0x[a-z0-9]+]] [shape=record,tooltip="N[[D]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
@@ -308,3 +343,9 @@ declare i32 @sleep()
 ; DOTCLONED: 	Node[[E]] -> Node[[D2]][tooltip="ContextIds: 1",fillcolor="cyan"];
 ; DOTCLONED: 	Node[[D2]] [shape=record,tooltip="N[[D2]] ContextIds: 1 3 4",fillcolor="cyan",style="filled",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z1Dv -\> alloc}"];
 ; DOTCLONED: }
+
+; DISTRIB: ^[[C:[0-9]+]] = gv: (guid: 1643923691937891493, {{.*}} callsites: ((callee: ^[[D:[0-9]+]], clones: (1)
+; DISTRIB: ^[[D]] = gv: (guid: 4881081444663423788, {{.*}} allocs: ((versions: (notcold, cold)
+; DISTRIB: ^[[B:[0-9]+]] = gv: (guid: 14590037969532473829, {{.*}} callsites: ((callee: ^[[D]], clones: (1)
+; DISTRIB: ^[[F:[0-9]+]] = gv: (guid: 17035303613541779335, {{.*}} callsites: ((callee: ^[[D]], clones: (0)
+; DISTRIB: ^[[E:[0-9]+]] = gv: (guid: 17820708772846654376, {{.*}} callsites: ((callee: ^[[D]], clones: (1)

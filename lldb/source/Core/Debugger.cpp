@@ -335,11 +335,7 @@ bool Debugger::SetScriptLanguage(lldb::ScriptLanguage script_lang) {
 
 lldb::LanguageType Debugger::GetREPLLanguage() const {
   const uint32_t idx = ePropertyREPLLanguage;
-  OptionValueLanguage *value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueLanguage(idx);
-  if (value)
-    return value->GetCurrentValue();
-  return LanguageType();
+  return GetPropertyAtIndexAs<LanguageType>(idx, {});
 }
 
 bool Debugger::SetREPLLanguage(lldb::LanguageType repl_lang) {
