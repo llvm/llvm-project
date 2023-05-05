@@ -251,27 +251,6 @@ __pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardItera
 
 // [alg.transform]
 
-template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _UnaryOperation>
-__pstl::__internal::__enable_if_execution_policy<_ExecutionPolicy, _ForwardIterator2>
-transform(_ExecutionPolicy&& __exec,
-          _ForwardIterator1 __first,
-          _ForwardIterator1 __last,
-          _ForwardIterator2 __result,
-          _UnaryOperation __op) {
-  typedef typename iterator_traits<_ForwardIterator1>::reference _InputType;
-  typedef typename iterator_traits<_ForwardIterator2>::reference _OutputType;
-
-  auto __dispatch_tag = __pstl::__internal::__select_backend(__exec, __first, __result);
-
-  return __pstl::__internal::__pattern_walk2(
-      __dispatch_tag,
-      std::forward<_ExecutionPolicy>(__exec),
-      __first,
-      __last,
-      __result,
-      [__op](_InputType __x, _OutputType __y) mutable { __y = __op(__x); });
-}
-
 template <class _ExecutionPolicy,
           class _ForwardIterator1,
           class _ForwardIterator2,
