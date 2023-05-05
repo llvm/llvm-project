@@ -877,7 +877,11 @@ module std [system] {
       module file_type                    { private header "__filesystem/file_type.h" }
       module filesystem_error             { private header "__filesystem/filesystem_error.h" }
       module operations                   { private header "__filesystem/operations.h" }
-      module path                         { private header "__filesystem/path.h" }
+      module path                         {
+        private header "__filesystem/path.h"
+        export functional.__functional.hash
+        export functional.__functional.unary_function
+      }
       module path_iterator                { private header "__filesystem/path_iterator.h" }
       module perm_options                 { private header "__filesystem/perm_options.h" }
       module perms                        { private header "__filesystem/perms.h" }
