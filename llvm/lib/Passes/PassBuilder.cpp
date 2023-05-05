@@ -262,6 +262,7 @@
 
 
 #include "llvm/Transforms/Utils/MyHelloWorld.h"
+#include "llvm/Transforms/Utils/DbgInstructionPrint.h"
 
 using namespace llvm;
 
