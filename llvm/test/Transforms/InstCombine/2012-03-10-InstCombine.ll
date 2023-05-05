@@ -60,12 +60,12 @@ define i32 @func_logical(ptr %c, ptr %f) nounwind uwtable readnone noinline ssp 
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule ptr [[D]], [[F:%.*]]
 ; CHECK-NEXT:    [[NOT_CMP1:%.*]] = icmp uge ptr [[C]], [[F]]
-; CHECK-NEXT:    [[DOTCMP2:%.*]] = select i1 [[CMP2]], i1 [[NOT_CMP1]], i1 false
+; CHECK-NEXT:    [[DOTCMP2:%.*]] = and i1 [[CMP2]], [[NOT_CMP1]]
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp uge ptr [[D]], [[F]]
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = icmp ule ptr [[C]], [[F]]
-; CHECK-NEXT:    [[DOTCMP5:%.*]] = select i1 [[CMP5]], i1 [[NOT_CMP3]], i1 false
+; CHECK-NEXT:    [[DOTCMP5:%.*]] = and i1 [[CMP5]], [[NOT_CMP3]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[RETVAL_0_IN:%.*]] = phi i1 [ [[DOTCMP2]], [[IF_THEN]] ], [ [[DOTCMP5]], [[IF_ELSE]] ]
