@@ -105,7 +105,7 @@ void MachOWriter::writeHeader(raw_ostream &OS) {
 }
 
 template <typename SectionType>
-SectionType constructSection(MachOYAML::Section Sec) {
+SectionType constructSection(const MachOYAML::Section &Sec) {
   SectionType TempSec;
   memcpy(reinterpret_cast<void *>(&TempSec.sectname[0]), &Sec.sectname[0], 16);
   memcpy(reinterpret_cast<void *>(&TempSec.segname[0]), &Sec.segname[0], 16);
