@@ -112,9 +112,6 @@ public:
   OptionValueLanguage *GetPropertyAtIndexAsOptionValueLanguage(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 
-  bool SetPropertyAtIndexAsLanguage(uint32_t idx, lldb::LanguageType lang,
-                                    const ExecutionContext *exe_ctx = nullptr);
-
   bool
   GetPropertyAtIndexAsArgs(uint32_t idx, Args &args,
                            const ExecutionContext *exe_ctx = nullptr) const;

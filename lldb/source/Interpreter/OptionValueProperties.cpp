@@ -210,17 +210,6 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueLanguage(
   return nullptr;
 }
 
-bool OptionValueProperties::SetPropertyAtIndexAsLanguage(
-    uint32_t idx, const LanguageType lang, const ExecutionContext *exe_ctx) {
-  const Property *property = GetPropertyAtIndex(idx, exe_ctx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->SetLanguageValue(lang);
-  }
-  return false;
-}
-
 bool OptionValueProperties::GetPropertyAtIndexAsArgs(
     uint32_t idx, Args &args, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);
