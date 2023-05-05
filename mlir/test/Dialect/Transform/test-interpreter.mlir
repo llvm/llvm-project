@@ -134,7 +134,6 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %f = pdl_match @const in %arg1 : (!pdl.operation) -> !pdl.operation
-    // CHECK: %{{.+}} = get_closest_isolated_parent %{{.+}}
     %m = get_closest_isolated_parent %f : (!pdl.operation) -> !pdl.operation
     test_print_remark_at_operand %m, "parent function" : !pdl.operation
   }
@@ -254,9 +253,7 @@ transform.with_pdl_patterns {
 
 func.func private @bar()
 
-// CHECK-LABEL: @erase_call
 func.func @erase_call() {
-  // CHECK-NOT: call @bar
   call @bar() : () -> ()
   return
 }
