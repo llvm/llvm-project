@@ -95,7 +95,7 @@ using SBTF2 = ::SS1 [[clang::btf_type_tag("1")]];
 using SBTF3 = ::SS1 [[clang::btf_type_tag("2")]];
 
 N t21 = 0 ? (SBTF1){} : (SBTF3){}; // expected-error {{from 'SS1'}}
-N t22 = 0 ? (SBTF1){} : (SBTF2){}; // expected-error {{from 'SS1 btf_type_tag(1)' (aka 'SS1')}}
+N t22 = 0 ? (SBTF1){} : (SBTF2){}; // expected-error {{from 'SS1 __attribute__((btf_type_tag("1")))' (aka 'SS1')}}
 
 using QX = const SB1 *;
 using QY = const ::SB1 *;
