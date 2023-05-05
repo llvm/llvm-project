@@ -12,6 +12,14 @@ The LLVM Project uses `GitHub <https://github.com/>`_ for
 This page describes how the LLVM Project users and developers can
 participate in the project using GitHub.
 
+Branches
+========
+Do not create any branches in the llvm/llvm-project repository.  This repository
+is reserved for official project branches only.  We may relax this rule in
+the future if needed to support "stacked" pull request, but in that case only
+branches being used for "stacked" pull requests will be allowed.
+
+
 Releases
 ========
 
