@@ -2490,7 +2490,7 @@ private:
 
   /// \returns a vector from a collection of scalars in \p VL. if \p Root is not
   /// specified, the starting vector value is poison.
-  Value *gather(ArrayRef<Value *> VL, Value *Root = nullptr);
+  Value *gather(ArrayRef<Value *> VL, Value *Root);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -9431,6 +9431,10 @@ public:
     inversePermutation(Order, NewMask);
     add(V1, NewMask);
   }
+  Value *gather(ArrayRef<Value *> VL, Value *Root = nullptr) {
+    return R.gather(VL, Root);
+  }
+  Value *createFreeze(Value *V) { return Builder.CreateFreeze(V); }
   /// Finalize emission of the shuffles.
   /// \param Action the action (if any) to be performed before final applying of
   /// the \p ExtMask mask.
@@ -9905,7 +9909,7 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     if (!all_of(GatheredScalars, PoisonValue::classof)) {
       SmallVector<int> BVMask(GatheredScalars.size(), PoisonMaskElem);
       TryPackScalars(GatheredScalars, BVMask, /*IsRootPoison=*/true);
-      Value *BV = gather(GatheredScalars);
+      Value *BV = ShuffleBuilder.gather(GatheredScalars);
       ShuffleBuilder.add(BV, BVMask);
     }
     if (all_of(NonConstants, [=](Value *V) {
@@ -9919,13 +9923,13 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
           E->ReuseShuffleIndices, E->Scalars.size(),
           [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
             TryPackScalars(NonConstants, Mask, /*IsRootPoison=*/false);
-            Vec = gather(NonConstants, Vec);
+            Vec = ShuffleBuilder.gather(NonConstants, Vec);
           });
   } else if (!allConstant(GatheredScalars)) {
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    Vec = gather(GatheredScalars);
+    Vec = ShuffleBuilder.gather(GatheredScalars);
     ShuffleBuilder.add(Vec, ReuseMask);
     Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   } else {
@@ -9935,13 +9939,13 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       if (!isa<PoisonValue>(V))
         Mask[I] = I;
     }
-    Vec = gather(E->Scalars);
+    Vec = ShuffleBuilder.gather(E->Scalars);
     ShuffleBuilder.add(Vec, Mask);
     Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   }
 
   if (NeedFreeze)
-    Vec = Builder.CreateFreeze(Vec);
+    Vec = ShuffleBuilder.createFreeze(Vec);
   return Vec;
 }
 
