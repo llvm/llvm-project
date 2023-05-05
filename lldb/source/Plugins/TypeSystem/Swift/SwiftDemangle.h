@@ -14,6 +14,7 @@
 #define liblldb_SwiftDemangle_h_
 
 #include "swift/Demangling/Demangle.h"
+#include "swift/Demangling/Demangler.h"
 #include "llvm/ADT/ArrayRef.h"
 
 namespace lldb_private {
@@ -49,6 +50,27 @@ nodeAtPath(swift::Demangle::NodePointer root,
   return node;
 }
 
+/// \return the child of the \p Type node.
+static swift::Demangle::NodePointer GetType(swift::Demangle::NodePointer n) {
+  using namespace swift::Demangle;
+  if (!n || n->getKind() != Node::Kind::Global)
+    return nullptr;
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
+    return nullptr;
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return nullptr;
+  n = n->getFirstChild();
+  return n;
+}
+
+/// Demangle a mangled type name and return the child of the \p Type node.
+static swift::Demangle::NodePointer
+GetDemangledType(swift::Demangle::Demangler &dem, llvm::StringRef name) {
+  return GetType(dem.demangleSymbol(name));
+}
+  
 } // namespace swift_demangle
 } // namespace lldb_private
 
