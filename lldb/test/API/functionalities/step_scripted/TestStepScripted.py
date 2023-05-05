@@ -41,7 +41,8 @@ class StepScriptedTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())
-
+        stop_desc = thread.GetStopDescription(1000)
+        self.assertIn("Stepping out from", stop_desc, "Got right description")
 
     def test_misspelled_plan_name(self):
         """Test that we get a useful error if we misspell the plan class name"""
@@ -106,6 +107,10 @@ class StepScriptedTestCase(TestBase):
         # And foo should have changed:
         self.assertTrue(foo_val.GetValueDidChange(), "Foo changed")
 
+        # And we should have a reasonable stop description:
+        desc = thread.GetStopDescription(1000)
+        self.assertIn("Stepped until foo changed", desc, "Got right stop description")
+
     def test_stop_others_from_command(self):
         """Test that the stop-others flag is set correctly by the command line.
            Also test that the run-all-threads property overrides this."""
@@ -119,10 +124,12 @@ class StepScriptedTestCase(TestBase):
         cmd = "thread step-scripted -C Steps.StepReportsStopOthers -k token -v %s"%(token)
         if run_mode != None:
             cmd = cmd + " --run-mode %s"%(run_mode)
-        print(cmd)
+        if self.TraceOn():
+            print(cmd)
         interp.HandleCommand(cmd, result)
         self.assertTrue(result.Succeeded(), "Step scripted failed: %s."%(result.GetError()))
-        print(Steps.StepReportsStopOthers.stop_mode_dict)
+        if self.TraceOn():
+            print(Steps.StepReportsStopOthers.stop_mode_dict)
         value = Steps.StepReportsStopOthers.stop_mode_dict[token]
         self.assertEqual(value, stop_others_value, "Stop others has the correct value.")
 
