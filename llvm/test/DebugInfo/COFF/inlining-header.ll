@@ -68,7 +68,8 @@
 ; OBJ:     FunctionType: main (0x1005)
 ; OBJ:     CodeOffset: _main+0x0
 ; OBJ:     Segment: 0x0
-; OBJ:     Flags [ (0x0)
+; OBJ:     Flags [ (0x80)
+; OBJ:       HasOptimizedDebugInfo (0x80)
 ; OBJ:     ]
 ; OBJ:     DisplayName: main
 ; OBJ:     LinkageName: _main
