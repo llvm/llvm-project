@@ -39,6 +39,7 @@ FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOpt::Level OptLevel);
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
 ModulePass *createGenericToNVVMLegacyPass();
+ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
 FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
