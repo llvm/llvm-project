@@ -10,6 +10,7 @@
 
 // explicit deque(const allocator_type& a);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -25,6 +26,7 @@ test(const Allocator& a)
     std::deque<T, Allocator> d(a);
     assert(d.size() == 0);
     assert(d.get_allocator() == a);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
 }
 
 int main(int, char**)
@@ -33,7 +35,9 @@ int main(int, char**)
     test<NotConstructible>(test_allocator<NotConstructible>(3));
 #if TEST_STD_VER >= 11
     test<int>(min_allocator<int>());
+    test<int>(safe_allocator<int>());
     test<NotConstructible>(min_allocator<NotConstructible>{});
+    test<NotConstructible>(safe_allocator<NotConstructible>{});
     test<int>(explicit_allocator<int>());
     test<NotConstructible>(explicit_allocator<NotConstructible>{});
 #endif
