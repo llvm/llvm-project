@@ -16,7 +16,7 @@ static void test_add_simple() {
   uint32_t num_additions = 1000 + 10 * gpu::get_block_id_x();
   uint64_t cnt = 0;
   for (uint32_t i = 0; i < num_additions; ++i) {
-    rpc::Port port = rpc::client.open(rpc::TEST_INCREMENT);
+    rpc::Client::Port port = rpc::client.open(rpc::TEST_INCREMENT);
     port.send_and_recv(
         [=](rpc::Buffer *buffer) {
           reinterpret_cast<uint64_t *>(buffer->data)[0] = cnt;
