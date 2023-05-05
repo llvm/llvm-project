@@ -11,8 +11,7 @@
 _Float16 x, y, z;
 
 // With no native half type support (no zfh), f16 will be promoted to f32.
-// With zfh, it shouldn't be (FIXME: set HasLegalHalfType = true in order to
-// get this behaviour for zfh).
+// With zfh, it shouldn't be.
 
 // NOZFH-LABEL: define dso_local void @f16_add
 // NOZFH-SAME: () #[[ATTR0:[0-9]+]] {
@@ -30,12 +29,9 @@ _Float16 x, y, z;
 // ZFH-SAME: () #[[ATTR0:[0-9]+]] {
 // ZFH-NEXT:  entry:
 // ZFH-NEXT:    [[TMP0:%.*]] = load half, ptr @y, align 2
-// ZFH-NEXT:    [[EXT:%.*]] = fpext half [[TMP0]] to float
 // ZFH-NEXT:    [[TMP1:%.*]] = load half, ptr @z, align 2
-// ZFH-NEXT:    [[EXT1:%.*]] = fpext half [[TMP1]] to float
-// ZFH-NEXT:    [[ADD:%.*]] = fadd float [[EXT]], [[EXT1]]
-// ZFH-NEXT:    [[UNPROMOTION:%.*]] = fptrunc float [[ADD]] to half
-// ZFH-NEXT:    store half [[UNPROMOTION]], ptr @x, align 2
+// ZFH-NEXT:    [[ADD:%.*]] = fadd half [[TMP0]], [[TMP1]]
+// ZFH-NEXT:    store half [[ADD]], ptr @x, align 2
 // ZFH-NEXT:    ret void
 //
 void f16_add() {

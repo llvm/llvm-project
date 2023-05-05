@@ -320,6 +320,9 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (ABI.empty())
     ABI = ISAInfo->computeDefaultABI().str();
 
+  if (ISAInfo->hasExtension("zfh"))
+    HasLegalHalfType = true;
+
   return true;
 }
 
