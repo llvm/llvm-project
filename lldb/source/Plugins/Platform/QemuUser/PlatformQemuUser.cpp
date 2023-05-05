@@ -45,7 +45,7 @@ public:
   }
 
   FileSpec GetEmulatorPath() {
-    return m_collection_sp->GetPropertyAtIndexAsFileSpec(ePropertyEmulatorPath);
+    return GetPropertyAtIndexAs<FileSpec>(ePropertyEmulatorPath, {});
   }
 
   Args GetEmulatorArgs() {

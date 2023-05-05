@@ -287,29 +287,6 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpec(
   return nullptr;
 }
 
-FileSpec OptionValueProperties::GetPropertyAtIndexAsFileSpec(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
-  const Property *property = GetPropertyAtIndex(idx, exe_ctx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->GetFileSpecValue();
-  }
-  return FileSpec();
-}
-
-bool OptionValueProperties::SetPropertyAtIndexAsFileSpec(
-    uint32_t idx, const FileSpec &new_file_spec,
-    const ExecutionContext *exe_ctx) {
-  const Property *property = GetPropertyAtIndex(idx, exe_ctx);
-  if (property) {
-    OptionValue *value = property->GetValue().get();
-    if (value)
-      return value->SetFileSpecValue(new_file_spec);
-  }
-  return false;
-}
-
 OptionValueSInt64 *OptionValueProperties::GetPropertyAtIndexAsOptionValueSInt64(
     uint32_t idx, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);

@@ -134,13 +134,6 @@ public:
   OptionValueFileSpec *GetPropertyAtIndexAsOptionValueFileSpec(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 
-  FileSpec
-  GetPropertyAtIndexAsFileSpec(uint32_t idx,
-                               const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsFileSpec(uint32_t idx, const FileSpec &file_spec,
-                                    const ExecutionContext *exe_ctx = nullptr);
-
   OptionValuePathMappings *GetPropertyAtIndexAsOptionValuePathMappings(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 

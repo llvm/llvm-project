@@ -4452,7 +4452,7 @@ bool TargetProperties::GetEnableNotifyAboutFixIts() const {
 
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 void TargetProperties::CheckJITObjectsDir() {
@@ -4529,7 +4529,7 @@ uint32_t TargetProperties::GetMaximumMemReadSize() const {
 
 FileSpec TargetProperties::GetStandardInputPath() const {
   const uint32_t idx = ePropertyInputPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 void TargetProperties::SetStandardInputPath(llvm::StringRef path) {
@@ -4539,7 +4539,7 @@ void TargetProperties::SetStandardInputPath(llvm::StringRef path) {
 
 FileSpec TargetProperties::GetStandardOutputPath() const {
   const uint32_t idx = ePropertyOutputPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 void TargetProperties::SetStandardOutputPath(llvm::StringRef path) {
@@ -4549,7 +4549,7 @@ void TargetProperties::SetStandardOutputPath(llvm::StringRef path) {
 
 FileSpec TargetProperties::GetStandardErrorPath() const {
   const uint32_t idx = ePropertyErrorPath;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(idx);
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {

@@ -112,25 +112,23 @@ bool ModuleListProperties::GetEnableBackgroundLookup() const {
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
-  return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertyClangModulesCachePath)
-      ->GetCurrentValue();
+  const uint32_t idx = ePropertyClangModulesCachePath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
-  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      ePropertyClangModulesCachePath, path);
+  const uint32_t idx = ePropertyClangModulesCachePath;
+  return SetPropertyAtIndex(idx, path);
 }
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
-  return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertyLLDBIndexCachePath)
-      ->GetCurrentValue();
+  const uint32_t idx = ePropertyLLDBIndexCachePath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 bool ModuleListProperties::SetLLDBIndexCachePath(const FileSpec &path) {
-  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      ePropertyLLDBIndexCachePath, path);
+  const uint32_t idx = ePropertyLLDBIndexCachePath;
+  return SetPropertyAtIndex(idx, path);
 }
 
 bool ModuleListProperties::GetEnableLLDBIndexCache() const {
