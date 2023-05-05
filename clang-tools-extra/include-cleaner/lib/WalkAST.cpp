@@ -218,31 +218,45 @@ public:
   }
 
   // TypeLoc visitors.
+  void reportType(SourceLocation RefLoc, NamedDecl *ND) {
+    // Reporting explicit references to types nested inside classes can cause
+    // issues, e.g. a type accessed through a derived class shouldn't require
+    // inclusion of the base.
+    // Hence we report all such references as implicit. The code must spell the
+    // outer type-location somewhere, which will trigger an explicit reference
+    // and per IWYS, it's that spelling's responsibility to bring in necessary
+    // declarations.
+    RefType RT = llvm::isa<RecordDecl>(ND->getDeclContext())
+                     ? RefType::Implicit
+                     : RefType::Explicit;
+    return report(RefLoc, ND, RT);
+  }
+
   bool VisitUsingTypeLoc(UsingTypeLoc TL) {
-    report(TL.getNameLoc(), TL.getFoundDecl());
+    reportType(TL.getNameLoc(), TL.getFoundDecl());
     return true;
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TTL) {
-    report(TTL.getNameLoc(), TTL.getDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TTL) {
-    report(TTL.getNameLoc(), TTL.getTypedefNameDecl());
+    reportType(TTL.getNameLoc(), TTL.getTypedefNameDecl());
     return true;
   }
 
   bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
-    report(TL.getTemplateNameLoc(),
-           getMostRelevantTemplatePattern(TL.getTypePtr()));
+    reportType(TL.getTemplateNameLoc(),
+               getMostRelevantTemplatePattern(TL.getTypePtr()));
     return true;
   }
 
   bool VisitDeducedTemplateSpecializationTypeLoc(
       DeducedTemplateSpecializationTypeLoc TL) {
-    report(TL.getTemplateNameLoc(),
-           getMostRelevantTemplatePattern(TL.getTypePtr()));
+    reportType(TL.getTemplateNameLoc(),
+               getMostRelevantTemplatePattern(TL.getTypePtr()));
     return true;
   }
 
