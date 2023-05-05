@@ -22,6 +22,7 @@ int memcmp(const void *lhs, const void *rhs, size_t count);
 void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
+int atexit(void (*func)(void));
 
 } // namespace __llvm_libc
 
@@ -43,6 +44,9 @@ void *memmove(void *dst, const void *src, size_t count) {
 void *memset(void *ptr, int value, size_t count) {
   return __llvm_libc::memset(ptr, value, count);
 }
+
+// This is needed if the test was compiled with '-fno-use-cxa-atexit'.
+int atexit(void (*func)(void)) { return __llvm_libc::atexit(func); }
 
 } // extern "C"
 
