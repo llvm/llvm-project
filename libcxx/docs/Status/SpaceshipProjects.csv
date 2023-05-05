@@ -22,7 +22,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[optional.relops] <https://wg21.link/optional.relops>`_
 | `[optional.nullops] <https://wg21.link/optional.nullops>`_
 | `[optional.comp.with.t] <https://wg21.link/optional.comp.with.t>`_","| `optional <https://reviews.llvm.org/D146392>`_
-| `nullopt <https://reviews.llvm.org/D146392>`_",None,Hristo Hristov,|In Progress|
+| `nullopt <https://reviews.llvm.org/D146392>`_",None,Hristo Hristov,|Complete|
 "| `[variant.relops] <https://wg21.link/variant.relops>`_
 | `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| `monostate <https://reviews.llvm.org/D131372>`_
 | `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|Complete|

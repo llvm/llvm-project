@@ -53,6 +53,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -732,22 +733,19 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
   if (isa<PoisonValue>(V))
     return nullptr;
 
-  // TrackValueOfGlobalVariable only tracks scalar global variables.
-  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
-    // Check if we want to specialize on the address of non-constant
-    // global values.
-    if (!GV->isConstant() && !SpecializeOnAddress)
-      return nullptr;
-
-    if (!GV->getValueType()->isSingleValueType())
-      return nullptr;
-  }
-
   // Select for possible specialisation values that are constants or
   // are deduced to be constants or constant ranges with a single element.
   Constant *C = dyn_cast<Constant>(V);
   if (!C)
     C = Solver.getConstantOrNull(V);
+
+  // Don't specialize on (anything derived from) the address of a non-constant
+  // global variable, unless explicitly enabled.
+  if (C && C->getType()->isPointerTy() && !C->isNullValue())
+    if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C));
+        GV && !(GV->isConstant() || SpecializeOnAddress))
+      return nullptr;
+
   return C;
 }
 

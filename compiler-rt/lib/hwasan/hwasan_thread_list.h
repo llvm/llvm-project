@@ -131,9 +131,9 @@ class SANITIZER_MUTEX HwasanThreadList {
 
   void ReleaseThread(Thread *t) SANITIZER_EXCLUDES(free_list_mutex_) {
     RemoveThreadStats(t);
+    RemoveThreadFromLiveList(t);
     t->Destroy();
     DontNeedThread(t);
-    RemoveThreadFromLiveList(t);
     SpinMutexLock l(&free_list_mutex_);
     free_list_.push_back(t);
   }

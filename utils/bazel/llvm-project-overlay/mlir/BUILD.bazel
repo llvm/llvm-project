@@ -10501,6 +10501,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":Mem2RegInterfacesTdFiles",
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -10574,11 +10575,13 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":Mem2RegInterfaces",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":ShapedOpInterfaces",
