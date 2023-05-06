@@ -591,6 +591,9 @@ VPlan::~VPlan() {
       Block->dropAllReferences(&DummyValue);
 
     VPBlockBase::deleteCFG(Entry);
+
+    Preheader->dropAllReferences(&DummyValue);
+    delete Preheader;
   }
   for (VPValue *VPV : VPLiveInsToFree)
     delete VPV;
