@@ -13,7 +13,6 @@
 //   typename deque<T, Allocator>::size_type
 //   erase_if(deque<T, Allocator>& c, Predicate pred);
 
-#include "asan_testing.h"
 #include <deque>
 
 #include "test_macros.h"
@@ -25,7 +24,6 @@ void test0(S s, Pred p, S expected, std::size_t expected_erased_count) {
   ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
   assert(s == expected);
-  LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(s));
 }
 
 template <typename S>
@@ -71,7 +69,6 @@ int main(int, char**)
 {
     test<std::deque<int>>();
     test<std::deque<int, min_allocator<int>>> ();
-    test<std::deque<int, safe_allocator<int>>> ();
     test<std::deque<int, test_allocator<int>>> ();
 
     test<std::deque<long>>();
