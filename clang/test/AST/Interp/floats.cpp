@@ -101,14 +101,14 @@ namespace unary {
     assert(f == 1.0);
     return 1.0;
   }
-  static_assert(a() == 1.0);
+  static_assert(a() == 1.0, "");
 
   constexpr float b() {
     float f = __FLT_MAX__;
     f++;
     return f;
   }
-  static_assert(b() == __FLT_MAX__);
+  static_assert(b() == __FLT_MAX__, "");
 }
 
 
