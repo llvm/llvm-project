@@ -431,6 +431,20 @@ bool OptionValue::SetUUIDValue(const UUID &uuid) {
   return false;
 }
 
+std::optional<ArchSpec> OptionValue::GetArchSpecValue() const {
+  if (const OptionValueArch *option_value = GetAsArch())
+    return option_value->GetCurrentValue();
+  return {};
+}
+
+bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
+  if (OptionValueArch *option_value = GetAsArch()) {
+    option_value->SetCurrentValue(arch_spec, false);
+    return true;
+  }
+  return false;
+}
+
 const char *OptionValue::GetBuiltinTypeAsCString(Type t) {
   switch (t) {
   case eTypeInvalid:

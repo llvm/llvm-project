@@ -478,6 +478,7 @@ void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
+  assert(State.VF.isVector() && "not widening");
   auto &CI = *cast<CallInst>(getUnderlyingInstr());
   assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
@@ -488,9 +489,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     // Add return type if intrinsic is overloaded on it.
     if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1)) {
       TysForDecl.push_back(
-          State.VF.isVector()
-              ? VectorType::get(CI.getType()->getScalarType(), State.VF)
-              : CI.getType());
+          VectorType::get(CI.getType()->getScalarType(), State.VF));
     }
     SmallVector<Value *, 4> Args;
     for (const auto &I : enumerate(operands())) {

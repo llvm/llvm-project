@@ -49,6 +49,11 @@ LIBC_INLINE constexpr bool is_process_gpu() {
 #endif
 }
 
+/// Return \p val aligned "upwards" according to \p align.
+template <typename V, typename A> LIBC_INLINE V align_up(V val, A align) {
+  return ((val + V(align) - 1) / V(align)) * V(align);
+}
+
 } // namespace rpc
 } // namespace __llvm_libc
 

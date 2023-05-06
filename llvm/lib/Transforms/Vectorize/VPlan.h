@@ -2488,8 +2488,7 @@ public:
   }
 
   void addSCEVExpansion(const SCEV *S, VPValue *V) {
-    assert(SCEVToExpansion.find(S) == SCEVToExpansion.end() &&
-           "SCEV already expanded");
+    assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
     SCEVToExpansion[S] = V;
   }
 

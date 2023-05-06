@@ -246,18 +246,22 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (CUresult err = cuMemsetD32(dev_ret, 0, 1))
     handle_error(err);
 
+  uint64_t port_size = __llvm_libc::rpc::default_port_count;
   uint32_t warp_size = 32;
-  void *server_inbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *server_outbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *buffer =
-      allocator(align_up(sizeof(__llvm_libc::rpc::Header) +
-                             (warp_size * sizeof(__llvm_libc::rpc::Buffer)),
-                         alignof(__llvm_libc::rpc::Packet)));
+  void *server_inbox =
+      allocator(port_size * sizeof(__llvm_libc::cpp::Atomic<int>));
+  void *server_outbox =
+      allocator(port_size * sizeof(__llvm_libc::cpp::Atomic<int>));
+  void *buffer = allocator(
+      port_size * align_up(sizeof(__llvm_libc::rpc::Header) +
+                               (warp_size * sizeof(__llvm_libc::rpc::Buffer)),
+                           alignof(__llvm_libc::rpc::Packet)));
   if (!server_inbox || !server_outbox || !buffer)
     handle_error("Failed to allocate memory the RPC client / server.");
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(warp_size, &lock, server_inbox, server_outbox, buffer);
+  server.reset(port_size, warp_size, &lock, server_inbox, server_outbox,
+               buffer);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   // Call the kernel to

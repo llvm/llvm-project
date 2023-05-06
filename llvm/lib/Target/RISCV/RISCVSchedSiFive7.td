@@ -76,11 +76,41 @@ def : WriteRes<WriteIDiv32,  [SiFive7PipeB, SiFive7IDiv]> {
   let ResourceCycles = [1, 15];
 }
 
+// Bitmanip
+let Latency = 3 in {
+// Rotates are in the late-B ALU.
+def : WriteRes<WriteRotateImm, [SiFive7PipeB]>;
+def : WriteRes<WriteRotateImm32, [SiFive7PipeB]>;
+def : WriteRes<WriteRotateReg, [SiFive7PipeB]>;
+def : WriteRes<WriteRotateReg32, [SiFive7PipeB]>;
+
+// clz[w]/ctz[w] are in the late-B ALU.
+def : WriteRes<WriteCLZ, [SiFive7PipeB]>;
+def : WriteRes<WriteCLZ32, [SiFive7PipeB]>;
+def : WriteRes<WriteCTZ, [SiFive7PipeB]>;
+def : WriteRes<WriteCTZ32, [SiFive7PipeB]>;
+
+// cpop[w] look exactly like multiply.
+def : WriteRes<WriteCPOP, [SiFive7PipeB]>;
+def : WriteRes<WriteCPOP32, [SiFive7PipeB]>;
+
+// orc.b is in the late-B ALU.
+def : WriteRes<WriteORCB, [SiFive7PipeB]>;
+
+// rev8 is in the late-A and late-B ALUs.
+def : WriteRes<WriteREV8, [SiFive7PipeAB]>;
+
+// shNadd[.uw] is on the early-B and late-B ALUs.
+def : WriteRes<WriteSHXADD, [SiFive7PipeB]>;
+def : WriteRes<WriteSHXADD32, [SiFive7PipeB]>;
+}
+
 // Memory
 def : WriteRes<WriteSTB, [SiFive7PipeA]>;
 def : WriteRes<WriteSTH, [SiFive7PipeA]>;
 def : WriteRes<WriteSTW, [SiFive7PipeA]>;
 def : WriteRes<WriteSTD, [SiFive7PipeA]>;
+def : WriteRes<WriteFST16, [SiFive7PipeA]>;
 def : WriteRes<WriteFST32, [SiFive7PipeA]>;
 def : WriteRes<WriteFST64, [SiFive7PipeA]>;
 
@@ -92,6 +122,7 @@ def : WriteRes<WriteLDD, [SiFive7PipeA]>;
 }
 
 let Latency = 2 in {
+def : WriteRes<WriteFLD16, [SiFive7PipeA]>;
 def : WriteRes<WriteFLD32, [SiFive7PipeA]>;
 def : WriteRes<WriteFLD64, [SiFive7PipeA]>;
 }
@@ -105,6 +136,22 @@ def : WriteRes<WriteAtomicW, [SiFive7PipeA]>;
 def : WriteRes<WriteAtomicD, [SiFive7PipeA]>;
 def : WriteRes<WriteAtomicLDW, [SiFive7PipeA]>;
 def : WriteRes<WriteAtomicLDD, [SiFive7PipeA]>;
+}
+
+// Half precision.
+let Latency = 5 in {
+def : WriteRes<WriteFAdd16, [SiFive7PipeB]>;
+def : WriteRes<WriteFMul16, [SiFive7PipeB]>;
+def : WriteRes<WriteFMA16, [SiFive7PipeB]>;
+}
+let Latency = 3 in {
+def : WriteRes<WriteFSGNJ16, [SiFive7PipeB]>;
+def : WriteRes<WriteFMinMax16, [SiFive7PipeB]>;
+}
+
+let Latency = 14, ResourceCycles = [1, 13] in {
+def :  WriteRes<WriteFDiv16, [SiFive7PipeB, SiFive7FDiv]>;
+def :  WriteRes<WriteFSqrt16, [SiFive7PipeB, SiFive7FDiv]>;
 }
 
 // Single precision.
@@ -141,21 +188,33 @@ def : WriteRes<WriteFSqrt64, [SiFive7PipeB, SiFive7FDiv]> { let Latency = 56;
 
 // Conversions
 let Latency = 3 in {
+def : WriteRes<WriteFCvtI32ToF16, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtI32ToF32, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtI32ToF64, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtI64ToF16, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtI64ToF32, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtI64ToF64, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtF16ToI32, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtF16ToI64, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtF16ToF32, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtF16ToF64, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtF32ToI32, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtF32ToI64, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtF32ToF16, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtF32ToF64, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtF64ToI32, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtF64ToI64, [SiFive7PipeB]>;
+def : WriteRes<WriteFCvtF64ToF16, [SiFive7PipeB]>;
 def : WriteRes<WriteFCvtF64ToF32, [SiFive7PipeB]>;
 
+def : WriteRes<WriteFClass16, [SiFive7PipeB]>;
 def : WriteRes<WriteFClass32, [SiFive7PipeB]>;
 def : WriteRes<WriteFClass64, [SiFive7PipeB]>;
+def : WriteRes<WriteFCmp16, [SiFive7PipeB]>;
 def : WriteRes<WriteFCmp32, [SiFive7PipeB]>;
 def : WriteRes<WriteFCmp64, [SiFive7PipeB]>;
+def : WriteRes<WriteFMovI16ToF16, [SiFive7PipeB]>;
+def : WriteRes<WriteFMovF16ToI16, [SiFive7PipeB]>;
 def : WriteRes<WriteFMovI32ToF32, [SiFive7PipeB]>;
 def : WriteRes<WriteFMovF32ToI32, [SiFive7PipeB]>;
 def : WriteRes<WriteFMovI64ToF64, [SiFive7PipeB]>;
@@ -195,50 +254,82 @@ def : ReadAdvance<ReadAtomicSTW, 0>;
 def : ReadAdvance<ReadAtomicSTD, 0>;
 def : ReadAdvance<ReadFStoreData, 0>;
 def : ReadAdvance<ReadFMemBase, 0>;
+def : ReadAdvance<ReadFAdd16, 0>;
 def : ReadAdvance<ReadFAdd32, 0>;
 def : ReadAdvance<ReadFAdd64, 0>;
+def : ReadAdvance<ReadFMul16, 0>;
+def : ReadAdvance<ReadFMA16, 0>;
 def : ReadAdvance<ReadFMul32, 0>;
 def : ReadAdvance<ReadFMul64, 0>;
 def : ReadAdvance<ReadFMA32, 0>;
 def : ReadAdvance<ReadFMA64, 0>;
+def : ReadAdvance<ReadFDiv16, 0>;
 def : ReadAdvance<ReadFDiv32, 0>;
 def : ReadAdvance<ReadFDiv64, 0>;
+def : ReadAdvance<ReadFSqrt16, 0>;
 def : ReadAdvance<ReadFSqrt32, 0>;
 def : ReadAdvance<ReadFSqrt64, 0>;
+def : ReadAdvance<ReadFCmp16, 0>;
 def : ReadAdvance<ReadFCmp32, 0>;
 def : ReadAdvance<ReadFCmp64, 0>;
+def : ReadAdvance<ReadFSGNJ16, 0>;
 def : ReadAdvance<ReadFSGNJ32, 0>;
 def : ReadAdvance<ReadFSGNJ64, 0>;
+def : ReadAdvance<ReadFMinMax16, 0>;
 def : ReadAdvance<ReadFMinMax32, 0>;
 def : ReadAdvance<ReadFMinMax64, 0>;
+def : ReadAdvance<ReadFCvtF16ToI32, 0>;
+def : ReadAdvance<ReadFCvtF16ToI64, 0>;
 def : ReadAdvance<ReadFCvtF32ToI32, 0>;
 def : ReadAdvance<ReadFCvtF32ToI64, 0>;
 def : ReadAdvance<ReadFCvtF64ToI32, 0>;
 def : ReadAdvance<ReadFCvtF64ToI64, 0>;
+def : ReadAdvance<ReadFCvtI32ToF16, 0>;
 def : ReadAdvance<ReadFCvtI32ToF32, 0>;
 def : ReadAdvance<ReadFCvtI32ToF64, 0>;
+def : ReadAdvance<ReadFCvtI64ToF16, 0>;
 def : ReadAdvance<ReadFCvtI64ToF32, 0>;
 def : ReadAdvance<ReadFCvtI64ToF64, 0>;
 def : ReadAdvance<ReadFCvtF32ToF64, 0>;
 def : ReadAdvance<ReadFCvtF64ToF32, 0>;
+def : ReadAdvance<ReadFCvtF16ToF32, 0>;
+def : ReadAdvance<ReadFCvtF32ToF16, 0>;
+def : ReadAdvance<ReadFCvtF16ToF64, 0>;
+def : ReadAdvance<ReadFCvtF64ToF16, 0>;
+def : ReadAdvance<ReadFMovF16ToI16, 0>;
+def : ReadAdvance<ReadFMovI16ToF16, 0>;
 def : ReadAdvance<ReadFMovF32ToI32, 0>;
 def : ReadAdvance<ReadFMovI32ToF32, 0>;
 def : ReadAdvance<ReadFMovF64ToI64, 0>;
 def : ReadAdvance<ReadFMovI64ToF64, 0>;
+def : ReadAdvance<ReadFClass16, 0>;
 def : ReadAdvance<ReadFClass32, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
 
 def : ReadAdvance<ReadSFB, 0>;
 
+// Bitmanip
+def : ReadAdvance<ReadRotateImm, 0>;
+def : ReadAdvance<ReadRotateImm32, 0>;
+def : ReadAdvance<ReadRotateReg, 0>;
+def : ReadAdvance<ReadRotateReg32, 0>;
+def : ReadAdvance<ReadCLZ, 0>;
+def : ReadAdvance<ReadCLZ32, 0>;
+def : ReadAdvance<ReadCTZ, 0>;
+def : ReadAdvance<ReadCTZ32, 0>;
+def : ReadAdvance<ReadCPOP, 0>;
+def : ReadAdvance<ReadCPOP32, 0>;
+def : ReadAdvance<ReadORCB, 0>;
+def : ReadAdvance<ReadREV8, 0>;
+def : ReadAdvance<ReadSHXADD, 0>;
+def : ReadAdvance<ReadSHXADD32, 0>;
+
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedV;
-defm : UnsupportedSchedZba;
-defm : UnsupportedSchedZbb;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
-defm : UnsupportedSchedZfh;
 }
