@@ -1984,8 +1984,31 @@ public:
     OFK_Always,
   };
 
-  /// Determine if the result of the unsigned addition of 2 node can overflow.
+  /// Determine if the result of the signed addition of 2 nodes can overflow.
+  OverflowKind computeOverflowForSignedAdd(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the unsigned addition of 2 nodes can overflow.
   OverflowKind computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the addition of 2 nodes can overflow.
+  OverflowKind computeOverflowForAdd(bool IsSigned, SDValue N0,
+                                     SDValue N1) const {
+    return IsSigned ? computeOverflowForSignedAdd(N0, N1)
+                    : computeOverflowForUnsignedAdd(N0, N1);
+  }
+
+  /// Determine if the result of the signed sub of 2 nodes can overflow.
+  OverflowKind computeOverflowForSignedSub(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the unsigned sub of 2 nodes can overflow.
+  OverflowKind computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the sub of 2 nodes can overflow.
+  OverflowKind computeOverflowForSub(bool IsSigned, SDValue N0,
+                                     SDValue N1) const {
+    return IsSigned ? computeOverflowForSignedSub(N0, N1)
+                    : computeOverflowForUnsignedSub(N0, N1);
+  }
 
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
