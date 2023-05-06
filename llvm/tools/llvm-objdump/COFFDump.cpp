@@ -545,11 +545,17 @@ static void printExportTable(const COFFObjectFile *Obj) {
   outs() << " Ordinal base: " << OrdinalBase << "\n";
   outs() << " Ordinal      RVA  Name\n";
   for (; I != E; I = ++I) {
-    uint32_t Ordinal;
-    if (I->getOrdinal(Ordinal))
-      return;
     uint32_t RVA;
     if (I->getExportRVA(RVA))
+      return;
+    StringRef Name;
+    if (I->getSymbolName(Name))
+      continue;
+    if (!RVA && Name.empty())
+      continue;
+
+    uint32_t Ordinal;
+    if (I->getOrdinal(Ordinal))
       return;
     bool IsForwarder;
     if (I->isForwarder(IsForwarder))
@@ -564,9 +570,6 @@ static void printExportTable(const COFFObjectFile *Obj) {
       outs() << format("   %5d %# 8x", Ordinal, RVA);
     }
 
-    StringRef Name;
-    if (I->getSymbolName(Name))
-      continue;
     if (!Name.empty())
       outs() << "  " << Name;
     if (IsForwarder) {
