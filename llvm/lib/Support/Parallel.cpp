@@ -40,6 +40,7 @@ class Executor {
 public:
   virtual ~Executor() = default;
   virtual void add(std::function<void()> func, bool Sequential = false) = 0;
+  virtual size_t getThreadCount() const = 0;
 
   static Executor *getDefaultExecutor();
 };
@@ -49,7 +50,7 @@ public:
 class ThreadPoolExecutor : public Executor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S = hardware_concurrency()) {
-    unsigned ThreadCount = S.compute_thread_count();
+    ThreadCount = S.compute_thread_count();
     // Spawn all but one of the threads in another thread as spawning threads
     // can take a while.
     Threads.reserve(ThreadCount);
@@ -58,7 +59,7 @@ public:
     // Use operator[] before creating the thread to avoid data race in .size()
     // in “safe libc++” mode.
     auto &Thread0 = Threads[0];
-    Thread0 = std::thread([this, ThreadCount, S] {
+    Thread0 = std::thread([this, S] {
       for (unsigned I = 1; I < ThreadCount; ++I) {
         Threads.emplace_back([=] { work(S, I); });
         if (Stop)
@@ -108,6 +109,8 @@ public:
     Cond.notify_one();
   }
 
+  size_t getThreadCount() const override { return ThreadCount; }
+
 private:
   bool hasSequentialTasks() const {
     return !WorkQueueSequential.empty() && !SequentialQueueIsLocked;
@@ -149,6 +152,7 @@ private:
   std::condition_variable Cond;
   std::promise<void> ThreadsCreated;
   std::vector<std::thread> Threads;
+  unsigned ThreadCount;
 };
 
 Executor *Executor::getDefaultExecutor() {
@@ -178,6 +182,10 @@ Executor *Executor::getDefaultExecutor() {
 }
 } // namespace
 } // namespace detail
+
+size_t getThreadCount() {
+  return detail::Executor::getDefaultExecutor()->getThreadCount();
+}
 #endif
 
 // Latch::sync() called by the dtor may cause one thread to block. If is a dead
