@@ -6,6 +6,7 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-LABEL: 'test_chained_first_order_recurrences_1'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -55,6 +56,7 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-LABEL: 'test_chained_first_order_recurrences_3'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<1000> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
