@@ -8144,10 +8144,24 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
       return true;
     return std::nullopt;
 
+  case CmpInst::ICMP_SGT:
+  case CmpInst::ICMP_SGE:
+    if (isTruePredicate(CmpInst::ICMP_SLE, ALHS, BLHS, DL, Depth) &&
+        isTruePredicate(CmpInst::ICMP_SLE, BRHS, ARHS, DL, Depth))
+      return true;
+    return std::nullopt;
+
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_ULE:
     if (isTruePredicate(CmpInst::ICMP_ULE, BLHS, ALHS, DL, Depth) &&
         isTruePredicate(CmpInst::ICMP_ULE, ARHS, BRHS, DL, Depth))
+      return true;
+    return std::nullopt;
+
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_UGE:
+    if (isTruePredicate(CmpInst::ICMP_ULE, ALHS, BLHS, DL, Depth) &&
+        isTruePredicate(CmpInst::ICMP_ULE, BRHS, ARHS, DL, Depth))
       return true;
     return std::nullopt;
   }

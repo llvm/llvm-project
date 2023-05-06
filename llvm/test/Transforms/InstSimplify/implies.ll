@@ -271,11 +271,7 @@ define i1 @test_sle(i32 %length.i, i32 %i) {
 ; X +_{nsw} 1 <(s) Y ==> X <(s) Y
 define i1 @test_sgt_icmp(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test_sgt_icmp(
-; CHECK-NEXT:    [[IPLUS1:%.*]] = add nsw i32 [[I:%.*]], 1
-; CHECK-NEXT:    [[VAR29:%.*]] = icmp sgt i32 [[LENGTH_I:%.*]], [[I]]
-; CHECK-NEXT:    [[VAR30:%.*]] = icmp sgt i32 [[LENGTH_I]], [[IPLUS1]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR30]], [[VAR29]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %iplus1 = add nsw i32 %i, 1
   %var29 = icmp sgt i32 %length.i, %i
@@ -287,11 +283,7 @@ define i1 @test_sgt_icmp(i32 %length.i, i32 %i) {
 ; X +_{nsw} 1 <=(s) Y ==> X <=(s) Y
 define i1 @test_sge_icmp(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test_sge_icmp(
-; CHECK-NEXT:    [[IPLUS1:%.*]] = add nsw i32 [[I:%.*]], 1
-; CHECK-NEXT:    [[VAR29:%.*]] = icmp sge i32 [[LENGTH_I:%.*]], [[I]]
-; CHECK-NEXT:    [[VAR30:%.*]] = icmp sge i32 [[LENGTH_I]], [[IPLUS1]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR30]], [[VAR29]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %iplus1 = add nsw i32 %i, 1
   %var29 = icmp sge i32 %length.i, %i
@@ -303,11 +295,7 @@ define i1 @test_sge_icmp(i32 %length.i, i32 %i) {
 ; X +_{nuw} 1 <(u) Y ==> X <(u) Y
 define i1 @test_ugt_icmp(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test_ugt_icmp(
-; CHECK-NEXT:    [[IPLUS1:%.*]] = add nuw i32 [[I:%.*]], 1
-; CHECK-NEXT:    [[VAR29:%.*]] = icmp ugt i32 [[LENGTH_I:%.*]], [[I]]
-; CHECK-NEXT:    [[VAR30:%.*]] = icmp ugt i32 [[LENGTH_I]], [[IPLUS1]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR30]], [[VAR29]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %iplus1 = add nuw i32 %i, 1
   %var29 = icmp ugt i32 %length.i, %i
@@ -319,11 +307,7 @@ define i1 @test_ugt_icmp(i32 %length.i, i32 %i) {
 ; X +_{nuw} 1 <=(u) Y ==> X <=(u) Y
 define i1 @test_uge_icmp(i32 %length.i, i32 %i) {
 ; CHECK-LABEL: @test_uge_icmp(
-; CHECK-NEXT:    [[IPLUS1:%.*]] = add nuw i32 [[I:%.*]], 1
-; CHECK-NEXT:    [[VAR29:%.*]] = icmp uge i32 [[LENGTH_I:%.*]], [[I]]
-; CHECK-NEXT:    [[VAR30:%.*]] = icmp uge i32 [[LENGTH_I]], [[IPLUS1]]
-; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[VAR30]], [[VAR29]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %iplus1 = add nuw i32 %i, 1
   %var29 = icmp uge i32 %length.i, %i
