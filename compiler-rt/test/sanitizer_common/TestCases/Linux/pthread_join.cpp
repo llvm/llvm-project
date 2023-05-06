@@ -4,8 +4,6 @@
 // FIXME: Crashes on some bots in pthread_exit.
 // RUN: %run %t %if tsan %{ 0 %} %else %{ 1 %}
 
-// XFAIL: msan
-
 // REQUIRES: glibc
 
 #include <assert.h>
