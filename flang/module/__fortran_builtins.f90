@@ -75,4 +75,23 @@ module __Fortran_builtins
 
   intrinsic :: __builtin_compiler_options, __builtin_compiler_version
 
+  interface operator(==)
+    module procedure __builtin_c_ptr_eq
+  end interface
+  interface operator(/=)
+    module procedure __builtin_c_ptr_eq
+  end interface
+
+contains
+
+  elemental logical function __builtin_c_ptr_eq(x, y)
+    type(__builtin_c_ptr), intent(in) :: x, y
+    __builtin_c_ptr_eq = x%__address == y%__address
+  end function
+
+  elemental logical function __builtin_c_ptr_ne(x, y)
+    type(__builtin_c_ptr), intent(in) :: x, y
+    __builtin_c_ptr_ne = x%__address /= y%__address
+  end function
+
 end module
