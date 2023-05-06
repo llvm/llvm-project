@@ -134,7 +134,7 @@ isConditionValid(const Expr *E, ASTContext &Context,
   if (!RHS->EvaluateAsInt(Result, Context))
     return false;
   // Only allow constant that fix into 64 bits.
-  if (Result.Val.getInt().getMinSignedBits() > 64 ||
+  if (Result.Val.getInt().getSignificantBits() > 64 ||
       !RHSValues.insert(Result.Val.getInt().getExtValue()).second)
     return false;
 

@@ -90,7 +90,7 @@ void edit::fillInMissingSwitchEnumCases(
       if (!LHS->EvaluateAsInt(Result, Context))
         continue;
       // Only allow constant that fix into 64 bits.
-      if (Result.Val.getInt().getMinSignedBits() > 64)
+      if (Result.Val.getInt().getSignificantBits() > 64)
         continue;
       CoveredEnumCases[Result.Val.getInt().getSExtValue()] =
           CaseInfo{Case, NextCase, CaseIndex};
@@ -147,7 +147,7 @@ void edit::fillInMissingSwitchEnumCases(
   llvm::SmallVector<std::pair<const EnumConstantDecl *, int64_t>, 8> EnumCases;
   llvm::SmallVector<int64_t, 8> CoveredEnumCaseValues;
   for (const auto *EnumCase : Enum->enumerators()) {
-    if (EnumCase->getInitVal().getMinSignedBits() > 64)
+    if (EnumCase->getInitVal().getSignificantBits() > 64)
       continue;
     int64_t Value = EnumCase->getInitVal().getSExtValue();
     EnumCases.push_back(std::make_pair(EnumCase, Value));
