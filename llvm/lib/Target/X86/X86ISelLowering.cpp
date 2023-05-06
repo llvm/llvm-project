@@ -30020,17 +30020,6 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
   if (VT == MVT::v32i16 || VT == MVT::v64i8)
     return splitVectorIntBinary(Op, DAG);
 
-  // umax(x,1) --> sub(x,cmpeq(x,0))
-  // TODO: Move this to expandIntMINMAX?
-  if (VT.isVector() && Op.getOpcode() == ISD::UMAX &&
-      llvm::isOneOrOneSplat(Op.getOperand(1), true)) {
-    SDLoc DL(Op);
-    SDValue X = DAG.getFreeze(Op.getOperand(0));
-    SDValue Zero = getZeroVector(VT, Subtarget, DAG, DL);
-    return DAG.getNode(ISD::SUB, DL, VT, X,
-                       DAG.getSetCC(DL, VT, X, Zero, ISD::SETEQ));
-  }
-
   // Default to expand.
   return SDValue();
 }
@@ -30176,29 +30165,11 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.useBWIRegs())
     return splitVectorIntBinary(Op, DAG);
 
-  // TODO: Add TargetLowering expandABD() support.
   SDLoc dl(Op);
   bool IsSigned = Op.getOpcode() == ISD::ABDS;
-  SDValue LHS = DAG.getFreeze(Op.getOperand(0));
-  SDValue RHS = DAG.getFreeze(Op.getOperand(1));
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
-  // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
-  unsigned MaxOpc = IsSigned ? ISD::SMAX : ISD::UMAX;
-  unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
-  if (TLI.isOperationLegal(MaxOpc, VT) && TLI.isOperationLegal(MinOpc, VT)) {
-    SDValue Max = DAG.getNode(MaxOpc, dl, VT, LHS, RHS);
-    SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
-    return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
-  }
-
-  // abdu(lhs, rhs) -> or(usubsat(lhs,rhs), usubsat(rhs,lhs))
-  if (!IsSigned && TLI.isOperationLegal(ISD::USUBSAT, VT))
-    return DAG.getNode(ISD::OR, dl, VT,
-                       DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
-                       DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
-
+  // TODO: Move to TargetLowering expandABD() once we have ABD promotion.
   if (VT.isScalarInteger()) {
     unsigned WideBits = std::max<unsigned>(2 * VT.getScalarSizeInBits(), 32u);
     MVT WideVT = MVT::getIntegerVT(WideBits);
@@ -30206,6 +30177,8 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
       // abds(lhs, rhs) -> trunc(abs(sub(sext(lhs), sext(rhs))))
       // abdu(lhs, rhs) -> trunc(abs(sub(zext(lhs), zext(rhs))))
       unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+      SDValue LHS = DAG.getFreeze(Op.getOperand(0));
+      SDValue RHS = DAG.getFreeze(Op.getOperand(1));
       LHS = DAG.getNode(ExtOpc, dl, WideVT, LHS);
       RHS = DAG.getNode(ExtOpc, dl, WideVT, RHS);
       SDValue Diff = DAG.getNode(ISD::SUB, dl, WideVT, LHS, RHS);
@@ -30214,13 +30187,8 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
     }
   }
 
-  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
-  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
-  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
-  SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
-  return DAG.getSelect(dl, VT, Cmp, DAG.getNode(ISD::SUB, dl, VT, LHS, RHS),
-                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+  // Default to expand.
+  return SDValue();
 }
 
 static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
@@ -33777,12 +33745,9 @@ static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
     // "call dword ptr "
     auto TmpStr = AsmStr.substr(0, I);
     I = TmpStr.rfind(':');
-    if (I == StringRef::npos)
-      return TmpStr;
-
-    assert(I < TmpStr.size() && "Unexpected inline asm string!");
-    auto Asm = TmpStr.drop_front(I + 1);
-    return Asm;
+    if (I != StringRef::npos)
+      TmpStr = TmpStr.substr(I + 1);
+    return TmpStr.take_while(llvm::isAlpha);
   }
 
   return StringRef();
@@ -33790,12 +33755,13 @@ static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
 
 bool X86TargetLowering::isInlineAsmTargetBranch(
     const SmallVectorImpl<StringRef> &AsmStrs, unsigned OpNo) const {
-  StringRef InstrStr = getInstrStrFromOpNo(AsmStrs, OpNo);
-
-  if (InstrStr.contains("call"))
-    return true;
-
-  return false;
+  // In a __asm block, __asm inst foo where inst is CALL or JMP should be
+  // changed from indirect TargetLowering::C_Memory to direct
+  // TargetLowering::C_Address.
+  // We don't need to special case LOOP* and Jcc, which cannot target a memory
+  // location.
+  StringRef Inst = getInstrStrFromOpNo(AsmStrs, OpNo);
+  return Inst.equals_insensitive("call") || Inst.equals_insensitive("jmp");
 }
 
 /// Provide custom lowering hooks for some operations.

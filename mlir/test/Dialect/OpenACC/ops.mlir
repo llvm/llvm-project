@@ -1116,3 +1116,15 @@ func.func @testunstructuredclauseops(%a: memref<10xf32>) -> () {
 // CHECK: [[DEVPTR:%.*]] = acc.getdeviceptr varPtr([[ARGA]] : memref<10xf32>) -> memref<10xf32> {dataClause = 4 : i64}
 // CHECK-NEXT: acc.exit_data dataOperands([[DEVPTR]] : memref<10xf32>)
 // CHECK-NEXT: acc.copyout accPtr([[DEVPTR]] : memref<10xf32>) to varPtr([[ARGA]] : memref<10xf32>) {structured = false}
+
+// -----
+
+func.func @host_device_ops(%a: memref<10xf32>) -> () {
+  %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) -> memref<10xf32> {dataClause = 16}
+  acc.update_host accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) {structured = false}
+  acc.update dataOperands(%devptr : memref<10xf32>)
+
+  %accPtr = acc.update_device varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  acc.update dataOperands(%accPtr : memref<10xf32>)
+  return
+}

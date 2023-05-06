@@ -1788,6 +1788,10 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/partition_point.h>
 #include <__algorithm/pop_heap.h>
 #include <__algorithm/prev_permutation.h>
+#include <__algorithm/pstl_any_all_none_of.h>
+#include <__algorithm/pstl_fill.h>
+#include <__algorithm/pstl_find.h>
+#include <__algorithm/pstl_for_each.h>
 #include <__algorithm/push_heap.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_all_of.h>
@@ -1907,13 +1911,6 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/unique_copy.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
-
-#ifdef _LIBCPP_HAS_PARALLEL_ALGORITHMS
-#  include <__algorithm/pstl_any_all_none_of.h>
-#  include <__algorithm/pstl_fill.h>
-#  include <__algorithm/pstl_find.h>
-#  include <__algorithm/pstl_for_each.h>
-#endif
 
 // standard-mandated includes
 

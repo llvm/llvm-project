@@ -39,7 +39,8 @@ class LoopOutlineOp:
 
   def __init__(
       self,
-      result_type: Type,
+      function_type: Type,
+      call_type: Type,
       target: Union[Operation, Value],
       *,
       func_name: Union[str, StringAttr],
@@ -47,7 +48,8 @@ class LoopOutlineOp:
       loc=None,
   ):
     super().__init__(
-        result_type,
+        function_type,
+        call_type,
         _get_op_result_or_value(target),
         func_name=(func_name if isinstance(func_name, StringAttr) else
                    StringAttr.get(func_name)),

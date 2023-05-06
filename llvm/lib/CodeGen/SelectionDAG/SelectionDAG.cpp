@@ -3943,8 +3943,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   return Known;
 }
 
-SelectionDAG::OverflowKind SelectionDAG::computeOverflowKind(SDValue N0,
-                                                             SDValue N1) const {
+SelectionDAG::OverflowKind
+SelectionDAG::computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const {
   // X + 0 never overflow
   if (isNullConstant(N1))
     return OFK_Never;

@@ -58,8 +58,7 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
-- ``__is_trivial`` has changed for a small category of classes with constrained default constructors (`#60697 <https://github.com/llvm/llvm-project/issues/60697>`_).
-  *FIXME: Remove this note if we've backported this change to the Clang 16 branch.*
+
 
 What's New in Clang |release|?
 ==============================
@@ -369,6 +368,9 @@ Bug Fixes in This Version
   (`#62207 <https://github.com/llvm/llvm-project/issues/62207>`_)
 - Fix lambdas and other anonymous function names not respecting ``-fdebug-prefix-map``
   (`#62192 <https://github.com/llvm/llvm-project/issues/62192>`_)
+- Fix crash when attempting to pass a non-pointer type as first argument of
+  ``__builtin_assume_aligned``.
+  (`#62305 <https://github.com/llvm/llvm-project/issues/62305>`_) 
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

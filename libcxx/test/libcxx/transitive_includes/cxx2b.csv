@@ -2,10 +2,12 @@ algorithm climits
 algorithm cstddef
 algorithm cstdint
 algorithm cstring
+algorithm ctime
 algorithm initializer_list
 algorithm iosfwd
 algorithm limits
 algorithm new
+algorithm ratio
 algorithm version
 any cstddef
 any cstdint

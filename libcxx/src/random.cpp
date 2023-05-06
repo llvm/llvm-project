@@ -17,10 +17,6 @@
 #include <limits>
 #include <random>
 
-#if defined(__sun__)
-#   define rename solaris_headers_are_broken
-#endif // defined(__sun__)
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

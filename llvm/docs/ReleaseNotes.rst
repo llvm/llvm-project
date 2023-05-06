@@ -175,6 +175,7 @@ Changes to the RISC-V Backend
   ``RISCV::parseCPU``. The ``CPUKind`` enum is no longer part of the
   RISCVTargetParser.h interface. Similar for ``parseTuneCPUkind`` and
   ``checkTuneCPUKind``.
+* Add sifive-x280 processor.
 
 Changes to the WebAssembly Backend
 ----------------------------------

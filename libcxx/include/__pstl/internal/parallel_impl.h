@@ -13,7 +13,10 @@
 #include "pstl_config.h"
 
 #include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__pstl/internal/parallel_backend.h>
+
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 namespace __pstl
 {
@@ -80,5 +83,7 @@ bool __parallel_or(_BackendTag __tag, _ExecutionPolicy&& __exec, _Index __first,
 
 } // namespace __internal
 } // namespace __pstl
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif /* _PSTL_PARALLEL_IMPL_H */

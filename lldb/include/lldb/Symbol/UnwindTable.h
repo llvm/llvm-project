@@ -53,7 +53,7 @@ public:
   // problem.
   lldb::FuncUnwindersSP
   GetUncachedFuncUnwindersContainingAddress(const Address &addr,
-                                            SymbolContext &sc);
+                                            const SymbolContext &sc);
 
   ArchSpec GetArchitecture();
 
@@ -62,7 +62,7 @@ private:
 
   void Initialize();
   std::optional<AddressRange> GetAddressRange(const Address &addr,
-                                              SymbolContext &sc);
+                                              const SymbolContext &sc);
 
   typedef std::map<lldb::addr_t, lldb::FuncUnwindersSP> collection;
   typedef collection::iterator iterator;

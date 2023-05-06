@@ -509,26 +509,28 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
   }];
 }
 
-def SplitHandlesOp : TransformDialectOp<"split_handles",
+def SplitHandleOp : TransformDialectOp<"split_handle",
     [FunctionalStyleTransformOpTrait,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let summary = "Splits handles from a union of payload ops to a list";
+  let summary = "Splits a handle of payload ops into handles with a single op";
   let description = [{
-    Creates `num_result_handles` transform IR handles extracted from the
-    `handle` operand. The resulting Payload IR operation handles are listed
-    in the same order as the operations appear in the source `handle`.
-    This is useful for ensuring a statically known number of operations are
-    tracked by the source `handle` and to extract them into individual handles
-    that can be further manipulated in isolation.
+    Splits `handle` into one or multiple handles, as specified by the number
+    of results of this operation. `handle` should be mapped to as many payload
+    ops as there are results. Otherwise, this transform will fail silently.
+    Each result handle is mapped to exactly one payload op. The order
+    of the payload ops is preserved, i.e., the i-th payload op is mapped to the
+    i-th result handle.
 
-    This operation succeeds and returns `num_result_handles` if the statically
-    specified `num_result_handles` corresponds to the dynamic number of
-    operations contained in the source `handle`. Otherwise it silently fails.
+    This operation is useful for ensuring a statically known number of
+    operations are tracked by the source `handle` and to extract them into
+    individual handles that can be further manipulated in isolation.
+
+    If `handle` is empty, this transform will succeed and all result handles
+    are empty.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$handle,
-                       I64Attr:$num_result_handles);
+  let arguments = (ins TransformHandleTypeInterface:$handle);
   let results = (outs Variadic<TransformHandleTypeInterface>:$results);
 
   let builders = [
@@ -536,8 +538,7 @@ def SplitHandlesOp : TransformDialectOp<"split_handles",
   ];
 
   let assemblyFormat = [{
-    $handle `in` `[` $num_result_handles `]`
-    attr-dict `:` functional-type(operands, results)
+    $handle attr-dict `:` functional-type(operands, results)
   }];
 }
 

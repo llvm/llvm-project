@@ -1488,44 +1488,43 @@ LogicalResult transform::NamedSequenceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// SplitHandlesOp
+// SplitHandleOp
 //===----------------------------------------------------------------------===//
 
-void transform::SplitHandlesOp::build(OpBuilder &builder,
-                                      OperationState &result, Value target,
-                                      int64_t numResultHandles) {
+void transform::SplitHandleOp::build(OpBuilder &builder, OperationState &result,
+                                     Value target, int64_t numResultHandles) {
   result.addOperands(target);
-  result.addAttribute(SplitHandlesOp::getNumResultHandlesAttrName(result.name),
-                      builder.getI64IntegerAttr(numResultHandles));
   auto pdlOpType = pdl::OperationType::get(builder.getContext());
   result.addTypes(SmallVector<pdl::OperationType>(numResultHandles, pdlOpType));
 }
 
 DiagnosedSilenceableFailure
-transform::SplitHandlesOp::apply(transform::TransformResults &results,
-                                 transform::TransformState &state) {
-  int64_t numResultHandles =
-      getHandle() ? state.getPayloadOps(getHandle()).size() : 0;
-  int64_t expectedNumResultHandles = getNumResultHandles();
-  if (numResultHandles != expectedNumResultHandles) {
-    // Empty input handle corner case: always propagates empty handles in both
-    // suppress and propagate modes.
-    if (numResultHandles == 0)
-      return DiagnosedSilenceableFailure::success();
-    // If the input handle was not empty and the number of result handles does
-    // not match, this is a legit silenceable error.
-    return emitSilenceableError()
-           << getHandle() << " expected to contain " << expectedNumResultHandles
-           << " operation handles but it only contains " << numResultHandles
-           << " handles";
+transform::SplitHandleOp::apply(transform::TransformResults &results,
+                                transform::TransformState &state) {
+  int64_t numPayloadOps = state.getPayloadOps(getHandle()).size();
+
+  // Empty handle corner case: all result handles are empty.
+  if (numPayloadOps == 0) {
+    for (OpResult result : getResults())
+      results.set(result, {});
+    return DiagnosedSilenceableFailure::success();
   }
-  // Normal successful case.
+
+  // If the input handle was not empty and the number of payload ops does not
+  // match, this is a legit silenceable error.
+  if (numPayloadOps != getNumResults())
+    return emitSilenceableError()
+           << getHandle() << " expected to contain " << getNumResults()
+           << " payload ops but it contains " << numPayloadOps
+           << " payload ops";
+
   for (const auto &en : llvm::enumerate(state.getPayloadOps(getHandle())))
     results.set(getResults()[en.index()].cast<OpResult>(), en.value());
+
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::SplitHandlesOp::getEffects(
+void transform::SplitHandleOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   onlyReadsHandle(getHandle(), effects);
   producesHandle(getResults(), effects);
