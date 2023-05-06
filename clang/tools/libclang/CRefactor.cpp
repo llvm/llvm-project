@@ -211,6 +211,7 @@ public:
       Filenames.push_back(cxstring::createDup(FilenameCount.getKey()));
 
     unsigned FileIndex = 0;
+    (void)FileIndex;
     for (const auto &RenamedOccurrences : FilenamesToSymbolOccurrences) {
       assert(clang_getCString(Filenames[FileIndex]) ==
                  RenamedOccurrences.getKey() &&
@@ -353,6 +354,7 @@ public:
       Filenames.push_back(cxstring::createDup(FilenameCount.getKey()));
 
     unsigned FileIndex = 0;
+    (void)FileIndex;
     for (const auto &RenamedOccurrences : FilenamesToSymbolOccurrences) {
       assert(clang_getCString(Filenames[FileIndex]) ==
                  RenamedOccurrences.getKey() &&
