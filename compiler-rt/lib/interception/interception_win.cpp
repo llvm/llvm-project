@@ -270,8 +270,13 @@ static void WritePadding(uptr from, uptr size) {
 }
 
 static void WriteJumpInstruction(uptr from, uptr target) {
-  if (!DistanceIsWithin2Gig(from + kJumpInstructionLength, target))
+  if (!DistanceIsWithin2Gig(from + kJumpInstructionLength, target)) {
+    ReportError(
+        "interception_win: cannot write jmp further than 2GB away, from %p to "
+        "%p.\n",
+        (void *)from, (void *)target);
     InterceptionFailed();
+  }
   ptrdiff_t offset = target - from - kJumpInstructionLength;
   *(u8*)from = 0xE9;
   *(u32*)(from + 1) = offset;
@@ -295,6 +300,10 @@ static void WriteIndirectJumpInstruction(uptr from, uptr indirect_target) {
   int offset = indirect_target - from - kIndirectJumpInstructionLength;
   if (!DistanceIsWithin2Gig(from + kIndirectJumpInstructionLength,
                             indirect_target)) {
+    ReportError(
+        "interception_win: cannot write indirect jmp with target further than "
+        "2GB away, from %p to %p.\n",
+        (void *)from, (void *)indirect_target);
     InterceptionFailed();
   }
   *(u16*)from = 0x25FF;
