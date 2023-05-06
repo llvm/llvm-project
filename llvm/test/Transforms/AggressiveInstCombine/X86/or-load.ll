@@ -2253,3 +2253,53 @@ define i32 @loadCombine_4consecutive_badinsert6(ptr %p) {
   %o3 = or i32 %o2, %e1
   ret i32 %o3
 }
+
+define i64 @loadCombine_nonConstShift1(ptr %arg, i8 %b) {
+; ALL-LABEL: @loadCombine_nonConstShift1(
+; ALL-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[ARG:%.*]], i64 1
+; ALL-NEXT:    [[LD0:%.*]] = load i8, ptr [[ARG]], align 1
+; ALL-NEXT:    [[LD1:%.*]] = load i8, ptr [[G1]], align 1
+; ALL-NEXT:    [[Z0:%.*]] = zext i8 [[LD0]] to i64
+; ALL-NEXT:    [[Z1:%.*]] = zext i8 [[LD1]] to i64
+; ALL-NEXT:    [[Z6:%.*]] = zext i8 [[B:%.*]] to i64
+; ALL-NEXT:    [[S0:%.*]] = shl i64 [[Z0]], [[Z6]]
+; ALL-NEXT:    [[S1:%.*]] = shl i64 [[Z1]], 8
+; ALL-NEXT:    [[O7:%.*]] = or i64 [[S0]], [[S1]]
+; ALL-NEXT:    ret i64 [[O7]]
+;
+  %g1 = getelementptr i8, ptr %arg, i64 1
+  %ld0 = load i8, ptr %arg, align 1
+  %ld1 = load i8, ptr %g1, align 1
+  %z0 = zext i8 %ld0 to i64
+  %z1 = zext i8 %ld1 to i64
+  %z6 = zext i8 %b to i64
+  %s0 = shl i64 %z0, %z6
+  %s1 = shl i64 %z1, 8
+  %o7 = or i64 %s0, %s1
+  ret i64 %o7
+}
+
+define i64 @loadCombine_nonConstShift2(ptr %arg, i8 %b) {
+; ALL-LABEL: @loadCombine_nonConstShift2(
+; ALL-NEXT:    [[G1:%.*]] = getelementptr i8, ptr [[ARG:%.*]], i64 1
+; ALL-NEXT:    [[LD0:%.*]] = load i8, ptr [[ARG]], align 1
+; ALL-NEXT:    [[LD1:%.*]] = load i8, ptr [[G1]], align 1
+; ALL-NEXT:    [[Z0:%.*]] = zext i8 [[LD0]] to i64
+; ALL-NEXT:    [[Z1:%.*]] = zext i8 [[LD1]] to i64
+; ALL-NEXT:    [[Z6:%.*]] = zext i8 [[B:%.*]] to i64
+; ALL-NEXT:    [[S0:%.*]] = shl i64 [[Z0]], [[Z6]]
+; ALL-NEXT:    [[S1:%.*]] = shl i64 [[Z1]], 8
+; ALL-NEXT:    [[O7:%.*]] = or i64 [[S1]], [[S0]]
+; ALL-NEXT:    ret i64 [[O7]]
+;
+  %g1 = getelementptr i8, ptr %arg, i64 1
+  %ld0 = load i8, ptr %arg, align 1
+  %ld1 = load i8, ptr %g1, align 1
+  %z0 = zext i8 %ld0 to i64
+  %z1 = zext i8 %ld1 to i64
+  %z6 = zext i8 %b to i64
+  %s0 = shl i64 %z0, %z6
+  %s1 = shl i64 %z1, 8
+  %o7 = or i64 %s1, %s0
+  ret i64 %o7
+}
