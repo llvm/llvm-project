@@ -283,6 +283,30 @@ const u8 kPatchableCode11[] = {
     0x83, 0x64, 0x24, 0x28, 0x00,   // and     dword ptr [rsp+28h],0
 };
 
+const u8 kPatchableCode12[] = {
+    0x55,                           // push    ebp
+    0x53,                           // push    ebx
+    0x57,                           // push    edi
+    0x56,                           // push    esi
+    0x8b, 0x6c, 0x24, 0x18,         // mov     ebp,dword ptr[esp+18h]
+};
+
+const u8 kPatchableCode13[] = {
+    0x55,                           // push    ebp
+    0x53,                           // push    ebx
+    0x57,                           // push    edi
+    0x56,                           // push    esi
+    0x8b, 0x5c, 0x24, 0x14,         // mov     ebx,dword ptr[esp+14h]
+};
+
+const u8 kPatchableCode14[] = {
+    0x55,                           // push    ebp
+    0x89, 0xe5,                     // mov     ebp,esp
+    0x53,                           // push    ebx
+    0x57,                           // push    edi
+    0x56,                           // push    esi
+};
+
 // A buffer holding the dynamically generated code under test.
 u8* ActiveCode;
 const size_t ActiveCodeLength = 4096;
@@ -679,8 +703,11 @@ TEST(Interception, PatchableFunctionWithTrampoline) {
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode9, override, prefix));
 #else
   EXPECT_TRUE(TestFunctionPatching(kPatchableCode3, override, prefix));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode12, override, prefix));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode13, override, prefix));
 #endif
   EXPECT_FALSE(TestFunctionPatching(kPatchableCode4, override, prefix));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode14, override, prefix));
 
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode1, override, prefix));
   EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode2, override, prefix));
