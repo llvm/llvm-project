@@ -138,6 +138,12 @@ New checks
 
   Warns when lambda specify a by-value capture default and capture ``this``.
 
+- New :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check.
+
+  Warns when a forwarding reference parameter is not forwarded within the
+  function body.
+
 - New :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check.
 
