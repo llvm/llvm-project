@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.13.4)
 
 if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libunwind")
   message(FATAL_ERROR "llvm-libgcc requires being built in a monorepo layout with libunwind available")
