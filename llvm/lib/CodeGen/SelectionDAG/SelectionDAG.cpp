@@ -3943,6 +3943,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   return Known;
 }
 
+/// Convert ConstantRange OverflowResult into SelectionDAG::OverflowKind.
+static SelectionDAG::OverflowKind mapOverflowResult(ConstantRange::OverflowResult OR) {
+  switch (OR) {
+  case ConstantRange::OverflowResult::MayOverflow:
+    return SelectionDAG::OFK_Sometime;
+  case ConstantRange::OverflowResult::AlwaysOverflowsLow:
+  case ConstantRange::OverflowResult::AlwaysOverflowsHigh:
+    return SelectionDAG::OFK_Always;
+  case ConstantRange::OverflowResult::NeverOverflows:
+    return SelectionDAG::OFK_Never;
+  }
+  llvm_unreachable("Unknown OverflowResult");
+}
+
 SelectionDAG::OverflowKind
 SelectionDAG::computeOverflowForSignedAdd(SDValue N0, SDValue N1) const {
   // X + 0 never overflow
@@ -3964,26 +3978,21 @@ SelectionDAG::computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  KnownBits N1Known = computeKnownBits(N1);
-  if (N1Known.Zero.getBoolValue()) {
-    KnownBits N0Known = computeKnownBits(N0);
-
-    bool overflow;
-    (void)N0Known.getMaxValue().uadd_ov(N1Known.getMaxValue(), overflow);
-    if (!overflow)
-      return OFK_Never;
-  }
-
   // mulhi + 1 never overflow
+  KnownBits N1Known = computeKnownBits(N1);
   if (N0.getOpcode() == ISD::UMUL_LOHI && N0.getResNo() == 1 &&
       N1Known.getMaxValue().ult(2))
     return OFK_Never;
+
+  KnownBits N0Known = computeKnownBits(N0);
   if (N1.getOpcode() == ISD::UMUL_LOHI && N1.getResNo() == 1 &&
-      computeKnownBits(N0).getMaxValue().ult(2))
+      N0Known.getMaxValue().ult(2))
     return OFK_Never;
 
-  // TODO: Add ConstantRange::unsignedAddMayOverflow handling.
-  return OFK_Sometime;
+  // Fallback to ConstantRange::unsignedAddMayOverflow handling.
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  return mapOverflowResult(N0Range.unsignedAddMayOverflow(N1Range));
 }
 
 SelectionDAG::OverflowKind
