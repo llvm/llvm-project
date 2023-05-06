@@ -262,13 +262,13 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
-#if HWASAN_WITH_INTERCEPTORS
-#if defined(__linux__)
+#  if HWASAN_WITH_INTERCEPTORS
+#    if defined(__linux__)
   INTERCEPT_FUNCTION(__libc_longjmp);
   INTERCEPT_FUNCTION(longjmp);
   INTERCEPT_FUNCTION(siglongjmp);
   INTERCEPT_FUNCTION(vfork);
-#endif  // __linux__
+#    endif  // __linux__
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_join);
 #  endif
