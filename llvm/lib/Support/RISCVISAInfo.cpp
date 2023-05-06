@@ -866,11 +866,6 @@ Error RISCVISAInfo::checkDependency() {
     return createStringError(errc::invalid_argument,
                              "'f' and 'zfinx' extensions are incompatible");
 
-  if (Exts.count("zvfh") && !Exts.count("zfh") && !Exts.count("zfhmin"))
-    return createStringError(
-        errc::invalid_argument,
-        "'zvfh' requires 'zfh' or 'zfhmin extension to also be specified");
-
   if (HasZvl && !HasVector)
     return createStringError(
         errc::invalid_argument,
@@ -941,7 +936,7 @@ static const char *ImpliedExtsZve32x[] = {"zvl32b", "zicsr"};
 static const char *ImpliedExtsZve64d[] = {"zve64f", "d"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
 static const char *ImpliedExtsZve64x[] = {"zve32x", "zvl64b"};
-static const char *ImpliedExtsZvfh[] = {"zve32f"};
+static const char *ImpliedExtsZvfh[] = {"zve32f", "zfhmin"};
 static const char *ImpliedExtsZvkn[] = {"zvbb", "zvbc", "zvkned", "zvknhb",
                                         "zvkt"};
 static const char *ImpliedExtsZvkng[] = {"zvkg", "zvkn"};
