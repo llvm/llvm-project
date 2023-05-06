@@ -6869,7 +6869,7 @@ bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
   return false;
 }
 bool ResolveNamesVisitor::Pre(const parser::CallStmt &x) {
-  HandleCall(Symbol::Flag::Subroutine, x.v);
+  HandleCall(Symbol::Flag::Subroutine, x.call);
   return false;
 }
 
@@ -8085,7 +8085,7 @@ public:
     resolver_.NoteExecutablePartCall(Symbol::Flag::Function, fr.v);
   }
   void Post(const parser::CallStmt &cs) {
-    resolver_.NoteExecutablePartCall(Symbol::Flag::Subroutine, cs.v);
+    resolver_.NoteExecutablePartCall(Symbol::Flag::Subroutine, cs.call);
   }
 
 private:

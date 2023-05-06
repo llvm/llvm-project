@@ -820,6 +820,8 @@ public:
     common::visit(common::visitors{
                       [&](const AllocOpt::Mold &) { Word("MOLD="); },
                       [&](const AllocOpt::Source &) { Word("SOURCE="); },
+                      [&](const AllocOpt::Stream &) { Word("STREAM="); },
+                      [&](const AllocOpt::Pinned &) { Word("PINNED="); },
                       [](const StatOrErrmsg &) {},
                   },
         x.u);
@@ -1685,19 +1687,26 @@ public:
   void Unparse(const IntrinsicStmt &x) { // R1519
     Word("INTRINSIC :: "), Walk(x.v, ", ");
   }
+  void Unparse(const CallStmt::Chevrons &x) { // CUDA
+    Walk(std::get<0>(x.t)); // grid
+    Word(","), Walk(std::get<1>(x.t)); // block
+    Walk(",", std::get<2>(x.t)); // bytes
+    Walk(",", std::get<3>(x.t)); // stream
+  }
   void Unparse(const FunctionReference &x) { // R1520
     Walk(std::get<ProcedureDesignator>(x.v.t));
     Put('('), Walk(std::get<std::list<ActualArgSpec>>(x.v.t), ", "), Put(')');
   }
   void Unparse(const CallStmt &x) { // R1521
-    if (asFortran_ && x.typedCall.get()) {
+    if (asFortran_ && x.typedCall.get() && !x.chevrons /*CUDA todo*/) {
       Put(' ');
       asFortran_->call(out_, *x.typedCall);
       Put('\n');
     } else {
-      const auto &pd{std::get<ProcedureDesignator>(x.v.t)};
-      const auto &args{std::get<std::list<ActualArgSpec>>(x.v.t)};
+      const auto &pd{std::get<ProcedureDesignator>(x.call.t)};
       Word("CALL "), Walk(pd);
+      Walk("<<<", x.chevrons, ">>>");
+      const auto &args{std::get<std::list<ActualArgSpec>>(x.call.t)};
       if (args.empty()) {
         if (std::holds_alternative<ProcComponentRef>(pd.u)) {
           Put("()"); // pgf90 crashes on CALL to tbp without parentheses
@@ -1726,6 +1735,15 @@ public:
   void Post(const PrefixSpec::Non_Recursive) { Word("NON_RECURSIVE"); }
   void Post(const PrefixSpec::Pure) { Word("PURE"); }
   void Post(const PrefixSpec::Recursive) { Word("RECURSIVE"); }
+  void Unparse(const PrefixSpec::Attributes &x) {
+    Word("ATTRIBUTES("), Walk(x.v), Word(")");
+  }
+  void Unparse(const PrefixSpec::Launch_Bounds &x) {
+    Word("LAUNCH_BOUNDS("), Walk(x.v), Word(")");
+  }
+  void Unparse(const PrefixSpec::Cluster_Dims &x) {
+    Word("CLUSTER_DIMS("), Walk(x.v), Word(")");
+  }
   void Unparse(const FunctionStmt &x) { // R1530
     Walk("", std::get<std::list<PrefixSpec>>(x.t), " ", " ");
     Word("FUNCTION "), Walk(std::get<Name>(x.t)), Put("(");
@@ -1870,9 +1888,6 @@ public:
     Walk(std::get<std::optional<AccDataModifier>>(x.t), ":");
     Walk(std::get<AccObjectList>(x.t));
   }
-  void Unparse(const AccDataModifier::Modifier &x) {
-    Word(AccDataModifier::EnumToString(x));
-  }
   void Unparse(const AccBindClause &x) {
     common::visit(common::visitors{
                       [&](const Name &y) { Put('('), Walk(y), Put(')'); },
@@ -1966,9 +1981,6 @@ public:
         x.u);
   }
   void Unparse(const AccObjectList &x) { Walk(x.v, ","); }
-  void Unparse(const AccReductionOperator::Operator &x) {
-    Word(AccReductionOperator::EnumToString(x));
-  }
   void Unparse(const AccObjectListWithReduction &x) {
     Walk(std::get<AccReductionOperator>(x.t));
     Put(":");
@@ -2613,6 +2625,10 @@ public:
     Walk("(", std::get<std::optional<ArraySpec>>(x.t), ")"), Put(')');
   }
   void Unparse(const BasedPointerStmt &x) { Walk("POINTER ", x.v, ","); }
+  void Unparse(const CUDAAttributesStmt &x) {
+    Word("ATTRIBUTES("), Walk(std::get<common::CUDADataAttr>(x.t));
+    Word(") "), Walk(std::get<std::list<Name>>(x.t), ", ");
+  }
   void Post(const StructureField &x) {
     if (const auto *def{std::get_if<Statement<DataComponentDefStmt>>(&x.u)}) {
       for (const auto &item :
@@ -2658,8 +2674,12 @@ public:
 
 #define WALK_NESTED_ENUM(CLASS, ENUM) \
   void Unparse(const CLASS::ENUM &x) { Word(CLASS::EnumToString(x)); }
+  WALK_NESTED_ENUM(AccDataModifier, Modifier)
   WALK_NESTED_ENUM(AccessSpec, Kind) // R807
+  WALK_NESTED_ENUM(AccReductionOperator, Operator)
   WALK_NESTED_ENUM(common, TypeParamAttr) // R734
+  WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
+  WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(IntentSpec, Intent) // R826
   WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
   WALK_NESTED_ENUM(ConnectSpec::CharExpr, Kind) // R1205
@@ -2685,6 +2705,38 @@ public:
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
 #undef WALK_NESTED_ENUM
+
+  void Unparse(const CUFKernelDoConstruct::Directive &x) {
+    Word("!$CUF KERNEL DO");
+    Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");
+    Word(" <<<");
+    const auto &grid{std::get<1>(x.t)};
+    if (grid.empty()) {
+      Word("*");
+    } else if (grid.size() == 1) {
+      Walk(grid.front());
+    } else {
+      Walk("(", grid, ",", ")");
+    }
+    Word(",");
+    const auto &block{std::get<2>(x.t)};
+    if (block.empty()) {
+      Word("*");
+    } else if (block.size() == 1) {
+      Walk(block.front());
+    } else {
+      Walk("(", block, ",", ")");
+    }
+    if (const auto &stream{std::get<3>(x.t)}) {
+      Word(",STREAM="), Walk(*stream);
+    }
+    Word(">>>\n");
+  }
+
+  void Unparse(const CUFKernelDoConstruct &x) {
+    Walk(std::get<CUFKernelDoConstruct::Directive>(x.t));
+    Walk(std::get<std::optional<DoConstruct>>(x.t));
+  }
 
   void Done() const { CHECK(indent_ == 0); }
 
