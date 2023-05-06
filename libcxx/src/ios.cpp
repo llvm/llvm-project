@@ -108,11 +108,7 @@ const ios_base::openmode ios_base::trunc;
 void
 ios_base::__call_callbacks(event ev)
 {
-    for (size_t i = __event_size_; i;)
-    {
-        --i;
-        __fn_[i](ev, *this, __index_[i]);
-    }
+    /// Edited for ClickHouse: we make this method as noop, because we don't need it.
 }
 
 // locale
@@ -120,12 +116,9 @@ ios_base::__call_callbacks(event ev)
 locale
 ios_base::imbue(const locale& newloc)
 {
-    static_assert(sizeof(locale) == sizeof(__loc_), "");
-    locale& loc_storage = *reinterpret_cast<locale*>(&__loc_);
-    locale oldloc = loc_storage;
-    loc_storage = newloc;
-    __call_callbacks(imbue_event);
-    return oldloc;
+    /// Edited for ClickHouse: we make this method as noop, because we don't need it.
+    const locale& loc_storage = *reinterpret_cast<const locale*>(&__loc_);
+    return loc_storage;
 }
 
 locale
