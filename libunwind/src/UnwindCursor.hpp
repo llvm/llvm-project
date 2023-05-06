@@ -31,7 +31,8 @@
 #endif
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
-    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_S390X))
+    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
+     defined(_LIBUNWIND_TARGET_S390X))
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -992,6 +993,10 @@ private:
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
+#endif
+#if defined(_LIBUNWIND_TARGET_RISCV)
+  bool setInfoForSigReturn(Registers_riscv &);
+  int stepThroughSigReturn(Registers_riscv &);
 #endif
 #if defined(_LIBUNWIND_TARGET_S390X)
   bool setInfoForSigReturn(Registers_s390x &);
@@ -2719,6 +2724,60 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
 }
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_AARCH64)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_RISCV)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
+  const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  uint32_t instructions[2];
+  struct iovec local_iov = {&instructions, sizeof instructions};
+  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
+  long bytesRead =
+      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  // Look for the two instructions used in the sigreturn trampoline
+  // __vdso_rt_sigreturn:
+  //
+  // 0x08b00893 li a7,0x8b
+  // 0x00000073 ecall
+  if (bytesRead != sizeof instructions || instructions[0] != 0x08b00893 ||
+      instructions[1] != 0x00000073)
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_riscv &) {
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext_t struct:
+  //     - 8-byte long (__uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte uc_stack
+  //     - 8-byte uc_sigmask
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/riscv/kernel/signal.c
+  const pint_t kOffsetSpToSigcontext = 128 + 8 + 8 + 24 + 8 + 128;
+
+  const pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+  _registers.setIP(_addressSpace.get64(sigctx));
+  for (int i = UNW_RISCV_X1; i <= UNW_RISCV_X31; ++i) {
+    uint64_t value = _addressSpace.get64(sigctx + static_cast<pint_t>(i * 8));
+    _registers.setRegister(i, value);
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_RISCV)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_S390X)

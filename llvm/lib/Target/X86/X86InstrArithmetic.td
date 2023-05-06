@@ -281,9 +281,9 @@ class BinOpMR_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
            WriteALU.ReadAfterFold]>;  // reg
 
 // BinOpMR_RMW_FF - Binary instructions with inputs "[mem], reg", where the
-// pattern use EFLAGS as operand and implicitly use EFLAGS.
+// pattern sets EFLAGS and implicitly uses EFLAGS.
 class BinOpMR_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
-                    SDNode opnode>
+                     SDNode opnode>
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(store (opnode (load addr:$dst), typeinfo.RegClass:$src, EFLAGS),
                     addr:$dst),
@@ -325,7 +325,7 @@ class BinOpMI_RMW<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
     Sched<[WriteALURMW]>;
 
 // BinOpMI_RMW_FF - Binary instructions with inputs "[mem], imm", where the
-// pattern use EFLAGS as operand and implicitly use EFLAGS.
+// pattern sets EFLAGS and implicitly uses EFLAGS.
 class BinOpMI_RMW_FF<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
                      SDNode opnode, Format f>
   : BinOpMI<opcode, mnemonic, typeinfo, f,
@@ -363,7 +363,7 @@ class BinOpMI8_RMW<string mnemonic, X86TypeInfo typeinfo,
     Sched<[WriteALURMW]>;
 
 // BinOpMI8_RMW_FF - Binary instructions with inputs "[mem], imm8", where the
-// pattern use EFLAGS as operand and implicitly use EFLAGS.
+// pattern sets EFLAGS and implicitly uses EFLAGS.
 class BinOpMI8_RMW_FF<string mnemonic, X86TypeInfo typeinfo,
                       SDPatternOperator opnode, Format f>
   : BinOpMI8<mnemonic, typeinfo, f,
@@ -427,8 +427,8 @@ class UnaryOpR<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info,
 class INCDECR<Format f, string mnemonic, X86TypeInfo info,
               SDPatternOperator node>
   : UnaryOpR<0xFE, f, mnemonic, info,
-               [(set info.RegClass:$dst, EFLAGS,
-               (node info.RegClass:$src1, 1))]>;
+             [(set info.RegClass:$dst, EFLAGS,
+              (node info.RegClass:$src1, 1))]>;
 
 //  INCDECM - Instructions like "inc [mem]".
 class INCDECM<Format f, string mnemonic, X86TypeInfo info, int num>
@@ -459,8 +459,8 @@ class MulOpM<bits<8> opcode, Format f, string mnemonic, X86TypeInfo info,
 //  NegOpR - Instructions like "neg reg", with implicit EFLAGS.
 class NegOpR<bits<8> opcode, string mnemonic, X86TypeInfo info>
   : UnaryOpR<opcode, MRM3r, mnemonic, info,
-               [(set info.RegClass:$dst, (ineg info.RegClass:$src1)),
-                (implicit EFLAGS)]>;
+             [(set info.RegClass:$dst, (ineg info.RegClass:$src1)),
+              (implicit EFLAGS)]>;
 
 //  NotOpR - Instructions like "not reg".
 class NotOpR<bits<8> opcode, string mnemonic, X86TypeInfo info>
@@ -516,12 +516,11 @@ class IMulOpRM<bits<8> opcode, string mnemonic, X86TypeInfo info,
 class IMulOpRRI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
                  X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcReg, info, (outs info.RegClass:$dst),
-               (ins info.RegClass:$src1,
-               info.Imm8Operand:$src2), mnemonic,
-               "{$src2, $src1, $dst|$dst, $src1, $src2}",
-               [(set info.RegClass:$dst, EFLAGS,
-                (X86smul_flag info.RegClass:$src1,
-                info.Imm8NoSuOperator:$src2))]>,
+        (ins info.RegClass:$src1, info.Imm8Operand:$src2), mnemonic,
+        "{$src2, $src1, $dst|$dst, $src1, $src2}",
+        [(set info.RegClass:$dst, EFLAGS,
+         (X86smul_flag info.RegClass:$src1,
+                       info.Imm8NoSuOperator:$src2))]>,
     Sched<[sched]>{
   let ImmT = Imm8;
 }
@@ -530,12 +529,11 @@ class IMulOpRRI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
 class IMulOpRRI<bits<8> opcode, string mnemonic, X86TypeInfo info,
                 X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcReg, info, (outs info.RegClass:$dst),
-               (ins info.RegClass:$src1,
-               info.ImmOperand:$src2), mnemonic,
-               "{$src2, $src1, $dst|$dst, $src1, $src2}",
-               [(set info.RegClass:$dst, EFLAGS,
-                (X86smul_flag info.RegClass:$src1,
-                info.ImmNoSuOperator:$src2))]>,
+        (ins info.RegClass:$src1, info.ImmOperand:$src2), mnemonic,
+        "{$src2, $src1, $dst|$dst, $src1, $src2}",
+        [(set info.RegClass:$dst, EFLAGS,
+         (X86smul_flag info.RegClass:$src1,
+                       info.ImmNoSuOperator:$src2))]>,
     Sched<[sched]>{
   let ImmT = info.ImmEncoding;
 }
@@ -544,12 +542,11 @@ class IMulOpRRI<bits<8> opcode, string mnemonic, X86TypeInfo info,
 class IMulOpRMI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
                  X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcMem, info, (outs info.RegClass:$dst),
-               (ins info.MemOperand:$src1,
-               info.Imm8Operand:$src2), mnemonic,
-                "{$src2, $src1, $dst|$dst, $src1, $src2}",
-               [(set info.RegClass:$dst, EFLAGS,
-                (X86smul_flag (info.LoadNode addr:$src1),
-                info.Imm8NoSuOperator:$src2))]>,
+        (ins info.MemOperand:$src1, info.Imm8Operand:$src2), mnemonic,
+        "{$src2, $src1, $dst|$dst, $src1, $src2}",
+        [(set info.RegClass:$dst, EFLAGS,
+         (X86smul_flag (info.LoadNode addr:$src1),
+                        info.Imm8NoSuOperator:$src2))]>,
     Sched<[sched.Folded]>{
   let ImmT = Imm8;
 }
@@ -558,12 +555,11 @@ class IMulOpRMI8<bits<8> opcode, string mnemonic, X86TypeInfo info,
 class IMulOpRMI<bits<8> opcode, string mnemonic, X86TypeInfo info,
                 X86FoldableSchedWrite sched>
   : ITy<opcode, MRMSrcMem, info, (outs info.RegClass:$dst),
-               (ins info.MemOperand:$src1,
-               info.ImmOperand:$src2), mnemonic,
-               "{$src2, $src1, $dst|$dst, $src1, $src2}",
-               [(set info.RegClass:$dst, EFLAGS,
-                  (X86smul_flag (info.LoadNode addr:$src1),
-                  info.ImmNoSuOperator:$src2))]>,
+        (ins info.MemOperand:$src1, info.ImmOperand:$src2), mnemonic,
+        "{$src2, $src1, $dst|$dst, $src1, $src2}",
+        [(set info.RegClass:$dst, EFLAGS,
+         (X86smul_flag (info.LoadNode addr:$src1),
+                        info.ImmNoSuOperator:$src2))]>,
     Sched<[sched.Folded]>{
   let ImmT = info.ImmEncoding;
 }

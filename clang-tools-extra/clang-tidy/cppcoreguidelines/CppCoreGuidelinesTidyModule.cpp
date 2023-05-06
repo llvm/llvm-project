@@ -25,6 +25,7 @@
 #include "InterfacesGlobalInitCheck.h"
 #include "MacroUsageCheck.h"
 #include "MisleadingCaptureDefaultByValueCheck.h"
+#include "MissingStdForwardCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoMallocCheck.h"
 #include "OwningMemoryCheck.h"
@@ -77,6 +78,8 @@ public:
         "cppcoreguidelines-macro-usage");
     CheckFactories.registerCheck<MisleadingCaptureDefaultByValueCheck>(
         "cppcoreguidelines-misleading-capture-default-by-value");
+    CheckFactories.registerCheck<MissingStdForwardCheck>(
+        "cppcoreguidelines-missing-std-forward");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "cppcoreguidelines-narrowing-conversions");
     CheckFactories.registerCheck<NoMallocCheck>("cppcoreguidelines-no-malloc");

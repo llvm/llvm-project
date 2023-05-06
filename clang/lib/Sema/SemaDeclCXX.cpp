@@ -15732,7 +15732,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
     }
   }
 
-  if (!VD->hasGlobalStorage()) return;
+  if (!VD->hasGlobalStorage() || !VD->needsDestruction(Context))
+    return;
 
   // Emit warning for non-trivial dtor in global scope (a real global,
   // class-static, function-static).

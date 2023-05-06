@@ -2420,7 +2420,7 @@ protected:
   }
 
   CommandOptions m_options;
-  // Last traversed id used to continue a repeat command. None means
+  // Last traversed id used to continue a repeat command. std::nullopt means
   // that all the trace has been consumed.
   std::optional<lldb::user_id_t> m_last_id;
 };

@@ -54,10 +54,10 @@ public:
   };
 
   struct HungarianNotationOption {
-    HungarianNotationOption() : HPType(HungarianPrefixType::HPT_Off) {}
+    HungarianNotationOption() = default;
 
     std::optional<CaseType> Case;
-    HungarianPrefixType HPType;
+    HungarianPrefixType HPType = HungarianPrefixType::HPT_Off;
     llvm::StringMap<std::string> General;
     llvm::StringMap<std::string> CString;
     llvm::StringMap<std::string> PrimitiveType;

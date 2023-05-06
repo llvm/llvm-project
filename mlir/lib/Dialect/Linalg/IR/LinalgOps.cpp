@@ -187,7 +187,8 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
     }
   }
   if (!result.propertiesAttr) {
-    Optional<RegisteredOperationName> info = result.name.getRegisteredInfo();
+    std::optional<RegisteredOperationName> info =
+        result.name.getRegisteredInfo();
     if (info) {
       if (failed(info->verifyInherentAttrs(result.attributes, [&]() {
             return parser.emitError(attrsLoc)
