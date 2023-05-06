@@ -191,6 +191,7 @@ Clang-Tidy Checks
    `cppcoreguidelines-interfaces-global-init <cppcoreguidelines/interfaces-global-init.html>`_,
    `cppcoreguidelines-macro-usage <cppcoreguidelines/macro-usage.html>`_,
    `cppcoreguidelines-misleading-capture-default-by-value <cppcoreguidelines/misleading-capture-default-by-value.html>`_, "Yes"
+   `cppcoreguidelines-missing-std-forward <cppcoreguidelines/missing-std-forward.html>`_,
    `cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions.html>`_,
    `cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc.html>`_,
    `cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory.html>`_,

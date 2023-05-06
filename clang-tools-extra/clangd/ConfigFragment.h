@@ -167,7 +167,7 @@ struct Fragment {
     /// etc). Valid values are:
     /// - A single path to a directory (absolute, or relative to the fragment)
     /// - Ancestors: search all parent directories (the default)
-    /// - None: do not use a compilation database, just default flags.
+    /// - std::nullopt: do not use a compilation database, just default flags.
     std::optional<Located<std::string>> CompilationDatabase;
   };
   CompileFlagsBlock CompileFlags;
@@ -232,7 +232,7 @@ struct Fragment {
     ///
     /// Valid values are:
     /// - Strict
-    /// - None
+    /// - std::nullopt
     std::optional<Located<std::string>> UnusedIncludes;
 
 
@@ -249,7 +249,7 @@ struct Fragment {
     ///
     /// Valid values are:
     /// - Strict
-    /// - None
+    /// - std::nullopt
     std::optional<Located<std::string>> MissingIncludes;
 
     /// Controls IncludeCleaner diagnostics.

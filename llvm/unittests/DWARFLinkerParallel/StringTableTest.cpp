@@ -29,41 +29,48 @@ TEST(StringPoolTest, TestStringTable) {
   StringPool Strings;
   StringTable OutStrings(Strings, nullptr);
 
-  // Check string insertion.
-  StringEntry *FirstPtr = Strings.insert(InputStrings[0].Str).first;
-  StringEntry *SecondPtr = Strings.insert(InputStrings[1].Str).first;
-  StringEntry *ThirdPtr = Strings.insert(InputStrings[2].Str).first;
+  // StringPool uses PerThreadBumpPtrAllocator which should be accessed from
+  // threads created by ThreadPoolExecutor. Use TaskGroup to run on
+  // ThreadPoolExecutor threads.
+  parallel::TaskGroup tg;
 
-  FirstPtr = OutStrings.add(FirstPtr);
-  SecondPtr = OutStrings.add(SecondPtr);
-  ThirdPtr = OutStrings.add(ThirdPtr);
+  tg.spawn([&]() {
+    // Check string insertion.
+    StringEntry *FirstPtr = Strings.insert(InputStrings[0].Str).first;
+    StringEntry *SecondPtr = Strings.insert(InputStrings[1].Str).first;
+    StringEntry *ThirdPtr = Strings.insert(InputStrings[2].Str).first;
 
-  // Check fields of inserted strings.
-  EXPECT_TRUE(FirstPtr->getKey() == InputStrings[0].Str);
-  EXPECT_TRUE(FirstPtr->getValue()->Offset == InputStrings[0].Offset);
-  EXPECT_TRUE(FirstPtr->getValue()->Index == InputStrings[0].Idx);
+    FirstPtr = OutStrings.add(FirstPtr);
+    SecondPtr = OutStrings.add(SecondPtr);
+    ThirdPtr = OutStrings.add(ThirdPtr);
 
-  EXPECT_TRUE(SecondPtr->getKey() == InputStrings[1].Str);
-  EXPECT_TRUE(SecondPtr->getValue()->Offset == InputStrings[1].Offset);
-  EXPECT_TRUE(SecondPtr->getValue()->Index == InputStrings[1].Idx);
+    // Check fields of inserted strings.
+    EXPECT_TRUE(FirstPtr->getKey() == InputStrings[0].Str);
+    EXPECT_TRUE(FirstPtr->getValue()->Offset == InputStrings[0].Offset);
+    EXPECT_TRUE(FirstPtr->getValue()->Index == InputStrings[0].Idx);
 
-  EXPECT_TRUE(ThirdPtr->getKey() == InputStrings[2].Str);
-  EXPECT_TRUE(ThirdPtr->getValue()->Offset == InputStrings[2].Offset);
-  EXPECT_TRUE(ThirdPtr->getValue()->Index == InputStrings[2].Idx);
+    EXPECT_TRUE(SecondPtr->getKey() == InputStrings[1].Str);
+    EXPECT_TRUE(SecondPtr->getValue()->Offset == InputStrings[1].Offset);
+    EXPECT_TRUE(SecondPtr->getValue()->Index == InputStrings[1].Idx);
 
-  // Check order enumerated strings.
-  uint64_t CurIdx = 0;
-  std::function<void(DwarfStringPoolEntryRef)> checkStr =
-      [&](DwarfStringPoolEntryRef Entry) {
-        EXPECT_TRUE(Entry.getEntry().isIndexed());
-        EXPECT_TRUE(Entry.getIndex() == CurIdx);
-        EXPECT_TRUE(Entry.getOffset() == InputStrings[CurIdx].Offset);
-        EXPECT_TRUE(Entry.getString() == InputStrings[CurIdx].Str);
+    EXPECT_TRUE(ThirdPtr->getKey() == InputStrings[2].Str);
+    EXPECT_TRUE(ThirdPtr->getValue()->Offset == InputStrings[2].Offset);
+    EXPECT_TRUE(ThirdPtr->getValue()->Index == InputStrings[2].Idx);
 
-        CurIdx++;
-      };
+    // Check order enumerated strings.
+    uint64_t CurIdx = 0;
+    std::function<void(DwarfStringPoolEntryRef)> checkStr =
+        [&](DwarfStringPoolEntryRef Entry) {
+          EXPECT_TRUE(Entry.getEntry().isIndexed());
+          EXPECT_TRUE(Entry.getIndex() == CurIdx);
+          EXPECT_TRUE(Entry.getOffset() == InputStrings[CurIdx].Offset);
+          EXPECT_TRUE(Entry.getString() == InputStrings[CurIdx].Str);
 
-  OutStrings.forEach(checkStr);
+          CurIdx++;
+        };
+
+    OutStrings.forEach(checkStr);
+  });
 }
 
 TEST(StringPoolTest, TestStringTableWithTranslator) {
@@ -80,25 +87,32 @@ TEST(StringPoolTest, TestStringTableWithTranslator) {
   StringPool Strings;
   StringTable OutStrings(Strings, TranslatorFunc);
 
-  StringEntry *FirstPtr = Strings.insert("first").first;
-  StringEntry *SecondPtr = Strings.insert("second").first;
-  StringEntry *ThirdPtr = Strings.insert("third").first;
+  // StringPool uses PerThreadBumpPtrAllocator which should be accessed from
+  // threads created by ThreadPoolExecutor. Use TaskGroup to run on
+  // ThreadPoolExecutor threads.
+  parallel::TaskGroup tg;
 
-  FirstPtr = OutStrings.add(FirstPtr);
-  SecondPtr = OutStrings.add(SecondPtr);
-  ThirdPtr = OutStrings.add(ThirdPtr);
+  tg.spawn([&]() {
+    StringEntry *FirstPtr = Strings.insert("first").first;
+    StringEntry *SecondPtr = Strings.insert("second").first;
+    StringEntry *ThirdPtr = Strings.insert("third").first;
 
-  EXPECT_TRUE(FirstPtr->getKey() == "tsrif0");
-  EXPECT_TRUE(FirstPtr->getValue()->Offset == 0);
-  EXPECT_TRUE(FirstPtr->getValue()->Index == 0);
+    FirstPtr = OutStrings.add(FirstPtr);
+    SecondPtr = OutStrings.add(SecondPtr);
+    ThirdPtr = OutStrings.add(ThirdPtr);
 
-  EXPECT_TRUE(SecondPtr->getKey() == "dnoces0");
-  EXPECT_TRUE(SecondPtr->getValue()->Offset == 7);
-  EXPECT_TRUE(SecondPtr->getValue()->Index == 1);
+    EXPECT_TRUE(FirstPtr->getKey() == "tsrif0");
+    EXPECT_TRUE(FirstPtr->getValue()->Offset == 0);
+    EXPECT_TRUE(FirstPtr->getValue()->Index == 0);
 
-  EXPECT_TRUE(ThirdPtr->getKey() == "driht0");
-  EXPECT_TRUE(ThirdPtr->getValue()->Offset == 15);
-  EXPECT_TRUE(ThirdPtr->getValue()->Index == 2);
+    EXPECT_TRUE(SecondPtr->getKey() == "dnoces0");
+    EXPECT_TRUE(SecondPtr->getValue()->Offset == 7);
+    EXPECT_TRUE(SecondPtr->getValue()->Index == 1);
+
+    EXPECT_TRUE(ThirdPtr->getKey() == "driht0");
+    EXPECT_TRUE(ThirdPtr->getValue()->Offset == 15);
+    EXPECT_TRUE(ThirdPtr->getValue()->Index == 2);
+  });
 }
 
 } // anonymous namespace

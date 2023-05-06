@@ -4389,13 +4389,11 @@ _LIBCPP_POP_MACROS
 #  include <algorithm>
 #  include <concepts>
 #  include <cstdlib>
-#  include <functional>
 #  include <iterator>
 #  include <new>
 #  include <type_traits>
 #  include <typeinfo>
 #  include <utility>
-#  include <vector>
 #endif
 
 #endif // _LIBCPP_STRING

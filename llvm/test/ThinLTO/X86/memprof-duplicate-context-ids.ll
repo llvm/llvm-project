@@ -66,12 +66,14 @@
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
-; RUN:  --check-prefix=STATS
+; RUN:  --check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS
 
 ; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
 ;; We should clone D once for the cold allocations via C.
 ; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
 
 
 ;; Try again but with distributed ThinLTO
@@ -95,11 +97,18 @@
 ;; Check distributed index
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DISTRIB
 
+;; Run ThinLTO backend
+; RUN: opt -passes=memprof-context-disambiguation \
+; RUN:  -memprof-import-summary=%t.o.thinlto.bc \
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %t.o -S 2>&1 | FileCheck %s --check-prefix=IR \
+; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS
+
 source_filename = "duplicate-context-ids.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define internal ptr @_Z1Dv() {
+define internal ptr @_Z1Dv() #0 {
 entry:
   %call = call ptr @_Znam(i64 0), !memprof !0, !callsite !5
   ret ptr null
@@ -107,31 +116,31 @@ entry:
 
 declare ptr @_Znam(i64)
 
-define internal ptr @_Z1Fv() {
+define internal ptr @_Z1Fv() #0 {
 entry:
   %call = call ptr @_Z1Dv(), !callsite !6
   ret ptr null
 }
 
-define internal ptr @_Z1Cv() {
+define internal ptr @_Z1Cv() #0 {
 entry:
   %call = call ptr @_Z1Dv(), !callsite !7
   ret ptr null
 }
 
-define internal ptr @_Z1Bv() {
+define internal ptr @_Z1Bv() #0 {
 entry:
   %call.i = call ptr @_Z1Dv(), !callsite !8
   ret ptr null
 }
 
-define internal ptr @_Z1Ev() {
+define internal ptr @_Z1Ev() #0 {
 entry:
   %call.i = call ptr @_Z1Dv(), !callsite !9
   ret ptr null
 }
 
-define i32 @main() {
+define i32 @main() #0 {
 entry:
   call ptr @_Z1Bv()
   call ptr @_Z1Ev()
@@ -142,6 +151,8 @@ entry:
 declare void @_ZdaPv()
 
 declare i32 @sleep()
+
+attributes #0 = { noinline optnone}
 
 !0 = !{!1, !3}
 !1 = !{!2, !"cold"}
@@ -300,10 +311,43 @@ declare i32 @sleep()
 ; DUMP: 		Edge from Callee [[D2]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
 ; DUMP:         Clone of [[D]]
 
+; REMARKS: created clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Dv marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Bv assigned to call function clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Ev assigned to call function clone _Z1Dv.memprof.1
+
+
+;; The allocation via F does not allocate cold memory. It should call the
+;; original D, which ultimately call the original allocation decorated
+;; with a "notcold" attribute.
+; IR: define internal {{.*}} @_Z1Dv()
+; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z1Fv()
+; IR:   call {{.*}} @_Z1Dv()
+;; The allocations via B and E allocate cold memory. They should call the
+;; cloned D, which ultimately call the cloned allocation decorated with a
+;; "cold" attribute.
+; IR: define internal {{.*}} @_Z1Bv()
+; IR:   call {{.*}} @_Z1Dv.memprof.1()
+; IR: define internal {{.*}} @_Z1Ev()
+; IR:   call {{.*}} @_Z1Dv.memprof.1()
+; IR: define internal {{.*}} @_Z1Dv.memprof.1()
+; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
+; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { "memprof"="cold" }
+
 
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE: 2 memprof-context-disambiguation - Number of allocation versions (including clones) during ThinLTO backend
 ; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS-BE: 1 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
+; STATS-BE: 1 memprof-context-disambiguation - Number of functions that had clones created during ThinLTO backend
+; STATS-BE: 2 memprof-context-disambiguation - Maximum number of allocation versions created for an original allocation during ThinLTO backend
+; STATS-BE: 1 memprof-context-disambiguation - Number of original (not cloned) allocations with memprof profiles during ThinLTO backend
 
 
 ; DOTPRE: digraph "prestackupdate" {

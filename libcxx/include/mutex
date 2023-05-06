@@ -715,7 +715,6 @@ _LIBCPP_POP_MACROS
 #  include <cstdlib>
 #  include <cstring>
 #  include <ctime>
-#  include <functional>
 #  include <initializer_list>
 #  include <new>
 #  include <stdexcept>
