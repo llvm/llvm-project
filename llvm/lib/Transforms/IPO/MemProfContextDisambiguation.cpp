@@ -3004,7 +3004,8 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           auto MIBIter = AllocNode.MIBs.begin();
           for (auto &MDOp : MemProfMD->operands()) {
             assert(MIBIter != AllocNode.MIBs.end());
-            auto StackIdIndexIter = MIBIter->StackIdIndices.begin();
+            LLVM_ATTRIBUTE_UNUSED auto StackIdIndexIter =
+                MIBIter->StackIdIndices.begin();
             auto *MIBMD = cast<const MDNode>(MDOp);
             MDNode *StackMDNode = getMIBStackNode(MIBMD);
             assert(StackMDNode);
