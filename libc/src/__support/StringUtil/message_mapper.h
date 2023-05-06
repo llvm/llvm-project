@@ -29,20 +29,22 @@ struct MsgMapping {
   }
 };
 
-constexpr size_t total_str_len(const MsgMapping *array, size_t len) {
+template <size_t N> using MsgTable = cpp::array<MsgMapping, N>;
+
+template <size_t N> constexpr size_t total_str_len(const MsgTable<N> &table) {
   size_t total = 0;
-  for (size_t i = 0; i < len; ++i) {
+  for (size_t i = 0; i < table.size(); ++i) {
     // add 1 for the null terminator.
-    total += array[i].msg.size() + 1;
+    total += table[i].msg.size() + 1;
   }
   return total;
 }
 
-constexpr size_t max_key_val(const MsgMapping *array, size_t len) {
+template <size_t N> constexpr size_t max_key_val(const MsgTable<N> &table) {
   int max = 0;
-  for (size_t i = 0; i < len; ++i) {
-    if (array[i].num > max) {
-      max = array[i].num;
+  for (size_t i = 0; i < table.size(); ++i) {
+    if (table[i].num > max) {
+      max = table[i].num;
     }
   }
   // max will never be negative since the starting value is 0. This is good,
@@ -55,10 +57,10 @@ template <size_t ARR_SIZE, size_t TOTAL_STR_LEN> class MessageMapper {
   char string_array[TOTAL_STR_LEN] = {'\0'};
 
 public:
-  constexpr MessageMapper(const MsgMapping raw_array[], size_t raw_array_len) {
+  template <size_t N> constexpr MessageMapper(const MsgTable<N> &table) {
     cpp::string_view string_mappings[ARR_SIZE] = {""};
-    for (size_t i = 0; i < raw_array_len; ++i)
-      string_mappings[raw_array[i].num] = raw_array[i].msg;
+    for (size_t i = 0; i < table.size(); ++i)
+      string_mappings[table[i].num] = table[i].msg;
 
     int string_array_index = 0;
     for (size_t cur_num = 0; cur_num < ARR_SIZE; ++cur_num) {
@@ -85,8 +87,6 @@ public:
     }
   }
 };
-
-template <size_t N> using MsgTable = cpp::array<MsgMapping, N>;
 
 template <size_t N1, size_t N2>
 constexpr MsgTable<N1 + N2> operator+(const MsgTable<N1> &t1,
