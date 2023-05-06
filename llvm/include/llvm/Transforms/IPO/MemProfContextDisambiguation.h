@@ -25,14 +25,11 @@ namespace llvm {
 class GlobalValueSummary;
 class Module;
 class ModuleSummaryIndex;
-class OptimizationRemarkEmitter;
 
 class MemProfContextDisambiguation
     : public PassInfoMixin<MemProfContextDisambiguation> {
   /// Run the context disambiguator on \p M, returns true if any changes made.
-  bool processModule(
-      Module &M,
-      function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
+  bool processModule(Module &M);
 
 public:
   MemProfContextDisambiguation() {}
