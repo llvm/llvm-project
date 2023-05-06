@@ -978,14 +978,13 @@ define {i64, i1} @saddoovf(i64 %a, i64 %b) {
   ret {i64, i1} %t
 }
 
-; FIXME: Failure to recognise sub can't overflow
 define {i64, i1} @ssuboovf(i64 %a, i64 %b) {
 ; CHECK-LABEL: ssuboovf:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movzwl %di, %eax
 ; CHECK-NEXT:    shrq $22, %rsi
 ; CHECK-NEXT:    subq %rsi, %rax
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %1 = and i64 %a, 65535
   %2 = lshr i64 %b, 22
