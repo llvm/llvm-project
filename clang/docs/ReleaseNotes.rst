@@ -370,7 +370,7 @@ Bug Fixes in This Version
   (`#62192 <https://github.com/llvm/llvm-project/issues/62192>`_)
 - Fix crash when attempting to pass a non-pointer type as first argument of
   ``__builtin_assume_aligned``.
-  (`#62305 <https://github.com/llvm/llvm-project/issues/62305>`_) 
+  (`#62305 <https://github.com/llvm/llvm-project/issues/62305>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -416,6 +416,8 @@ Bug Fixes to C++ Support
   initialization.
   (`#61567 <https://github.com/llvm/llvm-project/issues/61567>`_)
 - Fix a crash when expanding a pack as the index of a subscript expression.
+- Fix handling of constexpr dynamic memory allocations in template
+  arguments. (`#62462 <https://github.com/llvm/llvm-project/issues/62462>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
