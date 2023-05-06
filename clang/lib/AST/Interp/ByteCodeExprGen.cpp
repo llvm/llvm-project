@@ -146,7 +146,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    // TODO: Emit this only if FromT != ToT.
+    if (FromT == ToT)
+      return true;
+
     return this->emitCast(*FromT, *ToT, CE);
   }
 
