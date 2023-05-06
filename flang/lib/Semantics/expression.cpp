@@ -2653,6 +2653,9 @@ void ExpressionAnalyzer::CheckForBadRecursion(
         msg = Say( // 15.6.2.1(3)
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
+      } else if (FindCUDADeviceContext(scope)) {
+        msg = Say(
+            "Device subprogram '%s' cannot call itself"_err_en_US, callSite);
       }
       AttachDeclaration(msg, proc);
     }
@@ -2719,6 +2722,55 @@ bool ExpressionAnalyzer::CheckIsValidForwardReference(
   return true;
 }
 
+std::optional<Chevrons> ExpressionAnalyzer::AnalyzeChevrons(
+    const parser::CallStmt &call) {
+  Chevrons result;
+  auto checkLaunchArg{[&](const Expr<SomeType> &expr, const char *which) {
+    if (auto dyType{expr.GetType()}) {
+      if (dyType->category() == TypeCategory::Integer) {
+        return true;
+      }
+      if (dyType->category() == TypeCategory::Derived &&
+          !dyType->IsPolymorphic() &&
+          IsBuiltinDerivedType(&dyType->GetDerivedTypeSpec(), "dim3")) {
+        return true;
+      }
+    }
+    Say("Kernel launch %s parameter must be either integer or TYPE(dim3)"_err_en_US,
+        which);
+    return false;
+  }};
+  if (const auto &chevrons{call.chevrons}) {
+    if (auto expr{Analyze(std::get<0>(chevrons->t))};
+        expr && checkLaunchArg(*expr, "grid")) {
+      result.emplace_back(*expr);
+    } else {
+      return std::nullopt;
+    }
+    if (auto expr{Analyze(std::get<1>(chevrons->t))};
+        expr && checkLaunchArg(*expr, "block")) {
+      result.emplace_back(*expr);
+    } else {
+      return std::nullopt;
+    }
+    if (const auto &maybeExpr{std::get<2>(chevrons->t)}) {
+      if (auto expr{Analyze(*maybeExpr)}) {
+        result.emplace_back(*expr);
+      } else {
+        return std::nullopt;
+      }
+    }
+    if (const auto &maybeExpr{std::get<3>(chevrons->t)}) {
+      if (auto expr{Analyze(*maybeExpr)}) {
+        result.emplace_back(*expr);
+      } else {
+        return std::nullopt;
+      }
+    }
+  }
+  return std::move(result);
+}
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
     std::optional<parser::StructureConstructor> *structureConstructor) {
   const parser::Call &call{funcRef.v};
@@ -2730,17 +2782,17 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
   if (analyzer.fatalErrors()) {
     return std::nullopt;
   }
-  if (std::optional<CalleeAndArguments> callee{
-          GetCalleeAndArguments(std::get<parser::ProcedureDesignator>(call.t),
-              analyzer.GetActuals(), false /* not subroutine */,
-              true /* might be structure constructor */)}) {
+  bool mightBeStructureConstructor{structureConstructor != nullptr};
+  if (std::optional<CalleeAndArguments> callee{GetCalleeAndArguments(
+          std::get<parser::ProcedureDesignator>(call.t), analyzer.GetActuals(),
+          false /* not subroutine */, mightBeStructureConstructor)}) {
     if (auto *proc{std::get_if<ProcedureDesignator>(&callee->u)}) {
       return MakeFunctionRef(
           funcRef.source, std::move(*proc), std::move(callee->arguments));
     }
     CHECK(std::holds_alternative<semantics::SymbolRef>(callee->u));
     const Symbol &symbol{*std::get<semantics::SymbolRef>(callee->u)};
-    if (structureConstructor) {
+    if (mightBeStructureConstructor) {
       // Structure constructor misparsed as function reference?
       const auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
       if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
@@ -2785,17 +2837,40 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
   for (const auto &arg : actualArgList) {
     analyzer.Analyze(arg, true /* is subroutine call */);
   }
-  if (!analyzer.fatalErrors()) {
+  auto chevrons{AnalyzeChevrons(callStmt)};
+  if (!analyzer.fatalErrors() && chevrons) {
     if (std::optional<CalleeAndArguments> callee{
             GetCalleeAndArguments(std::get<parser::ProcedureDesignator>(call.t),
                 analyzer.GetActuals(), true /* subroutine */)}) {
       ProcedureDesignator *proc{std::get_if<ProcedureDesignator>(&callee->u)};
       CHECK(proc);
+      bool isKernel{false};
+      if (const Symbol * procSym{proc->GetSymbol()}) {
+        const Symbol &ultimate{procSym->GetUltimate()};
+        if (const auto *subpDetails{
+                ultimate.detailsIf<semantics::SubprogramDetails>()}) {
+          if (auto attrs{subpDetails->cudaSubprogramAttrs()}) {
+            isKernel = *attrs == common::CUDASubprogramAttrs::Global ||
+                *attrs == common::CUDASubprogramAttrs::Grid_Global;
+          }
+        } else if (const auto *procDetails{
+                       ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
+          isKernel = procDetails->isCUDAKernel();
+        }
+        if (isKernel && chevrons->empty()) {
+          Say("'%s' is a kernel subroutine and must be called with kernel launch parameters in chevrons"_err_en_US,
+              procSym->name());
+        }
+      }
+      if (!isKernel && !chevrons->empty()) {
+        Say("Kernel launch parameters in chevrons may not be used unless calling a kernel subroutine"_err_en_US);
+      }
       if (CheckCall(callStmt.source, *proc, callee->arguments)) {
         callStmt.typedCall.Reset(
             new ProcedureRef{std::move(*proc), std::move(callee->arguments),
                 HasAlternateReturns(callee->arguments)},
             ProcedureRef::Deleter);
+        DEREF(callStmt.typedCall.get()).set_chevrons(std::move(*chevrons));
         return;
       }
     }
@@ -3697,14 +3772,13 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
   if (auto chars{CheckCall(callSite, proc, arguments)}) {
     if (chars->functionResult) {
       const auto &result{*chars->functionResult};
+      ProcedureRef procRef{std::move(proc), std::move(arguments)};
       if (result.IsProcedurePointer()) {
-        return Expr<SomeType>{
-            ProcedureRef{std::move(proc), std::move(arguments)}};
+        return Expr<SomeType>{std::move(procRef)};
       } else {
         // Not a procedure pointer, so type and shape are known.
         return TypedWrapper<FunctionRef, ProcedureRef>(
-            DEREF(result.GetTypeAndShape()).type(),
-            ProcedureRef{std::move(proc), std::move(arguments)});
+            DEREF(result.GetTypeAndShape()).type(), std::move(procRef));
       }
     } else {
       Say("Function result characteristics are not known"_err_en_US);

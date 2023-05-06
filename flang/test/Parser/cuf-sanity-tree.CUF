@@ -106,6 +106,9 @@ include "cuf-sanity-common"
 !CHECK: | | | | Name = 'attrs'
 !CHECK: | | | SpecificationPart
 !CHECK: | | | | ImplicitPart -> 
+!CHECK: | | | | DeclarationConstruct -> SpecificationConstruct -> OtherSpecificationStmt -> CUDAAttributesStmt
+!CHECK: | | | | | CUDADataAttr = Device
+!CHECK: | | | | | Name = 'devx1'
 !CHECK: | | | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !CHECK: | | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> Real
 !CHECK: | | | | | AttrSpec -> CUDADataAttr = Device
@@ -159,27 +162,36 @@ include "cuf-sanity-common"
 !CHECK: | | | | | | | | | LiteralConstant -> IntLiteralConstant = '10'
 !CHECK: | | | | | | Block
 !CHECK: | | | | | | EndDoStmt -> 
-!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub()'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4>>>()'
 !CHECK: | | | | | Call
 !CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
 !CHECK: | | | | | Chevrons
-!CHECK: | | | | | | Scalar -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
-!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub()'
+!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,3_4>>>()'
 !CHECK: | | | | | Call
 !CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
 !CHECK: | | | | | Chevrons
-!CHECK: | | | | | | Scalar -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
-!CHECK: | | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
-!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub()'
+!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL globalsub<<<1_4,2_4,3_4,4_4>>>()'
 !CHECK: | | | | | Call
 !CHECK: | | | | | | ProcedureDesignator -> Name = 'globalsub'
 !CHECK: | | | | | Chevrons
-!CHECK: | | | | | | Scalar -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
-!CHECK: | | | | | | Scalar -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
-!CHECK: | | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
-!CHECK: | | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
+!CHECK: | | | | | | Scalar -> Expr = '1_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '1'
+!CHECK: | | | | | | Scalar -> Expr = '2_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '3_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '3'
+!CHECK: | | | | | | Scalar -> Integer -> Expr = '4_4'
+!CHECK: | | | | | | | LiteralConstant -> IntLiteralConstant = '4'
 !CHECK: | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 !CHECK: | | | | | Allocation
 !CHECK: | | | | | | AllocateObject = 'pa'
