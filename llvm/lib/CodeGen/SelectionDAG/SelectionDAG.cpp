@@ -3976,15 +3976,11 @@ SelectionDAG::computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const {
 
   // mulhi + 1 never overflow
   if (N0.getOpcode() == ISD::UMUL_LOHI && N0.getResNo() == 1 &&
-      (N1Known.getMaxValue() & 0x01) == N1Known.getMaxValue())
+      N1Known.getMaxValue().ult(2))
     return OFK_Never;
-
-  if (N1.getOpcode() == ISD::UMUL_LOHI && N1.getResNo() == 1) {
-    KnownBits N0Known = computeKnownBits(N0);
-
-    if ((N0Known.getMaxValue() & 0x01) == N0Known.getMaxValue())
-      return OFK_Never;
-  }
+  if (N1.getOpcode() == ISD::UMUL_LOHI && N1.getResNo() == 1 &&
+      computeKnownBits(N0).getMaxValue().ult(2))
+    return OFK_Never;
 
   // TODO: Add ConstantRange::unsignedAddMayOverflow handling.
   return OFK_Sometime;
