@@ -1132,13 +1132,19 @@ bool vputils::onlyFirstLaneUsed(VPValue *Def) {
 
 VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                                 ScalarEvolution &SE) {
+  if (auto *Expanded = Plan.getSCEVExpansion(Expr))
+    return Expanded;
+  VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
-    return Plan.getVPValueOrAddLiveIn(E->getValue());
-  if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    return Plan.getVPValueOrAddLiveIn(E->getValue());
+    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+  else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
+    Expanded = Plan.getVPValueOrAddLiveIn(E->getValue());
+  else {
 
-  VPBasicBlock *Preheader = Plan.getEntry();
-  VPExpandSCEVRecipe *Step = new VPExpandSCEVRecipe(Expr, SE);
-  Preheader->appendRecipe(Step);
-  return Step;
+    VPBasicBlock *Preheader = Plan.getEntry();
+    Expanded = new VPExpandSCEVRecipe(Expr, SE);
+    Preheader->appendRecipe(Expanded->getDefiningRecipe());
+  }
+  Plan.addSCEVExpansion(Expr, Expanded);
+  return Expanded;
 }
