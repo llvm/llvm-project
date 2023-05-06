@@ -898,6 +898,10 @@ static void **InterestingDLLsAvailable() {
       "msvcr120.dll",      // VS2013
       "vcruntime140.dll",  // VS2015
       "ucrtbase.dll",      // Universal CRT
+#if (defined(__MINGW32__) && defined(__i386__))
+      "libc++.dll",        // libc++
+      "libunwind.dll",     // libunwind
+#endif
       // NTDLL should go last as it exports some functions that we should
       // override in the CRT [presumably only used internally].
       "ntdll.dll", NULL};
