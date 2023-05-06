@@ -11,6 +11,7 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #define MAXPATHSIZE 512
 
