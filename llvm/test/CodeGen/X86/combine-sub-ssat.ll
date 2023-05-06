@@ -119,14 +119,10 @@ define <8 x i16> @combine_self_v8i16(<8 x i16> %a0) {
 define i32 @combine_no_overflow_i32(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: combine_no_overflow_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sarl $16, %edi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $16, %eax
 ; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    setns %al
-; CHECK-NEXT:    addl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-NEXT:    subl %esi, %edi
-; CHECK-NEXT:    cmovnol %edi, %eax
+; CHECK-NEXT:    subl %esi, %eax
 ; CHECK-NEXT:    retq
   %1 = ashr i32 %a0, 16
   %2 = lshr i32 %a1, 16
@@ -139,14 +135,14 @@ define <8 x i16> @combine_no_overflow_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psraw $10, %xmm0
 ; SSE-NEXT:    psrlw $10, %xmm1
-; SSE-NEXT:    psubsw %xmm1, %xmm0
+; SSE-NEXT:    psubw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_no_overflow_v8i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsraw $10, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlw $10, %xmm1, %xmm1
-; AVX-NEXT:    vpsubsw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
   %2 = lshr <8 x i16> %a1, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
