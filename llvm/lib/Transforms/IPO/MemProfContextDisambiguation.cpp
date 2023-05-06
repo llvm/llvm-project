@@ -2231,21 +2231,6 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     checkNode<DerivedCCG, FuncTy, CallTy>(Node);
 }
 
-static std::string getAllocTypeAttributeString(AllocationType Type) {
-  switch (Type) {
-  case AllocationType::NotCold:
-    return "notcold";
-    break;
-  case AllocationType::Cold:
-    return "cold";
-    break;
-  default:
-    dbgs() << "Unexpected alloc type " << (uint8_t)Type;
-    assert(false);
-  }
-  llvm_unreachable("invalid alloc type");
-}
-
 void ModuleCallsiteContextGraph::updateAllocationCall(
     CallInfo &Call, AllocationType AllocType) {
   std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
