@@ -263,19 +263,19 @@ LIBC_INLINE void Port<T>::recv_n(A alloc) {
 LIBC_INLINE cpp::optional<Client::Port> Client::try_open(uint16_t opcode) {
   constexpr uint64_t index = 0;
   // Attempt to acquire the lock on this index.
-  if (lock->fetch_or(1, cpp::MemoryOrder::RELAXED))
+  if (lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
   atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
 
   uint32_t in = load_inbox(index);
-  uint32_t out = outbox->load(cpp::MemoryOrder::RELAXED);
+  uint32_t out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
   // Once we acquire the index we need to check if we are in a valid sending
   // state.
   if (!can_send_data(in, out)) {
-    lock->store(0, cpp::MemoryOrder::RELAXED);
+    lock[index].store(0, cpp::MemoryOrder::RELAXED);
     return cpp::nullopt;
   }
 
@@ -296,7 +296,7 @@ LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
 LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
   constexpr uint64_t index = 0;
   uint32_t in = load_inbox(index);
-  uint32_t out = outbox->load(cpp::MemoryOrder::RELAXED);
+  uint32_t out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
   // The server is passive, if there is no work pending don't bother
   // opening a port.
@@ -304,17 +304,17 @@ LIBC_INLINE cpp::optional<Server::Port> Server::try_open() {
     return cpp::nullopt;
 
   // Attempt to acquire the lock on this index.
-  if (lock->fetch_or(1, cpp::MemoryOrder::RELAXED))
+  if (lock[index].fetch_or(1, cpp::MemoryOrder::RELAXED))
     return cpp::nullopt;
 
   // The mailbox state must be read with the lock held.
   atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
 
   in = load_inbox(index);
-  out = outbox->load(cpp::MemoryOrder::RELAXED);
+  out = outbox[index].load(cpp::MemoryOrder::RELAXED);
 
   if (!can_recv_data(in, out)) {
-    lock->store(0, cpp::MemoryOrder::RELAXED);
+    lock[index].store(0, cpp::MemoryOrder::RELAXED);
     return cpp::nullopt;
   }
 
