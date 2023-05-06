@@ -552,7 +552,9 @@ TEST(VirtualFileSystemTest, PhysicalFileSystemWorkingDirFailure) {
       llvm::make_scope_exit([&] { sys::fs::set_current_path(PrevWD); });
 
   // Delete the working directory to create an error.
-  ASSERT_EQ(sys::fs::remove_directories(WD), std::error_code());
+  if (sys::fs::remove_directories(WD, /*IgnoreErrors=*/false))
+    // Some platforms (e.g. Solaris) disallow removal of the working directory.
+    GTEST_SKIP() << "test requires deletion of working directory";
 
   // Verify that we still get two separate working directories.
   auto FS1 = vfs::createPhysicalFileSystem();
