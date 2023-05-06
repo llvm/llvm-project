@@ -939,7 +939,7 @@ def hlfir_RegionAssignOp : hlfir_Op<"region_assign", [hlfir_OrderedAssignmentTre
 }
 
 def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp",
-    "ElementalAddrOp", "ForallOp"]>,
+    "ElementalAddrOp", "ForallOp", "ForallMaskOp", "WhereOp", "ElseWhereOp"]>,
     SingleBlockImplicitTerminator<"fir::FirEndOp">]> {
 
   let summary = "Yield a value or variable inside a forall, where or region assignment";
@@ -1112,6 +1112,125 @@ def hlfir_ForallOp : hlfir_Op<"forall", [hlfir_OrderedAssignmentTreeOpInterface]
     (`step` $step_region^)?
     custom<ForallOpBody>($body)
   }];
+}
+
+/// Shared definition for hlfir.forall_mask and hlfir.where
+/// that have the same structure and assembly format, but not the same
+/// constraints.
+class hlfir_AssignmentMaskOp<string mnemonic> : hlfir_Op<mnemonic,
+    [hlfir_OrderedAssignmentTreeOpInterface]> {
+  let regions = (region  SizedRegion<1>:$mask_region,
+                         SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+      regions.push_back(&getMaskRegion());
+    }
+    mlir::Region* getSubTreeRegion() { return &getBody(); }
+  }];
+
+  let assemblyFormat = [{
+    $mask_region
+    attr-dict `do`
+    custom<AssignmentMaskOpBody>($body)
+  }];
+}
+
+def hlfir_ForallMaskOp : hlfir_AssignmentMaskOp<"forall_mask"> {
+  let summary = "Represent a Fortran forall mask";
+  let description = [{
+    Fortran Forall can have a scalar mask expression that depends on the
+    Forall index-name value.
+    hlfir.forall_mask allows representing this mask. The expression
+    evaluation is held in the mask region that must yield an i1 scalar
+    value.
+    An hlfir.forall_mask must be directly nested in the body region of
+    an hlfir.forall. It is a separate operation so that it can use the
+    index SSA value defined by the hlfir.forall body region.
+
+    Example: "FORALL(I=1:10, SOME_CONDITION(I)) X(I) = FOO(I)"
+    ```
+    hlfir.forall lb {
+      hlfir.yield %c1 : index
+    } ub {
+      hlfir.yield %c10 : index
+    } (%i : index) {
+      hlfir.forall_mask {
+        %mask = fir.call @some_condition(%i) : (index) -> i1
+        hlfir.yield %mask : i1
+      } do {
+        hlfir.region_assign {
+          %res = fir.call @foo(%i) : (index) -> f32
+          hlfir.yield %res : f32
+        } to {
+          %xi = hlfir.designate %x(%i) : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+          hlfir.yield %xi : !fir.ref<f32>
+        }
+      }
+    }
+    ```
+  }];
+  let hasVerifier = 1;
+}
+
+def hlfir_WhereOp : hlfir_AssignmentMaskOp<"where"> {
+  let summary = "Represent a Fortran where construct or statement";
+  let description = [{
+    Represent Fortran "where" construct or statement. The mask
+    expression evaluation is held in the mask region that must yield
+    logical array that has the same shape as all the nested
+    hlfir.region_assign left-hand sides, and all the nested hlfir.where
+    or hlfir.elsewhere masks.
+
+    The values of the where and elsewhere masks form a control mask that
+    controls all the nested hlfir.region_assign: only the array element for
+    which the related control mask value is true are assigned. Any right-hand
+    side elemental expression is only evaluated for elements where the control
+    mask is true. See Fortran standard 2018 section 10.2.3 for more detailed
+    about the control mask semantic.
+
+    An hlfir.where must not contain any hlfir.forall but it may be contained
+    in such operation. This matches Fortran rules.
+  }];
+  let hasVerifier = 1;
+}
+
+def hlfir_ElseWhereOp : hlfir_Op<"elsewhere", [Terminator,
+    ParentOneOf<["WhereOp", "ElseWhereOp"]>, hlfir_OrderedAssignmentTreeOpInterface]> {
+  let summary = "Represent a Fortran elsewhere statement";
+
+  let description = [{
+    Represent Fortran "elsewhere" construct or statement.
+
+    It has an optional mask region to hold the evaluation of Fortran
+    optional elsewhere mask expressions. If this region is provided,
+    it must satisfy the same constraints as hlfir.where mask region.
+
+    An hlfir.elsewhere must be the last operation of an hlfir.where or,
+    hlfir.elsewhere body, which is enforced by its terminator property.
+
+    Like in Fortran, an hlfir.elsewhere negate the current control mask,
+    and if provided, adds the mask the resulting control mask (with a logical
+    AND).
+  }];
+
+  let regions = (region  MaxSizedRegion<1>:$mask_region,
+                         SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {
+      if (!getMaskRegion().empty())
+        regions.push_back(&getMaskRegion());
+    }
+    mlir::Region* getSubTreeRegion() { return &getBody(); }
+  }];
+
+  let assemblyFormat = [{
+    (`mask` $mask_region^)?
+    attr-dict `do`
+    custom<AssignmentMaskOpBody>($body)
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS
