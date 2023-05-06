@@ -540,6 +540,50 @@ bool DecPop(InterpState &S, CodePtr OpPC) {
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
 }
 
+template <IncDecOp Op, PushVal DoPush>
+bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                       llvm::RoundingMode RM) {
+  Floating Value = Ptr.deref<Floating>();
+  Floating Result;
+
+  if constexpr (DoPush == PushVal::Yes)
+    S.Stk.push<Floating>(Value);
+
+  llvm::APFloat::opStatus Status;
+  if constexpr (Op == IncDecOp::Inc)
+    Status = Floating::increment(Value, RM, &Result);
+  else
+    Status = Floating::decrement(Value, RM, &Result);
+
+  Ptr.deref<Floating>() = Result;
+
+  return CheckFloatResult(S, OpPC, Status);
+}
+
+inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, RM);
+}
+
+inline bool IncfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, RM);
+}
+
+inline bool Decf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, RM);
+}
+
+inline bool DecfPop(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  return IncDecFloatHelper<IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, RM);
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Pushes the bitwise complemented value on the stack (~V).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
