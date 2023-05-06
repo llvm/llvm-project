@@ -262,9 +262,11 @@ llvm.func @rocdl.raw.buffer.i32(%rsrc : vector<4xi32>,
   // CHECK-LABEL: rocdl.raw.buffer.i32
   // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
   // CHECK: rocdl.raw.buffer.atomic.umin %{{.*}} %{{.*}} %{{.*}} %{{.*}} %{{.*}} : i32
+  // CHECK: %{{.*}} = rocdl.raw.buffer.atomic.cmpswap(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : i32, vector<4xi32>
 
   rocdl.raw.buffer.atomic.smax %vdata1, %rsrc, %offset, %soffset, %aux : i32
   rocdl.raw.buffer.atomic.umin %vdata1, %rsrc, %offset, %soffset, %aux : i32
+  %val = rocdl.raw.buffer.atomic.cmpswap(%vdata1, %vdata1, %rsrc, %offset, %soffset, %aux) : i32, vector<4xi32>
   llvm.return
 }
 

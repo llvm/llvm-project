@@ -294,6 +294,18 @@ llvm.func @rocdl.raw.buffer.atomic.i32(%rsrc : vector<4xi32>,
   llvm.return
 }
 
+llvm.func @rocdl.raw.buffer.atomic.cmpswap(%rsrc : vector<4xi32>,
+                        %offset : i32, %soffset : i32,
+                        %src : i32, %cmp : i32) -> i32 {
+  %aux = llvm.mlir.constant(0 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.buffer.atomic.cmpswap
+  // CHECK: [[val:%.+]] = call i32 @llvm.amdgcn.raw.buffer.atomic.cmpswap.i32(i32 %{{.*}}, i32 %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 {{.*}}
+  // CHECK: ret i32 [[val]]
+
+  %val = rocdl.raw.buffer.atomic.cmpswap(%src, %cmp, %rsrc, %offset, %soffset, %aux) : i32, vector<4xi32>
+  llvm.return %val : i32
+}
+
 // CHECK-DAG: attributes #[[$KERNEL_ATTRS]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-implicitarg-num-bytes"="56" }
 // CHECK-DAG: attributes #[[$KERNEL_WORKGROUP_ATTRS]] = { "amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes #[[$KNOWN_BLOCK_SIZE_ATTRS]] = { "amdgpu-flat-work-group-size"="128,128"
