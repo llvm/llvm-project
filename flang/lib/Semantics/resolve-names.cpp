@@ -238,6 +238,7 @@ class AttrsVisitor : public virtual BaseVisitor {
 public:
   bool BeginAttrs(); // always returns true
   Attrs GetAttrs();
+  std::optional<common::CUDADataAttr> cudaDataAttr() { return cudaDataAttr_; }
   Attrs EndAttrs();
   bool SetPassNameOn(Symbol &);
   void SetBindNameOn(Symbol &);
@@ -278,9 +279,11 @@ public:
   HANDLE_ATTR_CLASS(Value, VALUE)
   HANDLE_ATTR_CLASS(Volatile, VOLATILE)
 #undef HANDLE_ATTR_CLASS
+  bool Pre(const common::CUDADataAttr);
 
 protected:
   std::optional<Attrs> attrs_;
+  std::optional<common::CUDADataAttr> cudaDataAttr_;
 
   Attr AccessSpecToAttr(const parser::AccessSpec &x) {
     switch (x.v) {
@@ -419,7 +422,8 @@ private:
 };
 
 // Track array specifications. They can occur in AttrSpec, EntityDecl,
-// ObjectDecl, DimensionStmt, CommonBlockObject, or BasedPointerStmt.
+// ObjectDecl, DimensionStmt, CommonBlockObject, BasedPointerStmt, and
+// ComponentDecl.
 // 1. INTEGER, DIMENSION(10) :: x
 // 2. INTEGER :: x(10)
 // 3. ALLOCATABLE :: x(:)
@@ -666,6 +670,8 @@ public:
     symbol.attrs().set(attr);
     symbol.implicitAttrs().set(attr);
   }
+  void SetCUDADataAttr(
+      SourceName, Symbol &, std::optional<common::CUDADataAttr>);
 
 protected:
   FuncResultStack &funcResultStack() { return funcResultStack_; }
@@ -857,6 +863,9 @@ public:
   void Post(const parser::InterfaceBody::Function &);
   bool Pre(const parser::Suffix &);
   bool Pre(const parser::PrefixSpec &);
+  bool Pre(const parser::PrefixSpec::Attributes &);
+  void Post(const parser::PrefixSpec::Launch_Bounds &);
+  void Post(const parser::PrefixSpec::Cluster_Dims &);
 
   bool BeginSubprogram(const parser::Name &, Symbol::Flag,
       bool hasModulePrefix = false,
@@ -928,6 +937,7 @@ public:
     objectDeclAttr_ = Attr::TARGET;
     return true;
   }
+  bool Pre(const parser::CUDAAttributesStmt &);
   void Post(const parser::TargetStmt &) { objectDeclAttr_ = std::nullopt; }
   void Post(const parser::DimensionStmt::Declaration &);
   void Post(const parser::CodimensionDecl &);
@@ -1540,7 +1550,8 @@ public:
     llvm_unreachable("This node is handled in ProgramUnit");
   }
 
-  void NoteExecutablePartCall(Symbol::Flag, const parser::Call &);
+  void NoteExecutablePartCall(
+      Symbol::Flag, const parser::Call &, bool hasCUDAChevrons);
 
   friend void ResolveSpecificationParts(SemanticsContext &, const Symbol &);
 
@@ -1568,6 +1579,7 @@ private:
   void FinishSpecificationParts(const ProgramTree &);
   void FinishDerivedTypeInstantiation(Scope &);
   void ResolveExecutionParts(const ProgramTree &);
+  void UseCUDABuiltinNames();
 };
 
 // ImplicitRules implementation
@@ -1673,8 +1685,8 @@ void BaseVisitor::MakePlaceholder(
 // AttrsVisitor implementation
 
 bool AttrsVisitor::BeginAttrs() {
-  CHECK(!attrs_);
-  attrs_ = std::make_optional<Attrs>();
+  CHECK(!attrs_ && !cudaDataAttr_);
+  attrs_ = Attrs{};
   return true;
 }
 Attrs AttrsVisitor::GetAttrs() {
@@ -1684,6 +1696,7 @@ Attrs AttrsVisitor::GetAttrs() {
 Attrs AttrsVisitor::EndAttrs() {
   Attrs result{GetAttrs()};
   attrs_.reset();
+  cudaDataAttr_.reset();
   passName_ = std::nullopt;
   bindName_.reset();
   return result;
@@ -1799,6 +1812,15 @@ bool AttrsVisitor::CheckAndSet(Attr attrName) {
   }
   attrs_->set(attrName);
   return true;
+}
+bool AttrsVisitor::Pre(const common::CUDADataAttr x) {
+  if (cudaDataAttr_.value_or(x) != x) {
+    Say(currStmtSource().value(),
+        "CUDA data attributes '%s' and '%s' may not both be specified"_err_en_US,
+        common::EnumToString(*cudaDataAttr_), common::EnumToString(x));
+  }
+  cudaDataAttr_ = x;
+  return false;
 }
 
 // DeclTypeSpecVisitor implementation
@@ -2709,6 +2731,27 @@ bool ScopeHandler::CheckDuplicatedAttrs(
   return ok;
 }
 
+void ScopeHandler::SetCUDADataAttr(SourceName source, Symbol &symbol,
+    std::optional<common::CUDADataAttr> attr) {
+  if (attr) {
+    ConvertToObjectEntity(symbol);
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (*attr != object->cudaDataAttr().value_or(*attr)) {
+        Say(source,
+            "'%s' already has another CUDA data attribute ('%s')"_err_en_US,
+            symbol.name(),
+            common::EnumToString(*object->cudaDataAttr()).substr());
+      } else {
+        object->set_cudaDataAttr(attr);
+      }
+    } else {
+      Say(source,
+          "'%s' is not an object and may not have a CUDA data attribute"_err_en_US,
+          symbol.name());
+    }
+  }
+}
+
 // ModuleVisitor implementation
 
 bool ModuleVisitor::Pre(const parser::Only &x) {
@@ -3466,14 +3509,97 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec &x) {
     if (info.parsedType) { // C1543
       Say(currStmtSource().value(),
           "FUNCTION prefix cannot specify the type more than once"_err_en_US);
-      return false;
     } else {
       info.parsedType = parsedType;
       info.source = currStmtSource();
-      return false;
     }
+    return false;
   } else {
     return true;
+  }
+}
+
+bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
+  if (auto *subp{currScope().symbol()
+              ? currScope().symbol()->detailsIf<SubprogramDetails>()
+              : nullptr}) {
+    for (auto attr : attrs.v) {
+      if (auto current{subp->cudaSubprogramAttrs()}) {
+        if (attr == *current ||
+            (*current == common::CUDASubprogramAttrs::HostDevice &&
+                (attr == common::CUDASubprogramAttrs::Host ||
+                    attr == common::CUDASubprogramAttrs::Device))) {
+          Say(currStmtSource().value(),
+              "ATTRIBUTES(%s) appears more than once"_warn_en_US,
+              common::EnumToString(attr));
+        } else if ((attr == common::CUDASubprogramAttrs::Host ||
+                       attr == common::CUDASubprogramAttrs::Device) &&
+            (*current == common::CUDASubprogramAttrs::Host ||
+                *current == common::CUDASubprogramAttrs::Device ||
+                *current == common::CUDASubprogramAttrs::HostDevice)) {
+          // HOST,DEVICE or DEVICE,HOST -> HostDevice
+          subp->set_cudaSubprogramAttrs(
+              common::CUDASubprogramAttrs::HostDevice);
+        } else {
+          Say(currStmtSource().value(),
+              "ATTRIBUTES(%s) conflicts with earlier ATTRIBUTES(%s)"_err_en_US,
+              common::EnumToString(attr), common::EnumToString(*current));
+        }
+      } else {
+        subp->set_cudaSubprogramAttrs(attr);
+      }
+    }
+  }
+  return false;
+}
+
+void SubprogramVisitor::Post(const parser::PrefixSpec::Launch_Bounds &x) {
+  std::vector<std::int64_t> bounds;
+  bool ok{true};
+  for (const auto &sicx : x.v) {
+    if (auto value{evaluate::ToInt64(EvaluateExpr(sicx))}) {
+      bounds.push_back(*value);
+    } else {
+      ok = false;
+    }
+  }
+  if (!ok || bounds.size() < 2 || bounds.size() > 3) {
+    Say(currStmtSource().value(),
+        "Operands of LAUNCH_BOUNDS() must be 2 or 3 integer constants"_err_en_US);
+  } else if (auto *subp{currScope().symbol()
+                     ? currScope().symbol()->detailsIf<SubprogramDetails>()
+                     : nullptr}) {
+    if (subp->cudaLaunchBounds().empty()) {
+      subp->set_cudaLaunchBounds(std::move(bounds));
+    } else {
+      Say(currStmtSource().value(),
+          "LAUNCH_BOUNDS() may only appear once"_err_en_US);
+    }
+  }
+}
+
+void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
+  std::vector<std::int64_t> dims;
+  bool ok{true};
+  for (const auto &sicx : x.v) {
+    if (auto value{evaluate::ToInt64(EvaluateExpr(sicx))}) {
+      dims.push_back(*value);
+    } else {
+      ok = false;
+    }
+  }
+  if (!ok || dims.size() != 3) {
+    Say(currStmtSource().value(),
+        "Operands of CLUSTER_DIMS() must be three integer constants"_err_en_US);
+  } else if (auto *subp{currScope().symbol()
+                     ? currScope().symbol()->detailsIf<SubprogramDetails>()
+                     : nullptr}) {
+    if (subp->cudaClusterDims().empty()) {
+      subp->set_cudaClusterDims(std::move(dims));
+    } else {
+      Say(currStmtSource().value(),
+          "CLUSTER_DIMS() may only appear once"_err_en_US);
+    }
   }
 }
 
@@ -3808,6 +3934,7 @@ void SubprogramVisitor::PostEntryStmt(const parser::EntryStmt &stmt) {
   }
   SubprogramDetails &entryDetails{entrySymbol.get<SubprogramDetails>()};
   CHECK(entryDetails.entryScope() == &inclusiveScope);
+  SetCUDADataAttr(name.source, entrySymbol, cudaDataAttr());
   entrySymbol.attrs() |= GetAttrs();
   SetBindNameOn(entrySymbol);
   for (const auto &dummyArg : std::get<std::list<parser::DummyArg>>(stmt.t)) {
@@ -4192,6 +4319,7 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   Attrs attrs{attrs_ ? HandleSaveName(name.source, *attrs_) : Attrs{}};
   Symbol &symbol{DeclareUnknownEntity(name, attrs)};
   symbol.ReplaceName(name.source);
+  SetCUDADataAttr(name.source, symbol, cudaDataAttr());
   if (const auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
     ConvertToObjectEntity(symbol) || ConvertToProcEntity(symbol);
     symbol.set(
@@ -4463,6 +4591,23 @@ bool DeclarationVisitor::Pre(const parser::ValueStmt &x) {
 }
 bool DeclarationVisitor::Pre(const parser::VolatileStmt &x) {
   return HandleAttributeStmt(Attr::VOLATILE, x.v);
+}
+bool DeclarationVisitor::Pre(const parser::CUDAAttributesStmt &x) {
+  auto attr{std::get<common::CUDADataAttr>(x.t)};
+  for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+    auto *symbol{FindInScope(name)};
+    if (symbol && symbol->has<UseDetails>()) {
+      Say(currStmtSource().value(),
+          "Cannot apply CUDA data attribute to use-associated '%s'"_err_en_US,
+          name.source);
+    } else {
+      if (!symbol) {
+        symbol = &MakeSymbol(name, ObjectEntityDetails{});
+      }
+      SetCUDADataAttr(name.source, *symbol, attr);
+    }
+  }
+  return false;
 }
 // Handle a statement that sets an attribute on a list of names.
 bool DeclarationVisitor::HandleAttributeStmt(
@@ -5124,6 +5269,7 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   }
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
+    SetCUDADataAttr(name.source, symbol, cudaDataAttr());
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, true);
@@ -5231,6 +5377,7 @@ void DeclarationVisitor::Post(const parser::ProcDecl &x) {
     attrs.set(Attr::EXTERNAL);
   }
   Symbol &symbol{DeclareProcEntity(name, attrs, procInterface)};
+  SetCUDADataAttr(name.source, symbol, cudaDataAttr()); // for error
   symbol.ReplaceName(name.source);
   if (dtDetails) {
     dtDetails->add_component(symbol);
@@ -6209,6 +6356,7 @@ Symbol *DeclarationVisitor::MakeTypeSymbol(
       attrs.set(Attr::PRIVATE);
     }
     Symbol &result{MakeSymbol(name, attrs, std::move(details))};
+    SetCUDADataAttr(name, result, cudaDataAttr());
     if (result.has<TypeParamDetails>()) {
       derivedType.symbol()->get<DerivedTypeDetails>().add_paramDecl(result);
     }
@@ -6870,6 +7018,7 @@ bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
 }
 bool ResolveNamesVisitor::Pre(const parser::CallStmt &x) {
   HandleCall(Symbol::Flag::Subroutine, x.call);
+  Walk(x.chevrons);
   return false;
 }
 
@@ -7383,7 +7532,7 @@ bool ResolveNamesVisitor::CheckImplicitNoneExternal(
 // of the subprogram's interface, and to mark as procedures any symbols
 // that might otherwise have been miscategorized as objects.
 void ResolveNamesVisitor::NoteExecutablePartCall(
-    Symbol::Flag flag, const parser::Call &call) {
+    Symbol::Flag flag, const parser::Call &call, bool hasCUDAChevrons) {
   auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
   if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
     // Subtlety: The symbol pointers in the parse tree are not set, because
@@ -7395,12 +7544,15 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
               : Symbol::Flag::Subroutine};
       if (!symbol->test(other)) {
         ConvertToProcEntity(*symbol);
-        if (symbol->has<ProcEntityDetails>()) {
+        if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
           symbol->set(flag);
           if (IsDummy(*symbol)) {
             SetImplicitAttr(*symbol, Attr::EXTERNAL);
           }
           ApplyImplicitRules(*symbol);
+          if (hasCUDAChevrons) {
+            details->set_isCUDAKernel();
+          }
         }
       }
     }
@@ -7529,6 +7681,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   Walk(ompDecls);
   Walk(compilerDirectives);
   Walk(useStmts);
+  UseCUDABuiltinNames();
   ClearUseRenames();
   ClearUseOnly();
   ClearModuleUses();
@@ -7543,6 +7696,20 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   Walk(decls);
   FinishSpecificationPart(decls);
   return false;
+}
+
+void ResolveNamesVisitor::UseCUDABuiltinNames() {
+  if (FindCUDADeviceContext(&currScope())) {
+    if (const Scope * CUDABuiltins{context().GetCUDABuiltinsScope()}) {
+      for (const auto &[name, symbol] : *CUDABuiltins) {
+        if (!FindInScope(name)) {
+          auto &localSymbol{MakeSymbol(name)};
+          localSymbol.set_details(UseDetails{name, *symbol});
+          localSymbol.flags() = symbol->flags();
+        }
+      }
+    }
+  }
 }
 
 // Initial processing on specification constructs, before visiting them.
@@ -8082,10 +8249,11 @@ public:
   template <typename A> bool Pre(const A &) { return true; }
   template <typename A> void Post(const A &) {}
   void Post(const parser::FunctionReference &fr) {
-    resolver_.NoteExecutablePartCall(Symbol::Flag::Function, fr.v);
+    resolver_.NoteExecutablePartCall(Symbol::Flag::Function, fr.v, false);
   }
   void Post(const parser::CallStmt &cs) {
-    resolver_.NoteExecutablePartCall(Symbol::Flag::Subroutine, cs.call);
+    resolver_.NoteExecutablePartCall(
+        Symbol::Flag::Subroutine, cs.call, cs.chevrons.has_value());
   }
 
 private:
@@ -8398,6 +8566,7 @@ void ResolveNamesVisitor::ResolveExecutionParts(const ProgramTree &node) {
 void ResolveNamesVisitor::Post(const parser::Program &) {
   // ensure that all temps were deallocated
   CHECK(!attrs_);
+  CHECK(!cudaDataAttr_);
   CHECK(!GetDeclTypeSpec());
 }
 

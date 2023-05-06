@@ -18,7 +18,7 @@ module m
   attributes(global) launch_bounds(1, 2) subroutine lbsub; end
   attributes(global) cluster_dims(1, 2, 3) subroutine cdsub; end
   attributes(device) subroutine attrs
-! enable with name resolution:    attributes(device) :: devx1
+    attributes(device) :: devx1
     real, device :: devx2
   end subroutine
   subroutine test
