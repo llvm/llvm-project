@@ -105,8 +105,8 @@ public:
 
   // -------
 
-  static APFloat::opStatus add(Floating A, Floating B, llvm::RoundingMode RM,
-                               Floating *R) {
+  static APFloat::opStatus add(const Floating &A, const Floating &B,
+                               llvm::RoundingMode RM, Floating *R) {
     *R = Floating(A.F);
     return R->F.add(B.F, RM);
   }
@@ -118,8 +118,8 @@ public:
     return R->F.add(One, RM);
   }
 
-  static APFloat::opStatus sub(Floating A, Floating B, llvm::RoundingMode RM,
-                               Floating *R) {
+  static APFloat::opStatus sub(const Floating &A, const Floating &B,
+                               llvm::RoundingMode RM, Floating *R) {
     *R = Floating(A.F);
     return R->F.subtract(B.F, RM);
   }
@@ -131,19 +131,19 @@ public:
     return R->F.subtract(One, RM);
   }
 
-  static APFloat::opStatus mul(Floating A, Floating B, llvm::RoundingMode RM,
-                               Floating *R) {
+  static APFloat::opStatus mul(const Floating &A, const Floating &B,
+                               llvm::RoundingMode RM, Floating *R) {
     *R = Floating(A.F);
     return R->F.multiply(B.F, RM);
   }
 
-  static APFloat::opStatus div(Floating A, Floating B, llvm::RoundingMode RM,
-                               Floating *R) {
+  static APFloat::opStatus div(const Floating &A, const Floating &B,
+                               llvm::RoundingMode RM, Floating *R) {
     *R = Floating(A.F);
     return R->F.divide(B.F, RM);
   }
 
-  static bool neg(Floating A, Floating *R) {
+  static bool neg(const Floating &A, Floating *R) {
     *R = -A;
     return false;
   }
