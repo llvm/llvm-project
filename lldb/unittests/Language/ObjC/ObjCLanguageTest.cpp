@@ -92,7 +92,7 @@ TEST(ObjCLanguage, MethodNameParsing) {
   }
 }
 
-TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
+TEST(ObjCLanguage, InvalidMethodNameParsing) {
   // Tests that we correctly reject malformed function names
 
   llvm::StringRef test_cases[] = {"+[Uh oh!",
