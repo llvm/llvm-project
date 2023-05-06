@@ -259,7 +259,7 @@
 "`3338 <https://wg21.link/LWG3338>`__","Rename ``default_constructible``\  to ``default_initializable``\ ","Prague","|Complete|","13.0"
 "`3340 <https://wg21.link/LWG3340>`__","Formatting functions should throw on argument/format string mismatch in |sect|\ [format.functions]","Prague","|Complete|","14.0","|format|"
 "`3346 <https://wg21.link/LWG3346>`__","``pair``\  and ``tuple``\  copy and move constructor have backwards specification","Prague","",""
-"`3347 <https://wg21.link/LWG3347>`__","``std::pair<T, U>``\  now requires ``T``\  and ``U``\  to be less-than-comparable","Prague","",""
+"`3347 <https://wg21.link/LWG3347>`__","``std::pair<T, U>``\  now requires ``T``\  and ``U``\  to be less-than-comparable","Prague","|Complete|","17.0"
 "`3348 <https://wg21.link/LWG3348>`__","``__cpp_lib_unwrap_ref``\  in wrong header","Prague","|Complete|","12.0"
 "`3349 <https://wg21.link/LWG3349>`__","Missing ``__cpp_lib_constexpr_complex``\  for P0415R1","Prague","|Complete|","16.0"
 "`3350 <https://wg21.link/LWG3350>`__","Simplify return type of ``lexicographical_compare_three_way``\ ","Prague","|Complete|","17.0","|spaceship|"
