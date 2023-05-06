@@ -220,18 +220,15 @@ public:
       function_options.include_inlines = true;
       context.module_sp->FindFunctions(m_regex, function_options, sc_list);
 
-      SymbolContext sc;
       // Now add the functions & symbols to the list - only add if unique:
-      for (uint32_t i = 0; i < sc_list.GetSize(); i++) {
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
-          // Ensure that the function name matches the regex. This is more than
-          // a sanity check. It is possible that the demangled function name
-          // does not start with the prefix, for example when it's in an
-          // anonymous namespace.
-          if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
-            m_match_set.insert(func_name);
-        }
+      for (const SymbolContext &sc : sc_list) {
+        ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
+        // Ensure that the function name matches the regex. This is more than
+        // a sanity check. It is possible that the demangled function name
+        // does not start with the prefix, for example when it's in an
+        // anonymous namespace.
+        if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
+          m_match_set.insert(func_name);
       }
     }
     return Searcher::eCallbackReturnContinue;
