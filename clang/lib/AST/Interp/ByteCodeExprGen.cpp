@@ -2158,8 +2158,7 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   // Now emit the destructor and recurse into base classes.
   if (const CXXDestructorDecl *Dtor = R->getDestructor();
       Dtor && !Dtor->isTrivial()) {
-    const Function *DtorFunc = getFunction(Dtor);
-    if (DtorFunc && DtorFunc->isConstexpr()) {
+    if (const Function *DtorFunc = getFunction(Dtor)) {
       assert(DtorFunc->hasThisPointer());
       assert(DtorFunc->getNumParams() == 1);
       if (!this->emitDupPtr(SourceInfo{}))
