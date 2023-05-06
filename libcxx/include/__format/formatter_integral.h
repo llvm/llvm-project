@@ -203,16 +203,16 @@ consteval size_t __buffer_size() noexcept
        + 1;                          // Reserve space for the sign.
 }
 
-template <unsigned_integral _Tp, class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __format_integer(
+template <unsigned_integral _Tp, class _CharT, class _FormatContext>
+_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
     _Tp __value,
-    auto& __ctx,
+    _FormatContext& __ctx,
     __format_spec::__parsed_specifications<_CharT> __specs,
     bool __negative,
     char* __begin,
     char* __end,
     const char* __prefix,
-    int __base) -> decltype(__ctx.out()) {
+    int __base) {
   char* __first = __formatter::__insert_sign(__begin, __negative, __specs.__std_.__sign_);
   if (__specs.__std_.__alternate_form_ && __prefix)
     while (*__prefix)
@@ -263,10 +263,12 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
   return __formatter::__write_transformed(__first, __last, __ctx.out(), __specs, __formatter::__hex_to_upper);
 }
 
-template <unsigned_integral _Tp, class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto __format_integer(
-    _Tp __value, auto& __ctx, __format_spec::__parsed_specifications<_CharT> __specs, bool __negative = false)
-    -> decltype(__ctx.out()) {
+template <unsigned_integral _Tp, class _CharT, class _FormatContext>
+_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+__format_integer(_Tp __value,
+                 _FormatContext& __ctx,
+                 __format_spec::__parsed_specifications<_CharT> __specs,
+                 bool __negative = false) {
   switch (__specs.__std_.__type_) {
   case __format_spec::__type::__binary_lower_case: {
     array<char, __formatter::__buffer_size<decltype(__value), 2>()> __array;
@@ -302,10 +304,9 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
   }
 }
 
-template <signed_integral _Tp, class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__format_integer(_Tp __value, auto& __ctx, __format_spec::__parsed_specifications<_CharT> __specs)
-    -> decltype(__ctx.out()) {
+template <signed_integral _Tp, class _CharT, class _FormatContext>
+_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+__format_integer(_Tp __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
   // Depending on the std-format-spec string the sign and the value
   // might not be outputted together:
   // - alternate form may insert a prefix string.
@@ -341,10 +342,9 @@ struct _LIBCPP_TEMPLATE_VIS __bool_strings<wchar_t> {
 };
 #  endif
 
-template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__format_bool(bool __value, auto& __ctx, __format_spec::__parsed_specifications<_CharT> __specs)
-    -> decltype(__ctx.out()) {
+template <class _CharT, class _FormatContext>
+_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+__format_bool(bool __value, _FormatContext& __ctx, __format_spec::__parsed_specifications<_CharT> __specs) {
 #  ifndef _LIBCPP_HAS_NO_LOCALIZATION
   if (__specs.__std_.__locale_specific_form_) {
     const auto& __np           = std::use_facet<numpunct<_CharT>>(__ctx.locale());
