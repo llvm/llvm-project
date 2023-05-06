@@ -566,6 +566,25 @@ namespace Destructors {
     return i;
   }
   static_assert(test() == 1);
+
+  struct S {
+    constexpr S() {}
+    constexpr ~S() { // expected-error {{never produces a constant expression}} \
+                     // ref-error {{never produces a constant expression}}
+      int i = 1 / 0; // expected-warning {{division by zero}} \
+                     // expected-note {{division by zero}} \
+                     // ref-warning {{division by zero}} \
+                     // ref-note 2{{division by zero}}
+    }
+  };
+  constexpr int testS() {
+    S{}; // ref-note {{in call to 'S{}.~S()'}}
+    return 1;
+              // FIXME: ^ Wrong line
+  }
+  static_assert(testS() == 1); // expected-error {{not an integral constant expression}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'testS()'}}
 }
 
 
