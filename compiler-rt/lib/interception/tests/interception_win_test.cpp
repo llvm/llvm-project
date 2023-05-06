@@ -18,6 +18,8 @@
 #if !SANITIZER_DEBUG
 #if SANITIZER_WINDOWS
 
+#include <stdarg.h>
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -728,7 +730,37 @@ TEST(Interception, UnsupportedInstructionWithTrampoline) {
   TestOverrideFunction override = OverrideFunctionWithTrampoline;
   FunctionPrefixKind prefix = FunctionPrefixPadding;
 
+  static bool reportCalled;
+  reportCalled = false;
+
+  struct Local {
+    static void Report(const char *format, ...) {
+      if (reportCalled)
+        FAIL() << "Report called more times than expected";
+      reportCalled = true;
+      ASSERT_STREQ(
+          "interception_win: unhandled instruction at %p: %02x %02x %02x %02x "
+          "%02x %02x %02x %02x\n",
+          format);
+      va_list args;
+      va_start(args, format);
+      u8 *ptr = va_arg(args, u8 *);
+      for (int i = 0; i < 8; i++) EXPECT_EQ(kUnsupportedCode1[i], ptr[i]);
+      int bytes[8];
+      for (int i = 0; i < 8; i++) {
+        bytes[i] = va_arg(args, int);
+        EXPECT_EQ(kUnsupportedCode1[i], bytes[i]);
+      }
+      va_end(args);
+    }
+  };
+
+  SetErrorReportCallback(Local::Report);
   EXPECT_FALSE(TestFunctionPatching(kUnsupportedCode1, override, prefix));
+  SetErrorReportCallback(nullptr);
+
+  if (!reportCalled)
+    ADD_FAILURE() << "Report not called";
 }
 
 TEST(Interception, PatchableFunctionPadding) {
