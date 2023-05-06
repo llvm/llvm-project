@@ -229,8 +229,9 @@ Changes in existing checks
   to ``std::forward``.
 
 - Improved :doc:`bugprone-use-after-move
-  <clang-tidy/checks/bugprone/use-after-move>` check to also cover constructor
-  initializers.
+  <clang-tidy/checks/bugprone/use-after-move>` check. Detect uses and moves in
+  constructor initializers. Correctly handle constructor arguments as being
+  sequenced when constructor call is written as list-initialization.
 
 - Deprecated :doc:`cert-dcl21-cpp
   <clang-tidy/checks/cert/dcl21-cpp>` check.
