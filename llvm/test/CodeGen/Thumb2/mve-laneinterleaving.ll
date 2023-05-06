@@ -530,7 +530,7 @@ define arm_aapcs_vfpcc <8 x i16> @ext_intrinsics_trunc_i16(<8 x i16> %a, <8 x i1
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmovlb.u16 q2, q1
 ; CHECK-NEXT:    vmovlb.s16 q3, q0
-; CHECK-NEXT:    vqadd.s32 q4, q3, q2
+; CHECK-NEXT:    vadd.i32 q4, q3, q2
 ; CHECK-NEXT:    vmovlt.u16 q1, q1
 ; CHECK-NEXT:    vqadd.u32 q4, q4, q2
 ; CHECK-NEXT:    vmovlt.s16 q0, q0
@@ -540,7 +540,7 @@ define arm_aapcs_vfpcc <8 x i16> @ext_intrinsics_trunc_i16(<8 x i16> %a, <8 x i1
 ; CHECK-NEXT:    vmin.s32 q4, q4, q3
 ; CHECK-NEXT:    vmax.s32 q4, q4, q2
 ; CHECK-NEXT:    vmin.u32 q3, q4, q3
-; CHECK-NEXT:    vqadd.s32 q4, q0, q1
+; CHECK-NEXT:    vadd.i32 q4, q0, q1
 ; CHECK-NEXT:    vqadd.u32 q4, q4, q1
 ; CHECK-NEXT:    vqsub.s32 q4, q4, q0
 ; CHECK-NEXT:    vqsub.u32 q4, q4, q1

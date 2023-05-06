@@ -2919,6 +2919,7 @@ SDValue DAGCombiner::visitADDSAT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+  bool IsSigned = Opcode == ISD::SADDSAT;
   SDLoc DL(N);
 
   // fold (add_sat x, undef) -> -1
@@ -2949,9 +2950,8 @@ SDValue DAGCombiner::visitADDSAT(SDNode *N) {
     return N0;
 
   // If it cannot overflow, transform into an add.
-  if (Opcode == ISD::UADDSAT)
-    if (DAG.computeOverflowForUnsignedAdd(N0, N1) == SelectionDAG::OFK_Never)
-      return DAG.getNode(ISD::ADD, DL, VT, N0, N1);
+  if (DAG.computeOverflowForAdd(IsSigned, N0, N1) == SelectionDAG::OFK_Never)
+    return DAG.getNode(ISD::ADD, DL, VT, N0, N1);
 
   return SDValue();
 }
