@@ -6,9 +6,17 @@ class Object: CustomStringConvertible {
   }
 }
 
+class User {
+    var id: Int = 314159265358979322
+    var name: String = "Gwendolyn"
+    var groups: (admin: Bool, staff: Bool) = (false, true)
+}
+
 func main() {
     let object = Object()
-    _ = object // break here
+    let user = User()
+    // break here
+    print(object, user)
 }
 
 main()

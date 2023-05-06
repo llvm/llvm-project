@@ -28,3 +28,14 @@ class TestCase(TestBase):
             self, "// break here", lldb.SBFileSpec("main.swift")
         )
         self.expect(f"dwim-print -O -- 0x1000", substrs=["4096"])
+
+    @swiftTest
+    def test_print_swift_object_does_not_show_name(self):
+        """Ensure that objects are printed without a name, and without the '='
+        that would follow the name."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.swift")
+        )
+
+        self.expect(f"dwim-print user", patterns=[r"^\(a\.User\) 0x[0-9a-f]{7,} \{"])
