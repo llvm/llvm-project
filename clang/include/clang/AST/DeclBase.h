@@ -645,7 +645,7 @@ public:
   }
 
   /// Whether this declaration comes from another module unit.
-  bool isInCurrentModuleUnit() const;
+  bool isInAnotherModuleUnit() const;
 
   /// FIXME: Implement discarding declarations actually in global module
   /// fragment. See [module.global.frag]p3,4 for details.
