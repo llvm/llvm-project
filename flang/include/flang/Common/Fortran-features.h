@@ -27,7 +27,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     SignedPrimary, FileName, Carriagecontrol, Convert, Dispose,
     IOListLeadingComma, AbbreviatedEditDescriptor, ProgramParentheses,
     PercentRefAndVal, OmitFunctionDummies, CrayPointer, Hollerith, ArithmeticIF,
-    Assign, AssignedGOTO, Pause, OpenACC, OpenMP, CruftAfterAmpersand,
+    Assign, AssignedGOTO, Pause, OpenACC, OpenMP, CUDA, CruftAfterAmpersand,
     ClassicCComments, AdditionalFormats, BigIntLiterals, RealDoControls,
     EquivalenceNumericWithCharacter, EquivalenceNonDefaultNumeric,
     EquivalenceSameNonSequence, AdditionalIntrinsics, AnonymousParents,
@@ -54,6 +54,7 @@ public:
     disable_.set(LanguageFeature::OldDebugLines);
     disable_.set(LanguageFeature::OpenACC);
     disable_.set(LanguageFeature::OpenMP);
+    disable_.set(LanguageFeature::CUDA); // !@cuf
     disable_.set(LanguageFeature::ImplicitNoneTypeNever);
     disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
     disable_.set(LanguageFeature::DefaultSave);
