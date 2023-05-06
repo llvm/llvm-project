@@ -232,9 +232,11 @@ static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
   auto Controller = DependencyScanningTool::createActionController(
       *Worker, std::move(LookupOutput));
 
+#ifndef NDEBUG
   bool HasDiagConsumer = DiagConsumer;
   bool HasError = Error;
   assert(HasDiagConsumer ^ HasError && "Both DiagConsumer and Error provided");
+#endif
 
   if (DiagConsumer) {
     bool Result =

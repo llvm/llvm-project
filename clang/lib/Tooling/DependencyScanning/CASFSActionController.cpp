@@ -169,8 +169,10 @@ Error CASFSActionController::finalizeModuleBuild(
   if (E)
     return E;
 
+#ifndef NDEBUG
   Module *M = ModuleScanInstance.getPreprocessor().getCurrentModule();
   assert(M && "finalizing without a module");
+#endif
 
   ModuleScanInstance.getASTContext().setCASFileSystemRootID(RootID->toString());
   return Error::success();
