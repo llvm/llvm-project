@@ -54,15 +54,18 @@ add_libc_test(
     libc.src.__support.CPP.string_view
 )
 
-add_libc_test(
-  arg_list_test
-  SUITE
-    libc-support-tests
-  SRCS
-    arg_list_test.cpp
-  DEPENDS
-    libc.src.__support.arg_list
-)
+# The GPU does not support varargs currently.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_libc_test(
+    arg_list_test
+    SUITE
+      libc-support-tests
+    SRCS
+      arg_list_test.cpp
+    DEPENDS
+      libc.src.__support.arg_list
+  )
+endif()
 
 add_libc_test(
   uint_test
