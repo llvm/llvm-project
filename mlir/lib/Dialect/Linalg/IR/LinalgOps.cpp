@@ -27,8 +27,10 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
@@ -128,10 +130,15 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
                              SmallVectorImpl<Type> &inputTypes,
                              SmallVectorImpl<Type> &outputTypes,
                              bool addOperandSegmentSizes = true) {
-  SMLoc inputsOperandsLoc, outputsOperandsLoc;
+  SMLoc attrsLoc, inputsOperandsLoc, outputsOperandsLoc;
   SmallVector<OpAsmParser::UnresolvedOperand, 4> inputsOperands,
       outputsOperands;
 
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseAttribute(result.propertiesAttr) || parser.parseGreater())
+      return failure();
+  }
+  attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
@@ -159,10 +166,35 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
     return failure();
 
   if (addOperandSegmentSizes) {
-    result.addAttribute("operand_segment_sizes",
-                        parser.getBuilder().getDenseI32ArrayAttr(
-                            {static_cast<int32_t>(inputsOperands.size()),
-                             static_cast<int32_t>(outputsOperands.size())}));
+    // This is a bit complex because we're trying to be backward compatible with
+    // operation syntax that mix the inherent attributes and the discardable ones
+    // in the same dictionary.
+    // If the properties are used, we append the operand_segment_sizes there directly.
+    // Otherwise we append it to the discardable attributes dictionary where it is
+    // handled by the generic Operation::create(...) method.
+    if (result.propertiesAttr) {
+      NamedAttrList attrs = result.propertiesAttr.cast<DictionaryAttr>();
+      attrs.append("operand_segment_sizes",
+                   parser.getBuilder().getDenseI32ArrayAttr(
+                       {static_cast<int32_t>(inputsOperands.size()),
+                        static_cast<int32_t>(outputsOperands.size())}));
+      result.propertiesAttr = attrs.getDictionary(parser.getContext());
+    } else {
+      result.addAttribute("operand_segment_sizes",
+                          parser.getBuilder().getDenseI32ArrayAttr(
+                              {static_cast<int32_t>(inputsOperands.size()),
+                               static_cast<int32_t>(outputsOperands.size())}));
+    }
+  }
+  if (!result.propertiesAttr) {
+    Optional<RegisteredOperationName> info = result.name.getRegisteredInfo();
+    if (info) {
+      if (failed(info->verifyInherentAttrs(result.attributes, [&]() {
+            return parser.emitError(attrsLoc)
+                   << "'" << result.name.getStringRef() << "' op ";
+          })))
+        return failure();
+    }
   }
   return success();
 }

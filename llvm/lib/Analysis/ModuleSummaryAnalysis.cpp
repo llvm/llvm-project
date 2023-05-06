@@ -284,6 +284,10 @@ static void computeFunctionSummary(
   std::vector<CallsiteInfo> Callsites;
   std::vector<AllocInfo> Allocs;
 
+#ifndef NDEBUG
+  DenseSet<const CallBase *> CallsThatMayHaveMemprofSummary;
+#endif
+
   bool HasInlineAsmMaybeReferencingInternal = false;
   bool HasIndirBranchToBlockAddress = false;
   bool HasUnknownCall = false;
@@ -427,6 +431,10 @@ static void computeFunctionSummary(
               .updateHotness(getHotness(Candidate.Count, PSI));
       }
 
+      // Summarize memprof related metadata. This is only needed for ThinLTO.
+      if (!IsThinLTO)
+        continue;
+
       // TODO: Skip indirect calls for now. Need to handle these better, likely
       // by creating multiple Callsites, one per target, then speculatively
       // devirtualize while applying clone info in the ThinLTO backends. This
@@ -436,6 +444,14 @@ static void computeFunctionSummary(
       // summaries to instructions.
       if (!CalledFunction)
         continue;
+
+      // Ensure we keep this analysis in sync with the handling in the ThinLTO
+      // backend (see MemProfContextDisambiguation::applyImport). Save this call
+      // so that we can skip it in checking the reverse case later.
+      assert(mayHaveMemprofSummary(CB));
+#ifndef NDEBUG
+      CallsThatMayHaveMemprofSummary.insert(CB);
+#endif
 
       // Compute the list of stack ids first (so we can trim them from the stack
       // ids on any MIBs).
@@ -545,6 +561,25 @@ static void computeFunctionSummary(
         ForceSummaryEdgesCold == FunctionSummary::FSHT_All
             ? CalleeInfo::HotnessType::Cold
             : CalleeInfo::HotnessType::Critical);
+
+#ifndef NDEBUG
+  // Make sure that all calls we decided could not have memprof summaries get a
+  // false value for mayHaveMemprofSummary, to ensure that this handling remains
+  // in sync with the ThinLTO backend handling.
+  if (IsThinLTO) {
+    for (const BasicBlock &BB : F) {
+      for (const Instruction &I : BB) {
+        const auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
+          continue;
+        // We already checked these above.
+        if (CallsThatMayHaveMemprofSummary.count(CB))
+          continue;
+        assert(!mayHaveMemprofSummary(CB));
+      }
+    }
+  }
+#endif
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport = NonRenamableLocal ||
@@ -1042,3 +1077,36 @@ ImmutablePass *llvm::createImmutableModuleSummaryIndexWrapperPass(
 
 INITIALIZE_PASS(ImmutableModuleSummaryIndexWrapperPass, "module-summary-info",
                 "Module summary info", false, true)
+
+bool llvm::mayHaveMemprofSummary(const CallBase *CB) {
+  if (!CB)
+    return false;
+  if (CB->isDebugOrPseudoInst())
+    return false;
+  auto *CI = dyn_cast<CallInst>(CB);
+  auto *CalledValue = CB->getCalledOperand();
+  auto *CalledFunction = CB->getCalledFunction();
+  if (CalledValue && !CalledFunction) {
+    CalledValue = CalledValue->stripPointerCasts();
+    // Stripping pointer casts can reveal a called function.
+    CalledFunction = dyn_cast<Function>(CalledValue);
+  }
+  // Check if this is an alias to a function. If so, get the
+  // called aliasee for the checks below.
+  if (auto *GA = dyn_cast<GlobalAlias>(CalledValue)) {
+    assert(!CalledFunction &&
+           "Expected null called function in callsite for alias");
+    CalledFunction = dyn_cast<Function>(GA->getAliaseeObject());
+  }
+  // Check if this is a direct call to a known function or a known
+  // intrinsic, or an indirect call with profile data.
+  if (CalledFunction) {
+    if (CI && CalledFunction->isIntrinsic())
+      return false;
+  } else {
+    // TODO: For now skip indirect calls. See comments in
+    // computeFunctionSummary for what is needed to handle this.
+    return false;
+  }
+  return true;
+}

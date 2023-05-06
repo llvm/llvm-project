@@ -2104,6 +2104,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
     return /*Changed*/ false;
 
   bool Changed = false;
+  auto *DL = &F.getParent()->getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.
@@ -2128,13 +2129,15 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
         // FIXME: Skip VLAs for now (let these variables use dbg.declares).
         if (!Alloca->isStaticAlloca())
           continue;
+        // Similarly, skip scalable vectors (use dbg.declares instead).
+        if (auto Sz = Alloca->getAllocationSize(*DL); Sz && Sz->isScalable())
+          continue;
         DbgDeclares[Alloca].insert(DDI);
         Vars[Alloca].insert(VarRecord(DDI));
       }
     }
   }
 
-  auto DL = std::make_unique<DataLayout>(F.getParent());
   // FIXME: Locals can be backed by caller allocas (sret, byval).
   // Note: trackAssignments doesn't respect dbg.declare's IR positions (as it
   // doesn't "understand" dbg.declares). However, this doesn't appear to break

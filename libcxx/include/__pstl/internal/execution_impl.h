@@ -11,9 +11,14 @@
 #define _PSTL_EXECUTION_IMPL_H
 
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/is_base_of.h>
 
 #include "execution_defs.h"
 #include "pstl_config.h"
+
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 namespace __pstl {
 namespace __internal {
@@ -29,15 +34,15 @@ struct __serial_backend_tag {};
 struct __tbb_backend_tag {};
 struct __openmp_backend_tag {};
 
-#if defined(_PSTL_PAR_BACKEND_TBB)
+#  if defined(_PSTL_PAR_BACKEND_TBB)
 using __par_backend_tag = __tbb_backend_tag;
-#elif defined(_PSTL_PAR_BACKEND_OPENMP)
+#  elif defined(_PSTL_PAR_BACKEND_OPENMP)
 using __par_backend_tag = __openmp_backend_tag;
-#elif defined(_PSTL_PAR_BACKEND_SERIAL)
+#  elif defined(_PSTL_PAR_BACKEND_SERIAL)
 using __par_backend_tag = __serial_backend_tag;
-#else
-#  error "A parallel backend must be specified";
-#endif
+#  else
+#    error "A parallel backend must be specified";
+#  endif
 
 template <class _IsVector>
 struct __serial_tag {
@@ -84,5 +89,7 @@ __select_backend(__pstl::execution::parallel_unsequenced_policy, _IteratorTypes&
 
 } // namespace __internal
 } // namespace __pstl
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif /* _PSTL_EXECUTION_IMPL_H */

@@ -193,23 +193,6 @@ OptionValueProperties::GetPropertyAtIndexAsOptionValueFileSpecList(
   return nullptr;
 }
 
-OptionValueArch *OptionValueProperties::GetPropertyAtIndexAsOptionValueArch(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
-  const Property *property = GetPropertyAtIndex(idx, exe_ctx);
-  if (property)
-    return property->GetValue()->GetAsArch();
-  return nullptr;
-}
-
-OptionValueLanguage *
-OptionValueProperties::GetPropertyAtIndexAsOptionValueLanguage(
-    uint32_t idx, const ExecutionContext *exe_ctx) const {
-  const Property *property = GetPropertyAtIndex(idx, exe_ctx);
-  if (property)
-    return property->GetValue()->GetAsLanguage();
-  return nullptr;
-}
-
 bool OptionValueProperties::GetPropertyAtIndexAsArgs(
     uint32_t idx, Args &args, const ExecutionContext *exe_ctx) const {
   const Property *property = GetPropertyAtIndex(idx, exe_ctx);

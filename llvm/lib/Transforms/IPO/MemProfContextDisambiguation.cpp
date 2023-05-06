@@ -28,8 +28,11 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -40,12 +43,40 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include <sstream>
 #include <vector>
 using namespace llvm;
 using namespace llvm::memprof;
 
 #define DEBUG_TYPE "memprof-context-disambiguation"
+
+STATISTIC(FunctionClonesAnalysis,
+          "Number of function clones created during whole program analysis");
+STATISTIC(FunctionClonesThinBackend,
+          "Number of function clones created during ThinLTO backend");
+STATISTIC(FunctionsClonedThinBackend,
+          "Number of functions that had clones created during ThinLTO backend");
+STATISTIC(AllocTypeNotCold, "Number of not cold static allocations (possibly "
+                            "cloned) during whole program analysis");
+STATISTIC(AllocTypeCold, "Number of cold static allocations (possibly cloned) "
+                         "during whole program analysis");
+STATISTIC(AllocTypeNotColdThinBackend,
+          "Number of not cold static allocations (possibly cloned) during "
+          "ThinLTO backend");
+STATISTIC(AllocTypeColdThinBackend, "Number of cold static allocations "
+                                    "(possibly cloned) during ThinLTO backend");
+STATISTIC(OrigAllocsThinBackend,
+          "Number of original (not cloned) allocations with memprof profiles "
+          "during ThinLTO backend");
+STATISTIC(
+    AllocVersionsThinBackend,
+    "Number of allocation versions (including clones) during ThinLTO backend");
+STATISTIC(MaxAllocVersionsThinBackend,
+          "Maximum number of allocation versions created for an original "
+          "allocation during ThinLTO backend");
+STATISTIC(UnclonableAllocsThinBackend,
+          "Number of unclonable ambigous allocations during ThinLTO backend");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
@@ -67,6 +98,11 @@ static cl::opt<bool>
 static cl::opt<bool>
     VerifyNodes("memprof-verify-nodes", cl::init(false), cl::Hidden,
                 cl::desc("Perform frequent verification checks on nodes."));
+
+static cl::opt<std::string> MemProfImportSummary(
+    "memprof-import-summary",
+    cl::desc("Import summary to use for testing the ThinLTO backend via opt"),
+    cl::Hidden);
 
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
 ///
@@ -95,6 +131,13 @@ public:
   /// Perform cloning on the graph necessary to uniquely identify the allocation
   /// behavior of an allocation based on its context.
   void identifyClones();
+
+  /// Assign callsite clones to functions, cloning functions as needed to
+  /// accommodate the combinations of their callsite clones reached by callers.
+  /// For regular LTO this clones functions and callsites in the IR, but for
+  /// ThinLTO the cloning decisions are noted in the summaries and later applied
+  /// in applyImport.
+  bool assignFunctions();
 
   void dump() const;
   void print(raw_ostream &OS) const;
@@ -376,6 +419,28 @@ private:
     return static_cast<DerivedCCG *>(this)->getLastStackId(Call);
   }
 
+  /// Update the allocation call to record type of allocated memory.
+  void updateAllocationCall(CallInfo &Call, AllocationType AllocType) {
+    AllocType == AllocationType::Cold ? AllocTypeCold++ : AllocTypeNotCold++;
+    static_cast<DerivedCCG *>(this)->updateAllocationCall(Call, AllocType);
+  }
+
+  /// Update non-allocation call to invoke (possibly cloned) function
+  /// CalleeFunc.
+  void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc) {
+    static_cast<DerivedCCG *>(this)->updateCall(CallerCall, CalleeFunc);
+  }
+
+  /// Clone the given function for the given callsite, recording mapping of all
+  /// of the functions tracked calls to their new versions in the CallMap.
+  /// Assigns new clones to clone number CloneNo.
+  FuncInfo cloneFunctionForCallsite(
+      FuncInfo &Func, CallInfo &Call, std::map<CallInfo, CallInfo> &CallMap,
+      std::vector<CallInfo> &CallsWithMetadataInFunc, unsigned CloneNo) {
+    return static_cast<DerivedCCG *>(this)->cloneFunctionForCallsite(
+        Func, Call, CallMap, CallsWithMetadataInFunc, CloneNo);
+  }
+
   /// Gets a label to use in the dot graph for the given call clone in the given
   /// function.
   std::string getLabel(const FuncTy *Func, const CallTy Call,
@@ -470,7 +535,9 @@ class ModuleCallsiteContextGraph
     : public CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
                                   Instruction *> {
 public:
-  ModuleCallsiteContextGraph(Module &M);
+  ModuleCallsiteContextGraph(
+      Module &M,
+      function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter);
 
 private:
   friend CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
@@ -480,10 +547,19 @@ private:
   bool calleeMatchesFunc(Instruction *Call, const Function *Func);
   uint64_t getLastStackId(Instruction *Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(Instruction *Call);
+  void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
+  void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
+  CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
+                       Instruction *>::FuncInfo
+  cloneFunctionForCallsite(FuncInfo &Func, CallInfo &Call,
+                           std::map<CallInfo, CallInfo> &CallMap,
+                           std::vector<CallInfo> &CallsWithMetadataInFunc,
+                           unsigned CloneNo);
   std::string getLabel(const Function *Func, const Instruction *Call,
                        unsigned CloneNo) const;
 
   const Module &Mod;
+  function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter;
 };
 
 /// Represents a call in the summary index graph, which can either be an
@@ -529,6 +605,14 @@ private:
   bool calleeMatchesFunc(IndexCall &Call, const FunctionSummary *Func);
   uint64_t getLastStackId(IndexCall &Call);
   std::vector<uint64_t> getStackIdsWithContextNodesForCall(IndexCall &Call);
+  void updateAllocationCall(CallInfo &Call, AllocationType AllocType);
+  void updateCall(CallInfo &CallerCall, FuncInfo CalleeFunc);
+  CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
+                       IndexCall>::FuncInfo
+  cloneFunctionForCallsite(FuncInfo &Func, CallInfo &Call,
+                           std::map<CallInfo, CallInfo> &CallMap,
+                           std::vector<CallInfo> &CallsWithMetadataInFunc,
+                           unsigned CloneNo);
   std::string getLabel(const FunctionSummary *Func, const IndexCall &Call,
                        unsigned CloneNo) const;
 
@@ -1298,10 +1382,14 @@ uint64_t IndexCallsiteContextGraph::getLastStackId(IndexCall &Call) {
   return Index.getStackIdAtIndex(CallsiteContext.back());
 }
 
+static const std::string MemProfCloneSuffix = ".memprof.";
+
 static std::string getMemProfFuncName(Twine Base, unsigned CloneNo) {
+  // We use CloneNo == 0 to refer to the original version, which doesn't get
+  // renamed with a suffix.
   if (!CloneNo)
     return Base.str();
-  return (Base + ".memprof." + Twine(CloneNo)).str();
+  return (Base + MemProfCloneSuffix + Twine(CloneNo)).str();
 }
 
 std::string ModuleCallsiteContextGraph::getLabel(const Function *Func,
@@ -1363,7 +1451,9 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getStackIdsWithContextNodes(
   return StackIds;
 }
 
-ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(Module &M) : Mod(M) {
+ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
+    Module &M, function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter)
+    : Mod(M), OREGetter(OREGetter) {
   for (auto &F : M) {
     std::vector<CallInfo> CallsWithMetadata;
     for (auto &BB : F) {
@@ -1677,7 +1767,7 @@ static void checkEdge(
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 static void checkNode(const ContextNode<DerivedCCG, FuncTy, CallTy> *Node,
-                      bool CheckEdges = false) {
+                      bool CheckEdges = true) {
   if (Node->isRemoved())
     return;
   // Node's context ids should be the union of both its callee and caller edge
@@ -1717,7 +1807,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::check() const {
   using GraphType = const CallsiteContextGraph<DerivedCCG, FuncTy, CallTy> *;
   for (const auto Node : nodes<GraphType>(this)) {
-    checkNode<DerivedCCG, FuncTy, CallTy>(Node);
+    checkNode<DerivedCCG, FuncTy, CallTy>(Node, /*CheckEdges=*/false);
     for (auto &Edge : Node->CallerEdges)
       checkEdge<DerivedCCG, FuncTy, CallTy>(Edge);
   }
@@ -1941,12 +2031,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
     NewEdge->Callee->CallerEdges.push_back(NewEdge);
   }
   if (VerifyCCG) {
-    checkNode<DerivedCCG, FuncTy, CallTy>(OldCallee);
-    checkNode<DerivedCCG, FuncTy, CallTy>(NewCallee);
+    checkNode<DerivedCCG, FuncTy, CallTy>(OldCallee, /*CheckEdges=*/false);
+    checkNode<DerivedCCG, FuncTy, CallTy>(NewCallee, /*CheckEdges=*/false);
     for (const auto &OldCalleeEdge : OldCallee->CalleeEdges)
-      checkNode<DerivedCCG, FuncTy, CallTy>(OldCalleeEdge->Callee);
+      checkNode<DerivedCCG, FuncTy, CallTy>(OldCalleeEdge->Callee,
+                                            /*CheckEdges=*/false);
     for (const auto &NewCalleeEdge : NewCallee->CalleeEdges)
-      checkNode<DerivedCCG, FuncTy, CallTy>(NewCalleeEdge->Callee);
+      checkNode<DerivedCCG, FuncTy, CallTy>(NewCalleeEdge->Callee,
+                                            /*CheckEdges=*/false);
   }
 }
 
@@ -1961,7 +2053,7 @@ template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
   if (VerifyNodes)
-    checkNode<DerivedCCG, FuncTy, CallTy>(Node, /*CheckEdges=*/true);
+    checkNode<DerivedCCG, FuncTy, CallTy>(Node);
   assert(!Node->CloneOf);
 
   // If Node as a null call, then either it wasn't found in the module (regular
@@ -2115,7 +2207,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   for (auto *Clone : Node->Clones) {
     removeNoneTypeCalleeEdges(Clone);
     if (VerifyNodes)
-      checkNode<DerivedCCG, FuncTy, CallTy>(Clone, /*CheckEdges=*/true);
+      checkNode<DerivedCCG, FuncTy, CallTy>(Clone);
   }
   // We should still have some context ids on the original Node.
   assert(!Node->ContextIds.empty());
@@ -2136,7 +2228,919 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
                        }));
 
   if (VerifyNodes)
-    checkNode<DerivedCCG, FuncTy, CallTy>(Node, /*CheckEdges=*/true);
+    checkNode<DerivedCCG, FuncTy, CallTy>(Node);
+}
+
+void ModuleCallsiteContextGraph::updateAllocationCall(
+    CallInfo &Call, AllocationType AllocType) {
+  std::string AllocTypeString = getAllocTypeAttributeString(AllocType);
+  auto A = llvm::Attribute::get(Call.call()->getFunction()->getContext(),
+                                "memprof", AllocTypeString);
+  cast<CallBase>(Call.call())->addFnAttr(A);
+  OREGetter(Call.call()->getFunction())
+      .emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", Call.call())
+            << ore::NV("AllocationCall", Call.call()) << " in clone "
+            << ore::NV("Caller", Call.call()->getFunction())
+            << " marked with memprof allocation attribute "
+            << ore::NV("Attribute", AllocTypeString));
+}
+
+void IndexCallsiteContextGraph::updateAllocationCall(CallInfo &Call,
+                                                     AllocationType AllocType) {
+  auto *AI = Call.call().dyn_cast<AllocInfo *>();
+  assert(AI);
+  assert(AI->Versions.size() > Call.cloneNo());
+  AI->Versions[Call.cloneNo()] = (uint8_t)AllocType;
+}
+
+void ModuleCallsiteContextGraph::updateCall(CallInfo &CallerCall,
+                                            FuncInfo CalleeFunc) {
+  if (CalleeFunc.cloneNo() > 0)
+    cast<CallBase>(CallerCall.call())->setCalledFunction(CalleeFunc.func());
+  OREGetter(CallerCall.call()->getFunction())
+      .emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CallerCall.call())
+            << ore::NV("Call", CallerCall.call()) << " in clone "
+            << ore::NV("Caller", CallerCall.call()->getFunction())
+            << " assigned to call function clone "
+            << ore::NV("Callee", CalleeFunc.func()));
+}
+
+void IndexCallsiteContextGraph::updateCall(CallInfo &CallerCall,
+                                           FuncInfo CalleeFunc) {
+  auto *CI = CallerCall.call().dyn_cast<CallsiteInfo *>();
+  assert(CI &&
+         "Caller cannot be an allocation which should not have profiled calls");
+  assert(CI->Clones.size() > CallerCall.cloneNo());
+  CI->Clones[CallerCall.cloneNo()] = CalleeFunc.cloneNo();
+}
+
+CallsiteContextGraph<ModuleCallsiteContextGraph, Function,
+                     Instruction *>::FuncInfo
+ModuleCallsiteContextGraph::cloneFunctionForCallsite(
+    FuncInfo &Func, CallInfo &Call, std::map<CallInfo, CallInfo> &CallMap,
+    std::vector<CallInfo> &CallsWithMetadataInFunc, unsigned CloneNo) {
+  // Use existing LLVM facilities for cloning and obtaining Call in clone
+  ValueToValueMapTy VMap;
+  auto *NewFunc = CloneFunction(Func.func(), VMap);
+  std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
+  assert(!Func.func()->getParent()->getFunction(Name));
+  NewFunc->setName(Name);
+  for (auto &Inst : CallsWithMetadataInFunc) {
+    // This map always has the initial version in it.
+    assert(Inst.cloneNo() == 0);
+    CallMap[Inst] = {cast<Instruction>(VMap[Inst.call()]), CloneNo};
+  }
+  OREGetter(Func.func())
+      .emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", Func.func())
+            << "created clone " << ore::NV("NewFunction", NewFunc));
+  return {NewFunc, CloneNo};
+}
+
+CallsiteContextGraph<IndexCallsiteContextGraph, FunctionSummary,
+                     IndexCall>::FuncInfo
+IndexCallsiteContextGraph::cloneFunctionForCallsite(
+    FuncInfo &Func, CallInfo &Call, std::map<CallInfo, CallInfo> &CallMap,
+    std::vector<CallInfo> &CallsWithMetadataInFunc, unsigned CloneNo) {
+  // Check how many clones we have of Call (and therefore function).
+  // The next clone number is the current size of versions array.
+  // Confirm this matches the CloneNo provided by the caller, which is based on
+  // the number of function clones we have.
+  assert(CloneNo ==
+         (Call.call().is<AllocInfo *>()
+              ? Call.call().dyn_cast<AllocInfo *>()->Versions.size()
+              : Call.call().dyn_cast<CallsiteInfo *>()->Clones.size()));
+  // Walk all the instructions in this function. Create a new version for
+  // each (by adding an entry to the Versions/Clones summary array), and copy
+  // over the version being called for the function clone being cloned here.
+  // Additionally, add an entry to the CallMap for the new function clone,
+  // mapping the original call (clone 0, what is in CallsWithMetadataInFunc)
+  // to the new call clone.
+  for (auto &Inst : CallsWithMetadataInFunc) {
+    // This map always has the initial version in it.
+    assert(Inst.cloneNo() == 0);
+    if (auto *AI = Inst.call().dyn_cast<AllocInfo *>()) {
+      assert(AI->Versions.size() == CloneNo);
+      // We assign the allocation type later (in updateAllocationCall), just add
+      // an entry for it here.
+      AI->Versions.push_back(0);
+    } else {
+      auto *CI = Inst.call().dyn_cast<CallsiteInfo *>();
+      assert(CI && CI->Clones.size() == CloneNo);
+      // We assign the clone number later (in updateCall), just add an entry for
+      // it here.
+      CI->Clones.push_back(0);
+    }
+    CallMap[Inst] = {Inst.call(), CloneNo};
+  }
+  return {Func.func(), CloneNo};
+}
+
+// This method assigns cloned callsites to functions, cloning the functions as
+// needed. The assignment is greedy and proceeds roughly as follows:
+//
+// For each function Func:
+//   For each call with graph Node having clones:
+//     Initialize ClonesWorklist to Node and its clones
+//     Initialize NodeCloneCount to 0
+//     While ClonesWorklist is not empty:
+//        Clone = pop front ClonesWorklist
+//        NodeCloneCount++
+//        If Func has been cloned less than NodeCloneCount times:
+//           If NodeCloneCount is 1:
+//             Assign Clone to original Func
+//             Continue
+//           Create a new function clone
+//           If other callers not assigned to call a function clone yet:
+//              Assign them to call new function clone
+//              Continue
+//           Assign any other caller calling the cloned version to new clone
+//
+//        For each caller of Clone:
+//           If caller is assigned to call a specific function clone:
+//             If we cannot assign Clone to that function clone:
+//               Create new callsite Clone NewClone
+//               Add NewClone to ClonesWorklist
+//               Continue
+//             Assign Clone to existing caller's called function clone
+//           Else:
+//             If Clone not already assigned to a function clone:
+//                Assign to first function clone without assignment
+//             Assign caller to selected function clone
+template <typename DerivedCCG, typename FuncTy, typename CallTy>
+bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
+  bool Changed = false;
+
+  // Keep track of the assignment of nodes (callsites) to function clones they
+  // call.
+  DenseMap<ContextNode *, FuncInfo> CallsiteToCalleeFuncCloneMap;
+
+  // Update caller node to call function version CalleeFunc, by recording the
+  // assignment in CallsiteToCalleeFuncCloneMap.
+  auto RecordCalleeFuncOfCallsite = [&](ContextNode *Caller,
+                                        const FuncInfo &CalleeFunc) {
+    assert(Caller->hasCall());
+    CallsiteToCalleeFuncCloneMap[Caller] = CalleeFunc;
+  };
+
+  // Walk all functions for which we saw calls with memprof metadata, and handle
+  // cloning for each of its calls.
+  for (auto &[Func, CallsWithMetadata] : FuncToCallsWithMetadata) {
+    FuncInfo OrigFunc(Func);
+    // Map from each clone of OrigFunc to a map of remappings of each call of
+    // interest (from original uncloned call to the corresponding cloned call in
+    // that function clone).
+    std::map<FuncInfo, std::map<CallInfo, CallInfo>> FuncClonesToCallMap;
+    for (auto &Call : CallsWithMetadata) {
+      ContextNode *Node = getNodeForInst(Call);
+      // Skip call if we do not have a node for it (all uses of its stack ids
+      // were either on inlined chains or pruned from the MIBs), or if we did
+      // not create any clones for it.
+      if (!Node || Node->Clones.empty())
+        continue;
+      assert(Node->hasCall() &&
+             "Not having a call should have prevented cloning");
+
+      // Track the assignment of function clones to clones of the current
+      // callsite Node being handled.
+      std::map<FuncInfo, ContextNode *> FuncCloneToCurNodeCloneMap;
+
+      // Assign callsite version CallsiteClone to function version FuncClone,
+      // and also assign (possibly cloned) Call to CallsiteClone.
+      auto AssignCallsiteCloneToFuncClone = [&](const FuncInfo &FuncClone,
+                                                CallInfo &Call,
+                                                ContextNode *CallsiteClone,
+                                                bool IsAlloc) {
+        // Record the clone of callsite node assigned to this function clone.
+        FuncCloneToCurNodeCloneMap[FuncClone] = CallsiteClone;
+
+        assert(FuncClonesToCallMap.count(FuncClone));
+        std::map<CallInfo, CallInfo> &CallMap = FuncClonesToCallMap[FuncClone];
+        CallInfo CallClone(Call);
+        if (CallMap.count(Call))
+          CallClone = CallMap[Call];
+        CallsiteClone->setCall(CallClone);
+      };
+
+      // Keep track of the clones of callsite Node that need to be assigned to
+      // function clones. This list may be expanded in the loop body below if we
+      // find additional cloning is required.
+      std::deque<ContextNode *> ClonesWorklist;
+      // Ignore original Node if we moved all of its contexts to clones.
+      if (!Node->ContextIds.empty())
+        ClonesWorklist.push_back(Node);
+      ClonesWorklist.insert(ClonesWorklist.end(), Node->Clones.begin(),
+                            Node->Clones.end());
+
+      // Now walk through all of the clones of this callsite Node that we need,
+      // and determine the assignment to a corresponding clone of the current
+      // function (creating new function clones as needed).
+      unsigned NodeCloneCount = 0;
+      while (!ClonesWorklist.empty()) {
+        ContextNode *Clone = ClonesWorklist.front();
+        ClonesWorklist.pop_front();
+        NodeCloneCount++;
+        if (VerifyNodes)
+          checkNode<DerivedCCG, FuncTy, CallTy>(Clone);
+
+        // Need to create a new function clone if we have more callsite clones
+        // than existing function clones, which would have been assigned to an
+        // earlier clone in the list (we assign callsite clones to function
+        // clones greedily).
+        if (FuncClonesToCallMap.size() < NodeCloneCount) {
+          // If this is the first callsite copy, assign to original function.
+          if (NodeCloneCount == 1) {
+            // Since FuncClonesToCallMap is empty in this case, no clones have
+            // been created for this function yet, and no callers should have
+            // been assigned a function clone for this callee node yet.
+            assert(llvm::none_of(
+                Clone->CallerEdges, [&](const std::shared_ptr<ContextEdge> &E) {
+                  return CallsiteToCalleeFuncCloneMap.count(E->Caller);
+                }));
+            // Initialize with empty call map, assign Clone to original function
+            // and its callers, and skip to the next clone.
+            FuncClonesToCallMap[OrigFunc] = {};
+            AssignCallsiteCloneToFuncClone(
+                OrigFunc, Call, Clone,
+                AllocationCallToContextNodeMap.count(Call));
+            for (auto &CE : Clone->CallerEdges) {
+              // Ignore any caller that does not have a recorded callsite Call.
+              if (!CE->Caller->hasCall())
+                continue;
+              RecordCalleeFuncOfCallsite(CE->Caller, OrigFunc);
+            }
+            continue;
+          }
+
+          // First locate which copy of OrigFunc to clone again. If a caller
+          // of this callsite clone was already assigned to call a particular
+          // function clone, we need to redirect all of those callers to the
+          // new function clone, and update their other callees within this
+          // function.
+          FuncInfo PreviousAssignedFuncClone;
+          auto EI = llvm::find_if(
+              Clone->CallerEdges, [&](const std::shared_ptr<ContextEdge> &E) {
+                return CallsiteToCalleeFuncCloneMap.count(E->Caller);
+              });
+          bool CallerAssignedToCloneOfFunc = false;
+          if (EI != Clone->CallerEdges.end()) {
+            const std::shared_ptr<ContextEdge> &Edge = *EI;
+            PreviousAssignedFuncClone =
+                CallsiteToCalleeFuncCloneMap[Edge->Caller];
+            CallerAssignedToCloneOfFunc = true;
+          }
+
+          // Clone function and save it along with the CallInfo map created
+          // during cloning in the FuncClonesToCallMap.
+          std::map<CallInfo, CallInfo> NewCallMap;
+          unsigned CloneNo = FuncClonesToCallMap.size();
+          assert(CloneNo > 0 && "Clone 0 is the original function, which "
+                                "should already exist in the map");
+          FuncInfo NewFuncClone = cloneFunctionForCallsite(
+              OrigFunc, Call, NewCallMap, CallsWithMetadata, CloneNo);
+          FuncClonesToCallMap.emplace(NewFuncClone, std::move(NewCallMap));
+          FunctionClonesAnalysis++;
+          Changed = true;
+
+          // If no caller callsites were already assigned to a clone of this
+          // function, we can simply assign this clone to the new func clone
+          // and update all callers to it, then skip to the next clone.
+          if (!CallerAssignedToCloneOfFunc) {
+            AssignCallsiteCloneToFuncClone(
+                NewFuncClone, Call, Clone,
+                AllocationCallToContextNodeMap.count(Call));
+            for (auto &CE : Clone->CallerEdges) {
+              // Ignore any caller that does not have a recorded callsite Call.
+              if (!CE->Caller->hasCall())
+                continue;
+              RecordCalleeFuncOfCallsite(CE->Caller, NewFuncClone);
+            }
+            continue;
+          }
+
+          // We may need to do additional node cloning in this case.
+          // Reset the CallsiteToCalleeFuncCloneMap entry for any callers
+          // that were previously assigned to call PreviousAssignedFuncClone,
+          // to record that they now call NewFuncClone.
+          for (auto CE : Clone->CallerEdges) {
+            // Ignore any caller that does not have a recorded callsite Call.
+            if (!CE->Caller->hasCall())
+              continue;
+
+            if (!CallsiteToCalleeFuncCloneMap.count(CE->Caller) ||
+                // We subsequently fall through to later handling that
+                // will perform any additional cloning required for
+                // callers that were calling other function clones.
+                CallsiteToCalleeFuncCloneMap[CE->Caller] !=
+                    PreviousAssignedFuncClone)
+              continue;
+
+            RecordCalleeFuncOfCallsite(CE->Caller, NewFuncClone);
+
+            // If we are cloning a function that was already assigned to some
+            // callers, then essentially we are creating new callsite clones
+            // of the other callsites in that function that are reached by those
+            // callers. Clone the other callees of the current callsite's caller
+            // that were already assigned to PreviousAssignedFuncClone
+            // accordingly. This is important since we subsequently update the
+            // calls from the nodes in the graph and their assignments to callee
+            // functions recorded in CallsiteToCalleeFuncCloneMap.
+            for (auto CalleeEdge : CE->Caller->CalleeEdges) {
+              // Skip any that have been removed on an earlier iteration when
+              // cleaning up newly None type callee edges.
+              if (!CalleeEdge)
+                continue;
+              ContextNode *Callee = CalleeEdge->Callee;
+              // Skip the current callsite, we are looking for other
+              // callsites Caller calls, as well as any that does not have a
+              // recorded callsite Call.
+              if (Callee == Clone || !Callee->hasCall())
+                continue;
+              ContextNode *NewClone = moveEdgeToNewCalleeClone(CalleeEdge);
+              removeNoneTypeCalleeEdges(NewClone);
+              // Moving the edge may have resulted in some none type
+              // callee edges on the original Callee.
+              removeNoneTypeCalleeEdges(Callee);
+              assert(NewClone->AllocTypes != (uint8_t)AllocationType::None);
+              // If the Callee node was already assigned to call a specific
+              // function version, make sure its new clone is assigned to call
+              // that same function clone.
+              if (CallsiteToCalleeFuncCloneMap.count(Callee))
+                RecordCalleeFuncOfCallsite(
+                    NewClone, CallsiteToCalleeFuncCloneMap[Callee]);
+              // Update NewClone with the new Call clone of this callsite's Call
+              // created for the new function clone created earlier.
+              // Recall that we have already ensured when building the graph
+              // that each caller can only call callsites within the same
+              // function, so we are guaranteed that Callee Call is in the
+              // current OrigFunc.
+              // CallMap is set up as indexed by original Call at clone 0.
+              CallInfo OrigCall(Callee->getOrigNode()->Call);
+              OrigCall.setCloneNo(0);
+              std::map<CallInfo, CallInfo> &CallMap =
+                  FuncClonesToCallMap[NewFuncClone];
+              assert(CallMap.count(OrigCall));
+              CallInfo NewCall(CallMap[OrigCall]);
+              assert(NewCall);
+              NewClone->setCall(NewCall);
+            }
+          }
+          // Fall through to handling below to perform the recording of the
+          // function for this callsite clone. This enables handling of cases
+          // where the callers were assigned to different clones of a function.
+        }
+
+        // See if we can use existing function clone. Walk through
+        // all caller edges to see if any have already been assigned to
+        // a clone of this callsite's function. If we can use it, do so. If not,
+        // because that function clone is already assigned to a different clone
+        // of this callsite, then we need to clone again.
+        // Basically, this checking is needed to handle the case where different
+        // caller functions/callsites may need versions of this function
+        // containing different mixes of callsite clones across the different
+        // callsites within the function. If that happens, we need to create
+        // additional function clones to handle the various combinations.
+        //
+        // Keep track of any new clones of this callsite created by the
+        // following loop, as well as any existing clone that we decided to
+        // assign this clone to.
+        std::map<FuncInfo, ContextNode *> FuncCloneToNewCallsiteCloneMap;
+        FuncInfo FuncCloneAssignedToCurCallsiteClone;
+        // We need to be able to remove Edge from CallerEdges, so need to adjust
+        // iterator in the loop.
+        for (auto EI = Clone->CallerEdges.begin();
+             EI != Clone->CallerEdges.end();) {
+          auto Edge = *EI;
+          // Ignore any caller that does not have a recorded callsite Call.
+          if (!Edge->Caller->hasCall()) {
+            EI++;
+            continue;
+          }
+          // If this caller already assigned to call a version of OrigFunc, need
+          // to ensure we can assign this callsite clone to that function clone.
+          if (CallsiteToCalleeFuncCloneMap.count(Edge->Caller)) {
+            FuncInfo FuncCloneCalledByCaller =
+                CallsiteToCalleeFuncCloneMap[Edge->Caller];
+            // First we need to confirm that this function clone is available
+            // for use by this callsite node clone.
+            //
+            // While FuncCloneToCurNodeCloneMap is built only for this Node and
+            // its callsite clones, one of those callsite clones X could have
+            // been assigned to the same function clone called by Edge's caller
+            // - if Edge's caller calls another callsite within Node's original
+            // function, and that callsite has another caller reaching clone X.
+            // We need to clone Node again in this case.
+            if ((FuncCloneToCurNodeCloneMap.count(FuncCloneCalledByCaller) &&
+                 FuncCloneToCurNodeCloneMap[FuncCloneCalledByCaller] !=
+                     Clone) ||
+                // Detect when we have multiple callers of this callsite that
+                // have already been assigned to specific, and different, clones
+                // of OrigFunc (due to other unrelated callsites in Func they
+                // reach via call contexts). Is this Clone of callsite Node
+                // assigned to a different clone of OrigFunc? If so, clone Node
+                // again.
+                (FuncCloneAssignedToCurCallsiteClone &&
+                 FuncCloneAssignedToCurCallsiteClone !=
+                     FuncCloneCalledByCaller)) {
+              // We need to use a different newly created callsite clone, in
+              // order to assign it to another new function clone on a
+              // subsequent iteration over the Clones array (adjusted below).
+              // Note we specifically do not reset the
+              // CallsiteToCalleeFuncCloneMap entry for this caller, so that
+              // when this new clone is processed later we know which version of
+              // the function to copy (so that other callsite clones we have
+              // assigned to that function clone are properly cloned over). See
+              // comments in the function cloning handling earlier.
+
+              // Check if we already have cloned this callsite again while
+              // walking through caller edges, for a caller calling the same
+              // function clone. If so, we can move this edge to that new clone
+              // rather than creating yet another new clone.
+              if (FuncCloneToNewCallsiteCloneMap.count(
+                      FuncCloneCalledByCaller)) {
+                ContextNode *NewClone =
+                    FuncCloneToNewCallsiteCloneMap[FuncCloneCalledByCaller];
+                moveEdgeToExistingCalleeClone(Edge, NewClone, &EI);
+                // Cleanup any none type edges cloned over.
+                removeNoneTypeCalleeEdges(NewClone);
+              } else {
+                // Create a new callsite clone.
+                ContextNode *NewClone = moveEdgeToNewCalleeClone(Edge, &EI);
+                removeNoneTypeCalleeEdges(NewClone);
+                FuncCloneToNewCallsiteCloneMap[FuncCloneCalledByCaller] =
+                    NewClone;
+                // Add to list of clones and process later.
+                ClonesWorklist.push_back(NewClone);
+                assert(EI == Clone->CallerEdges.end() ||
+                       Clone->AllocTypes != (uint8_t)AllocationType::None);
+                assert(NewClone->AllocTypes != (uint8_t)AllocationType::None);
+              }
+              // Moving the caller edge may have resulted in some none type
+              // callee edges.
+              removeNoneTypeCalleeEdges(Clone);
+              // We will handle the newly created callsite clone in a subsequent
+              // iteration over this Node's Clones. Continue here since we
+              // already adjusted iterator EI while moving the edge.
+              continue;
+            }
+
+            // Otherwise, we can use the function clone already assigned to this
+            // caller.
+            if (!FuncCloneAssignedToCurCallsiteClone) {
+              FuncCloneAssignedToCurCallsiteClone = FuncCloneCalledByCaller;
+              // Assign Clone to FuncCloneCalledByCaller
+              AssignCallsiteCloneToFuncClone(
+                  FuncCloneCalledByCaller, Call, Clone,
+                  AllocationCallToContextNodeMap.count(Call));
+            } else
+              // Don't need to do anything - callsite is already calling this
+              // function clone.
+              assert(FuncCloneAssignedToCurCallsiteClone ==
+                     FuncCloneCalledByCaller);
+
+          } else {
+            // We have not already assigned this caller to a version of
+            // OrigFunc. Do the assignment now.
+
+            // First check if we have already assigned this callsite clone to a
+            // clone of OrigFunc for another caller during this iteration over
+            // its caller edges.
+            if (!FuncCloneAssignedToCurCallsiteClone) {
+              // Find first function in FuncClonesToCallMap without an assigned
+              // clone of this callsite Node. We should always have one
+              // available at this point due to the earlier cloning when the
+              // FuncClonesToCallMap size was smaller than the clone number.
+              for (auto &CF : FuncClonesToCallMap) {
+                if (!FuncCloneToCurNodeCloneMap.count(CF.first)) {
+                  FuncCloneAssignedToCurCallsiteClone = CF.first;
+                  break;
+                }
+              }
+              assert(FuncCloneAssignedToCurCallsiteClone);
+              // Assign Clone to FuncCloneAssignedToCurCallsiteClone
+              AssignCallsiteCloneToFuncClone(
+                  FuncCloneAssignedToCurCallsiteClone, Call, Clone,
+                  AllocationCallToContextNodeMap.count(Call));
+            } else
+              assert(FuncCloneToCurNodeCloneMap
+                         [FuncCloneAssignedToCurCallsiteClone] == Clone);
+            // Update callers to record function version called.
+            RecordCalleeFuncOfCallsite(Edge->Caller,
+                                       FuncCloneAssignedToCurCallsiteClone);
+          }
+
+          EI++;
+        }
+      }
+      if (VerifyCCG) {
+        checkNode<DerivedCCG, FuncTy, CallTy>(Node);
+        for (const auto &PE : Node->CalleeEdges)
+          checkNode<DerivedCCG, FuncTy, CallTy>(PE->Callee);
+        for (const auto &CE : Node->CallerEdges)
+          checkNode<DerivedCCG, FuncTy, CallTy>(CE->Caller);
+        for (auto *Clone : Node->Clones) {
+          checkNode<DerivedCCG, FuncTy, CallTy>(Clone);
+          for (const auto &PE : Clone->CalleeEdges)
+            checkNode<DerivedCCG, FuncTy, CallTy>(PE->Callee);
+          for (const auto &CE : Clone->CallerEdges)
+            checkNode<DerivedCCG, FuncTy, CallTy>(CE->Caller);
+        }
+      }
+    }
+  }
+
+  auto UpdateCalls = [&](ContextNode *Node,
+                         DenseSet<const ContextNode *> &Visited,
+                         auto &&UpdateCalls) {
+    auto Inserted = Visited.insert(Node);
+    if (!Inserted.second)
+      return;
+
+    for (auto *Clone : Node->Clones)
+      UpdateCalls(Clone, Visited, UpdateCalls);
+
+    for (auto &Edge : Node->CallerEdges)
+      UpdateCalls(Edge->Caller, Visited, UpdateCalls);
+
+    // Skip if either no call to update, or if we ended up with no context ids
+    // (we moved all edges onto other clones).
+    if (!Node->hasCall() || Node->ContextIds.empty())
+      return;
+
+    if (Node->IsAllocation) {
+      updateAllocationCall(Node->Call, allocTypeToUse(Node->AllocTypes));
+      return;
+    }
+
+    if (!CallsiteToCalleeFuncCloneMap.count(Node))
+      return;
+
+    auto CalleeFunc = CallsiteToCalleeFuncCloneMap[Node];
+    updateCall(Node->Call, CalleeFunc);
+  };
+
+  // Performs DFS traversal starting from allocation nodes to update calls to
+  // reflect cloning decisions recorded earlier. For regular LTO this will
+  // update the actual calls in the IR to call the appropriate function clone
+  // (and add attributes to allocation calls), whereas for ThinLTO the decisions
+  // are recorded in the summary entries.
+  DenseSet<const ContextNode *> Visited;
+  for (auto &Entry : AllocationCallToContextNodeMap)
+    UpdateCalls(Entry.second, Visited, UpdateCalls);
+
+  return Changed;
+}
+
+static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
+    Function &F, unsigned NumClones, Module &M, OptimizationRemarkEmitter &ORE,
+    std::map<const Function *, SmallPtrSet<const GlobalAlias *, 1>>
+        &FuncToAliasMap) {
+  // The first "clone" is the original copy, we should only call this if we
+  // needed to create new clones.
+  assert(NumClones > 1);
+  SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> VMaps;
+  VMaps.reserve(NumClones - 1);
+  FunctionsClonedThinBackend++;
+  for (unsigned I = 1; I < NumClones; I++) {
+    VMaps.emplace_back(std::make_unique<ValueToValueMapTy>());
+    auto *NewF = CloneFunction(&F, *VMaps.back());
+    FunctionClonesThinBackend++;
+    // Strip memprof and callsite metadata from clone as they are no longer
+    // needed.
+    for (auto &BB : *NewF) {
+      for (auto &Inst : BB) {
+        Inst.setMetadata(LLVMContext::MD_memprof, nullptr);
+        Inst.setMetadata(LLVMContext::MD_callsite, nullptr);
+      }
+    }
+    std::string Name = getMemProfFuncName(F.getName(), I);
+    auto *PrevF = M.getFunction(Name);
+    if (PrevF) {
+      // We might have created this when adjusting callsite in another
+      // function. It should be a declaration.
+      assert(PrevF->isDeclaration());
+      NewF->takeName(PrevF);
+      PrevF->replaceAllUsesWith(NewF);
+      PrevF->eraseFromParent();
+    } else
+      NewF->setName(Name);
+    ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
+             << "created clone " << ore::NV("NewFunction", NewF));
+
+    // Now handle aliases to this function, and clone those as well.
+    if (!FuncToAliasMap.count(&F))
+      continue;
+    for (auto *A : FuncToAliasMap[&F]) {
+      std::string Name = getMemProfFuncName(A->getName(), I);
+      auto *PrevA = M.getNamedAlias(Name);
+      auto *NewA = GlobalAlias::create(A->getValueType(),
+                                       A->getType()->getPointerAddressSpace(),
+                                       A->getLinkage(), Name, NewF);
+      NewA->copyAttributesFrom(A);
+      if (PrevA) {
+        // We might have created this when adjusting callsite in another
+        // function. It should be a declaration.
+        assert(PrevA->isDeclaration());
+        NewA->takeName(PrevA);
+        PrevA->replaceAllUsesWith(NewA);
+        PrevA->eraseFromParent();
+      }
+    }
+  }
+  return VMaps;
+}
+
+// Locate the summary for F. This is complicated by the fact that it might
+// have been internalized or promoted.
+static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
+                                      const ModuleSummaryIndex *ImportSummary) {
+  // FIXME: Ideally we would retain the original GUID in some fashion on the
+  // function (e.g. as metadata), but for now do our best to locate the
+  // summary without that information.
+  ValueInfo TheFnVI = ImportSummary->getValueInfo(F.getGUID());
+  if (!TheFnVI)
+    // See if theFn was internalized, by checking index directly with
+    // original name (this avoids the name adjustment done by getGUID() for
+    // internal symbols).
+    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(F.getName()));
+  if (TheFnVI)
+    return TheFnVI;
+  // Now query with the original name before any promotion was performed.
+  StringRef OrigName =
+      ModuleSummaryIndex::getOriginalNameBeforePromote(F.getName());
+  std::string OrigId = GlobalValue::getGlobalIdentifier(
+      OrigName, GlobalValue::InternalLinkage, M.getSourceFileName());
+  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  if (TheFnVI)
+    return TheFnVI;
+  // Could be a promoted local imported from another module. We need to pass
+  // down more info here to find the original module id. For now, try with
+  // the OrigName which might have been stored in the OidGuidMap in the
+  // index. This would not work if there were same-named locals in multiple
+  // modules, however.
+  auto OrigGUID =
+      ImportSummary->getGUIDFromOriginalID(GlobalValue::getGUID(OrigName));
+  if (OrigGUID)
+    TheFnVI = ImportSummary->getValueInfo(OrigGUID);
+  return TheFnVI;
+}
+
+bool MemProfContextDisambiguation::applyImport(Module &M) {
+  assert(ImportSummary);
+  bool Changed = false;
+
+  auto IsMemProfClone = [](const Function &F) {
+    return F.getName().contains(MemProfCloneSuffix);
+  };
+
+  // We also need to clone any aliases that reference cloned functions, because
+  // the modified callsites may invoke via the alias. Keep track of the aliases
+  // for each function.
+  std::map<const Function *, SmallPtrSet<const GlobalAlias *, 1>>
+      FuncToAliasMap;
+  for (auto &A : M.aliases()) {
+    auto *Aliasee = A.getAliaseeObject();
+    if (auto *F = dyn_cast<Function>(Aliasee))
+      FuncToAliasMap[F].insert(&A);
+  }
+
+  for (auto &F : M) {
+    if (F.isDeclaration() || IsMemProfClone(F))
+      continue;
+
+    OptimizationRemarkEmitter ORE(&F);
+
+    SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> VMaps;
+    bool ClonesCreated = false;
+    unsigned NumClonesCreated = 0;
+    auto CloneFuncIfNeeded = [&](unsigned NumClones) {
+      // We should at least have version 0 which is the original copy.
+      assert(NumClones > 0);
+      // If only one copy needed use original.
+      if (NumClones == 1)
+        return;
+      // If we already performed cloning of this function, confirm that the
+      // requested number of clones matches (the thin link should ensure the
+      // number of clones for each constituent callsite is consistent within
+      // each function), before returning.
+      if (ClonesCreated) {
+        assert(NumClonesCreated == NumClones);
+        return;
+      }
+      VMaps = createFunctionClones(F, NumClones, M, ORE, FuncToAliasMap);
+      // The first "clone" is the original copy, which doesn't have a VMap.
+      assert(VMaps.size() == NumClones - 1);
+      Changed = true;
+      ClonesCreated = true;
+      NumClonesCreated = NumClones;
+    };
+
+    // Locate the summary for F.
+    ValueInfo TheFnVI = findValueInfoForFunc(F, M, ImportSummary);
+    // If not found, this could be an imported local (see comment in
+    // findValueInfoForFunc). Skip for now as it will be cloned in its original
+    // module (where it would have been promoted to global scope so should
+    // satisfy any reference in this module).
+    if (!TheFnVI)
+      continue;
+
+    auto *GVSummary =
+        ImportSummary->findSummaryInModule(TheFnVI, M.getModuleIdentifier());
+    if (!GVSummary)
+      // Must have been imported, use the first summary (might be multiple if
+      // this was a linkonce_odr).
+      GVSummary = TheFnVI.getSummaryList().front().get();
+
+    // If this was an imported alias skip it as we won't have the function
+    // summary, and it should be cloned in the original module.
+    if (isa<AliasSummary>(GVSummary))
+      continue;
+
+    auto *FS = cast<FunctionSummary>(GVSummary->getBaseObject());
+
+    if (FS->allocs().empty() && FS->callsites().empty())
+      continue;
+
+    auto SI = FS->callsites().begin();
+    auto AI = FS->allocs().begin();
+
+    // Assume for now that the instructions are in the exact same order
+    // as when the summary was created, but confirm this is correct by
+    // matching the stack ids.
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto *CB = dyn_cast<CallBase>(&I);
+        // Same handling as when creating module summary.
+        if (!mayHaveMemprofSummary(CB))
+          continue;
+
+        CallStack<MDNode, MDNode::op_iterator> CallsiteContext(
+            I.getMetadata(LLVMContext::MD_callsite));
+        auto *MemProfMD = I.getMetadata(LLVMContext::MD_memprof);
+
+        // Include allocs that were already assigned a memprof function
+        // attribute in the statistics.
+        if (CB->getAttributes().hasFnAttr("memprof")) {
+          assert(!MemProfMD);
+          CB->getAttributes().getFnAttr("memprof").getValueAsString() == "cold"
+              ? AllocTypeColdThinBackend++
+              : AllocTypeNotColdThinBackend++;
+          OrigAllocsThinBackend++;
+          AllocVersionsThinBackend++;
+          if (!MaxAllocVersionsThinBackend)
+            MaxAllocVersionsThinBackend = 1;
+          // Remove any remaining callsite metadata and we can skip the rest of
+          // the handling for this instruction, since no cloning needed.
+          I.setMetadata(LLVMContext::MD_callsite, nullptr);
+          continue;
+        }
+
+        if (MemProfMD) {
+          // Consult the next alloc node.
+          assert(AI != FS->allocs().end());
+          auto &AllocNode = *(AI++);
+
+          // Sanity check that the MIB stack ids match between the summary and
+          // instruction metadata.
+          auto MIBIter = AllocNode.MIBs.begin();
+          for (auto &MDOp : MemProfMD->operands()) {
+            assert(MIBIter != AllocNode.MIBs.end());
+            LLVM_ATTRIBUTE_UNUSED auto StackIdIndexIter =
+                MIBIter->StackIdIndices.begin();
+            auto *MIBMD = cast<const MDNode>(MDOp);
+            MDNode *StackMDNode = getMIBStackNode(MIBMD);
+            assert(StackMDNode);
+            SmallVector<unsigned> StackIdsFromMetadata;
+            CallStack<MDNode, MDNode::op_iterator> StackContext(StackMDNode);
+            for (auto ContextIter =
+                     StackContext.beginAfterSharedPrefix(CallsiteContext);
+                 ContextIter != StackContext.end(); ++ContextIter) {
+              // If this is a direct recursion, simply skip the duplicate
+              // entries, to be consistent with how the summary ids were
+              // generated during ModuleSummaryAnalysis.
+              if (!StackIdsFromMetadata.empty() &&
+                  StackIdsFromMetadata.back() == *ContextIter)
+                continue;
+              assert(StackIdIndexIter != MIBIter->StackIdIndices.end());
+              assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
+                     *ContextIter);
+              StackIdIndexIter++;
+            }
+            MIBIter++;
+          }
+
+          // Perform cloning if not yet done.
+          CloneFuncIfNeeded(/*NumClones=*/AllocNode.Versions.size());
+
+          OrigAllocsThinBackend++;
+          AllocVersionsThinBackend += AllocNode.Versions.size();
+          if (MaxAllocVersionsThinBackend < AllocNode.Versions.size())
+            MaxAllocVersionsThinBackend = AllocNode.Versions.size();
+
+          // If there is only one version that means we didn't end up
+          // considering this function for cloning, and in that case the alloc
+          // will still be none type or should have gotten the default NotCold.
+          // Skip that after calling clone helper since that does some sanity
+          // checks that confirm we haven't decided yet that we need cloning.
+          if (AllocNode.Versions.size() == 1) {
+            assert((AllocationType)AllocNode.Versions[0] ==
+                       AllocationType::NotCold ||
+                   (AllocationType)AllocNode.Versions[0] ==
+                       AllocationType::None);
+            UnclonableAllocsThinBackend++;
+            continue;
+          }
+
+          // All versions should have a singular allocation type.
+          assert(llvm::none_of(AllocNode.Versions, [](uint8_t Type) {
+            return Type == ((uint8_t)AllocationType::NotCold |
+                            (uint8_t)AllocationType::Cold);
+          }));
+
+          // Update the allocation types per the summary info.
+          for (unsigned J = 0; J < AllocNode.Versions.size(); J++) {
+            // Ignore any that didn't get an assigned allocation type.
+            if (AllocNode.Versions[J] == (uint8_t)AllocationType::None)
+              continue;
+            AllocationType AllocTy = (AllocationType)AllocNode.Versions[J];
+            AllocTy == AllocationType::Cold ? AllocTypeColdThinBackend++
+                                            : AllocTypeNotColdThinBackend++;
+            std::string AllocTypeString = getAllocTypeAttributeString(AllocTy);
+            auto A = llvm::Attribute::get(F.getContext(), "memprof",
+                                          AllocTypeString);
+            CallBase *CBClone;
+            // Copy 0 is the original function.
+            if (!J)
+              CBClone = CB;
+            else
+              // Since VMaps are only created for new clones, we index with
+              // clone J-1 (J==0 is the original clone and does not have a VMaps
+              // entry).
+              CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            CBClone->addFnAttr(A);
+            ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CBClone)
+                     << ore::NV("AllocationCall", CBClone) << " in clone "
+                     << ore::NV("Caller", CBClone->getFunction())
+                     << " marked with memprof allocation attribute "
+                     << ore::NV("Attribute", AllocTypeString));
+          }
+        } else if (!CallsiteContext.empty()) {
+          // Consult the next callsite node.
+          assert(SI != FS->callsites().end());
+          auto &StackNode = *(SI++);
+
+#ifndef NDEBUG
+          // Sanity check that the stack ids match between the summary and
+          // instruction metadata.
+          auto StackIdIndexIter = StackNode.StackIdIndices.begin();
+          for (auto StackId : CallsiteContext) {
+            assert(StackIdIndexIter != StackNode.StackIdIndices.end());
+            assert(ImportSummary->getStackIdAtIndex(*StackIdIndexIter) ==
+                   StackId);
+            StackIdIndexIter++;
+          }
+#endif
+
+          // Perform cloning if not yet done.
+          CloneFuncIfNeeded(/*NumClones=*/StackNode.Clones.size());
+
+          // Should have skipped indirect calls via mayHaveMemprofSummary.
+          assert(CB->getCalledFunction());
+          assert(!IsMemProfClone(*CB->getCalledFunction()));
+
+          // Update the calls per the summary info.
+          // Save orig name since it gets updated in the first iteration
+          // below.
+          auto CalleeOrigName = CB->getCalledFunction()->getName();
+          for (unsigned J = 0; J < StackNode.Clones.size(); J++) {
+            // Do nothing if this version calls the original version of its
+            // callee.
+            if (!StackNode.Clones[J])
+              continue;
+            auto NewF = M.getOrInsertFunction(
+                getMemProfFuncName(CalleeOrigName, StackNode.Clones[J]),
+                CB->getCalledFunction()->getFunctionType());
+            CallBase *CBClone;
+            // Copy 0 is the original function.
+            if (!J)
+              CBClone = CB;
+            else
+              CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
+            CBClone->setCalledFunction(NewF);
+            ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
+                     << ore::NV("Call", CBClone) << " in clone "
+                     << ore::NV("Caller", CBClone->getFunction())
+                     << " assigned to call function clone "
+                     << ore::NV("Callee", NewF.getCallee()));
+          }
+        }
+        // Memprof and callsite metadata on memory allocations no longer needed.
+        I.setMetadata(LLVMContext::MD_memprof, nullptr);
+        I.setMetadata(LLVMContext::MD_callsite, nullptr);
+      }
+    }
+  }
+
+  return Changed;
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -2165,21 +3169,70 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process() {
   if (ExportToDot)
     exportToDot("cloned");
 
-  return false;
-}
+  bool Changed = assignFunctions();
 
-bool MemProfContextDisambiguation::processModule(Module &M) {
-  bool Changed = false;
-
-  ModuleCallsiteContextGraph CCG(M);
-  Changed = CCG.process();
+  if (DumpCCG) {
+    dbgs() << "CCG after assigning function clones:\n";
+    dbgs() << *this;
+  }
+  if (ExportToDot)
+    exportToDot("clonefuncassign");
 
   return Changed;
 }
 
+bool MemProfContextDisambiguation::processModule(
+    Module &M,
+    function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter) {
+
+  // If we have an import summary, then the cloning decisions were made during
+  // the thin link on the index. Apply them and return.
+  if (ImportSummary)
+    return applyImport(M);
+
+  ModuleCallsiteContextGraph CCG(M, OREGetter);
+  return CCG.process();
+}
+
+MemProfContextDisambiguation::MemProfContextDisambiguation(
+    const ModuleSummaryIndex *Summary)
+    : ImportSummary(Summary) {
+  if (ImportSummary) {
+    // The MemProfImportSummary should only be used for testing ThinLTO
+    // distributed backend handling via opt, in which case we don't have a
+    // summary from the pass pipeline.
+    assert(MemProfImportSummary.empty());
+    return;
+  }
+  if (MemProfImportSummary.empty())
+    return;
+
+  auto ReadSummaryFile =
+      errorOrToExpected(MemoryBuffer::getFile(MemProfImportSummary));
+  if (!ReadSummaryFile) {
+    logAllUnhandledErrors(ReadSummaryFile.takeError(), errs(),
+                          "Error loading file '" + MemProfImportSummary +
+                              "': ");
+    return;
+  }
+  auto ImportSummaryForTestingOrErr = getModuleSummaryIndex(**ReadSummaryFile);
+  if (!ImportSummaryForTestingOrErr) {
+    logAllUnhandledErrors(ImportSummaryForTestingOrErr.takeError(), errs(),
+                          "Error parsing file '" + MemProfImportSummary +
+                              "': ");
+    return;
+  }
+  ImportSummaryForTesting = std::move(*ImportSummaryForTestingOrErr);
+  ImportSummary = ImportSummaryForTesting.get();
+}
+
 PreservedAnalyses MemProfContextDisambiguation::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
-  if (!processModule(M))
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto OREGetter = [&](Function *F) -> OptimizationRemarkEmitter & {
+    return FAM.getResult<OptimizationRemarkEmitterAnalysis>(*F);
+  };
+  if (!processModule(M, OREGetter))
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }

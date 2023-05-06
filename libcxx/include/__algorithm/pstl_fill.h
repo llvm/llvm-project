@@ -15,13 +15,14 @@
 #include <__pstl/internal/parallel_impl.h>
 #include <__pstl/internal/unseq_backend_simd.h>
 #include <__type_traits/is_execution_policy.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/terminate_on_exception.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 17
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -66,6 +67,6 @@ fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _SizeT __n, const 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 17
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___ALGORITHM_PSTL_FILL_H

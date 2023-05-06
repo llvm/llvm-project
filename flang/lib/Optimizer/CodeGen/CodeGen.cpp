@@ -3283,7 +3283,7 @@ struct ZeroOpConversion : public FIROpConversion<fir::ZeroOp> {
       rewriter.replaceOpWithNewOp<mlir::LLVM::NullOp>(zero, ty);
     } else if (ty.isa<mlir::IntegerType>()) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
-          zero, ty, mlir::IntegerAttr::get(zero.getType(), 0));
+          zero, ty, mlir::IntegerAttr::get(ty, 0));
     } else if (mlir::LLVM::isCompatibleFloatingPointType(ty)) {
       rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
           zero, ty, mlir::FloatAttr::get(zero.getType(), 0.0));

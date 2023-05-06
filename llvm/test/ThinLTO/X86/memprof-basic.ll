@@ -42,18 +42,49 @@
 ; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:	-stats -pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:	--check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS
 
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
+
+
+;; Try again but with distributed ThinLTO
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:  -thinlto-distributed-indexes \
+; RUN:	-r=%t.o,main,plx \
+; RUN:	-r=%t.o,_ZdaPv, \
+; RUN:	-r=%t.o,sleep, \
+; RUN:	-r=%t.o,_Znam, \
+; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
+; RUN:	-stats -pass-remarks=memprof-context-disambiguation \
+; RUN:	-o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:	--check-prefix=STATS
+
+; RUN:	cat %t2.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
+;; We should have cloned bar, baz, and foo, for the cold memory allocation.
+; RUN:	cat %t2.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+
+;; Check distributed index
+; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DISTRIB
+
+;; Run ThinLTO backend
+; RUN: opt -passes=memprof-context-disambiguation \
+; RUN:	-memprof-import-summary=%t.o.thinlto.bc \
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %t.o -S 2>&1 | FileCheck %s --check-prefix=IR \
+; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS
 
 source_filename = "memprof-basic.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @main() {
+define i32 @main() #0 {
 entry:
   %call = call ptr @_Z3foov(), !callsite !0
   %call1 = call ptr @_Z3foov(), !callsite !1
@@ -64,7 +95,7 @@ declare void @_ZdaPv()
 
 declare i32 @sleep()
 
-define internal ptr @_Z3barv() {
+define internal ptr @_Z3barv() #0 {
 entry:
   %call = call ptr @_Znam(i64 0), !memprof !2, !callsite !7
   ret ptr null
@@ -72,13 +103,13 @@ entry:
 
 declare ptr @_Znam(i64)
 
-define internal ptr @_Z3bazv() {
+define internal ptr @_Z3bazv() #0 {
 entry:
   %call = call ptr @_Z3barv(), !callsite !8
   ret ptr null
 }
 
-define internal ptr @_Z3foov() {
+define internal ptr @_Z3foov() #0 {
 entry:
   %call = call ptr @_Z3bazv(), !callsite !9
   ret ptr null
@@ -86,6 +117,8 @@ entry:
 
 ; uselistorder directives
 uselistorder ptr @_Z3foov, { 1, 0 }
+
+attributes #0 = { noinline optnone }
 
 !0 = !{i64 8632435727821051414}
 !1 = !{i64 -3421689549917153178}
@@ -230,6 +263,52 @@ uselistorder ptr @_Z3foov, { 1, 0 }
 ; DUMP:		Clone of [[BAR]]
 
 
+; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
+; REMARKS: created clone _Z3barv.memprof.1
+; REMARKS: call in clone _Z3barv marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z3barv.memprof.1 marked with memprof allocation attribute cold
+; REMARKS: created clone _Z3bazv.memprof.1
+; REMARKS: call in clone _Z3bazv.memprof.1 assigned to call function clone _Z3barv.memprof.1
+; REMARKS: created clone _Z3foov.memprof.1
+; REMARKS: call in clone _Z3foov.memprof.1 assigned to call function clone _Z3bazv.memprof.1
+
+
+; IR: define {{.*}} @main
+;; The first call to foo does not allocate cold memory. It should call the
+;; original functions, which ultimately call the original allocation decorated
+;; with a "notcold" attribute.
+; IR:   call {{.*}} @_Z3foov()
+;; The second call to foo allocates cold memory. It should call cloned functions
+;; which ultimately call a cloned allocation decorated with a "cold" attribute.
+; IR:   call {{.*}} @_Z3foov.memprof.1()
+; IR: define internal {{.*}} @_Z3barv()
+; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z3bazv()
+; IR:   call {{.*}} @_Z3barv()
+; IR: define internal {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Z3bazv()
+; IR: define internal {{.*}} @_Z3barv.memprof.1()
+; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z3bazv.memprof.1()
+; IR:   call {{.*}} @_Z3barv.memprof.1()
+; IR: define internal {{.*}} @_Z3foov.memprof.1()
+; IR:   call {{.*}} @_Z3bazv.memprof.1()
+; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { "memprof"="cold" }
+
+
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE: 2 memprof-context-disambiguation - Number of allocation versions (including clones) during ThinLTO backend
+; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS-BE: 3 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
+; STATS-BE: 3 memprof-context-disambiguation - Number of functions that had clones created during ThinLTO backend
+; STATS-BE: 2 memprof-context-disambiguation - Maximum number of allocation versions created for an original allocation during ThinLTO backend
+; STATS-BE: 1 memprof-context-disambiguation - Number of original (not cloned) allocations with memprof profiles during ThinLTO backend
+
+
 ; DOT: digraph "postbuild" {
 ; DOT: 	label="postbuild";
 ; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
@@ -261,3 +340,9 @@ uselistorder ptr @_Z3foov, { 1, 0 }
 ; DOTCLONED: 	Node[[BAZ2]] -> Node[[BAR2:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan"];
 ; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",style="filled",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
 ; DOTCLONED: }
+
+
+; DISTRIB: ^[[BAZ:[0-9]+]] = gv: (guid: 5878270615442837395, {{.*}} callsites: ((callee: ^[[BAR:[0-9]+]], clones: (0, 1)
+; DISTRIB: ^[[FOO:[0-9]+]] = gv: (guid: 6731117468105397038, {{.*}} callsites: ((callee: ^[[BAZ]], clones: (0, 1)
+; DISTRIB: ^[[BAR]] = gv: (guid: 9832687305761716512, {{.*}} allocs: ((versions: (notcold, cold)
+; DISTRIB: ^[[MAIN:[0-9]+]] = gv: (guid: 15822663052811949562, {{.*}} callsites: ((callee: ^[[FOO]], clones: (0), {{.*}} (callee: ^[[FOO]], clones: (1)

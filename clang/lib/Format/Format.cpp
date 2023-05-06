@@ -3485,7 +3485,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     if (Style.InsertBraces) {
       FormatStyle S = Expanded;
       S.InsertBraces = true;
-      Passes.emplace_back([&, S](const Environment &Env) {
+      Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
         return BracesInserter(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
@@ -3493,7 +3493,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     if (Style.RemoveBracesLLVM) {
       FormatStyle S = Expanded;
       S.RemoveBracesLLVM = true;
-      Passes.emplace_back([&, S](const Environment &Env) {
+      Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
         return BracesRemover(Env, S).process(/*SkipAnnotation=*/true);
       });
     }
@@ -3501,7 +3501,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     if (Style.RemoveSemicolon) {
       FormatStyle S = Expanded;
       S.RemoveSemicolon = true;
-      Passes.emplace_back([&, S](const Environment &Env) {
+      Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
         return SemiRemover(Env, S).process(/*SkipAnnotation=*/true);
       });
     }

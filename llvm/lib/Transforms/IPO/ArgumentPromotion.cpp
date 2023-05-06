@@ -764,15 +764,6 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     if (CB->isMustTailCall())
       return nullptr;
 
-    // If the caller is marked minsize, this transformation may increase code
-    // size. We assume that there is more than one call to this function since
-    // otherwise this function would be inlined or is dead.
-    // TODO: compare the number of loads/stores removed from the function with
-    // the number of introduced loads in callees to see if this is profitable
-    // code-size-wise.
-    if (CB->getFunction()->hasMinSize())
-      return nullptr;
-
     if (CB->getFunction() == F)
       IsRecursive = true;
   }
