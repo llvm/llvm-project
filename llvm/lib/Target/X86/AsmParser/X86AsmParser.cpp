@@ -2656,6 +2656,10 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
       }
     }
   } else if (IsUnconditionalBranch) {
+    // Treat `call [offset fn_ref]` (or `jmp`) syntax as an error.
+    if (!PtrInOperand && SM.isOffsetOperator())
+      return Error(
+          Start, "`OFFSET` operator cannot be used in an unconditional branch");
     if (PtrInOperand || SM.isBracketUsed())
       MaybeDirectBranchDest = false;
   }

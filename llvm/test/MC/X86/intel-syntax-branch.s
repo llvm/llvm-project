@@ -61,6 +61,11 @@ jmp [fn_ref]
 
 .ifdef ERR
 
+  call [offset fn_ref]
+  // ERR-32: {{.*}}.s:[[#@LINE-1]]:8: error: `OFFSET` operator cannot be used in an unconditional branch
+  jmp [offset fn_ref]
+  // ERR-32: {{.*}}.s:[[#@LINE-1]]:7: error: `OFFSET` operator cannot be used in an unconditional branch
+
   call offset fn_ref
   // ERR-32: {{.*}}.s:[[#@LINE-1]]:3: error: invalid operand for instruction
   jmp offset fn_ref
