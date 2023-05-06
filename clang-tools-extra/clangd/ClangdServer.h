@@ -145,8 +145,9 @@ public:
 
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
-    /// If None, ClangdServer calls CompilerInvocation::GetResourcePath() to
-    /// obtain the standard resource directory.
+    /// If std::nullopt, ClangdServer calls
+    /// CompilerInvocation::GetResourcePath() to obtain the standard resource
+    /// directory.
     std::optional<std::string> ResourceDir;
 
     /// Time to wait after a new file version before computing diagnostics.

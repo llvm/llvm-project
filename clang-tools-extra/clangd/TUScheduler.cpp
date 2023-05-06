@@ -740,8 +740,8 @@ private:
   mutable std::condition_variable RequestsCV;
   std::shared_ptr<const ASTSignals> LatestASTSignals; /* GUARDED_BY(Mutex) */
   /// Latest build preamble for current TU.
-  /// None means no builds yet, null means there was an error while building.
-  /// Only written by ASTWorker's thread.
+  /// std::nullopt means no builds yet, null means there was an error while
+  /// building. Only written by ASTWorker's thread.
   std::optional<std::shared_ptr<const PreambleData>> LatestPreamble;
   std::deque<Request> PreambleRequests; /* GUARDED_BY(Mutex) */
   /// Signaled whenever LatestPreamble changes state or there's a new
