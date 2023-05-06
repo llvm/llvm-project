@@ -129,10 +129,15 @@ class TargetWatchAddressAPITestCase(TestBase):
             "pointee",
             value.GetValueAsUnsigned(0),
             value.GetType().GetPointeeType())
-        # Watch for write to *g_char_ptr.
-        error = lldb.SBError()
-        watchpoint = target.WatchAddress(
-            value.GetValueAsUnsigned(), 365, False, True, error)
-        self.assertFalse(watchpoint)
-        self.expect(error.GetCString(), exe=False,
-                    substrs=['watch size of %d is not supported' % 365])
+
+        # debugserver on Darwin AArch64 systems can watch large regions
+        # of memory via https://reviews.llvm.org/D149792 , don't run this
+        # test there.
+        if self.getArchitecture() not in ['arm64', 'arm64e', 'arm64_32']:
+          # Watch for write to *g_char_ptr.
+          error = lldb.SBError()
+          watchpoint = target.WatchAddress(
+              value.GetValueAsUnsigned(), 365, False, True, error)
+          self.assertFalse(watchpoint)
+          self.expect(error.GetCString(), exe=False,
+                      substrs=['watch size of %d is not supported' % 365])
