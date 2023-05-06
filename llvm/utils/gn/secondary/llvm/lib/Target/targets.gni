@@ -16,6 +16,7 @@ llvm_all_stable_targets = [
   "BPF",
   "Hexagon",
   "Lanai",
+  "LoongArch",
   "Mips",
   "NVPTX",
   "PowerPC",
@@ -26,7 +27,7 @@ llvm_all_stable_targets = [
   "X86",
 ]
 
-llvm_all_experimental_targets = [ "LoongArch" ]
+llvm_all_experimental_targets = []
 
 llvm_all_targets = llvm_all_stable_targets + llvm_all_experimental_targets
 
