@@ -105,10 +105,12 @@ bool DataSharingProcessor::process() {
   insPt = firOpBuilder.saveInsertionPoint();
   collectSymbolsForPrivatization();
   insertLastPrivateCompare(op);
-  if (mlir::isa<mlir::omp::SectionOp>(op))
-    firOpBuilder.setInsertionPointToStart(&op->getRegion(0).back());
-  else
+  if (mlir::isa<mlir::omp::SectionOp>(op)) {
+    if (!eval.lowerAsUnstructured())
+      firOpBuilder.setInsertionPointToStart(&op->getRegion(0).back());
+  } else {
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+  }
   privatize();
   collectDefaultSymbols();
   defaultPrivatize();
@@ -233,40 +235,53 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           // a dedicated sub-region in `omp.section` where
           // lastprivate FIR can reside. Later canonicalizations
           // will optimize away this operation.
+          if (!eval.lowerAsUnstructured()) {
+            auto ifOp = firOpBuilder.create<fir::IfOp>(
+                op->getLoc(),
+                firOpBuilder.createIntegerConstant(
+                    op->getLoc(), firOpBuilder.getIntegerType(1), 0x1),
+                /*else*/ false);
+            firOpBuilder.setInsertionPointToStart(
+                &ifOp.getThenRegion().front());
 
-          auto ifOp = firOpBuilder.create<fir::IfOp>(
-              op->getLoc(),
-              firOpBuilder.createIntegerConstant(
-                  op->getLoc(), firOpBuilder.getIntegerType(1), 0x1),
-              /*else*/ false);
-          firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-
-          const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
-              eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
-          assert(parentOmpConstruct &&
-                 "Expected a valid enclosing OpenMP construct");
-          const Fortran::parser::OpenMPSectionsConstruct *sectionsConstruct =
-              std::get_if<Fortran::parser::OpenMPSectionsConstruct>(
-                  &parentOmpConstruct->u);
-          assert(sectionsConstruct &&
-                 "Expected an enclosing omp.sections construct");
-          const Fortran::parser::OmpClauseList &sectionsEndClauseList =
-              std::get<Fortran::parser::OmpClauseList>(
-                  std::get<Fortran::parser::OmpEndSectionsDirective>(
-                      sectionsConstruct->t)
-                      .t);
-          for (const Fortran::parser::OmpClause &otherClause :
-               sectionsEndClauseList.v)
-            if (std::get_if<Fortran::parser::OmpClause::Nowait>(&otherClause.u))
-              // Emit implicit barrier to synchronize threads and avoid data
-              // races on post-update of lastprivate variables when `nowait`
-              // clause is present.
-              firOpBuilder.create<mlir::omp::BarrierOp>(
-                  converter.getCurrentLocation());
-          firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-          lastPrivIP = firOpBuilder.saveInsertionPoint();
-          firOpBuilder.setInsertionPoint(ifOp);
-          insPt = firOpBuilder.saveInsertionPoint();
+            const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
+                eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
+            assert(parentOmpConstruct &&
+                   "Expected a valid enclosing OpenMP construct");
+            const Fortran::parser::OpenMPSectionsConstruct *sectionsConstruct =
+                std::get_if<Fortran::parser::OpenMPSectionsConstruct>(
+                    &parentOmpConstruct->u);
+            assert(sectionsConstruct &&
+                   "Expected an enclosing omp.sections construct");
+            const Fortran::parser::OmpClauseList &sectionsEndClauseList =
+                std::get<Fortran::parser::OmpClauseList>(
+                    std::get<Fortran::parser::OmpEndSectionsDirective>(
+                        sectionsConstruct->t)
+                        .t);
+            for (const Fortran::parser::OmpClause &otherClause :
+                 sectionsEndClauseList.v)
+              if (std::get_if<Fortran::parser::OmpClause::Nowait>(
+                      &otherClause.u))
+                // Emit implicit barrier to synchronize threads and avoid data
+                // races on post-update of lastprivate variables when `nowait`
+                // clause is present.
+                firOpBuilder.create<mlir::omp::BarrierOp>(
+                    converter.getCurrentLocation());
+            firOpBuilder.setInsertionPointToStart(
+                &ifOp.getThenRegion().front());
+            lastPrivIP = firOpBuilder.saveInsertionPoint();
+            firOpBuilder.setInsertionPoint(ifOp);
+            insPt = firOpBuilder.saveInsertionPoint();
+          } else {
+            // Lastprivate operation is inserted at the end
+            // of the lexically last section in the sections
+            // construct
+            mlir::OpBuilder::InsertPoint unstructuredSectionsIP =
+                firOpBuilder.saveInsertionPoint();
+            firOpBuilder.setInsertionPointToStart(&op->getRegion(0).back());
+            lastPrivIP = firOpBuilder.saveInsertionPoint();
+            firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
+          }
         }
       } else if (mlir::isa<omp::WsLoopOp>(op)) {
         mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
