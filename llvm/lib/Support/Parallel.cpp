@@ -185,8 +185,12 @@ Executor *Executor::getDefaultExecutor() {
 // lock, only allow the root TaskGroup to run tasks parallelly. In the scenario
 // of nested parallel_for_each(), only the outermost one runs parallelly.
 TaskGroup::TaskGroup()
+#if LLVM_ENABLE_THREADS
     : Parallel((parallel::strategy.ThreadsRequested != 1) &&
                (threadIndex == UINT_MAX)) {}
+#else
+    : Parallel(false) {}
+#endif
 TaskGroup::~TaskGroup() {
   // We must ensure that all the workloads have finished before decrementing the
   // instances count.

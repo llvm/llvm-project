@@ -103,6 +103,7 @@ TEST(Parallel, TaskGroupSequentialFor) {
   EXPECT_EQ(Count, 500ul);
 }
 
+#if LLVM_ENABLE_THREADS
 TEST(Parallel, NestedTaskGroup) {
   // This test checks:
   // 1. Root TaskGroup is in Parallel mode.
@@ -128,7 +129,6 @@ TEST(Parallel, NestedTaskGroup) {
   });
 }
 
-#if LLVM_ENABLE_THREADS
 TEST(Parallel, ParallelNestedTaskGroup) {
   // This test checks that it is possible to have several TaskGroups
   // run from different threads in Parallel mode.
