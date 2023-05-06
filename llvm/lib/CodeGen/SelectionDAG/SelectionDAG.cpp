@@ -3949,7 +3949,7 @@ SelectionDAG::computeOverflowForSignedAdd(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  // If bother operands each have at least two sign bits, the addition
+  // If both operands each have at least two sign bits, the addition
   // cannot overflow.
   if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
     return OFK_Never;
