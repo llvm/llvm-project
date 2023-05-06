@@ -65,7 +65,7 @@ program main
   end type
 
   type, bind(c) :: t10
-    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    !WARNING: A CHARACTER component of a BIND(C) type should have length 1
     character(len=2) x
   end type
   type, bind(c) :: t11
@@ -73,7 +73,7 @@ program main
     character(kind=2) x
   end type
   type, bind(c) :: t12
-    !ERROR: Each component of an interoperable derived type must have an interoperable type
+    !PORTABILITY: A LOGICAL component of a BIND(C) type should have the interoperable KIND=C_BOOL
     logical(kind=8) x
   end type
   type, bind(c) :: t13
