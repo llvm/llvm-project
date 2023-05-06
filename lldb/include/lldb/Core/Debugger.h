@@ -273,7 +273,7 @@ public:
 
   const FormatEntity::Entry *GetFrameFormatUnique() const;
 
-  uint32_t GetStopDisassemblyMaxSize() const;
+  uint64_t GetStopDisassemblyMaxSize() const;
 
   const FormatEntity::Entry *GetThreadFormat() const;
 
@@ -287,7 +287,7 @@ public:
 
   bool SetREPLLanguage(lldb::LanguageType repl_lang);
 
-  uint32_t GetTerminalWidth() const;
+  uint64_t GetTerminalWidth() const;
 
   bool SetTerminalWidth(uint32_t term_width);
 
@@ -333,11 +333,11 @@ public:
 
   llvm::StringRef GetStopShowColumnAnsiSuffix() const;
 
-  uint32_t GetStopSourceLineCount(bool before) const;
+  uint64_t GetStopSourceLineCount(bool before) const;
 
   StopDisassemblyType GetStopDisassemblyDisplay() const;
 
-  uint32_t GetDisassemblyLineCount() const;
+  uint64_t GetDisassemblyLineCount() const;
 
   llvm::StringRef GetStopShowLineMarkerAnsiPrefix() const;
 
@@ -353,7 +353,7 @@ public:
 
   bool SetPrintDecls(bool b);
 
-  uint32_t GetTabSize() const;
+  uint64_t GetTabSize() const;
 
   bool SetTabSize(uint32_t tab_size);
 

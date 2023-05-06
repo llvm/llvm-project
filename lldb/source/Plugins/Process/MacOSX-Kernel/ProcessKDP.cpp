@@ -78,8 +78,8 @@ public:
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyKDPPacketTimeout;
-    return m_collection_sp->GetPropertyAtIndexAsUInt64(idx).value_or(
-        g_processkdp_properties[idx].default_uint_value);
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_processkdp_properties[idx].default_uint_value);
   }
 };
 
