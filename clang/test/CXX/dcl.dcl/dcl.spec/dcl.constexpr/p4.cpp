@@ -242,6 +242,7 @@ constexpr int f(enable_shared_from_this<int>);
 
 // - every constructor involved in initializing non-static data members and base
 //   class sub-objects shall be a constexpr constructor.
+// This will no longer be the case once we support P2448R2
 struct ConstexprBaseMemberCtors : Literal {
   Literal l;
 
