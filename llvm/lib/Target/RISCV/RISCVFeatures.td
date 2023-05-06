@@ -449,7 +449,7 @@ def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
 def FeatureStdExtZvfh
     : SubtargetFeature<"experimental-zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
-                       [FeatureStdExtZve32f]>;
+                       [FeatureStdExtZve32f, FeatureStdExtZfhmin]>;
 
 def HasStdExtZfhOrZvfh
     : Predicate<"Subtarget->hasStdExtZfh() || Subtarget->hasStdExtZvfh()">,

@@ -151,9 +151,7 @@ public:
   // Vector codegen related methods.
   bool hasVInstructions() const { return HasStdExtZve32x; }
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
-  bool hasVInstructionsF16() const {
-    return HasStdExtZvfh && hasStdExtZfhOrZfhmin();
-  }
+  bool hasVInstructionsF16() const { return HasStdExtZvfh; }
   // FIXME: Consider Zfinx in the future
   bool hasVInstructionsF32() const { return HasStdExtZve32f && HasStdExtF; }
   // FIXME: Consider Zdinx in the future
