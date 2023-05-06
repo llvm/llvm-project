@@ -95,6 +95,7 @@
 
 ; RUN: opt -thinlto-bc %s >%t.o
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
 ; RUN:  -r=%t.o,main,plx \
 ; RUN:  -r=%t.o,_Z1Db,plx \
 ; RUN:  -r=%t.o,_Z1Cb,plx \
