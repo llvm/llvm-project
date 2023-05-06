@@ -1250,7 +1250,7 @@ bool BinaryFunction::disassemble() {
         const bool IsCondBranch = MIB->isConditionalBranch(Instruction);
         MCSymbol *TargetSymbol = nullptr;
 
-        if (BC.MIB->isUnsupportedBranch(Instruction.getOpcode())) {
+        if (BC.MIB->isUnsupportedBranch(Instruction)) {
           setIgnored();
           if (BinaryFunction *TargetFunc =
                   BC.getBinaryFunctionContainingAddress(TargetAddress))
@@ -3262,8 +3262,7 @@ void BinaryFunction::fixBranches() {
       const BinaryBasicBlock *TSuccessor = BB->getConditionalSuccessor(true);
       const BinaryBasicBlock *FSuccessor = BB->getConditionalSuccessor(false);
       // Check whether we support reversing this branch direction
-      const bool IsSupported =
-          !MIB->isUnsupportedBranch(CondBranch->getOpcode());
+      const bool IsSupported = !MIB->isUnsupportedBranch(*CondBranch);
       if (NextBB && NextBB == TSuccessor && IsSupported) {
         std::swap(TSuccessor, FSuccessor);
         {

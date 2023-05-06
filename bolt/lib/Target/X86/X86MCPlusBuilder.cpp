@@ -318,8 +318,8 @@ public:
     return false;
   }
 
-  bool isUnsupportedBranch(unsigned Opcode) const override {
-    switch (Opcode) {
+  bool isUnsupportedBranch(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
     default:
       return false;
     case X86::LOOP:
@@ -1860,8 +1860,7 @@ public:
       }
 
       // Handle conditional branches and ignore indirect branches
-      if (!isUnsupportedBranch(I->getOpcode()) &&
-          getCondCode(*I) == X86::COND_INVALID) {
+      if (!isUnsupportedBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
         // Indirect branch
         return false;
       }

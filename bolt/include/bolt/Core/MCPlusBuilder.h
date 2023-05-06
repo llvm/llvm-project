@@ -434,7 +434,7 @@ public:
   }
 
   /// Check whether we support inverting this branch
-  virtual bool isUnsupportedBranch(unsigned Opcode) const { return false; }
+  virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
 
   /// Return true of the instruction is of pseudo kind.
   bool isPseudo(const MCInst &Inst) const {
