@@ -1112,9 +1112,9 @@ INTERCEPTOR(int, __libc_thr_keycreate, __sanitizer_pthread_key_t *m,
 ALIAS(WRAPPER_NAME(pthread_key_create));
 #endif
 
-INTERCEPTOR(int, pthread_join, void *th, void **retval) {
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
   ENSURE_MSAN_INITED();
-  int res = REAL(pthread_join)(th, retval);
+  int res = REAL(pthread_join)(thread, retval);
   if (!res && retval)
     __msan_unpoison(retval, sizeof(*retval));
   return res;
