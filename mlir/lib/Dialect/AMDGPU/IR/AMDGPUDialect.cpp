@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -30,16 +30,16 @@
 using namespace mlir;
 using namespace mlir::amdgpu;
 
-#include "mlir/Dialect/AMDGPU/AMDGPUDialect.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
 void AMDGPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/AMDGPU/AMDGPU.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/AMDGPU/AMDGPUAttributes.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
       >();
 }
 
@@ -282,10 +282,10 @@ LogicalResult MFMAOp::verify() {
   return success();
 }
 
-#include "mlir/Dialect/AMDGPU/AMDGPUEnums.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/AMDGPU/AMDGPUAttributes.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/AMDGPU/AMDGPU.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
