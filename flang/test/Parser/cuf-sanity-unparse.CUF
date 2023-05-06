@@ -23,6 +23,7 @@ include "cuf-sanity-common"
 !CHECK:  ATTRIBUTES(GLOBAL) CLUSTER_DIMS(1_4, 2_4, 3_4) SUBROUTINE cdsub
 !CHECK:  END SUBROUTINE
 !CHECK:  ATTRIBUTES(DEVICE) SUBROUTINE attrs
+!CHECK:   ATTRIBUTES(DEVICE) devx1
 !CHECK:   REAL, DEVICE :: devx2
 !CHECK:  END SUBROUTINE
 !CHECK:  SUBROUTINE test
@@ -33,9 +34,9 @@ include "cuf-sanity-common"
 !CHECK:   !$CUF KERNEL DO <<<1_4,(2_4,3_4),STREAM=1_4>>>
 !CHECK:   DO j=1_4,10_4
 !CHECK:   END DO
-!CHECK:    CALL globalsub<<<1,2>>>
-!CHECK:    CALL globalsub<<<1,2,3>>>
-!CHECK:    CALL globalsub<<<1,2,3,4>>>
+!CHECK:    CALL globalsub<<<1_4,2_4>>>
+!CHECK:    CALL globalsub<<<1_4,2_4,3_4>>>
+!CHECK:    CALL globalsub<<<1_4,2_4,3_4,4_4>>>
 !CHECK:   ALLOCATE(pa(32_4), STREAM=1_4, PINNED=ispinned)
 !CHECK:  END SUBROUTINE
 !CHECK: END MODULE
