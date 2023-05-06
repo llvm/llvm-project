@@ -47,8 +47,8 @@ llvm::StringLiteral mandatoryHeader(Lang L) {
 
 LangStandard::Kind standardFromOpts(const LangOptions &LO) {
   if (LO.CPlusPlus) {
-    if (LO.CPlusPlus2b)
-      return LangStandard::lang_cxx2b;
+    if (LO.CPlusPlus23)
+      return LangStandard::lang_cxx23;
     if (LO.CPlusPlus20)
       return LangStandard::lang_cxx20;
     if (LO.CPlusPlus17)

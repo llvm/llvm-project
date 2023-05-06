@@ -1076,7 +1076,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
     // Check for C++1y 'decltype(auto)'.
     if (Tok.is(tok::kw_auto) && NextToken().is(tok::r_paren)) {
       // the typename-specifier in a function-style cast expression may
-      // be 'auto' since C++2b.
+      // be 'auto' since C++23.
       Diag(Tok.getLocation(),
            getLangOpts().CPlusPlus14
                ? diag::warn_cxx11_compat_decltype_auto_type_specifier

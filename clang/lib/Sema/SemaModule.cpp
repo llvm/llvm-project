@@ -255,7 +255,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     }
   }
 
-  // C++2b [module.unit]p1: ... The identifiers module and import shall not
+  // C++23 [module.unit]p1: ... The identifiers module and import shall not
   // appear as identifiers in a module-name or module-partition. All
   // module-names either beginning with an identifier consisting of std
   // followed by zero or more digits or containing a reserved identifier

@@ -312,7 +312,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
           << tok::r_brace;
     else if (!HadError) {
       Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           Features.CPlusPlus2b ? diag::warn_cxx2b_delimited_escape_sequence
+           Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
                                 : diag::ext_delimited_escape_sequence)
           << /*delimited*/ 0 << (Features.CPlusPlus ? 1 : 0);
     }
@@ -641,7 +641,7 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
 
   if ((IsDelimitedEscapeSequence || IsNamedEscapeSequence) && Diags)
     Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-         Features.CPlusPlus2b ? diag::warn_cxx2b_delimited_escape_sequence
+         Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
                               : diag::ext_delimited_escape_sequence)
         << (IsNamedEscapeSequence ? 1 : 0) << (Features.CPlusPlus ? 1 : 0);
 

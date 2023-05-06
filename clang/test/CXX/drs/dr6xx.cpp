@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 // RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
-// RUN: %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -fno-spell-checking
 
 namespace dr600 { // dr600: yes
 struct S {

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2b -verify=expected,cxx20_2b,cxx2b    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20_23,cxx23    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_23 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
@@ -20,8 +20,8 @@ namespace dr301 { // dr301: yes
   void f() {
     bool a = (void(*)(S, S))operator+<S> < // expected-warning {{ordered comparison of function pointers}}
              (void(*)(S, S))operator+<S>;
-    bool b = (void(*)(S, S))operator- < // cxx20_2b-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
-             (void(*)(S, S))operator-; // cxx20_2b-error {{expected '>'}}
+    bool b = (void(*)(S, S))operator- < // cxx20_23-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
+             (void(*)(S, S))operator-; // cxx20_23-error {{expected '>'}}
     bool c = (void(*)(S, S))operator+ < // expected-note {{to match this '<'}}
              (void(*)(S, S))operator-; // expected-error {{expected '>'}}
   }
@@ -459,10 +459,10 @@ namespace dr331 { // dr331: yes
 
 namespace dr332 { // dr332: dup 577
   void f(volatile void); // expected-error {{'void' as parameter must not have type qualifiers}}
-  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20_23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
   void g(const void); // expected-error {{'void' as parameter must not have type qualifiers}}
   void h(int n, volatile void); // expected-error {{'void' must be the first and only parameter}}
-  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20_23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
 }
 
 namespace dr333 { // dr333: yes
@@ -647,7 +647,7 @@ namespace dr349 { // dr349: no
     template <class T> operator T ***() {
       int ***p = 0;
       return p; // cxx98_20-error {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
-      // cxx2b-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
+      // cxx23-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
     }
   };
 
@@ -961,12 +961,12 @@ namespace dr368 { // dr368: yes
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
   template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'X'}}
-  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
+  // cxx20_23-note@-1 {{candidate function [with T = dr368::X]}}
   template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'X'}}
-  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
+  // cxx20_23-note@-1 {{candidate function [with T = dr368::X]}}
   struct X {};
   int n = g<X>(0); // cxx98_17-error {{no matching}}
-  // cxx20_2b-error@-1 {{call to 'g' is ambiguous}}
+  // cxx20_23-error@-1 {{call to 'g' is ambiguous}}
 }
 
 // dr370: na

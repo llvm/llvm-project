@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++23 -verify -fsyntax-only %s
 
 template <typename T, typename U>
 constexpr bool is_same = false;
