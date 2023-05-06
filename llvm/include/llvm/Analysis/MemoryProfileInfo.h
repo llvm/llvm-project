@@ -37,6 +37,9 @@ MDNode *getMIBStackNode(const MDNode *MIB);
 /// Returns the allocation type from an MIB metadata node.
 AllocationType getMIBAllocType(const MDNode *MIB);
 
+/// Returns the string to use in attributes with the given type.
+std::string getAllocTypeAttributeString(AllocationType Type);
+
 /// True if the AllocTypes bitmask contains just a single type.
 bool hasSingleAllocType(uint8_t AllocTypes);
 

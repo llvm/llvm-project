@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_OPTIONVALUE_H
 
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Cloneable.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
@@ -307,6 +308,10 @@ public:
 
   bool SetUUIDValue(const UUID &uuid);
 
+  std::optional<ArchSpec> GetArchSpecValue() const;
+
+  bool SetArchSpecValue(ArchSpec arch_spec);
+
   bool OptionWasSet() const { return m_value_was_set; }
 
   void SetOptionWasSet() { m_value_was_set = true; }
@@ -346,6 +351,8 @@ public:
       return GetLanguageValue();
     if constexpr (std::is_same_v<T, llvm::StringRef>)
       return GetStringValue();
+    if constexpr (std::is_same_v<T, ArchSpec>)
+      return GetArchSpecValue();
     if constexpr (std::is_enum_v<T>)
       if (std::optional<int64_t> value = GetEnumerationValue())
         return static_cast<T>(*value);
@@ -371,6 +378,8 @@ public:
   bool SetValueAs(lldb::LanguageType v) { return SetLanguageValue(v); }
 
   bool SetValueAs(FileSpec v) { return SetFileSpecValue(v); }
+
+  bool SetValueAs(ArchSpec v) { return SetArchSpecValue(v); }
 
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   bool SetValueAs(T t) {

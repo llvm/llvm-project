@@ -32,6 +32,11 @@
     ret void
   }
 
+  define void @fadd(double %v, double %p) {
+  entry:
+    ret void
+  }
+
   attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
 
 ...
@@ -395,4 +400,53 @@ body:             |
     RET_ReallyLR
 
 ...
+---
+name:            fadd
+alignment:       4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: fpr64, preferred-register: '' }
+  - { id: 1, class: fpr64, preferred-register: '' }
+  - { id: 2, class: fpr64, preferred-register: '' }
+  - { id: 3, class: fpr128, preferred-register: '' }
+  - { id: 4, class: fpr64, preferred-register: '' }
+  - { id: 5, class: fpr128, preferred-register: '' }
+  - { id: 6, class: fpr128, preferred-register: '' }
+  - { id: 7, class: fpr128, preferred-register: '' }
+  - { id: 8, class: fpr128, preferred-register: '' }
+  - { id: 9, class: fpr128, preferred-register: '' }
+liveins:
+  - { reg: '$d0', virtual-reg: '%0' }
+  - { reg: '$d1', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $d0, $d1
 
+    ; CHECK-LABEL: name: fadd
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[FADDDrr:%[0-9]+]]:fpr64 = nofpexcept FADDDrr [[COPY1]], [[COPY]], implicit $fpcr
+    ; CHECK-NEXT: [[MOVIv2d_ns:%[0-9]+]]:fpr128 = MOVIv2d_ns 0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[COPY2]], %subreg.dsub
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[FADDDrr]], %subreg.dsub
+    ; CHECK-NEXT: $q0 = COPY [[INSERT_SUBREG1]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %1:fpr64 = COPY $d1
+    %0:fpr64 = COPY $d0
+    %2:fpr64 = nofpexcept FADDDrr %0, %1, implicit $fpcr
+    %3:fpr128 = MOVIv2d_ns 0
+    %4:fpr64 = COPY %3.dsub
+    %6:fpr128 = IMPLICIT_DEF
+    %5:fpr128 = INSERT_SUBREG %6, killed %4, %subreg.dsub
+    %8:fpr128 = IMPLICIT_DEF
+    %7:fpr128 = INSERT_SUBREG %8, killed %2, %subreg.dsub
+    %9:fpr128 = INSvi64lane %7, 1, killed %5, 0
+    $q0 = COPY %9
+    RET_ReallyLR implicit $q0
+
+...

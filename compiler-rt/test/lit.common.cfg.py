@@ -518,9 +518,13 @@ if config.host_os == 'Linux':
   if not config.android and len(ver_lines) and ver_lines[0].startswith(b"ldd "):
     from distutils.version import LooseVersion
     ver = LooseVersion(ver_lines[0].split()[-1].decode())
-    for required in ["2.27", "2.30", "2.34", "2.37"]:
+    any_glibc = False
+    for required in ["2.19", "2.27", "2.30", "2.34", "2.37"]:
       if ver >= LooseVersion(required):
         config.available_features.add("glibc-" + required)
+        any_glibc = True
+      if any_glibc:
+        config.available_features.add("glibc")
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):

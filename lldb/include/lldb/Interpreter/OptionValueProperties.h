@@ -106,12 +106,6 @@ public:
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
                      llvm::StringRef path, llvm::StringRef value) override;
 
-  OptionValueArch *GetPropertyAtIndexAsOptionValueArch(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
-  OptionValueLanguage *GetPropertyAtIndexAsOptionValueLanguage(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
   bool
   GetPropertyAtIndexAsArgs(uint32_t idx, Args &args,
                            const ExecutionContext *exe_ctx = nullptr) const;

@@ -4153,18 +4153,13 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
-  OptionValueArch *value = m_collection_sp->GetPropertyAtIndexAsOptionValueArch(
-      ePropertyDefaultArch);
-  if (value)
-    return value->GetCurrentValue();
-  return ArchSpec();
+  const uint32_t idx = ePropertyDefaultArch;
+  return GetPropertyAtIndexAs<ArchSpec>(idx, {});
 }
 
 void TargetProperties::SetDefaultArchitecture(const ArchSpec &arch) {
-  OptionValueArch *value = m_collection_sp->GetPropertyAtIndexAsOptionValueArch(
-      ePropertyDefaultArch);
-  if (value)
-    return value->SetCurrentValue(arch, true);
+  const uint32_t idx = ePropertyDefaultArch;
+  SetPropertyAtIndex(idx, arch);
 }
 
 bool TargetProperties::GetMoveToNearestCode() const {
@@ -4549,12 +4544,8 @@ void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
 }
 
 LanguageType TargetProperties::GetLanguage() const {
-  OptionValueLanguage *value =
-      m_collection_sp->GetPropertyAtIndexAsOptionValueLanguage(
-          ePropertyLanguage);
-  if (value)
-    return value->GetCurrentValue();
-  return LanguageType();
+  const uint32_t idx = ePropertyLanguage;
+  return GetPropertyAtIndexAs<LanguageType>(idx, {});
 }
 
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {

@@ -795,6 +795,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::ABDS:
+  case ISD::ABDU:
+    if (SDValue Expanded = TLI.expandABD(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::BITREVERSE:
     ExpandBITREVERSE(Node, Results);
     return;

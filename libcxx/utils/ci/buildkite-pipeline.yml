@@ -465,22 +465,6 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "With PSTL support"
-    command: "libcxx/utils/ci/run-buildbot with-pstl"
-    artifact_paths:
-      - "**/test-results.xml"
-    env:
-      CC: "clang-${LLVM_HEAD_VERSION}"
-      CXX: "clang++-${LLVM_HEAD_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "With LLVM's libunwind"
     command: "libcxx/utils/ci/run-buildbot generic-with_llvm_unwinder"
     artifact_paths:

@@ -1823,7 +1823,8 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
       const SDValue &MaskIdx = Op.getOperand(OpIdx + 1);
       if (MaskIdx.isUndef() ||
           cast<ConstantSDNode>(MaskIdx.getNode())->getZExtValue() >= 32) {
-        Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32);
+        bool isTarget = MaskIdx.getNode()->getOpcode() == ISD::TargetConstant;
+        Ops[OpIdx++] = DAG.getConstant(0, DL, MVT::i32, isTarget);
       } else {
         Ops[OpIdx++] = MaskIdx;
       }

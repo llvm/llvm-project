@@ -1,7 +1,7 @@
 ;; Tests callsite context graph generation for call graph containing indirect
 ;; calls. Currently this should result in conservative behavior, such that the
 ;; indirect call receives a null call in its graph node, to prevent subsequent
-;; cloning.
+;; cloning. Also tests graph and IR cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -64,13 +64,44 @@
 ; RUN:  -r=%t.o,_ZTVN10__cxxabiv117__class_type_infoE, \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:  --check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS
 
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should only create a single clone of foo, for the direct call
 ;; from main allocating cold memory.
 ; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IR
+
+
+;; Try again but with distributed ThinLTO
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:  -thinlto-distributed-indexes \
+; RUN:  -r=%t.o,main,plx \
+; RUN:  -r=%t.o,_ZdaPv, \
+; RUN:  -r=%t.o,sleep, \
+; RUN:  -r=%t.o,_Znam, \
+; RUN:  -r=%t.o,_ZTVN10__cxxabiv120__si_class_type_infoE, \
+; RUN:  -r=%t.o,_ZTVN10__cxxabiv117__class_type_infoE, \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
+; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  -o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:  --check-prefix=STATS
+
+; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
+;; We should only create a single clone of foo, for the direct call
+;; from main allocating cold memory.
+; RUN:  cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+
+;; Run ThinLTO backend
+; RUN: opt -passes=memprof-context-disambiguation \
+; RUN:  -memprof-import-summary=%t.o.thinlto.bc \
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %t.o -S 2>&1 | FileCheck %s --check-prefix=IR \
+; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS
 
 source_filename = "indirectcall.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -79,12 +110,12 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZTVN10__cxxabiv120__si_class_type_infoE = external global ptr
 @_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
 
-define internal ptr @_Z3barP1A(ptr %a) {
+define internal ptr @_Z3barP1A(ptr %a) #0 {
 entry:
   ret ptr null
 }
 
-define i32 @main() {
+define i32 @main() #0 {
 entry:
   %call = call ptr @_Z3foov(), !callsite !0
   %call1 = call ptr @_Z3foov(), !callsite !1
@@ -99,19 +130,19 @@ declare void @_ZdaPv()
 
 declare i32 @sleep()
 
-define internal ptr @_ZN1A1xEv() {
+define internal ptr @_ZN1A1xEv() #0 {
 entry:
   %call = call ptr @_Z3foov(), !callsite !6
   ret ptr null
 }
 
-define internal ptr @_ZN1B1xEv() {
+define internal ptr @_ZN1B1xEv() #0 {
 entry:
   %call = call ptr @_Z3foov(), !callsite !7
   ret ptr null
 }
 
-define internal ptr @_Z3foov() {
+define internal ptr @_Z3foov() #0 {
 entry:
   %call = call ptr @_Znam(i64 0), !memprof !8, !callsite !21
   ret ptr null
@@ -121,6 +152,8 @@ declare ptr @_Znam(i64)
 
 ; uselistorder directives
 uselistorder ptr @_Z3foov, { 3, 2, 1, 0 }
+
+attributes #0 = { noinline optnone }
 
 !0 = !{i64 8632435727821051414}
 !1 = !{i64 -3421689549917153178}
@@ -360,6 +393,41 @@ uselistorder ptr @_Z3foov, { 3, 2, 1, 0 }
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 6
 ; DUMP:		Clone of [[FOO]]
+
+
+; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
+; REMARKS: created clone _Z3foov.memprof.1
+; REMARKS: call in clone _Z3foov marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z3foov.memprof.1 marked with memprof allocation attribute cold
+
+
+; IR: define {{.*}} @main(
+; IR:   call {{.*}} @_Z3foov()
+;; Only the second call to foo, which allocates cold memory via direct calls,
+;; is replaced with a call to a clone that calls a cold allocation.
+; IR:   call {{.*}} @_Z3foov.memprof.1()
+; IR:   call {{.*}} @_Z3barP1A(
+; IR:   call {{.*}} @_Z3barP1A(
+; IR:   call {{.*}} @_Z3barP1A(
+; IR:   call {{.*}} @_Z3barP1A(
+; IR: define internal {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Znam(i64 0) #[[NOTCOLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z3foov.memprof.1()
+; IR:   call {{.*}} @_Znam(i64 0) #[[COLD:[0-9]+]]
+; IR: attributes #[[NOTCOLD]] = { "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { "memprof"="cold" }
+
+
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS-BE: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
+; STATS-BE: 2 memprof-context-disambiguation - Number of allocation versions (including clones) during ThinLTO backend
+; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
+; STATS-BE: 1 memprof-context-disambiguation - Number of function clones created during ThinLTO backend
+; STATS-BE: 1 memprof-context-disambiguation - Number of functions that had clones created during ThinLTO backend
+; STATS-BE: 2 memprof-context-disambiguation - Maximum number of allocation versions created for an original allocation during ThinLTO backend
+; STATS-BE: 1 memprof-context-disambiguation - Number of original (not cloned) allocations with memprof profiles during ThinLTO backend
 
 
 ; DOT: digraph "postbuild" {

@@ -4028,52 +4028,45 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
               lldb_private::SymbolContextList sc_list;
               process->GetTarget().GetImages().FindSymbolsWithNameAndType(
                   ConstString(symbol_name), eSymbolTypeAny, sc_list);
-              if (!sc_list.IsEmpty()) {
-                const size_t num_scs = sc_list.GetSize();
-                for (size_t sc_idx = 0;
-                     sc_idx < num_scs &&
-                     symbol_load_addr == LLDB_INVALID_ADDRESS;
-                     ++sc_idx) {
-                  SymbolContext sc;
-                  if (sc_list.GetContextAtIndex(sc_idx, sc)) {
-                    if (sc.symbol) {
-                      switch (sc.symbol->GetType()) {
-                      case eSymbolTypeInvalid:
-                      case eSymbolTypeAbsolute:
-                      case eSymbolTypeUndefined:
-                      case eSymbolTypeSourceFile:
-                      case eSymbolTypeHeaderFile:
-                      case eSymbolTypeObjectFile:
-                      case eSymbolTypeCommonBlock:
-                      case eSymbolTypeBlock:
-                      case eSymbolTypeLocal:
-                      case eSymbolTypeParam:
-                      case eSymbolTypeVariable:
-                      case eSymbolTypeVariableType:
-                      case eSymbolTypeLineEntry:
-                      case eSymbolTypeLineHeader:
-                      case eSymbolTypeScopeBegin:
-                      case eSymbolTypeScopeEnd:
-                      case eSymbolTypeAdditional:
-                      case eSymbolTypeCompiler:
-                      case eSymbolTypeInstrumentation:
-                      case eSymbolTypeTrampoline:
-                        break;
+              for (const SymbolContext &sc : sc_list) {
+                if (symbol_load_addr != LLDB_INVALID_ADDRESS)
+                  break;
+                if (sc.symbol) {
+                  switch (sc.symbol->GetType()) {
+                  case eSymbolTypeInvalid:
+                  case eSymbolTypeAbsolute:
+                  case eSymbolTypeUndefined:
+                  case eSymbolTypeSourceFile:
+                  case eSymbolTypeHeaderFile:
+                  case eSymbolTypeObjectFile:
+                  case eSymbolTypeCommonBlock:
+                  case eSymbolTypeBlock:
+                  case eSymbolTypeLocal:
+                  case eSymbolTypeParam:
+                  case eSymbolTypeVariable:
+                  case eSymbolTypeVariableType:
+                  case eSymbolTypeLineEntry:
+                  case eSymbolTypeLineHeader:
+                  case eSymbolTypeScopeBegin:
+                  case eSymbolTypeScopeEnd:
+                  case eSymbolTypeAdditional:
+                  case eSymbolTypeCompiler:
+                  case eSymbolTypeInstrumentation:
+                  case eSymbolTypeTrampoline:
+                    break;
 
-                      case eSymbolTypeCode:
-                      case eSymbolTypeResolver:
-                      case eSymbolTypeData:
-                      case eSymbolTypeRuntime:
-                      case eSymbolTypeException:
-                      case eSymbolTypeObjCClass:
-                      case eSymbolTypeObjCMetaClass:
-                      case eSymbolTypeObjCIVar:
-                      case eSymbolTypeReExported:
-                        symbol_load_addr =
-                            sc.symbol->GetLoadAddress(&process->GetTarget());
-                        break;
-                      }
-                    }
+                  case eSymbolTypeCode:
+                  case eSymbolTypeResolver:
+                  case eSymbolTypeData:
+                  case eSymbolTypeRuntime:
+                  case eSymbolTypeException:
+                  case eSymbolTypeObjCClass:
+                  case eSymbolTypeObjCMetaClass:
+                  case eSymbolTypeObjCIVar:
+                  case eSymbolTypeReExported:
+                    symbol_load_addr =
+                        sc.symbol->GetLoadAddress(&process->GetTarget());
+                    break;
                   }
                 }
               }
