@@ -354,11 +354,18 @@ if(${MIC})
 endif()
 add_dependencies(libomp-micro-tests libomp-test-deps)
 
+# `omp` needs to be exported if in-tree build.
+set(export_to_llvmexports)
+if (NOT OPENMP_STANDALONE_BUILD)
+  get_target_export_arg(omp LLVM export_to_llvmexports)
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
+endif()
+
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
 if(WIN32)
-  install(TARGETS omp RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+  install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
   install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
@@ -371,7 +378,7 @@ if(WIN32)
   endforeach()
 else()
 
-  install(TARGETS omp ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility
