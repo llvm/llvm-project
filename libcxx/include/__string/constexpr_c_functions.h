@@ -13,6 +13,7 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,11 +36,14 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_st
   return __builtin_strlen(__str);
 }
 
+// Because of __libcpp_is_trivially_lexicographically_comparable we know that comparing the object representations is
+// equivalent to a std::memcmp. Since we have multiple objects contiguously in memory, we can call memcmp once instead
+// of invoking it on every object individually.
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int
 __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
-  static_assert(__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
-                "_Tp and _Up have to be trivially equality comparable");
+  static_assert(__libcpp_is_trivially_lexicographically_comparable<_Tp, _Up>::value,
+                "_Tp and _Up have to be trivially lexicographically comparable");
 
   if (__libcpp_is_constant_evaluated()) {
 #ifdef _LIBCPP_COMPILER_CLANG_BASED
@@ -60,6 +64,34 @@ __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
     return 0;
   } else {
     return __builtin_memcmp(__lhs, __rhs, __count);
+  }
+}
+
+// Because of __libcpp_is_trivially_equality_comparable we know that comparing the object representations is equivalent
+// to a std::memcmp(...) == 0. Since we have multiple objects contiguously in memory, we can call memcmp once instead
+// of invoking it on every object individually.
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
+__constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, size_t __count) {
+  static_assert(__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
+                "_Tp and _Up have to be trivially equality comparable");
+
+  if (__libcpp_is_constant_evaluated()) {
+#ifdef _LIBCPP_COMPILER_CLANG_BASED
+    if (sizeof(_Tp) == 1 && is_integral<_Tp>::value && !is_same<_Tp, bool>::value)
+      return __builtin_memcmp(__lhs, __rhs, __count) == 0;
+#endif
+    while (__count != 0) {
+      if (*__lhs != *__rhs)
+        return false;
+
+      __count -= sizeof(_Tp);
+      ++__lhs;
+      ++__rhs;
+    }
+    return true;
+  } else {
+    return __builtin_memcmp(__lhs, __rhs, __count) == 0;
   }
 }
 

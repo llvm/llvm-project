@@ -50,7 +50,7 @@ template <
                   int> = 0>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&) {
-  return std::__constexpr_memcmp(__first1, __first2, (__last1 - __first1) * sizeof(_Tp)) == 0;
+  return std::__constexpr_memcmp_equal(__first1, __first2, (__last1 - __first1) * sizeof(_Tp));
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
@@ -100,7 +100,7 @@ template <class _Tp,
                         int> = 0>
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
     _Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&, _Proj2&) {
-  return std::__constexpr_memcmp(__first1, __first2, (__last1 - __first1) * sizeof(_Tp)) == 0;
+  return std::__constexpr_memcmp_equal(__first1, __first2, (__last1 - __first1) * sizeof(_Tp));
 }
 
 template <class _BinaryPredicate, class _RandomAccessIterator1, class _RandomAccessIterator2>

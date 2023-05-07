@@ -15,6 +15,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/remove_cv.h>
+#include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 
@@ -32,8 +33,9 @@ struct __is_equality_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() 
 };
 
 // A type is_trivially_equality_comparable if the expression `a == b` is equivalent to `std::memcmp(&a, &b, sizeof(T))`
-// (with `a` and `b` being of type `T`). There is no compiler built-in to check this, so we can only do this for known
-// types. In particular, these are the integral types and raw pointers.
+// (with `a` and `b` being of type `T`). For the case where we compare two object of the same type, we can use
+// __is_trivially_equality_comparable. We have special-casing for pointers which point to the same type ignoring
+// cv-qualifications and comparing to void-pointers.
 //
 // The following types are not trivially equality comparable:
 // floating-point types: different bit-patterns can compare equal. (e.g 0.0 and -0.0)
@@ -43,19 +45,33 @@ struct __is_equality_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() 
 //   always compared.
 
 template <class _Tp, class _Up>
-struct __libcpp_is_trivially_equality_comparable
-    : integral_constant<bool,
-                        __is_equality_comparable<_Tp, _Up>::value && is_integral<_Tp>::value &&
-                            is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value> {};
+struct __libcpp_is_trivially_equality_comparable_impl : false_type {};
+
+template <class _Tp>
+struct __libcpp_is_trivially_equality_comparable_impl<_Tp, _Tp>
+#if __has_builtin(__is_trivially_equality_comparable)
+    : integral_constant<bool, __is_trivially_equality_comparable(_Tp) && __is_equality_comparable<_Tp, _Tp>::value> {
+};
+#else
+    : is_integral<_Tp> {
+};
+#endif // __has_builtin(__is_trivially_equality_comparable)
+
+template <class _Tp>
+struct __libcpp_is_trivially_equality_comparable_impl<_Tp*, _Tp*> : true_type {};
 
 // TODO: Use is_pointer_inverconvertible_base_of
 template <class _Tp, class _Up>
-struct __libcpp_is_trivially_equality_comparable<_Tp*, _Up*>
+struct __libcpp_is_trivially_equality_comparable_impl<_Tp*, _Up*>
     : integral_constant<
           bool,
           __is_equality_comparable<_Tp*, _Up*>::value &&
               (is_same<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >::value || is_void<_Tp>::value || is_void<_Up>::value)> {
 };
+
+template <class _Tp, class _Up>
+using __libcpp_is_trivially_equality_comparable =
+    __libcpp_is_trivially_equality_comparable_impl<__remove_cv_t<_Tp>, __remove_cv_t<_Up> >;
 
 _LIBCPP_END_NAMESPACE_STD
 
