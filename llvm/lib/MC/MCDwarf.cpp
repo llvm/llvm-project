@@ -667,9 +667,8 @@ void MCDwarfLineAddr::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                            int64_t LineDelta, uint64_t AddrDelta) {
   MCContext &Context = MCOS->getContext();
   SmallString<256> Tmp;
-  raw_svector_ostream OS(Tmp);
-  MCDwarfLineAddr::Encode(Context, Params, LineDelta, AddrDelta, OS);
-  MCOS->emitBytes(OS.str());
+  MCDwarfLineAddr::encode(Context, Params, LineDelta, AddrDelta, Tmp);
+  MCOS->emitBytes(Tmp);
 }
 
 /// Given a special op, return the address skip amount (in units of
@@ -679,9 +678,10 @@ static uint64_t SpecialAddr(MCDwarfLineTableParams Params, uint64_t op) {
 }
 
 /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas.
-void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
+void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
                              int64_t LineDelta, uint64_t AddrDelta,
-                             raw_ostream &OS) {
+                             SmallVectorImpl<char> &Out) {
+  uint8_t Buf[16];
   uint64_t Temp, Opcode;
   bool NeedCopy = false;
 
@@ -696,14 +696,14 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
   // end_sequence to emit the matrix entry.
   if (LineDelta == INT64_MAX) {
     if (AddrDelta == MaxSpecialAddrDelta)
-      OS << char(dwarf::DW_LNS_const_add_pc);
+      Out.push_back(dwarf::DW_LNS_const_add_pc);
     else if (AddrDelta) {
-      OS << char(dwarf::DW_LNS_advance_pc);
-      encodeULEB128(AddrDelta, OS);
+      Out.push_back(dwarf::DW_LNS_advance_pc);
+      Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
     }
-    OS << char(dwarf::DW_LNS_extended_op);
-    OS << char(1);
-    OS << char(dwarf::DW_LNE_end_sequence);
+    Out.push_back(dwarf::DW_LNS_extended_op);
+    Out.push_back(1);
+    Out.push_back(dwarf::DW_LNE_end_sequence);
     return;
   }
 
@@ -714,8 +714,8 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
   // it with DW_LNS_advance_line.
   if (Temp >= Params.DWARF2LineRange ||
       Temp + Params.DWARF2LineOpcodeBase > 255) {
-    OS << char(dwarf::DW_LNS_advance_line);
-    encodeSLEB128(LineDelta, OS);
+    Out.push_back(dwarf::DW_LNS_advance_line);
+    Out.append(Buf, Buf + encodeSLEB128(LineDelta, Buf));
 
     LineDelta = 0;
     Temp = 0 - Params.DWARF2LineBase;
@@ -724,7 +724,7 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
 
   // Use DW_LNS_copy instead of a "line +0, addr +0" special opcode.
   if (LineDelta == 0 && AddrDelta == 0) {
-    OS << char(dwarf::DW_LNS_copy);
+    Out.push_back(dwarf::DW_LNS_copy);
     return;
   }
 
@@ -736,28 +736,28 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
     // Try using a special opcode.
     Opcode = Temp + AddrDelta * Params.DWARF2LineRange;
     if (Opcode <= 255) {
-      OS << char(Opcode);
+      Out.push_back(Opcode);
       return;
     }
 
     // Try using DW_LNS_const_add_pc followed by special op.
     Opcode = Temp + (AddrDelta - MaxSpecialAddrDelta) * Params.DWARF2LineRange;
     if (Opcode <= 255) {
-      OS << char(dwarf::DW_LNS_const_add_pc);
-      OS << char(Opcode);
+      Out.push_back(dwarf::DW_LNS_const_add_pc);
+      Out.push_back(Opcode);
       return;
     }
   }
 
   // Otherwise use DW_LNS_advance_pc.
-  OS << char(dwarf::DW_LNS_advance_pc);
-  encodeULEB128(AddrDelta, OS);
+  Out.push_back(dwarf::DW_LNS_advance_pc);
+  Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
 
   if (NeedCopy)
-    OS << char(dwarf::DW_LNS_copy);
+    Out.push_back(dwarf::DW_LNS_copy);
   else {
     assert(Temp <= 255 && "Buggy special opcode encoding.");
-    OS << char(Temp);
+    Out.push_back(Temp);
   }
 }
 
