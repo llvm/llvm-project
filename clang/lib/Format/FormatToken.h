@@ -1068,6 +1068,7 @@ struct AdditionalKeywords {
     kw_delay_mode_zero = &IdentTable.get("delay_mode_zero");
     kw_disable = &IdentTable.get("disable");
     kw_dist = &IdentTable.get("dist");
+    kw_edge = &IdentTable.get("edge");
     kw_elsif = &IdentTable.get("elsif");
     kw_end = &IdentTable.get("end");
     kw_end_keywords = &IdentTable.get("end_keywords");
@@ -1113,10 +1114,12 @@ struct AdditionalKeywords {
     kw_macromodule = &IdentTable.get("macromodule");
     kw_matches = &IdentTable.get("matches");
     kw_medium = &IdentTable.get("medium");
+    kw_negedge = &IdentTable.get("negedge");
     kw_nounconnected_drive = &IdentTable.get("nounconnected_drive");
     kw_output = &IdentTable.get("output");
     kw_packed = &IdentTable.get("packed");
     kw_parameter = &IdentTable.get("parameter");
+    kw_posedge = &IdentTable.get("posedge");
     kw_primitive = &IdentTable.get("primitive");
     kw_priority = &IdentTable.get("priority");
     kw_program = &IdentTable.get("program");
@@ -1198,132 +1201,71 @@ struct AdditionalKeywords {
     // Some keywords are not included here because they don't need special
     // treatment like `showcancelled` or they should be treated as identifiers
     // like `int` and `logic`.
-    VerilogExtraKeywords =
-        std::unordered_set<IdentifierInfo *>({kw_always,
-                                              kw_always_comb,
-                                              kw_always_ff,
-                                              kw_always_latch,
-                                              kw_assert,
-                                              kw_assign,
-                                              kw_assume,
-                                              kw_automatic,
-                                              kw_before,
-                                              kw_begin,
-                                              kw_bins,
-                                              kw_binsof,
-                                              kw_casex,
-                                              kw_casez,
-                                              kw_celldefine,
-                                              kw_checker,
-                                              kw_clocking,
-                                              kw_constraint,
-                                              kw_cover,
-                                              kw_covergroup,
-                                              kw_coverpoint,
-                                              kw_disable,
-                                              kw_dist,
-                                              kw_end,
-                                              kw_endcase,
-                                              kw_endchecker,
-                                              kw_endclass,
-                                              kw_endclocking,
-                                              kw_endfunction,
-                                              kw_endgenerate,
-                                              kw_endgroup,
-                                              kw_endinterface,
-                                              kw_endmodule,
-                                              kw_endpackage,
-                                              kw_endprimitive,
-                                              kw_endprogram,
-                                              kw_endproperty,
-                                              kw_endsequence,
-                                              kw_endspecify,
-                                              kw_endtable,
-                                              kw_endtask,
-                                              kw_extends,
-                                              kw_final,
-                                              kw_foreach,
-                                              kw_forever,
-                                              kw_fork,
-                                              kw_function,
-                                              kw_generate,
-                                              kw_highz0,
-                                              kw_highz1,
-                                              kw_iff,
-                                              kw_ifnone,
-                                              kw_ignore_bins,
-                                              kw_illegal_bins,
-                                              kw_implements,
-                                              kw_import,
-                                              kw_initial,
-                                              kw_inout,
-                                              kw_input,
-                                              kw_inside,
-                                              kw_interconnect,
-                                              kw_interface,
-                                              kw_intersect,
-                                              kw_join,
-                                              kw_join_any,
-                                              kw_join_none,
-                                              kw_large,
-                                              kw_let,
-                                              kw_local,
-                                              kw_localparam,
-                                              kw_macromodule,
-                                              kw_matches,
-                                              kw_medium,
-                                              kw_output,
-                                              kw_package,
-                                              kw_packed,
-                                              kw_parameter,
-                                              kw_primitive,
-                                              kw_priority,
-                                              kw_program,
-                                              kw_property,
-                                              kw_pull0,
-                                              kw_pull1,
-                                              kw_pure,
-                                              kw_rand,
-                                              kw_randc,
-                                              kw_randcase,
-                                              kw_randsequence,
-                                              kw_ref,
-                                              kw_repeat,
-                                              kw_sample,
-                                              kw_scalared,
-                                              kw_sequence,
-                                              kw_small,
-                                              kw_soft,
-                                              kw_solve,
-                                              kw_specify,
-                                              kw_specparam,
-                                              kw_strong0,
-                                              kw_strong1,
-                                              kw_supply0,
-                                              kw_supply1,
-                                              kw_table,
-                                              kw_tagged,
-                                              kw_task,
-                                              kw_tri,
-                                              kw_tri0,
-                                              kw_tri1,
-                                              kw_triand,
-                                              kw_trior,
-                                              kw_trireg,
-                                              kw_unique,
-                                              kw_unique0,
-                                              kw_uwire,
-                                              kw_var,
-                                              kw_vectored,
-                                              kw_wand,
-                                              kw_weak0,
-                                              kw_weak1,
-                                              kw_wildcard,
-                                              kw_wire,
-                                              kw_with,
-                                              kw_wor,
-                                              kw_verilogHash,
-                                              kw_verilogHashHash});
+    VerilogExtraKeywords = std::unordered_set<IdentifierInfo *>(
+        {kw_always,       kw_always_comb,
+         kw_always_ff,    kw_always_latch,
+         kw_assert,       kw_assign,
+         kw_assume,       kw_automatic,
+         kw_before,       kw_begin,
+         kw_bins,         kw_binsof,
+         kw_casex,        kw_casez,
+         kw_celldefine,   kw_checker,
+         kw_clocking,     kw_constraint,
+         kw_cover,        kw_covergroup,
+         kw_coverpoint,   kw_disable,
+         kw_dist,         kw_edge,
+         kw_end,          kw_endcase,
+         kw_endchecker,   kw_endclass,
+         kw_endclocking,  kw_endfunction,
+         kw_endgenerate,  kw_endgroup,
+         kw_endinterface, kw_endmodule,
+         kw_endpackage,   kw_endprimitive,
+         kw_endprogram,   kw_endproperty,
+         kw_endsequence,  kw_endspecify,
+         kw_endtable,     kw_endtask,
+         kw_extends,      kw_final,
+         kw_foreach,      kw_forever,
+         kw_fork,         kw_function,
+         kw_generate,     kw_highz0,
+         kw_highz1,       kw_iff,
+         kw_ifnone,       kw_ignore_bins,
+         kw_illegal_bins, kw_implements,
+         kw_import,       kw_initial,
+         kw_inout,        kw_input,
+         kw_inside,       kw_interconnect,
+         kw_interface,    kw_intersect,
+         kw_join,         kw_join_any,
+         kw_join_none,    kw_large,
+         kw_let,          kw_local,
+         kw_localparam,   kw_macromodule,
+         kw_matches,      kw_medium,
+         kw_negedge,      kw_output,
+         kw_package,      kw_packed,
+         kw_parameter,    kw_posedge,
+         kw_primitive,    kw_priority,
+         kw_program,      kw_property,
+         kw_pull0,        kw_pull1,
+         kw_pure,         kw_rand,
+         kw_randc,        kw_randcase,
+         kw_randsequence, kw_ref,
+         kw_repeat,       kw_sample,
+         kw_scalared,     kw_sequence,
+         kw_small,        kw_soft,
+         kw_solve,        kw_specify,
+         kw_specparam,    kw_strong0,
+         kw_strong1,      kw_supply0,
+         kw_supply1,      kw_table,
+         kw_tagged,       kw_task,
+         kw_tri,          kw_tri0,
+         kw_tri1,         kw_triand,
+         kw_trior,        kw_trireg,
+         kw_unique,       kw_unique0,
+         kw_uwire,        kw_var,
+         kw_vectored,     kw_wand,
+         kw_weak0,        kw_weak1,
+         kw_wildcard,     kw_wire,
+         kw_with,         kw_wor,
+         kw_verilogHash,  kw_verilogHashHash});
   }
 
   // Context sensitive keywords.
@@ -1462,6 +1404,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_disable;
   IdentifierInfo *kw_dist;
   IdentifierInfo *kw_elsif;
+  IdentifierInfo *kw_edge;
   IdentifierInfo *kw_end;
   IdentifierInfo *kw_end_keywords;
   IdentifierInfo *kw_endcase;
@@ -1506,10 +1449,12 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_macromodule;
   IdentifierInfo *kw_matches;
   IdentifierInfo *kw_medium;
+  IdentifierInfo *kw_negedge;
   IdentifierInfo *kw_nounconnected_drive;
   IdentifierInfo *kw_output;
   IdentifierInfo *kw_packed;
   IdentifierInfo *kw_parameter;
+  IdentifierInfo *kw_posedge;
   IdentifierInfo *kw_primitive;
   IdentifierInfo *kw_priority;
   IdentifierInfo *kw_program;
