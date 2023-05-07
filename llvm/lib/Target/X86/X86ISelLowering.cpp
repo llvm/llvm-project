@@ -14693,6 +14693,8 @@ static SDValue lowerShuffleAsElementInsertion(
     SelectionDAG &DAG) {
   MVT ExtVT = VT;
   MVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltBits = VT.getScalarSizeInBits();
 
   if (isSoftFP16(EltVT, Subtarget))
     return SDValue();
@@ -14700,12 +14702,21 @@ static SDValue lowerShuffleAsElementInsertion(
   int V2Index =
       find_if(Mask, [&Mask](int M) { return M >= (int)Mask.size(); }) -
       Mask.begin();
+  bool IsV1Constant = getTargetConstantFromNode(V1) != nullptr;
   bool IsV1Zeroable = true;
   for (int i = 0, Size = Mask.size(); i < Size; ++i)
     if (i != V2Index && !Zeroable[i]) {
       IsV1Zeroable = false;
       break;
     }
+
+  // Bail if a non-zero V1 isn't used in place.
+  if (!IsV1Zeroable) {
+    SmallVector<int, 8> V1Mask(Mask);
+    V1Mask[V2Index] = -1;
+    if (!isNoopShuffleMask(V1Mask))
+      return SDValue();
+  }
 
   // Check for a single input from a SCALAR_TO_VECTOR node.
   // FIXME: All of this should be canonicalized into INSERT_VECTOR_ELT and
@@ -14719,13 +14730,26 @@ static SDValue lowerShuffleAsElementInsertion(
     V2S = DAG.getBitcast(EltVT, V2S);
     if (EltVT == MVT::i8 || (EltVT == MVT::i16 && !Subtarget.hasFP16())) {
       // Using zext to expand a narrow element won't work for non-zero
-      // insertions.
-      if (!IsV1Zeroable)
+      // insertions. But we can use a masked constant vector if we're
+      // inserting V2 into the bottom of V1.
+      if (!IsV1Zeroable && !(IsV1Constant && V2Index == 0))
         return SDValue();
 
       // Zero-extend directly to i32.
       ExtVT = MVT::getVectorVT(MVT::i32, ExtVT.getSizeInBits() / 32);
       V2S = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V2S);
+
+      // If we're inserting into a constant, mask off the inserted index
+      // and OR with the zero-extended scalar.
+      if (!IsV1Zeroable) {
+        SmallVector<APInt> Bits(NumElts, APInt::getAllOnes(EltBits));
+        Bits[V2Index] = APInt::getZero(EltBits);
+        SDValue BitMask = getConstVector(Bits, VT, DAG, DL);
+        V1 = DAG.getNode(ISD::AND, DL, VT, V1, BitMask);
+        V2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, V2S);
+        V2 = DAG.getBitcast(VT, DAG.getNode(X86ISD::VZEXT_MOVL, DL, ExtVT, V2));
+        return DAG.getNode(ISD::OR, DL, VT, V1, V2);
+      }
     }
     V2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtVT, V2S);
   } else if (Mask[V2Index] != (int)Mask.size() || EltVT == MVT::i8 ||
@@ -14737,14 +14761,9 @@ static SDValue lowerShuffleAsElementInsertion(
 
   if (!IsV1Zeroable) {
     // If V1 can't be treated as a zero vector we have fewer options to lower
-    // this. We can't support integer vectors or non-zero targets cheaply, and
-    // the V1 elements can't be permuted in any way.
+    // this. We can't support integer vectors or non-zero targets cheaply.
     assert(VT == ExtVT && "Cannot change extended type when non-zeroable!");
     if (!VT.isFloatingPoint() || V2Index != 0)
-      return SDValue();
-    SmallVector<int, 8> V1Mask(Mask);
-    V1Mask[V2Index] = -1;
-    if (!isNoopShuffleMask(V1Mask))
       return SDValue();
     if (!VT.is128BitVector())
       return SDValue();
@@ -14775,15 +14794,15 @@ static SDValue lowerShuffleAsElementInsertion(
     // the desired position. Otherwise it is more efficient to do a vector
     // shift left. We know that we can do a vector shift left because all
     // the inputs are zero.
-    if (VT.isFloatingPoint() || VT.getVectorNumElements() <= 4) {
+    if (VT.isFloatingPoint() || NumElts <= 4) {
       SmallVector<int, 4> V2Shuffle(Mask.size(), 1);
       V2Shuffle[V2Index] = 0;
       V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), V2Shuffle);
     } else {
       V2 = DAG.getBitcast(MVT::v16i8, V2);
-      V2 = DAG.getNode(X86ISD::VSHLDQ, DL, MVT::v16i8, V2,
-                       DAG.getTargetConstant(
-                           V2Index * EltVT.getSizeInBits() / 8, DL, MVT::i8));
+      V2 = DAG.getNode(
+          X86ISD::VSHLDQ, DL, MVT::v16i8, V2,
+          DAG.getTargetConstant(V2Index * EltBits / 8, DL, MVT::i8));
       V2 = DAG.getBitcast(VT, V2);
     }
   }
