@@ -131,14 +131,14 @@ public:
 
   bool GetEnableOnStartup() const {
     const uint32_t idx = ePropertyEnableOnStartup;
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(idx).value_or(
-        g_darwinlog_properties[idx].default_uint_value != 0);
+    return GetPropertyAtIndexAs<bool>(
+        idx, g_darwinlog_properties[idx].default_uint_value != 0);
   }
 
   llvm::StringRef GetAutoEnableOptions() const {
     const uint32_t idx = ePropertyAutoEnableOptions;
-    return m_collection_sp->GetPropertyAtIndexAsString(idx).value_or(
-        g_darwinlog_properties[idx].default_cstr_value);
+    return GetPropertyAtIndexAs<llvm::StringRef>(
+        idx, g_darwinlog_properties[idx].default_cstr_value);
   }
 
   const char *GetLoggingModuleName() const { return "libsystem_trace.dylib"; }
