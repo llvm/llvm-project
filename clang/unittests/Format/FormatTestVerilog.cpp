@@ -162,6 +162,39 @@ TEST_F(FormatTestVerilog, Block) {
                "x = x;");
   verifyFormat("rand join x x;\n"
                "x = x;");
+  // The begin keyword should not be indented if it is too long to fit on the
+  // same line.
+  verifyFormat("while (true) //\n"
+               "begin\n"
+               "  while (true) //\n"
+               "  begin\n"
+               "  end\n"
+               "end");
+  verifyFormat("while (true) //\n"
+               "begin : x\n"
+               "  while (true) //\n"
+               "  begin : x\n"
+               "  end : x\n"
+               "end : x");
+  verifyFormat("while (true) //\n"
+               "fork\n"
+               "  while (true) //\n"
+               "  fork\n"
+               "  join\n"
+               "join");
+  auto Style = getDefaultStyle();
+  Style.ColumnLimit = 17;
+  verifyFormat("while (true)\n"
+               "begin\n"
+               "  while (true)\n"
+               "  begin\n"
+               "  end\n"
+               "end",
+               "while (true) begin\n"
+               "  while (true) begin"
+               "  end\n"
+               "end",
+               Style);
 }
 
 TEST_F(FormatTestVerilog, Case) {
@@ -1156,6 +1189,14 @@ TEST_F(FormatTestVerilog, StructuredProcedure) {
   verifyFormat("always @(x)\n"
                "  x <= x;");
   verifyFormat("always @(posedge x)\n"
+               "  x <= x;");
+  verifyFormat("always @(posedge x or posedge y)\n"
+               "  x <= x;");
+  verifyFormat("always @(posedge x, posedge y)\n"
+               "  x <= x;");
+  verifyFormat("always @(negedge x, negedge y)\n"
+               "  x <= x;");
+  verifyFormat("always @(edge x, edge y)\n"
                "  x <= x;");
   verifyFormat("always\n"
                "  x <= x;");

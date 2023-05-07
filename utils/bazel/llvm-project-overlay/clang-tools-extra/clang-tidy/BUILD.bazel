@@ -114,6 +114,7 @@ clang_tidy_library(
     name = "utils",
     deps = [
         ":lib",
+        "//clang:analysis",
         "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
@@ -135,6 +136,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":readability",
+        ":utils",
     ],
 )
 
@@ -221,6 +223,7 @@ clang_tidy_library(
     name = "mpi",
     deps = [
         ":lib",
+        "//clang:static_analyzer_checkers",
         "//clang:static_analyzer_core",
         "//clang:static_analyzer_frontend",
         "//clang:tooling",

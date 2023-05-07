@@ -2277,6 +2277,7 @@ libc_support_library(
         ":__support_cpp_string_view",
         ":__support_float_to_string",
         ":__support_fputil_fenv_impl",
+        ":__support_fputil_float_properties",
         ":__support_fputil_fp_bits",
         ":__support_integer_to_string",
         ":__support_libc_assert",
