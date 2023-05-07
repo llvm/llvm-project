@@ -3581,7 +3581,8 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
     }
   }
 
-  return PredefinedExpr::Create(Context, Loc, ResTy, IK, SL);
+  return PredefinedExpr::Create(Context, Loc, ResTy, IK, LangOpts.MicrosoftExt,
+                                SL);
 }
 
 ExprResult Sema::BuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
