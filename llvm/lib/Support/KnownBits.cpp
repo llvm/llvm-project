@@ -540,7 +540,7 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
                           bool Exact) {
   // Equivilent of `udiv`. We must have caught this before it was folded.
   if (LHS.isNonNegative() && RHS.isNonNegative())
-    return udiv(LHS, RHS);
+    return udiv(LHS, RHS, Exact);
 
   unsigned BitWidth = LHS.getBitWidth();
   assert(!LHS.hasConflict() && !RHS.hasConflict() && "Bad inputs");
@@ -604,21 +604,33 @@ KnownBits KnownBits::sdiv(const KnownBits &LHS, const KnownBits &RHS,
   return Known;
 }
 
-KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
+                          bool Exact) {
   unsigned BitWidth = LHS.getBitWidth();
   assert(!LHS.hasConflict() && !RHS.hasConflict());
   KnownBits Known(BitWidth);
 
-  // For the purposes of computing leading zeros we can conservatively
-  // treat a udiv as a logical right shift by the power of 2 known to
-  // be less than the denominator.
-  unsigned LeadZ = LHS.countMinLeadingZeros();
-  unsigned RHSMaxLeadingZeros = RHS.countMaxLeadingZeros();
+  // We can figure out the minimum number of upper zero bits by doing
+  // MaxNumerator / MinDenominator. If the Numerator gets smaller or Denominator
+  // gets larger, the number of upper zero bits increases.
+  APInt MinDenum = RHS.getMinValue();
+  APInt MaxNum = LHS.getMaxValue();
+  APInt MaxRes = MinDenum.isZero() ? MaxNum : MaxNum.udiv(MinDenum);
 
-  if (RHSMaxLeadingZeros != BitWidth)
-    LeadZ = std::min(BitWidth, LeadZ + BitWidth - RHSMaxLeadingZeros - 1);
+  unsigned LeadZ = MaxRes.countLeadingZeros();
 
   Known.Zero.setHighBits(LeadZ);
+  if (Exact) {
+    // Odd / Odd -> Odd
+    if (LHS.One[0] && RHS.One[0])
+      Known.One.setBit(0);
+    // Even / Odd -> Even
+    else if (LHS.Zero[0] && RHS.One[0])
+      Known.Zero.setBit(0);
+    // Odd / Even -> impossible
+    // Even / Even -> unknown
+  }
+
   return Known;
 }
 

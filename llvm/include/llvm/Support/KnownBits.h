@@ -347,7 +347,8 @@ public:
                         bool Exact = false);
 
   /// Compute known bits for udiv(LHS, RHS).
-  static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits udiv(const KnownBits &LHS, const KnownBits &RHS,
+                        bool Exact = false);
 
   /// Compute known bits for urem(LHS, RHS).
   static KnownBits urem(const KnownBits &LHS, const KnownBits &RHS);
