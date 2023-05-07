@@ -226,8 +226,6 @@ define i1 @combine_setcc_ne_vecreduce_and_v32i1(<32 x i8> %a) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    cmeq v1.16b, v1.16b, #0
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
@@ -249,8 +247,6 @@ define i1 @combine_setcc_ne_vecreduce_and_v64i1(<64 x i8> %a) {
 ; CHECK-NEXT:    bic v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    bic v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    uminv b0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9

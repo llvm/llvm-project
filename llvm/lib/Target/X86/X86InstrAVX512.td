@@ -4068,7 +4068,7 @@ def VMOVPQIto64Zrr : I<0x7E, MRMDestReg, (outs GR64:$dst), (ins VR128X:$src),
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def VMOVPQIto64Zmr : I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128X:$src),
                       "vmovq\t{$src, $dst|$dst, $src}", []>, PD,
-                      EVEX, REX_W, Sched<[WriteVecStore]>,
+                      EVEX, REX_W, EVEX_CD8<64, CD8VT1>, Sched<[WriteVecStore]>,
                       Requires<[HasAVX512, In64BitMode]>;
 
 def VMOVPQI2QIZmr : I<0xD6, MRMDestMem, (outs),
