@@ -156,6 +156,10 @@ position in the argument list. If the value is an operation result, this is
 equivalent to printing the operation that produced it.
 )";
 
+static const char kGetNameAsOperand[] =
+    R"(Returns the string form of value as an operand (i.e., the ValueID).
+)";
+
 static const char kValueReplaceAllUsesWithDocstring[] =
     R"(Replace all uses of value with the new value, updating anything in
 the IR that uses 'self' to use the other value instead.
@@ -3336,6 +3340,19 @@ void mlir::python::populateIRCore(py::module &m) {
             return printAccum.join();
           },
           kValueDunderStrDocstring)
+      .def(
+          "get_name",
+          [](PyValue &self, bool useLocalScope) {
+            PyPrintAccumulator printAccum;
+            MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+            if (useLocalScope)
+              mlirOpPrintingFlagsUseLocalScope(flags);
+            mlirValuePrintAsOperand(self.get(), flags, printAccum.getCallback(),
+                                    printAccum.getUserData());
+            mlirOpPrintingFlagsDestroy(flags);
+            return printAccum.join();
+          },
+          py::arg("use_local_scope") = false, kGetNameAsOperand)
       .def_property_readonly("type",
                              [](PyValue &self) {
                                return PyType(
