@@ -218,16 +218,6 @@
 // RV32-ORDER: error: invalid arch name 'rv32imcq',
 // RV32-ORDER: standard user-level extension not given in canonical order 'q'
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32izve32f -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVE32F-ER %s
-// RV32-ZVE32F-ER: error: invalid arch name 'rv32izve32f',
-// RV32-ZVE32F-ER: 'zve32f' requires 'f' or 'zfinx' extension to also be specified
-
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32ifzve64d -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVE64D-ER %s
-// RV32-ZVE64D-ER: error: invalid arch name 'rv32ifzve64d',
-// RV32-ZVE64D-ER: 'zve64d' requires 'd' or 'zdinx' extension to also be specified
-
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izvl64b -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVL64B-ER %s
 // RV32-ZVL64B-ER: error: invalid arch name 'rv32izvl64b',
@@ -498,10 +488,6 @@
 // RV32-ZVE32X-GOODVERS: "-target-feature" "+zve32x"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izve32f -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-ZVE32F-REQUIRE-F %s
-// RV32-ZVE32F-REQUIRE-F: error: invalid arch name 'rv32izve32f', 'zve32f' requires 'f' or 'zfinx' extension to also be specified
-
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32ifzve32f -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-ZVE32F-GOOD %s
 // RV32-ZVE32F-GOOD: "-target-feature" "+zve32f"
 
@@ -510,18 +496,10 @@
 // RV32-ZVE64X: "-target-feature" "+zve64x"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izve64f -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-ZVE64F-REQUIRE-F %s
-// RV32-ZVE64F-REQUIRE-F: error: invalid arch name 'rv32izve64f', 'zve32f' requires 'f' or 'zfinx' extension to also be specified
-
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32ifzve64f -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-ZVE64F-GOOD %s
 // RV32-ZVE64F-GOOD: "-target-feature" "+zve64f"
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32ifzve64d -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-ZVE64D-REQUIRE-D %s
-// RV32-ZVE64D-REQUIRE-D: error: invalid arch name 'rv32ifzve64d', 'zve64d' requires 'd' or 'zdinx' extension to also be specified
-
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32ifdzve64d -### %s -c 2>&1 | \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izve64d -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-ZVE64D-GOOD %s
 // RV32-ZVE64D-GOOD: "-target-feature" "+zve64d"
 
