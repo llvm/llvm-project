@@ -272,7 +272,7 @@ if(WIN32)
   set(LIBOMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.def)
   add_custom_target(libomp-needed-def-file DEPENDS ${LIBOMP_GENERATED_DEF_FILE})
   add_dependencies(omp libomp-needed-def-file)
-    
+
   # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
   libomp_get_gdflags(LIBOMP_GDFLAGS)
   libomp_string_to_list("${LIBOMP_GDFLAGS}" LIBOMP_GDFLAGS)
@@ -286,7 +286,7 @@ if(WIN32)
   if(MSVC)
     # For toolchains that generated the import library importing by ordinal, re-generate it to import by name
     set(LIBOMP_IMP_LIB_TARGET ompimp)
-    # Create the auxiliary def file without ordinals to use for building the import library to import by name 
+    # Create the auxiliary def file without ordinals to use for building the import library to import by name
     set(LIBOMPIMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.imp.def)
     add_custom_target(libompimp-needed-def-file DEPENDS ${LIBOMPIMP_GENERATED_DEF_FILE})
     add_custom_command(
@@ -295,7 +295,7 @@ if(WIN32)
           -o ${LIBOMPIMP_GENERATED_DEF_FILE} ${CMAKE_CURRENT_SOURCE_DIR}/dllexports
       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dllexports ${LIBOMP_TOOLS_DIR}/generate-def.pl
     )
-    # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one, 
+    # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one,
     # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
     add_library(${LIBOMP_IMP_LIB_TARGET} STATIC kmp_dummy.txt)
     set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
@@ -354,11 +354,18 @@ if(${MIC})
 endif()
 add_dependencies(libomp-micro-tests libomp-test-deps)
 
+# `omp` needs to be exported if in-tree build.
+set(export_to_llvmexports)
+if (NOT OPENMP_STANDALONE_BUILD)
+  get_target_export_arg(omp LLVM export_to_llvmexports)
+  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
+endif()
+
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
 if(WIN32)
-  install(TARGETS omp RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+  install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
   install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
@@ -371,7 +378,7 @@ if(WIN32)
   endforeach()
 else()
 
-  install(TARGETS omp ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility

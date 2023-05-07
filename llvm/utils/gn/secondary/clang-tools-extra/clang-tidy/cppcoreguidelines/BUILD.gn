@@ -27,6 +27,7 @@ static_library("cppcoreguidelines") {
     "InterfacesGlobalInitCheck.cpp",
     "MacroUsageCheck.cpp",
     "MisleadingCaptureDefaultByValueCheck.cpp",
+    "MissingStdForwardCheck.cpp",
     "NarrowingConversionsCheck.cpp",
     "NoMallocCheck.cpp",
     "OwningMemoryCheck.cpp",
