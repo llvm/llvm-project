@@ -187,9 +187,6 @@ if (target_os == "win") {
     "support/win32/thread_win32.cpp",
   ]
 }
-if (target_os == "solaris") {
-  cxx_sources += [ "support/solaris/xlocale.cpp" ]
-}
 if (target_os == "zos") {
   cxx_sources += [
     "support/ibm/mbsnrtowcs.cpp",

@@ -1743,6 +1743,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":vt_gen",
     ],
 )
 
