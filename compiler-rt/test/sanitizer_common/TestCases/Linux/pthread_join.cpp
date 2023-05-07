@@ -1,4 +1,4 @@
-// RUN: %clangxx -pthread %s -o %t && %run %t
+// RUN: %clangxx -pthread %s -o %t && %run %t 0 && %run %t 1
 
 // XFAIL: msan
 
@@ -11,17 +11,27 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+bool use_exit;
 static void *fn(void *args) {
   sleep(1);
-  return (void *)(~(uintptr_t)args);
+  auto ret = (void *)(~(uintptr_t)args);
+  if (use_exit)
+    pthread_exit(ret);
+  return ret;
 }
 
 int main(int argc, char **argv) {
-  pthread_t thread[4];
-  assert(!pthread_create(&thread[0], 0, fn, (void *)1000));
-  assert(!pthread_create(&thread[1], 0, fn, (void *)1001));
-  assert(!pthread_create(&thread[2], 0, fn, (void *)1002));
-  assert(!pthread_create(&thread[3], 0, fn, (void *)1003));
+  use_exit = atoi(argv[1]);
+  pthread_t thread[5];
+  assert(!pthread_create(&thread[0], nullptr, fn, (void *)1000));
+  assert(!pthread_create(&thread[1], nullptr, fn, (void *)1001));
+  assert(!pthread_create(&thread[2], nullptr, fn, (void *)1002));
+  assert(!pthread_create(&thread[3], nullptr, fn, (void *)1003));
+  pthread_attr_t attr;
+  assert(!pthread_attr_init(&attr));
+  assert(!pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED));
+  assert(!pthread_create(&thread[4], &attr, fn, (void *)1004));
+  assert(!pthread_attr_destroy(&attr));
 
   assert(!pthread_detach(thread[0]));
 
