@@ -6468,7 +6468,7 @@ static SDValue getConstVector(ArrayRef<int> Values, MVT VT, SelectionDAG &DAG,
   return ConstsNode;
 }
 
-static SDValue getConstVector(ArrayRef<APInt> Bits, APInt &Undefs,
+static SDValue getConstVector(ArrayRef<APInt> Bits, const APInt &Undefs,
                               MVT VT, SelectionDAG &DAG, const SDLoc &dl) {
   assert(Bits.size() == Undefs.getBitWidth() &&
          "Unequal constant and undef arrays");
@@ -6507,6 +6507,12 @@ static SDValue getConstVector(ArrayRef<APInt> Bits, APInt &Undefs,
 
   SDValue ConstsNode = DAG.getBuildVector(ConstVecVT, dl, Ops);
   return DAG.getBitcast(VT, ConstsNode);
+}
+
+static SDValue getConstVector(ArrayRef<APInt> Bits, MVT VT,
+                              SelectionDAG &DAG, const SDLoc &dl) {
+  APInt Undefs = APInt::getZero(Bits.size());
+  return getConstVector(Bits, Undefs, VT, DAG, dl);
 }
 
 /// Returns a vector of specified type with all zero elements.
@@ -53964,13 +53970,11 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   SmallVector<APInt> EltBits0, EltBits1;
   if (getTargetConstantBitsFromNode(N0, EltSizeInBits, Undefs0, EltBits0)) {
     SDLoc DL(N);
-    APInt ResultUndefs = APInt::getZero(NumElts);
-
     if (getTargetConstantBitsFromNode(N1, EltSizeInBits, Undefs1, EltBits1)) {
       SmallVector<APInt> ResultBits;
       for (int I = 0; I != NumElts; ++I)
         ResultBits.push_back(~EltBits0[I] & EltBits1[I]);
-      return getConstVector(ResultBits, ResultUndefs, VT, DAG, DL);
+      return getConstVector(ResultBits, VT, DAG, DL);
     }
 
     // Constant fold NOT(N0) to allow us to use AND.
@@ -53981,7 +53985,7 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
       if (BC0.getOpcode() != ISD::BITCAST) {
         for (APInt &Elt : EltBits0)
           Elt = ~Elt;
-        SDValue Not = getConstVector(EltBits0, ResultUndefs, VT, DAG, DL);
+        SDValue Not = getConstVector(EltBits0, VT, DAG, DL);
         return DAG.getNode(ISD::AND, DL, VT, Not, N1);
       }
     }
