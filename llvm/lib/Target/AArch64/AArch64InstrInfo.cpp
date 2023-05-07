@@ -5409,41 +5409,6 @@ static bool getFMULPatterns(MachineInstr &Root,
   return Found;
 }
 
-static bool getFNEGPatterns(MachineInstr &Root,
-                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
-  unsigned Opc = Root.getOpcode();
-  MachineBasicBlock &MBB = *Root.getParent();
-  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  bool Found = false;
-
-  auto Match = [&](unsigned Opcode, MachineCombinerPattern Pattern) -> bool {
-    MachineOperand &MO = Root.getOperand(1);
-    MachineInstr *MI = MRI.getUniqueVRegDef(MO.getReg());
-    if ((MI->getOpcode() == Opcode) &&
-        Root.getFlag(MachineInstr::MIFlag::FmContract) &&
-        Root.getFlag(MachineInstr::MIFlag::FmNsz) &&
-        MI->getFlag(MachineInstr::MIFlag::FmContract) &&
-        MI->getFlag(MachineInstr::MIFlag::FmNsz)) {
-      Patterns.push_back(Pattern);
-      return true;
-    }
-    return false;
-  };
-
-  switch (Opc) {
-  default:
-    return false;
-  case AArch64::FNEGDr:
-    Found |= Match(AArch64::FMADDDrrr, MachineCombinerPattern::FNMADDD);
-    break;
-  case AArch64::FNEGSr:
-    Found |= Match(AArch64::FMADDSrrr, MachineCombinerPattern::FNMADDS);
-    break;
-  }
-
-  return Found;
-}
-
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
@@ -5613,8 +5578,6 @@ bool AArch64InstrInfo::getMachineCombinerPatterns(
     return true;
   if (getFMAPatterns(Root, Patterns))
     return true;
-  if (getFNEGPatterns(Root, Patterns))
-    return true;
 
   // Other patterns
   if (getMiscPatterns(Root, Patterns))
@@ -5703,39 +5666,6 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
   // Insert the MADD (MADD, FMA, FMS, FMLA, FMSL)
   InsInstrs.push_back(MIB);
   return MUL;
-}
-
-static MachineInstr *
-genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
-               const TargetInstrInfo *TII, MachineInstr &Root,
-               SmallVectorImpl<MachineInstr *> &InsInstrs, unsigned Opc,
-               const TargetRegisterClass *RC) {
-  MachineInstr *MAD = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
-  Register ResultReg = Root.getOperand(0).getReg();
-  Register SrcReg0 = MAD->getOperand(1).getReg();
-  Register SrcReg1 = MAD->getOperand(2).getReg();
-  Register SrcReg2 = MAD->getOperand(3).getReg();
-  bool Src0IsKill = MAD->getOperand(1).isKill();
-  bool Src1IsKill = MAD->getOperand(2).isKill();
-  bool Src2IsKill = MAD->getOperand(3).isKill();
-
-  if (ResultReg.isVirtual())
-    MRI.constrainRegClass(ResultReg, RC);
-  if (SrcReg0.isVirtual())
-    MRI.constrainRegClass(SrcReg0, RC);
-  if (SrcReg1.isVirtual())
-    MRI.constrainRegClass(SrcReg1, RC);
-  if (SrcReg2.isVirtual())
-    MRI.constrainRegClass(SrcReg2, RC);
-
-  MachineInstrBuilder MIB =
-      BuildMI(MF, MIMetadata(Root), TII->get(Opc), ResultReg)
-          .addReg(SrcReg0, getKillRegState(Src0IsKill))
-          .addReg(SrcReg1, getKillRegState(Src1IsKill))
-          .addReg(SrcReg2, getKillRegState(Src2IsKill));
-  InsInstrs.push_back(MIB);
-
-  return MAD;
 }
 
 /// Fold (FMUL x (DUP y lane)) into (FMUL_indexed x y lane)
@@ -6870,20 +6800,6 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                        &AArch64::FPR128_loRegClass, MRI);
     break;
   }
-
-  case MachineCombinerPattern::FNMADDS: {
-    Opc = AArch64::FNMADDSrrr;
-    RC = &AArch64::FPR32RegClass;
-    MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs, Opc, RC);
-    break;
-  }
-  case MachineCombinerPattern::FNMADDD: {
-    Opc = AArch64::FNMADDDrrr;
-    RC = &AArch64::FPR64RegClass;
-    MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs, Opc, RC);
-    break;
-  }
-
   } // end switch (Pattern)
   // Record MUL and ADD/SUB for deletion
   if (MUL)
