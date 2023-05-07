@@ -234,9 +234,30 @@ INTERCEPTOR(int, pthread_create, void *thread,
   return result;
 }
 
-INTERCEPTOR(int, pthread_join, void *t, void **arg) {
-  return real_pthread_join(t, arg);
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
+  return REAL(pthread_join)(thread, retval);
 }
+
+INTERCEPTOR(int, pthread_detach, void *thread) {
+  return REAL(pthread_detach)(thread);
+}
+
+INTERCEPTOR(int, pthread_exit, void *retval) {
+  return REAL(pthread_exit)(retval);
+}
+
+#    if ASAN_INTERCEPT_TRYJOIN
+INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
+  return REAL(pthread_tryjoin_np)(thread, ret);
+}
+#    endif
+
+#    if ASAN_INTERCEPT_TIMEDJOIN
+INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
+            const struct timespec *abstime) {
+  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
+}
+#    endif
 
 DEFINE_REAL_PTHREAD_FUNCTIONS
 #endif  // ASAN_INTERCEPT_PTHREAD_CREATE
@@ -723,6 +744,16 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(pthread_create);
 #endif
   ASAN_INTERCEPT_FUNC(pthread_join);
+  ASAN_INTERCEPT_FUNC(pthread_detach);
+  ASAN_INTERCEPT_FUNC(pthread_exit);
+#  endif
+
+#  if ASAN_INTERCEPT_TIMEDJOIN
+  ASAN_INTERCEPT_FUNC(pthread_timedjoin_np);
+#endif
+
+#if ASAN_INTERCEPT_TRYJOIN
+  ASAN_INTERCEPT_FUNC(pthread_tryjoin_np);
 #endif
 
   // Intercept atexit function.

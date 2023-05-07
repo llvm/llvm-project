@@ -416,9 +416,6 @@ Bug Fixes to C++ Support
   initialization.
   (`#61567 <https://github.com/llvm/llvm-project/issues/61567>`_)
 - Fix a crash when expanding a pack as the index of a subscript expression.
-- Some predefined expressions are now treated as string literals in MSVC
-  compatibility mode.
-  (`#114 <https://github.com/llvm/llvm-project/issues/114>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
