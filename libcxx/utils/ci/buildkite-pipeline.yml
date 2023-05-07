@@ -332,7 +332,6 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
       timeout_in_minutes: 120
-      soft_fail: true # TODO: Investigate why this job is failing only in the CI environment
 
     - label: "UBSAN"
       command: "libcxx/utils/ci/run-buildbot generic-ubsan"
@@ -369,7 +368,6 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
       timeout_in_minutes: 120
-      soft_fail: true # TODO: Investigate why this job is failing only in the CI environment
 
   # Tests with the various supported ways to build libc++.
   - label: "Bootstrapping build"
