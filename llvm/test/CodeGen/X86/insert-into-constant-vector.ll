@@ -13,15 +13,15 @@
 define <16 x i8> @elt0_v16i8(i8 %x) {
 ; X86-SSE2-LABEL: elt0_v16i8:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: elt0_v16i8:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    movd %edi, %xmm0
-; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    movzbl %dil, %eax
+; X64-SSE2-NEXT:    movd %eax, %xmm0
 ; X64-SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    retq
 ;

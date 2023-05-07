@@ -21,10 +21,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _CharT, class _Traits = char_traits<_CharT> >
 class _LIBCPP_TEMPLATE_VIS basic_ostream;
 
-typedef basic_ostream<char> ostream;
+using ostream = basic_ostream<char>;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_ostream<wchar_t> wostream;
+using wostream = basic_ostream<wchar_t>;
 #endif
 
 template <class _CharT, class _Traits>

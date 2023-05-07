@@ -28,16 +28,16 @@ class _LIBCPP_TEMPLATE_VIS basic_ostringstream;
 template <class _CharT, class _Traits = char_traits<_CharT>, class _Allocator = allocator<_CharT> >
 class _LIBCPP_TEMPLATE_VIS basic_stringstream;
 
-typedef basic_stringbuf<char> stringbuf;
-typedef basic_istringstream<char> istringstream;
-typedef basic_ostringstream<char> ostringstream;
-typedef basic_stringstream<char> stringstream;
+using stringbuf     = basic_stringbuf<char>;
+using istringstream = basic_istringstream<char>;
+using ostringstream = basic_ostringstream<char>;
+using stringstream  = basic_stringstream<char>;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_stringbuf<wchar_t> wstringbuf;
-typedef basic_istringstream<wchar_t> wistringstream;
-typedef basic_ostringstream<wchar_t> wostringstream;
-typedef basic_stringstream<wchar_t> wstringstream;
+using wstringbuf     = basic_stringbuf<wchar_t>;
+using wistringstream = basic_istringstream<wchar_t>;
+using wostringstream = basic_ostringstream<wchar_t>;
+using wstringstream  = basic_stringstream<wchar_t>;
 #endif
 
 template <class _CharT, class _Traits, class _Allocator>
