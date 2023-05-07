@@ -24,8 +24,8 @@ steps:
       # but with the number of jobs we run daily, this can result in thousands of GB of network I/O.
       - "cmake -S llvm -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DLLVM_ENABLE_PROJECTS=\"clang;compiler-rt\""
       - "ninja -C build install-clang install-clang-resource-headers"
-      - "tar -czvf install.tar.gz install/"
-      - "buildkite-agent artifact upload --debug install.tar.gz"
+      - "tar -cJvf install.tar.xz install/"
+      - "buildkite-agent artifact upload --debug install.tar.xz"
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
@@ -42,8 +42,8 @@ steps:
 
   - label: "C++03"
     commands:
-      - "buildkite-agent artifact download install.tar.gz ."
-      - "tar -xzvf install.tar.gz"
+      - "buildkite-agent artifact download install.tar.xz ."
+      - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
@@ -65,8 +65,8 @@ steps:
 
   - label: "C++2b"
     commands:
-      - "buildkite-agent artifact download install.tar.gz ."
-      - "tar -xzvf install.tar.gz"
+      - "buildkite-agent artifact download install.tar.xz ."
+      - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
@@ -88,8 +88,8 @@ steps:
 
   - label: "Modules"
     commands:
-      - "buildkite-agent artifact download install.tar.gz ."
-      - "tar -xzvf install.tar.gz"
+      - "buildkite-agent artifact download install.tar.xz ."
+      - "tar -xvf install.tar.xz"
       - "export CC=$(pwd)/install/bin/clang"
       - "export CXX=$(pwd)/install/bin/clang++"
       - "chmod +x install/bin/clang install/bin/clang++"
