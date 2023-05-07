@@ -546,16 +546,27 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {
   return Known;
 }
 
-KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::remGetLowBits(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
-  KnownBits Known(BitWidth);
+  if (!RHS.isZero() && RHS.Zero[0]) {
+    // rem X, Y where Y[0:N] is zero will preserve X[0:N] in the result.
+    unsigned RHSZeros = RHS.countMinTrailingZeros();
+    APInt Mask = APInt::getLowBitsSet(BitWidth, RHSZeros);
+    APInt OnesMask = LHS.One & Mask;
+    APInt ZerosMask = LHS.Zero & Mask;
+    return KnownBits(ZerosMask, OnesMask);
+  }
+  return KnownBits(BitWidth);
+}
 
+KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
+  assert(!LHS.hasConflict() && !RHS.hasConflict());
+
+  KnownBits Known = remGetLowBits(LHS, RHS);
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
-    // The upper bits are all zero, the lower ones are unchanged.
-    APInt LowBits = RHS.getConstant() - 1;
-    Known.Zero = LHS.Zero | ~LowBits;
-    Known.One = LHS.One & LowBits;
+    // NB: Low bits set in `remGetLowBits`.
+    APInt HighBits = ~(RHS.getConstant() - 1);
+    Known.Zero |= HighBits;
     return Known;
   }
 
@@ -568,16 +579,12 @@ KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
 }
 
 KnownBits KnownBits::srem(const KnownBits &LHS, const KnownBits &RHS) {
-  unsigned BitWidth = LHS.getBitWidth();
   assert(!LHS.hasConflict() && !RHS.hasConflict());
-  KnownBits Known(BitWidth);
 
+  KnownBits Known = remGetLowBits(LHS, RHS);
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
-    // The low bits of the first operand are unchanged by the srem.
+    // NB: Low bits are set in `remGetLowBits`.
     APInt LowBits = RHS.getConstant() - 1;
-    Known.Zero = LHS.Zero & LowBits;
-    Known.One = LHS.One & LowBits;
-
     // If the first operand is non-negative or has all low bits zero, then
     // the upper bits are all zero.
     if (LHS.isNonNegative() || LowBits.isSubsetOf(LHS.Zero))
