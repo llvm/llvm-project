@@ -197,12 +197,7 @@ define i1 @udiv_high_bits(i8 %x, i8 %y) {
 
 define i1 @udiv_exact_odd_odd(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_exact_odd_odd(
-; CHECK-NEXT:    [[NUM:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %num = or i8 %x, 1
   %denum = or i8 %y, 1
@@ -214,12 +209,7 @@ define i1 @udiv_exact_odd_odd(i8 %x, i8 %y) {
 
 define i1 @udiv_exact_even_odd(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_exact_even_odd(
-; CHECK-NEXT:    [[NUM:%.*]] = and i8 [[X:%.*]], -2
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = udiv exact i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %num = and i8 %x, -2
   %denum = or i8 %y, 1
