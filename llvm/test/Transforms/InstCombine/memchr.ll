@@ -174,9 +174,9 @@ define i1 @test14(i32 %C) {
 
 define i1 @test15(i32 %C) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @negative, i32 [[C:%.*]], i32 3)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[DST]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[C:%.*]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 3
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %dst = call ptr @memchr(ptr @negative, i32 %C, i32 3)
   %cmp = icmp ne ptr %dst, null
