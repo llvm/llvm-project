@@ -1212,6 +1212,13 @@ static void computeKnownBitsFromOperator(const Operator *I,
         KnownBits::udiv(Known, Known2, Q.IIQ.isExact(cast<BinaryOperator>(I)));
     break;
   }
+  case Instruction::SDiv: {
+    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    computeKnownBits(I->getOperand(1), Known2, Depth + 1, Q);
+    Known =
+        KnownBits::sdiv(Known, Known2, Q.IIQ.isExact(cast<BinaryOperator>(I)));
+    break;
+  }
   case Instruction::Select: {
     const Value *LHS = nullptr, *RHS = nullptr;
     SelectPatternFlavor SPF = matchSelectPattern(I, LHS, RHS).Flavor;
