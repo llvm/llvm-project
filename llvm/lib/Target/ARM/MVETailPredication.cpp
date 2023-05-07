@@ -116,11 +116,6 @@ private:
 
   /// Insert the intrinsic to represent the effect of tail predication.
   void InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask, Value *Start);
-
-  /// Rematerialize the iteration count in exit blocks, which enables
-  /// ARMLowOverheadLoops to better optimise away loop update statements inside
-  /// hardware-loops.
-  void RematerializeIterCount();
 };
 
 } // end namespace

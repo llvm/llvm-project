@@ -1365,6 +1365,10 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
   }
 
+  bool OptForSize = CI->getFunction()->hasOptSize() ||
+                    llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                                PGSOQueryType::IRPass);
+
   // If the char is variable but the input str and length are not we can turn
   // this memchr call into a simple bit field test. Of course this only works
   // when the return value is only checked against null.
@@ -1375,7 +1379,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   // memchr("\r\n", C, 2) != nullptr -> (1 << C & ((1 << '\r') | (1 << '\n')))
   // != 0
   //   after bounds check.
-  if (Str.empty() || !isOnlyUsedInZeroEqualityComparison(CI))
+  if (OptForSize || Str.empty() || !isOnlyUsedInZeroEqualityComparison(CI))
     return nullptr;
 
   unsigned char Max =
@@ -1387,8 +1391,34 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   // FIXME: On a 64 bit architecture this prevents us from using the
   // interesting range of alpha ascii chars. We could do better by emitting
   // two bitfields or shifting the range by 64 if no lower chars are used.
-  if (!DL.fitsInLegalInteger(Max + 1))
-    return nullptr;
+  if (!DL.fitsInLegalInteger(Max + 1)) {
+    // Build chain of ORs
+    // Transform:
+    //    memchr("abcd", C, 4) != nullptr
+    // to:
+    //    (C == 'a' || C == 'b' || C == 'c' || C == 'd') != 0
+    std::string SortedStr = Str.str();
+    llvm::sort(SortedStr);
+    // Compute the number of of non-contiguous ranges.
+    unsigned NonContRanges = 1;
+    for (size_t i = 1; i < SortedStr.size(); ++i) {
+      if (SortedStr[i] > SortedStr[i - 1] + 1) {
+        NonContRanges++;
+      }
+    }
+
+    // Restrict this optimization to profitable cases with one or two range
+    // checks.
+    if (NonContRanges > 2)
+      return nullptr;
+
+    SmallVector<Value *> CharCompares;
+    for (unsigned char C : SortedStr)
+      CharCompares.push_back(
+          B.CreateICmpEQ(CharVal, ConstantInt::get(CharVal->getType(), C)));
+
+    return B.CreateIntToPtr(B.CreateOr(CharCompares), CI->getType());
+  }
 
   // For the bit field use a power-of-2 type with at least 8 bits to avoid
   // creating unnecessary illegal types.
