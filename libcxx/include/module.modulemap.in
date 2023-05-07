@@ -1352,9 +1352,9 @@ module std [system] {
       module split_view             { private header "__ranges/split_view.h" }
       module subrange               {
         private header "__ranges/subrange.h"
-
-        module subrange_fwd { private header "__fwd/subrange.h" }
+        export subrange_fwd
       }
+      module subrange_fwd           { private header "__fwd/subrange.h" }
       module take_view              { private header "__ranges/take_view.h" }
       module take_while_view        { private header "__ranges/take_while_view.h" }
       module transform_view         {
@@ -1558,7 +1558,10 @@ module std [system] {
     module is_default_constructible            { private header "__type_traits/is_default_constructible.h" }
     module is_destructible                     { private header "__type_traits/is_destructible.h" }
     module is_empty                            { private header "__type_traits/is_empty.h" }
-    module is_enum                             { private header "__type_traits/is_enum.h" }
+    module is_enum                             {
+      private header "__type_traits/is_enum.h"
+      export integral_constant
+    }
     module is_equality_comparable                       {
       private header "__type_traits/is_equality_comparable.h"
       export integral_constant
