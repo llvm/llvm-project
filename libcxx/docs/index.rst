@@ -39,6 +39,7 @@ Getting Started with libc++
    BuildingLibcxx
    TestingLibcxx
    Contributing
+   ReleaseProcedure
    Status/Cxx14
    Status/Cxx17
    Status/Cxx20
@@ -93,6 +94,9 @@ reasons, but some of the major ones are:
   design decision from first principles based on experience.
   Further, both projects are apparently abandoned: STLport 5.2.1 was
   released in Oct'08, and STDCXX 4.2.1 in May'08.
+
+..
+  LLVM RELEASE bump version
 
 .. _SupportedPlatforms:
 
