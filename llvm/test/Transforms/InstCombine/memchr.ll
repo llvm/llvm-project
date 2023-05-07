@@ -172,15 +172,13 @@ define i1 @test14(i32 %C) {
   ret i1 %cmp
 }
 
-define i1 @test15(i32 %C) {
+define i1 @test15(i32 %C, i32 %n) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[C]], -2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 254
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr nonnull @negative, i32 [[C:%.*]], i32 [[N:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[DST]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %dst = call ptr @memchr(ptr @negative, i32 %C, i32 3)
+  %dst = call ptr @memchr(ptr @negative, i32 %C, i32 %n)
   %cmp = icmp ne ptr %dst, null
   ret i1 %cmp
 }
