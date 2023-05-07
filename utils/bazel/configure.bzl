@@ -34,7 +34,7 @@ DEFAULT_TARGETS = [
 ]
 
 def _overlay_directories(repository_ctx):
-    src_path = repository_ctx.path(Label("//:WORKSPACE")).dirname
+    src_path = repository_ctx.path(Label("@llvm-raw//:WORKSPACE")).dirname
     bazel_path = src_path.get_child("utils").get_child("bazel")
     overlay_path = bazel_path.get_child("llvm-project-overlay")
     script_path = bazel_path.get_child("overlay_directories.py")
