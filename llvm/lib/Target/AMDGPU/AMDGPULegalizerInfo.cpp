@@ -5885,6 +5885,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntrinsic(MI, B);
+  case Intrinsic::amdgcn_fmed3: {
+    GISelChangeObserver &Observer = Helper.Observer;
+
+    // FIXME: This is to workaround the inability of tablegen match combiners to
+    // match intrinsics in patterns.
+    Observer.changingInstr(MI);
+    MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_FMED3));
+    MI.removeOperand(1);
+    Observer.changedInstr(MI);
+    return true;
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

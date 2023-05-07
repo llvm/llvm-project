@@ -1715,6 +1715,8 @@ def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
+def NotHasMed3_16 : Predicate<"!Subtarget->hasMed3_16()">;
+
 def HasMinMaxDenormModes : Predicate<"Subtarget->supportsMinMaxDenormModes()">;
 def NotHasMinMaxDenormModes : Predicate<"!Subtarget->supportsMinMaxDenormModes()">;
 
