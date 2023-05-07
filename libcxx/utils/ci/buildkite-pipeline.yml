@@ -23,6 +23,9 @@
 # Theses numbers are available in all runners, making it easier to update the
 # version number.
 env:
+    # LLVM POST-BRANCH bump version
+    # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
+    # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
     LLVM_STABLE_VERSION: "16"
     LLVM_HEAD_VERSION: "17"
     GCC_STABLE_VERSION: "12"
@@ -265,7 +268,7 @@ steps:
     env:
         CC: "clang-15"
         CXX: "clang++-15"
-        # TODO LLVM18: Enable clang-tidy
+        # TODO(LLVM-18): Enable clang-tidy
         # ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
