@@ -494,6 +494,18 @@ void SplitBlockAndInsertForEachLane(ElementCount EC, Type *IndexTy,
     Instruction *InsertBefore,
     std::function<void(IRBuilderBase&, Value*)> Func);
 
+/// Utility function for performing a given action on each lane of a vector
+/// with \p EVL effective length. EVL is assumed > 0. To simplify porting legacy
+/// code, this defaults to unrolling the implied loop for non-scalable element
+/// counts, but this is not considered to be part of the contract of this
+/// routine, and is expected to change in the future. The callback takes as
+/// arguments an IRBuilder whose insert point is correctly set for instantiating
+/// the given index, and a value which is (at runtime) the index to access. This
+/// index *may* be a constant.
+void SplitBlockAndInsertForEachLane(
+    Value *End, Instruction *InsertBefore,
+    std::function<void(IRBuilderBase &, Value *)> Func);
+
 /// Check whether BB is the merge point of a if-region.
 /// If so, return the branch instruction that determines which entry into
 /// BB will be taken.  Also, return by references the block that will be
