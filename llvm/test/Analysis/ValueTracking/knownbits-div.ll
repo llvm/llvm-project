@@ -185,12 +185,7 @@ define i1 @sdiv_exact_even_even_fail_unknown2(i8 %x, i8 %y) {
 
 define i1 @udiv_high_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_high_bits(
-; CHECK-NEXT:    [[NUM:%.*]] = and i8 [[X:%.*]], -127
-; CHECK-NEXT:    [[DENUM:%.*]] = or i8 [[Y:%.*]], 31
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[NUM]], [[DENUM]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DIV]], 8
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 8
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %num = and i8 %x, 129
   %denum = or i8 %y, 31
