@@ -95,6 +95,8 @@ Deprecations and Removals
   which led to ODR violations when mixed with the C++03 definition. Cleaning this up is required for libc++ to
   make progress on support for C++20 modules.
 
+- The ``_LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION`` macro has been removed.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
