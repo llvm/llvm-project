@@ -933,6 +933,16 @@ CallInterfaceCallable CallOp::getCallableForCallee() {
   return getOperand(0);
 }
 
+void CallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  // Direct call.
+  if (FlatSymbolRefAttr calleeAttr = getCalleeAttr()) {
+    auto symRef = callee.get<SymbolRefAttr>();
+    return setCalleeAttr(cast<FlatSymbolRefAttr>(symRef));
+  }
+  // Indirect call, callee Value is the first operand.
+  return setOperand(0, callee.get<Value>());
+}
+
 Operation::operand_range CallOp::getArgOperands() {
   return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
 }
@@ -1155,6 +1165,16 @@ CallInterfaceCallable InvokeOp::getCallableForCallee() {
     return calleeAttr;
   // Indirect call, callee Value is the first operand.
   return getOperand(0);
+}
+
+void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  // Direct call.
+  if (FlatSymbolRefAttr calleeAttr = getCalleeAttr()) {
+    auto symRef = callee.get<SymbolRefAttr>();
+    return setCalleeAttr(cast<FlatSymbolRefAttr>(symRef));
+  }
+  // Indirect call, callee Value is the first operand.
+  return setOperand(0, callee.get<Value>());
 }
 
 Operation::operand_range InvokeOp::getArgOperands() {

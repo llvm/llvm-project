@@ -23,7 +23,7 @@ define i32 @test(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 entry:
   %cmp13 = icmp sgt i32 %c, 0
@@ -62,7 +62,7 @@ define i64 @IVIncHoist_not_all_user_in_header(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    add x10, x1, #4
 ; CHECK-NEXT:    add x11, x2, #8
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr w12, [x10, x8, lsl #2]
@@ -142,7 +142,7 @@ define i32 @negative_test_type_is_struct(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_5:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 entry:
   %cmp13 = icmp sgt i32 %c, 0

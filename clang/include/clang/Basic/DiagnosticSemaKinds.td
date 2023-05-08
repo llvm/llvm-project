@@ -10048,12 +10048,6 @@ def err_mips_builtin_requires_dspr2 : Error<
   "this builtin requires 'dsp r2' ASE, please use -mdspr2">;
 def err_mips_builtin_requires_msa : Error<
   "this builtin requires 'msa' ASE, please use -mmsa">;
-def err_ppc_builtin_only_on_arch : Error<
-  "this builtin is only valid on POWER%0 or later CPUs">;
-def err_ppc_builtin_requires_vsx : Error<
-  "this builtin requires VSX to be enabled">;
-def err_ppc_builtin_requires_htm : Error<
-  "this builtin requires HTM to be enabled">;
 def err_ppc_builtin_requires_abi : Error<
   "this builtin requires ABI -mabi=%0">;
 def err_ppc_invalid_use_mma_type : Error<

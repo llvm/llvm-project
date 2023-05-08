@@ -35,7 +35,8 @@ Section,Description,Dependencies,Assignee,Complete
 | `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| `basic_stacktrace <https://reviews.llvm.org/D123228>`_,[alg.three.way],Nikolas Klauser,|In Progress|
 | `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D131421>`_,None,Mark de Wever,|Complete|
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
-| `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
+| `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],"| Adrian Vogelsgesang
+| Hristo Hristov",|Complete|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `deque <https://reviews.llvm.org/D144821>`_,[expos.only.func],Hristo Hristov,|Complete|
 | `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `forward_list <https://reviews.llvm.org/D145172>`_,[expos.only.func],Hristo Hristov,|Complete|
 | `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `list <https://reviews.llvm.org/D132312>`_,[expos.only.func],Adrian Vogelsgesang,|Complete|

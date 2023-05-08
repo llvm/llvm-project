@@ -119,6 +119,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
 void Mangler::getNameWithPrefix(raw_ostream &OS, const GlobalValue *GV,
                                 bool CannotUsePrivateLabel) const {
   ManglerPrefixTy PrefixTy = Default;
+  assert(GV != nullptr && "Invalid Global Value");
   if (GV->hasPrivateLinkage()) {
     if (CannotUsePrivateLabel)
       PrefixTy = LinkerPrivate;

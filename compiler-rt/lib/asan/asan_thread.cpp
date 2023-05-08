@@ -41,7 +41,8 @@ void AsanThreadContext::OnFinished() {
 }
 
 // MIPS requires aligned address
-static ALIGNED(16) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+static ALIGNED(alignof(
+    ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static ThreadRegistry *asan_thread_registry;
 
 static Mutex mu_for_thread_context;
@@ -52,19 +53,23 @@ static ThreadContextBase *GetAsanThreadContext(u32 tid) {
   return new (allocator_for_thread_context) AsanThreadContext(tid);
 }
 
-ThreadRegistry &asanThreadRegistry() {
+static void InitThreads() {
   static bool initialized;
   // Don't worry about thread_safety - this should be called when there is
   // a single thread.
-  if (!initialized) {
-    // Never reuse ASan threads: we store pointer to AsanThreadContext
-    // in TSD and can't reliably tell when no more TSD destructors will
-    // be called. It would be wrong to reuse AsanThreadContext for another
-    // thread before all TSD destructors will be called for it.
-    asan_thread_registry =
-        new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);
-    initialized = true;
-  }
+  if (LIKELY(initialized))
+    return;
+  // Never reuse ASan threads: we store pointer to AsanThreadContext
+  // in TSD and can't reliably tell when no more TSD destructors will
+  // be called. It would be wrong to reuse AsanThreadContext for another
+  // thread before all TSD destructors will be called for it.
+  asan_thread_registry =
+      new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);
+  initialized = true;
+}
+
+ThreadRegistry &asanThreadRegistry() {
+  InitThreads();
   return *asan_thread_registry;
 }
 
