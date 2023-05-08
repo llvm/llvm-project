@@ -849,6 +849,20 @@ StringRef clang::getNullabilitySpelling(NullabilityKind kind,
   llvm_unreachable("Unknown nullability kind.");
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NullabilityKind NK) {
+  switch (NK) {
+  case NullabilityKind::NonNull:
+    return OS << "NonNull";
+  case NullabilityKind::Nullable:
+    return OS << "Nullable";
+  case NullabilityKind::NullableResult:
+    return OS << "NullableResult";
+  case NullabilityKind::Unspecified:
+    return OS << "Unspecified";
+  }
+  llvm_unreachable("Unknown nullability kind.");
+}
+
 diag::kind
 IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
                                          const LangOptions &LangOpts) {
