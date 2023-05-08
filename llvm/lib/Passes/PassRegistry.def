@@ -414,6 +414,7 @@ FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
 
 FUNCTION_PASS("dbg-ins-print", DbgInstructionPrintPass())
+FUNCTION_PASS("dbg-ins-delete", DbgInstructionDeletePass())
 
 #undef FUNCTION_PASS
 
