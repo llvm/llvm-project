@@ -3700,7 +3700,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::UDIV: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::udiv(Known, Known2);
+    Known = KnownBits::udiv(Known, Known2, Op->getFlags().hasExact());
+    break;
+  }
+  case ISD::SDIV: {
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known = KnownBits::sdiv(Known, Known2, Op->getFlags().hasExact());
     break;
   }
   case ISD::SREM: {
