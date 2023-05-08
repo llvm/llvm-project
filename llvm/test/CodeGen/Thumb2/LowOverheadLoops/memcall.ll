@@ -4,12 +4,11 @@
 define void @test_memcpy(ptr nocapture %x, ptr nocapture readonly %y, i32 %n, i32 %m) {
 ; CHECK-LABEL: test_memcpy:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB0_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    blt .LBB0_5
+; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    lsl.w r12, r3, #2
 ; CHECK-NEXT:    movs r7, #0
 ; CHECK-NEXT:    b .LBB0_2
@@ -32,9 +31,8 @@ define void @test_memcpy(ptr nocapture %x, ptr nocapture readonly %y, i32 %n, i3
 ; CHECK-NEXT:    vstrb.8 q0, [r5], #16
 ; CHECK-NEXT:    letp lr, .LBB0_4
 ; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB0_5: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
@@ -57,12 +55,12 @@ for.body:                                         ; preds = %entry, %for.body
 define void @test_memset(ptr nocapture %x, i32 %n, i32 %m) {
 ; CHECK-LABEL: test_memset:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r1, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    cmp r1, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r7, pc}
+; CHECK-NEXT:  .LBB1_1:
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
@@ -82,9 +80,8 @@ define void @test_memset(ptr nocapture %x, i32 %n, i32 %m) {
 ; CHECK-NEXT:    vstrb.8 q0, [r12], #16
 ; CHECK-NEXT:    letp lr, .LBB1_4
 ; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_5:
-; CHECK-NEXT:    pop.w {r7, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB1_5: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp5 = icmp sgt i32 %n, 0
   br i1 %cmp5, label %for.body, label %for.cond.cleanup
@@ -105,14 +102,13 @@ for.body:                                         ; preds = %entry, %for.body
 define void @test_memmove(ptr nocapture %x, ptr nocapture readonly %y, i32 %n, i32 %m) {
 ; CHECK-LABEL: test_memmove:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB2_1: @ %for.body.preheader
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    blt .LBB2_3
+; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r8, r3
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    mov r9, r1
@@ -128,10 +124,9 @@ define void @test_memmove(ptr nocapture %x, ptr nocapture readonly %y, i32 %n, i
 ; CHECK-NEXT:    add r6, r4
 ; CHECK-NEXT:    subs r5, #1
 ; CHECK-NEXT:    bne .LBB2_2
-; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:  .LBB2_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup

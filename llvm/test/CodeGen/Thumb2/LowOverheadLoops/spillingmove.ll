@@ -5,19 +5,17 @@
 define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
 ; CHECK-LABEL: __arm_2d_impl_rgb16_colour_filling_with_alpha:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrsh.w r12, [r2, #2]
-; CHECK-NEXT:    cmp.w r12, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB0_1: @ %for.cond3.preheader.lr.ph
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    sub sp, #64
-; CHECK-NEXT:    ldrsh.w r7, [r2]
-; CHECK-NEXT:    cmp r7, #1
-; CHECK-NEXT:    blt.w .LBB0_6
-; CHECK-NEXT:  @ %bb.2: @ %for.cond3.preheader.us.preheader
+; CHECK-NEXT:    ldrsh.w r12, [r2, #2]
+; CHECK-NEXT:    cmp.w r12, #1
+; CHECK-NEXT:    itt ge
+; CHECK-NEXT:    ldrshge.w r7, [r2]
+; CHECK-NEXT:    cmpge r7, #1
+; CHECK-NEXT:    blt.w .LBB0_5
+; CHECK-NEXT:  @ %bb.1: @ %for.cond3.preheader.us.preheader
 ; CHECK-NEXT:    movs r2, #252
 ; CHECK-NEXT:    ldr r4, [sp, #152]
 ; CHECK-NEXT:    and.w r6, r2, r3, lsr #3
@@ -48,14 +46,14 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vstrw.32 q3, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:  .LBB0_3: @ %vector.ph
+; CHECK-NEXT:  .LBB0_2: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB0_4 Depth 2
+; CHECK-NEXT:    @ Child Loop BB0_3 Depth 2
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r6, r7
 ; CHECK-NEXT:    dls lr, r3
-; CHECK-NEXT:  .LBB0_4: @ %vector.body
-; CHECK-NEXT:    @ Parent Loop BB0_3 Depth=1
+; CHECK-NEXT:  .LBB0_3: @ %vector.body
+; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vctp.16 r6
 ; CHECK-NEXT:    subs r6, #8
@@ -91,19 +89,18 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture
 ; CHECK-NEXT:    vorr q0, q1, q0
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vstrht.16 q0, [r5], #16
-; CHECK-NEXT:    le lr, .LBB0_4
-; CHECK-NEXT:  @ %bb.5: @ %for.cond3.for.cond.cleanup7_crit_edge.us
-; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    le lr, .LBB0_3
+; CHECK-NEXT:  @ %bb.4: @ %for.cond3.for.cond.cleanup7_crit_edge.us
+; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    adds r4, #1
 ; CHECK-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-NEXT:    cmp r4, r12
-; CHECK-NEXT:    bne .LBB0_3
-; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    bne .LBB0_2
+; CHECK-NEXT:  .LBB0_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #64
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %iHeight = getelementptr inbounds %struct.arm_2d_size_t, ptr %ptCopySize, i32 0, i32 1
   %0 = load i16, ptr %iHeight, align 2
@@ -187,19 +184,18 @@ for.cond.cleanup:                                 ; preds = %for.cond3.for.cond.
 define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) "target-cpu"="cortex-m55" {
 ; CHECK-LABEL: __arm_2d_impl_rgb16_colour_filling_with_alpha_sched:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrsh.w r12, [r2, #2]
-; CHECK-NEXT:    cmp.w r12, #1
-; CHECK-NEXT:    blt.w .LBB1_7
-; CHECK-NEXT:  @ %bb.1: @ %for.cond3.preheader.lr.ph
-; CHECK-NEXT:    ldrsh.w r2, [r2]
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB1_2: @ %for.cond3.preheader.us.preheader
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    sub sp, #80
+; CHECK-NEXT:    ldrsh.w r12, [r2, #2]
+; CHECK-NEXT:    cmp.w r12, #1
+; CHECK-NEXT:    blt.w .LBB1_6
+; CHECK-NEXT:  @ %bb.1: @ %for.cond3.preheader.lr.ph
+; CHECK-NEXT:    ldrsh.w r2, [r2]
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    blt .LBB1_6
+; CHECK-NEXT:  @ %bb.2: @ %for.cond3.preheader.us.preheader
 ; CHECK-NEXT:    ldr r7, [sp, #168]
 ; CHECK-NEXT:    movs r5, #120
 ; CHECK-NEXT:    lsls r6, r3, #3
@@ -269,13 +265,11 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(ptr noalias noc
 ; CHECK-NEXT:    adds r4, #1
 ; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    bne .LBB1_3
-; CHECK-NEXT:  @ %bb.6:
+; CHECK-NEXT:  .LBB1_6: @ %for.cond.cleanup
 ; CHECK-NEXT:    add sp, #80
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, lr}
-; CHECK-NEXT:  .LBB1_7: @ %for.cond.cleanup
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %iHeight = getelementptr inbounds %struct.arm_2d_size_t, ptr %ptCopySize, i32 0, i32 1
   %0 = load i16, ptr %iHeight, align 2

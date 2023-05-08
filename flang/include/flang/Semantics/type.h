@@ -266,7 +266,8 @@ public:
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
-  bool HasDefaultInitialization(bool ignoreAllocatable = false) const;
+  bool HasDefaultInitialization(
+      bool ignoreAllocatable = false, bool ignorePointer = true) const;
   bool HasDestruction() const;
 
   // The "raw" type parameter list is a simple transcription from the

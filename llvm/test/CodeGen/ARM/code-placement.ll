@@ -11,6 +11,7 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
+; CHECK: LBB0_1:
 ; CHECK: LBB0_[[LABEL:[0-9]]]:
 ; CHECK: bne LBB0_[[LABEL]]
 ; CHECK-NOT: b LBB0_[[LABEL]]
