@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_interceptors.h"
+
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
@@ -20,6 +21,7 @@
 #include "asan_stack.h"
 #include "asan_stats.h"
 #include "asan_suppressions.h"
+#include "asan_thread.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
