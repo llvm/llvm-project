@@ -1167,13 +1167,17 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   // Collect bitcode memory buffers from bitcodes, bundles, and archives
   for (auto *Input : InSet->DataObjects) {
 
+    if (!strcmp(Input->Name, "")) {
+      if (env::shouldEmitVerboseLogs()) {
+        LogS << "[Comgr Error] Input DataObject->Name not set for "
+          "AMD_COMGR_LINK_BC_TO_BC action.\n";
+        LogS.flush();
+      }
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+
     if (env::shouldSaveTemps()) {
       if (auto Status = outputToFile(Input, getFilePath(Input, InputDir))) {
-        if (!strcmp(Input->Name, ""))
-          if (env::shouldEmitVerboseLogs())
-            LogS << "Comgr data object name not set for LINK_BITCODE_TO_BITCODE"
-                 " action\n";
-
         return Status;
       }
     }
@@ -1186,10 +1190,6 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       if (env::shouldEmitVerboseLogs()) {
         LogS << "\t     Linking Bitcode: " << InputDir << "/" << Input->Name
              << "\n";
-
-        if (!strcmp(Input->Name, ""))
-          LogS << "Comgr data object name not set for LINK_BITCODE_TO_BITCODE"
-               " action\n";
       }
 
       auto Mod =
@@ -1228,10 +1228,6 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
         if (auto Status = outputToFile(Input, getFilePath(Input, InputDir))) {
           return Status;
         }
-
-        if (!strcmp(Input->Name, ""))
-          LogS << "Comgr data object name not set for LINK_BITCODE_TO_BITCODE"
-               " action\n";
       }
 
       // Configure Offload Bundler
@@ -1311,10 +1307,6 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       if (env::shouldEmitVerboseLogs()) {
         LogS << "\t     Linking Archive: " << InputDir << "/" << Input->Name
              << "\n";
-
-        if (!strcmp(Input->Name, ""))
-          LogS << "Comgr data object name not set for LINK_BITCODE_TO_BITCODE"
-               " action\n";
       }
 
       // Determine desired bundle entry ID

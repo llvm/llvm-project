@@ -1572,8 +1572,9 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR if the link or unbundling fails.
    *
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if isa name is not set in @p info and does not match the isa name
-   * of all bc data objects in @p input.
+   * if IsaName is not set in @p info and does not match the isa name
+   * of all bc data objects in @p input, or if the Name field is not set for
+   * any DataObject in the input set.
    */
   AMD_COMGR_ACTION_LINK_BC_TO_BC = 0x4,
   /**
