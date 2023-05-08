@@ -129,7 +129,7 @@ class AsanThread {
 
   void *extra_spill_area() { return &extra_spill_area_; }
 
-  void *get_arg() { return arg_; }
+  void *get_arg() const { return arg_; }
 
  private:
   // NOTE: There is no AsanThread constructor. It is allocated
