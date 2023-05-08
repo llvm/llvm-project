@@ -724,6 +724,8 @@ void ScheduleDAGTopologicalSort::AddSUnitWithoutPredecessors(const SUnit *SU) {
 
 bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
                                              const SUnit *TargetSU) {
+  assert(TargetSU != nullptr && "Invalid target SUnit");
+  assert(SU != nullptr && "Invalid SUnit");
   FixOrder();
   // If insertion of the edge SU->TargetSU would create a cycle
   // then there is a path from TargetSU to SU.
