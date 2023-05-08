@@ -300,7 +300,7 @@ void ValueObjectPrinter::PrintDecl() {
     ConstString type_name_cstr(typeName.GetString());
     ConstString var_name_cstr(varName.GetString());
 
-    DumpValueObjectOptions decl_print_options;
+    DumpValueObjectOptions decl_print_options = m_options;
     // Pass printing helpers an option object that indicates whether the name
     // should be shown or hidden.
     decl_print_options.SetHideName(!ShouldShowName());
