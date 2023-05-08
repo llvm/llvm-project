@@ -88,8 +88,7 @@ void transferUninitializedInt(const DeclStmt *D,
                               LatticeTransferState &State) {
   const auto *Var = M.Nodes.getNodeAs<clang::VarDecl>(kVar);
   assert(Var != nullptr);
-  const StorageLocation *Loc =
-      State.Env.getStorageLocation(*Var, SkipPast::None);
+  const StorageLocation *Loc = State.Env.getStorageLocation(*Var);
   Value *Val = State.Env.getValue(*Loc);
   initUnknown(*Val, State.Env);
 }
@@ -427,7 +426,7 @@ getProperty(const Environment &Env, ASTContext &ASTCtx, const Node *N,
             StringRef Property) {
   if (!N)
     return {testing::AssertionFailure() << "No node", nullptr};
-  const StorageLocation *Loc = Env.getStorageLocation(*N, SkipPast::None);
+  const StorageLocation *Loc = Env.getStorageLocation(*N);
   if (!isa_and_nonnull<ScalarStorageLocation>(Loc))
     return {testing::AssertionFailure() << "No location", nullptr};
   const Value *Val = Env.getValue(*Loc);
