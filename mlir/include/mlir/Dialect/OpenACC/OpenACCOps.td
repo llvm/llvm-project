@@ -477,6 +477,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     )
     $region attr-dict-with-keyword
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -562,6 +564,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     )
     $region attr-dict-with-keyword
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -646,6 +650,8 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     )
     $region attr-dict-with-keyword
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

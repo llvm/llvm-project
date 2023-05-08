@@ -224,3 +224,27 @@ acc.enter_data dataOperands(%value : memref<10xf32>)
 %value = memref.alloc() : memref<10xf32>
 // expected-error@+1 {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
 acc.update dataOperands(%value : memref<10xf32>)
+
+// -----
+
+%value = memref.alloc() : memref<10xf32>
+// expected-error@+1 {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+acc.parallel dataOperands(%value : memref<10xf32>) {
+  acc.yield
+}
+
+// -----
+
+%value = memref.alloc() : memref<10xf32>
+// expected-error@+1 {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+acc.serial dataOperands(%value : memref<10xf32>) {
+  acc.yield
+}
+
+// -----
+
+%value = memref.alloc() : memref<10xf32>
+// expected-error@+1 {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+acc.kernels dataOperands(%value : memref<10xf32>) {
+  acc.yield
+}
