@@ -2314,12 +2314,16 @@ OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
   // Rlist: {ra [, s0[-sN]]}
   // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
   SMLoc S = getLoc();
-  if (getLexer().isNot(AsmToken::LCurly)) {
-    Error(getLoc(), "register list must start with '{'");
+
+  if (parseToken(AsmToken::LCurly, "register list must start with '{'"))
+    return MatchOperand_ParseFail;
+
+  bool IsEABI = isRVE();
+
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    Error(getLoc(), "register list must start from 'ra' or 'x1'");
     return MatchOperand_ParseFail;
   }
-  getLexer().Lex(); // eat '{'
-  bool IsEABI = isRVE();
 
   StringRef RegName = getLexer().getTok().getIdentifier();
   MCRegister RegStart = matchRegisterNameHelper(IsEABI, RegName);
@@ -2416,11 +2420,8 @@ OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RCurly)) {
-    Error(getLoc(), "register list must end with '}'");
+  if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
     return MatchOperand_ParseFail;
-  }
-  getLexer().Lex(); // eat '}'
 
   if (RegEnd == RISCV::NoRegister)
     RegEnd = RegStart;
