@@ -1,41 +1,42 @@
 #include "llvm/Transforms/Utils/DbgInstructionPrint.h"
 #include "llvm/IR/Instructions.h"
+#include <map>
+#include "llvm/Support/Regex.h"
 
 using namespace llvm;
 
 PreservedAnalyses DbgInstructionPrintPass::run(Function& F, FunctionAnalysisManager& AM)
 {
     errs() << F.getName() <<":\n";
-    int dbgVals = 0;
-    int dbgDeclares = 0;
-    int dbgAssigns = 0;
+    std::map<StringRef, int> dbgCntMap;
+    Regex dbgRegex("^llvm.dbg.*");
     for(const BasicBlock& BB: F)
     {
         for(const Instruction& I: BB)
         {
             if(isa<CallInst> (I))
             {
-                
-                // errs() << "\t" << cast<CallInst>(I).getCalledFunction()->getName() << "\n";
-                StringRef ref = cast<CallInst>(I).getCalledFunction()->getName();
-                if(ref == "llvm.dbg.value")
+                StringRef functionName = cast<CallInst>(I).getCalledFunction()->getName();
+                if(dbgRegex.match(functionName))
                 {
-                    dbgVals++;
-                }
-                else if(ref == "llvm.dbg.declare")
-                {
-                    dbgDeclares++;
-                }
-                else if(ref == "llvm.dbg.assign")
-                {
-                    dbgAssigns++;
+                    if(dbgCntMap.count(functionName) > 0)
+                    {
+                        dbgCntMap[functionName]++;
+                    }
+                    else
+                    {
+                        dbgCntMap[functionName] = 1;
+                    }
                 }
             }
         }
     }
-    errs() << "\t" << "llvm.dbg.value: " << dbgVals << "\n";
-    errs() << "\t" << "llvm.dbg.declare: " << dbgDeclares << "\n";
-    errs() << "\t" << "llvm.dbg.assign: " << dbgAssigns << "\n";
+    //Onih kojih nema, njih je nula
+    for(auto it = dbgCntMap.cbegin(); it != dbgCntMap.cend(); it++)
+    {
+        errs() << "\t" << it->first << ": " << it->second << "\n";
+        
+    }
 
     return PreservedAnalyses::all();
 }
