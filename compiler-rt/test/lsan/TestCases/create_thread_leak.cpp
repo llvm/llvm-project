@@ -6,8 +6,8 @@
 // RUN: %run not %t 10 0 0 1 2>&1 | FileCheck %s --check-prefixes=LEAK,LEAK234
 
 // FIXME: Remove "not". There is no leak.
-// False LEAK234 is broken for ASAN, LSAN.
-// RUN: %run %if asan %{ not %} %if lsan-standalone %{ not %} %t 10 0 0 0
+// False LEAK234 is broken for LSAN.
+// RUN: %run %if lsan-standalone %{ not %} %t 10 0 0 0
 
 #include <pthread.h>
 #include <stdlib.h>
