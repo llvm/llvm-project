@@ -97,6 +97,10 @@ metadata querys for code object v2 objects.
 deprecation of code object v3 in LLVM. However, we still test loading and
 metadata querys for code object v3 objects.
 - Revamp symbolizer test to fail on errors, among other improvments
+- Improve linking and unbundling log to correctly store temporary files in /tmp,
+and to output clang-offload-bundler command to allow users to re-create Comgr
+unbundling. Also add log warning if linking objects without a Name field, which
+can lead to errors when saving temp files.
 
 New Targets
 -----------
