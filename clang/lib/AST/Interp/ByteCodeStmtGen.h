@@ -68,6 +68,8 @@ private:
   bool visitCaseStmt(const CaseStmt *S);
   bool visitDefaultStmt(const DefaultStmt *S);
 
+  bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
+
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;
 
