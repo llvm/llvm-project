@@ -9,8 +9,7 @@ _func1:
         @ There is no MachO relocation for Thumb1's unconditional branch, so
         @ this is unrepresentable. FIXME: I think ELF could represent this.
         b _func2
-
-@ CHECK-ERROR: unsupported relocation on symbol
+@ CHECK-ERROR: :[[#@LINE-1]]:9: error: unsupported relocation type
 
 @ CHECK-MACHO: f7ff bffe          b.w {{.+}} @ imm = #-4
 @ CHECK-MACHO-NEXT: ARM_THUMB_RELOC_BR22

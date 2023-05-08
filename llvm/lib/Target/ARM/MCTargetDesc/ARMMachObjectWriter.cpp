@@ -79,7 +79,7 @@ static bool getARMFixupKindMachOInfo(unsigned Kind, unsigned &RelocType,
     return true;
   case FK_Data_8:
     Log2Size = llvm::Log2_32(8);
-    return true;
+    return false;
 
     // These fixups are expected to always be resolvable at assembly time and
     // have no relocations supported.
@@ -386,8 +386,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
     // relocation type for the fixup kind. This happens when it's a fixup that's
     // expected to always be resolvable at assembly time and not have any
     // relocations needed.
-    Asm.getContext().reportError(Fixup.getLoc(),
-                                 "unsupported relocation on symbol");
+    Asm.getContext().reportError(Fixup.getLoc(), "unsupported relocation type");
     return;
   }
 
