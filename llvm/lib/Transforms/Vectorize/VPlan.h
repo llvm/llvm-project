@@ -37,6 +37,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/Operator.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -936,14 +937,131 @@ public:
   }
 };
 
+/// Class to record LLVM IR flag for a recipe along with it.
+class VPRecipeWithIRFlags : public VPRecipeBase {
+  enum class OperationType : unsigned char {
+    OverflowingBinOp,
+    PossiblyExactOp,
+    FPMathOp,
+    Other
+  };
+  struct WrapFlagsTy {
+    char HasNUW : 1;
+    char HasNSW : 1;
+  };
+  struct ExactFlagsTy {
+    char IsExact : 1;
+  };
+  struct FastMathFlagsTy {
+    char AllowReassoc : 1;
+    char NoNaNs : 1;
+    char NoInfs : 1;
+    char NoSignedZeros : 1;
+    char AllowReciprocal : 1;
+    char AllowContract : 1;
+    char ApproxFunc : 1;
+  };
+
+  OperationType OpType;
+
+  union {
+    WrapFlagsTy WrapFlags;
+    ExactFlagsTy ExactFlags;
+    FastMathFlagsTy FMFs;
+    unsigned char AllFlags;
+  };
+
+public:
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, iterator_range<IterT> Operands)
+      : VPRecipeBase(SC, Operands) {
+    OpType = OperationType::Other;
+    AllFlags = 0;
+  }
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, iterator_range<IterT> Operands,
+                      Instruction &I)
+      : VPRecipeWithIRFlags(SC, Operands) {
+    if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
+      OpType = OperationType::OverflowingBinOp;
+      WrapFlags.HasNUW = Op->hasNoUnsignedWrap();
+      WrapFlags.HasNSW = Op->hasNoSignedWrap();
+    } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
+      OpType = OperationType::PossiblyExactOp;
+      ExactFlags.IsExact = Op->isExact();
+    } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
+      OpType = OperationType::FPMathOp;
+      FastMathFlags FMF = Op->getFastMathFlags();
+      FMFs.AllowReassoc = FMF.allowReassoc();
+      FMFs.NoNaNs = FMF.noNaNs();
+      FMFs.NoInfs = FMF.noInfs();
+      FMFs.NoSignedZeros = FMF.noSignedZeros();
+      FMFs.AllowReciprocal = FMF.allowReciprocal();
+      FMFs.AllowContract = FMF.allowContract();
+      FMFs.ApproxFunc = FMF.approxFunc();
+    }
+  }
+
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
+  }
+
+  /// Drop all poison-generating flags.
+  void dropPoisonGeneratingFlags() {
+    // NOTE: This needs to be kept in-sync with
+    // Instruction::dropPoisonGeneratingFlags.
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      WrapFlags.HasNUW = false;
+      WrapFlags.HasNSW = false;
+      break;
+    case OperationType::PossiblyExactOp:
+      ExactFlags.IsExact = false;
+      break;
+    case OperationType::FPMathOp:
+      FMFs.NoNaNs = false;
+      FMFs.NoInfs = false;
+      break;
+    case OperationType::Other:
+      break;
+    }
+  }
+
+  /// Set the IR flags for \p I.
+  void setFlags(Instruction *I) const {
+    switch (OpType) {
+    case OperationType::OverflowingBinOp:
+      I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
+      I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      break;
+    case OperationType::PossiblyExactOp:
+      I->setIsExact(ExactFlags.IsExact);
+      break;
+    case OperationType::FPMathOp:
+      I->setHasAllowReassoc(FMFs.AllowReassoc);
+      I->setHasNoNaNs(FMFs.NoNaNs);
+      I->setHasNoInfs(FMFs.NoInfs);
+      I->setHasNoSignedZeros(FMFs.NoSignedZeros);
+      I->setHasAllowReciprocal(FMFs.AllowReciprocal);
+      I->setHasAllowContract(FMFs.AllowContract);
+      I->setHasApproxFunc(FMFs.ApproxFunc);
+      break;
+    case OperationType::Other:
+      break;
+    }
+  }
+};
+
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
 /// ingredient. This recipe covers most of the traditional vectorization cases
 /// where each ingredient transforms into a vectorized version of itself.
-class VPWidenRecipe : public VPRecipeBase, public VPValue {
+class VPWidenRecipe : public VPRecipeWithIRFlags, public VPValue {
+
 public:
   template <typename IterT>
   VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPDef::VPWidenSC, Operands), VPValue(this, &I) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPValue(this, &I) {}
 
   ~VPWidenRecipe() override = default;
 

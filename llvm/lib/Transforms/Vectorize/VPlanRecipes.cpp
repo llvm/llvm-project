@@ -632,17 +632,8 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
       Value *V = Builder.CreateNAryOp(I.getOpcode(), Ops);
 
-      if (auto *VecOp = dyn_cast<Instruction>(V)) {
-        VecOp->copyIRFlags(&I);
-
-        // If the instruction is vectorized and was in a basic block that needed
-        // predication, we can't propagate poison-generating flags (nuw/nsw,
-        // exact, etc.). The control flow has been linearized and the
-        // instruction is no longer guarded by the predicate, which could make
-        // the flag properties to no longer hold.
-        if (State.MayGeneratePoisonRecipes.contains(this))
-          VecOp->dropPoisonGeneratingFlags();
-      }
+      if (auto *VecOp = dyn_cast<Instruction>(V))
+        setFlags(VecOp);
 
       // Use this vector value for all users of the original instruction.
       State.set(this, V, Part);
