@@ -742,7 +742,7 @@ declare i32 @__kmpc_target_init(ptr, i8, i1);
 
 declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32);
 
-declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i64, ptr, i32);
+declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i32, ptr, i32);
 
 declare void @__tgt_interop_use(ptr, i32, ptr, i32, i32, ptr, i32);
 
@@ -1398,7 +1398,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i64, ptr, i32)
+; CHECK: declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i32, ptr, i32)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare void @__tgt_interop_use(ptr, i32, ptr, i32, i32, ptr, i32)
@@ -2046,7 +2046,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i64, ptr, i32)
+; OPTIMISTIC: declare void @__tgt_interop_init(ptr, i32, ptr, i32, i32, i32, ptr, i32)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare void @__tgt_interop_use(ptr, i32, ptr, i32, i32, ptr, i32)
@@ -2707,7 +2707,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare void @__tgt_interop_destroy(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare void @__tgt_interop_init(ptr, i32 signext, ptr, i32 signext, i32 signext, i64, ptr, i32 signext)
+; EXT: declare void @__tgt_interop_init(ptr, i32 signext, ptr, i32 signext, i32 signext, i32, ptr, i32 signext)
 
 ; EXT-NOT: Function Attrs
 ; EXT: declare void @__tgt_interop_use(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)
