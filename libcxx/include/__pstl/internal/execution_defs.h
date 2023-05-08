@@ -16,6 +16,8 @@
 
 #include "pstl_config.h"
 
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
 namespace __pstl {
 namespace execution {
 inline namespace v1 {
@@ -69,5 +71,7 @@ struct __parallel_tag;
 } // namespace __internal
 
 } // namespace __pstl
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif /* _PSTL_EXECUTION_POLICY_DEFS_H */

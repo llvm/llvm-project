@@ -626,7 +626,6 @@ libcxx/include/__support/ibm/locale_mgmt_zos.h
 libcxx/include/__support/ibm/nanosleep.h
 libcxx/include/__support/ibm/xlocale.h
 libcxx/include/__support/newlib/xlocale.h
-libcxx/include/__support/solaris/xlocale.h
 libcxx/include/__support/win32/locale_win32.h
 libcxx/include/__support/xlocale/__nop_locale_mgmt.h
 libcxx/include/__system_error/errc.h
@@ -841,9 +840,6 @@ libcxx/src/support/runtime/exception_pointer_unimplemented.ipp
 libcxx/src/support/runtime/new_handler_fallback.ipp
 libcxx/src/support/runtime/stdexcept_default.ipp
 libcxx/src/support/runtime/stdexcept_vcruntime.ipp
-libcxx/src/support/solaris/mbsnrtowcs.inc
-libcxx/src/support/solaris/wcsnrtombs.inc
-libcxx/src/support/solaris/xlocale.cpp
 libcxx/src/support/win32/locale_win32.cpp
 libcxx/src/support/win32/support.cpp
 libcxx/src/support/win32/thread_win32.cpp

@@ -8627,6 +8627,38 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::SUB, dl, VT, Shift, Xor);
 }
 
+SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  SDValue LHS = DAG.getFreeze(N->getOperand(0));
+  SDValue RHS = DAG.getFreeze(N->getOperand(1));
+  bool IsSigned = N->getOpcode() == ISD::ABDS;
+
+  // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
+  // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
+  unsigned MaxOpc = IsSigned ? ISD::SMAX : ISD::UMAX;
+  unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
+  if (isOperationLegal(MaxOpc, VT) && isOperationLegal(MinOpc, VT)) {
+    SDValue Max = DAG.getNode(MaxOpc, dl, VT, LHS, RHS);
+    SDValue Min = DAG.getNode(MinOpc, dl, VT, LHS, RHS);
+    return DAG.getNode(ISD::SUB, dl, VT, Max, Min);
+  }
+
+  // abdu(lhs, rhs) -> or(usubsat(lhs,rhs), usubsat(rhs,lhs))
+  if (!IsSigned && isOperationLegal(ISD::USUBSAT, VT))
+    return DAG.getNode(ISD::OR, dl, VT,
+                       DAG.getNode(ISD::USUBSAT, dl, VT, LHS, RHS),
+                       DAG.getNode(ISD::USUBSAT, dl, VT, RHS, LHS));
+
+  // abds(lhs, rhs) -> select(sgt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  // abdu(lhs, rhs) -> select(ugt(lhs,rhs), sub(lhs,rhs), sub(rhs,lhs))
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
+  SDValue Cmp = DAG.getSetCC(dl, CCVT, LHS, RHS, CC);
+  return DAG.getSelect(dl, VT, Cmp, DAG.getNode(ISD::SUB, dl, VT, LHS, RHS),
+                       DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+}
+
 SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
@@ -9511,10 +9543,21 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Op0 = Node->getOperand(0);
   SDValue Op1 = Node->getOperand(1);
   EVT VT = Op0.getValueType();
+  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   unsigned Opcode = Node->getOpcode();
   SDLoc DL(Node);
 
+  // umax(x,1) --> sub(x,cmpeq(x,0)) iff cmp result is allbits
+  if (Opcode == ISD::UMAX && llvm::isOneOrOneSplat(Op1, true) && BoolVT == VT &&
+      getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {
+    Op0 = DAG.getFreeze(Op0);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return DAG.getNode(ISD::SUB, DL, VT, Op0,
+                       DAG.getSetCC(DL, VT, Op0, Zero, ISD::SETEQ));
+  }
+
   // umin(x,y) -> sub(x,usubsat(x,y))
+  // TODO: Missing freeze(Op0)?
   if (Opcode == ISD::UMIN && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::USUBSAT, VT)) {
     return DAG.getNode(ISD::SUB, DL, VT, Op0,
@@ -9522,6 +9565,7 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   // umax(x,y) -> add(x,usubsat(y,x))
+  // TODO: Missing freeze(Op0)?
   if (Opcode == ISD::UMAX && isOperationLegal(ISD::ADD, VT) &&
       isOperationLegal(ISD::USUBSAT, VT)) {
     return DAG.getNode(ISD::ADD, DL, VT, Op0,
@@ -9535,10 +9579,10 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
 
   // Attempt to find an existing SETCC node that we can reuse.
   // TODO: Do we need a generic doesSETCCNodeExist?
+  // TODO: Missing freeze(Op0)/freeze(Op1)?
   auto buildMinMax = [&](ISD::CondCode PrefCC, ISD::CondCode AltCC,
                          ISD::CondCode PrefCommuteCC,
                          ISD::CondCode AltCommuteCC) {
-    EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     SDVTList BoolVTList = DAG.getVTList(BoolVT);
     for (ISD::CondCode CC : {PrefCC, AltCC}) {
       if (DAG.doesNodeExist(ISD::SETCC, BoolVTList,

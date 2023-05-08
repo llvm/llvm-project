@@ -635,7 +635,11 @@ module std [system] {
         private header "__atomic/aliases.h"
         export atomic
       }
-      module atomic              { private header "__atomic/atomic.h" }
+      module atomic              {
+        private header "__atomic/atomic.h"
+
+        export atomic_base
+      }
       module atomic_base         { private header "__atomic/atomic_base.h" }
       module atomic_flag         { private header "__atomic/atomic_flag.h" }
       module atomic_init         { private header "__atomic/atomic_init.h" }

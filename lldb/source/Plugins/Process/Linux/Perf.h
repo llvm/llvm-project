@@ -122,8 +122,8 @@ public:
   ///     Configuration information for the event.
   ///
   /// \param[in] pid
-  ///     The process or thread to be monitored by the event. If \b None, then
-  ///     all threads and processes are monitored.
+  ///     The process or thread to be monitored by the event. If \b
+  ///     std::nullopt, then all threads and processes are monitored.
   static llvm::Expected<PerfEvent>
   Init(perf_event_attr &attr, std::optional<lldb::pid_t> pid,
        std::optional<lldb::cpu_id_t> core = std::nullopt);

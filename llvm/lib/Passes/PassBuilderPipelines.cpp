@@ -884,8 +884,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // functions.
   MainCGPipeline.addPass(PostOrderFunctionAttrsPass(/*SkipNonRecursive*/ true));
 
-  // Try to promote pointer arguments for internal functions.
-  MainCGPipeline.addPass(ArgumentPromotionPass());
+  // When at O3 add argument promotion to the pass pipeline.
+  // FIXME: It isn't at all clear why this should be limited to O3.
+  if (Level == OptimizationLevel::O3)
+    MainCGPipeline.addPass(ArgumentPromotionPass());
 
   // Try to perform OpenMP specific optimizations. This is a (quick!) no-op if
   // there are no OpenMP runtime calls present in the module.
@@ -1529,6 +1531,11 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   ModulePassManager MPM;
 
   if (ImportSummary) {
+    // For ThinLTO we must apply the context disambiguation decisions early, to
+    // ensure we can correctly match the callsites to summary data.
+    if (EnableMemProfContextDisambiguation)
+      MPM.addPass(MemProfContextDisambiguation(ImportSummary));
+
     // These passes import type identifier resolutions for whole-program
     // devirtualization and CFI. They must run early because other passes may
     // disturb the specific instruction patterns that these passes look for,

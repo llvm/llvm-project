@@ -121,6 +121,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
   {{"gfx1102"},   {"gfx1102"}, GK_GFX1102, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1103"},   {"gfx1103"}, GK_GFX1103, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1150"},   {"gfx1150"}, GK_GFX1150, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1151"},   {"gfx1151"}, GK_GFX1151, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1200"},   {"gfx1200"}, GK_GFX1200, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1210"},   {"gfx1210"}, GK_GFX1210, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 };
@@ -243,6 +244,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1102: return {11, 0, 2};
   case GK_GFX1103: return {11, 0, 3};
   case GK_GFX1150: return {11, 5, 0};
+  case GK_GFX1151: return {11, 5, 1};
   case GK_GFX1200: return {12, 0, 0};
   case GK_GFX1210: return {12, 1, 0};
   default:         return {0, 0, 0};
@@ -300,6 +302,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx12-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
       break;
+    case GK_GFX1151:
     case GK_GFX1150:
     case GK_GFX1103:
     case GK_GFX1102:
@@ -464,6 +467,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1210:
     case GK_GFX1200:
+    case GK_GFX1151:
     case GK_GFX1150:
     case GK_GFX1103:
     case GK_GFX1102:

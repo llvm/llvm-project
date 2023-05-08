@@ -470,7 +470,8 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
     mlir::Value varPtr;
-    if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp>)
+    if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
+                  std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
       varPtr = entryOp.getVarPtr();
     builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
                            entryOp.getBounds(), entryOp.getDataClause(),
@@ -1438,8 +1439,8 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
                Fortran::lower::StatementContext &stmtCtx,
                const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond, async, waitDevnum;
-  llvm::SmallVector<mlir::Value> hostOperands, deviceOperands, waitOperands,
-      deviceTypeOperands;
+  llvm::SmallVector<mlir::Value> dataClauseOperands, updateHostOperands,
+      waitOperands, deviceTypeOperands;
 
   // Async and wait clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -1448,7 +1449,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
   bool addWaitAttr = false;
   bool addIfPresentAttr = false;
 
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separatly as clauses can appear
@@ -1472,14 +1473,18 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
                           deviceTypeOperands, stmtCtx);
     } else if (const auto *hostClause =
                    std::get_if<Fortran::parser::AccClause::Host>(&clause.u)) {
-      genObjectList(hostClause->v, converter, semanticsContext, stmtCtx,
-                    hostOperands);
+      genDataOperandOperations<mlir::acc::GetDevicePtrOp>(
+          hostClause->v, converter, semanticsContext, stmtCtx,
+          updateHostOperands, mlir::acc::DataClause::acc_update_host, false);
     } else if (const auto *deviceClause =
                    std::get_if<Fortran::parser::AccClause::Device>(&clause.u)) {
-      genObjectList(deviceClause->v, converter, semanticsContext, stmtCtx,
-                    deviceOperands);
+      genDataOperandOperations<mlir::acc::UpdateDeviceOp>(
+          deviceClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_update_device, false);
     }
   }
+
+  dataClauseOperands.append(updateHostOperands);
 
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
@@ -1489,18 +1494,21 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
   addOperand(operands, operandSegments, waitDevnum);
   addOperands(operands, operandSegments, waitOperands);
   addOperands(operands, operandSegments, deviceTypeOperands);
-  addOperands(operands, operandSegments, hostOperands);
-  addOperands(operands, operandSegments, deviceOperands);
+  operandSegments.append({0, 0});
+  addOperands(operands, operandSegments, dataClauseOperands);
 
   mlir::acc::UpdateOp updateOp = createSimpleOp<mlir::acc::UpdateOp>(
-      firOpBuilder, currentLocation, operands, operandSegments);
+      builder, currentLocation, operands, operandSegments);
+
+  genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
+      builder, updateHostOperands, /*structured=*/false, /*implicit=*/false);
 
   if (addAsyncAttr)
-    updateOp.setAsyncAttr(firOpBuilder.getUnitAttr());
+    updateOp.setAsyncAttr(builder.getUnitAttr());
   if (addWaitAttr)
-    updateOp.setWaitAttr(firOpBuilder.getUnitAttr());
+    updateOp.setWaitAttr(builder.getUnitAttr());
   if (addIfPresentAttr)
-    updateOp.setIfPresentAttr(firOpBuilder.getUnitAttr());
+    updateOp.setIfPresentAttr(builder.getUnitAttr());
 }
 
 static void

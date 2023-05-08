@@ -729,6 +729,11 @@ private:
       llvm::ArrayRef<mlir::Value> resultExtents) {
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Value shape = builder.genShape(loc, resultExtents);
+    // For polymorphic entities, it will be needed to add a mold on the
+    // hlfir.elemental_addr/hlfir.elemental so that we are able to create
+    // temporary storage for it.
+    if (partInfo.base && partInfo.base->isPolymorphic())
+      TODO(loc, "vector subscripted polymorphic entity in HLFIR");
     // The type parameters to be added on the hlfir.elemental_addr are the ones
     // of the whole designator (not the ones of the vector subscripted part).
     // These are not yet known and will be added when finalizing the designator
@@ -1365,6 +1370,11 @@ private:
     // Elemental expression.
     mlir::Type elementType;
     if constexpr (R::category == Fortran::common::TypeCategory::Derived) {
+      // TODO: need to pass a mold to hlfir.elemental for polymorphic arrays
+      // if using hlfir.elemental here so that it can get the dynamic type
+      // info.
+      if (left.isPolymorphic())
+        TODO(loc, "parenthesized polymorphic arrays in HLFIR");
       elementType = Fortran::lower::translateDerivedTypeToFIRType(
           getConverter(), op.derived().GetType().GetDerivedTypeSpec());
     } else {

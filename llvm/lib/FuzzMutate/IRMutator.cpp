@@ -27,6 +27,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <map>
 #include <optional>
 
 using namespace llvm;
@@ -569,55 +570,66 @@ void SinkInstructionStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
 }
 
 void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
-  SmallPtrSet<Instruction *, 8> AliveInsts;
+  // A deterministic alternative to SmallPtrSet with the same lookup
+  // performance.
+  std::map<size_t, Instruction *> AliveInsts;
+  std::map<Instruction *, size_t> AliveInstsLookup;
+  size_t InsertIdx = 0;
   for (auto &I : make_early_inc_range(make_range(
            BB.getFirstInsertionPt(), BB.getTerminator()->getIterator()))) {
     // First gather all instructions that can be shuffled. Don't take
     // terminator.
-    AliveInsts.insert(&I);
+    AliveInsts.insert({InsertIdx, &I});
+    AliveInstsLookup.insert({&I, InsertIdx++});
     // Then remove these instructions from the block
     I.removeFromParent();
   }
 
   // Shuffle these instructions using topological sort.
-  // Returns true if all current instruction's dependencies in this block have
+  // Returns false if all current instruction's dependencies in this block have
   // been shuffled. If so, this instruction can be shuffled too.
-  auto hasAliveParent = [&AliveInsts](Instruction *I) {
-    for (Value *O : I->operands()) {
+  auto hasAliveParent = [&AliveInsts, &AliveInstsLookup](size_t Index) {
+    for (Value *O : AliveInsts[Index]->operands()) {
       Instruction *P = dyn_cast<Instruction>(O);
-      if (P && AliveInsts.count(P))
+      if (P && AliveInstsLookup.count(P))
         return true;
     }
     return false;
   };
   // Get all alive instructions that depend on the current instruction.
-  auto getAliveChildren = [&AliveInsts](Instruction *I) {
-    SmallPtrSet<Instruction *, 4> Children;
+  // Takes Instruction* instead of index because the instruction is already
+  // shuffled.
+  auto getAliveChildren = [&AliveInstsLookup](Instruction *I) {
+    SmallSetVector<size_t, 8> Children;
     for (Value *U : I->users()) {
       Instruction *P = dyn_cast<Instruction>(U);
-      if (P && AliveInsts.count(P))
-        Children.insert(P);
+      if (P && AliveInstsLookup.count(P))
+        Children.insert(AliveInstsLookup[P]);
     }
     return Children;
   };
-  SmallPtrSet<Instruction *, 8> Roots;
+  SmallSet<size_t, 8> RootIndices;
   SmallVector<Instruction *, 8> Insts;
-  for (Instruction *I : AliveInsts) {
-    if (!hasAliveParent(I))
-      Roots.insert(I);
+  for (const auto &[Index, Inst] : AliveInsts) {
+    if (!hasAliveParent(Index))
+      RootIndices.insert(Index);
   }
   // Topological sort by randomly selecting a node without a parent, or root.
-  while (!Roots.empty()) {
-    auto RS = makeSampler<Instruction *>(IB.Rand);
-    for (Instruction *Root : Roots)
-      RS.sample(Root, 1);
-    Instruction *Root = RS.getSelection();
-    Roots.erase(Root);
-    AliveInsts.erase(Root);
+  while (!RootIndices.empty()) {
+    auto RS = makeSampler<size_t>(IB.Rand);
+    for (size_t RootIdx : RootIndices)
+      RS.sample(RootIdx, 1);
+    size_t RootIdx = RS.getSelection();
+
+    RootIndices.erase(RootIdx);
+    Instruction *Root = AliveInsts[RootIdx];
+    AliveInsts.erase(RootIdx);
+    AliveInstsLookup.erase(Root);
     Insts.push_back(Root);
-    for (Instruction *Child : getAliveChildren(Root)) {
+
+    for (size_t Child : getAliveChildren(Root)) {
       if (!hasAliveParent(Child)) {
-        Roots.insert(Child);
+        RootIndices.insert(Child);
       }
     }
   }

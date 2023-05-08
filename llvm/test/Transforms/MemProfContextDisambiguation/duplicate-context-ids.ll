@@ -1,7 +1,8 @@
 ;; Test callsite context graph generation for call graph with with MIBs
 ;; that have pruned contexts that partially match multiple inlined
 ;; callsite contexts, requiring duplication of context ids and nodes
-;; while matching callsite nodes onto the graph.
+;; while matching callsite nodes onto the graph. Also tests graph and IR
+;; cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -58,7 +59,9 @@
 ; RUN: opt -passes=memprof-context-disambiguation \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR \
+; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 ; RUN:  cat %t.ccg.prestackupdate.dot | FileCheck %s --check-prefix=DOTPRE
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOTPOST
@@ -265,6 +268,39 @@ attributes #6 = { builtin }
 ; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
 ; DUMP: 		Edge from Callee [[D2]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
 ; DUMP:         Clone of [[D]]
+
+; REMARKS: created clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Ev assigned to call function clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Cv assigned to call function clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Bv assigned to call function clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1Fv assigned to call function clone _Z1Dv
+; REMARKS: call in clone _Z1Dv marked with memprof allocation attribute notcold
+
+
+;; The allocation via F does not allocate cold memory. It should call the
+;; original D, which ultimately call the original allocation decorated
+;; with a "notcold" attribute.
+; IR: define internal {{.*}} @_Z1Dv()
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z1Fv()
+; IR:   call {{.*}} @_Z1Dv()
+;; The allocations via B and E allocate cold memory. They should call the
+;; cloned D, which ultimately call the cloned allocation decorated with a
+;; "cold" attribute.
+; IR: define internal {{.*}} @_Z1Bv()
+; IR:   call {{.*}} @_Z1Dv.memprof.1()
+; IR: define internal {{.*}} @_Z1Ev()
+; IR:   call {{.*}} @_Z1Dv.memprof.1()
+; IR: define internal {{.*}} @_Z1Dv.memprof.1()
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
+; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
+
+
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
 
 
 ; DOTPRE: digraph "prestackupdate" {

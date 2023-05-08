@@ -480,8 +480,9 @@ struct PageReleaseContext {
     }
 
     uptr LastBlockInRange = roundDownSlow(ToInRegion - 1, BlockSize);
-    if (LastBlockInRange < FromInRegion)
-      return;
+
+    // Note that LastBlockInRange may be smaller than `FromInRegion` at this
+    // point because it may contain only one block in the range.
 
     // When the last block sits across `To`, we can't just mark the pages
     // occupied by the last block as all counted. Instead, we increment the
@@ -540,13 +541,18 @@ struct PageReleaseContext {
       //   last block
       const uptr RoundedRegionSize = roundUp(RegionSize, PageSize);
       const uptr TrailingBlockBase = LastBlockInRegion + BlockSize;
-      // Only the last page touched by the last block needs to mark the trailing
-      // blocks. If the difference between `RoundedRegionSize` and
+      // If the difference between `RoundedRegionSize` and
       // `TrailingBlockBase` is larger than a page, that implies the reported
       // `RegionSize` may not be accurate.
       DCHECK_LT(RoundedRegionSize - TrailingBlockBase, PageSize);
+
+      // Only the last page touched by the last block needs to mark the trailing
+      // blocks. Note that if the last "pretend" block straddles the boundary,
+      // we still have to count it in so that the logic of counting the number
+      // of blocks on a page is consistent.
       uptr NumTrailingBlocks =
-          roundUpSlow(RoundedRegionSize - TrailingBlockBase, BlockSize) /
+          (roundUpSlow(RoundedRegionSize - TrailingBlockBase, BlockSize) +
+           BlockSize - 1) /
           BlockSize;
       if (NumTrailingBlocks > 0) {
         PageMap.incN(RegionIndex, getPageIndex(TrailingBlockBase),

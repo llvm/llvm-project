@@ -847,20 +847,14 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     SymbolContextList sc_list;
     frame_sc.comp_unit->ResolveSymbolContext(location_spec,
                                              eSymbolContextLineEntry, sc_list);
-    const uint32_t num_matches = sc_list.GetSize();
-    if (num_matches > 0) {
-      SymbolContext sc;
-      for (uint32_t i = 0; i < num_matches; ++i) {
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          addr_t step_addr =
-              sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
-          if (step_addr != LLDB_INVALID_ADDRESS) {
-            if (fun_range.ContainsLoadAddress(step_addr, target))
-              step_over_until_addrs.push_back(step_addr);
-            else
-              all_in_function = false;
-          }
-        }
+    for (const SymbolContext &sc : sc_list) {
+      addr_t step_addr =
+          sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
+      if (step_addr != LLDB_INVALID_ADDRESS) {
+        if (fun_range.ContainsLoadAddress(step_addr, target))
+          step_over_until_addrs.push_back(step_addr);
+        else
+          all_in_function = false;
       }
     }
 

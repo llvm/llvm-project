@@ -1492,7 +1492,7 @@ struct TypeHierarchyItem {
   /// Used to resolve a client provided item back.
   struct ResolveParams {
     SymbolID symbolID;
-    /// None means parents aren't resolved and empty is no parents.
+    /// std::nullopt means parents aren't resolved and empty is no parents.
     std::optional<std::vector<ResolveParams>> parents;
   };
   /// A data entry field that is preserved between a type hierarchy prepare and
@@ -1618,8 +1618,8 @@ struct InlayHintsParams {
 
   /// The visible document range for which inlay hints should be computed.
   ///
-  /// None is a clangd extension, which hints for computing hints on the whole
-  /// file.
+  /// std::nullopt is a clangd extension, which hints for computing hints on the
+  /// whole file.
   std::optional<Range> range;
 };
 bool fromJSON(const llvm::json::Value &, InlayHintsParams &, llvm::json::Path);

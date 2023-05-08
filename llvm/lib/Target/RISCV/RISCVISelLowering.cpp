@@ -935,6 +935,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                            Custom);
 
+        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
           setOperationAction({ISD::VP_AND, ISD::VP_OR, ISD::VP_XOR, ISD::AND,
@@ -956,8 +958,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
           setOperationAction(ISD::SPLAT_VECTOR_PARTS, VT, Custom);
         }
-
-        setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
 
         setOperationAction(
             {ISD::MLOAD, ISD::MSTORE, ISD::MGATHER, ISD::MSCATTER}, VT, Custom);
@@ -1697,6 +1697,8 @@ bool RISCVTargetLowering::canSplatOperand(Instruction *I, int Operand) const {
   case Intrinsic::vp_xor:
   case Intrinsic::vp_fadd:
   case Intrinsic::vp_fmul:
+  case Intrinsic::vp_icmp:
+  case Intrinsic::vp_fcmp:
     // These intrinsics have 'vr' versions.
   case Intrinsic::vp_sub:
   case Intrinsic::vp_fsub:
@@ -3827,6 +3829,17 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+
+  // Promote i1 shuffle to i8 shuffle.
+  if (VT.getVectorElementType() == MVT::i1) {
+    MVT WidenVT = MVT::getVectorVT(MVT::i8, VT.getVectorElementCount());
+    V1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, V1);
+    V2 = V2.isUndef() ? DAG.getUNDEF(WidenVT)
+                      : DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, V2);
+    SDValue Shuffled = DAG.getVectorShuffle(WidenVT, DL, V1, V2, SVN->getMask());
+    return DAG.getSetCC(DL, VT, Shuffled, DAG.getConstant(0, DL, WidenVT),
+                        ISD::SETNE);
+  }
 
   MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
 

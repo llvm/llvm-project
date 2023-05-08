@@ -293,6 +293,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__debug>
 #include <__format/enable_insertable.h>
 #include <__format/formatter.h>
+#include <__format/formatter_bool.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__iterator/advance.h>
@@ -301,6 +302,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #include <__iterator/wrap_iter.h>
 #include <__memory/addressof.h>
 #include <__memory/allocate_at_least.h>
+#include <__memory/allocator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
@@ -441,11 +443,11 @@ private:
       _LIBCPP_CONSTEXPR __destroy_vector(vector& __vec) : __vec_(__vec) {}
 
       _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void operator()() {
-          __vec_.__annotate_delete();
           std::__debug_db_erase_c(std::addressof(__vec_));
 
           if (__vec_.__begin_ != nullptr) {
             __vec_.__clear();
+            __vec_.__annotate_delete();
             __alloc_traits::deallocate(__vec_.__alloc(), __vec_.__begin_, __vec_.capacity());
           }
       }
@@ -745,8 +747,7 @@ private:
                                          const void *__old_mid,
                                          const void *__new_mid) const
     {
-
-      if (!__libcpp_is_constant_evaluated() && __beg && is_same<allocator_type, __default_allocator_type>::value)
+      if (!__libcpp_is_constant_evaluated() && __beg != nullptr && __asan_annotate_container_with_allocator<_Allocator>::value)
         __sanitizer_annotate_contiguous_container(__beg, __end, __old_mid, __new_mid);
     }
 #else
@@ -868,6 +869,7 @@ private:
     if (__alloc() != __c.__alloc())
     {
       __clear();
+      __annotate_delete();
       __alloc_traits::deallocate(__alloc(), this->__begin_, capacity());
       this->__begin_ = this->__end_ = __end_cap() = nullptr;
     }
@@ -956,6 +958,7 @@ vector<_Tp, _Allocator>::__vdeallocate() _NOEXCEPT
     if (this->__begin_ != nullptr)
     {
         clear();
+        __annotate_delete();
         __alloc_traits::deallocate(this->__alloc(), this->__begin_, capacity());
         this->__begin_ = this->__end_ = this->__end_cap() = nullptr;
     }
@@ -3323,7 +3326,7 @@ inline constexpr bool __format::__enable_insertable<vector<wchar_t>> = true;
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#if _LIBCPP_STD_VER >= 23
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER >= 23
 template <class _Tp, class CharT>
 // Since is-vector-bool-reference is only used once it's inlined here.
   requires same_as<typename _Tp::__container, vector<bool, typename _Tp::__container::allocator_type>>
@@ -3342,7 +3345,7 @@ public:
         return __underlying_.format(__ref, __ctx);
   }
 };
-#endif // _LIBCPP_STD_VER >= 23
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

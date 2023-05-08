@@ -24,20 +24,6 @@
 #include <cstring>
 #include <utility>
 
-/// The name of the kernel we will launch. All AMDHSA kernels end with '.kd'.
-constexpr const char *KERNEL_START = "_start.kd";
-
-/// The arguments to the '_start' kernel.
-struct kernel_args_t {
-  int argc;
-  void *argv;
-  void *envp;
-  void *ret;
-  void *inbox;
-  void *outbox;
-  void *buffer;
-};
-
 /// Print the error code and exit if \p code indicates an error.
 static void handle_error(hsa_status_t code) {
   if (code == HSA_STATUS_SUCCESS || code == HSA_STATUS_INFO_BREAK)
@@ -145,6 +131,105 @@ hsa_status_t get_agent_memory_pool(hsa_agent_t agent,
   return iterate_agent_memory_pools(agent, cb);
 }
 
+template <typename args_t>
+hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
+                           hsa_amd_memory_pool_t kernargs_pool,
+                           hsa_queue_t *queue, const LaunchParameters &params,
+                           const char *kernel_name, args_t kernel_args) {
+  // Look up the '_start' kernel in the loaded executable.
+  hsa_executable_symbol_t symbol;
+  if (hsa_status_t err = hsa_executable_get_symbol_by_name(
+          executable, kernel_name, &dev_agent, &symbol))
+    return err;
+
+  // Retrieve different properties of the kernel symbol used for launch.
+  uint64_t kernel;
+  uint32_t args_size;
+  uint32_t group_size;
+  uint32_t private_size;
+
+  std::pair<hsa_executable_symbol_info_t, void *> symbol_infos[] = {
+      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernel},
+      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, &args_size},
+      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &group_size},
+      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &private_size}};
+
+  for (auto &[info, value] : symbol_infos)
+    if (hsa_status_t err = hsa_executable_symbol_get_info(symbol, info, value))
+      return err;
+
+  // Allocate space for the kernel arguments on the host and allow the GPU agent
+  // to access it.
+  void *args;
+  if (hsa_status_t err = hsa_amd_memory_pool_allocate(kernargs_pool, args_size,
+                                                      /*flags=*/0, &args))
+    handle_error(err);
+  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, args);
+
+  // Initialie all the arguments (explicit and implicit) to zero, then set the
+  // explicit arguments to the values created above.
+  std::memset(args, 0, args_size);
+  std::memcpy(args, &kernel_args, sizeof(args_t));
+
+  // Obtain a packet from the queue.
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
+  while (packet_id - hsa_queue_load_read_index_scacquire(queue) >= queue->size)
+    ;
+
+  const uint32_t mask = queue->size - 1;
+  hsa_kernel_dispatch_packet_t *packet =
+      static_cast<hsa_kernel_dispatch_packet_t *>(queue->base_address) +
+      (packet_id & mask);
+
+  // Set up the packet for exeuction on the device. We currently only launch
+  // with one thread on the device, forcing the rest of the wavefront to be
+  // masked off.
+  std::memset(packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
+  packet->setup = (1 + (params.num_blocks_y * params.num_threads_y != 1) +
+                   (params.num_blocks_z * params.num_threads_z != 1))
+                  << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+  packet->workgroup_size_x = params.num_threads_x;
+  packet->workgroup_size_y = params.num_threads_y;
+  packet->workgroup_size_z = params.num_threads_z;
+  packet->grid_size_x = params.num_blocks_x * params.num_threads_x;
+  packet->grid_size_y = params.num_blocks_y * params.num_threads_y;
+  packet->grid_size_z = params.num_blocks_z * params.num_threads_z;
+  packet->private_segment_size = private_size;
+  packet->group_segment_size = group_size;
+  packet->kernel_object = kernel;
+  packet->kernarg_address = args;
+
+  // Create a signal to indicate when this packet has been completed.
+  if (hsa_status_t err =
+          hsa_signal_create(1, 0, nullptr, &packet->completion_signal))
+    handle_error(err);
+
+  // Initialize the packet header and set the doorbell signal to begin execution
+  // by the HSA runtime.
+  uint16_t setup = packet->setup;
+  uint16_t header =
+      (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
+      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
+      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
+  __atomic_store_n(&packet->header, header | (setup << 16), __ATOMIC_RELEASE);
+  hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
+
+  // Wait until the kernel has completed execution on the device. Periodically
+  // check the RPC client for work to be performed on the server.
+  while (hsa_signal_wait_scacquire(
+             packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0,
+             /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
+    handle_server();
+
+  // Destroy the resources acquired to launch the kernel and return.
+  if (hsa_status_t err = hsa_amd_memory_pool_free(args))
+    handle_error(err);
+  if (hsa_status_t err = hsa_signal_destroy(packet->completion_signal))
+    handle_error(err);
+
+  return HSA_STATUS_SUCCESS;
+}
+
 int load(int argc, char **argv, char **envp, void *image, size_t size,
          const LaunchParameters &params) {
   // Initialize the HSA runtime used to communicate with the device.
@@ -167,18 +252,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (hsa_status_t err = get_agent<HSA_DEVICE_TYPE_GPU>(&dev_agent))
     handle_error(err);
   if (hsa_status_t err = get_agent<HSA_DEVICE_TYPE_CPU>(&host_agent))
-    handle_error(err);
-
-  // Obtain a queue with the minimum (power of two) size, used to send commands
-  // to the HSA runtime and launch execution on the device.
-  uint64_t queue_size;
-  if (hsa_status_t err = hsa_agent_get_info(
-          dev_agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE, &queue_size))
-    handle_error(err);
-  hsa_queue_t *queue = nullptr;
-  if (hsa_status_t err =
-          hsa_queue_create(dev_agent, queue_size, HSA_QUEUE_TYPE_SINGLE,
-                           nullptr, nullptr, UINT32_MAX, UINT32_MAX, &queue))
     handle_error(err);
 
   // Load the code object's ISA information and executable data segments.
@@ -228,36 +301,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
               dev_agent, &coarsegrained_pool))
     handle_error(err);
 
-  // Look up the '_start' kernel in the loaded executable.
-  hsa_executable_symbol_t symbol;
-  if (hsa_status_t err = hsa_executable_get_symbol_by_name(
-          executable, KERNEL_START, &dev_agent, &symbol))
-    handle_error(err);
-
-  // Retrieve different properties of the kernel symbol used for launch.
-  uint64_t kernel;
-  uint32_t args_size;
-  uint32_t group_size;
-  uint32_t private_size;
-
-  std::pair<hsa_executable_symbol_info_t, void *> symbol_infos[] = {
-      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, &kernel},
-      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, &args_size},
-      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE, &group_size},
-      {HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE, &private_size}};
-
-  for (auto &[info, value] : symbol_infos)
-    if (hsa_status_t err = hsa_executable_symbol_get_info(symbol, info, value))
-      handle_error(err);
-
-  // Allocate space for the kernel arguments on the host and allow the GPU agent
-  // to access it.
-  void *args;
-  if (hsa_status_t err = hsa_amd_memory_pool_allocate(kernargs_pool, args_size,
-                                                      /*flags=*/0, &args))
-    handle_error(err);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, args);
-
   // Allocate fine-grained memory on the host to hold the pointer array for the
   // copied argv and allow the GPU agent to access it.
   auto allocator = [&](uint64_t size) -> void * {
@@ -287,88 +330,62 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   hsa_amd_memory_fill(dev_ret, 0, sizeof(int));
 
   // Allocate finegrained memory for the RPC server and client to share.
+  uint64_t port_size = __llvm_libc::rpc::default_port_count;
+  uint32_t wavefront_size = 0;
+  if (hsa_status_t err = hsa_agent_get_info(
+          dev_agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &wavefront_size))
+    handle_error(err);
   void *server_inbox;
   void *server_outbox;
   void *buffer;
   if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool, sizeof(__llvm_libc::cpp::Atomic<int>),
+          finegrained_pool, port_size * sizeof(__llvm_libc::cpp::Atomic<int>),
           /*flags=*/0, &server_inbox))
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool, sizeof(__llvm_libc::cpp::Atomic<int>),
+          finegrained_pool, port_size * sizeof(__llvm_libc::cpp::Atomic<int>),
           /*flags=*/0, &server_outbox))
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool, sizeof(__llvm_libc::rpc::Buffer),
+          finegrained_pool,
+          port_size *
+              align_up(sizeof(__llvm_libc::rpc::Header) +
+                           (wavefront_size * sizeof(__llvm_libc::rpc::Buffer)),
+                       alignof(__llvm_libc::rpc::Packet)),
           /*flags=*/0, &buffer))
     handle_error(err);
   hsa_amd_agents_allow_access(1, &dev_agent, nullptr, server_inbox);
   hsa_amd_agents_allow_access(1, &dev_agent, nullptr, server_outbox);
   hsa_amd_agents_allow_access(1, &dev_agent, nullptr, buffer);
 
-  // Initialie all the arguments (explicit and implicit) to zero, then set the
-  // explicit arguments to the values created above.
-  std::memset(args, 0, args_size);
-  kernel_args_t *kernel_args = reinterpret_cast<kernel_args_t *>(args);
-  kernel_args->argc = argc;
-  kernel_args->argv = dev_argv;
-  kernel_args->envp = dev_envp;
-  kernel_args->ret = dev_ret;
-  kernel_args->inbox = server_outbox;
-  kernel_args->outbox = server_inbox;
-  kernel_args->buffer = buffer;
+  // Initialize the RPC server's buffer for host-device communication.
+  server.reset(port_size, wavefront_size, &lock, server_inbox, server_outbox,
+               buffer);
 
-  // Obtain a packet from the queue.
-  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
-  while (packet_id - hsa_queue_load_read_index_scacquire(queue) >= queue_size)
-    ;
-
-  const uint32_t mask = queue_size - 1;
-  hsa_kernel_dispatch_packet_t *packet =
-      (hsa_kernel_dispatch_packet_t *)queue->base_address + (packet_id & mask);
-
-  // Set up the packet for exeuction on the device. We currently only launch
-  // with one thread on the device, forcing the rest of the wavefront to be
-  // masked off.
-  std::memset(packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
-  packet->setup = (1 + (params.num_blocks_y * params.num_threads_y != 1) +
-                   (params.num_blocks_z * params.num_threads_z != 1))
-                  << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
-  packet->workgroup_size_x = params.num_threads_x;
-  packet->workgroup_size_y = params.num_threads_y;
-  packet->workgroup_size_z = params.num_threads_z;
-  packet->grid_size_x = params.num_blocks_x * params.num_threads_x;
-  packet->grid_size_y = params.num_blocks_y * params.num_threads_y;
-  packet->grid_size_z = params.num_blocks_z * params.num_threads_z;
-  packet->private_segment_size = private_size;
-  packet->group_segment_size = group_size;
-  packet->kernel_object = kernel;
-  packet->kernarg_address = args;
-
-  // Create a signal to indicate when this packet has been completed.
+  // Obtain a queue with the minimum (power of two) size, used to send commands
+  // to the HSA runtime and launch execution on the device.
+  uint64_t queue_size;
+  if (hsa_status_t err = hsa_agent_get_info(
+          dev_agent, HSA_AGENT_INFO_QUEUE_MIN_SIZE, &queue_size))
+    handle_error(err);
+  hsa_queue_t *queue = nullptr;
   if (hsa_status_t err =
-          hsa_signal_create(1, 0, nullptr, &packet->completion_signal))
+          hsa_queue_create(dev_agent, queue_size, HSA_QUEUE_TYPE_MULTI, nullptr,
+                           nullptr, UINT32_MAX, UINT32_MAX, &queue))
     handle_error(err);
 
-  // Initialize the RPC server's buffer for host-device communication.
-  server.reset(&lock, server_inbox, server_outbox, buffer);
+  LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
+  begin_args_t init_args = {argc,          dev_argv,     dev_envp,
+                            server_outbox, server_inbox, buffer};
+  if (hsa_status_t err =
+          launch_kernel(dev_agent, executable, kernargs_pool, queue,
+                        single_threaded_params, "_begin.kd", init_args))
+    handle_error(err);
 
-  // Initialize the packet header and set the doorbell signal to begin execution
-  // by the HSA runtime.
-  uint16_t header =
-      (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
-      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) |
-      (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE);
-  __atomic_store_n(&packet->header, header | (packet->setup << 16),
-                   __ATOMIC_RELEASE);
-  hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
-
-  // Wait until the kernel has completed execution on the device. Periodically
-  // check the RPC client for work to be performed on the server.
-  while (hsa_signal_wait_scacquire(
-             packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0,
-             /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
-    handle_server();
+  start_args_t args = {argc, dev_argv, dev_envp, dev_ret};
+  if (hsa_status_t err = launch_kernel(dev_agent, executable, kernargs_pool,
+                                       queue, params, "_start.kd", args))
+    handle_error(err);
 
   // Create a memory signal and copy the return value back from the device into
   // a new buffer.
@@ -395,9 +412,13 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   // Save the return value and perform basic clean-up.
   int ret = *static_cast<int *>(host_ret);
 
-  // Free the memory allocated for the device.
-  if (hsa_status_t err = hsa_amd_memory_pool_free(args))
+  end_args_t fini_args = {ret};
+  if (hsa_status_t err =
+          launch_kernel(dev_agent, executable, kernargs_pool, queue,
+                        single_threaded_params, "_end.kd", fini_args))
     handle_error(err);
+
+  // Free the memory allocated for the device.
   if (hsa_status_t err = hsa_amd_memory_pool_free(dev_argv))
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_free(dev_ret))
@@ -413,10 +434,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
 
   if (hsa_status_t err = hsa_signal_destroy(memory_signal))
     handle_error(err);
-
-  if (hsa_status_t err = hsa_signal_destroy(packet->completion_signal))
-    handle_error(err);
-
   if (hsa_status_t err = hsa_queue_destroy(queue))
     handle_error(err);
 

@@ -1258,4 +1258,49 @@ def hlfir_ElseWhereOp : hlfir_Op<"elsewhere", [Terminator,
   let hasVerifier = 1;
 }
 
+def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterface,
+    hlfir_OrderedAssignmentTreeOpInterface, Pure]> {
+  let summary = "represent a Fortran forall index declaration";
+  let description = [{
+    This operation allows placing an hlfir.forall index in memory with
+    the related Fortran index-value name and type.
+
+    So far, lowering needs to manipulate symbols as memory entities.
+    This operation allows fulfilling this requirements without allowing
+    bare alloca/declare/store inside the body of hlfir.forall, which would
+    make their analysis more complex.
+
+    Given Forall index-value cannot be modified it also allows defining
+    a canonicalization of all its loads into a fir.convert of the
+    hlfir.forall index, which helps simplifying the data dependency analysis
+    of hlfir.forall.
+  }];
+
+  let arguments = (ins AnyIntegerType:$index,
+                       Builtin_StringAttr:$name);
+
+  let results = (outs AnyFortranVariable);
+
+  let assemblyFormat = [{
+    $name $index attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    /// Implement FortranVariableInterface interface.
+    std::optional<fir::FortranVariableFlagsEnum> getFortranAttrs() const {
+      return std::nullopt;
+    }
+    mlir::Value getShape() const {return mlir::Value{};}
+    mlir::OperandRange getExplicitTypeParams() const {
+      // Return an empty range.
+      return {(*this)->getOperands().begin(), (*this)->getOperands().begin()};
+    }
+    /// Implement OrderedAssignmentTreeOpInterface interface.
+    void getLeafRegions(llvm::SmallVectorImpl<mlir::Region*>& regions) {}
+    mlir::Region* getSubTreeRegion() { return nullptr; }
+  }];
+
+  let hasCanonicalizeMethod = 1;
+}
+
 #endif // FORTRAN_DIALECT_HLFIR_OPS

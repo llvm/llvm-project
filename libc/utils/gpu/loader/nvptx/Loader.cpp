@@ -30,17 +30,6 @@
 using namespace llvm;
 using namespace object;
 
-/// The arguments to the '_start' kernel.
-struct kernel_args_t {
-  int argc;
-  void *argv;
-  void *envp;
-  void *ret;
-  void *inbox;
-  void *outbox;
-  void *buffer;
-};
-
 static void handle_error(CUresult err) {
   if (err == CUDA_SUCCESS)
     return;
@@ -170,6 +159,36 @@ Expected<void *> get_ctor_dtor_array(const void *image, const size_t size,
   return dev_memory;
 }
 
+template <typename args_t>
+CUresult launch_kernel(CUmodule binary, CUstream stream,
+                       const LaunchParameters &params, const char *kernel_name,
+                       args_t kernel_args) {
+  // look up the '_start' kernel in the loaded module.
+  CUfunction function;
+  if (CUresult err = cuModuleGetFunction(&function, binary, kernel_name))
+    handle_error(err);
+
+  // Set up the arguments to the '_start' kernel on the GPU.
+  uint64_t args_size = sizeof(args_t);
+  void *args_config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, &kernel_args,
+                         CU_LAUNCH_PARAM_BUFFER_SIZE, &args_size,
+                         CU_LAUNCH_PARAM_END};
+
+  // Call the kernel with the given arguments.
+  if (CUresult err = cuLaunchKernel(
+          function, params.num_blocks_x, params.num_blocks_y,
+          params.num_blocks_z, params.num_threads_x, params.num_threads_y,
+          params.num_threads_z, 0, stream, nullptr, args_config))
+    handle_error(err);
+
+  // Wait until the kernel has completed execution on the device. Periodically
+  // check the RPC client for work to be performed on the server.
+  while (cuStreamQuery(stream) == CUDA_ERROR_NOT_READY)
+    handle_server();
+
+  return CUDA_SUCCESS;
+}
+
 int load(int argc, char **argv, char **envp, void *image, size_t size,
          const LaunchParameters &params) {
 
@@ -195,11 +214,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   // Load the image into a CUDA module.
   CUmodule binary;
   if (CUresult err = cuModuleLoadDataEx(&binary, image, 0, nullptr, nullptr))
-    handle_error(err);
-
-  // look up the '_start' kernel in the loaded module.
-  CUfunction function;
-  if (CUresult err = cuModuleGetFunction(&function, binary, "_start"))
     handle_error(err);
 
   // Allocate pinned memory on the host to hold the pointer array for the
@@ -232,41 +246,35 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (CUresult err = cuMemsetD32(dev_ret, 0, 1))
     handle_error(err);
 
-  void *server_inbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *server_outbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *buffer = allocator(sizeof(__llvm_libc::rpc::Buffer));
+  uint64_t port_size = __llvm_libc::rpc::default_port_count;
+  uint32_t warp_size = 32;
+  void *server_inbox =
+      allocator(port_size * sizeof(__llvm_libc::cpp::Atomic<int>));
+  void *server_outbox =
+      allocator(port_size * sizeof(__llvm_libc::cpp::Atomic<int>));
+  void *buffer = allocator(
+      port_size * align_up(sizeof(__llvm_libc::rpc::Header) +
+                               (warp_size * sizeof(__llvm_libc::rpc::Buffer)),
+                           alignof(__llvm_libc::rpc::Packet)));
   if (!server_inbox || !server_outbox || !buffer)
     handle_error("Failed to allocate memory the RPC client / server.");
 
-  // Set up the arguments to the '_start' kernel on the GPU.
-  uint64_t args_size = sizeof(kernel_args_t);
-  kernel_args_t args;
-  std::memset(&args, 0, args_size);
-  args.argc = argc;
-  args.argv = dev_argv;
-  args.envp = dev_envp;
-  args.ret = reinterpret_cast<void *>(dev_ret);
-  args.inbox = server_outbox;
-  args.outbox = server_inbox;
-  args.buffer = buffer;
-  void *args_config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, &args,
-                         CU_LAUNCH_PARAM_BUFFER_SIZE, &args_size,
-                         CU_LAUNCH_PARAM_END};
-
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(&lock, server_inbox, server_outbox, buffer);
+  server.reset(port_size, warp_size, &lock, server_inbox, server_outbox,
+               buffer);
 
-  // Call the kernel with the given arguments.
-  if (CUresult err = cuLaunchKernel(
-          function, params.num_blocks_x, params.num_blocks_y,
-          params.num_blocks_z, params.num_threads_x, params.num_threads_y,
-          params.num_threads_z, 0, stream, nullptr, args_config))
+  LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
+  // Call the kernel to
+  begin_args_t init_args = {argc,          dev_argv,     dev_envp,
+                            server_outbox, server_inbox, buffer};
+  if (CUresult err = launch_kernel(binary, stream, single_threaded_params,
+                                   "_begin", init_args))
     handle_error(err);
 
-  // Wait until the kernel has completed execution on the device. Periodically
-  // check the RPC client for work to be performed on the server.
-  while (cuStreamQuery(stream) == CUDA_ERROR_NOT_READY)
-    handle_server();
+  start_args_t args = {argc, dev_argv, dev_envp,
+                       reinterpret_cast<void *>(dev_ret)};
+  if (CUresult err = launch_kernel(binary, stream, params, "_start", args))
+    handle_error(err);
 
   // Copy the return value back from the kernel and wait.
   int host_ret = 0;
@@ -274,6 +282,11 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   if (CUresult err = cuStreamSynchronize(stream))
+    handle_error(err);
+
+  end_args_t fini_args = {host_ret};
+  if (CUresult err = launch_kernel(binary, stream, single_threaded_params,
+                                   "_end", fini_args))
     handle_error(err);
 
   // Free the memory allocated for the device.

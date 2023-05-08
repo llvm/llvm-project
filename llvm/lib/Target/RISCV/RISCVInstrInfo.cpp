@@ -1708,6 +1708,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM8_LSB000:
           Ok = isShiftedUInt<5, 3>(Imm);
           break;
+        case RISCVOp::OPERAND_UIMM8_GE32:
+          Ok = isUInt<8>(Imm) && Imm >= 32;
+          break;
         case RISCVOp::OPERAND_UIMM9_LSB000:
           Ok = isShiftedUInt<6, 3>(Imm);
           break;
@@ -2637,7 +2640,7 @@ RISCVInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
       {{MONontemporalBit0, "riscv-nontemporal-domain-bit-0"},
        {MONontemporalBit1, "riscv-nontemporal-domain-bit-1"}};
-  return ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.

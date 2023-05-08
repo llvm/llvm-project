@@ -10,9 +10,12 @@
 #define LLDB_INTERPRETER_OPTIONVALUE_H
 
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Cloneable.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -269,11 +272,13 @@ public:
 
   bool SetEnumerationValue(int64_t value);
 
-  FileSpec GetFileSpecValue() const;
+  std::optional<FileSpec> GetFileSpecValue() const;
 
-  bool SetFileSpecValue(const FileSpec &file_spec);
+  bool SetFileSpecValue(FileSpec file_spec);
 
-  FileSpecList GetFileSpecListValue() const;
+  bool AppendFileSpecValue(FileSpec file_spec);
+
+  std::optional<FileSpecList> GetFileSpecListValue() const;
 
   std::optional<lldb::Format> GetFormatValue() const;
 
@@ -303,6 +308,10 @@ public:
 
   bool SetUUIDValue(const UUID &uuid);
 
+  std::optional<ArchSpec> GetArchSpecValue() const;
+
+  bool SetArchSpecValue(ArchSpec arch_spec);
+
   bool OptionWasSet() const { return m_value_was_set; }
 
   void SetOptionWasSet() { m_value_was_set = true; }
@@ -320,6 +329,61 @@ public:
   void NotifyValueChanged() {
     if (m_callback)
       m_callback();
+  }
+
+  template <typename T, std::enable_if_t<!std::is_pointer_v<T>, bool> = true>
+  std::optional<T> GetValueAs() const {
+    if constexpr (std::is_same_v<T, uint64_t>)
+      return GetUInt64Value();
+    if constexpr (std::is_same_v<T, int64_t>)
+      return GetSInt64Value();
+    if constexpr (std::is_same_v<T, bool>)
+      return GetBooleanValue();
+    if constexpr (std::is_same_v<T, char>)
+      return GetCharValue();
+    if constexpr (std::is_same_v<T, lldb::Format>)
+      return GetFormatValue();
+    if constexpr (std::is_same_v<T, FileSpec>)
+      return GetFileSpecValue();
+    if constexpr (std::is_same_v<T, FileSpecList>)
+      return GetFileSpecListValue();
+    if constexpr (std::is_same_v<T, lldb::LanguageType>)
+      return GetLanguageValue();
+    if constexpr (std::is_same_v<T, llvm::StringRef>)
+      return GetStringValue();
+    if constexpr (std::is_same_v<T, ArchSpec>)
+      return GetArchSpecValue();
+    if constexpr (std::is_enum_v<T>)
+      if (std::optional<int64_t> value = GetEnumerationValue())
+        return static_cast<T>(*value);
+    return {};
+  }
+
+  template <typename T,
+            typename U = typename std::remove_const<
+                typename std::remove_pointer<T>::type>::type,
+            std::enable_if_t<std::is_pointer_v<T>, bool> = true>
+  T GetValueAs() const {
+    if constexpr (std::is_same_v<U, FormatEntity::Entry>)
+      return GetFormatEntity();
+    if constexpr (std::is_same_v<U, RegularExpression>)
+      return GetRegexValue();
+    return {};
+  }
+
+  bool SetValueAs(bool v) { return SetBooleanValue(v); }
+
+  bool SetValueAs(llvm::StringRef v) { return SetStringValue(v); }
+
+  bool SetValueAs(lldb::LanguageType v) { return SetLanguageValue(v); }
+
+  bool SetValueAs(FileSpec v) { return SetFileSpecValue(v); }
+
+  bool SetValueAs(ArchSpec v) { return SetArchSpecValue(v); }
+
+  template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
+  bool SetValueAs(T t) {
+    return SetEnumerationValue(t);
   }
 
 protected:

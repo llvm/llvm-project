@@ -125,8 +125,7 @@ public:
   }
 
   bool IgnoreFileIndexes() const {
-    return m_collection_sp->GetPropertyAtIndexAsBoolean(ePropertyIgnoreIndexes)
-        .value_or(false);
+    return GetPropertyAtIndexAs<bool>(ePropertyIgnoreIndexes, false);
   }
 };
 
@@ -1637,10 +1636,9 @@ bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, SymbolContext &sc) {
 lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
   UpdateExternalModuleListIfNeeded();
   const auto &pos = m_external_type_modules.find(name);
-  if (pos != m_external_type_modules.end())
-    return pos->second;
-  else
+  if (pos == m_external_type_modules.end())
     return lldb::ModuleSP();
+  return pos->second;
 }
 
 DWARFDIE

@@ -1047,7 +1047,6 @@ _LIBCPP_POP_MACROS
 #  include <algorithm>
 #  include <concepts>
 #  include <cstdlib>
-#  include <functional>
 #  include <iterator>
 #  include <type_traits>
 #endif

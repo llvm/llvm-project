@@ -22,6 +22,7 @@ static_library("Utility") {
     "Environment.cpp",
     "Event.cpp",
     "FileSpec.cpp",
+    "FileSpecList.cpp",
     "GDBRemote.cpp",
     "IOObject.cpp",
     "Instrumentation.cpp",

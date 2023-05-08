@@ -1,7 +1,7 @@
 ;; Tests callsite context graph generation for call graph containing indirect
 ;; calls. Currently this should result in conservative behavior, such that the
 ;; indirect call receives a null call in its graph node, to prevent subsequent
-;; cloning.
+;; cloning. Also tests graph and IR cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -57,7 +57,9 @@
 ; RUN: opt -passes=memprof-context-disambiguation \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR \
+; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 ; RUN:  cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should only create a single clone of foo, for the direct call
@@ -341,6 +343,41 @@ attributes #7 = { builtin }
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[FOO2]] to Caller: [[MAIN2]] AllocTypes: Cold ContextIds: 6
 ; DUMP:		Clone of [[FOO]]
+
+
+; REMARKS: created clone _Z3foov.memprof.1
+; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
+; REMARKS: call in clone _Z3foov.memprof.1 marked with memprof allocation attribute cold
+; REMARKS: call in clone _ZN1A1xEv assigned to call function clone _Z3foov
+; REMARKS: call in clone _ZN1B1xEv assigned to call function clone _Z3foov
+; REMARKS: call in clone main assigned to call function clone _Z3foov
+; REMARKS: call in clone _Z3foov marked with memprof allocation attribute notcold
+
+
+; IR: define {{.*}} @main(
+; IR:   call {{.*}} @_Z3foov()
+;; Only the second call to foo, which allocates cold memory via direct calls,
+;; is replaced with a call to a clone that calls a cold allocation.
+; IR:   call {{.*}} @_Z3foov.memprof.1()
+; IR:   call {{.*}} @_Z3barP1A(
+; IR:   call {{.*}} @_Z3barP1A(
+; IR:   call {{.*}} @_Z3barP1A(
+; IR:   call {{.*}} @_Z3barP1A(
+; IR: define internal {{.*}} @_ZN1A1xEv(
+; IR:   call {{.*}} @_Z3foov()
+; IR: define internal {{.*}} @_ZN1B1xEv(
+; IR:   call {{.*}} @_Z3foov()
+; IR: define internal {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z3foov.memprof.1()
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
+; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
+
+
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of function clones created during whole program analysis
 
 
 ; DOT: digraph "postbuild" {

@@ -1125,7 +1125,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Style.IndentWidth;
   }
 
-  if (NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) {
+  if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
+      (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
     if (Current.NestingLevel == 0 ||
         (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
          State.NextToken->is(TT_LambdaLBrace))) {

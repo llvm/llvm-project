@@ -3624,15 +3624,13 @@ public:
   /// legal.  It is frequently not legal in PIC relocation models.
   virtual bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const;
 
-  /// Return true if the operand with index OpNo corresponding to a target
-  /// branch, for example, in following case
+  /// On x86, return true if the operand with index OpNo is a CALL or JUMP
+  /// instruction, which can use either a memory constraint or an address
+  /// constraint. -fasm-blocks "__asm call foo" lowers to
+  /// call void asm sideeffect inteldialect "call ${0:P}", "*m..."
   ///
-  /// call void asm "lea r8, $0\0A\09call qword ptr ${1:P}\0A\09ret",
-  ///               "*m,*m,~{r8},~{dirflag},~{fpsr},~{flags}"
-  ///                ([9 x i32]* @Arr), void (...)* @sincos_asm)
-  ///
-  /// the operand $1 (sincos_asm) is target branch in inline asm, but the
-  /// operand $0 (Arr) is not.
+  /// This function is used by a hack to choose the address constraint,
+  /// lowering to a direct call.
   virtual bool
   isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                           unsigned OpNo) const {
@@ -5032,6 +5030,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandABS(SDNode *N, SelectionDAG &DAG,
                     bool IsNegative = false) const;
+
+  /// Expand ABDS/ABDU nodes. Expands vector/scalar ABDS/ABDU nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandABD(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
   /// scalar types. Returns SDValue() if expand fails.

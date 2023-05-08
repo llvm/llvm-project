@@ -62,6 +62,10 @@ target_link_libraries(PluginInterface
     MemoryManager
 )
 
+if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+  target_link_libraries(PluginInterface PUBLIC OMPT)
+endif()
+
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginInterface PRIVATE
   TARGET_NAME="PluginInterface"

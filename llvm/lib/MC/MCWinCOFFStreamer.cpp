@@ -344,9 +344,7 @@ void MCWinCOFFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
 
 void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
-  bool Created;
-  getAssembler().registerSymbol(*S, &Created);
-  if (Created)
+  if (getAssembler().registerSymbol(*S))
     cast<MCSymbolCOFF>(S)->setExternal(true);
 }
 

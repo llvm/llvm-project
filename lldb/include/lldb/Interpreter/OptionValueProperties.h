@@ -106,15 +106,6 @@ public:
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
                      llvm::StringRef path, llvm::StringRef value) override;
 
-  OptionValueArch *GetPropertyAtIndexAsOptionValueArch(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
-  OptionValueLanguage *GetPropertyAtIndexAsOptionValueLanguage(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsLanguage(uint32_t idx, lldb::LanguageType lang,
-                                    const ExecutionContext *exe_ctx = nullptr);
-
   bool
   GetPropertyAtIndexAsArgs(uint32_t idx, Args &args,
                            const ExecutionContext *exe_ctx = nullptr) const;
@@ -122,28 +113,7 @@ public:
   bool SetPropertyAtIndexFromArgs(uint32_t idx, const Args &args,
                                   const ExecutionContext *exe_ctx = nullptr);
 
-  std::optional<bool>
-  GetPropertyAtIndexAsBoolean(uint32_t idx,
-                              const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsBoolean(uint32_t idx, bool new_value,
-                                   const ExecutionContext *exe_ctx = nullptr);
-
   OptionValueDictionary *GetPropertyAtIndexAsOptionValueDictionary(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
-  std::optional<int64_t> GetPropertyAtIndexAsEnumeration(
-      uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool
-  SetPropertyAtIndexAsEnumeration(uint32_t idx, int64_t new_value,
-                                  const ExecutionContext *exe_ctx = nullptr);
-
-  const FormatEntity::Entry *
-  GetPropertyAtIndexAsFormatEntity(uint32_t idx,
-                                   const ExecutionContext *exe_ctx = nullptr);
-
-  const RegularExpression *GetPropertyAtIndexAsOptionValueRegex(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 
   OptionValueSInt64 *GetPropertyAtIndexAsOptionValueSInt64(
@@ -152,39 +122,11 @@ public:
   OptionValueUInt64 *GetPropertyAtIndexAsOptionValueUInt64(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 
-  std::optional<int64_t>
-  GetPropertyAtIndexAsSInt64(uint32_t idx,
-                             const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsSInt64(uint32_t idx, int64_t new_value,
-                                  const ExecutionContext *exe_ctx = nullptr);
-
-  std::optional<uint64_t>
-  GetPropertyAtIndexAsUInt64(uint32_t idx,
-                             const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsUInt64(uint32_t idx, uint64_t new_value,
-                                  const ExecutionContext *exe_ctx = nullptr);
-
-  std::optional<llvm::StringRef>
-  GetPropertyAtIndexAsString(uint32_t idx,
-                             const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsString(uint32_t idx, llvm::StringRef new_value,
-                                  const ExecutionContext *exe_ctx = nullptr);
-
   OptionValueString *GetPropertyAtIndexAsOptionValueString(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
 
   OptionValueFileSpec *GetPropertyAtIndexAsOptionValueFileSpec(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
-
-  FileSpec
-  GetPropertyAtIndexAsFileSpec(uint32_t idx,
-                               const ExecutionContext *exe_ctx = nullptr) const;
-
-  bool SetPropertyAtIndexAsFileSpec(uint32_t idx, const FileSpec &file_spec,
-                                    const ExecutionContext *exe_ctx = nullptr);
 
   OptionValuePathMappings *GetPropertyAtIndexAsOptionValuePathMappings(
       uint32_t idx, const ExecutionContext *exe_ctx = nullptr) const;
@@ -200,6 +142,31 @@ public:
 
   void SetValueChangedCallback(uint32_t property_idx,
                                std::function<void()> callback);
+
+  template <typename T>
+  auto GetPropertyAtIndexAs(uint32_t idx,
+                            const ExecutionContext *exe_ctx = nullptr) const {
+    if (const Property *property = GetPropertyAtIndex(idx, exe_ctx)) {
+      if (OptionValue *value = property->GetValue().get())
+        return value->GetValueAs<T>();
+    }
+    if constexpr (std::is_pointer_v<T>)
+      return T{nullptr};
+    else
+      return std::optional<T>{std::nullopt};
+  }
+
+  template <typename T>
+  bool SetPropertyAtIndex(uint32_t idx, T t,
+                          const ExecutionContext *exe_ctx = nullptr) const {
+    if (const Property *property = GetPropertyAtIndex(idx, exe_ctx)) {
+      if (OptionValue *value = property->GetValue().get()) {
+        value->SetValueAs(t);
+        return true;
+      }
+    }
+    return false;
+  }
 
 protected:
   Property *ProtectedGetPropertyAtIndex(uint32_t idx) {

@@ -11160,7 +11160,7 @@ static bool getAArch64MTV(QualType QT, ParamKindTy Kind) {
   if (Kind == ParamKindTy::Uniform)
     return false;
 
-  if (Kind == ParamKindTy::LinearUVal || ParamKindTy::LinearRef)
+  if (Kind == ParamKindTy::LinearUVal || Kind == ParamKindTy::LinearRef)
     return false;
 
   if ((Kind == ParamKindTy::Linear || Kind == ParamKindTy::LinearVal) &&

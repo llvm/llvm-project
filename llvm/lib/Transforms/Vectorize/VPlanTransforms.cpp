@@ -60,28 +60,25 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         // Create VPWidenMemoryInstructionRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
-              *Load,
-              Plan->getVPValueOrAddLiveIn(getLoadStorePointerOperand(Inst)),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
+              *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
+              false /*Consecutive*/, false /*Reverse*/);
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
-              *Store,
-              Plan->getVPValueOrAddLiveIn(getLoadStorePointerOperand(Inst)),
-              Plan->getVPValueOrAddLiveIn(Store->getValueOperand()),
+              *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-          NewRecipe =
-              new VPWidenGEPRecipe(GEP, Plan->mapToVPValues(GEP->operands()));
+          NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe =
-              new VPWidenCallRecipe(*CI, Plan->mapToVPValues(CI->args()),
+              new VPWidenCallRecipe(*CI, drop_end(Ingredient.operands()),
                                     getVectorIntrinsicIDForCall(CI, &TLI));
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          NewRecipe =
-              new VPWidenSelectRecipe(*SI, Plan->mapToVPValues(SI->operands()));
+          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
+        } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
+          NewRecipe = new VPWidenCastRecipe(
+              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI);
         } else {
-          NewRecipe =
-              new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
+          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
         }
       }
 
@@ -92,10 +89,6 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
       Ingredient.eraseFromParent();
-      Plan->removeVPValueFor(Inst);
-      for (auto *Def : NewRecipe->definedValues()) {
-        Plan->addVPValue(Inst, Def);
-      }
     }
   }
 }

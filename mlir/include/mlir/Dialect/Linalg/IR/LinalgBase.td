@@ -46,6 +46,7 @@ def Linalg_Dialect : Dialect {
   let hasCanonicalizer = 1;
   let hasOperationAttrVerify = 1;
   let hasConstantMaterializer = 1;
+  let usePropertiesForAttributes = 1;
   let extraClassDeclaration = [{
     /// Attribute name used to to memoize indexing maps for named ops.
     constexpr const static ::llvm::StringLiteral

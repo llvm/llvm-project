@@ -175,6 +175,9 @@ Changes to the RISC-V Backend
   ``RISCV::parseCPU``. The ``CPUKind`` enum is no longer part of the
   RISCVTargetParser.h interface. Similar for ``parseTuneCPUkind`` and
   ``checkTuneCPUKind``.
+* Add sifive-x280 processor.
+* Zve32f is no longer allowed with Zfinx. Zve64d is no longer allowed with
+  Zdinx.
 
 Changes to the WebAssembly Backend
 ----------------------------------
