@@ -180,7 +180,7 @@ getShmReadAndWriteOps(Operation *parentOp, Value shmMemRef,
 mlir::LogicalResult
 mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
                                                 Value memrefValue) {
-  auto memRefType = memrefValue.getType().dyn_cast<MemRefType>();
+  auto memRefType = dyn_cast<MemRefType>(memrefValue.getType());
   if (!memRefType || !NVGPUDialect::hasSharedMemoryAddressSpace(memRefType))
     return failure();
 

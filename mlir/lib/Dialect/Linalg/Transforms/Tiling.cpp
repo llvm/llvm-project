@@ -49,7 +49,7 @@ static bool isZero(OpFoldResult v) {
   if (!v)
     return false;
   if (auto attr = v.dyn_cast<Attribute>()) {
-    IntegerAttr intAttr = attr.dyn_cast<IntegerAttr>();
+    IntegerAttr intAttr = dyn_cast<IntegerAttr>(attr);
     return intAttr && intAttr.getValue().isZero();
   }
   if (auto cst = v.get<Value>().getDefiningOp<arith::ConstantIndexOp>())
@@ -105,7 +105,7 @@ void mlir::linalg::transformIndexOps(
 static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
                                          OpFoldResult value) {
   if (auto attr = value.dyn_cast<Attribute>()) {
-    assert(attr.cast<IntegerAttr>().getValue().isStrictlyPositive() &&
+    assert(cast<IntegerAttr>(attr).getValue().isStrictlyPositive() &&
            "expected strictly positive tile size and divisor");
     return;
   }
@@ -587,8 +587,8 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   SmallVector<Operation *, 8> loops;
   loops.reserve(ivs.size());
   for (auto iv : ivs) {
-    if (iv.isa<BlockArgument>()) {
-      loops.push_back(iv.cast<BlockArgument>().getOwner()->getParentOp());
+    if (isa<BlockArgument>(iv)) {
+      loops.push_back(cast<BlockArgument>(iv).getOwner()->getParentOp());
       assert(loops.back() && "no owner found for induction variable!");
     } else {
       // TODO: Instead of doing this, try to recover the ops used instead of the
@@ -712,7 +712,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       outOffsets[reductionDim] = forallOp.getInductionVars().front();
       // TODO: use SubsetExtractOpInterface once it is available.
       tiledDpsInitOperands.push_back(b.create<tensor::ExtractSliceOp>(
-          loc, initOperand->get().getType().cast<RankedTensorType>(),
+          loc, cast<RankedTensorType>(initOperand->get().getType()),
           destBbArgs[destNum], outOffsets, sizes, strides));
     }
 

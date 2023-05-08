@@ -227,7 +227,7 @@ SmallVector<BlockArgument> TileLoopNest::getTiedBBArgs(BlockArgument bbArg) {
       return {};
     bbArgs.push_back(bbArg);
     OpOperand *iterArg = &tileLoop.getOpOperandForRegionIterArg(bbArg);
-    bbArg = iterArg->get().dyn_cast<BlockArgument>();
+    bbArg = dyn_cast<BlockArgument>(iterArg->get());
   }
 
   // Reverse the block arguments to order them from outer to inner.
@@ -358,13 +358,13 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
 
   // Check if the producer is a LinalgOp possibly passed by iteration argument.
   OpOperand *iterArg = nullptr;
-  auto producerResult = sliceOp.getSource().dyn_cast<OpResult>();
-  if (auto bbArg = sliceOp.getSource().dyn_cast<BlockArgument>()) {
+  auto producerResult = dyn_cast<OpResult>(sliceOp.getSource());
+  if (auto bbArg = dyn_cast<BlockArgument>(sliceOp.getSource())) {
     iterArg = getTiedIterArg(bbArg);
     // Check the iteration argument may be used to pass in the producer output.
     if (!iterArg || hasOtherUses(bbArg, sliceOp))
       return failure();
-    producerResult = iterArg->get().dyn_cast<OpResult>();
+    producerResult = dyn_cast<OpResult>(iterArg->get());
   }
   if (!producerResult || !isa<LinalgOp>(producerResult.getOwner()))
     return failure();

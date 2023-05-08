@@ -441,7 +441,7 @@ static LogicalResult processParallelLoop(
     Value iv, lowerBound, upperBound, step;
     std::tie(mappingAttribute, iv, lowerBound, upperBound, step) = config;
     auto annotation =
-        mappingAttribute.dyn_cast<gpu::ParallelLoopDimMappingAttr>();
+        dyn_cast<gpu::ParallelLoopDimMappingAttr>(mappingAttribute);
     if (!annotation)
       return parallelOp.emitOpError()
              << "expected mapping attribute for lowering to GPU";

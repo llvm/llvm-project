@@ -38,9 +38,9 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
   bool changed = false;
   for (LinalgOp linalgOp : llvm::reverse(linalgOps)) {
     for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-      if (opOperand.get().getType().isa<MemRefType>())
+      if (isa<MemRefType>(opOperand.get().getType()))
         continue;
-      if (opOperand.get().getType().isa<RankedTensorType>()) {
+      if (isa<RankedTensorType>(opOperand.get().getType())) {
         // Tile and Fuse tensor input.
         if (opOperand.getOperandNumber() >= linalgOp.getNumDpsInputs())
           continue;

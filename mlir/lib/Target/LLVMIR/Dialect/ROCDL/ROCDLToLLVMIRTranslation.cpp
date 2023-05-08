@@ -109,7 +109,7 @@ public:
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
         return failure();
-      auto value = attribute.getValue().dyn_cast<IntegerAttr>();
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
       if (!value)
         return failure();
 
@@ -125,7 +125,7 @@ public:
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
         return failure();
-      auto value = attribute.getValue().dyn_cast<StringAttr>();
+      auto value = dyn_cast<StringAttr>(attribute.getValue());
       if (!value)
         return failure();
 
@@ -142,7 +142,7 @@ public:
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
       if (!func)
         return failure();
-      auto value = attribute.getValue().dyn_cast<DenseI32ArrayAttr>();
+      auto value = dyn_cast<DenseI32ArrayAttr>(attribute.getValue());
       if (!value)
         return failure();
       llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();

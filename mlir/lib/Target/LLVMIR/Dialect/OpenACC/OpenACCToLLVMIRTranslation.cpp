@@ -99,7 +99,7 @@ processOperands(llvm::IRBuilderBase &builder,
     llvm::Value *dataPtr;
     llvm::Value *dataSize;
 
-    if (data.getType().isa<LLVM::LLVMPointerType>()) {
+    if (isa<LLVM::LLVMPointerType>(data.getType())) {
       dataPtrBase = dataValue;
       dataPtr = dataValue;
       dataSize = accBuilder->getSizeInBytes(dataValue);

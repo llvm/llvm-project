@@ -151,7 +151,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
   for (OpOperand *operand : producer.getDpsInitOperands()) {
-    auto tensorType = operand->get().getType().dyn_cast<RankedTensorType>();
+    auto tensorType = dyn_cast<RankedTensorType>(operand->get().getType());
     if (!tensorType)
       continue;
     unsigned rank = tensorType.getRank();
@@ -210,20 +210,20 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producerOp, AffineMap producerMap,
 // dependence tracking since the dependence tracking is similar to what is done
 // w.r.t to buffers.
 static void getProducerOfTensor(Value tensor, OpResult &opResult) {
-  if (!tensor.getType().isa<RankedTensorType>())
+  if (!isa<RankedTensorType>(tensor.getType()))
     return;
 
   while (true) {
     LLVM_DEBUG(llvm::dbgs() << "\ngetProducerOfTensor: " << tensor);
     if (auto linalgOp = tensor.getDefiningOp<LinalgOp>()) {
-      opResult = tensor.cast<OpResult>();
+      opResult = cast<OpResult>(tensor);
       return;
     }
     if (auto sliceOp = tensor.getDefiningOp<tensor::ExtractSliceOp>()) {
       tensor = sliceOp.getSource();
       continue;
     }
-    if (auto blockArg = tensor.dyn_cast<BlockArgument>()) {
+    if (auto blockArg = dyn_cast<BlockArgument>(tensor)) {
       if (auto forOp = blockArg.getDefiningOp<scf::ForOp>()) {
         tensor = *(forOp.getIterOperands().begin() + blockArg.getArgNumber());
         continue;

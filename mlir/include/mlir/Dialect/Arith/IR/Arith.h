@@ -63,7 +63,7 @@ public:
                     Type type);
 
   inline int64_t value() {
-    return arith::ConstantOp::getValue().cast<IntegerAttr>().getInt();
+    return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();
   }
 
   static bool classof(Operation *op);
@@ -79,7 +79,7 @@ public:
                     const APFloat &value, FloatType type);
 
   inline APFloat value() {
-    return arith::ConstantOp::getValue().cast<FloatAttr>().getValue();
+    return cast<FloatAttr>(arith::ConstantOp::getValue()).getValue();
   }
 
   static bool classof(Operation *op);
@@ -94,7 +94,7 @@ public:
   static void build(OpBuilder &builder, OperationState &result, int64_t value);
 
   inline int64_t value() {
-    return arith::ConstantOp::getValue().cast<IntegerAttr>().getInt();
+    return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();
   }
 
   static bool classof(Operation *op);

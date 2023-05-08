@@ -1144,9 +1144,9 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
     SmallVector<Operation *> emptyPayload;
     SmallVector<Attribute> emptyParams;
     for (OpResult r : this->getOperation()->getResults()) {
-      if (r.getType().isa<TransformParamTypeInterface>())
+      if (isa<TransformParamTypeInterface>(r.getType()))
         transformResults.setParams(r, emptyParams);
-      else if (r.getType().isa<TransformValueHandleTypeInterface>())
+      else if (isa<TransformValueHandleTypeInterface>(r.getType()))
         transformResults.setValues(r, ValueRange());
       else
         transformResults.set(r, emptyPayload);

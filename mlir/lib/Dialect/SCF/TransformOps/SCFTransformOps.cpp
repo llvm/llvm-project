@@ -49,7 +49,7 @@ transform::GetParentForOp::apply(transform::TransformResults &results,
     }
     parents.insert(loop);
   }
-  results.set(getResult().cast<OpResult>(), parents.getArrayRef());
+  results.set(cast<OpResult>(getResult()), parents.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -116,8 +116,8 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     functions.push_back(*outlined);
     calls.push_back(call);
   }
-  results.set(getFunction().cast<OpResult>(), functions);
-  results.set(getCall().cast<OpResult>(), calls);
+  results.set(cast<OpResult>(getFunction()), functions);
+  results.set(cast<OpResult>(getCall()), calls);
   return DiagnosedSilenceableFailure::success();
 }
 

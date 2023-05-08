@@ -48,7 +48,7 @@ static Value genOperator(Location loc, Value x, Value y,
                          PatternRewriter &rewriter) {
   using vector::CombiningKind;
 
-  auto elType = x.getType().cast<VectorType>().getElementType();
+  auto elType = cast<VectorType>(x.getType()).getElementType();
   bool isInt = elType.isIntOrIndex();
 
   Value combinedResult{nullptr};

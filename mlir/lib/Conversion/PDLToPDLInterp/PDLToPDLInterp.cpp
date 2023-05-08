@@ -219,7 +219,7 @@ Block *PatternLowering::generateMatcher(MatcherNode &node, Region &region) {
 
   // If this value corresponds to an operation, record that we are going to use
   // its location as part of a fused location.
-  bool isOperationValue = val && val.getType().isa<pdl::OperationType>();
+  bool isOperationValue = val && isa<pdl::OperationType>(val.getType());
   if (isOperationValue)
     locOps.insert(val);
 
@@ -280,7 +280,7 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
     // The first operation retrieves the representative value of a range.
     // This applies only when the parent is a range of values and we were
     // requested to use a representative value (e.g., upward traversal).
-    if (parentVal.getType().isa<pdl::RangeType>() &&
+    if (isa<pdl::RangeType>(parentVal.getType()) &&
         usersPos->useRepresentative())
       value = builder.create<pdl_interp::ExtractOp>(loc, parentVal, 0);
     else
@@ -327,7 +327,7 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
     break;
   }
   case Predicates::TypePos: {
-    if (parentVal.getType().isa<pdl::AttributeType>())
+    if (isa<pdl::AttributeType>(parentVal.getType()))
       value = builder.create<pdl_interp::GetAttributeTypeOp>(loc, parentVal);
     else
       value = builder.create<pdl_interp::GetValueTypeOp>(loc, parentVal);
@@ -357,11 +357,11 @@ Value PatternLowering::getValueAt(Block *&currentBlock, Position *pos) {
   case Predicates::TypeLiteralPos: {
     auto *typePos = cast<TypeLiteralPosition>(pos);
     Attribute rawTypeAttr = typePos->getValue();
-    if (TypeAttr typeAttr = rawTypeAttr.dyn_cast<TypeAttr>())
+    if (TypeAttr typeAttr = dyn_cast<TypeAttr>(rawTypeAttr))
       value = builder.create<pdl_interp::CreateTypeOp>(loc, typeAttr);
     else
       value = builder.create<pdl_interp::CreateTypesOp>(
-          loc, rawTypeAttr.cast<ArrayAttr>());
+          loc, cast<ArrayAttr>(rawTypeAttr));
     break;
   }
   default:
@@ -410,7 +410,7 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   }
   case Predicates::TypeQuestion: {
     auto *ans = cast<TypeAnswer>(answer);
-    if (val.getType().isa<pdl::RangeType>())
+    if (isa<pdl::RangeType>(val.getType()))
       builder.create<pdl_interp::CheckTypesOp>(
           loc, val, ans->getValue().cast<ArrayAttr>(), success, failure);
     else
@@ -554,7 +554,7 @@ void PatternLowering::generate(SwitchNode *switchNode, Block *currentBlock,
                           OperationNameAnswer>(val, defaultDest, builder,
                                                children);
   case Predicates::TypeQuestion:
-    if (val.getType().isa<pdl::RangeType>()) {
+    if (isa<pdl::RangeType>(val.getType())) {
       return createSwitchOp<pdl_interp::SwitchTypesOp, TypeAnswer>(
           val, defaultDest, builder, children);
     }
@@ -745,7 +745,7 @@ void PatternLowering::generateRewriter(
   // Handle the case where there is a single range representing all of the
   // result types.
   OperandRange resultTys = operationOp.getTypeValues();
-  if (resultTys.size() == 1 && resultTys[0].getType().isa<pdl::RangeType>()) {
+  if (resultTys.size() == 1 && isa<pdl::RangeType>(resultTys[0].getType())) {
     Value &type = rewriteValues[resultTys[0]];
     if (!type) {
       auto results = builder.create<pdl_interp::GetResultsOp>(loc, createdOp);
@@ -762,7 +762,7 @@ void PatternLowering::generateRewriter(
     Value &type = rewriteValues[it.value()];
     if (type)
       continue;
-    bool isVariadic = it.value().getType().isa<pdl::RangeType>();
+    bool isVariadic = isa<pdl::RangeType>(it.value().getType());
     seenVariableLength |= isVariadic;
 
     // After a variable length result has been seen, we need to use result

@@ -29,9 +29,9 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
   SmallVector<OpOperand *> outputBufferOperands, outputTensorOperands;
   for (OpOperand *operand : dstStyleOp.getDpsInitOperands()) {
     Type type = operand->get().getType();
-    if (type.isa<MemRefType>()) {
+    if (isa<MemRefType>(type)) {
       outputBufferOperands.push_back(operand);
-    } else if (type.isa<RankedTensorType>()) {
+    } else if (isa<RankedTensorType>(type)) {
       outputTensorOperands.push_back(operand);
     } else {
       return op->emitOpError("expected that operand #")

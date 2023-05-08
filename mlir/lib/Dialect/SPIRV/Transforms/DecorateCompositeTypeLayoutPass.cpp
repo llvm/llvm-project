@@ -42,8 +42,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     SmallVector<NamedAttribute, 4> globalVarAttrs;
 
-    auto ptrType = op.getType().cast<spirv::PointerType>();
-    auto pointeeType = ptrType.getPointeeType().cast<spirv::StructType>();
+    auto ptrType = cast<spirv::PointerType>(op.getType());
+    auto pointeeType = cast<spirv::StructType>(ptrType.getPointeeType());
     spirv::StructType structType = VulkanLayoutUtils::decorateType(pointeeType);
 
     if (!structType)
