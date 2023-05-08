@@ -13,6 +13,7 @@
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/perfect_forward.h>
+#include <__type_traits/decay.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <tuple>
