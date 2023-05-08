@@ -6,7 +6,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   IR/LLVMDialect.cpp
   IR/LLVMInlining.cpp
   IR/LLVMInterfaces.cpp
-  IR/LLVMMemorySlot.cpp
+  IR/LLVMMem2Reg.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
 
@@ -34,7 +34,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRDataLayoutInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
-  MLIRMemorySlotInterfaces
+  MLIRMem2RegInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
   )

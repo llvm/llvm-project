@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Interfaces/Mem2RegInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
