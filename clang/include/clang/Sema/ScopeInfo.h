@@ -172,6 +172,9 @@ public:
   /// in the function. One of co_return, co_await, or co_yield.
   unsigned char FirstCoroutineStmtKind : 2;
 
+  /// Whether we found an immediate-escalating expression.
+  bool FoundImmediateEscalatingExpression : 1;
+
   /// First coroutine statement in the current function.
   /// (ex co_return, co_await, co_yield)
   SourceLocation FirstCoroutineStmtLoc;
@@ -388,7 +391,8 @@ public:
         HasPotentialAvailabilityViolations(false), ObjCShouldCallSuper(false),
         ObjCIsDesignatedInit(false), ObjCWarnForNoDesignatedInitChain(false),
         ObjCIsSecondaryInit(false), ObjCWarnForNoInitDelegation(false),
-        NeedsCoroutineSuspends(true), ErrorTrap(Diag) {}
+        NeedsCoroutineSuspends(true), FoundImmediateEscalatingExpression(false),
+        ErrorTrap(Diag) {}
 
   virtual ~FunctionScopeInfo();
 

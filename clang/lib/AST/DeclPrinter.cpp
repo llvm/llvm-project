@@ -622,6 +622,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     if (D->isConstexprSpecified() && !D->isExplicitlyDefaulted())
       Out << "constexpr ";
     if (D->isConsteval())        Out << "consteval ";
+    else if (D->isImmediateFunction())
+      Out << "immediate ";
     ExplicitSpecifier ExplicitSpec = ExplicitSpecifier::getFromDecl(D);
     if (ExplicitSpec.isSpecified())
       printExplicitSpecifier(ExplicitSpec, Out, Policy, Indentation, Context);

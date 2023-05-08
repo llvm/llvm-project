@@ -4390,6 +4390,12 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
       DeduceReturnType(Specialization, Info.getLocation(), false))
     return TDK_MiscellaneousDeductionFailure;
 
+  if (IsAddressOfFunction && getLangOpts().CPlusPlus20 &&
+      Specialization->isImmediateEscalating() &&
+      CheckIfFunctionSpecializationIsImmediate(Specialization,
+                                               Info.getLocation()))
+    return TDK_MiscellaneousDeductionFailure;
+
   // If the function has a dependent exception specification, resolve it now,
   // so we can check that the exception specification matches.
   auto *SpecializationFPT =
@@ -5009,6 +5015,33 @@ bool Sema::DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
   }
 
   return StillUndeduced;
+}
+
+bool Sema::CheckIfFunctionSpecializationIsImmediate(FunctionDecl *FD,
+                                                    SourceLocation Loc) {
+  assert(FD->isImmediateEscalating());
+
+  if (isLambdaConversionOperator(FD)) {
+    CXXRecordDecl *Lambda = cast<CXXMethodDecl>(FD)->getParent();
+    FunctionDecl *CallOp = Lambda->getLambdaCallOperator();
+
+    // For a generic lambda, instantiate the call operator if needed.
+    if (auto *Args = FD->getTemplateSpecializationArgs()) {
+      CallOp = InstantiateFunctionDeclaration(
+          CallOp->getDescribedFunctionTemplate(), Args, Loc);
+      if (!CallOp || CallOp->isInvalidDecl())
+        return true;
+      runWithSufficientStackSpace(
+          Loc, [&] { InstantiateFunctionDefinition(Loc, CallOp); });
+    }
+    return CallOp->isInvalidDecl();
+  }
+
+  if (FD->getTemplateInstantiationPattern()) {
+    runWithSufficientStackSpace(
+        Loc, [&] { InstantiateFunctionDefinition(Loc, FD); });
+  }
+  return false;
 }
 
 /// If this is a non-static member function,
