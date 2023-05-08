@@ -43,7 +43,7 @@ static bool isShapePreserving(ForOp forOp, int64_t arg) {
   while (value) {
     if (value == forOp.getRegionIterArgs()[arg])
       return true;
-    OpResult opResult = value.dyn_cast<OpResult>();
+    OpResult opResult = dyn_cast<OpResult>(value);
     if (!opResult)
       return false;
 
@@ -91,7 +91,7 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
-    auto blockArg = dimOp.getSource().template dyn_cast<BlockArgument>();
+    auto blockArg = dyn_cast<BlockArgument>(dimOp.getSource());
     if (!blockArg)
       return failure();
     auto forOp = dyn_cast<ForOp>(blockArg.getParentBlock()->getParentOp());
@@ -139,7 +139,7 @@ struct DimOfLoopResultFolder : public OpRewritePattern<OpTy> {
     auto forOp = dimOp.getSource().template getDefiningOp<scf::ForOp>();
     if (!forOp)
       return failure();
-    auto opResult = dimOp.getSource().template cast<OpResult>();
+    auto opResult = cast<OpResult>(dimOp.getSource());
     unsigned resultNumber = opResult.getResultNumber();
     if (!isShapePreserving(forOp, resultNumber))
       return failure();

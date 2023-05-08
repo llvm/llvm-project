@@ -59,7 +59,7 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
 
   // This transform op is currently restricted to ModuleOps and function ops.
   // Such ops are modified in-place.
-  transformResults.set(getTransformed().cast<OpResult>(), payloadOps);
+  transformResults.set(cast<OpResult>(getTransformed()), payloadOps);
   return DiagnosedSilenceableFailure::success();
 }
 

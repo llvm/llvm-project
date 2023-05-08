@@ -156,7 +156,7 @@ static Value createUnpackHiPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
 /// dst[511:384] := SELECT4(v2[511:0], mask[7:6])
 static Value create4x128BitSuffle(ImplicitLocOpBuilder &b, Value v1, Value v2,
                                   uint8_t mask) {
-  assert(v1.getType().cast<VectorType>().getShape()[0] == 16 &&
+  assert(cast<VectorType>(v1.getType()).getShape()[0] == 16 &&
          "expected a vector with length=16");
   SmallVector<int64_t> shuffleMask;
   auto appendToMask = [&](int64_t base, uint8_t control) {
@@ -291,7 +291,7 @@ static Value transposeToShuffle16x16(OpBuilder &builder, Value source, int m,
   vs[0xf] = create4x128BitSuffle(b, t7, tf, 0xdd);
 
   auto reshInputType = VectorType::get(
-      {m, n}, source.getType().cast<VectorType>().getElementType());
+      {m, n}, cast<VectorType>(source.getType()).getElementType());
   Value res =
       b.create<arith::ConstantOp>(reshInputType, b.getZeroAttr(reshInputType));
   for (int64_t i = 0; i < m; ++i)
@@ -329,7 +329,7 @@ public:
     // Set up convenience transposition table.
     SmallVector<int64_t> transp;
     for (auto attr : op.getTransp())
-      transp.push_back(attr.cast<IntegerAttr>().getInt());
+      transp.push_back(cast<IntegerAttr>(attr).getInt());
 
     if (isShuffleLike(vectorTransformOptions.vectorTransposeLowering) &&
         succeeded(isTranspose2DSlice(op)))

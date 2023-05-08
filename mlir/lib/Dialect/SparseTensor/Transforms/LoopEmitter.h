@@ -415,11 +415,11 @@ private:
       // check `dstLvl < dstLvlRank` at the top; and only here need to
       // assert that `reassoc.size() == dstLvlRank`.
       assert(dstLvl < reassoc.size() && "Level is out-of-bounds");
-      const auto srcLvls = reassoc[dstLvl].cast<ArrayAttr>();
+      const auto srcLvls = cast<ArrayAttr>(reassoc[dstLvl]);
       return llvm::to_vector<2>(
           llvm::map_range(srcLvls, [&](Attribute srcLvl) -> Level {
             // TODO: replace this with the converter for `LevelAttr`.
-            return srcLvl.cast<IntegerAttr>().getValue().getZExtValue();
+            return cast<IntegerAttr>(srcLvl).getValue().getZExtValue();
           }));
     }
     return {dstLvl};

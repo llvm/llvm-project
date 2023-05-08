@@ -16,7 +16,7 @@ llvm::Constant *
 mlir::LLVM::createSourceLocStrFromLocation(Location loc,
                                            llvm::OpenMPIRBuilder &builder,
                                            StringRef name, uint32_t &strLen) {
-  if (auto fileLoc = loc.dyn_cast<FileLineColLoc>()) {
+  if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
     StringRef fileName = fileLoc.getFilename();
     unsigned lineNo = fileLoc.getLine();
     unsigned colNo = fileLoc.getColumn();
@@ -32,7 +32,7 @@ llvm::Constant *
 mlir::LLVM::createMappingInformation(Location loc,
                                      llvm::OpenMPIRBuilder &builder) {
   uint32_t strLen;
-  if (auto nameLoc = loc.dyn_cast<NameLoc>()) {
+  if (auto nameLoc = dyn_cast<NameLoc>(loc)) {
     StringRef name = nameLoc.getName();
     return createSourceLocStrFromLocation(nameLoc.getChildLoc(), builder, name,
                                           strLen);

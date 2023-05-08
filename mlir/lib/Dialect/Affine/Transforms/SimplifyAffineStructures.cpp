@@ -100,9 +100,9 @@ void SimplifyAffineStructures::runOnOperation() {
   SmallVector<Operation *> opsToSimplify;
   func.walk([&](Operation *op) {
     for (auto attr : op->getAttrs()) {
-      if (auto mapAttr = attr.getValue().dyn_cast<AffineMapAttr>())
+      if (auto mapAttr = dyn_cast<AffineMapAttr>(attr.getValue()))
         simplifyAndUpdateAttribute(op, attr.getName(), mapAttr);
-      else if (auto setAttr = attr.getValue().dyn_cast<IntegerSetAttr>())
+      else if (auto setAttr = dyn_cast<IntegerSetAttr>(attr.getValue()))
         simplifyAndUpdateAttribute(op, attr.getName(), setAttr);
     }
 

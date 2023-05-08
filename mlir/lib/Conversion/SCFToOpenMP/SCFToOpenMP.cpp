@@ -51,8 +51,7 @@ static bool matchSimpleReduction(Block &block) {
   Value reducedVal = matchReduction({block.getArguments()[1]},
                                     /*redPos=*/0, combinerOps);
 
-  if (!reducedVal || !reducedVal.isa<BlockArgument>() ||
-      combinerOps.size() != 1)
+  if (!reducedVal || !isa<BlockArgument>(reducedVal) || combinerOps.size() != 1)
     return false;
 
   return isa<OpTy...>(combinerOps[0]) &&
@@ -155,7 +154,7 @@ static const llvm::fltSemantics &fltSemanticsForType(FloatType type) {
 /// Returns an attribute with the minimum (if `min` is set) or the maximum value
 /// (otherwise) for the given float type.
 static Attribute minMaxValueForFloat(Type type, bool min) {
-  auto fltType = type.cast<FloatType>();
+  auto fltType = cast<FloatType>(type);
   return FloatAttr::get(
       type, llvm::APFloat::getLargest(fltSemanticsForType(fltType), min));
 }
@@ -164,7 +163,7 @@ static Attribute minMaxValueForFloat(Type type, bool min) {
 /// the maximum value (otherwise) for the given integer type, regardless of its
 /// signedness semantics (only the width is considered).
 static Attribute minMaxValueForSignedInt(Type type, bool min) {
-  auto intType = type.cast<IntegerType>();
+  auto intType = cast<IntegerType>(type);
   unsigned bitwidth = intType.getWidth();
   return IntegerAttr::get(type, min ? llvm::APInt::getSignedMinValue(bitwidth)
                                     : llvm::APInt::getSignedMaxValue(bitwidth));
@@ -174,7 +173,7 @@ static Attribute minMaxValueForSignedInt(Type type, bool min) {
 /// the maximum value (otherwise) for the given integer type, regardless of its
 /// signedness semantics (only the width is considered).
 static Attribute minMaxValueForUnsignedInt(Type type, bool min) {
-  auto intType = type.cast<IntegerType>();
+  auto intType = cast<IntegerType>(type);
   unsigned bitwidth = intType.getWidth();
   return IntegerAttr::get(type, min ? llvm::APInt::getZero(bitwidth)
                                     : llvm::APInt::getAllOnes(bitwidth));
@@ -388,7 +387,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     reductionVariables.reserve(parallelOp.getNumReductions());
     for (Value init : parallelOp.getInitVals()) {
       assert((LLVM::isCompatibleType(init.getType()) ||
-              init.getType().isa<LLVM::PointerElementTypeInterface>()) &&
+              isa<LLVM::PointerElementTypeInterface>(init.getType())) &&
              "cannot create a reduction variable if the type is not an LLVM "
              "pointer element");
       Value storage = rewriter.create<LLVM::AllocaOp>(

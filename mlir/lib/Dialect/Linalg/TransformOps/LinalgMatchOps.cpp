@@ -607,7 +607,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredResultOp::matchOperation(
     return diag;
 
   Value result = linalgOp.getTiedOpResult(linalgOp.getDpsInitOperand(position));
-  if (getResult().getType().isa<TransformValueHandleTypeInterface>()) {
+  if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
     results.setValues(cast<OpResult>(getResult()), result);
     return DiagnosedSilenceableFailure::success();
   }
@@ -648,7 +648,7 @@ transform::MatchStructuredResultOp::getPositionFor(linalg::LinalgOp op,
 
 LogicalResult transform::MatchStructuredResultOp::verify() {
   if ((getAny() || getSingle()) ^
-      getResult().getType().isa<TransformHandleTypeInterface>()) {
+      isa<TransformHandleTypeInterface>(getResult().getType())) {
     return emitOpError() << "expects either the any/single keyword or the type "
                             "value handle result type";
   }

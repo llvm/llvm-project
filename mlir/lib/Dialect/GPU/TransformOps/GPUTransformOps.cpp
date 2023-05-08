@@ -257,19 +257,19 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
 
   bool hasBlockMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPUBlockMappingAttr>();
+        return isa<GPUBlockMappingAttr>(attr);
       });
   bool hasThreadMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPUThreadMappingAttr>();
+        return isa<GPUThreadMappingAttr>(attr);
       });
   bool hasWarpMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPUWarpMappingAttr>();
+        return isa<GPUWarpMappingAttr>(attr);
       });
   bool hasLinearMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return attr.isa<GPULinearIdMappingAttr>();
+        return isa<GPULinearIdMappingAttr>(attr);
       });
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
@@ -520,7 +520,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
                        ArrayRef<Attribute>{forallMappingAttrs}.take_front(
                            forallOp.getInductionVars().size()))) {
     Value peIdOp = mappingIdOps[static_cast<int64_t>(
-        dim.cast<DeviceMappingAttrInterface>().getMappingId())];
+        cast<DeviceMappingAttrInterface>(dim).getMappingId())];
     bvm.map(iv, peIdOp);
   }
 

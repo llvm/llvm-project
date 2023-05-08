@@ -454,7 +454,7 @@ LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op->getLoc();
 
   auto memRefType = hostRegisterOp.getValue().getType();
-  auto elementType = memRefType.cast<UnrankedMemRefType>().getElementType();
+  auto elementType = cast<UnrankedMemRefType>(memRefType).getElementType();
   auto elementSize = getSizeInBytes(loc, elementType, rewriter);
 
   auto arguments = getTypeConverter()->promoteOperands(
@@ -476,7 +476,7 @@ LogicalResult ConvertHostUnregisterOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op->getLoc();
 
   auto memRefType = hostUnregisterOp.getValue().getType();
-  auto elementType = memRefType.cast<UnrankedMemRefType>().getElementType();
+  auto elementType = cast<UnrankedMemRefType>(memRefType).getElementType();
   auto elementSize = getSizeInBytes(loc, elementType, rewriter);
 
   auto arguments = getTypeConverter()->promoteOperands(
@@ -555,7 +555,7 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
 }
 
 static bool isGpuAsyncTokenType(Value value) {
-  return value.getType().isa<gpu::AsyncTokenType>();
+  return isa<gpu::AsyncTokenType>(value.getType());
 }
 
 // Converts !gpu.async.token operands of `async.yield` to runtime calls. The
@@ -591,7 +591,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
 
 // Returns whether `value` is the result of an LLVM::CallOp to `functionName`.
 static bool isDefinedByCallTo(Value value, StringRef functionName) {
-  assert(value.getType().isa<LLVM::LLVMPointerType>());
+  assert(isa<LLVM::LLVMPointerType>(value.getType()));
   if (auto defOp = value.getDefiningOp<LLVM::CallOp>())
     return defOp.getCallee()->equals(functionName);
   return false;
@@ -862,7 +862,7 @@ static Value bitAndAddrspaceCast(Location loc,
                                  LLVM::LLVMPointerType destinationType,
                                  Value sourcePtr,
                                  LLVMTypeConverter &typeConverter) {
-  auto sourceTy = sourcePtr.getType().cast<LLVM::LLVMPointerType>();
+  auto sourceTy = cast<LLVM::LLVMPointerType>(sourcePtr.getType());
   if (destinationType.getAddressSpace() != sourceTy.getAddressSpace())
     sourcePtr = rewriter.create<LLVM::AddrSpaceCastOp>(
         loc,
@@ -879,7 +879,7 @@ static Value bitAndAddrspaceCast(Location loc,
 LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::MemcpyOp memcpyOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto memRefType = memcpyOp.getSrc().getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(memcpyOp.getSrc().getType());
 
   if (failed(areAllLLVMTypes(memcpyOp, adaptor.getOperands(), rewriter)) ||
       !isConvertibleAndHasIdentityMaps(memRefType) ||
@@ -919,7 +919,7 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::MemsetOp memsetOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto memRefType = memsetOp.getDst().getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(memsetOp.getDst().getType());
 
   if (failed(areAllLLVMTypes(memsetOp, adaptor.getOperands(), rewriter)) ||
       !isConvertibleAndHasIdentityMaps(memRefType) ||

@@ -549,7 +549,7 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   int paddedRank = paddedTensorType.getRank();
 
   // Step 0. Populate bvm with opToHoist.getSource if relevant.
-  BlockArgument bbArg = opToHoist.getSource().dyn_cast<BlockArgument>();
+  BlockArgument bbArg = dyn_cast<BlockArgument>(opToHoist.getSource());
   while (bbArg) {
     auto forOp = dyn_cast<scf::ForOp>(bbArg.getOwner()->getParentOp());
     if (!forOp)
@@ -558,7 +558,7 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
       break;
     OpOperand &operand = forOp.getOpOperandForRegionIterArg(bbArg);
     bvm.map(bbArg, operand.get());
-    bbArg = operand.get().dyn_cast<BlockArgument>();
+    bbArg = dyn_cast<BlockArgument>(operand.get());
   }
 
   // Step 1. iteratively clone loops and push `hoistedPackedTensor`.
@@ -754,9 +754,8 @@ static bool tracesBackToExpectedValue(tensor::ExtractSliceOp extractSliceOp,
     if (!destOp)
       break;
     LLVM_DEBUG(DBGS() << "--step dest op: " << destOp << "\n");
-    source =
-        destOp.getDpsInitOperand(source.cast<OpResult>().getResultNumber())
-            ->get();
+    source = destOp.getDpsInitOperand(cast<OpResult>(source).getResultNumber())
+                 ->get();
   }
   LLVM_DEBUG(DBGS() << "--final source: " << source << "\n");
   LLVM_DEBUG(DBGS() << "--expected source: " << expectedSource << "\n");

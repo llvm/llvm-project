@@ -148,7 +148,7 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
   if (collapseShapeOp.getReassociationIndices().empty()) {
     auto zeroAffineMap = rewriter.getConstantAffineMap(0);
     int64_t srcRank =
-        collapseShapeOp.getViewSource().getType().cast<MemRefType>().getRank();
+        cast<MemRefType>(collapseShapeOp.getViewSource().getType()).getRank();
     for (int64_t i = 0; i < srcRank; i++) {
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
           rewriter, loc, zeroAffineMap, dynamicIndices);
