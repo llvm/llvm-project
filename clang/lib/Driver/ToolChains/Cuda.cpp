@@ -711,8 +711,7 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
 /// system's default triple if not provided.
 NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
-    : NVPTXToolChain(D, Triple,
-                     llvm::Triple(llvm::sys::getDefaultTargetTriple()), Args,
+    : NVPTXToolChain(D, Triple, llvm::Triple(LLVM_HOST_TRIPLE), Args,
                      /*Freestanding=*/true) {}
 
 llvm::opt::DerivedArgList *
