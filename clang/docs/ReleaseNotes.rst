@@ -126,6 +126,7 @@ C++23 Feature Support
   functions. Which include allowing non-literal types as return values and parameters, allow calling of
   non-constexpr functions and constructors.
 - Clang now supports `requires cplusplus23` for module maps.
+- Implemented `P2564R3: consteval needs to propagate up <https://wg21.link/P2564R3>`_.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
