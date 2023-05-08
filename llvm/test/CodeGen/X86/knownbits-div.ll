@@ -4,11 +4,7 @@
 define i8 @sdiv_neg_neg_high_bits(i8 %x, i8 %y) {
 ; CHECK-LABEL: sdiv_neg_neg_high_bits:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $-128, %dil
-; CHECK-NEXT:    orb $-125, %sil
-; CHECK-NEXT:    movsbl %dil, %eax
-; CHECK-NEXT:    idivb %sil
-; CHECK-NEXT:    andb $-128, %al
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %num = or i8 %x, 128
   %denum = or i8 %y, 131
@@ -20,11 +16,7 @@ define i8 @sdiv_neg_neg_high_bits(i8 %x, i8 %y) {
 define i8 @sdiv_exact_odd_odd(i8 %x, i8 %y) {
 ; CHECK-LABEL: sdiv_exact_odd_odd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $1, %dil
-; CHECK-NEXT:    orb $1, %sil
-; CHECK-NEXT:    movsbl %dil, %eax
-; CHECK-NEXT:    idivb %sil
-; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retq
   %num = or i8 %x, 1
   %denum = or i8 %y, 1
@@ -52,11 +44,7 @@ define i8 @sdiv_exact_even_even_fail_unknown(i8 %x, i8 %y) {
 define i8 @udiv_exact_even_odd(i8 %x, i8 %y) {
 ; CHECK-LABEL: udiv_exact_even_odd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andb $-2, %dil
-; CHECK-NEXT:    orb $1, %sil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    divb %sil
-; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %num = and i8 %x, -2
   %denum = or i8 %y, 1
