@@ -41,6 +41,8 @@ void AsanThreadContext::OnFinished() {
 }
 
 static ThreadRegistry *asan_thread_registry;
+static ThreadArgRetval *thread_data;
+
 static Mutex mu_for_thread_context;
 static LowLevelAllocator allocator_for_thread_context;
 
@@ -63,15 +65,23 @@ static void InitThreads() {
   // MIPS requires aligned address
   static ALIGNED(alignof(
       ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+  static ALIGNED(alignof(
+      ThreadArgRetval)) char thread_data_placeholder[sizeof(ThreadArgRetval)];
 
   asan_thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);
+  thread_data = new (thread_data_placeholder) ThreadArgRetval();
   initialized = true;
 }
 
 ThreadRegistry &asanThreadRegistry() {
   InitThreads();
   return *asan_thread_registry;
+}
+
+ThreadArgRetval &asanThreadArgRetval() {
+  InitThreads();
+  return *thread_data;
 }
 
 AsanThreadContext *GetThreadContextByTidLocked(u32 tid) {
@@ -484,9 +494,15 @@ __asan::AsanThread *GetAsanThreadByOsIDLocked(tid_t os_id) {
 
 // --- Implementation of LSan-specific functions --- {{{1
 namespace __lsan {
-void LockThreadRegistry() { __asan::asanThreadRegistry().Lock(); }
+void LockThreadRegistry() {
+  __asan::asanThreadRegistry().Lock();
+  __asan::asanThreadArgRetval().Lock();
+}
 
-void UnlockThreadRegistry() { __asan::asanThreadRegistry().Unlock(); }
+void UnlockThreadRegistry() {
+  __asan::asanThreadArgRetval().Unlock();
+  __asan::asanThreadRegistry().Unlock();
+}
 
 static ThreadRegistry *GetAsanThreadRegistryLocked() {
   __asan::asanThreadRegistry().CheckLocked();
@@ -541,33 +557,7 @@ void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {
 }
 
 void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
-  GetAsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
-      [](ThreadContextBase *tctx, void *ptrs) {
-        // Look for the arg pointer of threads that have been created or are
-        // running. This is necessary to prevent false positive leaks due to the
-        // AsanThread holding the only live reference to a heap object.  This
-        // can happen because the `pthread_create()` interceptor doesn't wait
-        // for the child thread to start before returning and thus loosing the
-        // the only live reference to the heap object on the stack.
-
-        __asan::AsanThreadContext *atctx =
-            static_cast<__asan::AsanThreadContext *>(tctx);
-
-        // Note ThreadStatusRunning is required because there is a small window
-        // where the thread status switches to `ThreadStatusRunning` but the
-        // `arg` pointer still isn't on the stack yet.
-        if (atctx->status != ThreadStatusCreated &&
-            atctx->status != ThreadStatusRunning)
-          return;
-
-        uptr thread_arg = reinterpret_cast<uptr>(atctx->thread->get_arg());
-        if (!thread_arg)
-          return;
-
-        auto ptrsVec = reinterpret_cast<InternalMmapVector<uptr> *>(ptrs);
-        ptrsVec->push_back(thread_arg);
-      },
-      ptrs);
+  __asan::asanThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
 
 void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
