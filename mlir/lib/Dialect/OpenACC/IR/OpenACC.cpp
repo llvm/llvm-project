@@ -581,6 +581,11 @@ LogicalResult acc::EnterDataOp::verify() {
   if (getWaitDevnum() && getWaitOperands().empty())
     return emitError("wait_devnum cannot appear without waitOperands");
 
+  for (mlir::Value operand : getDataClauseOperands())
+    if (!mlir::isa<acc::AttachOp, acc::CreateOp, acc::CopyinOp>(
+            operand.getDefiningOp()))
+      return emitError("expect data entry operation as defining op");
+
   return success();
 }
 
