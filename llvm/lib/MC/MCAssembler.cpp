@@ -1117,10 +1117,9 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
   (void) Abs;
   SmallVectorImpl<char> &Data = DF.getContents();
   Data.clear();
-  raw_svector_ostream OSE(Data);
   DF.getFixups().clear();
 
-  MCDwarfFrameEmitter::EncodeAdvanceLoc(Context, AddrDelta, OSE);
+  MCDwarfFrameEmitter::encodeAdvanceLoc(Context, AddrDelta, Data);
   return OldSize != Data.size();
 }
 
