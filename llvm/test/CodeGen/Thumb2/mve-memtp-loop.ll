@@ -211,12 +211,12 @@ entry:
 define void @test11(ptr nocapture %x, ptr nocapture %y, i32 %n) {
 ; CHECK-LABEL: test11:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp.w r2, #-1
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    bxgt lr
-; CHECK-NEXT:  .LBB10_1: @ %prehead
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    cmp.w r2, #-1
+; CHECK-NEXT:    it gt
+; CHECK-NEXT:    popgt {r4, pc}
+; CHECK-NEXT:  .LBB10_1: @ %prehead
 ; CHECK-NEXT:    mov r12, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB10_3
@@ -230,9 +230,8 @@ define void @test11(ptr nocapture %x, ptr nocapture %y, i32 %n) {
 ; CHECK-NEXT:    subs r2, #2
 ; CHECK-NEXT:    strb r3, [r1], #1
 ; CHECK-NEXT:    bne .LBB10_3
-; CHECK-NEXT:  @ %bb.4:
-; CHECK-NEXT:    pop.w {r4, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  @ %bb.4: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp6 = icmp slt i32 %n, 0
   br i1 %cmp6, label %prehead, label %for.cond.cleanup
@@ -441,12 +440,12 @@ declare void @other()
 define void @multilooped_exit(i32 %b) {
 ; CHECK-LABEL: multilooped_exit:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp r0, #1
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB18_1: @ %loop.preheader
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB18_1: @ %loop.preheader
 ; CHECK-NEXT:    mov.w r4, #-1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    b .LBB18_3
@@ -499,9 +498,8 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:    vstrb.8 q0, [r3], #16
 ; CHECK-NEXT:    letp lr, .LBB18_11
 ; CHECK-NEXT:    b .LBB18_2
-; CHECK-NEXT:  .LBB18_12:
-; CHECK-NEXT:    pop.w {r4, lr}
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:  .LBB18_12: @ %exit
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %cmp8 = icmp sgt i32 %b, 0
   br i1 %cmp8, label %loop, label %exit
