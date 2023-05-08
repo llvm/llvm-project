@@ -951,22 +951,19 @@ public:
 
   void buildDecl(const clang::Decl &D);
 
-  /// If the specified expression does not fold
-  /// to a constant, or if it does but contains a label, return false.  If it
-  /// constant folds return true and set the boolean result in Result.
+  /// If the specified expression does not fold to a constant, or if it does but
+  /// contains a label, return false.  If it constant folds return true and set
+  /// the boolean result in Result.
   bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond, bool &ResultBool,
-                                    bool AllowLabels);
+                                    bool AllowLabels = false);
+  bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond,
+                                    llvm::APSInt &ResultInt,
+                                    bool AllowLabels = false);
 
   /// Return true if the statement contains a label in it.  If
   /// this statement is not executed normally, it not containing a label means
   /// that we can just remove the code.
   bool ContainsLabel(const clang::Stmt *S, bool IgnoreCaseStmts = false);
-
-  /// If the specified expression does not fold
-  /// to a constant, or if it does but contains a label, return false.  If it
-  /// constant folds return true and set the folded value.
-  bool ConstantFoldsToSimpleInteger(const clang::Expr *Cond,
-                                    llvm::APSInt &ResultInt, bool AllowLabels);
 
   /// Emit an if on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of

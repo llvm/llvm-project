@@ -77,7 +77,7 @@ public:
   }
 
   mlir::Value VisitConstantExpr(ConstantExpr *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitParenExpr(ParenExpr *PE) { llvm_unreachable("NYI"); }
+  mlir::Value VisitParenExpr(ParenExpr *PE) { return Visit(PE->getSubExpr()); }
   mlir::Value
   VisitSubstnonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E) {
     llvm_unreachable("NYI");
@@ -521,9 +521,7 @@ public:
   // Other Operators.
   mlir::Value VisitBlockExpr(const BlockExpr *E) { llvm_unreachable("NYI"); }
   mlir::Value
-  VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
-    llvm_unreachable("NYI");
-  }
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   mlir::Value VisitChooseExpr(ChooseExpr *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitVAArgExpr(VAArgExpr *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitObjCStringLiteral(const ObjCStringLiteral *E) {
@@ -1440,4 +1438,81 @@ mlir::Value ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   // Otherwise, reload the value.
   return buildLoadOfLValue(LHS, E->getExprLoc());
+}
+
+/// Return true if the specified expression is cheap enough and side-effect-free
+/// enough to evaluate unconditionally instead of conditionally.  This is used
+/// to convert control flow into selects in some cases.
+/// TODO(cir): can be shared with LLVM codegen.
+static bool isCheapEnoughToEvaluateUnconditionally(const Expr *E,
+                                                   CIRGenFunction &CGF) {
+  // Anything that is an integer or floating point constant is fine.
+  return E->IgnoreParens()->isEvaluatable(CGF.getContext());
+
+  // Even non-volatile automatic variables can't be evaluated unconditionally.
+  // Referencing a thread_local may cause non-trivial initialization work to
+  // occur. If we're inside a lambda and one of the variables is from the scope
+  // outside the lambda, that function may have returned already. Reading its
+  // locals is a bad idea. Also, these reads may introduce races there didn't
+  // exist in the source-level program.
+}
+
+mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  TestAndClearIgnoreResultAssign();
+
+  // Bind the common expression if necessary.
+  CIRGenFunction::OpaqueValueMapping binding(CGF, E);
+
+  Expr *condExpr = E->getCond();
+  Expr *lhsExpr = E->getTrueExpr();
+  Expr *rhsExpr = E->getFalseExpr();
+
+  // If the condition constant folds and can be elided, try to avoid emitting
+  // the condition and the dead arm.
+  bool CondExprBool;
+  if (CGF.ConstantFoldsToSimpleInteger(condExpr, CondExprBool)) {
+    Expr *live = lhsExpr, *dead = rhsExpr;
+    if (!CondExprBool)
+      std::swap(live, dead);
+
+    // If the dead side doesn't have labels we need, just emit the Live part.
+    if (!CGF.ContainsLabel(dead)) {
+      if (CondExprBool)
+        assert(!UnimplementedFeature::incrementProfileCounter());
+      auto Result = Visit(live);
+
+      // If the live part is a throw expression, it acts like it has a void
+      // type, so evaluating it returns a null Value.  However, a conditional
+      // with non-void type must return a non-null Value.
+      if (!Result && !E->getType()->isVoidType()) {
+        llvm_unreachable("NYI");
+      }
+
+      return Result;
+    }
+  }
+
+  // OpenCL: If the condition is a vector, we can treat this condition like
+  // the select function.
+  if ((CGF.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
+      condExpr->getType()->isExtVectorType()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (condExpr->getType()->isVectorType() ||
+      condExpr->getType()->isSveVLSBuiltinType()) {
+    llvm_unreachable("NYI");
+  }
+
+  // If this is a really simple expression (like x ? 4 : 5), emit this as a
+  // select instead of as control flow.  We can only do this if it is cheap and
+  // safe to evaluate the LHS and RHS unconditionally.
+  if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
+      isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
+    llvm_unreachable("NYI");
+  }
+
+  [[maybe_unused]] CIRGenFunction::ConditionalEvaluation eval(CGF);
+  llvm_unreachable("NYI");
 }
