@@ -3798,7 +3798,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
     Device = ConstantInt::get(Int32, -1);
   Constant *InteropTypeVal = ConstantInt::get(Int32, (int)InteropType);
   if (NumDependences == nullptr) {
-    NumDependences = ConstantInt::get(Int64, 0);
+    NumDependences = ConstantInt::get(Int32, 0);
     PointerType *PointerTypeVar = Type::getInt8PtrTy(M.getContext());
     DependenceAddress = ConstantPointerNull::get(PointerTypeVar);
   }
