@@ -1845,7 +1845,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 void TypePrinter::printBTFTagAttributedBefore(const BTFTagAttributedType *T,
                                               raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
-  OS << " btf_type_tag(" << T->getAttr()->getBTFTypeTag() << ")";
+  OS << " __attribute__((btf_type_tag(\"" << T->getAttr()->getBTFTypeTag() << "\")))";
 }
 
 void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
