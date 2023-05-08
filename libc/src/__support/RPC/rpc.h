@@ -250,16 +250,22 @@ template <bool InvertInbox> struct Process {
 /// processes. A port is conceptually an index into the memory provided by the
 /// underlying process that is guarded by a lock bit.
 template <bool T> struct Port {
-  // TODO: This should be move-only.
   LIBC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint64_t index,
                    uint32_t out)
       : process(process), lane_mask(lane_mask), index(index), out(out) {}
+  LIBC_INLINE ~Port() = default;
+
+private:
   LIBC_INLINE Port(const Port &) = delete;
   LIBC_INLINE Port &operator=(const Port &) = delete;
   LIBC_INLINE Port(Port &&) = default;
   LIBC_INLINE Port &operator=(Port &&) = default;
-  LIBC_INLINE ~Port() = default;
 
+  friend struct Client;
+  friend struct Server;
+  friend class cpp::optional<Port<T>>;
+
+public:
   template <typename U> LIBC_INLINE void recv(U use);
   template <typename F> LIBC_INLINE void send(F fill);
   template <typename F, typename U>
