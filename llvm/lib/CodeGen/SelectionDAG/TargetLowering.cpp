@@ -2592,9 +2592,10 @@ bool TargetLowering::SimplifyDemandedBits(
     SDNodeFlags Flags = Op.getNode()->getFlags();
     unsigned DemandedBitsLZ = DemandedBits.countl_zero();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
-    if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, Known2, TLO,
+    KnownBits KnownOp0, KnownOp1;
+    if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, KnownOp0, TLO,
                              Depth + 1) ||
-        SimplifyDemandedBits(Op1, LoMask, DemandedElts, Known2, TLO,
+        SimplifyDemandedBits(Op1, LoMask, DemandedElts, KnownOp1, TLO,
                              Depth + 1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
@@ -2691,7 +2692,16 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
-    [[fallthrough]];
+    if (Op.getOpcode() == ISD::MUL) {
+      Known = KnownBits::mul(KnownOp0, KnownOp1);
+    } else { // Op.getOpcode() is either ISD::ADD or ISD::SUB.
+      // TODO: Update `computeForAddCarry` to handle the NSW flag as well so
+      //       that `Flags.hasNoSignedWrap()` can be passed through here
+      //       instead of false.
+      Known = KnownBits::computeForAddSub(Op.getOpcode() == ISD::ADD, false,
+                                          KnownOp0, KnownOp1);
+    }
+    break;
   }
   default:
     // We also ask the target about intrinsics (which could be specific to it).
