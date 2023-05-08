@@ -664,10 +664,8 @@ LogicalResult acc::ShutdownOp::verify() {
 
 LogicalResult acc::UpdateOp::verify() {
   // At least one of host or device should have a value.
-  if (getHostOperands().empty() && getDeviceOperands().empty() &&
-      getDataClauseOperands().empty())
-    return emitError(
-        "at least one value must be present in hostOperands or deviceOperands");
+  if (getDataClauseOperands().empty())
+    return emitError("at least one value must be present in dataOperands");
 
   // The async attribute represent the async clause without value. Therefore the
   // attribute and operand cannot appear at the same time.
@@ -692,8 +690,7 @@ LogicalResult acc::UpdateOp::verify() {
 }
 
 unsigned UpdateOp::getNumDataOperands() {
-  return getHostOperands().size() + getDeviceOperands().size() +
-         getDataClauseOperands().size();
+  return getDataClauseOperands().size();
 }
 
 Value UpdateOp::getDataOperand(unsigned i) {
