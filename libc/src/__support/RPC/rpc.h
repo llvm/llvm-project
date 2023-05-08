@@ -273,8 +273,8 @@ struct Client : public Process<false> {
   LIBC_INLINE ~Client() = default;
 
   using Port = rpc::Port<false>;
-  LIBC_INLINE cpp::optional<Port> try_open(uint16_t opcode);
-  LIBC_INLINE Port open(uint16_t opcode);
+  template <uint16_t opcode> LIBC_INLINE cpp::optional<Port> try_open();
+  template <uint16_t opcode> LIBC_INLINE Port open();
 };
 
 /// The RPC server used to respond to the client.
@@ -411,10 +411,9 @@ LIBC_INLINE void Port<T>::recv_n(A alloc) {
 /// port if we find an index that is in a valid sending state. That is, there
 /// are send operations pending that haven't been serviced on this port. Each
 /// port instance uses an associated \p opcode to tell the server what to do.
-/// Opening a port is only valid if the `opcode` is the sam accross every
-/// participating thread.
+template <uint16_t opcode>
 [[clang::convergent]] LIBC_INLINE cpp::optional<Client::Port>
-Client::try_open(uint16_t opcode) {
+Client::try_open() {
   // Perform a naive linear scan for a port that can be opened to send data.
   for (uint64_t index = 0; index < port_count; ++index) {
     // Attempt to acquire the lock on this index.
@@ -445,9 +444,9 @@ Client::try_open(uint16_t opcode) {
   return cpp::nullopt;
 }
 
-LIBC_INLINE Client::Port Client::open(uint16_t opcode) {
+template <uint16_t opcode> LIBC_INLINE Client::Port Client::open() {
   for (;;) {
-    if (cpp::optional<Client::Port> p = try_open(opcode))
+    if (cpp::optional<Client::Port> p = try_open<opcode>())
       return cpp::move(p.value());
     sleep_briefly();
   }

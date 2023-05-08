@@ -17,7 +17,7 @@ static void test_add_simple() {
       10 + 10 * gpu::get_thread_id() + 10 * gpu::get_block_id();
   uint64_t cnt = 0;
   for (uint32_t i = 0; i < num_additions; ++i) {
-    rpc::Client::Port port = rpc::client.open(rpc::TEST_INCREMENT);
+    rpc::Client::Port port = rpc::client.open<rpc::TEST_INCREMENT>();
     port.send_and_recv(
         [=](rpc::Buffer *buffer) {
           reinterpret_cast<uint64_t *>(buffer->data)[0] = cnt;
@@ -32,7 +32,7 @@ static void test_add_simple() {
 
 // Test to ensure that the RPC mechanism doesn't hang on divergence.
 static void test_noop(uint8_t data) {
-  rpc::Client::Port port = rpc::client.open(rpc::NOOP);
+  rpc::Client::Port port = rpc::client.open<rpc::NOOP>();
   port.send([=](rpc::Buffer *buffer) { buffer->data[0] = data; });
   port.close();
 }
