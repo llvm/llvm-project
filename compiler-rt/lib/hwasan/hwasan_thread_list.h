@@ -157,7 +157,7 @@ class SANITIZER_MUTEX HwasanThreadList {
   }
 
   template <class CB>
-  Thread *FindThreadLocked(CB cb) SANITIZER_CHECK_LOCKED(stats_mutex_) {
+  Thread *FindThreadLocked(CB cb) SANITIZER_CHECK_LOCKED(live_list_mutex_) {
     CheckLocked();
     for (Thread *t : live_list_)
       if (cb(t))
