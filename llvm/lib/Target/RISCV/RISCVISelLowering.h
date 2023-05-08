@@ -550,6 +550,9 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
+  bool shouldTransformSignedTruncationCheck(EVT XVT,
+                                            unsigned KeptBits) const override;
+
   TargetLowering::ShiftLegalizationStrategy
   preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                      unsigned ExpansionFactor) const override {
