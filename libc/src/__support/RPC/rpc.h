@@ -146,6 +146,22 @@ template <bool InvertInbox> struct Process {
     return InvertInbox ? !i : i;
   }
 
+  /// Retrieve the outbox state from memory shared between processes.
+  /// Never needs to invert the associated read.
+  LIBC_INLINE uint32_t load_outbox(uint64_t index) {
+    return outbox[index].load(cpp::MemoryOrder::RELAXED);
+  }
+
+  /// Signal to the other process that this one is finished with the buffer.
+  /// Equivalent to loading outbox followed by store of the inverted value
+  /// The outbox is write only by this warp and tracking the value locally is
+  /// cheaper than calling load_outbox to get the value to store.
+  LIBC_INLINE uint32_t invert_outbox(uint64_t index, uint32_t current_outbox) {
+    uint32_t inverted_outbox = !current_outbox;
+    outbox[index].store(inverted_outbox, cpp::MemoryOrder::RELAXED);
+    return inverted_outbox;
+  }
+
   /// Determines if this process needs to wait for ownership of the buffer.
   LIBC_INLINE static bool buffer_unavailable(uint32_t in, uint32_t out) {
     return in != out;
@@ -301,9 +317,8 @@ template <bool T> template <typename F> LIBC_INLINE void Port<T>::send(F fill) {
 
   // Apply the \p fill function to initialize the buffer and release the memory.
   process.invoke_rpc(fill, process.get_packet(index));
-  out = !out;
   atomic_thread_fence(cpp::MemoryOrder::RELEASE);
-  process.outbox[index].store(out, cpp::MemoryOrder::RELAXED);
+  out = process.invert_outbox(index, out);
 }
 
 /// Applies \p use to the shared buffer and acknowledges the send.
@@ -319,8 +334,7 @@ template <bool T> template <typename U> LIBC_INLINE void Port<T>::recv(U use) {
 
   // Apply the \p use function to read the memory out of the buffer.
   process.invoke_rpc(use, process.get_packet(index));
-  out = !out;
-  process.outbox[index].store(out, cpp::MemoryOrder::RELAXED);
+  out = process.invert_outbox(index, out);
 }
 
 /// Combines a send and receive into a single function.
@@ -425,7 +439,7 @@ Client::try_open() {
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
 
     uint32_t in = load_inbox(index);
-    uint32_t out = outbox[index].load(cpp::MemoryOrder::RELAXED);
+    uint32_t out = load_outbox(index);
 
     // Once we acquire the index we need to check if we are in a valid sending
     // state.
@@ -459,7 +473,7 @@ Server::try_open() {
   // Perform a naive linear scan for a port that has a pending request.
   for (uint64_t index = 0; index < port_count; ++index) {
     uint32_t in = load_inbox(index);
-    uint32_t out = outbox[index].load(cpp::MemoryOrder::RELAXED);
+    uint32_t out = load_outbox(index);
 
     // The server is passive, if there is no work pending don't bother
     // opening a port.
@@ -476,7 +490,7 @@ Server::try_open() {
     atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
 
     in = load_inbox(index);
-    out = outbox[index].load(cpp::MemoryOrder::RELAXED);
+    out = load_outbox(index);
 
     if (buffer_unavailable(in, out)) {
       unlock(lane_mask, index);
