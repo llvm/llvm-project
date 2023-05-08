@@ -12,6 +12,12 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class SBStructuredData {
@@ -19,12 +25,6 @@ public:
   SBStructuredData();
 
   SBStructuredData(const lldb::SBStructuredData &rhs);
-
-  SBStructuredData(const lldb::EventSP &event_sp);
-
-#ifndef SWIG
-  SBStructuredData(const lldb_private::StructuredDataImpl &impl);
-#endif
 
   ~SBStructuredData();
 
@@ -103,6 +103,11 @@ protected:
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
   friend class SBTrace;
+  friend class lldb_private::python::SWIGBridge;
+
+  SBStructuredData(const lldb_private::StructuredDataImpl &impl);
+
+  SBStructuredData(const lldb::EventSP &event_sp);
 
   StructuredDataImplUP m_impl_up;
 };
