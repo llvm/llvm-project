@@ -161,6 +161,10 @@ MLIR symbol visibility.
 
 ### Attribute Pass-Through
 
+**WARNING:** this feature MUST NOT be used for any real workload. It is
+exclusively intended for quick prototyping. After that, attributes must be
+introduced as proper first-class concepts in the dialect.
+
 The LLVM dialect provides a mechanism to forward function-level attributes to
 LLVM IR using the `passthrough` attribute. This is an array attribute containing
 either string attributes or array attributes. In the former case, the value of

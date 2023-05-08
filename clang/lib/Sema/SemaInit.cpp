@@ -174,8 +174,6 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
       E = GSE->getResultExpr();
     } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
       E = CE->getChosenSubExpr();
-    } else if (PredefinedExpr *PE = dyn_cast<PredefinedExpr>(E)) {
-      E = PE->getFunctionName();
     } else {
       llvm_unreachable("unexpected expr in string literal init");
     }
@@ -396,12 +394,15 @@ class InitListChecker {
 
   /// Diagnose that OldInit (or part thereof) has been overridden by NewInit.
   void diagnoseInitOverride(Expr *OldInit, SourceRange NewInitRange,
+                            bool UnionOverride = false,
                             bool FullyOverwritten = true) {
     // Overriding an initializer via a designator is valid with C99 designated
     // initializers, but ill-formed with C++20 designated initializers.
-    unsigned DiagID = SemaRef.getLangOpts().CPlusPlus
-                          ? diag::ext_initializer_overrides
-                          : diag::warn_initializer_overrides;
+    unsigned DiagID =
+        SemaRef.getLangOpts().CPlusPlus
+            ? (UnionOverride ? diag::ext_initializer_union_overrides
+                             : diag::ext_initializer_overrides)
+            : diag::warn_initializer_overrides;
 
     if (InOverloadResolution && SemaRef.getLangOpts().CPlusPlus) {
       // In overload resolution, we have to strictly enforce the rules, and so
@@ -2548,6 +2549,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         // subobject [0].b.
         diagnoseInitOverride(ExistingInit,
                              SourceRange(D->getBeginLoc(), DIE->getEndLoc()),
+                             /*UnionOverride=*/false,
                              /*FullyOverwritten=*/false);
 
         if (!VerifyOnly) {
@@ -2693,7 +2695,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           if (ExistingInit) {
             // We're about to throw away an initializer, emit warning.
             diagnoseInitOverride(
-                ExistingInit, SourceRange(D->getBeginLoc(), DIE->getEndLoc()));
+                ExistingInit, SourceRange(D->getBeginLoc(), DIE->getEndLoc()),
+                /*UnionOverride=*/true,
+                /*FullyOverwritten=*/SemaRef.getLangOpts().CPlusPlus ? false
+                                                                     : true);
           }
 
           // remove existing initializer
@@ -8501,15 +8506,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
     Expr *Init = Args[0];
     S.Diag(Init->getBeginLoc(), diag::warn_cxx98_compat_reference_list_init)
         << Init->getSourceRange();
-  }
-
-  if (S.getLangOpts().MicrosoftExt && Args.size() == 1 &&
-      isa<PredefinedExpr>(Args[0]) && Entity.getType()->isArrayType()) {
-    // Produce a Microsoft compatibility warning when initializing from a
-    // predefined expression since MSVC treats predefined expressions as string
-    // literals.
-    Expr *Init = Args[0];
-    S.Diag(Init->getBeginLoc(), diag::ext_init_from_predefined) << Init;
   }
 
   // OpenCL v2.0 s6.13.11.1. atomic variables can be initialized in global scope

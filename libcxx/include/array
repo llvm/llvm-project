@@ -77,15 +77,18 @@ template <class T, class... U>
 template <class T, size_t N>
   bool operator==(const array<T,N>& x, const array<T,N>& y);    // constexpr in C++20
 template <class T, size_t N>
-  bool operator!=(const array<T,N>& x, const array<T,N>& y);    // constexpr in C++20
+  bool operator!=(const array<T,N>& x, const array<T,N>& y);    // removed in C++20
 template <class T, size_t N>
-  bool operator<(const array<T,N>& x, const array<T,N>& y);     // constexpr in C++20
+  bool operator<(const array<T,N>& x, const array<T,N>& y);     // removed in C++20
 template <class T, size_t N>
-  bool operator>(const array<T,N>& x, const array<T,N>& y);     // constexpr in C++20
+  bool operator>(const array<T,N>& x, const array<T,N>& y);     // removed in C++20
 template <class T, size_t N>
-  bool operator<=(const array<T,N>& x, const array<T,N>& y);    // constexpr in C++20
+  bool operator<=(const array<T,N>& x, const array<T,N>& y);    // removed in C++20
 template <class T, size_t N>
-  bool operator>=(const array<T,N>& x, const array<T,N>& y);    // constexpr in C++20
+  bool operator>=(const array<T,N>& x, const array<T,N>& y);    // removed in C++20
+template<class T, size_t N>
+  constexpr synth-three-way-result<T>
+    operator<=>(const array<T, N>& x, const array<T, N>& y);    // since C++20
 
 template <class T, size_t N >
   void swap(array<T,N>& x, array<T,N>& y) noexcept(noexcept(x.swap(y))); // constexpr in C++20
@@ -111,6 +114,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/swap_ranges.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
@@ -401,46 +405,43 @@ operator==(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
     return _VSTD::equal(__x.begin(), __x.end(), __y.begin());
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template <class _Tp, size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator!=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
-{
+inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
     return !(__x == __y);
 }
 
 template <class _Tp, size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator<(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
-{
-    return _VSTD::lexicographical_compare(__x.begin(), __x.end(),
-                                          __y.begin(), __y.end());
+inline _LIBCPP_HIDE_FROM_ABI bool operator<(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
+    return _VSTD::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
 }
 
 template <class _Tp, size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
-{
+inline _LIBCPP_HIDE_FROM_ABI bool operator>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
     return __y < __x;
 }
 
 template <class _Tp, size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator<=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
-{
+inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
     return !(__y < __x);
 }
 
 template <class _Tp, size_t _Size>
-inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator>=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y)
-{
+inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
     return !(__x < __y);
 }
+
+#else // _LIBCPP_STD_VER <= 17
+
+template <class _Tp, size_t _Size>
+_LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
+operator<=>(const array<_Tp, _Size>& __x, const array<_Tp, _Size>& __y) {
+    return std::lexicographical_compare_three_way(
+        __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
+}
+
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20

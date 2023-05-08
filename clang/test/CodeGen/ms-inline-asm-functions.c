@@ -24,10 +24,9 @@ int foo(void) {
   __asm call kimport;
   // CHECK:     calll   *({{.*}})
 
-  // Broken case: Call through a global function pointer.
+  // Call through a global function pointer.
   __asm call kptr;
-  // CHECK:     calll   _kptr
-  // CHECK-FIXME: calll   *_kptr
+  // CHECK:     calll   *_kptr
 }
 
 int bar(void) {

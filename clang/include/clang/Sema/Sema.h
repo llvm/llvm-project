@@ -806,6 +806,9 @@ public:
   /// context.
   unsigned FunctionScopesStart = 0;
 
+  /// Track the number of currently active capturing scopes.
+  unsigned CapturingFunctionScopes = 0;
+
   ArrayRef<sema::FunctionScopeInfo*> getFunctionScopes() const {
     return llvm::ArrayRef(FunctionScopes.begin() + FunctionScopesStart,
                           FunctionScopes.end());
@@ -8078,7 +8081,7 @@ public:
   /// Determine whether a particular identifier might be the name in a C++1z
   /// deduction-guide declaration.
   bool isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
-                            SourceLocation NameLoc,
+                            SourceLocation NameLoc, CXXScopeSpec &SS,
                             ParsedTemplateTy *Template = nullptr);
 
   bool DiagnoseUnknownTemplateName(const IdentifierInfo &II,

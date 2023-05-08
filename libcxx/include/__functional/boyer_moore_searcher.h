@@ -20,6 +20,7 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/pair.h>
 #include <array>
 #include <unordered_map>

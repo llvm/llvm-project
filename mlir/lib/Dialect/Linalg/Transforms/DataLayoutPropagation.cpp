@@ -229,6 +229,8 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   AffineMap origIndexingMap = genericOp.getMatchingIndexingMap(opOperand);
   llvm::DenseMap<int64_t, int64_t> domainDimToOperandDim;
   SmallVector<AffineExpr> exprs(origIndexingMap.getResults());
+
+  // If the OpOperand is a scalar or a zero-rank tensor, no need to pack.
   if (genericOp.isScalar(opOperand) || exprs.empty())
     return std::make_tuple(opOperand->get(),
                            AffineMap::get(numLoops, 0, exprs, b.getContext()));
@@ -293,10 +295,10 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
   return std::make_tuple(packedOperand, indexingMap);
 }
 
-/// Pack an element-wise genericOp and return it.
-static GenericOp packElementWiseOp(RewriterBase &rewriter, GenericOp genericOp,
-                                   Value dest, AffineMap packedOutIndexingMap,
-                                   const PackInfo &packInfo) {
+/// Pack a genericOp and return it.
+static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                               Value dest, AffineMap packedOutIndexingMap,
+                               const PackInfo &packInfo) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
   SmallVector<AffineMap> indexingMaps;
@@ -442,8 +444,8 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
                             .getDefiningOp<tensor::EmptyOp>()) {
     dest = packOpDest;
   }
-  return packElementWiseOp(rewriter, genericOp, dest, packedOutIndexingMap,
-                           *packInfo);
+  return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
+                       *packInfo);
 }
 
 /// Folds pack(fill) into a single fill op if
@@ -527,7 +529,7 @@ private:
   ControlPropagationFn controlFn;
 };
 
-// TODO: Relax this restriction. We should unpack an elementwise also
+// TODO: Relax this restriction. We should unpack a generic op also
 // in the presence of multiple unpack ops as producers.
 /// Return the unpacked operand, if present, for the current generic op.
 static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
@@ -545,7 +547,7 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
   return unPackedOperand;
 }
 
-/// Push down a tensor.unpack op through elementwise generic op.
+/// Push down a tensor.unpack op through a generic op.
 /// The new generic op works on packed domain; pack ops are created for input
 /// and output operands. A tensor.unpack op is inserted right after the packed
 /// generic. E.g.
@@ -619,8 +621,8 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   }
 
   // Pack the genericOp.
-  GenericOp newGenericOp = packElementWiseOp(rewriter, genericOp, dest,
-                                             packedOutIndexingMap, *packInfo);
+  GenericOp newGenericOp =
+      packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo);
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 

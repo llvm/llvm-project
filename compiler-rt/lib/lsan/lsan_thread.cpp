@@ -92,4 +92,13 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
       threads);
 }
 
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
+  // This function can be used to treat memory reachable from `tctx` as live.
+  // This is useful for threads that have been created but not yet started.
+
+  // This is currently a no-op because the LSan `pthread_create()` interceptor
+  // blocks until the child thread starts which keeps the thread's `arg` pointer
+  // live.
+}
+
 }  // namespace __lsan

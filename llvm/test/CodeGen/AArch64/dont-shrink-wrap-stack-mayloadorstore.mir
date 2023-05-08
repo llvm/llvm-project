@@ -6,8 +6,8 @@
  ; RUN: llc -x=mir -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
  ; CHECK:      name:            compiler_pop_stack
  ; CHECK:      frameInfo:       
- ; CHECK-NOT:  savePoint:
- ; CHECK-NOT:  restorePoint:
+ ; CHECK:      savePoint:       '%bb.1'
+ ; CHECK-NEXT: restorePoint:    '%bb.7'
  ; CHECK:      stack:
  ; CHECK:      name:            f
  ; CHECK:      frameInfo:       

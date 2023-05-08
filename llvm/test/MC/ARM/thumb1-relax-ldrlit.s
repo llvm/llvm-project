@@ -4,5 +4,5 @@
 
         .global func1
 _func1:
-@ CHECK-ERROR: :[[#@LINE+1]]:9: error: unsupported relocation on symbol
+@ CHECK-ERROR: :[[#@LINE+1]]:9: error: unsupported relocation type
         ldr r0, _func2

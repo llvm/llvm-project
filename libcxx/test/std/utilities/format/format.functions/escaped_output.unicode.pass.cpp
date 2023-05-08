@@ -11,9 +11,8 @@
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
 
-// TODO FMT Investigate Windows and AIX issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-// UNSUPPORTED: LIBCXX-AIX-FIXME
+// TODO FMT Investigate Windows and 32-bit AIX issues.
+// UNSUPPORTED: msvc, target={{.+}}-windows-gnu, target=powerpc-ibm-aix{{.*}}
 
 // TODO FMT Fix this test using GCC, it currently crashes.
 // UNSUPPORTED: gcc-12

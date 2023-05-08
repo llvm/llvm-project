@@ -529,6 +529,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__node_handle>
 #include <__type_traits/is_allocator.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <stdexcept>
 #include <tuple>

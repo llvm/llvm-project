@@ -12,7 +12,7 @@ Shortcut to build the libc++ testing dependencies and run the libc++ tests with 
 
 <build-directory>  The path to the build directory to use for building the library.
 [lit options...]   Optional options to pass to 'llvm-lit'.
-tests...           Paths of the tests to run. Those are paths relative to '<monorepo-root>/libcxx/test'.
+tests...           Paths of the tests to run. Those paths are relative to '<monorepo-root>'.
 
 Example
 =======

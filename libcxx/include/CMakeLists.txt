@@ -747,6 +747,7 @@ set(files
   __type_traits/is_trivially_copyable.h
   __type_traits/is_trivially_default_constructible.h
   __type_traits/is_trivially_destructible.h
+  __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_move_assignable.h
   __type_traits/is_trivially_move_constructible.h
   __type_traits/is_unbounded_array.h

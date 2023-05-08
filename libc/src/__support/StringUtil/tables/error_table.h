@@ -14,18 +14,25 @@
 #include "posix_error_table.h"
 #include "stdc_error_table.h"
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__Fuchsia__)
+#define USE_LINUX_PLATFORM_ERRORS 1
+#else
+#define USE_LINUX_PLATFORM_ERRORS 0
+#endif
+
+#if USE_LINUX_PLATFORM_ERRORS
 #include "linux/error_table.h"
 #endif
 
 namespace __llvm_libc::internal {
 
-#ifdef __linux__
-inline constexpr auto PLATFORM_ERRORS =
-    STDC_ERRORS + POSIX_ERRORS + LINUX_ERRORS;
-#else
-inline constexpr auto PLATFORM_ERRORS = STDC_ERRORS;
-#endif
+inline constexpr auto PLATFORM_ERRORS = []() {
+  if constexpr (USE_LINUX_PLATFORM_ERRORS) {
+    return STDC_ERRORS + POSIX_ERRORS + LINUX_ERRORS;
+  } else {
+    return STDC_ERRORS;
+  }
+}();
 
 } // namespace __llvm_libc::internal
 

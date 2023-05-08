@@ -723,8 +723,8 @@ TEST_F(WideningTest, DistinctPointersToTheSameLocationAreEquivalent) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<ScalarStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarVal =
             cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
         EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
