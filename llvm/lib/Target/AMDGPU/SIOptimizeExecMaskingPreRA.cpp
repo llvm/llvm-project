@@ -218,53 +218,11 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   // and their associated liveness information.
   SlotIndex CmpIdx = LIS->getInstructionIndex(*Cmp);
   if (CCReg.isVirtual()) {
-    // Apply live ranges from SelLI to CCReg potentially matching splits
-    // and extending to loop boundaries.
-
-    auto applyLiveRanges = [&](LiveRange &Dst, VNInfo *VNI) {
-      // Copy live ranges from SelLI, adjusting start and end as required
-      auto DefSegment = SelLI->FindSegmentContaining(SelIdx.getRegSlot());
-      assert(DefSegment != SelLI->end() &&
-             "No live interval segment covering definition?");
-      for (auto I = DefSegment; I != SelLI->end(); ++I) {
-        SlotIndex Start = I->start < SelIdx.getRegSlot() ?
-                          SelIdx.getRegSlot() : I->start;
-        SlotIndex End = I->end < AndIdx.getRegSlot() || I->end.isBlock() ?
-                        I->end : AndIdx.getRegSlot();
-        if (Start < End)
-          Dst.addSegment(LiveRange::Segment(Start, End, VNI));
-      }
-      if (!SelLI->getSegmentContaining(AndIdx.getRegSlot()))
-        // If SelLI does not cover AndIdx (because Cmp killed Sel) then extend.
-        Dst.addSegment(
-            LiveRange::Segment(CmpIdx.getRegSlot(), AndIdx.getRegSlot(), VNI));
-      else if (!Dst.liveAt(AndIdx))
-        // This is live-in, so extend segment to the beginning of the block.
-        Dst.addSegment(LiveRange::Segment(
-            LIS->getSlotIndexes()->getMBBStartIdx(Andn2->getParent()),
-            AndIdx.getRegSlot(), VNI));
-    };
-
     LiveInterval &CCLI = LIS->getInterval(CCReg);
     auto CCQ = CCLI.Query(SelIdx.getRegSlot());
-    if (CCQ.valueIn())
-      applyLiveRanges(CCLI, CCQ.valueIn());
-
-    if (CC->getSubReg()) {
-      LaneBitmask Mask = TRI->getSubRegIndexLaneMask(CC->getSubReg());
-      BumpPtrAllocator &Allocator = LIS->getVNInfoAllocator();
-      CCLI.refineSubRanges(
-          Allocator, Mask,
-          [=](LiveInterval::SubRange &SR) {
-            auto CCQS = SR.Query(SelIdx.getRegSlot());
-            if (CCQS.valueIn())
-              applyLiveRanges(SR, CCQS.valueIn());
-          },
-          *LIS->getSlotIndexes(), *TRI);
-      CCLI.removeEmptySubRanges();
-
-      SmallVector<LiveInterval *> SplitLIs;
-      LIS->splitSeparateComponents(CCLI, SplitLIs);
+    if (CCQ.valueIn()) {
+      LIS->removeInterval(CCReg);
+      LIS->createAndComputeVirtRegInterval(CCReg);
     }
   } else
     LIS->removeAllRegUnitsForPhysReg(CCReg);
