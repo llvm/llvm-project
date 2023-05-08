@@ -27,20 +27,6 @@ using namespace __hwasan;
 
 #  if HWASAN_WITH_INTERCEPTORS
 
-struct ThreadStartArg {
-  thread_callback_t callback;
-  void *param;
-  __sanitizer_sigset_t starting_sigset_;
-};
-
-static void *HwasanThreadStartFunc(void *arg) {
-  __hwasan_thread_enter();
-  ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
-  SetSigProcMask(&A.starting_sigset_, nullptr);
-  UnmapOrDie(arg, GetPageSizeCached());
-  return A.callback(A.param);
-}
-
 #    define COMMON_SYSCALL_PRE_READ_RANGE(p, s) __hwasan_loadN((uptr)p, (uptr)s)
 #    define COMMON_SYSCALL_PRE_WRITE_RANGE(p, s) \
       __hwasan_storeN((uptr)p, (uptr)s)
@@ -56,6 +42,20 @@ static void *HwasanThreadStartFunc(void *arg) {
       } while (false)
 #    include "sanitizer_common/sanitizer_common_syscalls.inc"
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
+
+struct ThreadStartArg {
+  thread_callback_t callback;
+  void *param;
+  __sanitizer_sigset_t starting_sigset_;
+};
+
+static void *HwasanThreadStartFunc(void *arg) {
+  __hwasan_thread_enter();
+  ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
+  SetSigProcMask(&A.starting_sigset_, nullptr);
+  UnmapOrDie(arg, GetPageSizeCached());
+  return A.callback(A.param);
+}
 
 INTERCEPTOR(int, pthread_create, void *th, void *attr,
             void *(*callback)(void *), void *param) {
