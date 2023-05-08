@@ -25,7 +25,7 @@
 
 using namespace __hwasan;
 
-#if HWASAN_WITH_INTERCEPTORS
+#  if HWASAN_WITH_INTERCEPTORS
 
 struct ThreadStartArg {
   thread_callback_t callback;
@@ -35,7 +35,7 @@ struct ThreadStartArg {
 
 static void *HwasanThreadStartFunc(void *arg) {
   __hwasan_thread_enter();
-  ThreadStartArg A = *reinterpret_cast<ThreadStartArg*>(arg);
+  ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
   SetSigProcMask(&A.starting_sigset_, nullptr);
   UnmapOrDie(arg, GetPageSizeCached());
   return A.callback(A.param);
@@ -57,12 +57,12 @@ static void *HwasanThreadStartFunc(void *arg) {
 #    include "sanitizer_common/sanitizer_common_syscalls.inc"
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
-INTERCEPTOR(int, pthread_create, void *th, void *attr, void *(*callback)(void*),
-            void * param) {
+INTERCEPTOR(int, pthread_create, void *th, void *attr,
+            void *(*callback)(void *), void *param) {
   EnsureMainThreadIDIsCorrect();
   ScopedTaggingDisabler tagging_disabler;
-  ThreadStartArg *A = reinterpret_cast<ThreadStartArg *> (MmapOrDie(
-      GetPageSizeCached(), "pthread_create"));
+  ThreadStartArg *A = reinterpret_cast<ThreadStartArg *>(
+      MmapOrDie(GetPageSizeCached(), "pthread_create"));
   A->callback = callback;
   A->param = param;
   ScopedBlockSignals block(&A->starting_sigset_);
@@ -104,13 +104,13 @@ DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
 // Get and/or change the set of blocked signals.
 extern "C" int sigprocmask(int __how, const __hw_sigset_t *__restrict __set,
                            __hw_sigset_t *__restrict __oset);
-#define SIG_BLOCK 0
-#define SIG_SETMASK 2
+#    define SIG_BLOCK 0
+#    define SIG_SETMASK 2
 extern "C" int __sigjmp_save(__hw_sigjmp_buf env, int savemask) {
   env[0].__magic = kHwJmpBufMagic;
   env[0].__mask_was_saved =
-      (savemask && sigprocmask(SIG_BLOCK, (__hw_sigset_t *)0,
-                               &env[0].__saved_mask) == 0);
+      (savemask &&
+       sigprocmask(SIG_BLOCK, (__hw_sigset_t *)0, &env[0].__saved_mask) == 0);
   return 0;
 }
 
@@ -139,26 +139,27 @@ InternalLongjmp(__hw_register_buf env, int retval) {
 #    if defined(__aarch64__)
   register long int retval_tmp asm("x1") = retval;
   register void *env_address asm("x0") = &env[0];
-  asm volatile("ldp	x19, x20, [%0, #0<<3];"
-               "ldp	x21, x22, [%0, #2<<3];"
-               "ldp	x23, x24, [%0, #4<<3];"
-               "ldp	x25, x26, [%0, #6<<3];"
-               "ldp	x27, x28, [%0, #8<<3];"
-               "ldp	x29, x30, [%0, #10<<3];"
-               "ldp	 d8,  d9, [%0, #14<<3];"
-               "ldp	d10, d11, [%0, #16<<3];"
-               "ldp	d12, d13, [%0, #18<<3];"
-               "ldp	d14, d15, [%0, #20<<3];"
-               "ldr	x5, [%0, #13<<3];"
-               "mov	sp, x5;"
-               // Return the value requested to return through arguments.
-               // This should be in x1 given what we requested above.
-               "cmp	%1, #0;"
-               "mov	x0, #1;"
-               "csel	x0, %1, x0, ne;"
-               "br	x30;"
-               : "+r"(env_address)
-               : "r"(retval_tmp));
+  asm volatile(
+      "ldp	x19, x20, [%0, #0<<3];"
+      "ldp	x21, x22, [%0, #2<<3];"
+      "ldp	x23, x24, [%0, #4<<3];"
+      "ldp	x25, x26, [%0, #6<<3];"
+      "ldp	x27, x28, [%0, #8<<3];"
+      "ldp	x29, x30, [%0, #10<<3];"
+      "ldp	 d8,  d9, [%0, #14<<3];"
+      "ldp	d10, d11, [%0, #16<<3];"
+      "ldp	d12, d13, [%0, #18<<3];"
+      "ldp	d14, d15, [%0, #20<<3];"
+      "ldr	x5, [%0, #13<<3];"
+      "mov	sp, x5;"
+      // Return the value requested to return through arguments.
+      // This should be in x1 given what we requested above.
+      "cmp	%1, #0;"
+      "mov	x0, #1;"
+      "csel	x0, %1, x0, ne;"
+      "br	x30;"
+      : "+r"(env_address)
+      : "r"(retval_tmp));
 #    elif defined(__x86_64__)
   register long int retval_tmp asm("%rsi") = retval;
   register void *env_address asm("%rdi") = &env[0];
@@ -234,8 +235,7 @@ INTERCEPTOR(void, siglongjmp, __hw_sigjmp_buf env, int val) {
 
   if (env[0].__mask_was_saved)
     // Restore the saved signal mask.
-    (void)sigprocmask(SIG_SETMASK, &env[0].__saved_mask,
-                      (__hw_sigset_t *)0);
+    (void)sigprocmask(SIG_SETMASK, &env[0].__saved_mask, (__hw_sigset_t *)0);
   InternalLongjmp(env[0].__jmpbuf, val);
 }
 
@@ -257,8 +257,8 @@ INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
   }
   InternalLongjmp(env[0].__jmpbuf, val);
 }
-#undef SIG_BLOCK
-#undef SIG_SETMASK
+#    undef SIG_BLOCK
+#    undef SIG_SETMASK
 
 #  endif  // HWASAN_WITH_INTERCEPTORS
 
@@ -273,7 +273,7 @@ int OnExit() {
   return 0;
 }
 
-} // namespace __hwasan
+}  // namespace __hwasan
 
 namespace __hwasan {
 
@@ -300,6 +300,6 @@ void InitializeInterceptors() {
 
   inited = 1;
 }
-} // namespace __hwasan
+}  // namespace __hwasan
 
 #endif  // #if !SANITIZER_FUCHSIA
