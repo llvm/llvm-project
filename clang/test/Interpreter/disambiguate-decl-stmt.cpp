@@ -7,6 +7,10 @@ extern "C" int printf(const char*,...);
 
 // Decls which are hard to disambiguate
 
+// Templates
+namespace ns1 { template<typename T> void tmplt(T &) {}}
+int arg_tmplt = 12; ns1::tmplt(arg_tmplt);
+
 // ParseStatementOrDeclaration returns multiple statements.
 #ifdef MS
 int g_bFlag = 1;

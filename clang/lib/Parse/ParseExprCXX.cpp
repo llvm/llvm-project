@@ -2911,9 +2911,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
       if (!Ty)
         return true;
       Result.setConstructorName(Ty, IdLoc, IdLoc);
-    } else if (getLangOpts().CPlusPlus17 &&
-               AllowDeductionGuide && SS.isEmpty() &&
-               Actions.isDeductionGuideName(getCurScope(), *Id, IdLoc,
+    } else if (getLangOpts().CPlusPlus17 && AllowDeductionGuide &&
+               SS.isEmpty() &&
+               Actions.isDeductionGuideName(getCurScope(), *Id, IdLoc, SS,
                                             &TemplateName)) {
       // We have parsed a template-name naming a deduction guide.
       Result.setDeductionGuideName(TemplateName, IdLoc);
