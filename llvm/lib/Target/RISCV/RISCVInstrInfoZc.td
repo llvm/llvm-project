@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// This file describes the RISC-V instructions from the 'Zc*' compressed
-/// instruction extensions, version 1.0.1.
+/// instruction extensions, version 1.0.3.
 /// This version is still experimental as the 'Zc*' extensions haven't been
 /// ratified yet.
 ///
@@ -37,6 +37,45 @@ def uimm8ge32 : Operand<XLenVT> {
   let DecoderMethod = "decodeUImmOperand<8>";
   let OperandType = "OPERAND_UIMM8_GE32";
   let OperandNamespace = "RISCVOp";
+}
+
+def RlistAsmOperand : AsmOperandClass {
+  let Name = "Rlist";
+  let ParserMethod = "parseReglist";
+  let DiagnosticType = "InvalidRlist";
+}
+
+def SpimmAsmOperand : AsmOperandClass {
+  let Name = "Spimm";
+  let ParserMethod = "parseZcmpSpimm";
+  let DiagnosticType = "InvalidSpimm";
+}
+
+def rlist : Operand<OtherVT> {
+   let ParserMatchClass = RlistAsmOperand;
+   let PrintMethod = "printRlist";
+   let DecoderMethod = "decodeZcmpRlist";
+   let EncoderMethod = "getRlistOpValue";
+   let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    if (!isUInt<4>(Imm)) return false;
+    // 0~3 Reserved for EABI
+    return (Imm >= 4) && (Imm <= 15);
+  }];
+ }
+
+def spimm : Operand<OtherVT> {
+  let ParserMatchClass = SpimmAsmOperand;
+  let PrintMethod = "printSpimm";
+  let DecoderMethod = "decodeZcmpSpimm";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedUInt<5, 4>(Imm);
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -90,6 +129,13 @@ class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
   let Constraints = "$rd = $rd_wb";
 }
 
+class RVInstZcCPPP<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+
+  let Inst{1-0} = 0b10;
+  let Inst{15-13} = 0b101;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -131,6 +177,62 @@ def C_SB : CStoreB_rri<0b100010, "c.sb">,
 def C_SH : CStoreH_rri<0b100011, 0b1, "c.sh">,
            Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 }
+
+// Zcmp
+let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp],
+    Defs = [X10, X11], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+def CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
+                            (ins SR07:$rs1, SR07:$rs2), "cm.mva01s", "$rs1, $rs2">;
+
+def CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
+                            (ins), "cm.mvsa01", "$rs1, $rs2">;
+} // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
+
+let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in 
+def CM_PUSH : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
+    "cm.push", "{$rlist}, $spimm"> {
+  bits<4> rlist;
+  bits<16> spimm;
+
+  let Inst{12-8} = 0b11000;
+  let Inst{7-4} = rlist;
+  let Inst{3-2} = spimm{5-4};
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in 
+def CM_POPRET : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
+    "cm.popret", "{$rlist}, $spimm"> {
+  bits<4> rlist;
+  bits<16> spimm;
+
+  let Inst{12-8} = 0b11110;
+  let Inst{7-4} = rlist;
+  let Inst{3-2} = spimm{5-4};
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in 
+def CM_POPRETZ : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
+    "cm.popretz", "{$rlist}, $spimm"> {
+  bits<4> rlist;
+  bits<16> spimm;
+
+  let Inst{12-8} = 0b11100;
+  let Inst{7-4} = rlist;
+  let Inst{3-2} = spimm{5-4};
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in 
+def CM_POP : RVInstZcCPPP<(outs), (ins rlist:$rlist, spimm:$spimm), 
+    "cm.pop", "{$rlist}, $spimm"> {
+  bits<4> rlist;
+  bits<16> spimm;
+
+  let Inst{12-8} = 0b11010;
+  let Inst{7-4} = rlist;
+  let Inst{3-2} = spimm{5-4};
+}
+} // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
 
 let DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {

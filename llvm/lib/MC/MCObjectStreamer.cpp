@@ -573,10 +573,12 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
   int64_t Res;
   if (AddrDelta->evaluateAsAbsolute(Res, getAssemblerPtr())) {
-    MCDwarfFrameEmitter::EmitAdvanceLoc(*this, Res);
-    return;
+    SmallString<8> Tmp;
+    MCDwarfFrameEmitter::encodeAdvanceLoc(getContext(), Res, Tmp);
+    emitBytes(Tmp);
+  } else {
+    insert(new MCDwarfCallFrameFragment(*AddrDelta));
   }
-  insert(new MCDwarfCallFrameFragment(*AddrDelta));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
