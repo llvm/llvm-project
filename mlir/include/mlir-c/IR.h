@@ -776,6 +776,12 @@ MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 MLIR_CAPI_EXPORTED void
 mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
 
+/// Prints a value as an operand (i.e., the ValueID).
+MLIR_CAPI_EXPORTED void mlirValuePrintAsOperand(MlirValue value,
+                                                MlirOpPrintingFlags flags,
+                                                MlirStringCallback callback,
+                                                void *userData);
+
 /// Returns an op operand representing the first use of the value, or a null op
 /// operand if there are no uses.
 MLIR_CAPI_EXPORTED MlirOpOperand mlirValueGetFirstUse(MlirValue value);

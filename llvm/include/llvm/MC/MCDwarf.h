@@ -429,8 +429,8 @@ public:
 class MCDwarfLineAddr {
 public:
   /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas.
-  static void Encode(MCContext &Context, MCDwarfLineTableParams Params,
-                     int64_t LineDelta, uint64_t AddrDelta, raw_ostream &OS);
+  static void encode(MCContext &Context, MCDwarfLineTableParams Params,
+                     int64_t LineDelta, uint64_t AddrDelta, SmallVectorImpl<char> &OS);
 
   /// Utility function to emit the encoding to a streamer.
   static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
@@ -704,9 +704,8 @@ public:
   // This emits the frame info section.
   //
   static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB, bool isEH);
-  static void EmitAdvanceLoc(MCObjectStreamer &Streamer, uint64_t AddrDelta);
-  static void EncodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
-                               raw_ostream &OS);
+  static void encodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
+                               SmallVectorImpl<char> &OS);
 };
 
 } // end namespace llvm

@@ -104,6 +104,12 @@ static cl::opt<std::string> MemProfImportSummary(
     cl::desc("Import summary to use for testing the ThinLTO backend via opt"),
     cl::Hidden);
 
+// Indicate we are linking with an allocator that supports hot/cold operator
+// new interfaces.
+cl::opt<bool> SupportsHotColdNew(
+    "supports-hot-cold-new", cl::init(false), cl::Hidden,
+    cl::desc("Linking with hot/cold operator new interfaces"));
+
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
 ///
 /// The graph represents the call contexts in all memprof metadata on allocation
@@ -878,6 +884,11 @@ template <class NodeT, class IteratorT>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
     CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType) {
+  // Treating the hot alloc type as NotCold before the disambiguation for "hot"
+  // is done.
+  if (AllocType == AllocationType::Hot)
+    AllocType = AllocationType::NotCold;
+
   ContextIdToAllocationType[++LastContextId] = AllocType;
 
   // Update alloc type and context ids for this MIB.
@@ -2049,6 +2060,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
     identifyClones(Entry.second, Visited);
 }
 
+// helper function to check an AllocType is cold or notcold or both.
+bool checkColdOrNotCold(uint8_t AllocType) {
+  return (AllocType == (uint8_t)AllocationType::Cold) ||
+         (AllocType == (uint8_t)AllocationType::NotCold) ||
+         (AllocType ==
+          ((uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold));
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
@@ -2112,13 +2131,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   const unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
                                                /*Cold*/ 1,
                                                /*NotColdCold*/ 2};
-  assert(std::size(AllocTypeCloningPriority) ==
-         (std::size_t)AllocationType::All + 1);
   std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
                    [&](const std::shared_ptr<ContextEdge> &A,
                        const std::shared_ptr<ContextEdge> &B) {
-                     assert(A->AllocTypes != (uint8_t)AllocationType::None &&
-                            B->AllocTypes != (uint8_t)AllocationType::None);
+                     assert(checkColdOrNotCold(A->AllocTypes) &&
+                            checkColdOrNotCold(B->AllocTypes));
+
                      if (A->AllocTypes == B->AllocTypes)
                        // Use the first context id for each edge as a
                        // tie-breaker.
@@ -3190,6 +3208,17 @@ bool MemProfContextDisambiguation::processModule(
   if (ImportSummary)
     return applyImport(M);
 
+  // TODO: If/when other types of memprof cloning are enabled beyond just for
+  // hot and cold, we will need to change this to individually control the
+  // AllocationType passed to addStackNodesForMIB during CCG construction.
+  // Note that we specifically check this after applying imports above, so that
+  // the option isn't needed to be passed to distributed ThinLTO backend
+  // clang processes, which won't necessarily have visibility into the linker
+  // dependences. Instead the information is communicated from the LTO link to
+  // the backends via the combined summary index.
+  if (!SupportsHotColdNew)
+    return false;
+
   ModuleCallsiteContextGraph CCG(M, OREGetter);
   return CCG.process();
 }
@@ -3241,6 +3270,14 @@ void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
+  // TODO: If/when other types of memprof cloning are enabled beyond just for
+  // hot and cold, we will need to change this to individually control the
+  // AllocationType passed to addStackNodesForMIB during CCG construction.
+  // The index was set from the option, so these should be in sync.
+  assert(Index.withSupportsHotColdNew() == SupportsHotColdNew);
+  if (!SupportsHotColdNew)
+    return;
+
   IndexCallsiteContextGraph CCG(Index, isPrevailing);
   CCG.process();
 }

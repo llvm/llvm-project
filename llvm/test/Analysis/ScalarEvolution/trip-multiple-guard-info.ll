@@ -520,7 +520,7 @@ define void @test_trip_multiple_5(i32 %num) {
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + %num)
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %for.body: Trip multiple is 1
+; CHECK:       Loop %for.body: Trip multiple is 5
 ;
 entry:
   %u = urem i32 %num, 5

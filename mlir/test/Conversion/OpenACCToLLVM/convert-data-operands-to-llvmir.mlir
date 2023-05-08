@@ -74,43 +74,6 @@ func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
 
 // -----
 
-func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  acc.update host(%b : memref<10xf32>) device(%a : memref<10xf32>)
-  return
-}
-
-// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-
-// -----
-
-func.func @testupdateop(%a: !llvm.ptr, %b: memref<10xf32>) -> () {
-  acc.update host(%b : memref<10xf32>) device(%a : !llvm.ptr)
-  return
-}
-
-// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.ptr)
-
-// -----
-
-func.func @testupdateop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
-  acc.update host(%b : memref<10xf32>) device(%a : memref<10xi64>) attributes {async}
-  return
-}
-
-// CHECK: acc.update host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) attributes {async}
-
-// -----
-
-func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = arith.constant true
-  acc.update if(%ifCond) host(%b : memref<10xf32>) device(%a : memref<10xf32>)
-  return
-}
-
-// CHECK: acc.update if(%{{.*}}) host(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) device(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-
-// -----
-
 func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.data copy(%b : memref<10xf32>) copyout(%a : memref<10xf32>) {
     acc.parallel {

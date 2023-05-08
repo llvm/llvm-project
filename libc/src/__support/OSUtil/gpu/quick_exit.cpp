@@ -17,7 +17,7 @@
 namespace __llvm_libc {
 
 void quick_exit(int status) {
-  rpc::Client::Port port = rpc::client.open(rpc::EXIT);
+  rpc::Client::Port port = rpc::client.open<rpc::EXIT>();
   port.send([&](rpc::Buffer *buffer) {
     reinterpret_cast<uint32_t *>(buffer->data)[0] = status;
   });

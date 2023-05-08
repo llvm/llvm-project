@@ -56,7 +56,7 @@
 ;; -stats requires asserts
 ; REQUIRES: asserts
 
-; RUN: opt -passes=memprof-context-disambiguation \
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -stats -pass-remarks=memprof-context-disambiguation \

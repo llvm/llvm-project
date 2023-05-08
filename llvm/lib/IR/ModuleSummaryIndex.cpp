@@ -107,11 +107,13 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x40;
   if (withWholeProgramVisibility())
     Flags |= 0x80;
+  if (withSupportsHotColdNew())
+    Flags |= 0x100;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0xff && "Unexpected bits in flag");
+  assert(Flags <= 0x1ff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -145,6 +147,10 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x80)
     setWithWholeProgramVisibility();
+  // 1 bit: WithSupportsHotColdNew flag.
+  // Set on combined index only.
+  if (Flags & 0x100)
+    setWithSupportsHotColdNew();
 }
 
 // Collect for the given module the list of function it defines

@@ -43,6 +43,63 @@ Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
   llvm_unreachable("Expected MemRefType or TensorType");
 }
 
+/// Given the n-D transpose pattern 'transp', return true if 'dim0' and 'dim1'
+/// should be transposed with each other within the context of their 2D
+/// transposition slice.
+///
+/// Example 1: dim0 = 0, dim1 = 2, transp = [2, 1, 0]
+///   Return true: dim0 and dim1 are transposed within the context of their 2D
+///   transposition slice ([1, 0]).
+///
+/// Example 2: dim0 = 0, dim1 = 1, transp = [2, 1, 0]
+///   Return true: dim0 and dim1 are transposed within the context of their 2D
+///   transposition slice ([1, 0]). Paradoxically, note how dim1 (1) is *not*
+///   transposed within the full context of the transposition.
+///
+/// Example 3: dim0 = 0, dim1 = 1, transp = [2, 0, 1]
+///   Return false: dim0 and dim1 are *not* transposed within the context of
+///   their 2D transposition slice ([0, 1]). Paradoxically, note how dim0 (0)
+///   and dim1 (1) are transposed within the full context of the of the
+///   transposition.
+static bool areDimsTransposedIn2DSlice(int64_t dim0, int64_t dim1,
+                                       ArrayRef<int64_t> transp) {
+  // Perform a linear scan along the dimensions of the transposed pattern. If
+  // dim0 is found first, dim0 and dim1 are not transposed within the context of
+  // their 2D slice. Otherwise, 'dim1' is found first and they are transposed.
+  for (int64_t permDim : transp) {
+    if (permDim == dim0)
+      return false;
+    if (permDim == dim1)
+      return true;
+  }
+
+  llvm_unreachable("Ill-formed transpose pattern");
+}
+
+FailureOr<std::pair<int, int>>
+mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
+  VectorType srcType = op.getSourceVectorType();
+  SmallVector<int64_t> srcGtOneDims;
+  for (auto [index, size] : llvm::enumerate(srcType.getShape()))
+    if (size > 1)
+      srcGtOneDims.push_back(index);
+
+  if (srcGtOneDims.size() != 2)
+    return failure();
+
+  SmallVector<int64_t> transp;
+  for (auto attr : op.getTransp())
+    transp.push_back(attr.cast<IntegerAttr>().getInt());
+
+  // Check whether the two source vector dimensions that are greater than one
+  // must be transposed with each other so that we can apply one of the 2-D
+  // transpose pattens. Otherwise, these patterns are not applicable.
+  if (!areDimsTransposedIn2DSlice(srcGtOneDims[0], srcGtOneDims[1], transp))
+    return failure();
+
+  return std::pair<int, int>(srcGtOneDims[0], srcGtOneDims[1]);
+}
+
 /// Constructs a permutation map from memref indices to vector dimension.
 ///
 /// The implementation uses the knowledge of the mapping of enclosing loop to

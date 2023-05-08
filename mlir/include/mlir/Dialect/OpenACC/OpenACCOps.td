@@ -477,6 +477,8 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     )
     $region attr-dict-with-keyword
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -562,6 +564,8 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     )
     $region attr-dict-with-keyword
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -646,6 +650,8 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     )
     $region attr-dict-with-keyword
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1029,8 +1035,6 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
                        UnitAttr:$async,
                        UnitAttr:$wait,
                        Variadic<IntOrIndex>:$deviceTypeOperands,
-                       Variadic<AnyType>:$hostOperands,
-                       Variadic<AnyType>:$deviceOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$ifPresent);
 
@@ -1050,8 +1054,6 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
       | `device_type` `(` $deviceTypeOperands `:`
           type($deviceTypeOperands) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
-      | `host` `(` $hostOperands `:` type($hostOperands) `)`
-      | `device` `(` $deviceOperands `:` type($deviceOperands) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword

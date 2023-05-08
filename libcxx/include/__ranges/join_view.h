@@ -30,6 +30,7 @@
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <optional>

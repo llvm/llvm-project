@@ -731,6 +731,7 @@ END-SCRIPT
 #include <__type_traits/is_trivially_copyable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_copyable.h'}}
 #include <__type_traits/is_trivially_default_constructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_default_constructible.h'}}
 #include <__type_traits/is_trivially_destructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_destructible.h'}}
+#include <__type_traits/is_trivially_lexicographically_comparable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_lexicographically_comparable.h'}}
 #include <__type_traits/is_trivially_move_assignable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_move_assignable.h'}}
 #include <__type_traits/is_trivially_move_constructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_move_constructible.h'}}
 #include <__type_traits/is_unbounded_array.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_unbounded_array.h'}}

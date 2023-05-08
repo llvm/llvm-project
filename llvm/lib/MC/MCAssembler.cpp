@@ -1096,11 +1096,10 @@ bool MCAssembler::relaxDwarfLineAddr(MCAsmLayout &Layout,
   LineDelta = DF.getLineDelta();
   SmallVectorImpl<char> &Data = DF.getContents();
   Data.clear();
-  raw_svector_ostream OSE(Data);
   DF.getFixups().clear();
 
-  MCDwarfLineAddr::Encode(Context, getDWARFLinetableParams(), LineDelta,
-                          AddrDelta, OSE);
+  MCDwarfLineAddr::encode(Context, getDWARFLinetableParams(), LineDelta,
+                          AddrDelta, Data);
   return OldSize != Data.size();
 }
 
@@ -1118,10 +1117,9 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
   (void) Abs;
   SmallVectorImpl<char> &Data = DF.getContents();
   Data.clear();
-  raw_svector_ostream OSE(Data);
   DF.getFixups().clear();
 
-  MCDwarfFrameEmitter::EncodeAdvanceLoc(Context, AddrDelta, OSE);
+  MCDwarfFrameEmitter::encodeAdvanceLoc(Context, AddrDelta, Data);
   return OldSize != Data.size();
 }
 

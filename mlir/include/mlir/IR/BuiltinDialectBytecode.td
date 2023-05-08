@@ -264,7 +264,7 @@ def DenseArrayAttr : DialectAttribute<(attr
 //  ///     data: blob
 //  ///   }
 //  kDenseIntOrFPElementsAttr = 18,
-def DenseElementsAttr : WithType<"DenseIntElementsAttr", Attribute>;
+def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
 def DenseIntOrFPElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
   Blob:$rawData

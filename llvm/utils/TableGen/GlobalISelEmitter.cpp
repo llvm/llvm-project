@@ -3958,6 +3958,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
     }
   }
 
+  assert(SrcGIEquivOrNull != nullptr && "Invalid SrcGIEquivOrNull value");
   // No check required. We already did it by swapping the opcode.
   if (!SrcGIEquivOrNull->isValueUnset("IfSignExtend") &&
       Predicate.isSignExtLoad())
