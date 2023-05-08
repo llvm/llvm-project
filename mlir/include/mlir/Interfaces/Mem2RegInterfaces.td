@@ -1,4 +1,4 @@
-//===-- MemorySlotInterfaces.td - MemorySlot interfaces ----*- tablegen -*-===//
+//===-- Mem2RegInterfaces.td - Mem2Reg interfaces ----------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INTERFACES_MEMORYSLOTINTERFACES
-#define MLIR_INTERFACES_MEMORYSLOTINTERFACES
+#ifndef MLIR_INTERFACES_MEM2REGINTERFACES
+#define MLIR_INTERFACES_MEM2REGINTERFACES
 
 include "mlir/IR/OpBase.td"
 
@@ -75,9 +75,6 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
     Describes an operation that can load from memory slots and/or store
     to memory slots. Loads and stores must be of whole values of the same
     type as the slot itself.
-
-    For a memory operation on a slot to be valid, it must operate on the slot
-    pointer *only as a pointer to an element of the type of the slot*.
 
     If the same operation does both loads and stores on the same slot, the
     load must semantically happen first.
@@ -155,21 +152,21 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
   let methods = [
     InterfaceMethod<[{
         Checks that this operation can be promoted to no longer use the provided
-        blocking uses, in order to allow optimization.
+        blocking uses, in the context of promoting `slot`.
 
         If the removal procedure of the use will require that other uses get
         removed, that dependency should be added to the `newBlockingUses`
         argument. Dependent uses must only be uses of results of this operation.
       }], "bool", "canUsesBeRemoved",
-      (ins "const ::llvm::SmallPtrSetImpl<::mlir::OpOperand *> &":$blockingUses,
+      (ins "const ::mlir::MemorySlot &":$slot,
+           "const ::llvm::SmallPtrSetImpl<::mlir::OpOperand *> &":$blockingUses,
            "::llvm::SmallVectorImpl<::mlir::OpOperand *> &":$newBlockingUses)
     >,
     InterfaceMethod<[{
         Transforms IR to ensure that the current operation does not use the
-        provided blocking uses anymore. In contrast to
-        `PromotableMemOpInterface`, operations implementing this interface
-        must not need access to the reaching definition of the content of the
-        slot.
+        provided memory slot anymore. In contrast to `PromotableMemOpInterface`,
+        operations implementing this interface must not need access to the
+        reaching definition of the content of the slot.
 
         During the transformation, *no operation should be deleted*.
         The operation can only schedule its own deletion by returning the
@@ -189,10 +186,11 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
       }],
       "::mlir::DeletionKind",
       "removeBlockingUses",
-      (ins "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
+      (ins "const ::mlir::MemorySlot &":$slot,
+           "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
            "::mlir::OpBuilder &":$builder)
     >,
   ];
 }
 
-#endif // MLIR_INTERFACES_MEMORYSLOTINTERFACES
+#endif // MLIR_INTERFACES_MEM2REGINTERFACES

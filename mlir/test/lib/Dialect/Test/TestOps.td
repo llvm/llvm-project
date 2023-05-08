@@ -495,10 +495,17 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
   let extraClassDeclaration = [{
     /// Return the callee of this operation.
     ::mlir::CallInterfaceCallable getCallableForCallee();
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable);
   }];
   let extraClassDefinition = [{
     ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
       return (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee");
+    }
+
+    void $cppClass::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
   }];
 }
