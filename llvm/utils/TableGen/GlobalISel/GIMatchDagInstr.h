@@ -1,4 +1,4 @@
-//===- GIMatchDagInstr.h - Represent a instruction to be matched ----------===//
+//===- GIMatchDagInstr.h - Represent instruction to be matched --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
