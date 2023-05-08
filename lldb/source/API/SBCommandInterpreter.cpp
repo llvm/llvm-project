@@ -33,6 +33,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace lldb_private {
 class CommandPluginInterfaceImplementation : public CommandObjectParsed {
 public:
   CommandPluginInterfaceImplementation(CommandInterpreter &interpreter,
@@ -73,13 +74,14 @@ protected:
     SBCommandReturnObject sb_return(result);
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
-    bool ret = m_backend->DoExecute(
-        debugger_sb, command.GetArgumentVector(), sb_return);
+    bool ret = m_backend->DoExecute(debugger_sb, command.GetArgumentVector(),
+                                    sb_return);
     return ret;
   }
   std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;
   std::optional<std::string> m_auto_repeat_command;
 };
+} // namespace lldb_private
 
 SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
     : m_opaque_ptr(interpreter) {
