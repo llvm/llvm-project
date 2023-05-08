@@ -219,7 +219,7 @@ public:
   void VisitDeclRefExpr(const DeclRefExpr *S) {
     const ValueDecl *VD = S->getDecl();
     assert(VD != nullptr);
-    auto *DeclLoc = Env.getStorageLocation(*VD, SkipPast::None);
+    auto *DeclLoc = Env.getStorageLocation(*VD);
     if (DeclLoc == nullptr)
       return;
 
@@ -533,7 +533,7 @@ public:
 
     if (auto *D = dyn_cast<VarDecl>(Member)) {
       if (D->hasGlobalStorage()) {
-        auto *VarDeclLoc = Env.getStorageLocation(*D, SkipPast::None);
+        auto *VarDeclLoc = Env.getStorageLocation(*D);
         if (VarDeclLoc == nullptr)
           return;
 
