@@ -1632,8 +1632,16 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
 
     const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
-    if (!CheckInvoke(S, OpPC, ThisPtr))
-      return false;
+    // If the current function is a lambda static invoker and
+    // the function we're about to call is a lambda call operator,
+    // skip the CheckInvoke, since the ThisPtr is a null pointer
+    // anyway.
+    if (!(S.Current->getFunction() &&
+          S.Current->getFunction()->isLambdaStaticInvoker() &&
+          Func->isLambdaCallOperator())) {
+      if (!CheckInvoke(S, OpPC, ThisPtr))
+        return false;
+    }
 
     if (S.checkingPotentialConstantExpression())
       return false;
