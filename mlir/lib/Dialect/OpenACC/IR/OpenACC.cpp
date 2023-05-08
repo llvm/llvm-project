@@ -655,6 +655,12 @@ LogicalResult acc::UpdateOp::verify() {
   if (getWaitDevnum() && getWaitOperands().empty())
     return emitError("wait_devnum cannot appear without waitOperands");
 
+  for (mlir::Value operand : getDataClauseOperands())
+    if (!mlir::isa<acc::UpdateDeviceOp, acc::UpdateHostOp, acc::GetDevicePtrOp>(
+            operand.getDefiningOp()))
+      return emitError("expect data entry/exit operation or acc.getdeviceptr "
+                       "as defining op");
+
   return success();
 }
 
