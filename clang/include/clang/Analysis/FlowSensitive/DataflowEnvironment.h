@@ -314,11 +314,7 @@ public:
 
   /// Equivalent to `getValue(getStorageLocation(D, SP), SkipPast::None)` if `D`
   /// is assigned a storage location in the environment, otherwise returns null.
-  ///
-  /// The `SP` parameter is deprecated and has no effect. In addition, it is
-  /// not permitted to pass `SkipPast::ReferenceThenPointer` for this parameter.
-  /// New uses of this function should use the default argument for `SP`.
-  Value *getValue(const ValueDecl &D, SkipPast SP = SkipPast::None) const;
+  Value *getValue(const ValueDecl &D) const;
 
   /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
   /// is assigned a storage location in the environment, otherwise returns null.
