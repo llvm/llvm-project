@@ -202,6 +202,60 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   RISCVVType::printVType(Imm, O);
 }
 
+void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI, raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  O << "{";
+  switch (Imm) {
+  case RISCVZC::RLISTENCODE::RA:
+    O << (ArchRegNames ? "x1" : "ra");
+    break;
+  case RISCVZC::RLISTENCODE::RA_S0:
+    O << (ArchRegNames ? "x1, x8" : "ra, s0");
+    break;
+  case RISCVZC::RLISTENCODE::RA_S0_S1:
+    O << (ArchRegNames ? "x1, x8-x9" : "ra, s0-s1");
+    break;
+  case RISCVZC::RLISTENCODE::RA_S0_S2:
+    O << (ArchRegNames ? "x1, x8-x9, x18" : "ra, s0-s2");
+    break;
+  case RISCVZC::RLISTENCODE::RA_S0_S3:
+  case RISCVZC::RLISTENCODE::RA_S0_S4:
+  case RISCVZC::RLISTENCODE::RA_S0_S5:
+  case RISCVZC::RLISTENCODE::RA_S0_S6:
+  case RISCVZC::RLISTENCODE::RA_S0_S7:
+  case RISCVZC::RLISTENCODE::RA_S0_S8:
+  case RISCVZC::RLISTENCODE::RA_S0_S9:
+    O << (ArchRegNames ? "x1, x8-x9, x18-" : "ra, s0-")
+      << getRegisterName(RISCV::X19 + (Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
+    break;
+  case RISCVZC::RLISTENCODE::RA_S0_S11:
+    O << (ArchRegNames ? "x1, x8-x9, x18-x27" : "ra, s0-s11");
+    break;
+  default:
+    llvm_unreachable("invalid register list");
+  }
+  O << "}";
+}
+
+void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI, raw_ostream &O) {
+  int64_t Imm = MI->getOperand(OpNo).getImm();
+  unsigned Opcode = MI->getOpcode();
+  bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
+  bool IsEABI = STI.hasFeature(RISCV::FeatureRVE);
+  int64_t Spimm = 0;
+  auto RlistVal = MI->getOperand(0).getImm();
+  assert(RlistVal != 16 && "Incorrect rlist.");
+  auto Base = RISCVZC::getStackAdjBase(RlistVal, IsRV64, IsEABI);
+  Spimm = Imm + Base;
+  assert((Spimm >= Base && Spimm <= Base + 48) && "Incorrect spimm");
+  if (Opcode == RISCV::CM_PUSH)
+    Spimm = -Spimm;
+
+  RISCVZC::printSpimm(Spimm, O);
+}
+
 void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {

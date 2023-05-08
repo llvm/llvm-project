@@ -15,7 +15,7 @@
 namespace __llvm_libc {
 
 void write_to_stderr(cpp::string_view msg) {
-  rpc::Client::Port port = rpc::client.open(rpc::PRINT_TO_STDERR);
+  rpc::Client::Port port = rpc::client.open<rpc::PRINT_TO_STDERR>();
   port.send_n(msg.data(), msg.size());
   port.close();
 }

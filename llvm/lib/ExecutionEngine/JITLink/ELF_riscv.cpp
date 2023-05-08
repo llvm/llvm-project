@@ -76,7 +76,8 @@ public:
   }
 
   bool isExternalBranchEdge(Edge &E) const {
-    return E.getKind() == R_RISCV_CALL_PLT;
+    return (E.getKind() == R_RISCV_CALL || E.getKind() == R_RISCV_CALL_PLT) &&
+           !E.getTarget().isDefined();
   }
 
 private:

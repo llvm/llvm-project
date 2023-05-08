@@ -10,4 +10,4 @@
     .equ sym0, 0x01abcdef
 .L2:
     mov r0, .L2
-@ CHECK: error: unsupported relocation on symbol
+@ CHECK: :[[#@LINE-1]]:5: error: unsupported relocation type

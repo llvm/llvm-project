@@ -290,12 +290,12 @@ end:
 define arm_aapcs_vfpcc void @gather_inc_v4i32_simple(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n) {
 ; CHECK-LABEL: gather_inc_v4i32_simple:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:  .LBB8_1: @ %vector.ph.preheader
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    bic r12, r2, #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    sub.w lr, r12, #4
@@ -319,8 +319,9 @@ define arm_aapcs_vfpcc void @gather_inc_v4i32_simple(ptr noalias nocapture reado
 ; CHECK-NEXT:    @ in Loop: Header=BB8_2 Depth=1
 ; CHECK-NEXT:    cmp r12, r2
 ; CHECK-NEXT:    bne .LBB8_2
-; CHECK-NEXT:  @ %bb.5: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:  @ %bb.5:
+; CHECK-NEXT:    pop.w {r4, lr}
+; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.6:
 ; CHECK-NEXT:  .LCPI8_0:
@@ -359,13 +360,14 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define arm_aapcs_vfpcc void @gather_inc_v4i32_complex(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n) {
 ; CHECK-LABEL: gather_inc_v4i32_complex:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r2, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    bxlt lr
+; CHECK-NEXT:  .LBB9_1: @ %vector.ph.preheader
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    blt .LBB9_5
-; CHECK-NEXT:  @ %bb.1: @ %vector.ph.preheader
 ; CHECK-NEXT:    bic r12, r2, #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    sub.w lr, r12, #4
@@ -401,9 +403,10 @@ define arm_aapcs_vfpcc void @gather_inc_v4i32_complex(ptr noalias nocapture read
 ; CHECK-NEXT:    @ in Loop: Header=BB9_2 Depth=1
 ; CHECK-NEXT:    cmp r12, r2
 ; CHECK-NEXT:    bne .LBB9_2
-; CHECK-NEXT:  .LBB9_5: @ %for.cond.cleanup
+; CHECK-NEXT:  @ %bb.5:
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r7, lr}
+; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.6:
 ; CHECK-NEXT:  .LCPI9_0:
@@ -461,12 +464,12 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define arm_aapcs_vfpcc void @gather_inc_v4i32_large(ptr noalias nocapture readonly %data, ptr noalias nocapture %dst, i32 %n) {
 ; CHECK-LABEL: gather_inc_v4i32_large:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:  .LBB10_1: @ %vector.ph.preheader
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    bic r12, r2, #3
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    sub.w lr, r12, #4
@@ -490,8 +493,9 @@ define arm_aapcs_vfpcc void @gather_inc_v4i32_large(ptr noalias nocapture readon
 ; CHECK-NEXT:    @ in Loop: Header=BB10_2 Depth=1
 ; CHECK-NEXT:    cmp r12, r2
 ; CHECK-NEXT:    bne .LBB10_2
-; CHECK-NEXT:  @ %bb.5: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:  @ %bb.5:
+; CHECK-NEXT:    pop.w {r4, lr}
+; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.6:
 ; CHECK-NEXT:  .LCPI10_0:

@@ -100,7 +100,7 @@ llvm.mlir.global internal protected unnamed_addr @protected(42 : i32) : i32
 // -----
 
 // expected-error @+1 {{op requires attribute 'sym_name'}}
-"llvm.mlir.global"() ({}) {linkage = "private", type = i64, constant, global_type = i64, value = 42 : i64} : () -> ()
+"llvm.mlir.global"() ({}) {linkage = #llvm.linkage<private>, type = i64, constant, global_type = i64, value = 42 : i64} : () -> ()
 
 // -----
 

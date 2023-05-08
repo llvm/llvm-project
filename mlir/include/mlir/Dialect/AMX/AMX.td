@@ -56,6 +56,7 @@ def AMX_Dialect : Dialect {
     https://software.intel.com/content/www/us/en/develop/articles/intel-sdm.html
   }];
 
+  let usePropertiesForAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//

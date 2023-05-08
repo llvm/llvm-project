@@ -219,6 +219,20 @@ static unsigned getKnownLeadingZeroCount(const unsigned Reg,
       Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8)
     return 56;
 
+  if (Opcode == PPC::AND || Opcode == PPC::AND8 || Opcode == PPC::AND_rec ||
+      Opcode == PPC::AND8_rec)
+    return std::max(
+        getKnownLeadingZeroCount(MI->getOperand(1).getReg(), TII, MRI),
+        getKnownLeadingZeroCount(MI->getOperand(2).getReg(), TII, MRI));
+
+  if (Opcode == PPC::OR || Opcode == PPC::OR8 || Opcode == PPC::XOR ||
+      Opcode == PPC::XOR8 || Opcode == PPC::OR_rec ||
+      Opcode == PPC::OR8_rec || Opcode == PPC::XOR_rec ||
+      Opcode == PPC::XOR8_rec)
+    return std::min(
+        getKnownLeadingZeroCount(MI->getOperand(1).getReg(), TII, MRI),
+        getKnownLeadingZeroCount(MI->getOperand(2).getReg(), TII, MRI));
+
   if (TII->isZeroExtended(Reg, MRI))
     return 32;
 

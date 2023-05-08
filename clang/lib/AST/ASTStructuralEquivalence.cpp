@@ -1453,19 +1453,23 @@ static bool IsRecordContextStructurallyEquivalent(RecordDecl *D1,
   return true;
 }
 
+static bool NameIsStructurallyEquivalent(const TagDecl &D1, const TagDecl &D2) {
+  auto GetName = [](const TagDecl &D) -> const IdentifierInfo * {
+    if (const IdentifierInfo *Name = D.getIdentifier())
+      return Name;
+    if (const TypedefNameDecl *TypedefName = D.getTypedefNameForAnonDecl())
+      return TypedefName->getIdentifier();
+    return nullptr;
+  };
+  return IsStructurallyEquivalent(GetName(D1), GetName(D2));
+}
+
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
-
-  // Check for equivalent structure names.
-  IdentifierInfo *Name1 = D1->getIdentifier();
-  if (!Name1 && D1->getTypedefNameForAnonDecl())
-    Name1 = D1->getTypedefNameForAnonDecl()->getIdentifier();
-  IdentifierInfo *Name2 = D2->getIdentifier();
-  if (!Name2 && D2->getTypedefNameForAnonDecl())
-    Name2 = D2->getTypedefNameForAnonDecl()->getIdentifier();
-  if (!IsStructurallyEquivalent(Name1, Name2))
+  if (!NameIsStructurallyEquivalent(*D1, *D2)) {
     return false;
+  }
 
   if (D1->isUnion() != D2->isUnion()) {
     if (Context.Complain) {
@@ -1727,16 +1731,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 /// Determine structural equivalence of two enums.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      EnumDecl *D1, EnumDecl *D2) {
-
-  // Check for equivalent enum names.
-  IdentifierInfo *Name1 = D1->getIdentifier();
-  if (!Name1 && D1->getTypedefNameForAnonDecl())
-    Name1 = D1->getTypedefNameForAnonDecl()->getIdentifier();
-  IdentifierInfo *Name2 = D2->getIdentifier();
-  if (!Name2 && D2->getTypedefNameForAnonDecl())
-    Name2 = D2->getTypedefNameForAnonDecl()->getIdentifier();
-  if (!IsStructurallyEquivalent(Name1, Name2))
+  if (!NameIsStructurallyEquivalent(*D1, *D2)) {
     return false;
+  }
 
   // Compare the definitions of these two enums. If either or both are
   // incomplete (i.e. forward declared), we assume that they are equivalent.

@@ -471,10 +471,9 @@ multiclass VPatWidenBinarySDNode_WV_WX<SDNode op, PatFrags extop,
 }
 
 multiclass VPatWidenBinarySDNode_VV_VX_WV_WX<SDNode op, PatFrags extop,
-                                             string instruction_name> {
-  defm : VPatWidenBinarySDNode_VV_VX<op, extop, extop, instruction_name>;
-  defm : VPatWidenBinarySDNode_WV_WX<op, extop, instruction_name>;
-}
+                                             string instruction_name>
+    : VPatWidenBinarySDNode_VV_VX<op, extop, extop, instruction_name>,
+      VPatWidenBinarySDNode_WV_WX<op, extop, instruction_name>;
 
 multiclass VPatWidenMulAddSDNode_VV<PatFrags extop1, PatFrags extop2, string instruction_name> {
   foreach vtiToWti = AllWidenableIntVectors in {
@@ -558,10 +557,10 @@ multiclass VPatWidenBinaryFPSDNode_WV_WF<SDNode op, string instruction_name> {
   }
 }
 
-multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF<SDNode op, string instruction_name> {
-  defm : VPatWidenBinaryFPSDNode_VV_VF<op, instruction_name>;
-  defm : VPatWidenBinaryFPSDNode_WV_WF<op, instruction_name>;
-}
+multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF<SDNode op,
+                                               string instruction_name>
+    : VPatWidenBinaryFPSDNode_VV_VF<op, instruction_name>,
+      VPatWidenBinaryFPSDNode_WV_WF<op, instruction_name>;
 
 multiclass VPatWidenFPMulAccSDNode_VV_VF<string instruction_name> {
   foreach vtiToWti = AllWidenableFloatVectors in {

@@ -761,41 +761,45 @@ func.func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf
 
 // -----
 
-func.func @testupdateop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testupdateop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
   %ifCond = arith.constant true
-  acc.update async(%i64Value: i64) host(%a: memref<10xf32>)
-  acc.update async(%i32Value: i32) host(%a: memref<10xf32>)
-  acc.update async(%i32Value: i32) host(%a: memref<10xf32>)
-  acc.update async(%idxValue: index) host(%a: memref<10xf32>)
-  acc.update wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) host(%a: memref<10xf32>)
-  acc.update if(%ifCond) host(%a: memref<10xf32>)
-  acc.update device_type(%i32Value : i32) host(%a: memref<10xf32>)
-  acc.update host(%a: memref<10xf32>) device(%b, %c : memref<10xf32>, memref<10x10xf32>)
-  acc.update host(%a: memref<10xf32>) device(%b, %c : memref<10xf32>, memref<10x10xf32>) attributes {async}
-  acc.update host(%a: memref<10xf32>) device(%b, %c : memref<10xf32>, memref<10x10xf32>) attributes {wait}
-  acc.update host(%a: memref<10xf32>) device(%b, %c : memref<10xf32>, memref<10x10xf32>) attributes {ifPresent}
+  %0 = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
+  %1 = acc.update_device varPtr(%b : memref<f32>) -> memref<f32>
+  %2 = acc.update_device varPtr(%c : memref<f32>) -> memref<f32>
+  
+  acc.update async(%i64Value: i64) dataOperands(%0: memref<f32>)
+  acc.update async(%i32Value: i32) dataOperands(%0: memref<f32>)
+  acc.update async(%i32Value: i32) dataOperands(%0: memref<f32>)
+  acc.update async(%idxValue: index) dataOperands(%0: memref<f32>)
+  acc.update wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%0: memref<f32>)
+  acc.update if(%ifCond) dataOperands(%0: memref<f32>)
+  acc.update device_type(%i32Value : i32) dataOperands(%0: memref<f32>)
+  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
+  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) attributes {async}
+  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) attributes {wait}
+  acc.update dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>) attributes {ifPresent}
   return
 }
 
-// CHECK: func @testupdateop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK: func @testupdateop([[ARGA:%.*]]: memref<f32>, [[ARGB:%.*]]: memref<f32>, [[ARGC:%.*]]: memref<f32>) {
 // CHECK:   [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK:   [[I32VALUE:%.*]] = arith.constant 1 : i32
 // CHECK:   [[IDXVALUE:%.*]] = arith.constant 1 : index
 // CHECK:   [[IFCOND:%.*]] = arith.constant true
-// CHECK:   acc.update async([[I64VALUE]] : i64) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update async([[I32VALUE]] : i32) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update async([[I32VALUE]] : i32) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update async([[IDXVALUE]] : index) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update if([[IFCOND]]) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update device_type([[I32VALUE]] : i32) host([[ARGA]] : memref<10xf32>)
-// CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>)
-// CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) attributes {async}
-// CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) attributes {wait}
-// CHECK:   acc.update host([[ARGA]] : memref<10xf32>) device([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) attributes {ifPresent}
+// CHECK:   acc.update async([[I64VALUE]] : i64) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update async([[I32VALUE]] : i32) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update async([[I32VALUE]] : i32) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update async([[IDXVALUE]] : index) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update if([[IFCOND]]) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update device_type([[I32VALUE]] : i32) dataOperands(%{{.*}} : memref<f32>)
+// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>)
+// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) attributes {async}
+// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) attributes {wait}
+// CHECK:   acc.update dataOperands(%{{.*}}, %{{.*}}, %{{.*}} : memref<f32>, memref<f32>, memref<f32>) attributes {ifPresent}
 
 // -----
 

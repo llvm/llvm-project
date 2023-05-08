@@ -13,6 +13,9 @@
 #include <__config>
 #include <__functional/invoke.h>
 #include <__functional/weak_result_type.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_reference_wrapper.h>
+#include <__type_traits/is_void.h>
 #include <cstddef>
 #include <tuple>
 

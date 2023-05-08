@@ -510,7 +510,9 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
 
   if (!DispSpec.isImm()) {
     if (NeedPlus) O << " + ";
-    PrintOperand(MI, OpNo + X86::AddrDisp, O);
+    // Do not add `offset` operator. Matches the behaviour of
+    // X86IntelInstPrinter::printMemReference.
+    PrintSymbolOperand(DispSpec, O);
   } else {
     int64_t DispVal = DispSpec.getImm();
     if (DispVal || (!IndexReg.getReg() && !HasBaseReg)) {
