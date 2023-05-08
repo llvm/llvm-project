@@ -8,7 +8,6 @@ add_llvm_component_library(LLVMAsmParser
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ASMParser
 
   DEPENDS
-  attributes_gen
   intrinsics_gen
 
   LINK_COMPONENTS
