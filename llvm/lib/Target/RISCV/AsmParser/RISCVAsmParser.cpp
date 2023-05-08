@@ -1512,23 +1512,22 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
 // Attempts to match Name as a register (either using the default name or
 // alternative ABI names), setting RegNo to the matching register. Upon
-// failure, returns true and sets RegNo to 0. If IsRVE then registers
-// x16-x31 will be rejected.
-static bool matchRegisterNameHelper(bool IsRVE, MCRegister &RegNo,
-                                    StringRef Name) {
-  RegNo = MatchRegisterName(Name);
+// failure, returns a non-valid MCRegister. If IsRVE, then registers x16-x31
+// will be rejected.
+static MCRegister matchRegisterNameHelper(bool IsRVE, StringRef Name) {
+  MCRegister Reg = MatchRegisterName(Name);
   // The 16-/32- and 64-bit FPRs have the same asm name. Check that the initial
   // match always matches the 64-bit variant, and not the 16/32-bit one.
-  assert(!(RegNo >= RISCV::F0_H && RegNo <= RISCV::F31_H));
-  assert(!(RegNo >= RISCV::F0_F && RegNo <= RISCV::F31_F));
+  assert(!(Reg >= RISCV::F0_H && Reg <= RISCV::F31_H));
+  assert(!(Reg >= RISCV::F0_F && Reg <= RISCV::F31_F));
   // The default FPR register class is based on the tablegen enum ordering.
   static_assert(RISCV::F0_D < RISCV::F0_H, "FPR matching must be updated");
   static_assert(RISCV::F0_D < RISCV::F0_F, "FPR matching must be updated");
-  if (RegNo == RISCV::NoRegister)
-    RegNo = MatchRegisterAltName(Name);
-  if (IsRVE && RegNo >= RISCV::X16 && RegNo <= RISCV::X31)
-    RegNo = RISCV::NoRegister;
-  return RegNo == RISCV::NoRegister;
+  if (!Reg)
+    Reg = MatchRegisterAltName(Name);
+  if (IsRVE && Reg >= RISCV::X16 && Reg <= RISCV::X31)
+    Reg = RISCV::NoRegister;
+  return Reg;
 }
 
 bool RISCVAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
@@ -1544,10 +1543,10 @@ OperandMatchResultTy RISCVAsmParser::tryParseRegister(MCRegister &RegNo,
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = 0;
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (matchRegisterNameHelper(isRVE(), (MCRegister &)RegNo, Name))
+  RegNo = matchRegisterNameHelper(isRVE(), Name);
+  if (!RegNo)
     return MatchOperand_NoMatch;
 
   getParser().Lex(); // Eat identifier token.
@@ -1579,10 +1578,9 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     return MatchOperand_NoMatch;
   case AsmToken::Identifier:
     StringRef Name = getLexer().getTok().getIdentifier();
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRVE(), RegNo, Name);
+    MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
 
-    if (RegNo == RISCV::NoRegister) {
+    if (!RegNo) {
       if (HadParens)
         getLexer().UnLex(LParen);
       return MatchOperand_NoMatch;
@@ -2121,10 +2119,9 @@ OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
     Error(getLoc(), "expected '.t' suffix");
     return MatchOperand_ParseFail;
   }
-  MCRegister RegNo;
-  matchRegisterNameHelper(isRVE(), RegNo, Name);
+  MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
 
-  if (RegNo == RISCV::NoRegister)
+  if (!RegNo)
     return MatchOperand_NoMatch;
   if (RegNo != RISCV::V0)
     return MatchOperand_NoMatch;
@@ -2140,10 +2137,9 @@ OperandMatchResultTy RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
     return MatchOperand_NoMatch;
 
   StringRef Name = getLexer().getTok().getIdentifier();
-  MCRegister RegNo;
-  matchRegisterNameHelper(isRVE(), RegNo, Name);
+  MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
 
-  if (RegNo == RISCV::NoRegister)
+  if (!RegNo)
     return MatchOperand_NoMatch;
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
@@ -2318,17 +2314,20 @@ OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
   // Rlist: {ra [, s0[-sN]]}
   // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
   SMLoc S = getLoc();
-  if (getLexer().isNot(AsmToken::LCurly)) {
-    Error(getLoc(), "register list must start with '{'");
+
+  if (parseToken(AsmToken::LCurly, "register list must start with '{'"))
     return MatchOperand_ParseFail;
-  }
-  getLexer().Lex(); // eat '{'
+
   bool IsEABI = isRVE();
 
-  MCRegister RegStart = RISCV::NoRegister;
-  MCRegister RegEnd = RISCV::NoRegister;
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    Error(getLoc(), "register list must start from 'ra' or 'x1'");
+    return MatchOperand_ParseFail;
+  }
+
   StringRef RegName = getLexer().getTok().getIdentifier();
-  matchRegisterNameHelper(IsEABI, RegStart, RegName);
+  MCRegister RegStart = matchRegisterNameHelper(IsEABI, RegName);
+  MCRegister RegEnd;
   if (RegStart != RISCV::X1) {
     Error(getLoc(), "register list must start from 'ra' or 'x1'");
     return MatchOperand_ParseFail;
@@ -2343,7 +2342,8 @@ OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
       return MatchOperand_ParseFail;
     }
     StringRef RegName = getLexer().getTok().getIdentifier();
-    if (matchRegisterNameHelper(IsEABI, RegStart, RegName)) {
+    RegStart = matchRegisterNameHelper(IsEABI, RegName);
+    if (!RegStart) {
       Error(getLoc(), "invalid register");
       return MatchOperand_ParseFail;
     }
@@ -2359,7 +2359,8 @@ OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
     getLexer().Lex();
     StringRef EndName = getLexer().getTok().getIdentifier();
     // FIXME: the register mapping and checks of EABI is wrong
-    if (matchRegisterNameHelper(IsEABI, RegEnd, EndName)) {
+    RegEnd = matchRegisterNameHelper(IsEABI, EndName);
+    if (!RegEnd) {
       Error(getLoc(), "invalid register");
       return MatchOperand_ParseFail;
     }
@@ -2419,11 +2420,8 @@ OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RCurly)) {
-    Error(getLoc(), "register list must end with '}'");
+  if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
     return MatchOperand_ParseFail;
-  }
-  getLexer().Lex(); // eat '}'
 
   if (RegEnd == RISCV::NoRegister)
     RegEnd = RegStart;

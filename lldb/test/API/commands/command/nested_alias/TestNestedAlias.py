@@ -101,3 +101,7 @@ class NestedAliasTestCase(TestBase):
         self.expect('command alias two expr -- 2')
         self.expect('command alias add_two two +')
         self.expect('add_two 3', patterns=[' = 5$'])
+        # Check that aliases to aliases to raw input commands work the second
+        # and subsequent times.
+        self.expect('add_two 3', patterns=[' = 5$'])
+        self.expect('add_two 3', patterns=[' = 5$'])
