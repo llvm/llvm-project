@@ -1,5 +1,6 @@
 #include "llvm/Transforms/Utils/DbgInstructionPrint.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include <map>
 #include "llvm/Support/Regex.h"
 
@@ -9,24 +10,21 @@ PreservedAnalyses DbgInstructionPrintPass::run(Function& F, FunctionAnalysisMana
 {
     errs() << F.getName() <<":\n";
     std::map<StringRef, int> dbgCntMap;
-    Regex dbgRegex("^llvm.dbg.*");
+
     for(const BasicBlock& BB: F)
     {
         for(const Instruction& I: BB)
         {
-            if(isa<CallInst> (I))
+            if(isa<DbgInfoIntrinsic> (I))
             {
-                StringRef functionName = cast<CallInst>(I).getCalledFunction()->getName();
-                if(dbgRegex.match(functionName))
+                StringRef dbgInstructionName = cast<DbgInfoIntrinsic>(I).getCalledFunction()->getName();
+                if(dbgCntMap.count(dbgInstructionName) > 0)
                 {
-                    if(dbgCntMap.count(functionName) > 0)
-                    {
-                        dbgCntMap[functionName]++;
-                    }
-                    else
-                    {
-                        dbgCntMap[functionName] = 1;
-                    }
+                    dbgCntMap[dbgInstructionName]++;
+                }
+                else
+                {
+                        dbgCntMap[dbgInstructionName] = 1;
                 }
             }
         }
