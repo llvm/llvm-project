@@ -7,7 +7,7 @@
 // FIXME: Remove "not". There is no leak.
 // False LEAK123 is broken for HWASAN.
 // False LEAK234 is broken for ASAN, HWASAN, LSAN.
-// RUN: %clangxx_lsan -pthread %s -o %t && %run not %t 10
+// RUN: %clangxx_lsan -pthread %s -o %t && %run %if asan %{ not %} %if hwasan %{ not %} %if lsan-standalone %{ not %} %t 10
 
 #include <pthread.h>
 #include <stdlib.h>
