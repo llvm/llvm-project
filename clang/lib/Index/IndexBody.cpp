@@ -144,6 +144,17 @@ public:
                                     Parent, ParentDC, Roles, Relations, E);
   }
 
+  bool VisitGotoStmt(GotoStmt *S) {
+    return IndexCtx.handleReference(S->getLabel(), S->getLabelLoc(), Parent,
+                                    ParentDC);
+  }
+
+  bool VisitLabelStmt(LabelStmt *S) {
+    if (IndexCtx.shouldIndexFunctionLocalSymbols())
+      return IndexCtx.handleDecl(S->getDecl());
+    return true;
+  }
+
   bool VisitMemberExpr(MemberExpr *E) {
     SourceLocation Loc = E->getMemberLoc();
     if (Loc.isInvalid())
