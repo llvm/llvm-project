@@ -14,7 +14,9 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__pstl/internal/parallel_backend.h>
+#include <__pstl/internal/parallel_backend_serial.h>
 #include <__pstl/internal/unseq_backend_simd.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/terminate_on_exception.h>

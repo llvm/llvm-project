@@ -13,7 +13,10 @@
 #include <__atomic/atomic.h>
 #include <__atomic/memory_order.h>
 #include <__config>
+#include <__iterator/iterator_traits.h>
 #include <__pstl/internal/parallel_backend.h>
+#include <__pstl/internal/parallel_backend_serial.h>
+#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
