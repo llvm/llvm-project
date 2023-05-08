@@ -629,7 +629,7 @@ declare noundef nonnull ptr @_Znam(i64 noundef)
       Call->getMetadata(LLVMContext::MD_callsite));
 
   MDNode *MemProfMD = Call->getMetadata(LLVMContext::MD_memprof);
-  uint Idx = 0;
+  unsigned Idx = 0;
   for (auto &MIBOp : MemProfMD->operands()) {
     auto *MIBMD = cast<const MDNode>(MIBOp);
     MDNode *StackNode = getMIBStackNode(MIBMD);
@@ -663,7 +663,7 @@ TEST_F(MemoryProfileInfoTest, CallStackTestSummary) {
   ASSERT_NE(Index, nullptr);
   auto *CallsiteSummary =
       cast<FunctionSummary>(Index->getGlobalValueSummary(/*guid=*/25));
-  uint Idx = 0;
+  unsigned Idx = 0;
   for (auto &CI : CallsiteSummary->callsites()) {
     CallStack<CallsiteInfo, SmallVector<unsigned>::const_iterator> InstCallsite(
         &CI);
@@ -686,7 +686,7 @@ TEST_F(MemoryProfileInfoTest, CallStackTestSummary) {
   auto *AllocSummary =
       cast<FunctionSummary>(Index->getGlobalValueSummary(/*guid=*/23));
   for (auto &AI : AllocSummary->allocs()) {
-    uint Idx = 0;
+    unsigned Idx = 0;
     for (auto &MIB : AI.MIBs) {
       CallStack<MIBInfo, SmallVector<unsigned>::const_iterator> StackContext(
           &MIB);
