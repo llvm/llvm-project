@@ -1,41 +1,40 @@
 #include "llvm/Transforms/Utils/DbgInstructionPrint.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include <map>
+#include "llvm/Support/Regex.h"
 
 using namespace llvm;
 
 PreservedAnalyses DbgInstructionPrintPass::run(Function& F, FunctionAnalysisManager& AM)
 {
     errs() << F.getName() <<":\n";
-    int dbgVals = 0;
-    int dbgDeclares = 0;
-    int dbgAssigns = 0;
+    std::map<StringRef, int> dbgCntMap;
+
     for(const BasicBlock& BB: F)
     {
         for(const Instruction& I: BB)
         {
-            if(isa<CallInst> (I))
+            if(isa<DbgInfoIntrinsic> (I))
             {
-                
-                // errs() << "\t" << cast<CallInst>(I).getCalledFunction()->getName() << "\n";
-                StringRef ref = cast<CallInst>(I).getCalledFunction()->getName();
-                if(ref == "llvm.dbg.value")
+                StringRef dbgInstructionName = cast<DbgInfoIntrinsic>(I).getCalledFunction()->getName();
+                if(dbgCntMap.count(dbgInstructionName) > 0)
                 {
-                    dbgVals++;
+                    dbgCntMap[dbgInstructionName]++;
                 }
-                else if(ref == "llvm.dbg.declare")
+                else
                 {
-                    dbgDeclares++;
-                }
-                else if(ref == "llvm.dbg.assign")
-                {
-                    dbgAssigns++;
+                        dbgCntMap[dbgInstructionName] = 1;
                 }
             }
         }
     }
-    errs() << "\t" << "llvm.dbg.value: " << dbgVals << "\n";
-    errs() << "\t" << "llvm.dbg.declare: " << dbgDeclares << "\n";
-    errs() << "\t" << "llvm.dbg.assign: " << dbgAssigns << "\n";
+    //Onih kojih nema, njih je nula
+    for(auto it = dbgCntMap.cbegin(); it != dbgCntMap.cend(); it++)
+    {
+        errs() << "\t" << it->first << ": " << it->second << "\n";
+        
+    }
 
     return PreservedAnalyses::all();
 }
