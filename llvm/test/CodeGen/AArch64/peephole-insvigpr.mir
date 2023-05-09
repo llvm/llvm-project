@@ -434,8 +434,7 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], killed [[COPY2]], %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[FADDDrr]], %subreg.dsub
-    ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG1]], 1, killed [[INSERT_SUBREG]], 0
-    ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
+    ; CHECK-NEXT: $q0 = COPY [[INSERT_SUBREG1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %1:fpr64 = COPY $d1
     %0:fpr64 = COPY $d0
