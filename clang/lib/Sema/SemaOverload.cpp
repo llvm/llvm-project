@@ -12797,10 +12797,9 @@ bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
 ///
 /// If no template-ids are found, no diagnostics are emitted and NULL is
 /// returned.
-FunctionDecl *
-Sema::ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
-                                                  bool Complain,
-                                                  DeclAccessPair *FoundResult) {
+FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
+    OverloadExpr *ovl, bool Complain, DeclAccessPair *FoundResult,
+    TemplateSpecCandidateSet *FailedTSC) {
   // C++ [over.over]p1:
   //   [...] [Note: any redundant set of parentheses surrounding the
   //   overloaded function name is ignored (5.1). ]
@@ -12814,7 +12813,6 @@ Sema::ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
 
   TemplateArgumentListInfo ExplicitTemplateArgs;
   ovl->copyTemplateArgumentsInto(ExplicitTemplateArgs);
-  TemplateSpecCandidateSet FailedCandidates(ovl->getNameLoc());
 
   // Look through all of the overloaded functions, searching for one
   // whose type matches exactly.
@@ -12837,16 +12835,16 @@ Sema::ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
     //   function template specialization, which is added to the set of
     //   overloaded functions considered.
     FunctionDecl *Specialization = nullptr;
-    TemplateDeductionInfo Info(FailedCandidates.getLocation());
+    TemplateDeductionInfo Info(ovl->getNameLoc());
     if (TemplateDeductionResult Result
           = DeduceTemplateArguments(FunctionTemplate, &ExplicitTemplateArgs,
                                     Specialization, Info,
                                     /*IsAddressOfFunction*/true)) {
       // Make a note of the failed deduction for diagnostics.
-      // TODO: Actually use the failed-deduction info?
-      FailedCandidates.addCandidate()
-          .set(I.getPair(), FunctionTemplate->getTemplatedDecl(),
-               MakeDeductionFailureInfo(Context, Result, Info));
+      if (FailedTSC)
+        FailedTSC->addCandidate().set(
+            I.getPair(), FunctionTemplate->getTemplatedDecl(),
+            MakeDeductionFailureInfo(Context, Result, Info));
       continue;
     }
 
