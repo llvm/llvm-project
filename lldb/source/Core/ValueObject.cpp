@@ -83,13 +83,13 @@ using namespace lldb_private;
 
 static user_id_t g_value_obj_uid = 0;
 
-// BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
 static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
   return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
              ? &valobj.GetExecutionContextRef()
              : nullptr;
 }
-// END SWIFT
+#endif // LLDB_ENABLE_SWIFT
 
 // ValueObject constructor
 ValueObject::ValueObject(ValueObject &parent)
