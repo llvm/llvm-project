@@ -1282,12 +1282,9 @@ public:
 };
 } // end anonymous namespace
 
-/// @name Auto-generated Match Functions
-/// {
-
-static unsigned MatchRegisterName(StringRef Name);
-
-/// }
+#define GET_REGISTER_MATCHER
+#define GET_SUBTARGET_FEATURE_NAME
+#include "X86GenAsmMatcher.inc"
 
 static bool CheckBaseRegAndIndexRegAndScale(unsigned BaseReg, unsigned IndexReg,
                                             unsigned Scale, bool Is64BitMode,
@@ -3929,8 +3926,6 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
   return false;
 }
 
-static const char *getSubtargetFeatureName(uint64_t Val);
-
 void X86AsmParser::emitWarningForSpecialLVIInstruction(SMLoc Loc) {
   Warning(Loc, "Instruction may be vulnerable to LVI and "
                "requires manual mitigation");
@@ -4985,7 +4980,5 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86AsmParser() {
   RegisterMCAsmParser<X86AsmParser> Y(getTheX86_64Target());
 }
 
-#define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
-#define GET_SUBTARGET_FEATURE_NAME
 #include "X86GenAsmMatcher.inc"
