@@ -533,7 +533,6 @@ set(files
   __pstl/internal/parallel_backend_tbb.h
   __pstl/internal/parallel_backend_utils.h
   __pstl/internal/parallel_impl.h
-  __pstl/internal/pstl_config.h
   __pstl/internal/unseq_backend_simd.h
   __pstl/internal/utils.h
   __pstl_algorithm
