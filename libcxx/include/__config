@@ -1273,6 +1273,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 // TODO: Make this a proper configuration option
 #define _PSTL_PAR_BACKEND_SERIAL
+#define _PSTL_CPU_BACKEND_SERIAL
 
 #define _PSTL_PRAGMA(x) _Pragma(#    x)
 
