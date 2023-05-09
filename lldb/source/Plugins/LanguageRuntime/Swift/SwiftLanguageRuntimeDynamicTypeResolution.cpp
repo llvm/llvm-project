@@ -1235,20 +1235,6 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
   return {true, child_indexes.size()};
 }
 
-static llvm::Optional<std::string>
-GetMultiPayloadEnumCaseName(const swift::reflection::EnumTypeInfo *eti,
-                            const DataExtractor &data) {
-  assert(eti->getEnumKind() == swift::reflection::EnumKind::MultiPayloadEnum);
-  auto payload_capacity = eti->getPayloadSize();
-  if (data.GetByteSize() == payload_capacity + 1) {
-    auto tag = data.GetDataStart()[payload_capacity];
-    const auto &cases = eti->getCases();
-    if (tag >= 0 && tag < cases.size())
-      return cases[tag].Name;
-  }
-  return {};
-}
-
 llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
     CompilerType type, const DataExtractor &data, ExecutionContext *exe_ctx) {
   using namespace swift::reflection;
@@ -1266,12 +1252,6 @@ llvm::Optional<std::string> SwiftLanguageRuntimeImpl::GetEnumCaseName(
   int case_index;
   if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
     return eti->getCases()[case_index].Name;
-
-  // Temporary workaround.
-  if (eti->getEnumKind() == EnumKind::MultiPayloadEnum &&
-      type.GetMangledTypeName().GetStringRef().startswith(
-          "$s10Foundation9IndexPathV7Storage"))
-    return GetMultiPayloadEnumCaseName(eti, data);
 
   return {};
 }
