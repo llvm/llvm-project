@@ -151,7 +151,8 @@ LogicalResult acc::GetDevicePtrOp::verify() {
       getDataClause() != acc::DataClause::acc_copyout &&
       getDataClause() != acc::DataClause::acc_delete &&
       getDataClause() != acc::DataClause::acc_detach &&
-      getDataClause() != acc::DataClause::acc_update_host)
+      getDataClause() != acc::DataClause::acc_update_host &&
+      getDataClause() != acc::DataClause::acc_update_self)
     return emitError("getDevicePtr mismatch");
   return success();
 }
