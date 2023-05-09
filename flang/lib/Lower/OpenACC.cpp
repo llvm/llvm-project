@@ -146,12 +146,10 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
     mlir::Value ext = fir::factory::readExtent(builder, loc, dataExv, dim);
-    mlir::Value lb =
-        baseLb == one ? builder.createIntegerConstant(loc, idxTy, 0) : baseLb;
+    mlir::Value lb = builder.createIntegerConstant(loc, idxTy, 0);
 
-    // ub = baseLb + extent - 1
-    mlir::Value lbExt = builder.create<mlir::arith::AddIOp>(loc, ext, baseLb);
-    mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
+    // ub = extent - 1
+    mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
     mlir::Value bound = builder.create<mlir::acc::DataBoundsOp>(
         loc, boundTy, lb, ub, mlir::Value(), one, false, baseLb);
     bounds.push_back(bound);
