@@ -54,6 +54,7 @@ void test_result_type(int N) {
 template <typename T>
 void test_result_type_tpl(int N) {
   auto l1 = []() -> T {}; // expected-error{{incomplete result type 'Incomplete' in lambda expression}}
+                          // expected-note@-1{{while substituting into a lambda expression here}}
   typedef int vla[N];
   auto l2 = []() -> vla {}; // expected-error{{function cannot return array type 'vla' (aka 'int[N]')}}
 }

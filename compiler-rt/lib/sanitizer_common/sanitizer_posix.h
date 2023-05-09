@@ -90,7 +90,7 @@ int real_pthread_join(void *th, void **ret);
   }                                                                            \
   }  // namespace __sanitizer
 
-int my_pthread_attr_getstack(void *attr, void **addr, uptr *size);
+int internal_pthread_attr_getstack(void *attr, void **addr, uptr *size);
 
 // A routine named real_sigaction() must be implemented by each sanitizer in
 // order for internal_sigaction() to bypass interceptors.

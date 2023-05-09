@@ -182,12 +182,12 @@ exit:
 define void @extrastride(i8* nocapture %main, i32 %main_stride, i32* nocapture %res, i32 %x, i32 %y, i32 %z) nounwind {
 ; X64-LABEL: extrastride:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    testl %r9d, %r9d
-; X64-NEXT:    je .LBB2_4
+; X64-NEXT:    je .LBB2_3
 ; X64-NEXT:  # %bb.1: # %for.body.lr.ph
-; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    leal (%rsi,%rsi), %r10d
 ; X64-NEXT:    leal (%rsi,%rsi,2), %r11d
 ; X64-NEXT:    addl %esi, %ecx
@@ -213,9 +213,8 @@ define void @extrastride(i8* nocapture %main, i32 %main_stride, i32* nocapture %
 ; X64-NEXT:    addq %r8, %rdx
 ; X64-NEXT:    decl %r9d
 ; X64-NEXT:    jne .LBB2_2
-; X64-NEXT:  # %bb.3:
+; X64-NEXT:  .LBB2_3: # %for.end
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:  .LBB2_4: # %for.end
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: extrastride:

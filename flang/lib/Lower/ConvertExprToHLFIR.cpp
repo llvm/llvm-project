@@ -47,6 +47,10 @@ private:
     return result;
   }
 
+  hlfir::EntityWithAttributes
+  genDesignatorExpr(const Fortran::lower::SomeExpr &designatorExpr,
+                    bool vectorSubscriptDesignatorToValue = true);
+
 public:
   HlfirDesignatorBuilder(mlir::Location loc,
                          Fortran::lower::AbstractConverter &converter,
@@ -111,6 +115,11 @@ public:
     return genLeafPartRef(namedEntity.GetComponent(),
                           vectorSubscriptDesignatorToValue);
   }
+
+  /// Public entry point to lower a vector subscripted designator to
+  /// an hlfir::ElementalAddrOp.
+  hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
+      const Fortran::lower::SomeExpr &designatorExpr);
 
 private:
   /// Struct that is filled while visiting a part-ref (in the "visit" member
@@ -843,6 +852,67 @@ private:
   std::optional<hlfir::ElementalAddrOp> vectorSubscriptElementAddrOp{};
   mlir::Location loc;
 };
+
+hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
+    const Fortran::lower::SomeExpr &designatorExpr,
+    bool vectorSubscriptDesignatorToValue) {
+  // Expr<SomeType> plumbing to unwrap Designator<T> and call
+  // gen(Designator<T>.u).
+  return std::visit(
+      [&](const auto &x) -> hlfir::EntityWithAttributes {
+        using T = std::decay_t<decltype(x)>;
+        if constexpr (Fortran::common::HasMember<
+                          T, Fortran::lower::CategoryExpression>) {
+          if constexpr (T::Result::category ==
+                        Fortran::common::TypeCategory::Derived) {
+            return gen(std::get<Fortran::evaluate::Designator<
+                           Fortran::evaluate::SomeDerived>>(x.u)
+                           .u,
+                       vectorSubscriptDesignatorToValue);
+          } else {
+            return std::visit(
+                [&](const auto &preciseKind) {
+                  using TK =
+                      typename std::decay_t<decltype(preciseKind)>::Result;
+                  return gen(
+                      std::get<Fortran::evaluate::Designator<TK>>(preciseKind.u)
+                          .u,
+                      vectorSubscriptDesignatorToValue);
+                },
+                x.u);
+          }
+        } else {
+          fir::emitFatalError(loc, "unexpected typeless Designator");
+        }
+      },
+      designatorExpr.u);
+}
+
+hlfir::ElementalAddrOp
+HlfirDesignatorBuilder::convertVectorSubscriptedExprToElementalAddr(
+    const Fortran::lower::SomeExpr &designatorExpr) {
+
+  hlfir::EntityWithAttributes elementAddrEntity = genDesignatorExpr(
+      designatorExpr, /*vectorSubscriptDesignatorToValue=*/false);
+  assert(getVectorSubscriptElementAddrOp().has_value() &&
+         "expected vector subscripts");
+  hlfir::ElementalAddrOp elementalAddrOp = *getVectorSubscriptElementAddrOp();
+  // Now that the type parameters have been computed, add then to the
+  // hlfir.elemental_addr.
+  fir::FirOpBuilder &builder = getBuilder();
+  llvm::SmallVector<mlir::Value, 1> lengths;
+  hlfir::genLengthParameters(loc, builder, elementAddrEntity, lengths);
+  if (!lengths.empty())
+    elementalAddrOp.getTypeparamsMutable().assign(lengths);
+  // Create the hlfir.yield terminator inside the hlfir.elemental_body.
+  builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
+  builder.create<hlfir::YieldOp>(loc, elementAddrEntity);
+  builder.setInsertionPointAfter(elementalAddrOp);
+  // Reset the HlfirDesignatorBuilder state, in case it is used on a new
+  // designator.
+  setVectorSubscriptElementAddrOp(std::nullopt);
+  return elementalAddrOp;
+}
 
 //===--------------------------------------------------------------------===//
 // Binary Operation implementation
@@ -1612,4 +1682,13 @@ fir::MutableBoxValue Fortran::lower::convertExprToMutableBox(
   auto *mutableBox = exv.getBoxOf<fir::MutableBoxValue>();
   assert(mutableBox && "expression could not be lowered to mutable box");
   return *mutableBox;
+}
+
+hlfir::ElementalAddrOp
+Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &designatorExpr,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  return HlfirDesignatorBuilder(loc, converter, symMap, stmtCtx)
+      .convertVectorSubscriptedExprToElementalAddr(designatorExpr);
 }

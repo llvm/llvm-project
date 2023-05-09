@@ -79,3 +79,16 @@ namespace ShouldNotCrash {
     };
     void f(A a = A()) { }
 }
+
+namespace GH62224 {
+  consteval int fwd();
+  template <int i = fwd()>
+  struct C {
+    consteval C(int = fwd()) { }
+    consteval int get() { return i; }
+  };
+
+  consteval int fwd() { return 42; }
+  C<> Val; // No error since fwd is defined already.
+  static_assert(Val.get() == 42);
+}

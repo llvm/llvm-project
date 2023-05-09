@@ -302,6 +302,8 @@ public:
   void applyShiftOfShiftedLogic(MachineInstr &MI,
                                 ShiftOfShiftedLogic &MatchInfo);
 
+  bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo);
+
   /// Transform a multiply by a power-of-2 value to a left shift.
   bool matchCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);
   void applyCombineMulToShl(MachineInstr &MI, unsigned &ShiftVal);

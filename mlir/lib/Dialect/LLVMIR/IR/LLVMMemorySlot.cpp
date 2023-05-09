@@ -1,4 +1,4 @@
-//===- LLVMMem2Reg.cpp - Mem2Reg Interfaces ---------------------*- C++ -*-===//
+//===- LLVMMemorySlot.cpp - MemorySlot interfaces ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces for LLVM dialect operations.
+// This file implements MemorySlot-related interfaces for LLVM dialect
+// operations.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Interfaces/Mem2RegInterfaces.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 using namespace mlir;
 
@@ -19,13 +20,18 @@ using namespace mlir;
 // Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
 
+static Type getAllocaElementType(LLVM::AllocaOp alloca) {
+  // This will become trivial once non-opaque pointers are gone.
+  return alloca.getElemType().has_value()
+             ? *alloca.getElemType()
+             : alloca.getResult().getType().getElementType();
+}
+
 llvm::SmallVector<MemorySlot> LLVM::AllocaOp::getPromotableSlots() {
   if (!getOperation()->getBlock()->isEntryBlock())
     return {};
 
-  Type elemType =
-      getElemType() ? *getElemType() : getResult().getType().getElementType();
-  return {MemorySlot{getResult(), elemType}};
+  return {MemorySlot{getResult(), getAllocaElementType(*this)}};
 }
 
 Value LLVM::AllocaOp::getDefaultValue(const MemorySlot &slot,
@@ -128,62 +134,57 @@ static bool forwardToUsers(Operation *op,
 }
 
 bool LLVM::BitcastOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
   return forwardToUsers(*this, newBlockingUses);
 }
 
 DeletionKind LLVM::BitcastOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder) {
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
 bool LLVM::AddrSpaceCastOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
   return forwardToUsers(*this, newBlockingUses);
 }
 
 DeletionKind LLVM::AddrSpaceCastOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder) {
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
 bool LLVM::LifetimeStartOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
   return true;
 }
 
 DeletionKind LLVM::LifetimeStartOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder) {
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
 bool LLVM::LifetimeEndOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
   return true;
 }
 
 DeletionKind LLVM::LifetimeEndOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder) {
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
   return true;
 }
 
 DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder) {
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
 
@@ -194,8 +195,12 @@ static bool hasAllZeroIndices(LLVM::GEPOp gepOp) {
   });
 }
 
+//===----------------------------------------------------------------------===//
+// Interfaces for GEPOp
+//===----------------------------------------------------------------------===//
+
 bool LLVM::GEPOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
   // GEP can be removed as long as it is a no-op and its users can be removed.
   if (!hasAllZeroIndices(*this))
@@ -204,7 +209,6 @@ bool LLVM::GEPOp::canUsesBeRemoved(
 }
 
 DeletionKind LLVM::GEPOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder) {
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }

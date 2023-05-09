@@ -21,16 +21,16 @@ declare i32 @__maskrune(i32, i64) #7
 define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly %b) #9 {
 ; CHECK-LABEL: prune_match:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrh w9, [x1]
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    b.ne LBB0_47
-; CHECK-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NEXT:    sub sp, sp, #64
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    ldrh w9, [x1]
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    b.ne LBB0_42
+; CHECK-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NEXT:  Lloh0:
 ; CHECK-NEXT:    adrp x14, __DefaultRuneLocale@GOTPAGE
 ; CHECK-NEXT:    mov x9, xzr
@@ -243,7 +243,7 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    b.eq LBB0_37
 ; CHECK-NEXT:  LBB0_42:
 ; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:  LBB0_43:
+; CHECK-NEXT:  LBB0_43: ; %return
 ; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
@@ -259,12 +259,6 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:  ; %bb.46: ; %land.lhs.true52
 ; CHECK-NEXT:    cbz w8, LBB0_43
 ; CHECK-NEXT:    b LBB0_12
-; CHECK-NEXT:  LBB0_47:
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1
 ; CHECK-NEXT:    .loh AdrpLdrGot Lloh2, Lloh3
 ; CHECK-NEXT:    .loh AdrpLdrGot Lloh4, Lloh5
