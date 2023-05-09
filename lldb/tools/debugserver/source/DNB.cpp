@@ -1023,20 +1023,11 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
   return INVALID_NUB_ADDRESS;
 }
 
-JSONGenerator::ObjectSP DNBGetLoadedDynamicLibrariesInfos(
-    nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
+JSONGenerator::ObjectSP
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetLoadedDynamicLibrariesInfos(pid, image_list_address,
-                                                  image_count);
-  }
-  return JSONGenerator::ObjectSP();
-}
-
-JSONGenerator::ObjectSP DNBGetAllLoadedLibrariesInfos(nub_process_t pid) {
-  MachProcessSP procSP;
-  if (GetProcessSP(pid, procSP)) {
-    return procSP->GetAllLoadedLibrariesInfos(pid);
+    return procSP->GetAllLoadedLibrariesInfos(pid, report_load_commands);
   }
   return JSONGenerator::ObjectSP();
 }
