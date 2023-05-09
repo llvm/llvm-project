@@ -15,7 +15,7 @@ class TestCase(lldbtest.TestBase):
 
         source_file = lldb.SBFileSpec("main.swift")
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "// break one", source_file)
+            self, "break one", source_file)
 
         # At "break one", only the `a` variable should have a value.
         frame = process.GetSelectedThread().frames[0]
@@ -23,8 +23,7 @@ class TestCase(lldbtest.TestBase):
         self.assertTrue(a.IsValid())
         self.assertGreater(a.unsigned, 0)
         b = frame.FindVariable("b")
-        self.assertTrue(b.IsValid())
-        self.assertEqual(b.unsigned, 0)
+        self.assertFalse(b.IsValid())
         d = frame.FindVariable("d")
         lldbutil.check_variable(self, d, False, value='23')
 
@@ -34,7 +33,7 @@ class TestCase(lldbtest.TestBase):
         target.DeleteAllBreakpoints()
 
         # Setup, and run to, the next breakpoint.
-        target.BreakpointCreateBySourceRegex("// break two", source_file)
+        target.BreakpointCreateBySourceRegex("break two", source_file)
         self.setAsync(False)
         process.Continue()
 
