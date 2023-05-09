@@ -10,12 +10,12 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H
 
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/XcodeSDK.h"
@@ -51,7 +51,7 @@ public:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
-  
+
   static void Initialize();
 
   static void Terminate();
@@ -108,7 +108,7 @@ public:
   FileSpec LocateExecutable(const char *basename) override;
 
   Status LaunchProcess(ProcessLaunchInfo &launch_info) override;
-  
+
   Args GetExtraStartupCommands() override;
 
   static std::tuple<llvm::VersionTuple, llvm::StringRef>
