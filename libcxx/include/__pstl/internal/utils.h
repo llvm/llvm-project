@@ -15,6 +15,8 @@
 #include <__utility/forward.h>
 #include <new>
 
+#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
 namespace __pstl {
 namespace __internal {
 
@@ -136,5 +138,7 @@ __cmp_iterators_by_values(_ForwardIterator __a, _ForwardIterator __b, _Compare _
 
 } // namespace __internal
 } // namespace __pstl
+
+#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif /* _PSTL_UTILS_H */
