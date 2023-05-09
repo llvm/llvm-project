@@ -30,15 +30,19 @@ void handle_server() {
 
   switch (port->get_opcode()) {
   case __llvm_libc::rpc::Opcode::PRINT_TO_STDERR: {
-    uint64_t str_size;
-    char *str = nullptr;
-    port->recv_n([&](uint64_t size) {
-      str_size = size;
-      str = new char[size];
-      return str;
+    uint64_t str_size[__llvm_libc::rpc::MAX_LANE_SIZE] = {0};
+    char *strs[__llvm_libc::rpc::MAX_LANE_SIZE] = {nullptr};
+    port->recv_n([&](uint64_t size, uint32_t id) {
+      str_size[id] = size;
+      strs[id] = new char[size];
+      return strs[id];
     });
-    fwrite(str, str_size, 1, stderr);
-    delete[] str;
+    for (uint64_t i = 0; i < __llvm_libc::rpc::MAX_LANE_SIZE; ++i) {
+      if (strs[i]) {
+        fwrite(strs[i], str_size[i], 1, stderr);
+        delete[] strs[i];
+      }
+    }
     break;
   }
   case __llvm_libc::rpc::Opcode::EXIT: {
@@ -54,8 +58,7 @@ void handle_server() {
     break;
   }
   default:
-    port->recv([](__llvm_libc::rpc::Buffer *) { /* no-op */ });
-    return;
+    port->recv([](__llvm_libc::rpc::Buffer *buffer) {});
   }
   port->close();
 }

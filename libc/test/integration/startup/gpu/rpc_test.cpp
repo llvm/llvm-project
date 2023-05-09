@@ -13,7 +13,8 @@
 using namespace __llvm_libc;
 
 static void test_add_simple() {
-  uint32_t num_additions = 1000 + 10 * gpu::get_block_id_x();
+  uint32_t num_additions =
+      10 + 10 * gpu::get_thread_id() + 10 * gpu::get_block_id();
   uint64_t cnt = 0;
   for (uint32_t i = 0; i < num_additions; ++i) {
     rpc::Client::Port port = rpc::client.open(rpc::TEST_INCREMENT);
@@ -29,8 +30,20 @@ static void test_add_simple() {
   ASSERT_TRUE(cnt == num_additions && "Incorrect sum");
 }
 
+// Test to ensure that the RPC mechanism doesn't hang on divergence.
+static void test_noop(uint8_t data) {
+  rpc::Client::Port port = rpc::client.open(rpc::NOOP);
+  port.send([=](rpc::Buffer *buffer) { buffer->data[0] = data; });
+  port.close();
+}
+
 TEST_MAIN(int argc, char **argv, char **envp) {
   test_add_simple();
+
+  if (gpu::get_thread_id() % 2)
+    test_noop(1);
+  else
+    test_noop(2);
 
   return 0;
 }

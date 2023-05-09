@@ -232,9 +232,13 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (CUresult err = cuMemsetD32(dev_ret, 0, 1))
     handle_error(err);
 
+  uint32_t warp_size = 32;
   void *server_inbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
   void *server_outbox = allocator(sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *buffer = allocator(sizeof(__llvm_libc::rpc::Buffer));
+  void *buffer =
+      allocator(align_up(sizeof(__llvm_libc::rpc::Header) +
+                             (warp_size * sizeof(__llvm_libc::rpc::Buffer)),
+                         alignof(__llvm_libc::rpc::Packet)));
   if (!server_inbox || !server_outbox || !buffer)
     handle_error("Failed to allocate memory the RPC client / server.");
 
@@ -254,7 +258,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                          CU_LAUNCH_PARAM_END};
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(&lock, server_inbox, server_outbox, buffer);
+  server.reset(warp_size, &lock, server_inbox, server_outbox, buffer);
 
   // Call the kernel with the given arguments.
   if (CUresult err = cuLaunchKernel(
