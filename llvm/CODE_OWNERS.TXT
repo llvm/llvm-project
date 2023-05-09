@@ -139,6 +139,10 @@ N: Michael Kuperstein
 E: mkuper@google.com
 D: Loop Vectorizer
 
+N: Alexey Bataev
+E: a.bataev@outlook.com
+D: SLP Vectorizer
+
 N: Sergei Larin
 E: slarin@codeaurora.org
 D: VLIW Instruction Scheduling, Packetization

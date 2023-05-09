@@ -26,6 +26,11 @@ E: aaron@aaronballman.com
 D: Clang frontend, frontend attributes, Windows support, general bug fixing
 I: AaronBallman
 
+N: Alexey Bataev
+E: a.bataev@outlook.com
+D: Clang frontend, OpenMP in clang, SLP vectorizer, Loop vectorizer, InstCombine
+I: ABataev
+
 N: Nate Begeman
 E: natebegeman@mac.com
 D: PowerPC backend developer
