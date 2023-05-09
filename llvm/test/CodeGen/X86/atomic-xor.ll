@@ -85,16 +85,8 @@ define i64 @xor64_signbit_used(ptr %p) nounwind {
 ;
 ; X64-LABEL: xor64_signbit_used:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
-; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  .LBB2_1: # %atomicrmw.start
-; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movq %rax, %rdx
-; X64-NEXT:    xorq %rcx, %rdx
-; X64-NEXT:    lock cmpxchgq %rdx, (%rdi)
-; X64-NEXT:    jne .LBB2_1
-; X64-NEXT:  # %bb.2: # %atomicrmw.end
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    lock xaddq %rax, (%rdi)
 ; X64-NEXT:    retq
   %r = atomicrmw xor ptr %p, i64 9223372036854775808 monotonic
   ret i64 %r
@@ -104,29 +96,14 @@ define i32 @xor32_signbit_used(ptr %p) nounwind {
 ; X86-LABEL: xor32_signbit_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %eax
-; X86-NEXT:    .p2align 4, 0x90
-; X86-NEXT:  .LBB3_1: # %atomicrmw.start
-; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    leal -2147483648(%eax), %edx
-; X86-NEXT:    lock cmpxchgl %edx, (%ecx)
-; X86-NEXT:    jne .LBB3_1
-; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    lock xaddl %eax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor32_signbit_used:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  .LBB3_1: # %atomicrmw.start
-; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    leal -2147483648(%rax), %ecx
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
-; X64-NEXT:    lock cmpxchgl %ecx, (%rdi)
-; X64-NEXT:    # kill: def $eax killed $eax def $rax
-; X64-NEXT:    jne .LBB3_1
-; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    lock xaddl %eax, (%rdi)
 ; X64-NEXT:    retq
   %r = atomicrmw xor ptr %p, i32 2147483648 monotonic
   ret i32 %r
@@ -136,34 +113,14 @@ define i16 @xor16_signbit_used(ptr %p) nounwind {
 ; X86-LABEL: xor16_signbit_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %eax
-; X86-NEXT:    .p2align 4, 0x90
-; X86-NEXT:  .LBB4_1: # %atomicrmw.start
-; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    xorl $32768, %edx # imm = 0x8000
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    lock cmpxchgw %dx, (%ecx)
-; X86-NEXT:    # kill: def $ax killed $ax def $eax
-; X86-NEXT:    jne .LBB4_1
-; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    movw $-32768, %ax # imm = 0x8000
+; X86-NEXT:    lock xaddw %ax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor16_signbit_used:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  .LBB4_1: # %atomicrmw.start
-; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    xorl $32768, %ecx # imm = 0x8000
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    lock cmpxchgw %cx, (%rdi)
-; X64-NEXT:    # kill: def $ax killed $ax def $eax
-; X64-NEXT:    jne .LBB4_1
-; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    movw $-32768, %ax # imm = 0x8000
+; X64-NEXT:    lock xaddw %ax, (%rdi)
 ; X64-NEXT:    retq
   %r = atomicrmw xor ptr %p, i16 32768 monotonic
   ret i16 %r
@@ -173,30 +130,14 @@ define i8 @xor8_signbit_used(ptr %p) nounwind {
 ; X86-LABEL: xor8_signbit_used:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl (%ecx), %eax
-; X86-NEXT:    .p2align 4, 0x90
-; X86-NEXT:  .LBB5_1: # %atomicrmw.start
-; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    addb $-128, %dl
-; X86-NEXT:    lock cmpxchgb %dl, (%ecx)
-; X86-NEXT:    jne .LBB5_1
-; X86-NEXT:  # %bb.2: # %atomicrmw.end
+; X86-NEXT:    movb $-128, %al
+; X86-NEXT:    lock xaddb %al, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor8_signbit_used:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl (%rdi), %eax
-; X64-NEXT:    .p2align 4, 0x90
-; X64-NEXT:  .LBB5_1: # %atomicrmw.start
-; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    leal -128(%rax), %ecx
-; X64-NEXT:    # kill: def $al killed $al killed $rax
-; X64-NEXT:    lock cmpxchgb %cl, (%rdi)
-; X64-NEXT:    # kill: def $al killed $al def $rax
-; X64-NEXT:    jne .LBB5_1
-; X64-NEXT:  # %bb.2: # %atomicrmw.end
-; X64-NEXT:    # kill: def $al killed $al killed $rax
+; X64-NEXT:    movb $-128, %al
+; X64-NEXT:    lock xaddb %al, (%rdi)
 ; X64-NEXT:    retq
   %r = atomicrmw xor ptr %p, i8 128 monotonic
   ret i8 %r
