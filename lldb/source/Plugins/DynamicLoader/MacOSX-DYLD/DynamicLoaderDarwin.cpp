@@ -372,7 +372,6 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     // clang-format off
     if (!image->HasKey("load_address") ||
         !image->HasKey("pathname") ||
-        !image->HasKey("mod_date") ||
         !image->HasKey("mach_header") ||
         image->GetValueForKey("mach_header")->GetAsDictionary() == nullptr ||
         !image->HasKey("segments") ||
@@ -383,8 +382,6 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     // clang-format on
     image_infos[i].address =
         image->GetValueForKey("load_address")->GetAsInteger()->GetValue();
-    image_infos[i].mod_date =
-        image->GetValueForKey("mod_date")->GetAsInteger()->GetValue();
     image_infos[i].file_spec.SetFile(
         image->GetValueForKey("pathname")->GetAsString()->GetValue(),
         FileSpec::Style::native);
@@ -811,11 +808,11 @@ void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
   if (address == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(log, "modtime={0:x+8} uuid={1} path='{2}' (UNLOADED)", mod_date,
-             uuid.GetAsString(), file_spec.GetPath());
+    LLDB_LOG(log, "uuid={1} path='{2}' (UNLOADED)", uuid.GetAsString(),
+             file_spec.GetPath());
   } else {
-    LLDB_LOG(log, "address={0:x+16} modtime={1:x+8} uuid={2} path='{3}'",
-             address, mod_date, uuid.GetAsString(), file_spec.GetPath());
+    LLDB_LOG(log, "address={0:x+16} uuid={2} path='{3}'", address,
+             uuid.GetAsString(), file_spec.GetPath());
     for (uint32_t i = 0; i < segments.size(); ++i)
       segments[i].PutToLog(log, slide);
   }
