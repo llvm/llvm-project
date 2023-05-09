@@ -78,9 +78,12 @@ static inline uint64_t ScaleAddrDelta(MCContext &Context, uint64_t AddrDelta) {
 
 MCDwarfLineStr::MCDwarfLineStr(MCContext &Ctx) {
   UseRelocs = Ctx.getAsmInfo()->doesDwarfUseRelocationsAcrossSections();
-  if (UseRelocs)
-    LineStrLabel =
-        Ctx.getObjectFileInfo()->getDwarfLineStrSection()->getBeginSymbol();
+  if (UseRelocs) {
+    MCSection *DwarfLineStrSection =
+        Ctx.getObjectFileInfo()->getDwarfLineStrSection();
+    assert(DwarfLineStrSection && "DwarfLineStrSection must not be NULL");
+    LineStrLabel = DwarfLineStrSection->getBeginSymbol();
+  }
 }
 
 //
