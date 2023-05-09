@@ -13,7 +13,7 @@ func exerciseString() {
 
 func exercise(_ string: String) {
     let substrings = allIndices(string).map { string[$0..<string.endIndex] }
-    // break here
+    print("break here")
 }
 
 func allIndices<T: Collection>(_ collection: T) -> [T.Index] {

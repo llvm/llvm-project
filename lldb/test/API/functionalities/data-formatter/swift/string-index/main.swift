@@ -18,7 +18,7 @@ func exercise(_ string: String) {
     let unicodeScalarIndices = allIndices(string.unicodeScalars)
     let utf8Indices = allIndices(string.utf8)
     let utf16Indices = allIndices(string.utf16)
-    // break here
+    print("break here")
 }
 
 func allIndices<T: Collection>(_ collection: T) -> [T.Index] {

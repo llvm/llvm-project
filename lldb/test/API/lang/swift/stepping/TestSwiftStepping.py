@@ -221,6 +221,7 @@ class TestSwiftStepping(lldbtest.TestBase):
         self.hit_correct_line(thread, "Second case with a where statement")
 
         thread.StepOver()
+        thread.StepOver()
         self.hit_correct_line(
             thread, "print in second case with where statement.")
 
