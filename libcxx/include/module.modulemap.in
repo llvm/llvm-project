@@ -1309,62 +1309,64 @@ module std [system] {
     export *
 
     module __ranges {
-      module access                 { private header "__ranges/access.h" }
-      module all                    {
+      module access                     { private header "__ranges/access.h" }
+      module all                        {
         private header "__ranges/all.h"
         export functional.__functional.compose
         export functional.__functional.perfect_forward
       }
-      module as_rvalue_view         { private header "__ranges/as_rvalue_view.h" }
-      module common_view            { private header "__ranges/common_view.h" }
-      module concepts               { private header "__ranges/concepts.h" }
-      module copyable_box           { private header "__ranges/copyable_box.h" }
-      module counted                {
+      module as_rvalue_view             { private header "__ranges/as_rvalue_view.h" }
+      module common_view                { private header "__ranges/common_view.h" }
+      module concepts                   { private header "__ranges/concepts.h" }
+      module container_compatible_range { private header "__ranges/container_compatible_range.h" }
+      module copyable_box               { private header "__ranges/copyable_box.h" }
+      module counted                    {
         private header "__ranges/counted.h"
         export span
       }
-      module dangling               { private header "__ranges/dangling.h" }
-      module data                   { private header "__ranges/data.h" }
-      module drop_view              { private header "__ranges/drop_view.h" }
-      module drop_while_view        { private header "__ranges/drop_while_view.h" }
-      module elements_view          { private header "__ranges/elements_view.h" }
-      module empty                  { private header "__ranges/empty.h" }
-      module empty_view             { private header "__ranges/empty_view.h" }
-      module enable_borrowed_range  { private header "__ranges/enable_borrowed_range.h" }
-      module enable_view            { private header "__ranges/enable_view.h" }
-      module filter_view            { private header "__ranges/filter_view.h" }
-      module iota_view              { private header "__ranges/iota_view.h" }
-      module istream_view           {
+      module dangling                   { private header "__ranges/dangling.h" }
+      module data                       { private header "__ranges/data.h" }
+      module drop_view                  { private header "__ranges/drop_view.h" }
+      module drop_while_view            { private header "__ranges/drop_while_view.h" }
+      module elements_view              { private header "__ranges/elements_view.h" }
+      module empty                      { private header "__ranges/empty.h" }
+      module empty_view                 { private header "__ranges/empty_view.h" }
+      module enable_borrowed_range      { private header "__ranges/enable_borrowed_range.h" }
+      module enable_view                { private header "__ranges/enable_view.h" }
+      module filter_view                { private header "__ranges/filter_view.h" }
+      module from_range                 { private header "__ranges/from_range.h" }
+      module iota_view                  { private header "__ranges/iota_view.h" }
+      module istream_view               {
         @requires_LIBCXX_ENABLE_LOCALIZATION@
         private header "__ranges/istream_view.h"
       }
-      module join_view              { private header "__ranges/join_view.h" }
-      module lazy_split_view        { private header "__ranges/lazy_split_view.h" }
-      module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
-      module owning_view            { private header "__ranges/owning_view.h" }
-      module range_adaptor          { private header "__ranges/range_adaptor.h" }
-      module rbegin                 { private header "__ranges/rbegin.h" }
-      module ref_view               { private header "__ranges/ref_view.h" }
-      module rend                   { private header "__ranges/rend.h" }
-      module reverse_view           { private header "__ranges/reverse_view.h" }
-      module single_view            { private header "__ranges/single_view.h" }
-      module size                   { private header "__ranges/size.h" }
-      module split_view             { private header "__ranges/split_view.h" }
-      module subrange               {
+      module join_view                  { private header "__ranges/join_view.h" }
+      module lazy_split_view            { private header "__ranges/lazy_split_view.h" }
+      module non_propagating_cache      { private header "__ranges/non_propagating_cache.h" }
+      module owning_view                { private header "__ranges/owning_view.h" }
+      module range_adaptor              { private header "__ranges/range_adaptor.h" }
+      module rbegin                     { private header "__ranges/rbegin.h" }
+      module ref_view                   { private header "__ranges/ref_view.h" }
+      module rend                       { private header "__ranges/rend.h" }
+      module reverse_view               { private header "__ranges/reverse_view.h" }
+      module single_view                { private header "__ranges/single_view.h" }
+      module size                       { private header "__ranges/size.h" }
+      module split_view                 { private header "__ranges/split_view.h" }
+      module subrange                   {
         private header "__ranges/subrange.h"
         export subrange_fwd
       }
-      module subrange_fwd           { private header "__fwd/subrange.h" }
-      module take_view              { private header "__ranges/take_view.h" }
-      module take_while_view        { private header "__ranges/take_while_view.h" }
-      module transform_view         {
+      module subrange_fwd               { private header "__fwd/subrange.h" }
+      module take_view                  { private header "__ranges/take_view.h" }
+      module take_while_view            { private header "__ranges/take_while_view.h" }
+      module transform_view             {
         private header "__ranges/transform_view.h"
         export functional.__functional.bind_back
         export functional.__functional.perfect_forward
       }
-      module view_interface         { private header "__ranges/view_interface.h" }
-      module views                  { private header "__ranges/views.h" }
-      module zip_view               { private header "__ranges/zip_view.h" }
+      module view_interface             { private header "__ranges/view_interface.h" }
+      module views                      { private header "__ranges/views.h" }
+      module zip_view                   { private header "__ranges/zip_view.h" }
     }
   }
   module ratio {
