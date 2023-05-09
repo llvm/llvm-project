@@ -945,39 +945,61 @@ func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // -----
 
 
-func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testenterdataop(%a: !llvm.ptr<f32>, %b: !llvm.ptr<f32>, %c: !llvm.ptr<f32>) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
 
-  acc.enter_data copyin(%a : memref<10xf32>)
-  acc.enter_data create(%a : memref<10xf32>) create_zero(%b, %c : memref<10xf32>, memref<10x10xf32>)
-  acc.enter_data attach(%a : memref<10xf32>)
-  acc.enter_data copyin(%a : memref<10xf32>) attributes {async}
-  acc.enter_data create(%a : memref<10xf32>) attributes {wait}
-  acc.enter_data async(%i64Value : i64) copyin(%a : memref<10xf32>)
-  acc.enter_data copyin(%a : memref<10xf32>) async(%i64Value : i64)
-  acc.enter_data if(%ifCond) copyin(%a : memref<10xf32>)
-  acc.enter_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) copyin(%a : memref<10xf32>)
+  %0 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data dataOperands(%0 : !llvm.ptr<f32>)
+  %1 = acc.create varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  %2 = acc.create varPtr(%b : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = 8 : i64}
+  %3 = acc.create varPtr(%c : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = 8 : i64}
+  acc.enter_data dataOperands(%1, %2, %3 : !llvm.ptr<f32>, !llvm.ptr<f32>, !llvm.ptr<f32>)
+  %4 = acc.attach varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data dataOperands(%4 : !llvm.ptr<f32>)
+  %5 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data dataOperands(%5 : !llvm.ptr<f32>) attributes {async}
+  %6 = acc.create varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data dataOperands(%6 : !llvm.ptr<f32>) attributes {wait}
+  %7 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data async(%i64Value : i64) dataOperands(%7 : !llvm.ptr<f32>)
+  %8 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data dataOperands(%8 : !llvm.ptr<f32>) async(%i64Value : i64)
+  %9 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data if(%ifCond) dataOperands(%9 : !llvm.ptr<f32>)
+  %10 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%10 : !llvm.ptr<f32>)
 
   return
 }
 
-// CHECK: func @testenterdataop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
+// CHECK: func @testenterdataop(%[[ARGA:.*]]: !llvm.ptr<f32>, %[[ARGB:.*]]: !llvm.ptr<f32>, %[[ARGC:.*]]: !llvm.ptr<f32>) {
 // CHECK: [[IFCOND1:%.*]] = arith.constant true
 // CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
 // CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
-// CHECK: acc.enter_data copyin([[ARGA]] : memref<10xf32>)
-// CHECK: acc.enter_data create([[ARGA]] : memref<10xf32>) create_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>)
-// CHECK: acc.enter_data attach([[ARGA]] : memref<10xf32>)
-// CHECK: acc.enter_data copyin([[ARGA]] : memref<10xf32>) attributes {async}
-// CHECK: acc.enter_data create([[ARGA]] : memref<10xf32>) attributes {wait}
-// CHECK: acc.enter_data async([[I64VALUE]] : i64) copyin([[ARGA]] : memref<10xf32>)
-// CHECK: acc.enter_data async([[I64VALUE]] : i64) copyin([[ARGA]] : memref<10xf32>)
-// CHECK: acc.enter_data if([[IFCOND]]) copyin([[ARGA]] : memref<10xf32>)
-// CHECK: acc.enter_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) copyin([[ARGA]] : memref<10xf32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
+// CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = 8 : i64}
+// CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = 8 : i64}
+// CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !llvm.ptr<f32>, !llvm.ptr<f32>, !llvm.ptr<f32>)
+// CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data dataOperands(%[[ATTACH]] : !llvm.ptr<f32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr<f32>) attributes {async}
+// CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data dataOperands(%[[CREATE]] : !llvm.ptr<f32>) attributes {wait}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data if([[IFCOND]]) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.enter_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
 
 // -----
 
