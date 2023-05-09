@@ -22,8 +22,8 @@ public:
   // For hand crafting an abbreviation declaration
   DWARFAbbreviationDeclaration(dw_tag_t tag, uint8_t has_children);
 
-  dw_uleb128_t Code() const { return m_code; }
-  void SetCode(dw_uleb128_t code) { m_code = code; }
+  uint32_t Code() const { return m_code; }
+  void SetCode(uint32_t code) { m_code = code; }
   dw_tag_t Tag() const { return m_tag; }
   bool HasChildren() const { return m_has_children; }
   size_t NumAttributes() const { return m_attributes.size(); }
@@ -55,7 +55,7 @@ public:
   bool IsValid();
 
 protected:
-  dw_uleb128_t m_code = InvalidCode;
+  uint32_t m_code = InvalidCode;
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
   uint8_t m_has_children = 0;
   DWARFAttribute::collection m_attributes;
