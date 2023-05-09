@@ -4456,7 +4456,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
       Id->second->setOutOfDate(true);
   }
   // Mark selectors as out of date.
-  for (auto Sel : SelectorGeneration)
+  for (const auto &Sel : SelectorGeneration)
     SelectorOutOfDate[Sel.first] = true;
 
   // Resolve any unresolved module exports.
@@ -7741,7 +7741,7 @@ void ASTReader::FindExternalLexicalDecls(
   };
 
   if (isa<TranslationUnitDecl>(DC)) {
-    for (auto Lexical : TULexicalDecls)
+    for (const auto &Lexical : TULexicalDecls)
       Visit(Lexical.first, Lexical.second);
   } else {
     auto I = LexicalDecls.find(DC);
