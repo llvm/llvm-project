@@ -800,6 +800,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     //       collectLoopScalars() and teach getVectorValue() to broadcast
     //       the lane-zero scalar value.
     auto *Clone = State.Builder.Insert(GEP->clone());
+    setFlags(Clone);
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *EntryPart = State.Builder.CreateVectorSplat(State.VF, Clone);
       State.set(this, EntryPart, Part);
@@ -831,18 +832,10 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
           Indices.push_back(State.get(Operand, Part));
       }
 
-      // If the GEP instruction is vectorized and was in a basic block that
-      // needed predication, we can't propagate the poison-generating 'inbounds'
-      // flag. The control flow has been linearized and the GEP is no longer
-      // guarded by the predicate, which could make the 'inbounds' properties to
-      // no longer hold.
-      bool IsInBounds =
-          GEP->isInBounds() && State.MayGeneratePoisonRecipes.count(this) == 0;
-
       // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
       // but it should be a vector, otherwise.
       auto *NewGEP = State.Builder.CreateGEP(GEP->getSourceElementType(), Ptr,
-                                             Indices, "", IsInBounds);
+                                             Indices, "", isInBounds());
       assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
              "NewGEP is not a pointer vector");
       State.set(this, NewGEP, Part);

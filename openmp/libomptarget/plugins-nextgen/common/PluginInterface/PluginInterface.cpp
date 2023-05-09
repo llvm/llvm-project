@@ -1146,8 +1146,16 @@ uint32_t GenericDeviceTy::queryCoarseGrainMemory(const void *ptr,
 }
 
 Error GenericDeviceTy::printInfo() {
-  // TODO: Print generic information here
-  return printInfoImpl();
+  InfoQueueTy InfoQueue;
+
+  // Get the vendor-specific info entries describing the device properties.
+  if (auto Err = obtainInfoImpl(InfoQueue))
+    return Err;
+
+  // Print all info entries.
+  InfoQueue.print();
+
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::createEvent(void **EventPtrStorage) {

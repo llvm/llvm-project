@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 namespace mlir {
@@ -115,6 +116,19 @@ private:
   DenseMap<PromotableMemOpInterface, Value> reachingDefs;
   DominanceInfo &dominance;
   MemorySlotPromotionInfo info;
+};
+
+/// Pattern applying mem2reg to the regions of the operations on which it
+/// matches.
+class Mem2RegPattern : public RewritePattern {
+public:
+  using RewritePattern::RewritePattern;
+
+  Mem2RegPattern(MLIRContext *ctx, PatternBenefit benefit = 1)
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
 };
 
 /// Attempts to promote the memory slots of the provided allocators. Succeeds if
