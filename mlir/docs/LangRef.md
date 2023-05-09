@@ -287,20 +287,20 @@ GPUs), and are required to align with the LLVM definition of these intrinsics.
 Syntax:
 
 ```
-operation            ::= op-result-list? (generic-operation | custom-operation)
-                         trailing-location?
-generic-operation    ::= string-literal `(` value-use-list? `)`  successor-list?
-                         dictionary-properties? region-list? dictionary-attribute?
-                         `:` function-type
-custom-operation     ::= bare-id custom-operation-format
-op-result-list       ::= op-result (`,` op-result)* `=`
-op-result            ::= value-id (`:` integer-literal)
-successor-list       ::= `[` successor (`,` successor)* `]`
-successor            ::= caret-id (`:` block-arg-list)?
-dictionary-propertes ::= `<` dictionary-attribute `>`
-region-list          ::= `(` region (`,` region)* `)`
-dictionary-attribute ::= `{` (attribute-entry (`,` attribute-entry)*)? `}`
-trailing-location    ::= (`loc` `(` location `)`)?
+operation             ::= op-result-list? (generic-operation | custom-operation)
+                          trailing-location?
+generic-operation     ::= string-literal `(` value-use-list? `)`  successor-list?
+                          dictionary-properties? region-list? dictionary-attribute?
+                          `:` function-type
+custom-operation      ::= bare-id custom-operation-format
+op-result-list        ::= op-result (`,` op-result)* `=`
+op-result             ::= value-id (`:` integer-literal)
+successor-list        ::= `[` successor (`,` successor)* `]`
+successor             ::= caret-id (`:` block-arg-list)?
+dictionary-properties ::= `<` dictionary-attribute `>`
+region-list           ::= `(` region (`,` region)* `)`
+dictionary-attribute  ::= `{` (attribute-entry (`,` attribute-entry)*)? `}`
+trailing-location     ::= (`loc` `(` location `)`)?
 ```
 
 MLIR introduces a uniform concept called *operations* to enable describing many
