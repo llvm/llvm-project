@@ -744,6 +744,9 @@ hlfir::genElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   return elementalOp;
 }
 
+// TODO: we do not actually need to clone the YieldElementOp,
+// because returning its getElementValue() operand should be enough
+// for all callers of this function.
 hlfir::YieldElementOp
 hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
                          hlfir::ElementalOp elemental,
