@@ -91,6 +91,9 @@ C++20 Feature Support
   building of standard modules. This diagnostic may be strengthened into an
   error again in the future once there is a less fragile way to mark a module
   as being part of the implementation rather than a user module.
+- Clang now implements `[temp.deduct]p9`. Substitution failures inside lambdas from
+  unevaluated contexts will be surfaced as errors. They were previously handled as
+  SFINAE.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -261,6 +264,11 @@ Improvements to Clang's diagnostics
   (`#62247: <https://github.com/llvm/llvm-project/issues/62247>`_).
 - Clang now diagnoses shadowing of lambda's template parameter by a capture.
   (`#61105: <https://github.com/llvm/llvm-project/issues/61105>`_).
+- Address a false positive in ``-Wpacked`` when applied to a non-pod type using
+  Clang ABI >= 15.
+  (`#62353: <https://github.com/llvm/llvm-project/issues/62353>`_,
+  fallout from the non-POD packing ABI fix in LLVM 15).
+
 
 Bug Fixes in This Version
 -------------------------
@@ -371,6 +379,10 @@ Bug Fixes in This Version
 - Fix crash when attempting to pass a non-pointer type as first argument of
   ``__builtin_assume_aligned``.
   (`#62305 <https://github.com/llvm/llvm-project/issues/62305>`_)
+- A default argument for a non-type template parameter is evaluated and checked
+  at the point where it is required. This fixes:
+  (`#62224 <https://github.com/llvm/llvm-project/issues/62224>`_) and
+  (`#62596 <https://github.com/llvm/llvm-project/issues/62596>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -4034,6 +4034,19 @@ public:
     return true;
   }
 
+  /// GlobalISel - return true if it is profitable to move this shift by a
+  /// constant amount through its operand, adjusting any immediate operands as
+  /// necessary to preserve semantics. This transformation may not be desirable
+  /// if it disrupts a particularly auspicious target-specific tree (e.g.
+  /// bitfield extraction in AArch64). By default, it returns true.
+  ///
+  /// @param MI the shift instruction
+  /// @param IsAfterLegal true if running after legalization.
+  virtual bool isDesirableToCommuteWithShift(const MachineInstr &MI,
+                                             bool IsAfterLegal) const {
+    return true;
+  }
+
   // Return AndOrSETCCFoldKind::{AddAnd, ABS} if its desirable to try and
   // optimize LogicOp(SETCC0, SETCC1). An example (what is implemented as of
   // writing this) is:

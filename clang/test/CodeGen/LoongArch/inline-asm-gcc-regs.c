@@ -100,3 +100,11 @@ void test_fs2() {
     register float a asm ("$fs2");
     asm ("" :: "f" (a));
 }
+
+// CHECK-LABEL: @test_fcc
+// CHECK: call void asm sideeffect "", "~{$fcc0}"()
+// CHECK: call void asm sideeffect "", "~{$fcc7}"()
+void test_fcc() {
+    asm ("" ::: "$fcc0");
+    asm ("" ::: "$fcc7");
+}

@@ -396,7 +396,7 @@ def RCR64ri : RIi8<0xC1, MRM3r, (outs GR64:$dst), (ins GR64:$src1, u8imm:$cnt),
 
 } // Constraints = "$src = $dst"
 
-let mayStore = 1 in {
+let mayLoad = 1, mayStore = 1 in {
 let Uses = [EFLAGS], SchedRW = [WriteRotateLd, WriteRMW] in {
 def RCL8m1 : I<0xD0, MRM2m, (outs), (ins i8mem:$dst),
                "rcl{b}\t$dst", []>;
@@ -456,7 +456,7 @@ def RCR64mCL : RI<0xD3, MRM3m, (outs), (ins i64mem:$dst),
                   "rcr{q}\t{%cl, $dst|$dst, cl}", []>,
                   Requires<[In64BitMode]>;
 } // Uses = [CL, EFLAGS], SchedRW
-} // mayStore
+} // mayLoad, mayStore
 } // hasSideEffects = 0
 
 let Constraints = "$src1 = $dst" in {

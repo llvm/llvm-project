@@ -170,6 +170,14 @@ public:
       __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
       __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
 
+  template <class _Iterator, class _Sentinel>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  void __construct_at_end_with_sentinel(_Iterator __first, _Sentinel __last);
+
+  template <class _Iterator>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  void __construct_at_end_with_size(_Iterator __first, size_type __n);
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_begin(pointer __new_begin) {
     __destruct_at_begin(__new_begin, is_trivially_destructible<value_type>());
   }
@@ -279,6 +287,13 @@ template <class _InputIter>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__is_exactly_cpp17_input_iterator<_InputIter>::value>
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIter __last)
 {
+  __construct_at_end_with_sentinel(__first, __last);
+}
+
+template <class _Tp, class _Allocator>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+void __split_buffer<_Tp, _Allocator>::__construct_at_end_with_sentinel(_Iterator __first, _Sentinel __last) {
     __alloc_rr& __a = this->__alloc();
     for (; __first != __last; ++__first)
     {
@@ -296,13 +311,19 @@ __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIt
         ++this->__end_;
     }
 }
-
 template <class _Tp, class _Allocator>
 template <class _ForwardIterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__is_cpp17_forward_iterator<_ForwardIterator>::value>
 __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
-    _ConstructTransaction __tx(&this->__end_, _VSTD::distance(__first, __last));
+  __construct_at_end_with_size(__first, std::distance(__first, __last));
+}
+
+template <class _Tp, class _Allocator>
+template <class _ForwardIterator>
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+void __split_buffer<_Tp, _Allocator>::__construct_at_end_with_size(_ForwardIterator __first, size_type __n) {
+    _ConstructTransaction __tx(&this->__end_, __n);
     for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, (void) ++__first) {
         __alloc_traits::construct(this->__alloc(),
             _VSTD::__to_address(__tx.__pos_), *__first);

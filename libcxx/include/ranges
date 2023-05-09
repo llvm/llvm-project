@@ -339,6 +339,9 @@ namespace std {
   struct tuple_element<1, const ranges::subrange<I, S, K>> {
     using type = S;
   };
+
+  struct from_range_t { explicit from_range_t() = default; };  // Since C++23
+  inline constexpr from_range_t from_range{};                  // Since C++23
 }
 */
 
@@ -360,6 +363,7 @@ namespace std {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/filter_view.h>
+#include <__ranges/from_range.h>
 #include <__ranges/iota_view.h>
 #include <__ranges/join_view.h>
 #include <__ranges/lazy_split_view.h>

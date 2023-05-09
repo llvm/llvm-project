@@ -109,7 +109,7 @@ getValueAndSignProperties(const UnaryOperator *UO,
   // The DeclRefExpr refers to this variable in the operand.
   const auto *OperandVar = M.Nodes.getNodeAs<clang::VarDecl>(kVar);
   assert(OperandVar != nullptr);
-  const auto *OperandValue = State.Env.getValue(*OperandVar, SkipPast::None);
+  const auto *OperandValue = State.Env.getValue(*OperandVar);
   if (!OperandValue)
     return {nullptr, {}, {}};
 
