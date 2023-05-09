@@ -336,10 +336,13 @@ uint32_t BroadcasterManager::RegisterListenerForEvents(
   collection::iterator iter = m_event_map.begin(), end_iter = m_event_map.end();
   uint32_t available_bits = event_spec.GetEventBits();
 
+  auto class_matches = [&event_spec](const event_listener_key &input) -> bool {
+    return input.first.GetBroadcasterClass() ==
+           event_spec.GetBroadcasterClass();
+  };
+
   while (iter != end_iter &&
-         (iter = find_if(iter, end_iter,
-                         BroadcasterClassMatches(
-                             event_spec.GetBroadcasterClass()))) != end_iter) {
+         (iter = find_if(iter, end_iter, class_matches)) != end_iter) {
     available_bits &= ~((*iter).first.GetEventBits());
     iter++;
   }
@@ -362,7 +365,13 @@ bool BroadcasterManager::UnregisterListenerForEvents(
   if (m_listeners.erase(listener_sp) == 0)
     return false;
 
-  ListenerMatchesAndSharedBits predicate(event_spec, listener_sp);
+  auto listener_matches_and_shared_bits =
+      [&listener_sp, &event_spec](const event_listener_key &input) -> bool {
+    return input.first.GetBroadcasterClass() ==
+               event_spec.GetBroadcasterClass() &&
+           (input.first.GetEventBits() & event_spec.GetEventBits()) != 0 &&
+           input.second == listener_sp;
+  };
   std::vector<BroadcastEventSpec> to_be_readded;
   uint32_t event_bits_to_remove = event_spec.GetEventBits();
 
@@ -370,7 +379,8 @@ bool BroadcasterManager::UnregisterListenerForEvents(
   // matches that weren't exact to re-add:
   while (true) {
     collection::iterator iter, end_iter = m_event_map.end();
-    iter = find_if(m_event_map.begin(), end_iter, predicate);
+    iter = find_if(m_event_map.begin(), end_iter,
+                   listener_matches_and_shared_bits);
     if (iter == end_iter) {
       break;
     }
@@ -397,9 +407,13 @@ ListenerSP BroadcasterManager::GetListenerForEventSpec(
     const BroadcastEventSpec &event_spec) const {
   std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
 
+  auto event_spec_matches =
+      [&event_spec](const event_listener_key &input) -> bool {
+    return input.first.IsContainedIn(event_spec);
+  };
+
   collection::const_iterator iter, end_iter = m_event_map.end();
-  iter = find_if(m_event_map.begin(), end_iter,
-                 BroadcastEventSpecMatches(event_spec));
+  iter = find_if(m_event_map.begin(), end_iter, event_spec_matches);
   if (iter != end_iter)
     return (*iter).second;
 
@@ -408,17 +422,25 @@ ListenerSP BroadcasterManager::GetListenerForEventSpec(
 
 void BroadcasterManager::RemoveListener(Listener *listener) {
   std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
-  ListenerMatchesPointer predicate(listener);
+  auto listeners_predicate =
+      [&listener](const lldb::ListenerSP &input) -> bool {
+    return input.get() == listener;
+  };
+
   listener_collection::iterator iter = m_listeners.begin(),
                                 end_iter = m_listeners.end();
 
-  iter = std::find_if(iter, end_iter, predicate);
+  iter = std::find_if(iter, end_iter, listeners_predicate);
   if (iter != end_iter)
     m_listeners.erase(iter);
 
   while (true) {
+    auto events_predicate =
+        [&listener](const event_listener_key &input) -> bool {
+      return input.second.get() == listener;
+    };
     collection::iterator iter, end_iter = m_event_map.end();
-    iter = find_if(m_event_map.begin(), end_iter, predicate);
+    iter = find_if(m_event_map.begin(), end_iter, events_predicate);
     if (iter == end_iter)
       break;
 
@@ -428,14 +450,18 @@ void BroadcasterManager::RemoveListener(Listener *listener) {
 
 void BroadcasterManager::RemoveListener(const lldb::ListenerSP &listener_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_manager_mutex);
-  ListenerMatches predicate(listener_sp);
+
+  auto listener_matches =
+      [&listener_sp](const event_listener_key &input) -> bool {
+    return input.second == listener_sp;
+  };
 
   if (m_listeners.erase(listener_sp) == 0)
     return;
 
   while (true) {
     collection::iterator iter, end_iter = m_event_map.end();
-    iter = find_if(m_event_map.begin(), end_iter, predicate);
+    iter = find_if(m_event_map.begin(), end_iter, listener_matches);
     if (iter == end_iter)
       break;
 
@@ -449,10 +475,13 @@ void BroadcasterManager::SignUpListenersForBroadcaster(
 
   collection::iterator iter = m_event_map.begin(), end_iter = m_event_map.end();
 
+  auto class_matches = [&broadcaster](const event_listener_key &input) -> bool {
+    return input.first.GetBroadcasterClass() ==
+           broadcaster.GetBroadcasterClass();
+  };
+
   while (iter != end_iter &&
-         (iter = find_if(iter, end_iter,
-                         BroadcasterClassMatches(
-                             broadcaster.GetBroadcasterClass()))) != end_iter) {
+         (iter = find_if(iter, end_iter, class_matches)) != end_iter) {
     (*iter).second->StartListeningForEvents(&broadcaster,
                                             (*iter).first.GetEventBits());
     iter++;
