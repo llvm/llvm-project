@@ -356,7 +356,7 @@ SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
 
 /// Returns the index of the only non-unit dimension among `indices` of `shape`,
 /// if such a dimension exists and `indices` has more than one element.
-/// Otherwise, return none.
+/// Otherwise, return std::nullopt.
 static std::optional<int64_t> getUniqueNonUnitDim(ArrayRef<int64_t> indices,
                                                   ArrayRef<int64_t> shape) {
   // Return false if more than one of the dimensions in this group are not 1.

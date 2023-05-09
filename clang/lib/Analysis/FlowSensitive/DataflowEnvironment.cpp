@@ -680,9 +680,7 @@ Value *Environment::getValue(const StorageLocation &Loc) const {
   return It == LocToVal.end() ? nullptr : It->second;
 }
 
-Value *Environment::getValue(const ValueDecl &D, SkipPast SP) const {
-  assert(SP != SkipPast::ReferenceThenPointer);
-
+Value *Environment::getValue(const ValueDecl &D) const {
   auto *Loc = getStorageLocation(D);
   if (Loc == nullptr)
     return nullptr;

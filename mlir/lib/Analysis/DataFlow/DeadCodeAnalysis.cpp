@@ -309,8 +309,8 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 }
 
 /// Get the constant values of the operands of an operation. If any of the
-/// constant value lattices are uninitialized, return none to indicate the
-/// analysis should bail out.
+/// constant value lattices are uninitialized, return std::nullopt to indicate
+/// the analysis should bail out.
 static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
     Operation *op,
     function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {

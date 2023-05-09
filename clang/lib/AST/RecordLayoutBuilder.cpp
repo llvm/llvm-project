@@ -2198,11 +2198,19 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
           << (InBits ? 1 : 0); // (byte|bit)
     }
 
+    const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+
     // Warn if we packed it unnecessarily, when the unpacked alignment is not
     // greater than the one after packing, the size in bits doesn't change and
     // the offset of each field is identical.
+    // Unless the type is non-POD (for Clang ABI > 15), where the packed
+    // attribute on such a type does allow the type to be packed into other
+    // structures that use the packed attribute.
     if (Packed && UnpackedAlignment <= Alignment &&
-        UnpackedSizeInBits == getSizeInBits() && !HasPackedField)
+        UnpackedSizeInBits == getSizeInBits() && !HasPackedField &&
+        (!CXXRD || CXXRD->isPOD() ||
+         Context.getLangOpts().getClangABICompat() <=
+             LangOptions::ClangABI::Ver15))
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
           << Context.getTypeDeclType(RD);
   }

@@ -1009,7 +1009,7 @@ public:
   static OpNameDecl *create(Context &ctx, const Name &name);
   static OpNameDecl *create(Context &ctx, SMRange loc);
 
-  /// Return the name of this operation, or none if the name is unknown.
+  /// Return the name of this operation, or std::nullopt if the name is unknown.
   std::optional<StringRef> getName() const {
     const Name *name = Decl::getName();
     return name ? std::optional<StringRef>(name->getName()) : std::nullopt;

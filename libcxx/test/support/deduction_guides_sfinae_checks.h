@@ -18,6 +18,25 @@
 #include <utility>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 23
+#include "almost_satisfies_types.h"
+#endif
+
+#if TEST_STD_VER >= 23
+
+template <class T>
+struct RangeT {
+  T* begin();
+  T* end();
+};
+static_assert(std::ranges::input_range<RangeT<int>>);
+
+template <class T>
+using BadRangeT = InputRangeNotDerivedFromGeneric<T>;
+static_assert(std::ranges::range<BadRangeT<int>>);
+static_assert(!std::ranges::input_range<BadRangeT<int>>);
+
+#endif
 
 // `SFINAEs_away` template variable checks whether the template arguments for
 // a given template class `Instantiated` can be deduced from the given
@@ -34,17 +53,20 @@ template<template<typename ...> class Instantiated, class ...CtrArgs>
 constexpr bool SFINAEs_away =
     decltype(SFINAEs_away_impl<Instantiated, CtrArgs...>(0))::value;
 
+struct Empty {};
+
 // For sequence containers the deduction guides should be SFINAE'd away when
 // given:
 // - "bad" input iterators (that is, a type not qualifying as an input
 //   iterator);
-// - a bad allocator.
-template<template<typename ...> class Container, typename InstantiatedContainer>
+// - a bad allocator;
+// - a range not satisfying the `input_range` concept.
+template<template<typename ...> class Container, typename InstantiatedContainer, typename BadAlloc = Empty>
 constexpr void SequenceContainerDeductionGuidesSfinaeAway() {
-  using Alloc = std::allocator<int>;
-  using Iter = int*;
+  using T = typename InstantiatedContainer::value_type;
+  using Alloc = std::allocator<T>;
+  using Iter = T*;
 
-  struct BadAlloc {};
   // Note: the only requirement in the Standard is that integral types cannot be
   // considered input iterators; however, this doesn't work for sequence
   // containers because they have constructors of the form `(size_type count,
@@ -70,6 +92,20 @@ constexpr void SequenceContainerDeductionGuidesSfinaeAway() {
   //
   // Cannot deduce from (alloc)
   static_assert(SFINAEs_away<Container, Alloc>);
+
+#if TEST_STD_VER >= 23
+  using BadRange = BadRangeT<T>;
+
+  // (from_range, range)
+  //
+  // Cannot deduce from (BAD_range)
+  static_assert(SFINAEs_away<Container, std::from_range_t, BadRange>);
+
+  // (from_range, range, alloc)
+  //
+  // Cannot deduce from (range, BAD_alloc)
+  static_assert(SFINAEs_away<Container, std::from_range_t, RangeT<int>, BadAlloc>);
+#endif
 }
 
 // For associative containers the deduction guides should be SFINAE'd away when

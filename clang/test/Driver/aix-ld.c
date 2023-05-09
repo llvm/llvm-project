@@ -1096,3 +1096,27 @@
 // CHECK-RELOCATABLE-NOT:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
 // CHECK-RELOCATABLE-NOT:     "-l{{.*}}"
 // CHECK-RELOCATABLE-NOT:     "-L{{.*}}"
+
+// Check powerpc-ibm-aix7.1.0.0. -K is a passthrough linker option.
+// RUN: %clang %s 2>&1 -### \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:        -K \
+// RUN:   | FileCheck --check-prefixes=CHECK-K %s
+// CHECK-K:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-K:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-K:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-K:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-K:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-K:     "-K"
+
+// Check powerpc-ibm-aix7.1.0.0. -K unused when not linking.
+// RUN: %clang %s 2>&1 -### \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:        -K \
+// RUN:        -c \
+// RUN:   | FileCheck --check-prefixes=CHECK-K-UNUSED %s
+// CHECK-K-UNUSED: clang: warning: -K: 'linker' input unused [-Wunused-command-line-argument]
