@@ -1266,38 +1266,6 @@ foldShuffledIntrinsicOperands(IntrinsicInst *II,
   return new ShuffleVectorInst(NewIntrinsic, Mask);
 }
 
-/// Fold the following cases and accepts bswap and bitreverse intrinsics:
-///   bswap(logic_op(bswap(x), y)) --> logic_op(x, bswap(y))
-///   bswap(logic_op(bswap(x), bswap(y))) --> logic_op(x, y) (ignores multiuse)
-template <Intrinsic::ID IntrID>
-static Instruction *foldBitOrderCrossLogicOp(Value *V,
-                                             InstCombiner::BuilderTy &Builder) {
-  static_assert(IntrID == Intrinsic::bswap || IntrID == Intrinsic::bitreverse,
-                "This helper only supports BSWAP and BITREVERSE intrinsics");
-
-  Value *X, *Y;
-  if (match(V, m_OneUse(m_BitwiseLogic(m_Value(X), m_Value(Y))))) {
-    Value *OldReorderX, *OldReorderY;
-    BinaryOperator::BinaryOps Op = cast<BinaryOperator>(V)->getOpcode();
-
-    // If both X and Y are bswap/bitreverse, the transform reduces the number
-    // of instructions even if there's multiuse.
-    // If only one operand is bswap/bitreverse, we need to ensure the operand
-    // have only one use.
-    if (match(X, m_Intrinsic<IntrID>(m_Value(OldReorderX))) &&
-        match(Y, m_Intrinsic<IntrID>(m_Value(OldReorderY)))) {
-      return BinaryOperator::Create(Op, OldReorderX, OldReorderY);
-    } else if (match(X, m_OneUse(m_Intrinsic<IntrID>(m_Value(OldReorderX))))) {
-      Value *NewReorder = Builder.CreateUnaryIntrinsic(IntrID, Y);
-      return BinaryOperator::Create(Op, OldReorderX, NewReorder);
-    } else if (match(Y, m_OneUse(m_Intrinsic<IntrID>(m_Value(OldReorderY))))) {
-      Value *NewReorder = Builder.CreateUnaryIntrinsic(IntrID, X);
-      return BinaryOperator::Create(Op, NewReorder, OldReorderY);
-    }
-  }
-  return nullptr;
-}
-
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -1701,12 +1669,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *V = Builder.CreateLShr(X, CV);
       return new TruncInst(V, IIOperand->getType());
     }
-
-    if (Instruction *crossLogicOpFold =
-            foldBitOrderCrossLogicOp<Intrinsic::bswap>(IIOperand, Builder)) {
-      return crossLogicOpFold;
-    }
-
     break;
   }
   case Intrinsic::masked_load:
