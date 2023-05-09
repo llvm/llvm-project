@@ -235,7 +235,7 @@ void dr118(void) {
 	 * type at this point.
 	 */
     Val = sizeof(enum E)
-    #ifndef _WIN32
+    #ifndef _MSC_VER
     /* expected-error@-2 {{invalid application of 'sizeof' to an incomplete type 'enum E'}} */
     /* expected-note@-12 {{definition of 'enum E' is not complete until the closing '}'}} */
     #endif

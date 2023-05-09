@@ -992,7 +992,8 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   addOperand(operands, operandSegments, selfCond);
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>)
     addOperands(operands, operandSegments, reductionOperands);
-  operandSegments.append({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+  if constexpr (!std::is_same_v<Op, mlir::acc::ParallelOp>)
+    operandSegments.append({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
     addOperands(operands, operandSegments, privateOperands);
     addOperands(operands, operandSegments, firstprivateOperands);

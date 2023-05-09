@@ -431,6 +431,27 @@ LogicalResult gpu::AllReduceOp::verifyRegions() {
   return success();
 }
 
+static bool canMakeGroupOpUniform(Operation *op) {
+  auto launchOp = dyn_cast<gpu::LaunchOp>(op->getParentOp());
+  if (!launchOp)
+    return false;
+
+  Region &body = launchOp.getBody();
+  assert(!body.empty() && "Invalid region");
+
+  // Only convert ops in gpu::launch entry block for now.
+  return op->getBlock() == &body.front();
+}
+
+OpFoldResult gpu::AllReduceOp::fold(FoldAdaptor /*adaptor*/) {
+  if (!getUniform() && canMakeGroupOpUniform(*this)) {
+    setUniform(true);
+    return getResult();
+  }
+
+  return nullptr;
+}
+
 // TODO: Support optional custom attributes (without dialect prefix).
 static ParseResult parseAllReduceOperation(AsmParser &parser,
                                            AllReduceOperationAttr &attr) {
@@ -462,6 +483,15 @@ LogicalResult gpu::SubgroupReduceOp::verify() {
                        << "` accumulator is only compatible with Integer type";
   }
   return success();
+}
+
+OpFoldResult gpu::SubgroupReduceOp::fold(FoldAdaptor /*adaptor*/) {
+  if (!getUniform() && canMakeGroupOpUniform(*this)) {
+    setUniform(true);
+    return getResult();
+  }
+
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
