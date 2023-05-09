@@ -1644,7 +1644,19 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       Fn.arg_size() == 2) {
     StackSize += 8;
     MFI.setStackSize(StackSize);
-    emitSPUpdate(MBB, MBBI, DL, -8, /*InEpilogue=*/false);
+
+    // Update the stack pointer by pushing a register. This is the instruction
+    // emitted that would be end up being emitted by a call to `emitSPUpdate`.
+    // Hard-coding the update to a push avoids emitting a second
+    // `STACKALLOC_W_PROBING` instruction in the save block: We know that stack
+    // probing isn't needed anyways for an 8-byte update.
+    // Pushing a register leaves us in a similar situation to a regular
+    // function call where we know that the address at (rsp-8) is writeable.
+    // That way we avoid any off-by-ones with stack probing for additional
+    // stack pointer updates later on.
+    BuildMI(MBB, MBBI, DL, TII.get(X86::PUSH64r))
+        .addReg(X86::RAX, RegState::Undef)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 
   // If this is x86-64 and the Red Zone is not disabled, if we are a leaf
