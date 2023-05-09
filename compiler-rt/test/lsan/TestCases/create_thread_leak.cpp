@@ -11,7 +11,6 @@
 
 #include <pthread.h>
 #include <stdlib.h>
-#include <vector>
 
 #include <sanitizer/lsan_interface.h>
 
@@ -25,7 +24,7 @@ static void *thread_free(void *args) {
 int main(int argc, char **argv) {
   int n = atoi(argv[1]);
   for (int i = 0; i < n; ++i) {
-    std::vector<pthread_t> threads(10);
+    pthread_t threads[10];
 
     for (auto &thread : threads) {
       pthread_create(&thread, 0, thread_free, malloc(123));
