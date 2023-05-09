@@ -174,6 +174,8 @@ static void updateStringLiteralType(Expr *E, QualType Ty) {
       E = GSE->getResultExpr();
     } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
       E = CE->getChosenSubExpr();
+    } else if (PredefinedExpr *PE = dyn_cast<PredefinedExpr>(E)) {
+      E = PE->getFunctionName();
     } else {
       llvm_unreachable("unexpected expr in string literal init");
     }
@@ -8499,6 +8501,15 @@ ExprResult InitializationSequence::Perform(Sema &S,
     Expr *Init = Args[0];
     S.Diag(Init->getBeginLoc(), diag::warn_cxx98_compat_reference_list_init)
         << Init->getSourceRange();
+  }
+
+  if (S.getLangOpts().MicrosoftExt && Args.size() == 1 &&
+      isa<PredefinedExpr>(Args[0]) && Entity.getType()->isArrayType()) {
+    // Produce a Microsoft compatibility warning when initializing from a
+    // predefined expression since MSVC treats predefined expressions as string
+    // literals.
+    Expr *Init = Args[0];
+    S.Diag(Init->getBeginLoc(), diag::ext_init_from_predefined) << Init;
   }
 
   // OpenCL v2.0 s6.13.11.1. atomic variables can be initialized in global scope
