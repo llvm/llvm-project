@@ -162,16 +162,30 @@ processDataOperands(llvm::IRBuilderBase &builder,
   unsigned index = 0;
 
   // Create operands are handled as `alloc` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCreateOperands(), op.getNumDataOperands(),
-                             kCreateFlag, flags, names, index, mapperAllocas)))
+  // Copyin operands are handled as `to` call.
+  llvm::SmallVector<mlir::Value> create, copyin;
+  for (mlir::Value dataOp : op.getDataClauseOperands()) {
+    if (auto createOp =
+            mlir::dyn_cast_or_null<acc::CreateOp>(dataOp.getDefiningOp())) {
+      create.push_back(createOp.getVarPtr());
+    } else if (auto copyinOp = mlir::dyn_cast_or_null<acc::CopyinOp>(
+                   dataOp.getDefiningOp())) {
+      copyin.push_back(copyinOp.getVarPtr());
+    }
+  }
+
+  auto nbTotalOperands = create.size() + copyin.size();
+
+  // Create operands are handled as `alloc` call.
+  if (failed(processOperands(builder, moduleTranslation, op, create,
+                             nbTotalOperands, kCreateFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   // Copyin operands are handled as `to` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyinOperands(), op.getNumDataOperands(),
-                             kDeviceCopyinFlag, flags, names, index,
-                             mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, copyin,
+                             nbTotalOperands, kDeviceCopyinFlag, flags, names,
+                             index, mapperAllocas)))
     return failure();
 
   return success();
@@ -188,17 +202,31 @@ processDataOperands(llvm::IRBuilderBase &builder,
 
   unsigned index = 0;
 
+  llvm::SmallVector<mlir::Value> deleteOperands, copyoutOperands;
+  for (mlir::Value dataOp : op.getDataClauseOperands()) {
+    if (auto devicePtrOp = mlir::dyn_cast_or_null<acc::GetDevicePtrOp>(
+            dataOp.getDefiningOp())) {
+      for (auto &u : devicePtrOp.getAccPtr().getUses()) {
+        if (mlir::dyn_cast_or_null<acc::DeleteOp>(u.getOwner()))
+          deleteOperands.push_back(devicePtrOp.getVarPtr());
+        else if (mlir::dyn_cast_or_null<acc::CopyoutOp>(u.getOwner()))
+          copyoutOperands.push_back(devicePtrOp.getVarPtr());
+      }
+    }
+  }
+
+  auto nbTotalOperands = deleteOperands.size() + copyoutOperands.size();
+
   // Delete operands are handled as `delete` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getDeleteOperands(), op.getNumDataOperands(),
-                             kDeleteFlag, flags, names, index, mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, deleteOperands,
+                             nbTotalOperands, kDeleteFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   // Copyout operands are handled as `from` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyoutOperands(), op.getNumDataOperands(),
-                             kHostCopyoutFlag, flags, names, index,
-                             mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, copyoutOperands,
+                             nbTotalOperands, kHostCopyoutFlag, flags, names,
+                             index, mapperAllocas)))
     return failure();
 
   return success();
@@ -495,7 +523,8 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
                "unexpected OpenACC terminator with operands");
         return success();
       })
-      .Case([&](acc::UpdateDeviceOp) {
+      .Case<acc::CreateOp, acc::CopyinOp, acc::CopyoutOp, acc::DeleteOp,
+            acc::UpdateDeviceOp, acc::GetDevicePtrOp>([](auto op) {
         // NOP
         return success();
       })

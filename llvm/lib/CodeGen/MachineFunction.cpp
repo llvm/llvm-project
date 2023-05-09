@@ -119,7 +119,7 @@ void setUnsafeStackSize(const Function &F, MachineFrameInfo &FrameInfo) {
 
   auto *MetadataName = "unsafe-stack-size";
   if (auto &N = Existing->getOperand(0)) {
-    if (cast<MDString>(N.get())->getString() == MetadataName) {
+    if (N.equalsStr(MetadataName)) {
       if (auto &Op = Existing->getOperand(1)) {
         auto Val = mdconst::extract<ConstantInt>(Op)->getZExtValue();
         FrameInfo.setUnsafeStackSize(Val);

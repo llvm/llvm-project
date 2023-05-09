@@ -11567,6 +11567,10 @@ NamespaceDecl *Sema::getOrCreateStdNamespace() {
         &PP.getIdentifierTable().get("std"),
         /*PrevDecl=*/nullptr, /*Nested=*/false);
     getStdNamespace()->setImplicit(true);
+    // We want the created NamespaceDecl to be available for redeclaration
+    // lookups, but not for regular name lookups.
+    Context.getTranslationUnitDecl()->addDecl(getStdNamespace());
+    getStdNamespace()->clearIdentifierNamespace();
   }
 
   return getStdNamespace();

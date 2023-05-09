@@ -2309,9 +2309,15 @@ protected:
     return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
   }
 
+  void setCommonPtr(Common *C) {
+    RedeclarableTemplateDecl::Common = C;
+  }
+
 public:
+
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class TemplateDeclInstantiator;
 
   /// Load any lazily-loaded specializations from the external source.
   void LoadLazySpecializations() const;
