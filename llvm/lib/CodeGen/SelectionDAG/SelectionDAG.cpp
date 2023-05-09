@@ -4130,14 +4130,20 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
         continue;
 
       SDValue SrcOp = Op.getOperand(i);
-      Tmp2 = ComputeNumSignBits(SrcOp, Depth + 1);
+      // BUILD_VECTOR can implicitly truncate sources, we handle this specially
+      // for constant nodes to ensure we only look at the sign bits.
+      if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(SrcOp)) {
+        APInt T = C->getAPIntValue().trunc(VTBits);
+        Tmp2 = T.getNumSignBits();
+      } else {
+        Tmp2 = ComputeNumSignBits(SrcOp, Depth + 1);
 
-      // BUILD_VECTOR can implicitly truncate sources, we must handle this.
-      if (SrcOp.getValueSizeInBits() != VTBits) {
-        assert(SrcOp.getValueSizeInBits() > VTBits &&
-               "Expected BUILD_VECTOR implicit truncation");
-        unsigned ExtraBits = SrcOp.getValueSizeInBits() - VTBits;
-        Tmp2 = (Tmp2 > ExtraBits ? Tmp2 - ExtraBits : 1);
+        if (SrcOp.getValueSizeInBits() != VTBits) {
+          assert(SrcOp.getValueSizeInBits() > VTBits &&
+                 "Expected BUILD_VECTOR implicit truncation");
+          unsigned ExtraBits = SrcOp.getValueSizeInBits() - VTBits;
+          Tmp2 = (Tmp2 > ExtraBits ? Tmp2 - ExtraBits : 1);
+        }
       }
       Tmp = std::min(Tmp, Tmp2);
     }
