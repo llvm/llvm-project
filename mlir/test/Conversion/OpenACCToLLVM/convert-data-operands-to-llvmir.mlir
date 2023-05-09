@@ -1,42 +1,5 @@
 // RUN: mlir-opt -convert-openacc-to-llvm='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
 
-func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  acc.exit_data copyout(%b : memref<10xf32>) delete(%a : memref<10xf32>)
-  return
-}
-
-// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-
-// -----
-
-func.func @testexitdataop(%a: !llvm.ptr, %b: memref<10xf32>) -> () {
-  acc.exit_data copyout(%b : memref<10xf32>) delete(%a : !llvm.ptr)
-  return
-}
-
-// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.ptr)
-
-// -----
-
-func.func @testexitdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
-  acc.exit_data copyout(%b : memref<10xf32>) delete(%a : memref<10xi64>) attributes {async}
-  return
-}
-
-// CHECK: acc.exit_data copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) attributes {async}
-
-// -----
-
-func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = arith.constant true
-  acc.exit_data if(%ifCond) copyout(%b : memref<10xf32>) delete(%a : memref<10xf32>)
-  return
-}
-
-// CHECK: acc.exit_data if(%{{.*}}) copyout(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) delete(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-
-// -----
-
 func.func @testdataregion(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.data copy(%b : memref<10xf32>) copyout(%a : memref<10xf32>) {
     acc.parallel {

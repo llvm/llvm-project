@@ -6169,7 +6169,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   // Don't fold loads into indirect calls that need a KCFI check as we'll
-  // have to unfold these in X86KCFIPass anyway.
+  // have to unfold these in X86TargetLowering::EmitKCFICheck anyway.
   if (MI.isCall() && MI.getCFIType())
     return nullptr;
 

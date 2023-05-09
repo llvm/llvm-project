@@ -23,19 +23,23 @@ func.func @testenterdataop(%a: memref<f32>) -> () {
 
 // -----
 
-func.func @testexitdataop(%a: memref<10xf32>) -> () {
+func.func @testexitdataop(%a: memref<f32>) -> () {
   %ifCond = arith.constant true
-  acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
+  acc.delete accPtr(%0 : memref<f32>)
   return
 }
 
-// CHECK: acc.exit_data delete(%{{.*}} : memref<10xf32>)
+// CHECK: acc.exit_data dataOperands(%{{.*}} : memref<f32>)
 
 // -----
 
-func.func @testexitdataop(%a: memref<10xf32>) -> () {
+func.func @testexitdataop(%a: memref<f32>) -> () {
   %ifCond = arith.constant false
-  acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
+  acc.delete accPtr(%0 : memref<f32>)
   return
 }
 
@@ -80,13 +84,15 @@ func.func @testenterdataop(%a: memref<f32>, %ifCond: i1) -> () {
 
 // -----
 
-func.func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
-  acc.exit_data if(%ifCond) delete(%a: memref<10xf32>)
+func.func @testexitdataop(%a: memref<f32>, %ifCond: i1) -> () {
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  acc.exit_data if(%ifCond) dataOperands(%0 : memref<f32>)
+  acc.delete accPtr(%0 : memref<f32>)
   return
 }
 
-// CHECK: func @testexitdataop(%{{.*}}: memref<10xf32>, [[IFCOND:%.*]]: i1)
-// CHECK:   acc.exit_data if(%{{.*}}) delete(%{{.*}} : memref<10xf32>)
+// CHECK: func @testexitdataop(%{{.*}}: memref<f32>, [[IFCOND:%.*]]: i1)
+// CHECK:   acc.exit_data if(%{{.*}}) dataOperands(%{{.*}} : memref<f32>)
 
 // -----
 

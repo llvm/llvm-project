@@ -87,7 +87,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   initializeX86TileConfigPass(PR);
   initializeX86FastPreTileConfigPass(PR);
   initializeX86FastTileConfigPass(PR);
-  initializeX86KCFIPass(PR);
+  initializeKCFIPass(PR);
   initializeX86LowerTileCopyPass(PR);
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
@@ -556,7 +556,7 @@ void X86PassConfig::addPostRegAlloc() {
 
 void X86PassConfig::addPreSched2() {
   addPass(createX86ExpandPseudoPass());
-  addPass(createX86KCFIPass());
+  addPass(createKCFIPass());
 }
 
 void X86PassConfig::addPreEmitPass() {
