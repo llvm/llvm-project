@@ -701,17 +701,16 @@ DecodeMatrixTileListRegisterClass(MCInst &Inst, unsigned RegMask,
   return Success;
 }
 
-static const SmallVector<SmallVector<unsigned, 16>, 5>
-    MatrixZATileDecoderTable = {
-        {AArch64::ZAB0},
-        {AArch64::ZAH0, AArch64::ZAH1},
-        {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
-        {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3,
-         AArch64::ZAD4, AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
-        {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3,
-         AArch64::ZAQ4, AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7,
-         AArch64::ZAQ8, AArch64::ZAQ9, AArch64::ZAQ10, AArch64::ZAQ11,
-         AArch64::ZAQ12, AArch64::ZAQ13, AArch64::ZAQ14, AArch64::ZAQ15}};
+static const MCPhysReg MatrixZATileDecoderTable[5][16] = {
+    {AArch64::ZAB0},
+    {AArch64::ZAH0, AArch64::ZAH1},
+    {AArch64::ZAS0, AArch64::ZAS1, AArch64::ZAS2, AArch64::ZAS3},
+    {AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3, AArch64::ZAD4,
+     AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7},
+    {AArch64::ZAQ0, AArch64::ZAQ1, AArch64::ZAQ2, AArch64::ZAQ3, AArch64::ZAQ4,
+     AArch64::ZAQ5, AArch64::ZAQ6, AArch64::ZAQ7, AArch64::ZAQ8, AArch64::ZAQ9,
+     AArch64::ZAQ10, AArch64::ZAQ11, AArch64::ZAQ12, AArch64::ZAQ13,
+     AArch64::ZAQ14, AArch64::ZAQ15}};
 
 template <unsigned NumBitsForTile>
 static DecodeStatus DecodeMatrixTile(MCInst &Inst, unsigned RegNo,

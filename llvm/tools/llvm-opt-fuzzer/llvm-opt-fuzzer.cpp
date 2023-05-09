@@ -44,11 +44,9 @@ std::unique_ptr<IRMutator> createOptMutator() {
       Type::getInt64Ty, Type::getFloatTy, Type::getDoubleTy};
 
   std::vector<std::unique_ptr<IRMutationStrategy>> Strategies;
-  Strategies.push_back(
-      std::make_unique<InjectorIRStrategy>(
-          InjectorIRStrategy::getDefaultOps()));
-  Strategies.push_back(
-      std::make_unique<InstDeleterIRStrategy>());
+  Strategies.push_back(std::make_unique<InjectorIRStrategy>(
+      InjectorIRStrategy::getDefaultOps()));
+  Strategies.push_back(std::make_unique<InstDeleterIRStrategy>());
   Strategies.push_back(std::make_unique<InstModificationIRStrategy>());
 
   return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
@@ -58,7 +56,7 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
     uint8_t *Data, size_t Size, size_t MaxSize, unsigned int Seed) {
 
   assert(Mutator &&
-      "IR mutator should have been created during fuzzer initialization");
+         "IR mutator should have been created during fuzzer initialization");
 
   LLVMContext Context;
   auto M = parseAndVerify(Data, Size, Context);
@@ -67,7 +65,7 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
     return 0;
   }
 
-  Mutator->mutateModule(*M, Seed, Size, MaxSize);
+  Mutator->mutateModule(*M, Seed, MaxSize);
 
   if (verifyModule(*M, &errs())) {
     errs() << "mutation result doesn't pass verification\n";
@@ -77,7 +75,7 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
     // Avoid adding incorrect test cases to the corpus.
     return 0;
   }
-  
+
   std::string Buf;
   {
     raw_string_ostream OS(Buf);
@@ -85,15 +83,15 @@ extern "C" LLVM_ATTRIBUTE_USED size_t LLVMFuzzerCustomMutator(
   }
   if (Buf.size() > MaxSize)
     return 0;
-  
+
   // There are some invariants which are not checked by the verifier in favor
   // of having them checked by the parser. They may be considered as bugs in the
   // verifier and should be fixed there. However until all of those are covered
   // we want to check for them explicitly. Otherwise we will add incorrect input
-  // to the corpus and this is going to confuse the fuzzer which will start 
+  // to the corpus and this is going to confuse the fuzzer which will start
   // exploration of the bitcode reader error handling code.
-  auto NewM = parseAndVerify(
-      reinterpret_cast<const uint8_t*>(Buf.data()), Buf.size(), Context);
+  auto NewM = parseAndVerify(reinterpret_cast<const uint8_t *>(Buf.data()),
+                             Buf.size(), Context);
   if (!NewM) {
     errs() << "mutator failed to re-read the module\n";
 #ifndef NDEBUG
@@ -174,8 +172,8 @@ static void handleLLVMFatalError(void *, const char *Message, bool) {
   abort();
 }
 
-extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(
-    int *argc, char ***argv) {
+extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
+                                                        char ***argv) {
   EnableDebugBuffering = true;
 
   // Make sure we print the summary and the current unit when LLVM errors out.

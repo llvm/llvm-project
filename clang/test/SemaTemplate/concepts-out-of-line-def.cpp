@@ -127,3 +127,275 @@ static_assert(S<XY>::specialization("str") == SPECIALIZATION_CONCEPT);
 static_assert(S<int>::specialization("str") == SPECIALIZATION_REQUIRES);
 
 } // namespace multiple_template_parameter_lists
+
+static constexpr int CONSTRAINED_METHOD_1 = 1;
+static constexpr int CONSTRAINED_METHOD_2 = 2;
+
+namespace constrained_members {
+
+template <int>
+struct S {
+  template <Concept C>
+  static constexpr int constrained_method();
+};
+
+template <>
+template <Concept C>
+constexpr int S<1>::constrained_method() { return CONSTRAINED_METHOD_1; }
+
+template <>
+template <Concept C>
+constexpr int S<2>::constrained_method() { return CONSTRAINED_METHOD_2; }
+
+static_assert(S<1>::constrained_method<XY>() == CONSTRAINED_METHOD_1);
+static_assert(S<2>::constrained_method<XY>() == CONSTRAINED_METHOD_2);
+
+
+template <class T1, class T2>
+concept ConceptT1T2 = true;
+
+template<typename T3>
+struct S12 {
+  template<ConceptT1T2<T3> T4>
+  static constexpr int constrained_method();
+};
+
+template<>
+template<ConceptT1T2<int> T5>
+constexpr int S12<int>::constrained_method() { return CONSTRAINED_METHOD_1; }
+
+template<>
+template<ConceptT1T2<double> T5>
+constexpr int S12<double>::constrained_method() { return CONSTRAINED_METHOD_2; }
+
+static_assert(S12<int>::constrained_method<XY>() == CONSTRAINED_METHOD_1);
+static_assert(S12<double>::constrained_method<XY>() == CONSTRAINED_METHOD_2);
+
+} // namespace constrained members
+
+namespace constrained_members_of_nested_types {
+
+template <int>
+struct S {
+  struct Inner0 {
+    struct Inner1 {
+      template <Concept C>
+      static constexpr int constrained_method();
+    };
+  };
+};
+
+template <>
+template <Concept C>
+constexpr int S<1>::Inner0::Inner1::constrained_method() { return CONSTRAINED_METHOD_1; }
+
+template <>
+template <Concept C>
+constexpr int S<2>::Inner0::Inner1::constrained_method() { return CONSTRAINED_METHOD_2; }
+
+static_assert(S<1>::Inner0::Inner1::constrained_method<XY>() == CONSTRAINED_METHOD_1);
+static_assert(S<2>::Inner0::Inner1::constrained_method<XY>() == CONSTRAINED_METHOD_2);
+
+
+template <class T1, class T2>
+concept ConceptT1T2 = true;
+
+template<typename T3>
+struct S12 {
+  struct Inner0 {
+    struct Inner1 {
+      template<ConceptT1T2<T3> T4>
+      static constexpr int constrained_method();
+    };
+  };
+};
+
+template<>
+template<ConceptT1T2<int> T5>
+constexpr int S12<int>::Inner0::Inner1::constrained_method() { return CONSTRAINED_METHOD_1; }
+
+template<>
+template<ConceptT1T2<double> T5>
+constexpr int S12<double>::Inner0::Inner1::constrained_method() { return CONSTRAINED_METHOD_2; }
+
+static_assert(S12<int>::Inner0::Inner1::constrained_method<XY>() == CONSTRAINED_METHOD_1);
+static_assert(S12<double>::Inner0::Inner1::constrained_method<XY>() == CONSTRAINED_METHOD_2);
+
+} // namespace constrained_members_of_nested_types
+
+namespace constrained_member_sfinae {
+
+template<int N> struct S {
+  template<class T>
+  static constexpr int constrained_method() requires (sizeof(int[N * 1073741824 + 4]) == 16) {
+    return CONSTRAINED_METHOD_1;
+  }
+
+  template<class T>
+  static constexpr int constrained_method() requires (sizeof(int[N]) == 16);
+};
+
+template<>
+template<typename T>
+constexpr int S<4>::constrained_method() requires (sizeof(int[4]) == 16) {
+  return CONSTRAINED_METHOD_2;
+}
+
+// Verify that there is no amiguity in this case.
+static_assert(S<4>::constrained_method<double>() == CONSTRAINED_METHOD_2);
+
+} // namespace constrained_member_sfinae
+
+namespace requires_expression_references_members {
+
+void accept1(int x);
+void accept2(XY xy);
+
+template <class T> struct S {
+  T Field = T();
+
+  constexpr int constrained_method()
+      requires requires { accept1(Field); };
+
+  constexpr int constrained_method()
+      requires requires { accept2(Field); };
+};
+
+template <class T>
+constexpr int S<T>::constrained_method()
+  requires requires { accept1(Field); } {
+  return CONSTRAINED_METHOD_1;
+}
+
+template <class T>
+constexpr int S<T>::constrained_method()
+  requires requires { accept2(Field); } {
+  return CONSTRAINED_METHOD_2;
+}
+
+static_assert(S<int>().constrained_method() == CONSTRAINED_METHOD_1);
+static_assert(S<XY>().constrained_method() == CONSTRAINED_METHOD_2);
+
+} // namespace requires_expression_references_members
+
+namespace GH60231 {
+
+template<typename T0> concept C = true;
+
+template <typename T1>
+struct S {
+  template <typename F1> requires C<S<T1>>
+  void foo1(F1 f);
+
+  template <typename F2>
+  void foo2(F2 f) requires C<S<T1>>;
+
+  template <typename F3> requires C<F3>
+  void foo3(F3 f);
+};
+
+template <typename T2>
+template <typename F4> requires C<S<T2>>
+void S<T2>::foo1(F4 f) {}
+
+template <typename T3>
+template <typename F5>
+void S<T3>::foo2(F5 f) requires C<S<T3>> {}
+
+template <typename T4>
+template <typename F6> requires C<F6>
+void S<T4>::foo3(F6 f) {}
+
+} // namespace GH60231
+
+namespace GH62003 {
+
+template <typename T0> concept Concept = true;
+
+template <class T1>
+struct S1 {
+  template <Concept C1>
+  static constexpr int foo();
+};
+template <class T2>
+template <Concept C2>
+constexpr int S1<T2>::foo() { return 1; }
+
+template <Concept C3>
+struct S2 {
+  template <class T3>
+  static constexpr int foo();
+};
+template <Concept C4>
+template <class T4>
+constexpr int S2<C4>::foo() { return 2; }
+
+template <Concept C5>
+struct S3 {
+  template <Concept C6>
+  static constexpr int foo();
+};
+template <Concept C7>
+template <Concept C8>
+constexpr int S3<C7>::foo() { return 3; }
+
+static_assert(S1<int>::foo<int>() == 1);
+static_assert(S2<int>::foo<int>() == 2);
+static_assert(S3<int>::foo<int>() == 3);
+
+} // namespace GH62003
+
+namespace MultilevelTemplateWithPartialSpecialization {
+template <typename>
+concept Concept = true;
+
+namespace two_level {
+template <typename T1, int>
+struct W0 {
+  template <typename T2>
+  requires (Concept<T2>)
+  void f(const T2 &);
+};
+
+template <typename T3>
+struct W0<T3, 0> {
+  template <typename T4>
+  requires (Concept<T4>)
+  void f(const T4 &);
+};
+
+template <typename T3>
+template <typename T4>
+requires (Concept<T4>)
+inline void W0<T3, 0>::f(const T4 &) {}
+} // namespace two_level
+
+namespace three_level {
+template <typename T1, int>
+struct W0 {
+  template <typename T2>
+  struct W1 {
+    template <typename T3>
+    requires (Concept<T3>)
+    void f(const T3 &);
+  };
+};
+
+template <typename T4>
+struct W0<T4, 0> {
+  template <typename T5>
+  struct W1 {
+    template <typename T6>
+    requires (Concept<T6>)
+    void f(const T6 &);
+  };
+};
+
+template <typename T7>
+template <typename T8>
+template <typename T9>
+requires (Concept<T9>)
+inline void W0<T7, 0>::W1<T8>::f(const T9 &) {}
+} // namespace three_level
+
+} // namespace MultilevelTemplateWithPartialSpecialization

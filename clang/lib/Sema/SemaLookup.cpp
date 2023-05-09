@@ -1877,14 +1877,14 @@ bool Sema::isModuleVisible(const Module *M, bool ModulePrivate) {
   if (LookupModules.empty())
     return false;
 
+  // If our lookup set contains the module, it's visible.
+  if (LookupModules.count(M))
+    return true;
+
   // The global module fragments are visible to its corresponding module unit.
   // So the global module fragment should be visible if the its corresponding
   // module unit is visible.
-  if (M->isGlobalModule())
-    M = M->getTopLevelModule();
-
-  // If our lookup set contains the module, it's visible.
-  if (LookupModules.count(M))
+  if (M->isGlobalModule() && LookupModules.count(M->getTopLevelModule()))
     return true;
 
   // For a module-private query, that's everywhere we get to look.

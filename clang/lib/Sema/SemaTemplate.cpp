@@ -1610,16 +1610,6 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
     if (DiagnoseUnexpandedParameterPack(Default, UPPC_DefaultArgument))
       return Param;
 
-    TemplateArgument SugaredConverted, CanonicalConverted;
-    ExprResult DefaultRes = CheckTemplateArgument(
-        Param, Param->getType(), Default, SugaredConverted, CanonicalConverted,
-        CTAK_Specified);
-    if (DefaultRes.isInvalid()) {
-      Param->setInvalidDecl();
-      return Param;
-    }
-    Default = DefaultRes.get();
-
     Param->setDefaultArgument(Default);
   }
 

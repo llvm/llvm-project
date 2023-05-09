@@ -75,6 +75,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(!std::is_assignable<P&, T&>::value, "");
   }
 #endif
+#if TEST_STD_VER >= 11 || defined(_LIBCPP_VERSION) // valid in C++11, provided in C++03 with libc++ as an extension
+  {
+    int i = 0, j = 0;
+    std::pair<int&, int&> p(i, j);
+    const std::pair<const int, const int> from(11, 12);
+    p = from;
+    assert(i == 11);
+    assert(j == 12);
+  }
+#endif
   return true;
 }
 

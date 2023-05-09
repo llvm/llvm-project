@@ -448,9 +448,13 @@ public:
   /// and does not consult the external source. (Those checks are the
   /// responsibility of \ref HeaderSearch.)
   ///
+  /// \param AllowCreation Whether to allow inference of a new submodule, or to
+  ///        only return existing known modules.
+  ///
   /// Typically, \ref findModuleForHeader should be used instead, as it picks
   /// the preferred module for the header.
-  ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File);
+  ArrayRef<KnownHeader> findAllModulesForHeader(const FileEntry *File,
+                                                bool AllowCreation = true);
 
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.

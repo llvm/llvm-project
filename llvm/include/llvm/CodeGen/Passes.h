@@ -598,6 +598,9 @@ namespace llvm {
   FunctionPass *createSelectOptimizePass();
 
   FunctionPass *createCallBrPass();
+
+  /// Lowers KCFI operand bundles for indirect calls.
+  FunctionPass *createKCFIPass();
 } // End llvm namespace
 
 #endif

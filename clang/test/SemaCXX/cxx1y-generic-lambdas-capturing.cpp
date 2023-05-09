@@ -563,8 +563,8 @@ struct X {
   
   int g() {
     auto L = [=](auto a) {
-      return [](int i) { // expected-note {{explicitly capture 'this'}}
-        return [=](auto b) {
+      return [](int i) { // expected-note {{explicitly capture 'this'}} expected-note {{while substituting into a lambda}}
+        return [=](auto b) { // expected-note {{while substituting into a lambda}}
           f(decltype(a){}); //expected-error{{this}}
           int x = i;
         };
@@ -587,8 +587,8 @@ struct X {
   
   int g() {
     auto L = [=](auto a) {
-      return [](auto b) { // expected-note {{explicitly capture 'this'}}
-        return [=](int i) {
+      return [](auto b) { // expected-note {{explicitly capture 'this'}} expected-note {{while substituting into a lambda}}
+        return [=](int i) { // expected-note {{while substituting into a lambda}}
           f(b); 
           f(decltype(a){}); //expected-error{{this}}
         };
@@ -612,7 +612,7 @@ struct X {
   int g() {
     auto L = [=](auto a) {
       return [](auto b) { // expected-note {{explicitly capture 'this'}}
-        return [=](int i) {
+        return [=](int i) { // expected-note {{while substituting into a lambda}}
           f(b); //expected-error{{this}}
           f(decltype(a){}); 
         };

@@ -73,8 +73,7 @@ end subroutine
 ! CHECK: %[[EXT:.*]] = arith.constant 100 : index
 ! CHECK: %[[ONE:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
-! CHECK: %[[LBEXT:.*]] = arith.addi %[[EXT]], %[[ONE]] : index
-! CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
+! CHECK: %[[UB:.*]] = arith.subi %[[EXT]], %[[ONE]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
 ! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = 3 : i64, name = "w%data"}
 ! CHECK: acc.data dataOperands(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) {
@@ -102,8 +101,7 @@ end subroutine
 ! CHECK: %[[EXT:.*]] = arith.constant 100 : index
 ! CHECK: %[[ONE:.*]] = arith.constant 1 : index
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
-! CHECK: %[[LBEXT:.*]] = arith.addi %[[EXT]], %[[ONE]] : index
-! CHECK: %[[UB:.*]] = arith.subi %[[LBEXT]], %[[ONE]] : index
+! CHECK: %[[UB:.*]] = arith.subi %[[EXT]], %[[ONE]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index) 
 ! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_W1_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = 3 : i64, name = "w(1_8)%data"}
 ! CHECK: acc.data dataOperands(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) {

@@ -90,7 +90,7 @@ class FuncOp:
       raise IndexError('External function does not have a body')
     return self.regions[0].blocks[0]
 
-  def add_entry_block(self):
+  def add_entry_block(self, arg_locs: Optional[Sequence[Location]] = None):
     """
     Add an entry block to the function body using the function signature to
     infer block arguments.
@@ -98,7 +98,7 @@ class FuncOp:
     """
     if not self.is_external:
       raise IndexError('The function already has an entry block!')
-    self.body.blocks.append(*self.type.inputs)
+    self.body.blocks.append(*self.type.inputs, arg_locs=arg_locs)
     return self.body.blocks[0]
 
   @property

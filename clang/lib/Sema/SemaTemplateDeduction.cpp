@@ -2882,7 +2882,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   // not class-scope explicit specialization, so replace with Deduced Args
   // instead of adding to inner-most.
   if (NeedsReplacement)
-    MLTAL.replaceInnermostTemplateArguments(CanonicalDeducedArgs);
+    MLTAL.replaceInnermostTemplateArguments(Template, CanonicalDeducedArgs);
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),

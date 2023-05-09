@@ -57,7 +57,12 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
 
     for (const MDOperand &Op :
          I.getMetadata(LLVMContext::MD_annotation)->operands()) {
-      auto Iter = Mapping.insert({cast<MDString>(Op.get())->getString(), 0});
+      StringRef AnnotationStr =
+          isa<MDString>(Op.get())
+              ? cast<MDString>(Op.get())->getString()
+              : cast<MDString>(cast<MDTuple>(Op.get())->getOperand(0).get())
+                    ->getString();
+      auto Iter = Mapping.insert({AnnotationStr, 0});
       Iter.first->second++;
     }
   }
