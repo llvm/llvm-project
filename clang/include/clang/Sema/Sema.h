@@ -4153,10 +4153,9 @@ public:
   bool resolveAndFixAddressOfSingleOverloadCandidate(
       ExprResult &SrcExpr, bool DoFunctionPointerConversion = false);
 
-  FunctionDecl *
-  ResolveSingleFunctionTemplateSpecialization(OverloadExpr *ovl,
-                                              bool Complain = false,
-                                              DeclAccessPair *Found = nullptr);
+  FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
+      OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
+      TemplateSpecCandidateSet *FailedTSC = nullptr);
 
   bool ResolveAndFixSingleFunctionTemplateSpecialization(
       ExprResult &SrcExpr, bool DoFunctionPointerConversion = false,
@@ -9140,11 +9139,12 @@ public:
   TypeSourceInfo *ReplaceAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
                                             QualType Replacement);
 
-  TemplateDeductionResult DeduceAutoType(TypeLoc AutoTypeLoc, Expr *Initializer,
-                                         QualType &Result,
-                                         sema::TemplateDeductionInfo &Info,
-                                         bool DependentDeduction = false,
-                                         bool IgnoreConstraints = false);
+  TemplateDeductionResult
+  DeduceAutoType(TypeLoc AutoTypeLoc, Expr *Initializer, QualType &Result,
+                 sema::TemplateDeductionInfo &Info,
+                 bool DependentDeduction = false,
+                 bool IgnoreConstraints = false,
+                 TemplateSpecCandidateSet *FailedTSC = nullptr);
   void DiagnoseAutoDeductionFailure(VarDecl *VDecl, Expr *Init);
   bool DeduceReturnType(FunctionDecl *FD, SourceLocation Loc,
                         bool Diagnose = true);
