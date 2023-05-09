@@ -1,4 +1,4 @@
-//===-- Mem2RegInterfaces.cpp - Mem2Reg interfaces --------------*- C++ -*-===//
+//===-- MemorySlotInterfaces.cpp - MemorySlot interfaces --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Interfaces/Mem2RegInterfaces.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 
-#include "mlir/Interfaces/Mem2RegInterfaces.cpp.inc"
+#include "mlir/Interfaces/MemorySlotOpInterfaces.cpp.inc"
