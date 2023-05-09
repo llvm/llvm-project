@@ -1,0 +1,29 @@
+// RUN: cir-tool %s | cir-tool | FileCheck %s
+
+module  {
+  cir.func @blue(%arg0: !cir.bool) -> i32 {
+    %0 = cir.ternary(%arg0, true_region {
+      %a = cir.const(0 : i32) : i32
+      cir.yield %a : i32
+    }, false_region {
+      %b = cir.const(1 : i32) : i32
+      cir.yield %b : i32
+    }) : i32
+    cir.return %0 : i32
+  }
+}
+
+// CHECK: module  {
+
+// CHECK: cir.func @blue(%arg0: !cir.bool) -> i32 {
+// CHECK:   %0 = cir.ternary(%arg0, true_region {
+// CHECK:     %1 = cir.const(0 : i32) : i32
+// CHECK:     cir.yield %1 : i32
+// CHECK:   }, false_region {
+// CHECK:     %1 = cir.const(1 : i32) : i32
+// CHECK:     cir.yield %1 : i32
+// CHECK:   }) : i32
+// CHECK:   cir.return %0 : i32
+// CHECK: }
+
+// CHECK: }
