@@ -54,8 +54,8 @@ func.func @loop_outline_op_multi_region() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["scf.while"]} in %arg1 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.while"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{failed to outline}}
-  transform.loop.outline %0 {func_name = "foo"} : (!pdl.operation) -> !pdl.operation
+  transform.loop.outline %0 {func_name = "foo"} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }

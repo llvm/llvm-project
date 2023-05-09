@@ -85,7 +85,8 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
 DiagnosedSilenceableFailure
 transform::LoopOutlineOp::apply(transform::TransformResults &results,
                                 transform::TransformState &state) {
-  SmallVector<Operation *> transformed;
+  SmallVector<Operation *> functions;
+  SmallVector<Operation *> calls;
   DenseMap<Operation *, SymbolTable> symbolTables;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Location location = target->getLoc();
@@ -112,9 +113,11 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
       symbolTable.insert(*outlined);
       call.setCalleeAttr(FlatSymbolRefAttr::get(*outlined));
     }
-    transformed.push_back(*outlined);
+    functions.push_back(*outlined);
+    calls.push_back(call);
   }
-  results.set(getTransformed().cast<OpResult>(), transformed);
+  results.set(getFunction().cast<OpResult>(), functions);
+  results.set(getCall().cast<OpResult>(), calls);
   return DiagnosedSilenceableFailure::success();
 }
 
