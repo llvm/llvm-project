@@ -2640,7 +2640,7 @@ RISCVInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   static const std::pair<MachineMemOperand::Flags, const char *> TargetFlags[] =
       {{MONontemporalBit0, "riscv-nontemporal-domain-bit-0"},
        {MONontemporalBit1, "riscv-nontemporal-domain-bit-1"}};
-  return ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
