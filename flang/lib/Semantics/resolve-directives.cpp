@@ -1691,8 +1691,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   }
                 }
                 if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
-                    IsAllocatable(*symbol) &&
-                    !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
+                    IsAllocatable(*symbol)) {
                   context_.Say(designator.source,
                       "List items specified in the ALLOCATE directive must not "
                       "have the ALLOCATABLE attribute unless the directive is "
