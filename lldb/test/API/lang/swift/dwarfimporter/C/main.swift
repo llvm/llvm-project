@@ -22,6 +22,8 @@ let swiftStructCMember = SwiftStructCMember()
 let typedef = TPoint(x: 5, y: 6)
 let union = DoubleLongUnion(long_val: 42)
 let fromSubmodule = FromSubmodule(x: 1, y: 2, z: 3)
+let withPointer = WithPointer(ptr: UnsafeMutableRawPointer(bitPattern: 0x0),
+                        const_ptr: UnsafeMutableRawPointer(bitPattern: 0x0))
 
 use(pureSwift) // break here
 use(point)
@@ -31,3 +33,4 @@ use(swiftStructCMember)
 use(typedef)
 use(union)
 use(fromSubmodule)
+use(withPointer)
