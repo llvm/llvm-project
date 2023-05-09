@@ -542,11 +542,9 @@ LogicalResult acc::ExitDataOp::verify() {
   // 2.6.6. Data Exit Directive restriction
   // At least one copyout, delete, or detach clause must appear on an exit data
   // directive.
-  if (getCopyoutOperands().empty() && getDeleteOperands().empty() &&
-      getDetachOperands().empty() && getDataClauseOperands().empty())
-    return emitError(
-        "at least one operand in copyout, delete or detach must appear on the "
-        "exit data operation");
+  if (getDataClauseOperands().empty())
+    return emitError("at least one operand must be present in dataOperands on "
+                     "the exit data operation");
 
   // The async attribute represent the async clause without value. Therefore the
   // attribute and operand cannot appear at the same time.
@@ -565,8 +563,7 @@ LogicalResult acc::ExitDataOp::verify() {
 }
 
 unsigned ExitDataOp::getNumDataOperands() {
-  return getCopyoutOperands().size() + getDeleteOperands().size() +
-         getDetachOperands().size() + getDataClauseOperands().size();
+  return getDataClauseOperands().size();
 }
 
 Value ExitDataOp::getDataOperand(unsigned i) {

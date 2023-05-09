@@ -907,41 +907,101 @@ acc.shutdown device_num(%idxValue : index) if(%ifCond)
 
 // -----
 
-func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) -> () {
+func.func @testexitdataop(%a: !llvm.ptr<f32>) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
 
-  acc.exit_data copyout(%a : memref<10xf32>)
-  acc.exit_data delete(%a : memref<10xf32>)
-  acc.exit_data delete(%a : memref<10xf32>) attributes {async,finalize}
-  acc.exit_data detach(%a : memref<10xf32>)
-  acc.exit_data copyout(%a : memref<10xf32>) attributes {async}
-  acc.exit_data delete(%a : memref<10xf32>) attributes {wait}
-  acc.exit_data async(%i64Value : i64) copyout(%a : memref<10xf32>)
-  acc.exit_data copyout(%a : memref<10xf32>) async(%i64Value : i64)
-  acc.exit_data if(%ifCond) copyout(%a : memref<10xf32>)
-  acc.exit_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) copyout(%a : memref<10xf32>)
+  %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%0 : !llvm.ptr<f32>)
+  acc.copyout accPtr(%0 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+
+  %1 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%1 : !llvm.ptr<f32>)
+  acc.delete accPtr(%1 : !llvm.ptr<f32>)
+
+  %2 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%2 : !llvm.ptr<f32>) attributes {async,finalize}
+  acc.delete accPtr(%2 : !llvm.ptr<f32>)
+
+  %3 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%3 : !llvm.ptr<f32>)
+  acc.detach accPtr(%3 : !llvm.ptr<f32>)
+
+  %4 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%4 : !llvm.ptr<f32>) attributes {async}
+  acc.copyout accPtr(%4 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+
+  %5 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%5 : !llvm.ptr<f32>) attributes {wait}
+  acc.delete accPtr(%5 : !llvm.ptr<f32>)
+
+  %6 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data async(%i64Value : i64) dataOperands(%6 : !llvm.ptr<f32>)
+  acc.copyout accPtr(%6 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+
+  %7 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data dataOperands(%7 : !llvm.ptr<f32>) async(%i64Value : i64)
+  acc.copyout accPtr(%7 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+
+  %8 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data if(%ifCond) dataOperands(%8 : !llvm.ptr<f32>)
+  acc.copyout accPtr(%8 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+
+  %9 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.exit_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%9 : !llvm.ptr<f32>)
+  acc.copyout accPtr(%9 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
 
   return
 }
 
-// CHECK: func @testexitdataop([[ARGA:%.*]]: memref<10xf32>, [[ARGB:%.*]]: memref<10xf32>, [[ARGC:%.*]]: memref<10x10xf32>) {
-// CHECK: [[IFCOND1:%.*]] = arith.constant true
-// CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
-// CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
-// CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
-// CHECK: acc.exit_data copyout([[ARGA]] : memref<10xf32>)
-// CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>)
-// CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>) attributes {async, finalize}
-// CHECK: acc.exit_data detach([[ARGA]] : memref<10xf32>)
-// CHECK: acc.exit_data copyout([[ARGA]] : memref<10xf32>) attributes {async}
-// CHECK: acc.exit_data delete([[ARGA]] : memref<10xf32>) attributes {wait}
-// CHECK: acc.exit_data async([[I64VALUE]] : i64) copyout([[ARGA]] : memref<10xf32>)
-// CHECK: acc.exit_data async([[I64VALUE]] : i64) copyout([[ARGA]] : memref<10xf32>)
-// CHECK: acc.exit_data if([[IFCOND]]) copyout([[ARGA]] : memref<10xf32>)
-// CHECK: acc.exit_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) copyout([[ARGA]] : memref<10xf32>)
+// CHECK: func @testexitdataop(%[[ARGA:.*]]: !llvm.ptr<f32>) {
+// CHECK: %[[IFCOND:.*]] = arith.constant true
+// CHECK: %[[I64VALUE:.*]] = arith.constant 1 : i64
+// CHECK: %[[I32VALUE:.*]] = arith.constant 1 : i32
+// CHECK: %[[IDXVALUE:.*]] = arith.constant 1 : index
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>) attributes {async, finalize}
+// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.detach accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>) attributes {async}
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>) attributes {wait}
+// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data async(%[[I64VALUE]] : i64) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data async(%[[I64VALUE]] : i64) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data if(%[[IFCOND]]) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.exit_data wait_devnum(%[[I64VALUE]] : i64) wait(%[[I32VALUE]], %[[IDXVALUE]] : i32, index) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+
 // -----
 
 
@@ -976,7 +1036,7 @@ func.func @testenterdataop(%a: !llvm.ptr<f32>, %b: !llvm.ptr<f32>, %c: !llvm.ptr
 }
 
 // CHECK: func @testenterdataop(%[[ARGA:.*]]: !llvm.ptr<f32>, %[[ARGB:.*]]: !llvm.ptr<f32>, %[[ARGC:.*]]: !llvm.ptr<f32>) {
-// CHECK: [[IFCOND1:%.*]] = arith.constant true
+// CHECK: [[IFCOND:%.*]] = arith.constant true
 // CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
 // CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index

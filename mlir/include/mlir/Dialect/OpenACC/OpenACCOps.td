@@ -813,9 +813,6 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
                        Optional<IntOrIndex>:$waitDevnum,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$wait,
-                       Variadic<AnyType>:$copyoutOperands,
-                       Variadic<AnyType>:$deleteOperands,
-                       Variadic<AnyType>:$detachOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$finalize);
 
@@ -833,9 +830,6 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
       | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
-      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
-      | `delete` `(` $deleteOperands `:` type($deleteOperands) `)`
-      | `detach` `(` $detachOperands `:` type($detachOperands) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword
