@@ -167,48 +167,55 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{at least one operand in copyout, delete or detach must appear on the exit data operation}}
+// expected-error@+1 {{at least one operand must be present in dataOperands on the exit data operation}}
 acc.exit_data attributes {async}
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.exit_data async(%cst: index) delete(%value : memref<10xf32>) attributes {async}
+acc.exit_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+acc.delete accPtr(%0 : memref<f32>)
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.exit_data wait_devnum(%cst: index) delete(%value : memref<10xf32>)
+acc.exit_data wait_devnum(%cst: index) dataOperands(%0 : memref<f32>)
+acc.delete accPtr(%0 : memref<f32>)
 
 // -----
 
-// expected-error@+1 {{at least one operand in copyin, create, create_zero or attach must appear on the enter data operation}}
+// expected-error@+1 {{at least one operand must be present in dataOperands on the enter data operation}}
 acc.enter_data attributes {async}
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.enter_data async(%cst: index) create(%value : memref<10xf32>) attributes {async}
+acc.enter_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.enter_data wait(%cst: index) create(%value : memref<10xf32>) attributes {wait}
+acc.enter_data wait(%cst: index) dataOperands(%0 : memref<f32>) attributes {wait}
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.enter_data wait_devnum(%cst: index) create(%value : memref<10xf32>)
+acc.enter_data wait_devnum(%cst: index) dataOperands(%0 : memref<f32>)
 
 // -----
 

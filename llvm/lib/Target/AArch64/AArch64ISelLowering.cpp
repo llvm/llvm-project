@@ -23856,6 +23856,33 @@ bool AArch64TargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,
   return TargetLowering::shouldConvertFpToSat(Op, FPVT, VT);
 }
 
+MachineInstr *
+AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::instr_iterator &MBBI,
+                                     const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  switch (MBBI->getOpcode()) {
+  case AArch64::BLR:
+  case AArch64::BLRNoIP:
+  case AArch64::TCRETURNri:
+  case AArch64::TCRETURNriBTI:
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  assert(Target.isReg() && "Invalid target operand for an indirect call");
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(AArch64::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
+}
+
 bool AArch64TargetLowering::enableAggressiveFMAFusion(EVT VT) const {
   return Subtarget->hasAggressiveFMA() && VT.isFloatingPoint();
 }

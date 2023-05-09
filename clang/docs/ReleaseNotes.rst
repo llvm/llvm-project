@@ -91,6 +91,9 @@ C++20 Feature Support
   building of standard modules. This diagnostic may be strengthened into an
   error again in the future once there is a less fragile way to mark a module
   as being part of the implementation rather than a user module.
+- Clang now implements `[temp.deduct]p9`. Substitution failures inside lambdas from
+  unevaluated contexts will be surfaced as errors. They were previously handled as
+  SFINAE.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -189,11 +192,19 @@ New Compiler Flags
 - The flag ``-std=c++23`` has been added. This behaves the same as the existing
   flag ``-std=c++2b``.
 
+- ``-dumpdir`` has been implemented to specify auxiliary and dump output
+  filenames for features like ``-gsplit-dwarf``.
+
 Deprecated Compiler Flags
 -------------------------
 
 Modified Compiler Flags
 -----------------------
+
+- ``clang -g -gsplit-dwarf a.c -o obj/x`` (compile and link) now generates the
+  ``.dwo`` file at ``obj/x-a.dwo``, instead of a file in the temporary
+  directory (``/tmp`` on \*NIX systems, if none of the environment variables
+  TMPDIR, TMP, and TEMP are specified).
 
 Removed Compiler Flags
 -------------------------
@@ -376,6 +387,10 @@ Bug Fixes in This Version
 - Fix crash when attempting to pass a non-pointer type as first argument of
   ``__builtin_assume_aligned``.
   (`#62305 <https://github.com/llvm/llvm-project/issues/62305>`_)
+- A default argument for a non-type template parameter is evaluated and checked
+  at the point where it is required. This fixes:
+  (`#62224 <https://github.com/llvm/llvm-project/issues/62224>`_) and
+  (`#62596 <https://github.com/llvm/llvm-project/issues/62596>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

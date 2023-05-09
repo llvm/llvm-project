@@ -115,9 +115,6 @@ void OpenACCDataOperandConversion::runOnOperation() {
   options.useOpaquePointers = useOpaquePointers;
   fir::LLVMTypeConverter converter(
       op.getOperation()->getParentOfType<mlir::ModuleOp>(), true);
-  patterns.add<LegalizeDataOpForLLVMTranslation<acc::DataOp>>(converter);
-  patterns.add<LegalizeDataOpForLLVMTranslation<acc::EnterDataOp>>(converter);
-  patterns.add<LegalizeDataOpForLLVMTranslation<acc::ExitDataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::ParallelOp>>(converter);
 
   ConversionTarget target(*context);
@@ -132,36 +129,6 @@ void OpenACCDataOperandConversion::runOnOperation() {
     }
     return true;
   };
-
-  target.addDynamicallyLegalOp<acc::DataOp>(
-      [allDataOperandsAreConverted](acc::DataOp op) {
-        return allDataOperandsAreConverted(op.getCopyOperands()) &&
-               allDataOperandsAreConverted(op.getCopyinOperands()) &&
-               allDataOperandsAreConverted(op.getCopyinReadonlyOperands()) &&
-               allDataOperandsAreConverted(op.getCopyoutOperands()) &&
-               allDataOperandsAreConverted(op.getCopyoutZeroOperands()) &&
-               allDataOperandsAreConverted(op.getCreateOperands()) &&
-               allDataOperandsAreConverted(op.getCreateZeroOperands()) &&
-               allDataOperandsAreConverted(op.getNoCreateOperands()) &&
-               allDataOperandsAreConverted(op.getPresentOperands()) &&
-               allDataOperandsAreConverted(op.getDeviceptrOperands()) &&
-               allDataOperandsAreConverted(op.getAttachOperands());
-      });
-
-  target.addDynamicallyLegalOp<acc::EnterDataOp>(
-      [allDataOperandsAreConverted](acc::EnterDataOp op) {
-        return allDataOperandsAreConverted(op.getCopyinOperands()) &&
-               allDataOperandsAreConverted(op.getCreateOperands()) &&
-               allDataOperandsAreConverted(op.getCreateZeroOperands()) &&
-               allDataOperandsAreConverted(op.getAttachOperands());
-      });
-
-  target.addDynamicallyLegalOp<acc::ExitDataOp>(
-      [allDataOperandsAreConverted](acc::ExitDataOp op) {
-        return allDataOperandsAreConverted(op.getCopyoutOperands()) &&
-               allDataOperandsAreConverted(op.getDeleteOperands()) &&
-               allDataOperandsAreConverted(op.getDetachOperands());
-      });
 
   target.addDynamicallyLegalOp<acc::ParallelOp>(
       [allDataOperandsAreConverted](acc::ParallelOp op) {

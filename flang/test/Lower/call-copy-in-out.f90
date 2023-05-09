@@ -323,7 +323,7 @@ subroutine whole_component_contiguous_char_pointer()
   ! CHECK: %[[a:.*]] = fir.alloca !fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>
   type(t) :: a
   ! CHECK: %[[field:.*]] = fir.field_index i, !fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %0, %1 : (!fir.ref<!fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[a]], %[[field]] : (!fir.ref<!fir.type<_QFwhole_component_contiguous_char_pointerTt{i:!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[box_load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box_load]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
   ! CHECK: %[[len:.*]] = fir.box_elesize %[[box_load]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> index

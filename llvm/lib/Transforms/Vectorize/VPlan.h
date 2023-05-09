@@ -942,6 +942,7 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
   enum class OperationType : unsigned char {
     OverflowingBinOp,
     PossiblyExactOp,
+    GEPOp,
     FPMathOp,
     Other
   };
@@ -951,6 +952,9 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
   };
   struct ExactFlagsTy {
     char IsExact : 1;
+  };
+  struct GEPFlagsTy {
+    char IsInBounds : 1;
   };
   struct FastMathFlagsTy {
     char AllowReassoc : 1;
@@ -967,6 +971,7 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
   union {
     WrapFlagsTy WrapFlags;
     ExactFlagsTy ExactFlags;
+    GEPFlagsTy GEPFlags;
     FastMathFlagsTy FMFs;
     unsigned char AllFlags;
   };
@@ -990,6 +995,9 @@ public:
     } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
       OpType = OperationType::PossiblyExactOp;
       ExactFlags.IsExact = Op->isExact();
+    } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      OpType = OperationType::GEPOp;
+      GEPFlags.IsInBounds = GEP->isInBounds();
     } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
       OpType = OperationType::FPMathOp;
       FastMathFlags FMF = Op->getFastMathFlags();
@@ -1004,7 +1012,8 @@ public:
   }
 
   static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
+    return R->getVPDefID() == VPRecipeBase::VPWidenSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenGEPSC;
   }
 
   /// Drop all poison-generating flags.
@@ -1018,6 +1027,9 @@ public:
       break;
     case OperationType::PossiblyExactOp:
       ExactFlags.IsExact = false;
+      break;
+    case OperationType::GEPOp:
+      GEPFlags.IsInBounds = false;
       break;
     case OperationType::FPMathOp:
       FMFs.NoNaNs = false;
@@ -1038,6 +1050,9 @@ public:
     case OperationType::PossiblyExactOp:
       I->setIsExact(ExactFlags.IsExact);
       break;
+    case OperationType::GEPOp:
+      cast<GetElementPtrInst>(I)->setIsInBounds(GEPFlags.IsInBounds);
+      break;
     case OperationType::FPMathOp:
       I->setHasAllowReassoc(FMFs.AllowReassoc);
       I->setHasNoNaNs(FMFs.NoNaNs);
@@ -1050,6 +1065,12 @@ public:
     case OperationType::Other:
       break;
     }
+  }
+
+  bool isInBounds() const {
+    assert(OpType == OperationType::GEPOp &&
+           "recipe doesn't have inbounds flag");
+    return GEPFlags.IsInBounds;
   }
 };
 
@@ -1177,7 +1198,7 @@ struct VPWidenSelectRecipe : public VPRecipeBase, public VPValue {
 };
 
 /// A recipe for handling GEP instructions.
-class VPWidenGEPRecipe : public VPRecipeBase, public VPValue {
+class VPWidenGEPRecipe : public VPRecipeWithIRFlags, public VPValue {
   bool isPointerLoopInvariant() const {
     return getOperand(0)->isDefinedOutsideVectorRegions();
   }
@@ -1195,7 +1216,8 @@ class VPWidenGEPRecipe : public VPRecipeBase, public VPValue {
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeBase(VPDef::VPWidenGEPSC, Operands), VPValue(this, GEP) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP),
+        VPValue(this, GEP) {}
 
   ~VPWidenGEPRecipe() override = default;
 
