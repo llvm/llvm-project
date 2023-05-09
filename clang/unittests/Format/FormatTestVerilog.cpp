@@ -1157,6 +1157,14 @@ TEST_F(FormatTestVerilog, StructuredProcedure) {
                "  x <= x;");
   verifyFormat("always @(posedge x)\n"
                "  x <= x;");
+  verifyFormat("always @(posedge x or posedge y)\n"
+               "  x <= x;");
+  verifyFormat("always @(posedge x, posedge y)\n"
+               "  x <= x;");
+  verifyFormat("always @(negedge x, negedge y)\n"
+               "  x <= x;");
+  verifyFormat("always @(edge x, edge y)\n"
+               "  x <= x;");
   verifyFormat("always\n"
                "  x <= x;");
   verifyFormat("always @*\n"
