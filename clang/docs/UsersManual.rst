@@ -3871,7 +3871,7 @@ codebases.
 
 On ``x86_64-mingw32``, passing i128(by value) is incompatible with the
 Microsoft x64 calling convention. You might need to tweak
-``WinX86_64ABIInfo::classify()`` in lib/CodeGen/TargetInfo.cpp.
+``WinX86_64ABIInfo::classify()`` in lib/CodeGen/Targets/X86.cpp.
 
 For the X86 target, clang supports the `-m16` command line
 argument which enables 16-bit code output. This is broadly similar to
