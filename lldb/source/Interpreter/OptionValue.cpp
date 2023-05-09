@@ -296,14 +296,14 @@ bool OptionValue::SetEnumerationValue(int64_t value) {
   return false;
 }
 
-FileSpec OptionValue::GetFileSpecValue() const {
+std::optional<FileSpec> OptionValue::GetFileSpecValue() const {
   const OptionValueFileSpec *option_value = GetAsFileSpec();
   if (option_value)
     return option_value->GetCurrentValue();
-  return FileSpec();
+  return {};
 }
 
-bool OptionValue::SetFileSpecValue(const FileSpec &file_spec) {
+bool OptionValue::SetFileSpecValue(FileSpec file_spec) {
   OptionValueFileSpec *option_value = GetAsFileSpec();
   if (option_value) {
     option_value->SetCurrentValue(file_spec, false);
