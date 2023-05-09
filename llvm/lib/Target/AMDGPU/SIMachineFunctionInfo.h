@@ -467,6 +467,7 @@ private:
   bool WorkGroupIDY : 1;
   bool WorkGroupIDZ : 1;
   bool WorkGroupInfo : 1;
+  bool WaveID : 1;
   bool LDSKernelId : 1;
   bool PrivateSegmentWaveByteOffset : 1;
 
@@ -781,6 +782,12 @@ public:
     return ArgInfo.WorkGroupInfo.getRegister();
   }
 
+  // Supported for gfx12+
+  Register addWaveID() {
+    ArgInfo.WaveID = ArgDescriptor::createRegister(AMDGPU::TTMP8, 0x1f << 25);
+    return ArgInfo.WaveID.getRegister();
+  }
+
   // Add special VGPR inputs
   void setWorkItemIDX(ArgDescriptor Arg) {
     ArgInfo.WorkItemIDX = Arg;
@@ -844,6 +851,8 @@ public:
   bool hasWorkGroupInfo() const {
     return WorkGroupInfo;
   }
+
+  bool hasWaveID() const { return WaveID; }
 
   bool hasLDSKernelId() const { return LDSKernelId; }
 

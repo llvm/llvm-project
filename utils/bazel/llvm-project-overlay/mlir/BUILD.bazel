@@ -1018,8 +1018,8 @@ td_library(
 )
 
 td_library(
-    name = "Mem2RegInterfacesTdFiles",
-    srcs = ["include/mlir/Interfaces/Mem2RegInterfaces.td"],
+    name = "MemorySlotInterfacesTdFiles",
+    srcs = ["include/mlir/Interfaces/MemorySlotInterfaces.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
 )
@@ -3203,13 +3203,13 @@ cc_library(
 )
 
 cc_library(
-    name = "Mem2RegInterfaces",
-    srcs = ["lib/Interfaces/Mem2RegInterfaces.cpp"],
-    hdrs = ["include/mlir/Interfaces/Mem2RegInterfaces.h"],
+    name = "MemorySlotInterfaces",
+    srcs = ["lib/Interfaces/MemorySlotInterfaces.cpp"],
+    hdrs = ["include/mlir/Interfaces/MemorySlotInterfaces.h"],
     includes = ["include"],
     deps = [
         ":IR",
-        ":Mem2RegInterfacesIncGen",
+        ":MemorySlotInterfacesIncGen",
         "//llvm:Support",
     ],
 )
@@ -4032,8 +4032,8 @@ cc_library(
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
         ":LLVMTypesIncGen",
-        ":Mem2RegInterfaces",
-        ":Mem2RegInterfacesIncGen",
+        ":MemorySlotInterfaces",
+        ":MemorySlotInterfacesIncGen",
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:AsmParser",
@@ -4435,7 +4435,7 @@ td_library(
         ":DataLayoutInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
-        ":Mem2RegInterfacesTdFiles",
+        ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -5975,7 +5975,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LoopLikeInterface",
-        ":Mem2RegInterfaces",
+        ":MemorySlotInterfaces",
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",
@@ -6132,21 +6132,21 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "Mem2RegInterfacesIncGen",
+    name = "MemorySlotInterfacesIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Interfaces/Mem2RegInterfaces.h.inc",
+            "include/mlir/Interfaces/MemorySlotOpInterfaces.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Interfaces/Mem2RegInterfaces.cpp.inc",
+            "include/mlir/Interfaces/MemorySlotOpInterfaces.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Interfaces/Mem2RegInterfaces.td",
-    deps = [":Mem2RegInterfacesTdFiles"],
+    td_file = "include/mlir/Interfaces/MemorySlotInterfaces.td",
+    deps = [":MemorySlotInterfacesTdFiles"],
 )
 
 gentbl_cc_library(
@@ -6304,7 +6304,7 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LoopLikeInterface",
-        ":Mem2RegInterfaces",
+        ":MemorySlotInterfaces",
         ":Pass",
         ":Rewrite",
         ":RuntimeVerifiableOpInterface",
@@ -10502,7 +10502,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":Mem2RegInterfacesTdFiles",
+        ":MemorySlotInterfacesTdFiles",
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
@@ -10582,7 +10582,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":Mem2RegInterfaces",
+        ":MemorySlotInterfaces",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":ShapedOpInterfaces",

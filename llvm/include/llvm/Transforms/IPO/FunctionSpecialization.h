@@ -60,6 +60,15 @@
 using namespace llvm;
 
 namespace llvm {
+// Map of potential specializations for each function. The FunctionSpecializer
+// keeps the discovered specialisation opportunities for the module in a single
+// vector, where the specialisations of each function form a contiguous range.
+// This map's value is the beginning and the end of that range.
+using SpecMap = DenseMap<Function *, std::pair<unsigned, unsigned>>;
+
+// Just a shorter abbreviation to improve indentation.
+using Cost = InstructionCost;
+
 // Specialization signature, used to uniquely designate a specialization within
 // a function.
 struct SpecSig {
@@ -95,22 +104,16 @@ struct Spec {
   SpecSig Sig;
 
   // Profitability of the specialization.
-  InstructionCost Gain;
+  Cost Score;
 
   // List of call sites, matching this specialization.
   SmallVector<CallBase *> CallSites;
 
-  Spec(Function *F, const SpecSig &S, InstructionCost G)
-      : F(F), Sig(S), Gain(G) {}
-  Spec(Function *F, const SpecSig &&S, InstructionCost G)
-      : F(F), Sig(S), Gain(G) {}
+  Spec(Function *F, const SpecSig &S, Cost Score)
+      : F(F), Sig(S), Score(Score) {}
+  Spec(Function *F, const SpecSig &&S, Cost Score)
+      : F(F), Sig(S), Score(Score) {}
 };
-
-// Map of potential specializations for each function. The FunctionSpecializer
-// keeps the discovered specialisation opportunities for the module in a single
-// vector, where the specialisations of each function form a contiguous range.
-// This map's value is the beginning and the end of that range.
-using SpecMap = DenseMap<Function *, std::pair<unsigned, unsigned>>;
 
 class FunctionSpecializer {
 
@@ -170,12 +173,12 @@ private:
 
   /// @brief  Find potential specialization opportunities.
   /// @param F Function to specialize
-  /// @param Cost Cost of specializing a function. Final gain is this cost
-  /// minus benefit
+  /// @param SpecCost Cost of specializing a function. Final score is benefit
+  /// minus this cost.
   /// @param AllSpecs A vector to add potential specializations to.
   /// @param SM  A map for a function's specialisation range
   /// @return True, if any potential specializations were found
-  bool findSpecializations(Function *F, InstructionCost Cost,
+  bool findSpecializations(Function *F, Cost SpecCost,
                            SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
 
   bool isCandidateFunction(Function *F);
@@ -187,11 +190,10 @@ private:
   Function *createSpecialization(Function *F, const SpecSig &S);
 
   /// Compute and return the cost of specializing function \p F.
-  InstructionCost getSpecializationCost(Function *F);
+  Cost getSpecializationCost(Function *F);
 
   /// Compute a bonus for replacing argument \p A with constant \p C.
-  InstructionCost getSpecializationBonus(Argument *A, Constant *C,
-                                         const LoopInfo &LI);
+  Cost getSpecializationBonus(Argument *A, Constant *C, const LoopInfo &LI);
 
   /// Determine if it is possible to specialise the function for constant values
   /// of the formal parameter \p A.

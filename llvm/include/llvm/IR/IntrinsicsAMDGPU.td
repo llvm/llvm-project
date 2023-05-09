@@ -2393,6 +2393,10 @@ class AMDGPUGlobalLoadTr<LLVMType data_ty> :
 def int_amdgcn_global_load_tr_b64 : AMDGPUGlobalLoadTr<llvm_any_ty>;
 def int_amdgcn_global_load_tr_b128 : AMDGPUGlobalLoadTr<llvm_any_ty>;
 
+// i32 @llvm.amdgcn.wave.id()
+def int_amdgcn_wave_id :
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

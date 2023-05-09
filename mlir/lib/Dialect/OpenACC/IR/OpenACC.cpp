@@ -151,7 +151,8 @@ LogicalResult acc::GetDevicePtrOp::verify() {
       getDataClause() != acc::DataClause::acc_copyout &&
       getDataClause() != acc::DataClause::acc_delete &&
       getDataClause() != acc::DataClause::acc_detach &&
-      getDataClause() != acc::DataClause::acc_update_host)
+      getDataClause() != acc::DataClause::acc_update_host &&
+      getDataClause() != acc::DataClause::acc_update_self)
     return emitError("getDevicePtr mismatch");
   return success();
 }
@@ -519,14 +520,7 @@ LogicalResult acc::DataOp::verify() {
   return success();
 }
 
-unsigned DataOp::getNumDataOperands() {
-  return getCopyOperands().size() + getCopyinOperands().size() +
-         getCopyinReadonlyOperands().size() + getCopyoutOperands().size() +
-         getCopyoutZeroOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getNoCreateOperands().size() +
-         getPresentOperands().size() + getDeviceptrOperands().size() +
-         getAttachOperands().size() + getDataClauseOperands().size();
-}
+unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;
@@ -541,11 +535,9 @@ LogicalResult acc::ExitDataOp::verify() {
   // 2.6.6. Data Exit Directive restriction
   // At least one copyout, delete, or detach clause must appear on an exit data
   // directive.
-  if (getCopyoutOperands().empty() && getDeleteOperands().empty() &&
-      getDetachOperands().empty() && getDataClauseOperands().empty())
-    return emitError(
-        "at least one operand in copyout, delete or detach must appear on the "
-        "exit data operation");
+  if (getDataClauseOperands().empty())
+    return emitError("at least one operand must be present in dataOperands on "
+                     "the exit data operation");
 
   // The async attribute represent the async clause without value. Therefore the
   // attribute and operand cannot appear at the same time.
@@ -564,8 +556,7 @@ LogicalResult acc::ExitDataOp::verify() {
 }
 
 unsigned ExitDataOp::getNumDataOperands() {
-  return getCopyoutOperands().size() + getDeleteOperands().size() +
-         getDetachOperands().size() + getDataClauseOperands().size();
+  return getDataClauseOperands().size();
 }
 
 Value ExitDataOp::getDataOperand(unsigned i) {
@@ -588,12 +579,9 @@ LogicalResult acc::EnterDataOp::verify() {
   // 2.6.6. Data Enter Directive restriction
   // At least one copyin, create, or attach clause must appear on an enter data
   // directive.
-  if (getCopyinOperands().empty() && getCreateOperands().empty() &&
-      getCreateZeroOperands().empty() && getAttachOperands().empty() &&
-      getDataClauseOperands().empty())
-    return emitError(
-        "at least one operand in copyin, create, "
-        "create_zero or attach must appear on the enter data operation");
+  if (getDataClauseOperands().empty())
+    return emitError("at least one operand must be present in dataOperands on "
+                     "the enter data operation");
 
   // The async attribute represent the async clause without value. Therefore the
   // attribute and operand cannot appear at the same time.
@@ -617,9 +605,7 @@ LogicalResult acc::EnterDataOp::verify() {
 }
 
 unsigned EnterDataOp::getNumDataOperands() {
-  return getCopyinOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getAttachOperands().size() +
-         getDataClauseOperands().size();
+  return getDataClauseOperands().size();
 }
 
 Value EnterDataOp::getDataOperand(unsigned i) {

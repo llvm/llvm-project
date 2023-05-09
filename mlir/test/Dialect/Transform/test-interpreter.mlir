@@ -858,6 +858,47 @@ transform.sequence failures(suppress) {
 
 // -----
 
+func.func @split_handle(%a: index, %b: index, %c: index) {
+  %0 = arith.muli %a, %b : index
+  %1 = arith.muli %a, %c : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%fun: !pdl.operation):
+  %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!pdl.operation) -> !pdl.operation
+  // No error, last result handle is empty.
+  %h:3 = split_handle %muli_2 {fail_on_payload_too_small = false} : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
+  // expected-remark @below {{1}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#0
+  // expected-remark @below {{1}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#1
+  // expected-remark @below {{0}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#2
+}
+
+// -----
+
+func.func @split_handle(%a: index, %b: index, %c: index) {
+  %0 = arith.muli %a, %b : index
+  %1 = arith.muli %a, %c : index
+  %2 = arith.muli %a, %c : index
+  %3 = arith.muli %a, %c : index
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%fun: !pdl.operation):
+  %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun : (!pdl.operation) -> !pdl.operation
+  %h:2 = split_handle %muli_2 {overflow_result = 0} : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
+  // expected-remark @below {{3}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#0
+  // expected-remark @below {{1}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#1
+}
+
+// -----
+
 "test.some_op"() : () -> ()
 "other_dialect.other_op"() : () -> ()
 

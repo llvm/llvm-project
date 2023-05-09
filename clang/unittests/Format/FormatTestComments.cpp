@@ -4316,7 +4316,7 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
 )",
             format(R"(//
 /\
-/
+/ 
   )",
                    getLLVMStyleWithColumns(10)));
 }

@@ -189,8 +189,11 @@ struct AMDGPUMemoryPoolTy {
   /// Getter of the HSA memory pool.
   hsa_amd_memory_pool_t get() const { return MemoryPool; }
 
-  /// Indicate if it belongs to the global segment.
+  /// Indicate the segment which belongs to.
   bool isGlobal() const { return (Segment == HSA_AMD_SEGMENT_GLOBAL); }
+  bool isReadOnly() const { return (Segment == HSA_AMD_SEGMENT_READONLY); }
+  bool isPrivate() const { return (Segment == HSA_AMD_SEGMENT_PRIVATE); }
+  bool isGroup() const { return (Segment == HSA_AMD_SEGMENT_GROUP); }
 
   /// Indicate if it is fine-grained memory. Valid only for global.
   bool isFineGrained() const {
@@ -246,13 +249,17 @@ struct AMDGPUMemoryPoolTy {
     return Plugin::check(Status, "Error in hsa_amd_agents_allow_access: %s");
   }
 
-private:
   /// Get attribute from the memory pool.
   template <typename Ty>
   Error getAttr(hsa_amd_memory_pool_info_t Kind, Ty &Value) const {
     hsa_status_t Status;
     Status = hsa_amd_memory_pool_get_info(MemoryPool, Kind, &Value);
     return Plugin::check(Status, "Error in hsa_amd_memory_pool_get_info: %s");
+  }
+
+  template <typename Ty>
+  hsa_status_t getAttrRaw(hsa_amd_memory_pool_info_t Kind, Ty &Value) const {
+    return hsa_amd_memory_pool_get_info(MemoryPool, Kind, &Value);
   }
 
   /// Get attribute from the memory pool relating to an agent.
@@ -266,6 +273,7 @@ private:
                          "Error in hsa_amd_agent_memory_pool_get_info: %s");
   }
 
+private:
   /// The HSA memory pool.
   hsa_amd_memory_pool_t MemoryPool;
 
@@ -2100,8 +2108,206 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Print information about the device.
-  Error printInfoImpl() override {
-    // TODO: Implement the basic info.
+  Error obtainInfoImpl(InfoQueueTy &Info) override {
+    char TmpChar[1000];
+    const char *TmpCharPtr;
+    uint16_t Major, Minor;
+    uint32_t TmpUInt, TmpUInt2;
+    uint32_t CacheSize[4];
+    size_t TmpSt;
+    bool TmpBool;
+    uint16_t WorkgrpMaxDim[3];
+    hsa_dim3_t GridMaxDim;
+    hsa_status_t Status, Status2;
+
+    Status = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MAJOR, &Major);
+    Status2 = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MINOR, &Minor);
+    if (Status == HSA_STATUS_SUCCESS && Status2 == HSA_STATUS_SUCCESS)
+      Info.add("HSA Runtime Version",
+               std::to_string(Major) + "." + std::to_string(Minor));
+
+    Info.add("HSA OpenMP Device Number", DeviceId);
+
+    Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_PRODUCT_NAME, TmpChar);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Product Name", TmpChar);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_NAME, TmpChar);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Device Name", TmpChar);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_VENDOR_NAME, TmpChar);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Vendor Name", TmpChar);
+
+    hsa_device_type_t DevType;
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_DEVICE, DevType);
+    if (Status == HSA_STATUS_SUCCESS) {
+      switch (DevType) {
+      case HSA_DEVICE_TYPE_CPU:
+        TmpCharPtr = "CPU";
+        break;
+      case HSA_DEVICE_TYPE_GPU:
+        TmpCharPtr = "GPU";
+        break;
+      case HSA_DEVICE_TYPE_DSP:
+        TmpCharPtr = "DSP";
+        break;
+      default:
+        TmpCharPtr = "Unknown";
+      }
+      Info.add("Device Type", TmpCharPtr);
+    }
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_QUEUES_MAX, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Max Queues", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_QUEUE_MIN_SIZE, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Queue Min Size", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_QUEUE_MAX_SIZE, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Queue Max Size", TmpUInt);
+
+    // FIXME: This is deprecated according to HSA documentation. But using
+    // hsa_agent_iterate_caches and hsa_cache_get_info breaks execution during
+    // runtime.
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_CACHE_SIZE, CacheSize);
+    if (Status == HSA_STATUS_SUCCESS) {
+      Info.add("Cache");
+
+      for (int I = 0; I < 4; I++)
+        if (CacheSize[I])
+          Info.add<InfoLevel2>("L" + std::to_string(I), CacheSize[I]);
+    }
+
+    Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_CACHELINE_SIZE, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Cacheline Size", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Max Clock Freq", TmpUInt, "MHz");
+
+    Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Compute Units", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("SIMD per CU", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_FAST_F16_OPERATION, TmpBool);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Fast F16 Operation", TmpBool);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_WAVEFRONT_SIZE, TmpUInt2);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Wavefront Size", TmpUInt2);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Workgroup Max Size", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_DIM, WorkgrpMaxDim);
+    if (Status == HSA_STATUS_SUCCESS) {
+      Info.add("Workgroup Max Size per Dimension");
+      Info.add<InfoLevel2>("x", WorkgrpMaxDim[0]);
+      Info.add<InfoLevel2>("y", WorkgrpMaxDim[1]);
+      Info.add<InfoLevel2>("z", WorkgrpMaxDim[2]);
+    }
+
+    Status = getDeviceAttrRaw(
+        (hsa_agent_info_t)HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS) {
+      Info.add("Max Waves Per CU", TmpUInt);
+      Info.add("Max Work-item Per CU", TmpUInt * TmpUInt2);
+    }
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_SIZE, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Grid Max Size", TmpUInt);
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim);
+    if (Status == HSA_STATUS_SUCCESS) {
+      Info.add("Grid Max Size per Dimension");
+      Info.add<InfoLevel2>("x", GridMaxDim.x);
+      Info.add<InfoLevel2>("y", GridMaxDim.y);
+      Info.add<InfoLevel2>("z", GridMaxDim.z);
+    }
+
+    Status = getDeviceAttrRaw(HSA_AGENT_INFO_FBARRIER_MAX_SIZE, TmpUInt);
+    if (Status == HSA_STATUS_SUCCESS)
+      Info.add("Max fbarriers/Workgrp", TmpUInt);
+
+    Info.add("Memory Pools");
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      std::string TmpStr, TmpStr2;
+
+      if (Pool->isGlobal())
+        TmpStr = "Global";
+      else if (Pool->isReadOnly())
+        TmpStr = "ReadOnly";
+      else if (Pool->isPrivate())
+        TmpStr = "Private";
+      else if (Pool->isGroup())
+        TmpStr = "Group";
+      else
+        TmpStr = "Unknown";
+
+      Info.add<InfoLevel2>(std::string("Pool ") + TmpStr);
+
+      if (Pool->isGlobal()) {
+        if (Pool->isFineGrained())
+          TmpStr2 += "Fine Grained ";
+        if (Pool->isCoarseGrained())
+          TmpStr2 += "Coarse Grained ";
+        if (Pool->supportsKernelArgs())
+          TmpStr2 += "Kernarg ";
+
+        Info.add<InfoLevel3>("Flags", TmpStr2);
+      }
+
+      Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, TmpSt);
+      if (Status == HSA_STATUS_SUCCESS)
+        Info.add<InfoLevel3>("Size", TmpSt, "bytes");
+
+      Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
+                                TmpBool);
+      if (Status == HSA_STATUS_SUCCESS)
+        Info.add<InfoLevel3>("Allocatable", TmpBool);
+
+      Status = Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE,
+                                TmpSt);
+      if (Status == HSA_STATUS_SUCCESS)
+        Info.add<InfoLevel3>("Runtime Alloc Granule", TmpSt, "bytes");
+
+      Status = Pool->getAttrRaw(
+          HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT, TmpSt);
+      if (Status == HSA_STATUS_SUCCESS)
+        Info.add<InfoLevel3>("Runtime Alloc Alignment", TmpSt, "bytes");
+
+      Status =
+          Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL, TmpBool);
+      if (Status == HSA_STATUS_SUCCESS)
+        Info.add<InfoLevel3>("Accessable by all", TmpBool);
+    }
+
+    Info.add("ISAs");
+    auto Err = utils::iterateAgentISAs(getAgent(), [&](hsa_isa_t ISA) {
+      Status = hsa_isa_get_info_alt(ISA, HSA_ISA_INFO_NAME, TmpChar);
+      if (Status == HSA_STATUS_SUCCESS)
+        Info.add<InfoLevel2>("Name", TmpChar);
+
+      return Status;
+    });
+
+    // Silently consume the error.
+    if (Err)
+      consumeError(std::move(Err));
+
     return Plugin::success();
   }
 
@@ -2124,6 +2330,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     hsa_status_t Status =
         hsa_agent_get_info(Agent, (hsa_agent_info_t)Kind, &Value);
     return Plugin::check(Status, "Error in hsa_agent_get_info: %s");
+  }
+
+  template <typename Ty>
+  hsa_status_t getDeviceAttrRaw(uint32_t Kind, Ty &Value) {
+    return hsa_agent_get_info(Agent, (hsa_agent_info_t)Kind, &Value);
   }
 
   /// Get the device agent.

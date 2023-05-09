@@ -1248,23 +1248,24 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
     if (StringRef(A->getValue()) == "single")
       return Args.MakeArgString(Output.getFilename());
 
-  Arg *FinalOutput = Args.getLastArg(options::OPT_o);
-  if (FinalOutput && Args.hasArg(options::OPT_c)) {
-    SmallString<128> T(FinalOutput->getValue());
-    llvm::sys::path::remove_filename(T);
-    llvm::sys::path::append(T, llvm::sys::path::stem(FinalOutput->getValue()));
-    AddPostfix(T);
-    return Args.MakeArgString(T);
+  SmallString<128> T;
+  if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+    T = A->getValue();
   } else {
-    // Use the compilation dir.
-    Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
-                             options::OPT_fdebug_compilation_dir_EQ);
-    SmallString<128> T(A ? A->getValue() : "");
-    SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
-    AddPostfix(F);
-    T += F;
-    return Args.MakeArgString(T);
+    Arg *FinalOutput = Args.getLastArg(options::OPT_o);
+    if (FinalOutput && Args.hasArg(options::OPT_c)) {
+      T = FinalOutput->getValue();
+      llvm::sys::path::remove_filename(T);
+      llvm::sys::path::append(T,
+                              llvm::sys::path::stem(FinalOutput->getValue()));
+      AddPostfix(T);
+      return Args.MakeArgString(T);
+    }
   }
+
+  T += llvm::sys::path::stem(Input.getBaseInput());
+  AddPostfix(T);
+  return Args.MakeArgString(T);
 }
 
 void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
