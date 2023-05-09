@@ -2458,6 +2458,12 @@ private:
   /// Create a new vector from a list of scalar values.  Produces a sequence
   /// which exploits values reused across lanes, and arranges the inserts
   /// for ease of later optimization.
+  template <typename BVTy, typename ResTy, typename... Args>
+  ResTy processBuildVector(const TreeEntry *E, Args &...Params);
+
+  /// Create a new vector from a list of scalar values.  Produces a sequence
+  /// which exploits values reused across lanes, and arranges the inserts
+  /// for ease of later optimization.
   Value *createBuildVector(const TreeEntry *E);
 
   /// Returns the instruction in the bundle, which can be used as a base point
@@ -9603,7 +9609,8 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
   return vectorizeTree(I->get());
 }
 
-Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
+template <typename BVTy, typename ResTy, typename... Args>
+ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   assert(E->State == TreeEntry::NeedToGather && "Expected gather node.");
   unsigned VF = E->getVectorFactor();
 
@@ -9644,8 +9651,8 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       std::fill(Mask.begin(), Mask.end(), I);
     return true;
   };
-  ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
-  Value *Vec = nullptr;
+  BVTy ShuffleBuilder(Params...);
+  ResTy Res = ResTy();
   SmallVector<int> Mask;
   SmallVector<int> ExtractMask;
   std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
@@ -9702,8 +9709,8 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
             Mask[I] = Entries.front()->findLaneForValue(V);
         }
         ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
-        Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
-        return Vec;
+        Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+        return Res;
       }
       if (!Resized) {
         unsigned VF1 = Entries.front()->getVectorFactor();
@@ -9917,9 +9924,9 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
                  (IsSingleShuffle && ((IsIdentityShuffle &&
                   IsNonPoisoned) || IsUsedInExpr) && isa<UndefValue>(V));
         }))
-      Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+      Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
     else
-      Vec = ShuffleBuilder.finalize(
+      Res = ShuffleBuilder.finalize(
           E->ReuseShuffleIndices, E->Scalars.size(),
           [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
             TryPackScalars(NonConstants, Mask, /*IsRootPoison=*/false);
@@ -9929,9 +9936,9 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    Vec = ShuffleBuilder.gather(GatheredScalars);
-    ShuffleBuilder.add(Vec, ReuseMask);
-    Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+    Value *BV = ShuffleBuilder.gather(GatheredScalars);
+    ShuffleBuilder.add(BV, ReuseMask);
+    Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   } else {
     // Gather all constants.
     SmallVector<int> Mask(E->Scalars.size(), PoisonMaskElem);
@@ -9939,14 +9946,19 @@ Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
       if (!isa<PoisonValue>(V))
         Mask[I] = I;
     }
-    Vec = ShuffleBuilder.gather(E->Scalars);
-    ShuffleBuilder.add(Vec, Mask);
-    Vec = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+    Value *BV = ShuffleBuilder.gather(E->Scalars);
+    ShuffleBuilder.add(BV, Mask);
+    Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
   }
 
   if (NeedFreeze)
-    Vec = ShuffleBuilder.createFreeze(Vec);
-  return Vec;
+    Res = ShuffleBuilder.createFreeze(Res);
+  return Res;
+}
+
+Value *BoUpSLP::createBuildVector(const TreeEntry *E) {
+  return processBuildVector<ShuffleInstructionBuilder, Value *>(E, Builder,
+                                                                *this);
 }
 
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
