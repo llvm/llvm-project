@@ -912,21 +912,33 @@ bool MachProcess::GetMachOInformationFromMemory(
 // create a JSONGenerator object
 // with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
-    const std::vector<struct binary_image_information> &image_infos) {
+    const std::vector<struct binary_image_information> &image_infos,
+    bool report_load_commands) {
 
   JSONGenerator::ArraySP image_infos_array_sp(new JSONGenerator::Array());
 
   const size_t image_count = image_infos.size();
 
   for (size_t i = 0; i < image_count; i++) {
-    if (!image_infos[i].is_valid_mach_header)
+    // If we should report the Mach-O header and load commands,
+    // and those were unreadable, don't report anything about this
+    // binary.
+    if (report_load_commands && !image_infos[i].is_valid_mach_header)
       continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    image_info_dict_sp->AddIntegerItem("mod_date", image_infos[i].mod_date);
+    // TODO: lldb currently rejects a response without this, but it
+    // is always zero from dyld.  It can be removed once we've had time
+    // for lldb's that require it to be present are obsolete.
+    image_info_dict_sp->AddIntegerItem("mod_date", 0);
     image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+
+    if (!report_load_commands) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
@@ -1000,109 +1012,6 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
   return reply_sp;
 }
 
-// Get the shared library information using the old (pre-macOS 10.12, pre-iOS
-// 10, pre-tvOS 10, pre-watchOS 3)
-// code path.  We'll be given the address of an array of structures in the form
-// {void* load_addr, void* mod_date, void* pathname}
-//
-// In macOS 10.12 etc and newer, we'll use SPI calls into dyld to gather this
-// information.
-JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
-    nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
-
-  JSONGenerator::ObjectSP empty_reply_sp(new JSONGenerator::Dictionary());
-  int pointer_size = GetInferiorAddrSize(pid);
-
-  std::vector<struct binary_image_information> image_infos;
-  size_t image_infos_size = image_count * 3 * pointer_size;
-
-  uint8_t *image_info_buf = (uint8_t *)malloc(image_infos_size);
-  if (image_info_buf == NULL) {
-    return empty_reply_sp;
-  }
-  if (ReadMemory(image_list_address, image_infos_size, image_info_buf) !=
-      image_infos_size) {
-    return empty_reply_sp;
-  }
-
-  /// First the image_infos array with (load addr, pathname, mod date)
-  /// tuples
-
-  for (size_t i = 0; i < image_count; i++) {
-    struct binary_image_information info;
-    nub_addr_t pathname_address;
-    if (pointer_size == 4) {
-      uint32_t load_address_32;
-      uint32_t pathname_address_32;
-      uint32_t mod_date_32;
-      ::memcpy(&load_address_32, image_info_buf + (i * 3 * pointer_size), 4);
-      ::memcpy(&pathname_address_32,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size, 4);
-      ::memcpy(&mod_date_32,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size +
-                   pointer_size,
-               4);
-      info.load_address = load_address_32;
-      info.mod_date = mod_date_32;
-      pathname_address = pathname_address_32;
-    } else {
-      uint64_t load_address_64;
-      uint64_t pathname_address_64;
-      uint64_t mod_date_64;
-      ::memcpy(&load_address_64, image_info_buf + (i * 3 * pointer_size), 8);
-      ::memcpy(&pathname_address_64,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size, 8);
-      ::memcpy(&mod_date_64,
-               image_info_buf + (i * 3 * pointer_size) + pointer_size +
-                   pointer_size,
-               8);
-      info.load_address = load_address_64;
-      info.mod_date = mod_date_64;
-      pathname_address = pathname_address_64;
-    }
-    char strbuf[17];
-    info.filename = "";
-    uint64_t pathname_ptr = pathname_address;
-    bool still_reading = true;
-    while (still_reading && ReadMemory(pathname_ptr, sizeof(strbuf) - 1,
-                                       strbuf) == sizeof(strbuf) - 1) {
-      strbuf[sizeof(strbuf) - 1] = '\0';
-      info.filename += strbuf;
-      pathname_ptr += sizeof(strbuf) - 1;
-      // Stop if we found nul byte indicating the end of the string
-      for (size_t i = 0; i < sizeof(strbuf) - 1; i++) {
-        if (strbuf[i] == '\0') {
-          still_reading = false;
-          break;
-        }
-      }
-    }
-    uuid_clear(info.macho_info.uuid);
-    image_infos.push_back(info);
-  }
-  if (image_infos.size() == 0) {
-    return empty_reply_sp;
-  }
-
-  free(image_info_buf);
-
-  ///  Second, read the mach header / load commands for all the dylibs
-
-  for (size_t i = 0; i < image_count; i++) {
-    // The SPI to provide platform is not available on older systems.
-    uint32_t platform = 0;
-    if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                      pointer_size,
-                                      image_infos[i].macho_info)) {
-      image_infos[i].is_valid_mach_header = true;
-    }
-  }
-
-  ///  Third, format all of the above in the JSONGenerator object.
-
-  return FormatDynamicLibrariesIntoJSON(image_infos);
-}
-
 /// From dyld SPI header dyld_process_info.h
 typedef void *dyld_process_info;
 struct dyld_process_cache_info {
@@ -1162,21 +1071,24 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // in
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
-MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
+MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
+                                        bool report_load_commands) {
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  uint32_t platform = GetPlatform();
-  const size_t image_count = image_infos.size();
-  for (size_t i = 0; i < image_count; i++) {
-    if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
-                                      pointer_size,
-                                      image_infos[i].macho_info)) {
-      image_infos[i].is_valid_mach_header = true;
+  if (report_load_commands) {
+    uint32_t platform = GetPlatform();
+    const size_t image_count = image_infos.size();
+    for (size_t i = 0; i < image_count; i++) {
+      if (GetMachOInformationFromMemory(platform, image_infos[i].load_address,
+                                        pointer_size,
+                                        image_infos[i].macho_info)) {
+        image_infos[i].is_valid_mach_header = true;
+      }
     }
   }
-    return FormatDynamicLibrariesIntoJSON(image_infos);
+  return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
 }
 
 // Fetch information about the shared libraries at the given load addresses
@@ -1226,7 +1138,8 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
         image_infos[i].is_valid_mach_header = true;
       }
     }
-    return FormatDynamicLibrariesIntoJSON(image_infos);
+    return FormatDynamicLibrariesIntoJSON(image_infos,
+                                          /* report_load_commands =  */ true);
 }
 
 // From dyld's internal podyld_process_info.h:

@@ -778,7 +778,7 @@ public:
     /// The parsed keyword itself.
     StringRef keyword;
 
-    /// The result of the switch statement or none if currently unknown.
+    /// The result of the switch statement or std::nullopt if currently unknown.
     std::optional<ResultT> result;
   };
 

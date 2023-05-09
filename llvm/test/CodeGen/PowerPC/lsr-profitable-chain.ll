@@ -6,24 +6,24 @@ define void @foo(ptr readonly %0, ptr %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpd 5, 7
-; CHECK-NEXT:    bgelr 0
-; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 27, 5, 2
-; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 28, 5, 3
-; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 30, 5, 1
-; CHECK-NEXT:    mulld 12, 8, 5
-; CHECK-NEXT:    mulld 0, 9, 8
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    addi 29, 3, 16
-; CHECK-NEXT:    sldi 11, 10, 3
 ; CHECK-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
+; CHECK-NEXT:    bge 0, .LBB0_6
+; CHECK-NEXT:  # %bb.1: # %.preheader
+; CHECK-NEXT:    addi 30, 5, 1
+; CHECK-NEXT:    addi 28, 5, 3
+; CHECK-NEXT:    addi 27, 5, 2
+; CHECK-NEXT:    mulld 12, 8, 5
+; CHECK-NEXT:    addi 29, 3, 16
+; CHECK-NEXT:    mulld 0, 9, 8
+; CHECK-NEXT:    sldi 11, 10, 3
 ; CHECK-NEXT:    mulld 30, 8, 30
 ; CHECK-NEXT:    mulld 28, 8, 28
 ; CHECK-NEXT:    mulld 8, 8, 27

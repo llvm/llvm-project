@@ -12,6 +12,7 @@
 ! standard names of the procedures.
 module __Fortran_builtins
 
+  intrinsic :: __builtin_c_loc
   intrinsic :: __builtin_c_f_pointer
   intrinsic :: sizeof ! extension
 
@@ -41,8 +42,6 @@ module __Fortran_builtins
 
   integer, parameter :: __builtin_atomic_int_kind = selected_int_kind(18)
   integer, parameter :: __builtin_atomic_logical_kind = __builtin_atomic_int_kind
-
-  procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
 
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
