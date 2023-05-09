@@ -44,7 +44,7 @@ static inline bool cstring_is_mangled(llvm::StringRef s) {
   return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone;
 }
 
-// BEGIN SWIFT
+#ifdef LLDB_ENABLE_SWIFT
 #pragma mark DisplayDemangledNamesCache
 
 // make the key type be a const char* because that gives us usable
@@ -59,7 +59,7 @@ GetDisplayDemangledNamesCache() {
   static ThreadSafeDenseMap<const char *, ConstString> g_cache;
   return g_cache;
 }
-// END SWIFT
+#endif // LLDB_ENABLE_SWIFT
 
 #pragma mark Mangled
 
