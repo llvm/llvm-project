@@ -98,13 +98,32 @@ struct AddressCompare {
   }
 };
 
+#if TEST_STD_VER >= 20
+class trivially_equality_comparable {
+public:
+  constexpr trivially_equality_comparable(int i) : i_(i) {}
+  bool operator==(const trivially_equality_comparable&) const = default;
+
+private:
+  int i_;
+};
+
+#endif
+
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestIter2<int, types::cpp17_input_iterator_list<int*> >());
-  types::for_each(types::cpp17_input_iterator_list<char*>(), TestIter2<char, types::cpp17_input_iterator_list<char*> >());
+  types::for_each(
+      types::cpp17_input_iterator_list<char*>(), TestIter2<char, types::cpp17_input_iterator_list<char*> >());
   types::for_each(types::cpp17_input_iterator_list<AddressCompare*>(),
-                 TestIter2<AddressCompare, types::cpp17_input_iterator_list<AddressCompare*> >());
+                  TestIter2<AddressCompare, types::cpp17_input_iterator_list<AddressCompare*> >());
 
   types::for_each(types::integral_types(), TestNarrowingEqualTo());
+
+#if TEST_STD_VER >= 20
+  types::for_each(
+      types::cpp17_input_iterator_list<trivially_equality_comparable*>{},
+      TestIter2<trivially_equality_comparable, types::cpp17_input_iterator_list<trivially_equality_comparable*>>{});
+#endif
 
   return true;
 }
@@ -119,9 +138,9 @@ int main(int, char**) {
 #endif
 
   types::for_each(types::as_pointers<types::cv_qualified_versions<int> >(),
-                 TestIter2<int, types::as_pointers<types::cv_qualified_versions<int> > >());
+                  TestIter2<int, types::as_pointers<types::cv_qualified_versions<int> > >());
   types::for_each(types::as_pointers<types::cv_qualified_versions<char> >(),
-                 TestIter2<char, types::as_pointers<types::cv_qualified_versions<char> > >());
+                  TestIter2<char, types::as_pointers<types::cv_qualified_versions<char> > >());
 
   {
     Derived d;
