@@ -1491,6 +1491,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, deviceTypeOperands);
   addOperands(operands, operandSegments, hostOperands);
   addOperands(operands, operandSegments, deviceOperands);
+  operandSegments.push_back(0); // temporary for dataClauseOperands.
 
   mlir::acc::UpdateOp updateOp = createSimpleOp<mlir::acc::UpdateOp>(
       firOpBuilder, currentLocation, operands, operandSegments);
