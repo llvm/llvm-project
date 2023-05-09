@@ -100,7 +100,7 @@ public:
     return result;
   }
 
-  /// Get the last modifications of a value. Returns none if the last
+  /// Get the last modifications of a value. Returns std::nullopt if the last
   /// modifications are not known.
   std::optional<ArrayRef<Operation *>> getLastModifiers(Value value) const {
     auto it = lastMods.find(value);
