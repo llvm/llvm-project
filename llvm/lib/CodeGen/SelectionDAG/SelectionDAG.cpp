@@ -3944,6 +3944,20 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 }
 
 SelectionDAG::OverflowKind
+SelectionDAG::computeOverflowForSignedAdd(SDValue N0, SDValue N1) const {
+  // X + 0 never overflow
+  if (isNullConstant(N1))
+    return OFK_Never;
+
+  // If bother operands each have at least two sign bits, the addition
+  // cannot overflow.
+  if (ComputeNumSignBits(N0) > 1 && ComputeNumSignBits(N1) > 1)
+    return OFK_Never;
+
+  return OFK_Sometime;
+}
+
+SelectionDAG::OverflowKind
 SelectionDAG::computeOverflowForUnsignedAdd(SDValue N0, SDValue N1) const {
   // X + 0 never overflow
   if (isNullConstant(N1))

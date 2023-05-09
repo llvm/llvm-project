@@ -964,15 +964,13 @@ continue:
   ret i1 true
 }
 
-; FIXME: Failure to recognise add can't overflow
 define {i64, i1} @saddoovf(i64 %a, i64 %b) {
 ; CHECK-LABEL: saddoovf:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    sarq $17, %rdi
-; CHECK-NEXT:    shrq $31, %rax
-; CHECK-NEXT:    addq %rdi, %rax
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    shrq $31, %rsi
+; CHECK-NEXT:    leaq (%rsi,%rdi), %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %1 = ashr i64 %a, 17
   %2 = lshr i64 %b, 31
