@@ -1482,6 +1482,16 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
           dataClauseOperands, mlir::acc::DataClause::acc_update_device, false);
     } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
       addIfPresentAttr = true;
+    } else if (const auto *selfClause =
+                   std::get_if<Fortran::parser::AccClause::Self>(&clause.u)) {
+      const std::optional<Fortran::parser::AccSelfClause> &accSelfClause =
+          selfClause->v;
+      const auto *accObjectList =
+          std::get_if<Fortran::parser::AccObjectList>(&(*accSelfClause).u);
+      assert(accObjectList && "expect AccObjectList");
+      genDataOperandOperations<mlir::acc::GetDevicePtrOp>(
+          *accObjectList, converter, semanticsContext, stmtCtx,
+          updateHostOperands, mlir::acc::DataClause::acc_update_self, false);
     }
   }
 
