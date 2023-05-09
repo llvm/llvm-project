@@ -1,6 +1,7 @@
 ;; Test callsite context graph generation for call graph with two memprof
 ;; contexts and partial inlining, requiring generation of a new fused node to
 ;; represent the inlined sequence while matching callsite nodes onto the graph.
+;; Also tests graph and IR cloning.
 ;;
 ;; Original code looks like:
 ;;
@@ -46,7 +47,9 @@
 ; RUN: opt -passes=memprof-context-disambiguation \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:	%s -S 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:	%s -S 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR \
+; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should create clones for foo and bar for the call from main to allocate
@@ -252,6 +255,42 @@ attributes #7 = { builtin }
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[BAR2]] to Caller: [[FOO3]] AllocTypes: Cold ContextIds: 2
 ; DUMP:         Clone of [[BAR]]
+
+
+; REMARKS: created clone _Z3barv.memprof.1
+; REMARKS: created clone _Z3foov.memprof.1
+; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
+; REMARKS: call in clone _Z3foov.memprof.1 assigned to call function clone _Z3barv.memprof.1
+; REMARKS: call in clone _Z3barv.memprof.1 marked with memprof allocation attribute cold
+; REMARKS: call in clone main assigned to call function clone _Z3foov
+; REMARKS: call in clone _Z3foov assigned to call function clone _Z3barv
+; REMARKS: call in clone _Z3barv marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z3bazv marked with memprof allocation attribute notcold
+
+
+; IR: define internal {{.*}} @_Z3barv()
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z3foov()
+; IR:   call {{.*}} @_Z3barv()
+; IR: define {{.*}} @main()
+;; The first call to foo does not allocate cold memory. It should call the
+;; original functions, which ultimately call the original allocation decorated
+;; with a "notcold" attribute.
+; IR:   call {{.*}} @_Z3foov()
+;; The second call to foo allocates cold memory. It should call cloned functions
+;; which ultimately call a cloned allocation decorated with a "cold" attribute.
+; IR:   call {{.*}} @_Z3foov.memprof.1()
+; IR: define internal {{.*}} @_Z3barv.memprof.1()
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
+; IR: define internal {{.*}} @_Z3foov.memprof.1()
+; IR:   call {{.*}} @_Z3barv.memprof.1()
+; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
+
+
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 2 memprof-context-disambiguation - Number of function clones created during whole program analysis
 
 
 ; DOT: digraph "postbuild" {

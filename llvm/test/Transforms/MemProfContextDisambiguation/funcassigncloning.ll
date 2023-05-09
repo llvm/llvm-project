@@ -45,9 +45,14 @@
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
+;; -stats requires asserts
+; REQUIRES: asserts
+
 ; RUN: opt -passes=memprof-context-disambiguation \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
-; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR \
+; RUN:  --check-prefix=STATS --check-prefix=REMARKS
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -187,3 +192,56 @@ attributes #6 = { builtin }
 ; DUMP: 	CallerEdges:
 ; DUMP: 		Edge from Callee [[ENEW2CLONE]] to Caller: [[C]] AllocTypes: Cold ContextIds: 5
 ; DUMP: 	Clone of [[ENEW2ORIG]]
+
+
+;; We greedily create a clone of E that is initially used by the clones of the
+;; first call to new. However, we end up with an incompatible set of callers
+;; given the second call to new which has clones with a different combination of
+;; callers. Eventually, we create 2 more clones, and the first clone becomes dead.
+; REMARKS: created clone _Z1EPPcS0_.memprof.1
+; REMARKS: created clone _Z1EPPcS0_.memprof.2
+; REMARKS: created clone _Z1EPPcS0_.memprof.3
+; REMARKS: call in clone _Z1DPPcS0_ assigned to call function clone _Z1EPPcS0_.memprof.2
+; REMARKS: call in clone _Z1EPPcS0_.memprof.2 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1CPPcS0_ assigned to call function clone _Z1EPPcS0_.memprof.3
+; REMARKS: call in clone _Z1EPPcS0_.memprof.3 marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z1BPPcS0_ assigned to call function clone _Z1EPPcS0_
+; REMARKS: call in clone _Z1EPPcS0_ marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z1EPPcS0_.memprof.2 marked with memprof allocation attribute notcold
+; REMARKS: call in clone _Z1EPPcS0_.memprof.3 marked with memprof allocation attribute cold
+; REMARKS: call in clone _Z1EPPcS0_ marked with memprof allocation attribute notcold
+
+
+;; Original version of E is used for the non-cold allocations, both from B.
+; IR: define internal {{.*}} @_Z1EPPcS0_(
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD:[0-9]+]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
+; IR: define internal {{.*}} @_Z1BPPcS0_(
+; IR:   call {{.*}} @_Z1EPPcS0_(
+;; C calls a clone of E with the first new allocating cold memory and the
+;; second allocating non-cold memory.
+; IR: define internal {{.*}} @_Z1CPPcS0_(
+; IR:   call {{.*}} @_Z1EPPcS0_.memprof.3(
+;; D calls a clone of E with the first new allocating non-cold memory and the
+;; second allocating cold memory.
+; IR: define internal {{.*}} @_Z1DPPcS0_(
+; IR:   call {{.*}} @_Z1EPPcS0_.memprof.2(
+;; Transient clone that will get removed as it ends up with no callers.
+;; Its calls to new never get updated with a memprof attribute as a result.
+; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.1(
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[DEFAULT:[0-9]+]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[DEFAULT]]
+; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.2(
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD:[0-9]+]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
+; IR: define internal {{.*}} @_Z1EPPcS0_.memprof.3(
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[NOTCOLD]]
+; IR:   call {{.*}} @_Znam(i64 noundef 10) #[[COLD]]
+; IR: attributes #[[NOTCOLD]] = { builtin "memprof"="notcold" }
+; IR: attributes #[[DEFAULT]] = { builtin }
+; IR: attributes #[[COLD]] = { builtin "memprof"="cold" }
+
+
+; STATS: 2 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 4 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
