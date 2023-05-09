@@ -17,9 +17,15 @@
   template <class _RandomAccessIterator, class _Functor>
   void __parallel_for(_RandomAccessIterator __first, _RandomAccessIterator __last, _Functor __func);
 
+  // Cancel the execution of other jobs - they aren't needed anymore
+  void __cancel_execution();
+
   TODO: Document the parallel backend
 */
 
+#include <__algorithm/pstl_backends/cpu_backends/any_of.h>
+#include <__algorithm/pstl_backends/cpu_backends/fill.h>
+#include <__algorithm/pstl_backends/cpu_backends/find_if.h>
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h>
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_H
