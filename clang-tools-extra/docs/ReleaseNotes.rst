@@ -103,6 +103,9 @@ Improvements to clang-tidy
 
 - Fix a potential crash when using the `--dump-config` option.
 
+- Support specifying `SystemHeaders` in the `.clang-tidy` configuration file,
+  with the same functionality as the command-line option `--system-headers`.
+
 New checks
 ^^^^^^^^^^
 

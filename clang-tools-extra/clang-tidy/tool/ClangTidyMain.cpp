@@ -134,10 +134,13 @@ option in .clang-tidy file, if any.
                                          cl::init(""),
                                          cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    SystemHeaders("system-headers",
-                  desc("Display the errors from system headers."),
-                  cl::init(false), cl::cat(ClangTidyCategory));
+static cl::opt<bool> SystemHeaders("system-headers", desc(R"(
+Display the errors from system headers.
+This option overrides the 'SystemHeaders' option
+in .clang-tidy file, if any.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
 static cl::opt<std::string> LineFilter("line-filter", desc(R"(
 List of files with line ranges to filter the
 warnings. Can be used together with
