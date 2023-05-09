@@ -162,16 +162,30 @@ processDataOperands(llvm::IRBuilderBase &builder,
   unsigned index = 0;
 
   // Create operands are handled as `alloc` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCreateOperands(), op.getNumDataOperands(),
-                             kCreateFlag, flags, names, index, mapperAllocas)))
+  // Copyin operands are handled as `to` call.
+  llvm::SmallVector<mlir::Value> create, copyin;
+  for (mlir::Value dataOp : op.getDataClauseOperands()) {
+    if (auto createOp =
+            mlir::dyn_cast_or_null<acc::CreateOp>(dataOp.getDefiningOp())) {
+      create.push_back(createOp.getVarPtr());
+    } else if (auto copyinOp = mlir::dyn_cast_or_null<acc::CopyinOp>(
+                   dataOp.getDefiningOp())) {
+      copyin.push_back(copyinOp.getVarPtr());
+    }
+  }
+
+  auto nbTotalOperands = create.size() + copyin.size();
+
+  // Create operands are handled as `alloc` call.
+  if (failed(processOperands(builder, moduleTranslation, op, create,
+                             nbTotalOperands, kCreateFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   // Copyin operands are handled as `to` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyinOperands(), op.getNumDataOperands(),
-                             kDeviceCopyinFlag, flags, names, index,
-                             mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, copyin,
+                             nbTotalOperands, kDeviceCopyinFlag, flags, names,
+                             index, mapperAllocas)))
     return failure();
 
   return success();
@@ -495,7 +509,7 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
                "unexpected OpenACC terminator with operands");
         return success();
       })
-      .Case([&](acc::UpdateDeviceOp) {
+      .Case<acc::CreateOp, acc::CopyinOp, acc::UpdateDeviceOp>([](auto op) {
         // NOP
         return success();
       })
