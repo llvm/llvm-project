@@ -1357,8 +1357,8 @@ LogicalResult ExtractStridedMetadataOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
-  ExtractStridedMetadataOpAdaptor extractAdaptor(
-      operands, attributes, *properties.as<EmptyProperties *>(), regions);
+  ExtractStridedMetadataOpAdaptor extractAdaptor(operands, attributes,
+                                                 properties);
   auto sourceType = extractAdaptor.getSource().getType().dyn_cast<MemRefType>();
   if (!sourceType)
     return failure();
