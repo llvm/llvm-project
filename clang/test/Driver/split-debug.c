@@ -67,7 +67,7 @@
 
 /// GCC special cases /dev/null (HOST_BIT_BUCKET) but not other special files like /dev/zero.
 /// We don't apply special rules at all.
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK_NULL
+// RUN: %if !system-windows %{ %clang -### --target=x86_64-unknown-linux-gnu -gsplit-dwarf -g %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=SPLIT_LINK_NULL %}
 
 // SPLIT_LINK_NULL:      "-dumpdir" "/dev/null-"
 // SPLIT_LINK_NULL-SAME: "-split-dwarf-output" "/dev/null-split-debug.dwo"
