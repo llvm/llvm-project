@@ -650,7 +650,6 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
   LineSectionSize += PrologueBytes.size() + 4;
 
   SmallString<128> EncodingBuffer;
-  raw_svector_ostream EncodingOS(EncodingBuffer);
 
   if (Rows.empty()) {
     // We only have the dummy entry, dsymutil emits an entry with a 0
