@@ -12,6 +12,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
@@ -21,6 +22,8 @@ namespace mlir {
 #define GEN_PASS_DEF_MEM2REG
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
+
+#define DEBUG_TYPE "mem2reg"
 
 using namespace mlir;
 
@@ -422,6 +425,9 @@ void MemorySlotPromoter::promoteSlot() {
     }
   }
 
+  LLVM_DEBUG(llvm::dbgs() << "[mem2reg] Promoted memory slot: " << slot.ptr
+                          << "\n");
+
   allocator.handlePromotionComplete(slot, defaultValue);
 }
 
@@ -450,6 +456,37 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   return success(!toPromote.empty());
 }
 
+LogicalResult Mem2RegPattern::matchAndRewrite(Operation *op,
+                                              PatternRewriter &rewriter) const {
+  hasBoundedRewriteRecursion();
+
+  if (op->getNumRegions() == 0)
+    return failure();
+
+  DominanceInfo dominance;
+
+  SmallVector<PromotableAllocationOpInterface> allocators;
+  // Build a list of allocators to attempt to promote the slots of.
+  for (Region &region : op->getRegions())
+    for (auto allocator : region.getOps<PromotableAllocationOpInterface>())
+      allocators.emplace_back(allocator);
+
+  // Because pattern rewriters are normally not expressive enough to support a
+  // transformation like mem2reg, this uses an escape hatch to mark modified
+  // operations manually and operate outside of its context.
+  rewriter.startRootUpdate(op);
+
+  OpBuilder builder(rewriter.getContext());
+
+  if (failed(tryToPromoteMemorySlots(allocators, builder, dominance))) {
+    rewriter.cancelRootUpdate(op);
+    return failure();
+  }
+
+  rewriter.finalizeRootUpdate(op);
+  return success();
+}
+
 namespace {
 
 struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
@@ -457,32 +494,11 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
     Operation *scopeOp = getOperation();
     bool changed = false;
 
-    for (Region &region : scopeOp->getRegions()) {
-      if (region.getBlocks().empty())
-        continue;
-
-      OpBuilder builder(&region.front(), region.front().begin());
-
-      // Promoting a slot can allow for further promotion of other slots,
-      // promotion is tried until no promotion succeeds.
-      while (true) {
-        DominanceInfo &dominance = getAnalysis<DominanceInfo>();
-
-        SmallVector<PromotableAllocationOpInterface> allocators;
-        // Build a list of allocators to attempt to promote the slots of.
-        for (Block &block : region)
-          for (Operation &op : block.getOperations())
-            if (auto allocator = dyn_cast<PromotableAllocationOpInterface>(op))
-              allocators.emplace_back(allocator);
-
-        // Attempt promoting until no promotion succeeds.
-        if (failed(tryToPromoteMemorySlots(allocators, builder, dominance)))
-          break;
-
-        changed = true;
-        getAnalysisManager().invalidate({});
-      }
-    }
+    RewritePatternSet rewritePatterns(&getContext());
+    rewritePatterns.add<Mem2RegPattern>(&getContext());
+    FrozenRewritePatternSet frozen(std::move(rewritePatterns));
+    (void)applyOpPatternsAndFold({scopeOp}, frozen, GreedyRewriteConfig(),
+                                 &changed);
 
     if (!changed)
       markAllAnalysesPreserved();
