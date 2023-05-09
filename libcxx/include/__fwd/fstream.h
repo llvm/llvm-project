@@ -27,16 +27,16 @@ class _LIBCPP_TEMPLATE_VIS basic_ofstream;
 template <class _CharT, class _Traits = char_traits<_CharT> >
 class _LIBCPP_TEMPLATE_VIS basic_fstream;
 
-typedef basic_filebuf<char> filebuf;
-typedef basic_ifstream<char> ifstream;
-typedef basic_ofstream<char> ofstream;
-typedef basic_fstream<char> fstream;
+using filebuf  = basic_filebuf<char>;
+using ifstream = basic_ifstream<char>;
+using ofstream = basic_ofstream<char>;
+using fstream  = basic_fstream<char>;
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-typedef basic_filebuf<wchar_t> wfilebuf;
-typedef basic_ifstream<wchar_t> wifstream;
-typedef basic_ofstream<wchar_t> wofstream;
-typedef basic_fstream<wchar_t> wfstream;
+using wfilebuf  = basic_filebuf<wchar_t>;
+using wifstream = basic_ifstream<wchar_t>;
+using wofstream = basic_ofstream<wchar_t>;
+using wfstream  = basic_fstream<wchar_t>;
 #endif
 
 template <class _CharT, class _Traits>
