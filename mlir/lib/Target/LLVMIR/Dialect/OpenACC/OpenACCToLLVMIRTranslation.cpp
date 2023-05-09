@@ -38,7 +38,6 @@ using OpenACCIRBuilder = llvm::OpenMPIRBuilder;
 static constexpr uint64_t kCreateFlag = 0x000;
 static constexpr uint64_t kDeviceCopyinFlag = 0x001;
 static constexpr uint64_t kHostCopyoutFlag = 0x002;
-static constexpr uint64_t kCopyFlag = kDeviceCopyinFlag | kHostCopyoutFlag;
 static constexpr uint64_t kPresentFlag = 0x1000;
 static constexpr uint64_t kDeleteFlag = 0x008;
 // Runtime extension to implement the OpenACC second reference counter.
