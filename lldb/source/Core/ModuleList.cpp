@@ -144,9 +144,13 @@ bool ModuleListProperties::GetEnableBackgroundLookup() const {
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
-  return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertyClangModulesCachePath)
-      ->GetCurrentValue();
+  const uint32_t idx = ePropertyClangModulesCachePath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
+  const uint32_t idx = ePropertyClangModulesCachePath;
+  return SetPropertyAtIndex(idx, path);
 }
 
 // BEGIN SWIFT
@@ -164,8 +168,7 @@ bool ModuleListProperties::GetUseSwiftDWARFImporter() const {
 
 bool ModuleListProperties::SetUseSwiftDWARFImporter(bool new_value) {
   const uint32_t idx = ePropertyUseSwiftDWARFImporter;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
+  return SetPropertyAtIndex(idx, new_value);
 }
 
 bool ModuleListProperties::GetUseSwiftTypeRefTypeSystem() const {
@@ -182,14 +185,7 @@ bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
 
 bool ModuleListProperties::SetUseSwiftTypeRefTypeSystem(bool new_value) {
   const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
-}
-
-bool ModuleListProperties::SetClangModulesCachePath(const FileSpec &path) {
-  const uint32_t idx = ePropertyClangModulesCachePath;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_modulelist_properties[idx].default_uint_value != 0);
+  return SetPropertyAtIndex(idx, new_value);
 }
 
 SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
@@ -211,8 +207,8 @@ FileSpec ModuleListProperties::GetSwiftMetadataCachePath() const {
 }
 
 bool ModuleListProperties::SetSwiftMetadataCachePath(const FileSpec &path) {
-  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      ePropertySwiftMetadataCachePath, path);
+  const uint32_t idx = ePropertySwiftMetadataCachePath;
+  return SetPropertyAtIndex(idx, path);
 }
 
 bool ModuleListProperties::GetEnableSwiftMetadataCache() const {
@@ -235,14 +231,13 @@ uint64_t ModuleListProperties::GetSwiftMetadataCacheExpirationDays() {
 // END SWIFT
 
 FileSpec ModuleListProperties::GetLLDBIndexCachePath() const {
-  return m_collection_sp
-      ->GetPropertyAtIndexAsOptionValueFileSpec(ePropertyLLDBIndexCachePath)
-      ->GetCurrentValue();
+  const uint32_t idx = ePropertyLLDBIndexCachePath;
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 bool ModuleListProperties::SetLLDBIndexCachePath(const FileSpec &path) {
-  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
-      ePropertyLLDBIndexCachePath, path);
+  const uint32_t idx = ePropertyLLDBIndexCachePath;
+  return SetPropertyAtIndex(idx, path);
 }
 
 bool ModuleListProperties::GetEnableLLDBIndexCache() const {
@@ -252,7 +247,8 @@ bool ModuleListProperties::GetEnableLLDBIndexCache() const {
 }
 
 bool ModuleListProperties::SetEnableLLDBIndexCache(bool new_value) {
-  return SetPropertyAtIndex(ePropertyEnableLLDBIndexCache, new_value);
+  const uint32_t idx = ePropertyEnableLLDBIndexCache;
+  return SetPropertyAtIndex(idx, new_value);
 }
 
 uint64_t ModuleListProperties::GetLLDBIndexCacheMaxByteSize() {
