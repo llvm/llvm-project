@@ -77,6 +77,25 @@ INTERCEPTOR(int, pthread_join, void *t, void **arg) {
   return REAL(pthread_join)(t, arg);
 }
 
+INTERCEPTOR(int, pthread_detach, void *thread) {
+  return REAL(pthread_detach)(thread);
+}
+
+INTERCEPTOR(int, pthread_exit, void *retval) {
+  return REAL(pthread_exit)(retval);
+}
+
+#    if SANITIZER_GLIBC
+INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
+  return REAL(pthread_tryjoin_np)(thread, ret);
+}
+
+INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
+            const struct timespec *abstime) {
+  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
+}
+#    endif
+
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
 DEFINE_REAL(int, vfork)
@@ -271,6 +290,12 @@ void InitializeInterceptors() {
 #    endif  // __linux__
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_join);
+  INTERCEPT_FUNCTION(pthread_detach);
+  INTERCEPT_FUNCTION(pthread_exit);
+#    if SANITIZER_GLIBC
+  INTERCEPT_FUNCTION(pthread_tryjoin_np);
+  INTERCEPT_FUNCTION(pthread_timedjoin_np);
+#    endif
 #  endif
 
   inited = 1;
