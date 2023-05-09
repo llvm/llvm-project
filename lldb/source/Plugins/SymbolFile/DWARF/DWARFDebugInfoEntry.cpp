@@ -177,7 +177,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
 
         case DW_FORM_indirect:
           form_is_indirect = true;
-          form = data.GetULEB128(&offset);
+          form = static_cast<dw_form_t>(data.GetULEB128(&offset));
           break;
 
         case DW_FORM_strp:

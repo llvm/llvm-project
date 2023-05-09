@@ -41,7 +41,7 @@ DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
 
   while (data.ValidOffset(*offset_ptr)) {
     dw_attr_t attr = data.GetULEB128(offset_ptr);
-    dw_form_t form = data.GetULEB128(offset_ptr);
+    auto form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
 
     // This is the last attribute for this abbrev decl, but there may still be
     // more abbrev decls, so return MoreItems to indicate to the caller that

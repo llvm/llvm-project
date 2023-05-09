@@ -55,7 +55,7 @@ public:
   dw_attr_t AttributeAtIndex(uint32_t i) const {
     return m_infos[i].attr.get_attr();
   }
-  dw_attr_t FormAtIndex(uint32_t i) const { return m_infos[i].attr.get_form(); }
+  dw_form_t FormAtIndex(uint32_t i) const { return m_infos[i].attr.get_form(); }
   DWARFFormValue::ValueType ValueAtIndex(uint32_t i) const {
     return m_infos[i].attr.get_value();
   }
