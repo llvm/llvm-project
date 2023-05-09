@@ -5327,6 +5327,8 @@ def note_constraint_normalization_here : Note<
 def note_parameter_mapping_substitution_here : Note<
   "while substituting into concept arguments here; substitution failures not "
   "allowed in concept arguments">;
+def note_lambda_substitution_here : Note<
+  "while substituting into a lambda expression here">;
 def note_instantiation_contexts_suppressed : Note<
   "(skipping %0 context%s0 in backtrace; use -ftemplate-backtrace-limit=0 to "
   "see all)">;
