@@ -42,12 +42,34 @@
 ; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN:	-stats -pass-remarks=memprof-context-disambiguation -save-temps \
+; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:	--check-prefix=STATS
 
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
 
+
+;; Try again but with distributed ThinLTO
+; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:  -thinlto-distributed-indexes \
+; RUN:	-r=%t.o,main,plx \
+; RUN:	-r=%t.o,_ZdaPv, \
+; RUN:	-r=%t.o,sleep, \
+; RUN:	-r=%t.o,_Znam, \
+; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t2. \
+; RUN:	-stats -pass-remarks=memprof-context-disambiguation \
+; RUN:	-o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
+; RUN:	--check-prefix=STATS
+
+; RUN:	cat %t2.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
+;; We should have cloned bar, baz, and foo, for the cold memory allocation.
+; RUN:	cat %t2.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+
+;; Check distributed index
+; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DISTRIB
 
 source_filename = "memprof-basic.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -230,6 +252,11 @@ uselistorder ptr @_Z3foov, { 1, 0 }
 ; DUMP:		Clone of [[BAR]]
 
 
+; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 3 memprof-context-disambiguation - Number of function clones created during whole program analysis
+
+
 ; DOT: digraph "postbuild" {
 ; DOT: 	label="postbuild";
 ; DOT: 	Node[[BAR:0x[a-z0-9]+]] [shape=record,tooltip="N[[BAR]] ContextIds: 1 2",fillcolor="mediumorchid1",style="filled",style="filled",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
@@ -261,3 +288,9 @@ uselistorder ptr @_Z3foov, { 1, 0 }
 ; DOTCLONED: 	Node[[BAZ2]] -> Node[[BAR2:0x[a-z0-9]+]][tooltip="ContextIds: 2",fillcolor="cyan"];
 ; DOTCLONED: 	Node[[BAR2]] [shape=record,tooltip="N[[BAR2]] ContextIds: 2",fillcolor="cyan",style="filled",color="blue",style="filled,bold,dashed",label="{OrigId: Alloc0\n_Z3barv -\> alloc}"];
 ; DOTCLONED: }
+
+
+; DISTRIB: ^[[BAZ:[0-9]+]] = gv: (guid: 5878270615442837395, {{.*}} callsites: ((callee: ^[[BAR:[0-9]+]], clones: (0, 1)
+; DISTRIB: ^[[FOO:[0-9]+]] = gv: (guid: 6731117468105397038, {{.*}} callsites: ((callee: ^[[BAZ]], clones: (0, 1)
+; DISTRIB: ^[[BAR]] = gv: (guid: 9832687305761716512, {{.*}} allocs: ((versions: (notcold, cold)
+; DISTRIB: ^[[MAIN:[0-9]+]] = gv: (guid: 15822663052811949562, {{.*}} callsites: ((callee: ^[[FOO]], clones: (0), {{.*}} (callee: ^[[FOO]], clones: (1)
