@@ -30276,13 +30276,15 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
   bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
   bool IgnoreSignedZero = DAG.getTarget().Options.NoSignedZerosFPMath ||
-                          Op->getFlags().hasNoSignedZeros();
+                          Op->getFlags().hasNoSignedZeros() ||
+                          DAG.isKnownNeverZeroFloat(X) ||
+                          DAG.isKnownNeverZeroFloat(Y);
   SDValue NewX, NewY;
-  if (IgnoreSignedZero || IsPreferredZero(Y) || DAG.isKnownNeverZeroFloat(X)) {
+  if (IgnoreSignedZero || IsPreferredZero(Y)) {
     // Operands are already in right order or order does not matter.
     NewX = X;
     NewY = Y;
-  } else if (IsPreferredZero(X) || DAG.isKnownNeverZeroFloat(Y)) {
+  } else if (IsPreferredZero(X)) {
     NewX = Y;
     NewY = X;
   } else if ((VT == MVT::f16 || Subtarget.hasDQI()) &&
@@ -30307,34 +30309,32 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
     NewY = DAG.getSelect(DL, VT, NeedSwap, X, Y);
     return DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
   } else {
-    SDValue IsXZero;
+    SDValue IsXSigned;
     if (Subtarget.is64Bit() || VT != MVT::f64) {
       SDValue XInt = DAG.getNode(ISD::BITCAST, DL, IVT, X);
-      SDValue ZeroCst = DAG.getConstant(PreferredZero, DL, IVT);
-      IsXZero = DAG.getSetCC(DL, SetCCType, XInt, ZeroCst, ISD::SETEQ);
+      SDValue ZeroCst = DAG.getConstant(0, DL, IVT);
+      IsXSigned = DAG.getSetCC(DL, SetCCType, XInt, ZeroCst, ISD::SETLT);
     } else {
       assert(VT == MVT::f64);
       SDValue Ins = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v2f64,
                                 DAG.getConstantFP(0, DL, MVT::v2f64), X,
                                 DAG.getIntPtrConstant(0, DL));
       SDValue VX = DAG.getNode(ISD::BITCAST, DL, MVT::v4f32, Ins);
-      SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, VX,
-                               DAG.getIntPtrConstant(0, DL));
-      Lo = DAG.getBitcast(MVT::i32, Lo);
       SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, VX,
                                DAG.getIntPtrConstant(1, DL));
       Hi = DAG.getBitcast(MVT::i32, Hi);
-      PreferredZero = APInt::getZero(SizeInBits / 2);
-      if (MinMaxOp == X86ISD::FMIN)
-        PreferredZero.setSignBit();
-      IsXZero = DAG.getNode(ISD::XOR, DL, MVT::i32, Hi,
-                            DAG.getConstant(PreferredZero, DL, MVT::i32));
-      IsXZero = DAG.getNode(ISD::OR, DL, MVT::i32, Lo, IsXZero);
-      IsXZero = DAG.getSetCC(DL, SetCCType, IsXZero,
-                             DAG.getConstant(0, DL, MVT::i32), ISD::SETEQ);
+      SDValue ZeroCst = DAG.getConstant(0, DL, MVT::i32);
+      EVT SetCCType = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                             *DAG.getContext(), MVT::i32);
+      IsXSigned = DAG.getSetCC(DL, SetCCType, Hi, ZeroCst, ISD::SETLT);
     }
-    NewX = DAG.getSelect(DL, VT, IsXZero, Y, X);
-    NewY = DAG.getSelect(DL, VT, IsXZero, X, Y);
+    if (MinMaxOp == X86ISD::FMAX) {
+      NewX = DAG.getSelect(DL, VT, IsXSigned, X, Y);
+      NewY = DAG.getSelect(DL, VT, IsXSigned, Y, X);
+    } else {
+      NewX = DAG.getSelect(DL, VT, IsXSigned, Y, X);
+      NewY = DAG.getSelect(DL, VT, IsXSigned, X, Y);
+    }
   }
 
   bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
