@@ -468,7 +468,7 @@ struct PrintExprResult {
   std::optional<std::string> PrintedValue;
   /// The Expr object that represents the closest evaluable
   /// expression.
-  const Expr *Expr;
+  const clang::Expr *Expr;
   /// The node of selection tree where the traversal stops.
   const SelectionTree::Node *Node;
 };
