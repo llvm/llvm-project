@@ -9261,6 +9261,9 @@ public:
       /// a TemplateDecl.
       DeducedTemplateArgumentSubstitution,
 
+      /// We are substituting into a lambda expression.
+      LambdaExpressionSubstitution,
+
       /// We are substituting prior template arguments into a new
       /// template parameter. The template parameter itself is either a
       /// NonTypeTemplateParmDecl or a TemplateTemplateParmDecl.
