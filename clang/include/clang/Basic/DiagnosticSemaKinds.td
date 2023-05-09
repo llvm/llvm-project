@@ -112,9 +112,6 @@ def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def ext_predef_outside_function : Warning<
   "predefined identifier is only valid inside function">,
   InGroup<DiagGroup<"predefined-identifier-outside-function">>;
-def ext_init_from_predefined : ExtWarn<
-  "initializing an array from a '%0' predefined identifier is a Microsoft extension">,
-  InGroup<MicrosoftInitFromPredefined>;
 def warn_float_overflow : Warning<
   "magnitude of floating-point constant too large for type %0; maximum is %1">,
    InGroup<LiteralRange>;
