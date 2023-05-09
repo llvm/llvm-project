@@ -12,18 +12,12 @@
 
 extern unsigned int ui;
 
-int test_builtin_ppc_cmprb() {
-  // CHECK-LABEL: @test_builtin_ppc_cmprb(
+int test_builtin_ppc_cmprb_extract_exp(double d) {
+  // CHECK-LABEL: @test_builtin_ppc_cmprb_extract_exp(
   // CHECK:       %2 = call i32 @llvm.ppc.cmprb(i32 0, i32 %0, i32 %1)
   // CHECK:       %5 = call i32 @llvm.ppc.cmprb(i32 1, i32 %3, i32 %4)
-  // CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
-  return __builtin_ppc_cmprb(0, ui, ui) + __builtin_ppc_cmprb(1, ui, ui);
-}
-
-unsigned int extract_exp (double d) {
-// CHECK-LABEL: @extract_exp
-// CHECK:    [[TMP1:%.*]] = call i32 @llvm.ppc.extract.exp(double %0)
-// CHECK-NEXT:    ret i32 [[TMP1]]
-// CHECK-NONPWR9-ERR:  error: this builtin is only valid on POWER9 or later CPUs
-  return __extract_exp (d);
+  // CHECK:       %7 = call i32 @llvm.ppc.extract.exp(double %6)
+  // CHECK-NONPWR9-ERR:  error: '__builtin_ppc_cmprb' needs target feature isa-v30-instructions
+  // CHECK-NONPWR9-ERR:  error: '__builtin_ppc_extract_exp' needs target feature power9-vector
+  return __builtin_ppc_cmprb(0, ui, ui) + __builtin_ppc_cmprb(1, ui, ui) + __extract_exp(d);
 }
