@@ -25,7 +25,7 @@ using namespace lldb_private::dwarf;
 
 void DWARFFormValue::Clear() {
   m_unit = nullptr;
-  m_form = 0;
+  m_form = dw_form_t(0);
   m_value = ValueTypeTag();
 }
 
@@ -127,7 +127,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       m_value.value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:
-      m_form = data.GetULEB128(offset_ptr);
+      m_form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
       indirect = true;
       break;
     case DW_FORM_flag_present:
@@ -321,9 +321,10 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       return true;
 
   case DW_FORM_indirect: {
-    dw_form_t indirect_form = debug_info_data.GetULEB128(offset_ptr);
-    return DWARFFormValue::SkipValue(indirect_form, debug_info_data, offset_ptr,
-                                     unit);
+      auto indirect_form =
+          static_cast<dw_form_t>(debug_info_data.GetULEB128(offset_ptr));
+      return DWARFFormValue::SkipValue(indirect_form, debug_info_data,
+                                       offset_ptr, unit);
   }
 
   default:
@@ -573,8 +574,10 @@ bool DWARFFormValue::IsBlockForm(const dw_form_t form) {
   case DW_FORM_block2:
   case DW_FORM_block4:
     return true;
+  default:
+    return false;
   }
-  return false;
+  llvm_unreachable("All cases handled above!");
 }
 
 bool DWARFFormValue::IsDataForm(const dw_form_t form) {
@@ -586,8 +589,10 @@ bool DWARFFormValue::IsDataForm(const dw_form_t form) {
   case DW_FORM_data4:
   case DW_FORM_data8:
     return true;
+  default:
+    return false;
   }
-  return false;
+  llvm_unreachable("All cases handled above!");
 }
 
 bool DWARFFormValue::FormIsSupported(dw_form_t form) {
