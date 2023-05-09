@@ -3,6 +3,28 @@ cmake_minimum_required(VERSION 3.13.4)
 project(amd_comgr VERSION "2.5.0" LANGUAGES C CXX)
 set(amd_comgr_NAME "${PROJECT_NAME}")
 
+# Get git branch and commit hash to add to log for easier debugging.
+# Modeled after https://github.com/pmirshad/cmake-with-git-metadata.
+# Current working branch
+if(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
+execute_process(
+  COMMAND git rev-parse --abbrev-ref HEAD
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE AMD_COMGR_GIT_BRANCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+# Shortened commit hash
+execute_process(
+  COMMAND git log -1 --format=%h
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE AMD_COMGR_GIT_COMMIT
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+else(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
+  set(AMD_COMGR_GIT_BRANCH "not-available")
+  set(AMD_COMGR_GIT_COMMIT "not-available")
+endif(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
+
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 # Disable file reorg backward compatibility for ASAN build
@@ -111,7 +133,6 @@ message("--CLANG_INCLUDE_DIRS: ${CLANG_INCLUDE_DIRS}")
 message("----LLD_INCLUDE_DIRS: ${LLD_INCLUDE_DIRS}")
 message("---AMDDeviceLibs_DIR: ${AMDDeviceLibs_DIR}")
 message("------------ROCM_DIR: ${ROCM_DIR}")
-message("")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -138,6 +159,12 @@ set(AMD_COMGR_PRIVATE_COMPILE_OPTIONS)
 set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS ${LLVM_DEFINITIONS})
 set(AMD_COMGR_PUBLIC_LINKER_OPTIONS)
 set(AMD_COMGR_PRIVATE_LINKER_OPTIONS)
+
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "-DAMD_COMGR_GIT_COMMIT=${AMD_COMGR_GIT_COMMIT}")
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "-DAMD_COMGR_GIT_BRANCH=${AMD_COMGR_GIT_BRANCH}")
+message("----COMGR_GIT_COMMIT: ${AMD_COMGR_GIT_COMMIT}")
+message("----COMGR_GIT_BRANCH: ${AMD_COMGR_GIT_BRANCH}")
+message("")
 
 if (UNIX)
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS

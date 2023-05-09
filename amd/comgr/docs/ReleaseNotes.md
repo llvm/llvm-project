@@ -103,6 +103,9 @@ metadata querys for code object v3 objects.
 - Improve linking and unbundling log to correctly store temporary files in /tmp,
 and to output clang-offload-bundler command to allow users to re-create Comgr
 unbundling.
+- Add git branch and commit hash for Comgr, and commit hash for LLVM to log
+output for Comgr actions. This can help us debug issues more quickly in cases
+where reporters provide Comgr logs.
 
 New Targets
 -----------

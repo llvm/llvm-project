@@ -44,6 +44,7 @@
 #include "comgr-symbol.h"
 #include "comgr-symbolizer.h"
 
+#include "clang/Basic/Version.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -62,6 +63,10 @@
 #define AMD_NOINLINE __declspec(noinline)
 #endif
 #endif
+
+// Needed for stringification of macro expansions for git branch/commit macros
+#define xstringify(x) stringify(x)
+#define stringify(x) #x
 
 using namespace llvm;
 using namespace COMGR;
@@ -1323,8 +1328,11 @@ amd_comgr_status_t AMD_COMGR_API
       }
       *LogP << '\n'
         << "\t        Path: " << ActionInfoP->Path << '\n'
-        << "\t    Language: " << getLanguageName(ActionInfoP->Language)
-        << '\n';
+        << "\t    Language: " << getLanguageName(ActionInfoP->Language) << '\n'
+        << " Comgr Branch-Commit: " << xstringify(AMD_COMGR_GIT_BRANCH) << '-'
+        << xstringify(AMD_COMGR_GIT_COMMIT) << '\n'
+        << "\t LLVM Commit: " << clang::getLLVMRevision() << '\n';
+      (*LogP).flush();
     }
 
 
