@@ -829,11 +829,6 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
 // This is a very simple ABI that relies a lot on DefaultABIInfo.
 //===----------------------------------------------------------------------===//
 
-enum class WebAssemblyABIKind {
-  MVP = 0,
-  ExperimentalMV = 1,
-};
-
 class WebAssemblyABIInfo final : public ABIInfo {
   DefaultABIInfo defaultInfo;
   WebAssemblyABIKind Kind;
@@ -2251,12 +2246,6 @@ bool X86_32TargetCodeGenInfo::initDwarfEHRegSizeTable(
 
 
 namespace {
-/// The AVX ABI level for X86 targets.
-enum class X86AVXABILevel {
-  None,
-  AVX,
-  AVX512
-};
 
 /// \p returns the size in bits of the largest (native) vector for \p AVXLevel.
 static unsigned getNativeVectorSizeForAVXABI(X86AVXABILevel AVXLevel) {
@@ -4983,10 +4972,6 @@ PPC32TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 // PowerPC-64
 
 namespace {
-enum class PPC64_SVR4_ABIKind {
-  ELFv1 = 0,
-  ELFv2,
-};
 
 /// PPC64_SVR4_ABIInfo - The 64-bit PowerPC ELF (SVR4) ABI information.
 class PPC64_SVR4_ABIInfo : public ABIInfo {
@@ -5495,12 +5480,6 @@ PPC64TargetCodeGenInfo::initDwarfEHRegSizeTable(CodeGen::CodeGenFunction &CGF,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
-enum class AArch64ABIKind {
-  AAPCS = 0,
-  DarwinPCS,
-  Win64,
-};
 
 class AArch64ABIInfo : public ABIInfo {
   AArch64ABIKind Kind;
@@ -6304,13 +6283,6 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 //===----------------------------------------------------------------------===//
 
 namespace {
-
-enum class ARMABIKind {
-  APCS = 0,
-  AAPCS = 1,
-  AAPCS_VFP = 2,
-  AAPCS16_VFP = 3,
-};
 
 class ARMABIInfo : public ABIInfo {
   ARMABIKind Kind;
@@ -12286,80 +12258,74 @@ public:
 // Driver code
 //===----------------------------------------------------------------------===//
 
+// TODO: Move to CodeGenModule.cpp.
 bool CodeGenModule::supportsCOMDAT() const {
   return getTriple().supportsCOMDAT();
 }
 
-const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
-  if (TheTargetCodeGenInfo)
-    return *TheTargetCodeGenInfo;
+// TODO: Move to CodeGenModule.cpp.
+static std::unique_ptr<TargetCodeGenInfo>
+createTargetCodeGenInfo(CodeGenModule &CGM) {
+  const TargetInfo &Target = CGM.getTarget();
+  const llvm::Triple &Triple = Target.getTriple();
+  const CodeGenOptions &CodeGenOpts = CGM.getCodeGenOpts();
 
-  // Helper to set the unique_ptr while still keeping the return value.
-  auto SetCGInfo = [&](TargetCodeGenInfo *P) -> const TargetCodeGenInfo & {
-    this->TheTargetCodeGenInfo.reset(P);
-    return *P;
-  };
-
-  const llvm::Triple &Triple = getTarget().getTriple();
   switch (Triple.getArch()) {
   default:
-    return SetCGInfo(new DefaultTargetCodeGenInfo(Types));
+    return createDefaultTargetCodeGenInfo(CGM);
 
   case llvm::Triple::le32:
-    return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
+    return createPNaClTargetCodeGenInfo(CGM);
   case llvm::Triple::m68k:
-    return SetCGInfo(new M68kTargetCodeGenInfo(Types));
+    return createM68kTargetCodeGenInfo(CGM);
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
     if (Triple.getOS() == llvm::Triple::NaCl)
-      return SetCGInfo(new PNaClTargetCodeGenInfo(Types));
-    return SetCGInfo(new MIPSTargetCodeGenInfo(Types, true));
+      return createPNaClTargetCodeGenInfo(CGM);
+    return createMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/true);
 
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
-    return SetCGInfo(new MIPSTargetCodeGenInfo(Types, false));
+    return createMIPSTargetCodeGenInfo(CGM, /*IsOS32=*/false);
 
   case llvm::Triple::avr: {
     // For passing parameters, R8~R25 are used on avr, and R18~R25 are used
     // on avrtiny. For passing return value, R18~R25 are used on avr, and
     // R22~R25 are used on avrtiny.
-    unsigned NPR = getTarget().getABI() == "avrtiny" ? 6 : 18;
-    unsigned NRR = getTarget().getABI() == "avrtiny" ? 4 : 8;
-    return SetCGInfo(new AVRTargetCodeGenInfo(Types, NPR, NRR));
+    unsigned NPR = Target.getABI() == "avrtiny" ? 6 : 18;
+    unsigned NRR = Target.getABI() == "avrtiny" ? 4 : 8;
+    return createAVRTargetCodeGenInfo(CGM, NPR, NRR);
   }
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
   case llvm::Triple::aarch64_be: {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
-    if (getTarget().getABI() == "darwinpcs")
+    if (Target.getABI() == "darwinpcs")
       Kind = AArch64ABIKind::DarwinPCS;
     else if (Triple.isOSWindows())
-      return SetCGInfo(
-          new WindowsAArch64TargetCodeGenInfo(Types, AArch64ABIKind::Win64));
+      return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
 
-    return SetCGInfo(new AArch64TargetCodeGenInfo(Types, Kind));
+    return createAArch64TargetCodeGenInfo(CGM, Kind);
   }
 
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64: {
     WebAssemblyABIKind Kind = WebAssemblyABIKind::MVP;
-    if (getTarget().getABI() == "experimental-mv")
+    if (Target.getABI() == "experimental-mv")
       Kind = WebAssemblyABIKind::ExperimentalMV;
-    return SetCGInfo(new WebAssemblyTargetCodeGenInfo(Types, Kind));
+    return createWebAssemblyTargetCodeGenInfo(CGM, Kind);
   }
 
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb: {
-    if (Triple.getOS() == llvm::Triple::Win32) {
-      return SetCGInfo(
-          new WindowsARMTargetCodeGenInfo(Types, ARMABIKind::AAPCS_VFP));
-    }
+    if (Triple.getOS() == llvm::Triple::Win32)
+      return createWindowsARMTargetCodeGenInfo(CGM, ARMABIKind::AAPCS_VFP);
 
     ARMABIKind Kind = ARMABIKind::AAPCS;
-    StringRef ABIStr = getTarget().getABI();
+    StringRef ABIStr = Target.getABI();
     if (ABIStr == "apcs-gnu")
       Kind = ARMABIKind::APCS;
     else if (ABIStr == "aapcs16")
@@ -12371,160 +12337,154 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
                Triple.getEnvironment() == llvm::Triple::EABIHF)))
       Kind = ARMABIKind::AAPCS_VFP;
 
-    return SetCGInfo(new ARMTargetCodeGenInfo(Types, Kind));
+    return createARMTargetCodeGenInfo(CGM, Kind);
   }
 
   case llvm::Triple::ppc: {
     if (Triple.isOSAIX())
-      return SetCGInfo(new AIXTargetCodeGenInfo(Types, /*Is64Bit*/ false));
+      return createAIXTargetCodeGenInfo(CGM, /*Is64Bit=*/false);
 
     bool IsSoftFloat =
-        CodeGenOpts.FloatABI == "soft" || getTarget().hasFeature("spe");
-    bool RetSmallStructInRegABI =
-        PPC32TargetCodeGenInfo::isStructReturnInRegABI(Triple, CodeGenOpts);
-    return SetCGInfo(
-        new PPC32TargetCodeGenInfo(Types, IsSoftFloat, RetSmallStructInRegABI));
+        CodeGenOpts.FloatABI == "soft" || Target.hasFeature("spe");
+    return createPPC32TargetCodeGenInfo(CGM, IsSoftFloat);
   }
   case llvm::Triple::ppcle: {
     bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
-    bool RetSmallStructInRegABI =
-        PPC32TargetCodeGenInfo::isStructReturnInRegABI(Triple, CodeGenOpts);
-    return SetCGInfo(
-        new PPC32TargetCodeGenInfo(Types, IsSoftFloat, RetSmallStructInRegABI));
+    return createPPC32TargetCodeGenInfo(CGM, IsSoftFloat);
   }
   case llvm::Triple::ppc64:
     if (Triple.isOSAIX())
-      return SetCGInfo(new AIXTargetCodeGenInfo(Types, /*Is64Bit*/ true));
+      return createAIXTargetCodeGenInfo(CGM, /*Is64Bit=*/true);
 
     if (Triple.isOSBinFormatELF()) {
       PPC64_SVR4_ABIKind Kind = PPC64_SVR4_ABIKind::ELFv1;
-      if (getTarget().getABI() == "elfv2")
+      if (Target.getABI() == "elfv2")
         Kind = PPC64_SVR4_ABIKind::ELFv2;
       bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
 
-      return SetCGInfo(
-          new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, IsSoftFloat));
+      return createPPC64_SVR4_TargetCodeGenInfo(CGM, Kind, IsSoftFloat);
     }
-    return SetCGInfo(new PPC64TargetCodeGenInfo(Types));
+    return createPPC64TargetCodeGenInfo(CGM);
   case llvm::Triple::ppc64le: {
     assert(Triple.isOSBinFormatELF() && "PPC64 LE non-ELF not supported!");
     PPC64_SVR4_ABIKind Kind = PPC64_SVR4_ABIKind::ELFv2;
-    if (getTarget().getABI() == "elfv1")
+    if (Target.getABI() == "elfv1")
       Kind = PPC64_SVR4_ABIKind::ELFv1;
     bool IsSoftFloat = CodeGenOpts.FloatABI == "soft";
 
-    return SetCGInfo(
-        new PPC64_SVR4_TargetCodeGenInfo(Types, Kind, IsSoftFloat));
+    return createPPC64_SVR4_TargetCodeGenInfo(CGM, Kind, IsSoftFloat);
   }
 
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-    return SetCGInfo(new NVPTXTargetCodeGenInfo(Types));
+    return createNVPTXTargetCodeGenInfo(CGM);
 
   case llvm::Triple::msp430:
-    return SetCGInfo(new MSP430TargetCodeGenInfo(Types));
+    return createMSP430TargetCodeGenInfo(CGM);
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
-    StringRef ABIStr = getTarget().getABI();
-    unsigned XLen = getTarget().getPointerWidth(LangAS::Default);
+    StringRef ABIStr = Target.getABI();
+    unsigned XLen = Target.getPointerWidth(LangAS::Default);
     unsigned ABIFLen = 0;
     if (ABIStr.endswith("f"))
       ABIFLen = 32;
     else if (ABIStr.endswith("d"))
       ABIFLen = 64;
-    return SetCGInfo(new RISCVTargetCodeGenInfo(Types, XLen, ABIFLen));
+    return createRISCVTargetCodeGenInfo(CGM, XLen, ABIFLen);
   }
 
   case llvm::Triple::systemz: {
     bool SoftFloat = CodeGenOpts.FloatABI == "soft";
-    bool HasVector = !SoftFloat && getTarget().getABI() == "vector";
-    return SetCGInfo(new SystemZTargetCodeGenInfo(Types, HasVector, SoftFloat));
+    bool HasVector = !SoftFloat && Target.getABI() == "vector";
+    return createSystemZTargetCodeGenInfo(CGM, HasVector, SoftFloat);
   }
 
   case llvm::Triple::tce:
   case llvm::Triple::tcele:
-    return SetCGInfo(new TCETargetCodeGenInfo(Types));
+    return createTCETargetCodeGenInfo(CGM);
 
   case llvm::Triple::x86: {
     bool IsDarwinVectorABI = Triple.isOSDarwin();
-    bool RetSmallStructInRegABI =
-        X86_32TargetCodeGenInfo::isStructReturnInRegABI(Triple, CodeGenOpts);
     bool IsWin32FloatStructABI = Triple.isOSWindows() && !Triple.isOSCygMing();
 
     if (Triple.getOS() == llvm::Triple::Win32) {
-      return SetCGInfo(new WinX86_32TargetCodeGenInfo(
-          Types, IsDarwinVectorABI, RetSmallStructInRegABI,
-          IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters));
-    } else {
-      return SetCGInfo(new X86_32TargetCodeGenInfo(
-          Types, IsDarwinVectorABI, RetSmallStructInRegABI,
-          IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters,
-          CodeGenOpts.FloatABI == "soft"));
+      return createWinX86_32TargetCodeGenInfo(
+          CGM, IsDarwinVectorABI, IsWin32FloatStructABI,
+          CodeGenOpts.NumRegisterParameters);
     }
+    return createX86_32TargetCodeGenInfo(
+        CGM, IsDarwinVectorABI, IsWin32FloatStructABI,
+        CodeGenOpts.NumRegisterParameters, CodeGenOpts.FloatABI == "soft");
   }
 
   case llvm::Triple::x86_64: {
-    StringRef ABI = getTarget().getABI();
-    X86AVXABILevel AVXLevel =
-        (ABI == "avx512"
-             ? X86AVXABILevel::AVX512
-             : ABI == "avx" ? X86AVXABILevel::AVX : X86AVXABILevel::None);
+    StringRef ABI = Target.getABI();
+    X86AVXABILevel AVXLevel = (ABI == "avx512" ? X86AVXABILevel::AVX512
+                               : ABI == "avx"  ? X86AVXABILevel::AVX
+                                               : X86AVXABILevel::None);
 
     switch (Triple.getOS()) {
     case llvm::Triple::Win32:
-      return SetCGInfo(new WinX86_64TargetCodeGenInfo(Types, AVXLevel));
+      return createWinX86_64TargetCodeGenInfo(CGM, AVXLevel);
     default:
-      return SetCGInfo(new X86_64TargetCodeGenInfo(Types, AVXLevel));
+      return createX86_64TargetCodeGenInfo(CGM, AVXLevel);
     }
   }
   case llvm::Triple::hexagon:
-    return SetCGInfo(new HexagonTargetCodeGenInfo(Types));
+    return createHexagonTargetCodeGenInfo(CGM);
   case llvm::Triple::lanai:
-    return SetCGInfo(new LanaiTargetCodeGenInfo(Types));
+    return createLanaiTargetCodeGenInfo(CGM);
   case llvm::Triple::r600:
-    return SetCGInfo(new AMDGPUTargetCodeGenInfo(Types));
+    return createAMDGPUTargetCodeGenInfo(CGM);
   case llvm::Triple::amdgcn:
-    return SetCGInfo(new AMDGPUTargetCodeGenInfo(Types));
+    return createAMDGPUTargetCodeGenInfo(CGM);
   case llvm::Triple::sparc:
-    return SetCGInfo(new SparcV8TargetCodeGenInfo(Types));
+    return createSparcV8TargetCodeGenInfo(CGM);
   case llvm::Triple::sparcv9:
-    return SetCGInfo(new SparcV9TargetCodeGenInfo(Types));
+    return createSparcV9TargetCodeGenInfo(CGM);
   case llvm::Triple::xcore:
-    return SetCGInfo(new XCoreTargetCodeGenInfo(Types));
+    return createXCoreTargetCodeGenInfo(CGM);
   case llvm::Triple::arc:
-    return SetCGInfo(new ARCTargetCodeGenInfo(Types));
+    return createARCTargetCodeGenInfo(CGM);
   case llvm::Triple::spir:
   case llvm::Triple::spir64:
-    return SetCGInfo(new CommonSPIRTargetCodeGenInfo(Types));
+    return createCommonSPIRTargetCodeGenInfo(CGM);
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
-    return SetCGInfo(new SPIRVTargetCodeGenInfo(Types));
+    return createSPIRVTargetCodeGenInfo(CGM);
   case llvm::Triple::ve:
-    return SetCGInfo(new VETargetCodeGenInfo(Types));
+    return createVETargetCodeGenInfo(CGM);
   case llvm::Triple::csky: {
-    bool IsSoftFloat = !getTarget().hasFeature("hard-float-abi");
-    bool hasFP64 = getTarget().hasFeature("fpuv2_df") ||
-                   getTarget().hasFeature("fpuv3_df");
-    return SetCGInfo(new CSKYTargetCodeGenInfo(Types, IsSoftFloat ? 0
-                                                      : hasFP64   ? 64
-                                                                  : 32));
+    bool IsSoftFloat = !Target.hasFeature("hard-float-abi");
+    bool hasFP64 =
+        Target.hasFeature("fpuv2_df") || Target.hasFeature("fpuv3_df");
+    return createCSKYTargetCodeGenInfo(CGM, IsSoftFloat ? 0
+                                            : hasFP64   ? 64
+                                                        : 32);
   }
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
-    return SetCGInfo(new BPFTargetCodeGenInfo(Types));
+    return createBPFTargetCodeGenInfo(CGM);
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64: {
-    StringRef ABIStr = getTarget().getABI();
+    StringRef ABIStr = Target.getABI();
     unsigned ABIFRLen = 0;
     if (ABIStr.endswith("f"))
       ABIFRLen = 32;
     else if (ABIStr.endswith("d"))
       ABIFRLen = 64;
-    return SetCGInfo(new LoongArchTargetCodeGenInfo(
-        Types, getTarget().getPointerWidth(LangAS::Default), ABIFRLen));
+    return createLoongArchTargetCodeGenInfo(
+        CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
   }
+}
+
+// TODO: Move to CodeGenModule.cpp.
+const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
+  if (!TheTargetCodeGenInfo)
+    TheTargetCodeGenInfo = createTargetCodeGenInfo(*this);
+  return *TheTargetCodeGenInfo;
 }
 
 /// Create an OpenCL kernel for an enqueued block.
@@ -12643,4 +12603,209 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
     F->setMetadata("kernel_arg_name", llvm::MDNode::get(C, ArgNames));
 
   return F;
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createDefaultTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<DefaultTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createAArch64TargetCodeGenInfo(CodeGenModule &CGM,
+                                        AArch64ABIKind Kind) {
+  return std::make_unique<AArch64TargetCodeGenInfo>(CGM.getTypes(), Kind);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM,
+                                               AArch64ABIKind K) {
+  return std::make_unique<WindowsAArch64TargetCodeGenInfo>(CGM.getTypes(), K);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createAMDGPUTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<AMDGPUTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createARCTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<ARCTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createARMTargetCodeGenInfo(CodeGenModule &CGM, ARMABIKind Kind) {
+  return std::make_unique<ARMTargetCodeGenInfo>(CGM.getTypes(), Kind);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createWindowsARMTargetCodeGenInfo(CodeGenModule &CGM, ARMABIKind K) {
+  return std::make_unique<WindowsARMTargetCodeGenInfo>(CGM.getTypes(), K);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createAVRTargetCodeGenInfo(CodeGenModule &CGM, unsigned NPR,
+                                    unsigned NRR) {
+  return std::make_unique<AVRTargetCodeGenInfo>(CGM.getTypes(), NPR, NRR);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createBPFTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<BPFTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createCSKYTargetCodeGenInfo(CodeGenModule &CGM, unsigned FLen) {
+  return std::make_unique<CSKYTargetCodeGenInfo>(CGM.getTypes(), FLen);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createHexagonTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<HexagonTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createLanaiTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<LanaiTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createLoongArchTargetCodeGenInfo(CodeGenModule &CGM, unsigned GRLen,
+                                          unsigned FLen) {
+  return std::make_unique<LoongArchTargetCodeGenInfo>(CGM.getTypes(), GRLen,
+                                                      FLen);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createM68kTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<M68kTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32) {
+  return std::make_unique<MIPSTargetCodeGenInfo>(CGM.getTypes(), IsOS32);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createMSP430TargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<MSP430TargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createNVPTXTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<NVPTXTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createPNaClTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<PNaClTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createAIXTargetCodeGenInfo(CodeGenModule &CGM, bool Is64Bit) {
+  return std::make_unique<AIXTargetCodeGenInfo>(CGM.getTypes(), Is64Bit);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createPPC32TargetCodeGenInfo(CodeGenModule &CGM, bool SoftFloatABI) {
+  bool RetSmallStructInRegABI = PPC32TargetCodeGenInfo::isStructReturnInRegABI(
+      CGM.getTriple(), CGM.getCodeGenOpts());
+  return std::make_unique<PPC32TargetCodeGenInfo>(CGM.getTypes(), SoftFloatABI,
+                                                  RetSmallStructInRegABI);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createPPC64TargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<PPC64TargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo> CodeGen::createPPC64_SVR4_TargetCodeGenInfo(
+    CodeGenModule &CGM, PPC64_SVR4_ABIKind Kind, bool SoftFloatABI) {
+  return std::make_unique<PPC64_SVR4_TargetCodeGenInfo>(CGM.getTypes(), Kind,
+                                                        SoftFloatABI);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen,
+                                      unsigned FLen) {
+  return std::make_unique<RISCVTargetCodeGenInfo>(CGM.getTypes(), XLen, FLen);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<CommonSPIRTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createSPIRVTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<SPIRVTargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createSparcV8TargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<SparcV8TargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createSparcV9TargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<SparcV9TargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createSystemZTargetCodeGenInfo(CodeGenModule &CGM, bool HasVector,
+                                        bool SoftFloatABI) {
+  return std::make_unique<SystemZTargetCodeGenInfo>(CGM.getTypes(), HasVector,
+                                                    SoftFloatABI);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createTCETargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<TCETargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createVETargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<VETargetCodeGenInfo>(CGM.getTypes());
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createWebAssemblyTargetCodeGenInfo(CodeGenModule &CGM,
+                                            WebAssemblyABIKind K) {
+  return std::make_unique<WebAssemblyTargetCodeGenInfo>(CGM.getTypes(), K);
+}
+
+std::unique_ptr<TargetCodeGenInfo> CodeGen::createX86_32TargetCodeGenInfo(
+    CodeGenModule &CGM, bool DarwinVectorABI, bool Win32StructABI,
+    unsigned NumRegisterParameters, bool SoftFloatABI) {
+  bool RetSmallStructInRegABI = X86_32TargetCodeGenInfo::isStructReturnInRegABI(
+      CGM.getTriple(), CGM.getCodeGenOpts());
+  return std::make_unique<X86_32TargetCodeGenInfo>(
+      CGM.getTypes(), DarwinVectorABI, RetSmallStructInRegABI, Win32StructABI,
+      NumRegisterParameters, SoftFloatABI);
+}
+
+std::unique_ptr<TargetCodeGenInfo> CodeGen::createWinX86_32TargetCodeGenInfo(
+    CodeGenModule &CGM, bool DarwinVectorABI, bool Win32StructABI,
+    unsigned NumRegisterParameters) {
+  bool RetSmallStructInRegABI = X86_32TargetCodeGenInfo::isStructReturnInRegABI(
+      CGM.getTriple(), CGM.getCodeGenOpts());
+  return std::make_unique<WinX86_32TargetCodeGenInfo>(
+      CGM.getTypes(), DarwinVectorABI, RetSmallStructInRegABI, Win32StructABI,
+      NumRegisterParameters);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createX86_64TargetCodeGenInfo(CodeGenModule &CGM,
+                                       X86AVXABILevel AVXLevel) {
+  return std::make_unique<X86_64TargetCodeGenInfo>(CGM.getTypes(), AVXLevel);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createWinX86_64TargetCodeGenInfo(CodeGenModule &CGM,
+                                          X86AVXABILevel AVXLevel) {
+  return std::make_unique<WinX86_64TargetCodeGenInfo>(CGM.getTypes(), AVXLevel);
+}
+
+std::unique_ptr<TargetCodeGenInfo>
+CodeGen::createXCoreTargetCodeGenInfo(CodeGenModule &CGM) {
+  return std::make_unique<XCoreTargetCodeGenInfo>(CGM.getTypes());
 }
