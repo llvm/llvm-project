@@ -657,6 +657,13 @@ protected:
   /// Read a string indirectly via the name table.
   ErrorOr<StringRef> readStringFromTable();
 
+  /// Read a context indirectly via the CSNameTable.
+  ErrorOr<SampleContextFrames> readContextFromTable();
+
+  /// Read a context indirectly via the CSNameTable if the profile has context,
+  /// otherwise same as readStringFromTable.
+  ErrorOr<SampleContext> readSampleContextFromTable();
+
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
 
@@ -678,7 +685,9 @@ protected:
   /// The starting address of NameTable containing fixed length MD5.
   const uint8_t *MD5NameMemStart = nullptr;
 
-  virtual ErrorOr<SampleContext> readSampleContextFromTable();
+  /// CSNameTable is used to save full context vectors. It is the backing buffer
+  /// for SampleContextFrames.
+  std::vector<SampleContextFrameVector> CSNameTable;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
@@ -746,8 +755,6 @@ protected:
                                          const SecHdrTableEntry &Entry);
   // placeholder for subclasses to dispatch their own section readers.
   virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
-  ErrorOr<SampleContext> readSampleContextFromTable() override;
-  ErrorOr<SampleContextFrames> readContextFromTable();
 
   std::unique_ptr<ProfileSymbolList> ProfSymList;
 
@@ -761,10 +768,6 @@ protected:
 
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
-
-  /// CSNameTable is used to save full context vectors. This serves as an
-  /// underlying immutable buffer for all clients.
-  std::unique_ptr<const std::vector<SampleContextFrameVector>> CSNameTable;
 
   /// If SkipFlatProf is true, skip the sections with
   /// SecFlagFlat flag.
