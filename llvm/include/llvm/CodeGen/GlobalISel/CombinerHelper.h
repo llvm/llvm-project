@@ -353,8 +353,6 @@ public:
   void applyCombineUnmergeZExtToZExt(MachineInstr &MI);
 
   /// Transform fp_instr(cst) to constant result of the fp operation.
-  bool matchCombineConstantFoldFpUnary(MachineInstr &MI,
-                                       const ConstantFP *&Cst);
   void applyCombineConstantFoldFpUnary(MachineInstr &MI, const ConstantFP *Cst);
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
