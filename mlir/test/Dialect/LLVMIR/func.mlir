@@ -5,33 +5,33 @@
 
 module {
   // GENERIC: "llvm.func"
-  // GENERIC: function_type = !llvm.func<void ()>
+  // GENERIC-SAME: function_type = !llvm.func<void ()>
   // GENERIC-SAME: sym_name = "foo"
-  // GENERIC-SAME: () -> ()
+  // GENERIC: () -> ()
   // CHECK: llvm.func @foo()
   "llvm.func" () ({
   }) {sym_name = "foo", function_type = !llvm.func<void ()>} : () -> ()
 
   // GENERIC: "llvm.func"
-  // GENERIC: function_type = !llvm.func<i64 (i64, i64)>
+  // GENERIC-SAME: function_type = !llvm.func<i64 (i64, i64)>
   // GENERIC-SAME: sym_name = "bar"
-  // GENERIC-SAME: () -> ()
+  // GENERIC: () -> ()
   // CHECK: llvm.func @bar(i64, i64) -> i64
   "llvm.func"() ({
   }) {sym_name = "bar", function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
 
   // GENERIC: "llvm.func"
+  // GENERIC-SAME: function_type = !llvm.func<i64 (i64)>
+  // GENERIC-SAME: sym_name = "baz"
   // CHECK: llvm.func @baz(%{{.*}}: i64) -> i64
-  "llvm.func"() ({
+  "llvm.func"() <{sym_name = "baz", function_type = !llvm.func<i64 (i64)>}> ({
   // GENERIC: ^bb0
   ^bb0(%arg0: i64):
     // GENERIC: llvm.return
     llvm.return %arg0 : i64
 
-  // GENERIC: function_type = !llvm.func<i64 (i64)>
-  // GENERIC-SAME: sym_name = "baz"
-  // GENERIC-SAME: () -> ()
-  }) {sym_name = "baz", function_type = !llvm.func<i64 (i64)>} : () -> ()
+  // GENERIC: () -> ()
+  }) : () -> ()
 
   // CHECK: llvm.func @qux(!llvm.ptr {llvm.noalias}, i64)
   // CHECK: attributes {xxx = {yyy = 42 : i64}}
