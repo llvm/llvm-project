@@ -789,6 +789,13 @@ public:
     Op.MD = nullptr;
     return *this;
   }
+
+  // Check if MDOperand is of type MDString and equals `Str`.
+  bool equalsStr(StringRef Str) const {
+    return isa<MDString>(this->get()) &&
+           cast<MDString>(this->get())->getString() == Str;
+  }
+
   ~MDOperand() { untrack(); }
 
   Metadata *get() const { return MD; }

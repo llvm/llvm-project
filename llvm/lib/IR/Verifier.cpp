@@ -4678,8 +4678,15 @@ void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
   Check(isa<MDTuple>(Annotation), "annotation must be a tuple");
   Check(Annotation->getNumOperands() >= 1,
         "annotation must have at least one operand");
-  for (const MDOperand &Op : Annotation->operands())
-    Check(isa<MDString>(Op.get()), "operands must be strings");
+  for (const MDOperand &Op : Annotation->operands()) {
+    bool TupleOfStrings =
+        isa<MDTuple>(Op.get()) &&
+        all_of(cast<MDTuple>(Op)->operands(), [](auto &Annotation) {
+          return isa<MDString>(Annotation.get());
+        });
+    Check(isa<MDString>(Op.get()) || TupleOfStrings,
+          "operands must be a string or a tuple of strings");
+  }
 }
 
 void Verifier::visitAliasScopeMetadata(const MDNode *MD) {
