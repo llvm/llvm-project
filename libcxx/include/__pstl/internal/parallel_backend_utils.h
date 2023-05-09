@@ -11,12 +11,11 @@
 #define _PSTL_PARALLEL_BACKEND_UTILS_H
 
 #include <__assert>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 
 #include "utils.h"
-
-#include "pstl_config.h"
 
 namespace __pstl
 {

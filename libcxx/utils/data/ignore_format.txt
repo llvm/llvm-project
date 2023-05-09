@@ -523,7 +523,6 @@ libcxx/include/__pstl/internal/parallel_backend_serial.h
 libcxx/include/__pstl/internal/parallel_backend_tbb.h
 libcxx/include/__pstl/internal/parallel_backend_utils.h
 libcxx/include/__pstl/internal/parallel_impl.h
-libcxx/include/__pstl/internal/pstl_config.h
 libcxx/include/__pstl/internal/unseq_backend_simd.h
 libcxx/include/__pstl/internal/utils.h
 libcxx/include/queue

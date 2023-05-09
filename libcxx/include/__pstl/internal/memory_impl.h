@@ -10,9 +10,9 @@
 #ifndef _PSTL_MEMORY_IMPL_H
 #define _PSTL_MEMORY_IMPL_H
 
+#include <__config>
 #include <iterator>
 
-#include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
 namespace __pstl {

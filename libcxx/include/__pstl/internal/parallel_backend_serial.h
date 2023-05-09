@@ -10,11 +10,10 @@
 #ifndef _PSTL_PARALLEL_BACKEND_SERIAL_H
 #define _PSTL_PARALLEL_BACKEND_SERIAL_H
 
+#include <__config>
 #include <__memory/allocator.h>
 #include <__pstl/internal/execution_impl.h>
 #include <__utility/forward.h>
-
-#include "pstl_config.h"
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 

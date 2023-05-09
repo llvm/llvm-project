@@ -10,13 +10,13 @@
 #ifndef _PSTL_UNSEQ_BACKEND_SIMD_H
 #define _PSTL_UNSEQ_BACKEND_SIMD_H
 
+#include <__config>
 #include <__functional/operations.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__utility/pair.h>
 #include <cstddef>
 #include <cstdint>
 
-#include "pstl_config.h"
 #include "utils.h"
 
 // This header defines the minimum set of vector routines required
