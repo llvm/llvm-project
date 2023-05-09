@@ -629,6 +629,9 @@ set(files
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
+  __stop_token/atomic_unique_lock.h
+  __stop_token/intrusive_list_view.h
+  __stop_token/intrusive_shared_ptr.h
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
