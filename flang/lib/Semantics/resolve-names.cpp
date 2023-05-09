@@ -2455,8 +2455,7 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
     return false;
   }
   // TODO: check no INTENT(OUT) if dummy?
-  if (context().languageFeatures().ShouldWarn(
-          common::LanguageFeature::ForwardRefImplicitNone)) {
+  if (context().ShouldWarn(common::LanguageFeature::ForwardRefImplicitNone)) {
     Say(symbol.name(),
         "'%s' was used without (or before) being explicitly typed"_warn_en_US,
         symbol.name());
@@ -3535,7 +3534,7 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   // C1560.
   if (info.resultName && !distinctResultName) {
     Say(info.resultName->source,
-        "The function name should not appear in RESULT, references to '%s' "
+        "The function name should not appear in RESULT; references to '%s' "
         "inside the function will be considered as references to the "
         "result only"_warn_en_US,
         name.source);
@@ -4915,16 +4914,14 @@ bool DeclarationVisitor::Pre(const parser::PrivateStmt &) {
     derivedTypeInfo_.privateBindings = true;
   } else if (!derivedTypeInfo_.privateComps) {
     derivedTypeInfo_.privateComps = true;
-  } else {
-    Say("PRIVATE may not appear more than once in"
-        " derived type components"_warn_en_US); // C738
+  } else { // C738
+    Say("PRIVATE should not appear more than once in derived type components"_warn_en_US);
   }
   return false;
 }
 bool DeclarationVisitor::Pre(const parser::SequenceStmt &) {
-  if (derivedTypeInfo_.sequence) {
-    Say("SEQUENCE may not appear more than once in"
-        " derived type components"_warn_en_US); // C738
+  if (derivedTypeInfo_.sequence) { // C738
+    Say("SEQUENCE should not appear more than once in derived type components"_warn_en_US);
   }
   derivedTypeInfo_.sequence = true;
   return false;

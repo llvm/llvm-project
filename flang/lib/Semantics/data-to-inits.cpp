@@ -384,7 +384,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
       return true;
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
-        if (CheckPointerAssignment(context, designator, *expr, DEREF(scope_))) {
+        if (CheckPointerAssignment(
+                exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
             return true;
@@ -405,7 +406,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
       exprAnalyzer_.Say(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
-    } else if (CheckInitialTarget(context, designator, *expr, DEREF(scope_))) {
+    } else if (CheckInitialTarget(
+                   exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }

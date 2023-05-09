@@ -26,6 +26,7 @@ class FoldingContext;
 
 namespace Fortran::semantics {
 class Scope;
+class SemanticsContext;
 
 // Argument treatingExternalAsImplicit should be true when the called procedure
 // does not actually have an explicit interface at the call site, but
@@ -33,7 +34,7 @@ class Scope;
 // defined at the top level in the same source file.  Returns false if
 // messages were created, true if all is well.
 bool CheckArguments(const evaluate::characteristics::Procedure &,
-    evaluate::ActualArguments &, evaluate::FoldingContext &, const Scope &,
+    evaluate::ActualArguments &, SemanticsContext &, const Scope &,
     bool treatingExternalAsImplicit,
     const evaluate::SpecificIntrinsic *intrinsic);
 
@@ -46,7 +47,7 @@ bool CheckArgumentIsConstantExprInRange(
 
 // Checks actual arguments for the purpose of resolving a generic interface.
 bool CheckInterfaceForGeneric(const evaluate::characteristics::Procedure &,
-    evaluate::ActualArguments &, const evaluate::FoldingContext &,
+    evaluate::ActualArguments &, SemanticsContext &,
     bool allowActualArgumentConversions = false);
 } // namespace Fortran::semantics
 #endif
