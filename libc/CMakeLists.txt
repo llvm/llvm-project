@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.13.4)
 
 # Include LLVM's cmake policies.
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
