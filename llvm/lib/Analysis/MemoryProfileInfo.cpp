@@ -76,7 +76,7 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
   return AllocationType::NotCold;
 }
 
-static std::string getAllocTypeAttributeString(AllocationType Type) {
+std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
   switch (Type) {
   case AllocationType::NotCold:
     return "notcold";
