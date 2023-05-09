@@ -27,20 +27,52 @@ class TestSwiftRegex(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
-    def test_swift_regex(self):
-        """Test Swift's regex support"""
+    @skipIf(macos_version=["<", "13"])
+    def test_swift_regex_frame_var(self):
+        """Test frame variable support for Swift regexes."""
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', self.main_source_spec)
         self.expect('v regex',
                     substrs=['_StringProcessing.Regex<(Substring, Substring, Substring, Substring)>) regex = {'])
-        self.expect('po regex',
-                    substrs=['Regex<(Substring, Substring, Substring, Substring)>'])
-
         self.expect('v dslRegex',
                     substrs=['(_StringProcessing.Regex<Substring>) dslRegex = {'])
-        self.expect('po dslRegex',
+
+    @swiftTest
+    @skipIf(macos_version=["<", "13"])
+    def test_swift_regex_expr_desc(self):
+        """Test expression object description support for Swift regexes."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', self.main_source_spec)
+        self.expect('expr -O -- regex',
+                    substrs=['Regex<(Substring, Substring, Substring, Substring)>'])
+        self.expect('expr -O -- dslRegex',
                     substrs=['Regex<Substring>'])
+
+    @swiftTest
+    @skipIf(macos_version=["<", "13"])
+    def test_swift_regex_frame_var_desc(self):
+        """Test frame variable object description support for Swift regexes."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', self.main_source_spec)
+        self.expect('vo regex',
+                    substrs=['Regex<(Substring, Substring, Substring, Substring)>'])
+        self.expect('vo dslRegex',
+                    substrs=['Regex<Substring>'])
+
+    @swiftTest
+    @skipIf(macos_version=["<", "13"])
+    def test_swift_regex_expr(self):
+        """Test expression support for Swift regexes."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', self.main_source_spec)
+        self.expect('expr regex',
+                    substrs=['_StringProcessing.Regex<(Substring, Substring, Substring, Substring)>) $R0 = {'])
+        self.expect('expr dslRegex',
+                    substrs=['(_StringProcessing.Regex<Substring>) $R1 = {'])
 
     @swiftTest
     @skipIf(macos_version=["<", "13"])
