@@ -2749,18 +2749,18 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
         return nullptr;
       }
       if (log)
-        log->Printf("returned cached module-wide scratch context\n");
+        log->PutCString("returned cached module-wide scratch context");
       return cached_ts;
     }
 
     if (!create_on_demand) {
       if (log)
-        log->Printf("not allowed to create a new context\n");
+        log->PutCString("not allowed to create a new context");
       return nullptr;
     }
     if (!GetSwiftScratchContextLock().try_lock()) {
       if (log)
-        log->Printf("couldn't acquire scratch context lock\n");
+        log->PutCString("couldn't acquire scratch context lock");
       return nullptr;
     }
 
@@ -2787,14 +2787,14 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     typesystem_sp->GetSwiftASTContext();
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
     if (log)
-      log->Printf("created module-wide scratch context\n");
+      log->PutCString("created module-wide scratch context");
     return typesystem_sp.get();
   };
 
   auto *swift_scratch_ctx = get_or_create_fallback_context();
   if (!swift_scratch_ctx) {
     if (log)
-      log->Printf("returned project-wide scratch context\n");
+      log->PutCString("returned project-wide scratch context");
     auto type_system_or_err =
         GetScratchTypeSystemForLanguage(eLanguageTypeSwift, create_on_demand);
     if (type_system_or_err)
