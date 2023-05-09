@@ -199,7 +199,7 @@ void DWARFRewriter::updateDebugInfo() {
           std::make_unique<DebugLoclistWriter>(*CU.get(), DwarfVersion, false);
 
       if (std::optional<uint64_t> DWOId = CU->getDWOId()) {
-        assert(LocListWritersByCU.count(*DWOId) == 0 &&
+        assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
                "RangeLists writer for DWO unit already exists.");
         auto RangeListsSectionWriter =
             std::make_unique<DebugRangeListsSectionWriter>();
