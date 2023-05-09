@@ -1413,7 +1413,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       return nullptr;
 
     SmallVector<Value *> CharCompares;
-    for (char C : SortedStr)
+    for (unsigned char C : SortedStr)
       CharCompares.push_back(
           B.CreateICmpEQ(CharVal, ConstantInt::get(CharVal->getType(), C)));
 
