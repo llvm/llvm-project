@@ -1944,7 +1944,8 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
           // modules must be imported from the SDK instead.
           if (!p.startswith("/System/Library") && !IsDeviceSupport(p) &&
               !p.startswith(
-                  "/Library/Apple/System/Library/PrivateFrameworks")) {
+                  "/Library/Apple/System/Library/PrivateFrameworks") &&
+              !p.startswith("/System/iOSSupport/System/Library/Frameworks")) {
             LOG_PRINTF(GetLog(LLDBLog::Types), "adding framework path \"%s\"/.. .",
                        framework_path.c_str());
             framework_search_paths.push_back(
