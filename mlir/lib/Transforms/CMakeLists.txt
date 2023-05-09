@@ -28,7 +28,7 @@ add_mlir_library(MLIRTransforms
   MLIRAnalysis
   MLIRCopyOpInterface
   MLIRLoopLikeInterface
-  MLIRMem2RegInterfaces
+  MLIRMemorySlotInterfaces
   MLIRPass
   MLIRRuntimeVerifiableOpInterface
   MLIRSideEffectInterfaces
