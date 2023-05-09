@@ -497,6 +497,9 @@ enum LanguageType {
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
   eLanguageTypeMipsAssembler,           ///< Mips_Assembler.
+  // Mojo will move to the common list of languages once the DWARF committee
+  // creates a language code for it.
+  eLanguageTypeMojo,
   eNumLanguageTypes
 };
 
