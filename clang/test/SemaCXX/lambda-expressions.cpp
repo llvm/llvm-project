@@ -260,10 +260,11 @@ namespace VariadicPackExpansion {
     f([&ts] { return (int)f(ts...); } ()...); // \
     // expected-error 2{{'ts' cannot be implicitly captured}} \
     // expected-note 2{{lambda expression begins here}} \
-    // expected-note 4 {{capture 'ts' by}}
+    // expected-note 4 {{capture 'ts' by}} \
+    // expected-note 2 {{while substituting into a lambda}}
   }
   template void nested2(int); // ok
-  template void nested2(int, int); // expected-note {{in instantiation of}}
+  template void nested2(int, int); // expected-note 2 {{in instantiation of}}
 }
 
 namespace PR13860 {
@@ -383,7 +384,7 @@ namespace PR18128 {
 namespace PR18473 {
   template<typename T> void f() {
     T t(0);
-    (void) [=]{ int n = t; }; // expected-error {{deleted}}
+    (void) [=]{ int n = t; }; // expected-error {{deleted}} expected-note {{while substituting into a lambda}}
   }
 
   template void f<int>();
@@ -466,7 +467,7 @@ namespace error_in_transform_prototype {
   void f(T t) {
     // expected-error@+2 {{type 'int' cannot be used prior to '::' because it has no members}}
     // expected-error@+1 {{no member named 'ns' in 'error_in_transform_prototype::S'}}
-    auto x = [](typename T::ns::type &k) {};
+    auto x = [](typename T::ns::type &k) {}; // expected-note 2 {{while substituting into a lambda}}
   }
   class S {};
   void foo() {
