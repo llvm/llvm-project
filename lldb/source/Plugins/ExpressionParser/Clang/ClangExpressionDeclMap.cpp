@@ -534,7 +534,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
   addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
 
   for (const SymbolContext &sym_ctx : sc_list) {
-    if (symbol_load_addr != 0 || symbol_load_addr != LLDB_INVALID_ADDRESS)
+    if (symbol_load_addr != 0 && symbol_load_addr != LLDB_INVALID_ADDRESS)
       break;
 
     const Address sym_address = sym_ctx.symbol->GetAddress();
