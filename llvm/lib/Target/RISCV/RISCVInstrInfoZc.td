@@ -132,8 +132,8 @@ def C_SH : CStoreH_rri<0b100011, 0b1, "c.sh">,
            Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 }
 
-let Predicates = [HasStdExtZcmt],
-hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt],
+    hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
                        "cm.jt", "$index">{
   bits<5> index;
@@ -149,7 +149,7 @@ def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
   let Inst{12-10} = 0b000;
   let Inst{9-2} = index;
 }
-} // Predicates = [HasStdExtZcmt]
+} // DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt]...
 
 
 let Predicates = [HasStdExtZcb, HasStdExtMOrZmmul] in{
