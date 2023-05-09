@@ -422,6 +422,59 @@ def IfOp : CIR_Op<"if",
 }
 
 //===----------------------------------------------------------------------===//
+// TernaryOp
+//===----------------------------------------------------------------------===//
+
+def TernaryOp : CIR_Op<"ternary",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
+  let summary = "The `cond ? a : b` C/C++ ternary operation";
+  let description = [{
+    The `cir.ternary` operation represents C/C++ ternary, much like a `select`
+    operation. First argument is a `cir.bool` condition to evaluate, followed
+    by two regions to execute (true or false). This is different from `cir.if`
+    since each region is one block sized and the `cir.yield` closing the block
+    scope should have one argument.
+
+    Example:
+
+    ```mlir
+    // x = cond ? a : b;
+
+    %x = cir.ternary (%cond, true_region {
+      ...
+      cir.yield %a : i32
+    }, false_region {
+      ...
+      cir.yield %b : i32
+    }) -> i32
+    ```
+  }];
+  let arguments = (ins CIR_BoolType:$cond);
+  let regions = (region SizedRegion<1>:$trueRegion,
+                        SizedRegion<1>:$falseRegion);
+  let results = (outs AnyType:$result);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$cond,
+      "function_ref<void(OpBuilder &, Location)>":$trueBuilder,
+      "function_ref<void(OpBuilder &, Location)>":$falseBuilder)
+      >
+  ];
+
+  // All constraints already verified elsewhere.
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    `(` $cond `,`
+      `true_region` $trueRegion `,`
+      `false_region` $falseRegion
+    `)` `:` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
@@ -438,17 +491,15 @@ def YieldOpKind : I32EnumAttr<
 }
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["IfOp", "ScopeOp", "SwitchOp",
-                                            "LoopOp", "AwaitOp"]>]> {
+    ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "LoopOp", "AwaitOp",
+                 "TernaryOp"]>]> {
   let summary = "Terminate CIR regions";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations:
-    `cir.if`, `cir.scope`, `cir.switch`, `cir.loop` and `cir.await`.
+    `cir.if`, `cir.scope`, `cir.switch`, `cir.loop`, `cir.await` and `cir.ternary`.
 
     Might yield an SSA value and the semantics of how the values are yielded is
-    defined by the parent operation. Note: there are currently no uses of
-    `cir.yield` with operands - should be helpful to represent lifetime
-    extension out of short lived scopes in the future.
+    defined by the parent operation.
 
     Optionally, `cir.yield` can be annotated with extra kind specifiers:
     - `break`: breaking out of the innermost `cir.switch` / `cir.loop` semantics,
@@ -492,6 +543,21 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
       }
       cir.yield // control-flow to the next region for suspension.
     }, ...)
+
+    cir.scope {
+      ...
+      cir.yield
+    }
+
+    %x = cir.scope {
+      ...
+      cir.yield %val
+    }
+
+    %y = cir.ternary {
+      ...
+      cir.yield %val : i32
+    } : i32
     ```
   }];
 

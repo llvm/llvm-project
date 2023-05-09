@@ -588,6 +588,52 @@ void ScopeOp::build(OpBuilder &builder, OperationState &result,
 LogicalResult ScopeOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
+// TernaryOp
+//===----------------------------------------------------------------------===//
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void TernaryOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `true` and the `false` region branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(this->getODSResults(0)));
+    return;
+  }
+
+  // Try optimize if we have more information
+  // if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
+  //   assert(0 && "not implemented");
+  // }
+
+  // If the condition isn't constant, both regions may be executed.
+  regions.push_back(RegionSuccessor(&getTrueRegion()));
+  regions.push_back(RegionSuccessor(&getFalseRegion()));
+  return;
+}
+
+void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
+                      function_ref<void(OpBuilder &, Location)> trueBuilder,
+                      function_ref<void(OpBuilder &, Location)> falseBuilder) {
+  result.addOperands(cond);
+  OpBuilder::InsertionGuard guard(builder);
+
+  Region *trueRegion = result.addRegion();
+  auto *block = builder.createBlock(trueRegion);
+  trueBuilder(builder, result.location);
+  Region *falseRegion = result.addRegion();
+  builder.createBlock(falseRegion);
+  falseBuilder(builder, result.location);
+
+  auto yield = dyn_cast<YieldOp>(block->getTerminator());
+  assert(yield && "expected cir.yield terminator");
+  result.addTypes(TypeRange{yield.getOperand(0).getType()});
+}
+
+//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
