@@ -3,7 +3,7 @@ func main() {
     let someSlice = a[1...]
     let arraySlice: ArraySlice<Int> = a[1...]
     let arraySubSequence: Array<Int>.SubSequence = a[1...]
-    // break here
+    print("break here")
 }
 
 main()

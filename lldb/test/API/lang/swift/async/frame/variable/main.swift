@@ -7,9 +7,11 @@ func inner<T>(_ t: T) async {
   // is unknown.
   let d = t
   let a = await randInt(30)
-  let b = await randInt(a + 11) // break one
+  print("break one")
+  let b = await randInt(a + 11)
   use(a, b)
-  use(d) // break two
+  use(d)
+  print("break two")
 }
 
 func use<T>(_ t: T...) {}
