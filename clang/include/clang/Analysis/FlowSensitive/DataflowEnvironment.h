@@ -281,12 +281,7 @@ public:
   ///
   /// Note that if `D` has reference type, the storage location that is returned
   /// refers directly to the referenced object, not a `ReferenceValue`.
-  ///
-  /// The `SP` parameter is deprecated and has no effect. In addition, it is
-  /// not permitted to pass `SkipPast::ReferenceThenPointer` for this parameter.
-  /// New uses of this function should use the default argument for `SP`.
-  StorageLocation *getStorageLocation(const ValueDecl &D,
-                                      SkipPast SP = SkipPast::None) const;
+  StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
   /// Assigns `Loc` as the storage location of `E` in the environment.
   ///
