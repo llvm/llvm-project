@@ -12,7 +12,6 @@
 
 // iterator insert(const_iterator p, initializer_list<value_type> il);
 
-#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -40,7 +39,6 @@ int main(int, char**)
     assert(d[11] == 1);
     assert(d[12] == 1);
     assert(d[13] == 1);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     }
     {
     std::deque<int, min_allocator<int>> d(10, 1);
@@ -61,7 +59,6 @@ int main(int, char**)
     assert(d[11] == 1);
     assert(d[12] == 1);
     assert(d[13] == 1);
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
     }
 
   return 0;
