@@ -332,7 +332,7 @@ public:
   bool isWarningGadget() const final { return false; }
 
   /// Returns a fixit that would fix the current gadget according to
-  /// the current strategy. Returns None if the fix cannot be produced;
+  /// the current strategy. Returns std::nullopt if the fix cannot be produced;
   /// returns an empty list if no fixes are necessary.
   virtual std::optional<FixItList> getFixits(const Strategy &) const {
     return std::nullopt;
