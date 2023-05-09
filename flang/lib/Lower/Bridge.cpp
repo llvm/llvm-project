@@ -3226,7 +3226,11 @@ private:
       genCleanUpInRegionIfAny(loc, builder, lhsYieldOp.getCleanup(),
                               lhsContext);
     } else {
-      TODO(loc, "assignment to vector subscripted entity");
+      hlfir::ElementalAddrOp elementalAddr =
+          Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
+              loc, *this, assign.lhs, localSymbols, lhsContext);
+      genCleanUpInRegionIfAny(loc, builder, elementalAddr.getCleanup(),
+                              lhsContext);
     }
 
     // Add "realloc" flag to hlfir.region_assign.
