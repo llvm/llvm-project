@@ -77,6 +77,16 @@ if((CMAKE_BUILD_TYPE MATCHES Release) AND (${LIBOMPTARGET_PERF}))
   set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
 endif()
 
+if(SANITIZER_AMDGPU)
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(OPENMP_LIBDIR_SUFFIX "-debug/asan")
+    set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
+  else()
+    set(OPENMP_LIBDIR_SUFFIX "/asan")
+    set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
+  endif()
+endif()
+
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
