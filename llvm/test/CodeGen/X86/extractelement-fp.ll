@@ -680,16 +680,14 @@ define float @fmaximum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X64-NEXT:    je .LBB30_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    vmovdqa %xmm1, %xmm2
-; X64-NEXT:    vmovdqa %xmm0, %xmm3
 ; X64-NEXT:    jmp .LBB30_3
 ; X64-NEXT:  .LBB30_1:
 ; X64-NEXT:    vmovdqa %xmm0, %xmm2
-; X64-NEXT:    vmovdqa %xmm1, %xmm3
+; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:  .LBB30_3:
-; X64-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vcmpunordss %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; X64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; X64-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
+; X64-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
+; X64-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fmaximum_v4f32:
@@ -699,17 +697,15 @@ define float @fmaximum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X86-NEXT:    je .LBB30_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovdqa %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
 ; X86-NEXT:    jmp .LBB30_3
 ; X86-NEXT:  .LBB30_1:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
+; X86-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-NEXT:  .LBB30_3:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vmaxss %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vcmpunordss %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; X86-NEXT:    vmaxss %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -727,15 +723,14 @@ define double @fmaximum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; X64-NEXT:    je .LBB31_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    vmovdqa %xmm1, %xmm2
-; X64-NEXT:    vmovdqa %xmm0, %xmm3
 ; X64-NEXT:    jmp .LBB31_3
 ; X64-NEXT:  .LBB31_1:
 ; X64-NEXT:    vmovdqa %xmm0, %xmm2
-; X64-NEXT:    vmovdqa %xmm1, %xmm3
+; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:  .LBB31_3:
-; X64-NEXT:    vmaxsd %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vcmpunordsd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
+; X64-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
+; X64-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
+; X64-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;
@@ -747,19 +742,18 @@ define double @fmaximum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; X86-NEXT:    je .LBB31_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovdqa %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
 ; X86-NEXT:    jmp .LBB31_3
 ; X86-NEXT:  .LBB31_1:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
+; X86-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-NEXT:  .LBB31_3:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmaxsd %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm0
+; X86-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
@@ -779,16 +773,14 @@ define float @fminimum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X64-NEXT:    je .LBB32_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    vmovdqa %xmm1, %xmm2
-; X64-NEXT:    vmovdqa %xmm0, %xmm3
 ; X64-NEXT:    jmp .LBB32_3
 ; X64-NEXT:  .LBB32_1:
 ; X64-NEXT:    vmovdqa %xmm0, %xmm2
-; X64-NEXT:    vmovdqa %xmm1, %xmm3
+; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:  .LBB32_3:
-; X64-NEXT:    vminss %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vcmpunordss %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; X64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; X64-NEXT:    vminss %xmm2, %xmm0, %xmm1
+; X64-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
+; X64-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: fminimum_v4f32:
@@ -798,17 +790,15 @@ define float @fminimum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X86-NEXT:    je .LBB32_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovdqa %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
 ; X86-NEXT:    jmp .LBB32_3
 ; X86-NEXT:  .LBB32_1:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
+; X86-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-NEXT:  .LBB32_3:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vminss %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vcmpunordss %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; X86-NEXT:    vminss %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
@@ -827,15 +817,14 @@ define double @fminimum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; X64-NEXT:    je .LBB33_1
 ; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    vmovdqa %xmm1, %xmm2
-; X64-NEXT:    vmovdqa %xmm0, %xmm3
 ; X64-NEXT:    jmp .LBB33_3
 ; X64-NEXT:  .LBB33_1:
 ; X64-NEXT:    vmovdqa %xmm0, %xmm2
-; X64-NEXT:    vmovdqa %xmm1, %xmm3
+; X64-NEXT:    vmovdqa %xmm1, %xmm0
 ; X64-NEXT:  .LBB33_3:
-; X64-NEXT:    vminsd %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vcmpunordsd %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
+; X64-NEXT:    vminsd %xmm2, %xmm0, %xmm1
+; X64-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
+; X64-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 ;
@@ -848,19 +837,18 @@ define double @fminimum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; X86-NEXT:    je .LBB33_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    vmovdqa %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm0, %xmm3
 ; X86-NEXT:    jmp .LBB33_3
 ; X86-NEXT:  .LBB33_1:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm2
-; X86-NEXT:    vmovdqa %xmm1, %xmm3
+; X86-NEXT:    vmovdqa %xmm1, %xmm0
 ; X86-NEXT:  .LBB33_3:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vminsd %xmm2, %xmm3, %xmm2
-; X86-NEXT:    vcmpunordsd %xmm1, %xmm0, %xmm0
-; X86-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm0
+; X86-NEXT:    vminsd %xmm2, %xmm0, %xmm1
+; X86-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm2
+; X86-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vmovlpd %xmm0, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
