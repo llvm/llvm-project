@@ -6,12 +6,14 @@ algorithm cstddef
 algorithm cstdint
 algorithm cstdlib
 algorithm cstring
+algorithm ctime
 algorithm initializer_list
 algorithm iosfwd
 algorithm iterator
 algorithm limits
 algorithm memory
 algorithm new
+algorithm ratio
 algorithm stdexcept
 algorithm type_traits
 algorithm utility

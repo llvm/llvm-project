@@ -184,6 +184,7 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag('-D_LIBCPP_ENABLE_EXPERIMENTAL'),
             ] if experimental else [
               AddFeature('libcpp-has-no-incomplete-format'),
+              AddFeature('libcpp-has-no-incomplete-pstl'),
             ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,

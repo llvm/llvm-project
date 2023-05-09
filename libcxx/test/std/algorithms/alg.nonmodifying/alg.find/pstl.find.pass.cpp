@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// REQUIRES: with-pstl
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // <algorithm>
 
@@ -63,7 +63,9 @@ struct Test {
 
 struct ThrowOnCompare {};
 
+#ifndef TEST_HAS_NO_EXCEPTIONS
 bool operator==(ThrowOnCompare, ThrowOnCompare) { throw int{}; }
+#endif
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
