@@ -42,24 +42,28 @@ func.func @testexitdataop(%a: memref<10xf32>) -> () {
 
 // -----
 
-func.func @testupdateop(%a: memref<10xf32>) -> () {
+func.func @testupdateop(%a: memref<f32>) -> () {
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>)
   %ifCond = arith.constant true
-  acc.update if(%ifCond) host(%a: memref<10xf32>)
+  acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   return
 }
 
-// CHECK: acc.update host(%{{.*}} : memref<10xf32>)
+// CHECK: acc.update dataOperands(%{{.*}} : memref<f32>)
 
 // -----
 
-func.func @testupdateop(%a: memref<10xf32>) -> () {
+func.func @testupdateop(%a: memref<f32>) -> () {
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>)
   %ifCond = arith.constant false
-  acc.update if(%ifCond) host(%a: memref<10xf32>)
+  acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   return
 }
 
 // CHECK: func @testupdateop
-// CHECK-NOT: acc.update
+// CHECK-NOT: acc.update{{.$}}
 
 // -----
 
@@ -83,10 +87,12 @@ func.func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
 
 // -----
 
-func.func @testupdateop(%a: memref<10xf32>, %ifCond: i1) -> () {
-  acc.update if(%ifCond) host(%a: memref<10xf32>)
+func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
+  %0 = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  acc.update_host accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>)
+  acc.update if(%ifCond) dataOperands(%0: memref<f32>)
   return
 }
 
-// CHECK:  func @testupdateop(%{{.*}}: memref<10xf32>, [[IFCOND:%.*]]: i1)
-// CHECK:    acc.update if(%{{.*}}) host(%{{.*}} : memref<10xf32>)
+// CHECK:  func @testupdateop(%{{.*}}: memref<f32>, [[IFCOND:%.*]]: i1)
+// CHECK:    acc.update if(%{{.*}}) dataOperands(%{{.*}} : memref<f32>)

@@ -47,23 +47,13 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   return false;
 }
 
-static bool IsDescriptor(const ProcEntityDetails &details) {
-  // TODO: refine this placeholder; procedure pointers and dummy
-  // procedures should now be simple addresses (possibly of thunks)
-  return details.HasExplicitInterface();
-}
-
 bool IsDescriptor(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [&](const ObjectEntityDetails &d) {
             return IsAllocatableOrPointer(symbol) || IsDescriptor(d);
           },
-          [&](const ProcEntityDetails &d) {
-            return (symbol.attrs().test(Attr::POINTER) ||
-                       symbol.attrs().test(Attr::EXTERNAL)) &&
-                IsDescriptor(d);
-          },
+          [&](const ProcEntityDetails &d) { return false; },
           [&](const EntityDetails &d) { return IsDescriptor(d.type()); },
           [](const AssocEntityDetails &d) {
             if (const auto &expr{d.expr()}) {
@@ -744,7 +734,8 @@ std::optional<DynamicType> ComparisonType(
   }
 }
 
-bool IsInteroperableIntrinsicType(const DynamicType &type) {
+bool IsInteroperableIntrinsicType(
+    const DynamicType &type, bool checkCharLength) {
   switch (type.category()) {
   case TypeCategory::Integer:
     return true;
@@ -754,7 +745,10 @@ bool IsInteroperableIntrinsicType(const DynamicType &type) {
   case TypeCategory::Logical:
     return type.kind() == 1; // C_BOOL
   case TypeCategory::Character:
-    return type.kind() == 1 /* C_CHAR */ && type.knownLength().value_or(0) == 1;
+    if (checkCharLength && type.knownLength().value_or(0) != 1) {
+      return false;
+    }
+    return type.kind() == 1 /* C_CHAR */;
   default:
     // Derived types are tested in Semantics/check-declarations.cpp
     return false;

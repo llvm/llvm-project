@@ -63,7 +63,8 @@ public:
                 : IsFunctionResult(symbol)     ? "Function result"
                 : IsAllocatable(symbol)        ? "Allocatable"
                 : IsInitialized(symbol, true /*ignore DATA*/,
-                      true /*ignore allocatable components*/)
+                      true /*ignore allocatable components*/,
+                      true /*ignore uninitialized pointer components*/)
                 ? "Default-initialized"
                 : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
                 // remaining checks don't apply to components

@@ -58,6 +58,7 @@
 
 ; RUN: opt -thinlto-bc %s >%t.o
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
 ; RUN:  -r=%t.o,main,plx \
 ; RUN:  -r=%t.o,_ZdaPv, \
 ; RUN:  -r=%t.o,sleep, \
@@ -78,6 +79,7 @@
 
 ;; Try again but with distributed ThinLTO
 ; RUN: llvm-lto2 run %t.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
 ; RUN:  -r=%t.o,main,plx \
 ; RUN:  -r=%t.o,_ZdaPv, \

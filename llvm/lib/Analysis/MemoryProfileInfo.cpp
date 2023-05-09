@@ -33,6 +33,14 @@ cl::opt<unsigned> MemProfAveLifetimeColdThreshold(
     cl::desc("The average lifetime (s) for an allocation to be considered "
              "cold"));
 
+// Lower bound on average lifetime accesses density (total life time access
+// density / alloc count) for marking an allocation hot.
+cl::opt<unsigned> MemProfMinAveLifetimeAccessDensityHotThreshold(
+    "memprof-min-ave-lifetime-access-density-hot-threshold", cl::init(1000),
+    cl::Hidden,
+    cl::desc("The minimum TotalLifetimeAccessDensity / AllocCount for an "
+             "allocation to be considered hot"));
+
 AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
                                            uint64_t AllocCount,
                                            uint64_t TotalLifetime) {
@@ -44,6 +52,13 @@ AllocationType llvm::memprof::getAllocType(uint64_t TotalLifetimeAccessDensity,
       && ((float)TotalLifetime) / AllocCount >=
              MemProfAveLifetimeColdThreshold * 1000)
     return AllocationType::Cold;
+
+  // The access densities are multiplied by 100 to hold 2 decimal places of
+  // precision, so need to divide by 100.
+  if (((float)TotalLifetimeAccessDensity) / AllocCount / 100 >
+      MemProfMinAveLifetimeAccessDensityHotThreshold)
+    return AllocationType::Hot;
+
   return AllocationType::NotCold;
 }
 
@@ -71,8 +86,11 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
   // types that can be applied based on the allocation profile data.
   auto *MDS = dyn_cast<MDString>(MIB->getOperand(1));
   assert(MDS);
-  if (MDS->getString().equals("cold"))
+  if (MDS->getString().equals("cold")) {
     return AllocationType::Cold;
+  } else if (MDS->getString().equals("hot")) {
+    return AllocationType::Hot;
+  }
   return AllocationType::NotCold;
 }
 
@@ -83,6 +101,9 @@ std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
     break;
   case AllocationType::Cold:
     return "cold";
+    break;
+  case AllocationType::Hot:
+    return "hot";
     break;
   default:
     assert(false && "Unexpected alloc type");

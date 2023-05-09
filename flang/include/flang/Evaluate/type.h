@@ -472,7 +472,8 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(const DynamicType &);
+bool IsInteroperableIntrinsicType(
+    const DynamicType &, bool checkCharLength = true);
 
 // Determine whether two derived type specs are sufficiently identical
 // to be considered the "same" type even if declared separately.

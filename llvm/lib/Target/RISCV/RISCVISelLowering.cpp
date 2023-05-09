@@ -252,6 +252,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                        MVT::i32, Custom);
 
+    setOperationAction(ISD::SADDO, MVT::i32, Custom);
     setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                        MVT::i32, Custom);
   } else {
@@ -9033,6 +9034,39 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(customLegalizeToWOp(N, DAG, ExtOpc));
     break;
   }
+  case ISD::SADDO: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+
+    // If the RHS is a constant, we can simplify ConditionRHS below. Otherwise
+    // use the default legalization.
+    if (!isa<ConstantSDNode>(N->getOperand(1)))
+      return;
+
+    SDValue LHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
+    SDValue Res = DAG.getNode(ISD::ADD, DL, MVT::i64, LHS, RHS);
+    Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Res,
+                      DAG.getValueType(MVT::i32));
+
+    SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+
+    // For an addition, the result should be less than one of the operands (LHS)
+    // if and only if the other operand (RHS) is negative, otherwise there will
+    // be overflow.
+    // For a subtraction, the result should be less than one of the operands
+    // (LHS) if and only if the other operand (RHS) is (non-zero) positive,
+    // otherwise there will be overflow.
+    EVT OType = N->getValueType(1);
+    SDValue ResultLowerThanLHS = DAG.getSetCC(DL, OType, Res, LHS, ISD::SETLT);
+    SDValue ConditionRHS = DAG.getSetCC(DL, OType, RHS, Zero, ISD::SETLT);
+
+    SDValue Overflow =
+        DAG.getNode(ISD::XOR, DL, OType, ConditionRHS, ResultLowerThanLHS);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+    Results.push_back(Overflow);
+    return;
+  }
   case ISD::UADDO:
   case ISD::USUBO: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
@@ -12153,6 +12187,23 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+bool RISCVTargetLowering::shouldTransformSignedTruncationCheck(
+    EVT XVT, unsigned KeptBits) const {
+  // For vectors, we don't have a preference..
+  if (XVT.isVector())
+    return false;
+
+  if (XVT != MVT::i32 && XVT != MVT::i64)
+    return false;
+
+  // We can use sext.w for RV64 or an srai 31 on RV32.
+  if (KeptBits == 32 || KeptBits == 64)
+    return true;
+
+  // With Zbb we can use sext.h. sext.b does not seem to be profitable.
+  return Subtarget.hasStdExtZbb() && KeptBits == 16;
 }
 
 bool RISCVTargetLowering::isDesirableToCommuteWithShift(

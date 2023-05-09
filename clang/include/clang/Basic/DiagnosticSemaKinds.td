@@ -186,6 +186,8 @@ def warn_initializer_overrides : Warning<
   "this subobject">, InGroup<InitializerOverrides>;
 def ext_initializer_overrides : ExtWarn<warn_initializer_overrides.Summary>,
   InGroup<InitializerOverrides>, SFINAEFailure;
+def ext_initializer_union_overrides : ExtWarn<warn_initializer_overrides.Summary>,
+  InGroup<InitializerOverrides>, DefaultError, SFINAEFailure;
 def err_initializer_overrides_destructed : Error<
   "initializer would partially override prior initialization of object of "
   "type %1 with non-trivial destruction">;
@@ -10048,6 +10050,12 @@ def err_mips_builtin_requires_dspr2 : Error<
   "this builtin requires 'dsp r2' ASE, please use -mdspr2">;
 def err_mips_builtin_requires_msa : Error<
   "this builtin requires 'msa' ASE, please use -mmsa">;
+def err_ppc_builtin_only_on_arch : Error<
+  "this builtin is only valid on POWER%0 or later CPUs">;
+def err_ppc_builtin_requires_vsx : Error<
+  "this builtin requires VSX to be enabled">;
+def err_ppc_builtin_requires_htm : Error<
+  "this builtin requires HTM to be enabled">;
 def err_ppc_builtin_requires_abi : Error<
   "this builtin requires ABI -mabi=%0">;
 def err_ppc_invalid_use_mma_type : Error<

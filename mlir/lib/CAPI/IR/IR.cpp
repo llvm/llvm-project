@@ -20,6 +20,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
@@ -765,6 +766,13 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);
   unwrap(value).print(stream);
+}
+
+void mlirValuePrintAsOperand(MlirValue value, MlirOpPrintingFlags flags,
+                             MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  Value cppValue = unwrap(value);
+  cppValue.printAsOperand(stream, *unwrap(flags));
 }
 
 MlirOpOperand mlirValueGetFirstUse(MlirValue value) {

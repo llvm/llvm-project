@@ -1,6 +1,8 @@
-// RUN: %clangxx -pthread %s -o %t && %run %t 0 && %run %t 1
+// RUN: %clangxx -pthread %s -o %t
+// RUN: %run %t 0
 
-// XFAIL: msan
+// FIXME: Crashes on some bots in pthread_exit.
+// RUN: %run %t %if tsan %{ 0 %} %else %{ 1 %}
 
 // REQUIRES: glibc
 
