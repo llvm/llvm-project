@@ -704,9 +704,8 @@ public:
   // This emits the frame info section.
   //
   static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB, bool isEH);
-  static void EmitAdvanceLoc(MCObjectStreamer &Streamer, uint64_t AddrDelta);
-  static void EncodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
-                               raw_ostream &OS);
+  static void encodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
+                               SmallVectorImpl<char> &OS);
 };
 
 } // end namespace llvm
