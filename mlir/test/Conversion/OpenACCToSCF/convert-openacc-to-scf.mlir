@@ -1,13 +1,14 @@
 // RUN: mlir-opt %s -convert-openacc-to-scf -split-input-file | FileCheck %s
 
-func.func @testenterdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
-  acc.enter_data if(%ifCond) create(%a: memref<10xf32>)
+func.func @testenterdataop(%a: memref<f32>, %ifCond: i1) -> () {
+  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
+  acc.enter_data if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
 
-// CHECK:      func @testenterdataop(%{{.*}}: memref<10xf32>, [[IFCOND:%.*]]: i1)
+// CHECK:      func @testenterdataop(%{{.*}}: memref<f32>, [[IFCOND:%.*]]: i1)
 // CHECK:        scf.if [[IFCOND]] {
-// CHECK-NEXT:     acc.enter_data create(%{{.*}} : memref<10xf32>)
+// CHECK-NEXT:     acc.enter_data dataOperands(%{{.*}} : memref<f32>)
 // CHECK-NEXT:   }
 
 // -----
@@ -62,26 +63,28 @@ func.func @update_false(%arg0: memref<f32>) {
 
 // -----
 
-func.func @enter_data_true(%d1 : memref<10xf32>) {
+func.func @enter_data_true(%d1 : memref<f32>) {
   %true = arith.constant true
-  acc.enter_data if(%true) create(%d1 : memref<10xf32>) attributes {async}
+  %0 = acc.create varPtr(%d1 : memref<f32>) -> memref<f32>
+  acc.enter_data if(%true) dataOperands(%0 : memref<f32>) attributes {async}
   return
 }
 
 // CHECK-LABEL: func.func @enter_data_true
 // CHECK-NOT:     if
-// CHECK:           acc.enter_data create
+// CHECK:           acc.enter_data dataOperands
 
 // -----
 
-func.func @enter_data_false(%d1 : memref<10xf32>) {
+func.func @enter_data_false(%d1 : memref<f32>) {
   %false = arith.constant false
-  acc.enter_data if(%false) create(%d1 : memref<10xf32>) attributes {async}
+  %0 = acc.create varPtr(%d1 : memref<f32>) -> memref<f32>
+  acc.enter_data if(%false) dataOperands(%0 : memref<f32>) attributes {async}
   return
 }
 
 // CHECK-LABEL: func.func @enter_data_false
-// CHECK-NOT:acc.enter_data
+// CHECK-NOT:     acc.enter_data
 
 // -----
 

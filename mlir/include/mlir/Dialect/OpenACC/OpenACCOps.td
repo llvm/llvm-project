@@ -765,10 +765,6 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
                        Optional<IntOrIndex>:$waitDevnum,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$wait,
-                       Variadic<AnyType>:$copyinOperands,
-                       Variadic<AnyType>:$createOperands,
-                       Variadic<AnyType>:$createZeroOperands,
-                       Variadic<AnyType>:$attachOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
 
   let extraClassDeclaration = [{
@@ -785,11 +781,6 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
       | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
-      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
-      | `create` `(` $createOperands `:` type($createOperands) `)`
-      | `create_zero` `(` $createZeroOperands `:`
-          type($createZeroOperands) `)`
-      | `attach` `(` $attachOperands `:` type($attachOperands) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     attr-dict-with-keyword

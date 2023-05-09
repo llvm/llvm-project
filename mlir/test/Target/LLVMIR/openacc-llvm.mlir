@@ -1,62 +1,46 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>, %arg2: i64, %arg3: i64, %arg4: i64, %arg5: !llvm.ptr<f32>) {
-  %0 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %3 = llvm.insertvalue %arg2, %2[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %5 = llvm.insertvalue %arg4, %4[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %6 = llvm.mlir.constant(10 : index) : i64
-  %7 = llvm.mlir.constant(1 : index) : i64
-  %8 = llvm.mlir.null : !llvm.ptr<f32>
-  %9 = llvm.getelementptr %8[%6] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
-  %10 = llvm.ptrtoint %9 : !llvm.ptr<f32> to i64
-  %11 = llvm.extractvalue %5[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %12 = llvm.mlir.undef : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>
-  %13 = llvm.insertvalue %5, %12[0] : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>
-  %14 = llvm.insertvalue %11, %13[1] : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>
-  %15 = llvm.insertvalue %10, %14[2] : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>
-  acc.enter_data copyin(%arg5 : !llvm.ptr<f32>) create(%15 : !llvm.struct<"openacc_data", (struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>, ptr<f32>, i64)>)
+llvm.func @testenterdataop(%arg0: !llvm.ptr<f32>, %arg1 : !llvm.ptr<f32>) {
+  %0 = acc.create varPtr(%arg0 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  %1 = acc.copyin varPtr(%arg1 : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.enter_data dataOperands(%0, %1 : !llvm.ptr<f32>, !llvm.ptr<f32>)
   llvm.return
 }
 
 // CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 
-// CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testenterdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
-// CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[MAPNAME2:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 0, i64 1]
-// CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]], ptr [[MAPNAME2]]]
+// CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testenterdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }, align 8
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 0, i64 1]
+// CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 
-// CHECK: define void @testenterdataop(ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr [[SIMPLEPTR:%.*]])
-// CHECK: [[ARGBASE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
-// CHECK: [[ARG_ALLOCA:%.*]] = alloca [{{[0-9]*}} x ptr], align 8
-// CHECK: [[SIZE_ALLOCA:%.*]] = alloca [{{[0-9]*}} x i64], align 8
+// CHECK: define void @testenterdataop(ptr %[[PTR0:.*]], ptr %[[PTR1:.*]])
+// CHECK: %[[OFFLOAD_BASEPTR:.*]] = alloca [{{[0-9]*}} x ptr]
+// CHECK: %[[OFFLOAD_PTRS:.*]] = alloca [{{[0-9]*}} x ptr]
+// CHECK: %[[OFFLOAD_SIZES:.*]] = alloca [{{[0-9]*}} x i64]
 
-// CHECK: [[ARGBASE:%.*]] = extractvalue %openacc_data %{{.*}}, 0
-// CHECK: [[ARG:%.*]] = extractvalue %openacc_data %{{.*}}, 1
-// CHECK: [[ARGSIZE:%.*]] = extractvalue %openacc_data %{{.*}}, 2
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: store { ptr, ptr, i64, [1 x i64], [1 x i64] } [[ARGBASE]], ptr [[ARGBASEGEP]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: store ptr [[ARG]], ptr [[ARGGEP]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
-// CHECK: store i64 [[ARGSIZE]], ptr [[SIZEGEP]], align 4
+// CHECK: %[[OFFLOAD_BASEPTR_GEP:.*]] = getelementptr inbounds [2 x ptr], ptr %[[OFFLOAD_BASEPTR]], i32 0, i32 0
+// CHECK: store ptr %[[PTR0]], ptr %[[OFFLOAD_BASEPTR_GEP]]
+// CHECK: %[[OFFLOAD_PTRS_GEP:.*]] = getelementptr inbounds [2 x ptr], ptr %[[OFFLOAD_PTRS]], i32 0, i32 0
+// CHECK: store ptr %[[PTR0]], ptr %[[OFFLOAD_PTRS_GEP]]
+// CHECK: %[[OFFLOAD_SIZES_GEP:.*]] = getelementptr inbounds [2 x i64], ptr %[[OFFLOAD_SIZES]], i32 0, i32 0
+// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr %[[OFFLOAD_SIZES_GEP]]
 
-// CHECK: [[ARGBASEGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 1
-// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGBASEGEP]], align 8
-// CHECK: [[ARGGEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 1
-// CHECK: store ptr [[SIMPLEPTR]], ptr [[ARGGEP]], align 8
-// CHECK: [[SIZEGEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 1
-// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr [[SIZEGEP]], align 4
+// CHECK: %[[OFFLOAD_BASEPTR_GEP:.*]] = getelementptr inbounds [2 x ptr], ptr %[[OFFLOAD_BASEPTR]], i32 0, i32 1
+// CHECK: store ptr %[[PTR1]], ptr %[[OFFLOAD_BASEPTR_GEP]]
+// CHECK: %[[OFFLOAD_PTRS_GEP:.*]] = getelementptr inbounds [2 x ptr], ptr %[[OFFLOAD_PTRS]], i32 0, i32 1
+// CHECK: store ptr %[[PTR1]], ptr %[[OFFLOAD_PTRS_GEP]]
+// CHECK: %[[OFFLOAD_SIZES_GEP:.*]] = getelementptr inbounds [2 x i64], ptr %[[OFFLOAD_SIZES]], i32 0, i32 1
+// CHECK: store i64 ptrtoint (ptr getelementptr (ptr, ptr null, i32 1) to i64), ptr %[[OFFLOAD_SIZES_GEP]]
 
-// CHECK: [[ARGBASE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARGBASE_ALLOCA]], i32 0, i32 0
-// CHECK: [[ARG_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr [[ARG_ALLOCA]], i32 0, i32 0
-// CHECK: [[SIZE_ALLOCA_GEP:%.*]] = getelementptr inbounds [2 x i64], ptr [[SIZE_ALLOCA]], i32 0, i32 0
 
-// CHECK: call void @__tgt_target_data_begin_mapper(ptr [[LOCGLOBAL]], i64 -1, i32 2, ptr [[ARGBASE_ALLOCA_GEP]], ptr [[ARG_ALLOCA_GEP]], ptr [[SIZE_ALLOCA_GEP]], ptr [[MAPTYPES]], ptr [[MAPNAMES]], ptr null)
+// CHECK: %[[OFFLOAD_BASEPTR_GEP:.*]] = getelementptr inbounds [2 x ptr], ptr %[[OFFLOAD_BASEPTR]], i32 0, i32 0
+// CHECK: %[[OFFLOAD_PTRS_GEP:.*]] = getelementptr inbounds [2 x ptr], ptr %[[OFFLOAD_PTRS]], i32 0, i32 0
+// CHECK: %[[OFFLOAD_SIZES_GEP:.*]] = getelementptr inbounds [2 x i64], ptr %[[OFFLOAD_SIZES]], i32 0, i32 0
+
+// CHECK: call void @__tgt_target_data_begin_mapper(ptr @[[LOCGLOBAL]], i64 -1, i32 2, ptr %[[OFFLOAD_BASEPTR_GEP]], ptr %[[OFFLOAD_PTRS_GEP]], ptr %[[OFFLOAD_SIZES_GEP]], ptr @[[MAPTYPES]], ptr @[[MAPNAMES]], ptr null)
 
 // CHECK: declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr) #0
 

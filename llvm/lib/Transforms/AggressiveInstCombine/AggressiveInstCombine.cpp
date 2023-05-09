@@ -821,48 +821,6 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   return true;
 }
 
-// Calculate GEP Stride and accumulated const ModOffset. Return Stride and
-// ModOffset
-static std::pair<APInt, APInt>
-getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
-  unsigned BW = DL.getIndexTypeSizeInBits(PtrOp->getType());
-  std::optional<APInt> Stride;
-  APInt ModOffset(BW, 0);
-  // Return a minimum gep stride, greatest common divisor of consective gep
-  // index scales(c.f. Bézout's identity).
-  while (auto *GEP = dyn_cast<GEPOperator>(PtrOp)) {
-    MapVector<Value *, APInt> VarOffsets;
-    if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset))
-      break;
-
-    for (auto [V, Scale] : VarOffsets) {
-      // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
-        Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
-
-      if (!Stride)
-        Stride = Scale;
-      else
-        Stride = APIntOps::GreatestCommonDivisor(*Stride, Scale);
-    }
-
-    PtrOp = GEP->getPointerOperand();
-  }
-
-  // Check whether pointer arrives back at Global Variable.
-  // Even if it doesn't, we can check by alignment.
-  if (!isa<GlobalVariable>(PtrOp))
-    return {APInt(BW, 1), APInt(BW, 0)};
-
-  // In consideration of signed GEP indices, non-negligible offset become
-  // remainder of division by minimum GEP stride.
-  ModOffset = ModOffset.srem(*Stride);
-  if (ModOffset.isNegative())
-    ModOffset += *Stride;
-
-  return {*Stride, ModOffset};
-}
-
 /// If C is a constant patterned array and all valid loaded results for given
 /// alignment are same to a constant, return that constant.
 static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
@@ -877,24 +835,29 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
   if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
     return false;
 
-  // Bail for large initializers in excess of 4K to avoid too many scans.
+  Type *LoadTy = LI->getType();
   Constant *C = GV->getInitializer();
+
+  // Bail for large initializers in excess of 4K to avoid too many scans.
   uint64_t GVSize = DL.getTypeAllocSize(C->getType());
   if (!GVSize || 4096 < GVSize)
     return false;
 
-  Type *LoadTy = LI->getType();
+  // Check whether pointer arrives back at Global Variable.
+  // If PtrOp is neither GlobalVariable nor GEP, it might not arrive back at
+  // GlobalVariable.
+  // TODO: implement GEP handling
   unsigned BW = DL.getIndexTypeSizeInBits(PtrOp->getType());
-  auto [Stride, ConstOffset] = getStrideAndModOffsetOfGEP(PtrOp, DL);
+  // TODO: Determine stride based on GEPs.
+  APInt Stride(BW, 1);
+  APInt ConstOffset(BW, 0);
 
   // Any possible offset could be multiple of GEP stride. And any valid
   // offset is multiple of load alignment, so checking only multiples of bigger
   // one is sufficient to say results' equality.
   if (auto LA = LI->getAlign();
-      LA <= GV->getAlign().valueOrOne() && Stride.getZExtValue() < LA.value()) {
-    ConstOffset = APInt(BW, 0);
+      LA <= GV->getAlign().valueOrOne() && Stride.getZExtValue() < LA.value())
     Stride = APInt(BW, LA.value());
-  }
 
   Constant *Ca = ConstantFoldLoadFromConst(C, LoadTy, ConstOffset, DL);
   if (!Ca)

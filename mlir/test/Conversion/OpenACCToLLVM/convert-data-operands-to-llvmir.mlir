@@ -1,42 +1,5 @@
 // RUN: mlir-opt -convert-openacc-to-llvm='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
 
-func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  acc.enter_data copyin(%b : memref<10xf32>) create(%a : memref<10xf32>)
-  return
-}
-
-// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-
-// -----
-
-func.func @testenterdataop(%a: !llvm.ptr, %b: memref<10xf32>) -> () {
-  acc.enter_data copyin(%b : memref<10xf32>) create(%a : !llvm.ptr)
-  return
-}
-
-// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create(%{{.*}} : !llvm.ptr)
-
-// -----
-
-func.func @testenterdataop(%a: memref<10xi64>, %b: memref<10xf32>) -> () {
-  acc.enter_data copyin(%b : memref<10xf32>) create_zero(%a : memref<10xi64>) attributes {async}
-  return
-}
-
-// CHECK: acc.enter_data copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create_zero(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) attributes {async}
-
-// -----
-
-func.func @testenterdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
-  %ifCond = arith.constant true
-  acc.enter_data if(%ifCond) copyin(%b : memref<10xf32>) create(%a : memref<10xf32>)
-  return
-}
-
-// CHECK: acc.enter_data if(%{{.*}}) copyin(%{{.*}} : !llvm.struct<"openacc_data", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>) create(%{{.*}} : !llvm.struct<"openacc_data.1", (struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>, ptr, i64)>)
-
-// -----
-
 func.func @testexitdataop(%a: memref<10xf32>, %b: memref<10xf32>) -> () {
   acc.exit_data copyout(%b : memref<10xf32>) delete(%a : memref<10xf32>)
   return
