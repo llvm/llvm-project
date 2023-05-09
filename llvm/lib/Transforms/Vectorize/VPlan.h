@@ -942,8 +942,8 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
   enum class OperationType : unsigned char {
     OverflowingBinOp,
     PossiblyExactOp,
-    FPMathOp,
     GEPOp,
+    FPMathOp,
     Other
   };
   struct WrapFlagsTy {
@@ -1065,6 +1065,12 @@ public:
     case OperationType::Other:
       break;
     }
+  }
+
+  bool isInBounds() const {
+    assert(OpType == OperationType::GEPOp &&
+           "recipe doesn't have inbounds flag");
+    return GEPFlags.IsInBounds;
   }
 };
 
