@@ -9543,10 +9543,21 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Op0 = Node->getOperand(0);
   SDValue Op1 = Node->getOperand(1);
   EVT VT = Op0.getValueType();
+  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   unsigned Opcode = Node->getOpcode();
   SDLoc DL(Node);
 
+  // umax(x,1) --> sub(x,cmpeq(x,0)) iff cmp result is allbits
+  if (Opcode == ISD::UMAX && llvm::isOneOrOneSplat(Op1, true) && BoolVT == VT &&
+      getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {
+    Op0 = DAG.getFreeze(Op0);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return DAG.getNode(ISD::SUB, DL, VT, Op0,
+                       DAG.getSetCC(DL, VT, Op0, Zero, ISD::SETEQ));
+  }
+
   // umin(x,y) -> sub(x,usubsat(x,y))
+  // TODO: Missing freeze(Op0)?
   if (Opcode == ISD::UMIN && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::USUBSAT, VT)) {
     return DAG.getNode(ISD::SUB, DL, VT, Op0,
@@ -9554,6 +9565,7 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   // umax(x,y) -> add(x,usubsat(y,x))
+  // TODO: Missing freeze(Op0)?
   if (Opcode == ISD::UMAX && isOperationLegal(ISD::ADD, VT) &&
       isOperationLegal(ISD::USUBSAT, VT)) {
     return DAG.getNode(ISD::ADD, DL, VT, Op0,
@@ -9567,10 +9579,10 @@ SDValue TargetLowering::expandIntMINMAX(SDNode *Node, SelectionDAG &DAG) const {
 
   // Attempt to find an existing SETCC node that we can reuse.
   // TODO: Do we need a generic doesSETCCNodeExist?
+  // TODO: Missing freeze(Op0)/freeze(Op1)?
   auto buildMinMax = [&](ISD::CondCode PrefCC, ISD::CondCode AltCC,
                          ISD::CondCode PrefCommuteCC,
                          ISD::CondCode AltCommuteCC) {
-    EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     SDVTList BoolVTList = DAG.getVTList(BoolVT);
     for (ISD::CondCode CC : {PrefCC, AltCC}) {
       if (DAG.doesNodeExist(ISD::SETCC, BoolVTList,
