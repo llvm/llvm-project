@@ -12654,13 +12654,13 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       }
     }
 
-    // Let's try to generate two DUPs and VECTOR_SHUFFLE. For example,
+    // Let's try to generate VECTOR_SHUFFLE. For example,
     //
     //  t24: v8i8 = BUILD_VECTOR t25, t25, t25, t25, t26, t26, t26, t26
     //  ==>
-    //    t28: v8i8 = AArch64ISD::DUP t25
-    //    t30: v8i8 = AArch64ISD::DUP t26
-    //  t31: v8i8 = vector_shuffle<0,0,0,0,8,8,8,8> t28, t30
+    //    t27: v8i8 = BUILD_VECTOR t26, t26, t26, t26, t26, t26, t26, t26
+    //    t28: v8i8 = BUILD_VECTOR t25, t25, t25, t25, t25, t25, t25, t25
+    //  t29: v8i8 = vector_shuffle<0,1,2,3,12,13,14,15> t27, t28
     if (NumElts >= 8) {
       SmallVector<int, 16> MaskVec;
       // Build mask for VECTOR_SHUFLLE.
@@ -12668,17 +12668,17 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       for (unsigned i = 0; i < NumElts; ++i) {
         SDValue Val = Op.getOperand(i);
         if (FirstLaneVal == Val)
-          MaskVec.push_back(0);
+          MaskVec.push_back(i);
         else
-          MaskVec.push_back(NumElts);
+          MaskVec.push_back(i + NumElts);
       }
 
       SmallVector<SDValue, 8> Ops1(NumElts, Vals[0]);
       SmallVector<SDValue, 8> Ops2(NumElts, Vals[1]);
-      SDValue DUP1 = LowerBUILD_VECTOR(DAG.getBuildVector(VT, dl, Ops1), DAG);
-      SDValue DUP2 = LowerBUILD_VECTOR(DAG.getBuildVector(VT, dl, Ops2), DAG);
+      SDValue VEC1 = DAG.getBuildVector(VT, dl, Ops1);
+      SDValue VEC2 = DAG.getBuildVector(VT, dl, Ops2);
       SDValue VECTOR_SHUFFLE =
-          DAG.getVectorShuffle(VT, dl, DUP1, DUP2, MaskVec);
+          DAG.getVectorShuffle(VT, dl, VEC1, VEC2, MaskVec);
       return VECTOR_SHUFFLE;
     }
   }
