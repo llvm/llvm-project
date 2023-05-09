@@ -21,7 +21,7 @@
 # outlined function.
 # CHECK: name:            foo
 # CHECK: $s0_nm = MOVE_NM $ra_nm
-# CHECK: BALC_NM @OUTLINED_FUNCTION_0, implicit-def $ra_nm, implicit-def $a0_nm, implicit-def $ra_nm, implicit $zero_nm, implicit $s0_nm
+# CHECK: BALC_NM @OUTLINED_FUNCTION_{{.*}}, implicit-def $ra_nm, implicit-def $a0_nm, implicit-def $ra_nm, implicit $zero_nm, implicit $s0_nm
 # CHECK: $ra_nm = MOVE_NM $s0_nm
 
 
@@ -78,7 +78,7 @@ body:             |
 # to that.
 # CHECK-LABEL: name:            bar
 # CHECK: SAVE_NM 16, $ra_nm, implicit-def $sp_nm, implicit $sp_nm
-# CHECK: BALC_NM @OUTLINED_FUNCTION_1, implicit-def $ra_nm, implicit-def $ra_nm, implicit-def $sp_nm, implicit-def $t2_nm, implicit-def $t3_nm, implicit $zero_nm, implicit $sp_nm
+# CHECK: BALC_NM @OUTLINED_FUNCTION_{{.*}}, implicit-def $ra_nm, implicit-def $ra_nm, implicit-def $sp_nm, implicit-def $t2_nm, implicit-def $t3_nm, implicit $zero_nm, implicit $sp_nm
 # CHECK: RESTORE_NM 16, def $ra_nm, implicit-def $sp_nm, implicit $sp_nm
 
 

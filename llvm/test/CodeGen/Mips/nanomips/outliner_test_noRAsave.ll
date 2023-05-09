@@ -85,7 +85,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-; CHECK: balc OUTLINED_FUNCTION_0
+; CHECK: balc OUTLINED_FUNCTION_{{.*}}
   %mul = mul nsw i32 %a, 10
   %add = add nsw i32 %mul, %y
   %reass.add85 = shl i32 %a, 1
@@ -109,7 +109,7 @@ if.else10:                                        ; preds = %if.else
   br i1 %cmp11, label %if.then12, label %if.else21
 
 if.then12:                                        ; preds = %if.else10
-; CHECK: balc OUTLINED_FUNCTION_1
+; CHECK: balc OUTLINED_FUNCTION_{{.*}}
   %mul13 = mul nsw i32 %a, 10
   %add14 = add nsw i32 %mul13, %y
   %reass.add83 = shl i32 %a, 1

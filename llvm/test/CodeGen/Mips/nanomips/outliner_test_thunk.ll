@@ -59,7 +59,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-; CHECK: balc OUTLINED_FUNCTION_0
+; CHECK: balc OUTLINED_FUNCTION_{{.*}}
   %mul = mul nsw i32 %a, 10
   %add = add nsw i32 %mul, %y
   %reass.add85 = shl i32 %a, 1

@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; xfail this test on hexagon because upstream llc is not emitting the
 ; correct DWARF info. Downstream llc is.
 ; XFAIL: hexagon
