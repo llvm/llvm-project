@@ -1481,6 +1481,8 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperations<mlir::acc::UpdateDeviceOp>(
           deviceClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_update_device, false);
+    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
+      addIfPresentAttr = true;
     }
   }
 
