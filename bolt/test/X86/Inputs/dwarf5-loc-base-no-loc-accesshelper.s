@@ -286,11 +286,10 @@ fooVar:
 	.long	.Lloclists_table_base0          # DW_AT_loclists_base
 	.byte	2                               # Abbrev [2] 0x27:0xb DW_TAG_variable
 	.byte	3                               # DW_AT_name
-	.long	50                              # DW_AT_type
+	.long	39                              # DW_AT_type
                                         # DW_AT_external
 	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.byte	0
 	.byte	3                               # Abbrev [3] 0x32:0x4 DW_TAG_base_type
 	.byte	4                               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
@@ -319,7 +318,7 @@ fooVar:
 	.long	88                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	8                               # Abbrev [8] 0x58:0x5 DW_TAG_pointer_type
-	.long	50                              # DW_AT_type
+	.long	39                              # DW_AT_type
 	.byte	9                               # Abbrev [9] 0x5d:0x31 DW_TAG_subprogram
 	.byte	2                               # DW_AT_low_pc
 	.long	.Lfunc_end1-.Lfunc_begin1       # DW_AT_high_pc
@@ -330,18 +329,18 @@ fooVar:
 	.byte	9                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	6                               # DW_AT_decl_line
-	.long	50                              # DW_AT_type
+	.long	39                              # DW_AT_type
                                         # DW_AT_external
 	.byte	10                              # Abbrev [10] 0x6d:0xa DW_TAG_formal_parameter
 	.byte	10                              # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	6                               # DW_AT_decl_line
-	.long	50                              # DW_AT_type
+	.long	39                              # DW_AT_type
 	.byte	11                              # Abbrev [11] 0x77:0x9 DW_TAG_variable
 	.byte	7                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-	.long	50                              # DW_AT_type
+	.long	39                              # DW_AT_type
 	.byte	12                              # Abbrev [12] 0x80:0xd DW_TAG_inlined_subroutine
 	.long	74                              # DW_AT_abstract_origin
 	.byte	2                               # DW_AT_low_pc

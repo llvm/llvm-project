@@ -216,7 +216,7 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
       DIE("unexpected alternative in DataRef");
     } else if (!symbol.attrs().test(semantics::Attr::INTRINSIC)) {
       if (symbol.has<semantics::GenericDetails>()) {
-        Say("'%s' is not a specific procedure"_err_en_US, symbol.name());
+        Say("'%s' is not a specific procedure"_err_en_US, last.name());
       } else {
         return Expr<SomeType>{ProcedureDesignator{symbol}};
       }
@@ -229,7 +229,7 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
       return Expr<SomeType>{ProcedureDesignator{std::move(intrinsic)}};
     } else {
       Say("'%s' is not an unrestricted specific intrinsic procedure"_err_en_US,
-          symbol.name());
+          last.name());
     }
     return std::nullopt;
   } else if (MaybeExpr result{AsGenericExpr(std::move(ref))}) {
@@ -1475,7 +1475,20 @@ public:
         ArrayConstructor<T> result{MakeSpecific<T>(std::move(values_))};
         if constexpr (T::category == TypeCategory::Character) {
           if (auto len{type_->LEN()}) {
-            if (IsConstantExpr(*len)) {
+            // The ac-do-variables may be treated as constant expressions,
+            // if some conditions on ac-implied-do-control hold (10.1.12 (12)).
+            // At the same time, they may be treated as constant expressions
+            // only in the context of the ac-implied-do, but setting
+            // the character length here may result in complete elimination
+            // of the ac-implied-do. For example:
+            //   character(10) :: c
+            //   ... len([(c(i:i), integer(8)::i = 1,4)])
+            // would be evaulated into:
+            //   ... int(max(0_8,i-i+1_8),kind=4)
+            // with a dangling reference to the ac-do-variable.
+            // Prevent this by checking for the ac-do-variable references
+            // in the 'len' expression.
+            if (!ContainsAnyImpliedDoIndex(*len) && IsConstantExpr(*len)) {
               result.set_LEN(std::move(*len));
             }
           }
@@ -2066,13 +2079,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     if (!symbol.test(Symbol::Flag::ParentComp) &&
         unavailable.find(symbol.name()) == unavailable.cend()) {
       if (IsAllocatable(symbol)) {
-        // Set all remaining allocatables to explicit NULL()
+        // Set all remaining allocatables to explicit NULL().
         result.Add(symbol, Expr<SomeType>{NullPointer{}});
-      } else if (const auto *details{
-                     symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-        if (details->init()) {
-          result.Add(symbol, common::Clone(*details->init()));
-        } else { // C799
+      } else {
+        const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+        if (object && object->init()) {
+          result.Add(symbol, common::Clone(*object->init()));
+        } else if (IsPointer(symbol)) {
+          result.Add(symbol, Expr<SomeType>{NullPointer{}});
+        } else if (object) { // C799
           AttachDeclaration(Say(typeName,
                                 "Structure constructor lacks a value for "
                                 "component '%s'"_err_en_US,

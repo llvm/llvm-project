@@ -124,7 +124,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
-  EXPECT_THAT(Env.getValue(*Var, SkipPast::None), NotNull());
+  EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
 // Tests that fields mentioned only in default member initializers are included
@@ -255,7 +255,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsConstructor) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Ctor);
-  EXPECT_THAT(Env.getValue(*Var, SkipPast::None), NotNull());
+  EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
 } // namespace

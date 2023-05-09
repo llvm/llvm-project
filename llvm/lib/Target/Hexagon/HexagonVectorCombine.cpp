@@ -168,12 +168,6 @@ public:
 private:
   using InstList = std::vector<Instruction *>;
 
-  struct Segment {
-    void *Data;
-    int Start;
-    int Size;
-  };
-
   struct AddrInfo {
     AddrInfo(const AddrInfo &) = default;
     AddrInfo(const HexagonVectorCombine &HVC, Instruction *I, Value *A, Type *T,

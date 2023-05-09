@@ -13957,20 +13957,6 @@ public:
   SemaDiagnosticBuilder SYCLDiagIfDeviceCode(SourceLocation Loc,
                                              unsigned DiagID);
 
-  /// Check whether we're allowed to call Callee from the current context.
-  ///
-  /// - If the call is never allowed in a semantically-correct program
-  ///   emits an error and returns false.
-  ///
-  /// - If the call is allowed in semantically-correct programs, but only if
-  ///   it's never codegen'ed, creates a deferred diagnostic to be emitted if
-  ///   and when the caller is codegen'ed, and returns true.
-  ///
-  /// - Otherwise, returns true without emitting any diagnostics.
-  ///
-  /// Adds Callee to DeviceCallGraph if we don't know if its caller will be
-  /// codegen'ed yet.
-  bool checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
   void deepTypeCheckForSYCLDevice(SourceLocation UsedAt,
                                   llvm::DenseSet<QualType> Visited,
                                   ValueDecl *DeclToCheck);
