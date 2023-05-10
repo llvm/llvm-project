@@ -1,6 +1,6 @@
 RUN: llvm-config --link-static --system-libs Support 2>&1 | FileCheck %s
 REQUIRES: static-libs
-UNSUPPORTED: target={{.*-windows-msvc}}
+UNSUPPORTED: system-windows
 CHECK: -l
 CHECK-NOT: error
 CHECK-NOT: warning

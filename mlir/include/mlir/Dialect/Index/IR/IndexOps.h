@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_INDEX_IR_INDEXOPS_H
 #define MLIR_DIALECT_INDEX_IR_INDEXOPS_H
 
+#include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
