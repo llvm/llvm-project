@@ -9,7 +9,7 @@ set(LLVM_OPTIONAL_SOURCES
   InferIntRangeInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
-  Mem2RegInterfaces.cpp
+  MemorySlotInterfaces.cpp
   ParallelCombiningOpInterface.cpp
   RuntimeVerifiableOpInterface.cpp
   ShapedOpInterfaces.cpp
@@ -46,7 +46,7 @@ add_mlir_interface_library(DestinationStyleOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 add_mlir_interface_library(InferTypeOpInterface)
 add_mlir_interface_library(LoopLikeInterface)
-add_mlir_interface_library(Mem2RegInterfaces)
+add_mlir_interface_library(MemorySlotInterfaces)
 add_mlir_interface_library(ParallelCombiningOpInterface)
 add_mlir_interface_library(RuntimeVerifiableOpInterface)
 add_mlir_interface_library(ShapedOpInterfaces)
