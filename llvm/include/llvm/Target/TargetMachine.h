@@ -100,6 +100,7 @@ protected: // Can only create subclasses.
 
   Reloc::Model RM = Reloc::Static;
   CodeModel::Model CMModel = CodeModel::Small;
+  uint64_t LargeDataThreshold = 0;
   CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
 
   /// Contains target specific asm information.
@@ -238,7 +239,8 @@ public:
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
-  bool isLargeData() const;
+  void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
+  bool isLargeData(const GlobalVariable *GV) const;
 
   bool isPositionIndependent() const;
 
