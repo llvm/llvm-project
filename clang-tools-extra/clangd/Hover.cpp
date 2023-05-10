@@ -468,9 +468,9 @@ struct PrintExprResult {
   std::optional<std::string> PrintedValue;
   /// The Expr object that represents the closest evaluable
   /// expression.
-  const clang::Expr *Expr;
+  const clang::Expr *TheExpr;
   /// The node of selection tree where the traversal stops.
-  const SelectionTree::Node *Node;
+  const SelectionTree::Node *TheNode;
 };
 
 // Seek the closest evaluable expression along the ancestors of node N
@@ -731,12 +731,12 @@ HoverInfo evaluateMacroExpansion(unsigned int SpellingBeginOffset,
   // Attempt to evaluate it from Expr first.
   auto ExprResult = printExprValue(StartNode, Context);
   HI.Value = std::move(ExprResult.PrintedValue);
-  if (auto *E = ExprResult.Expr)
+  if (auto *E = ExprResult.TheExpr)
     HI.Type = printType(E->getType(), Context, PP);
 
   // If failed, extract the type from Decl if possible.
-  if (!HI.Value && !HI.Type && ExprResult.Node)
-    if (auto *VD = ExprResult.Node->ASTNode.get<VarDecl>())
+  if (!HI.Value && !HI.Type && ExprResult.TheNode)
+    if (auto *VD = ExprResult.TheNode->ASTNode.get<VarDecl>())
       HI.Type = printType(VD->getType(), Context, PP);
 
   return HI;
