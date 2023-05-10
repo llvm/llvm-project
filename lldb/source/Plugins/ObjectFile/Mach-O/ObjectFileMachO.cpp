@@ -6059,20 +6059,22 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   SectionList *section_list = GetSectionList();
   if (!section_list)
     return nullptr;
+
+  // Some binaries can have a TEXT segment with a non-zero file offset.
+  // Binaries in the shared cache are one example.  Some hand-generated
+  // binaries may not be laid out in the normal TEXT,DATA,LC_SYMTAB order
+  // in the file, even though they're laid out correctly in vmaddr terms.
+  SectionSP text_segment_sp =
+      section_list->FindSectionByName(GetSegmentNameTEXT());
+  if (text_segment_sp.get() && SectionIsLoadable(text_segment_sp.get()))
+    return text_segment_sp.get();
+
   const size_t num_sections = section_list->GetSize();
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     Section *section = section_list->GetSectionAtIndex(sect_idx).get();
     if (section->GetFileOffset() == 0 && SectionIsLoadable(section))
       return section;
   }
-
-  // We may have a binary in the shared cache that has a non-zero
-  // file address for its first segment, traditionally the __TEXT segment.
-  // Search for it by name and return it as our next best guess.
-  SectionSP text_segment_sp =
-      GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
-  if (text_segment_sp.get() && SectionIsLoadable(text_segment_sp.get()))
-    return text_segment_sp.get();
 
   return nullptr;
 }
