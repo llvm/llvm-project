@@ -141,26 +141,6 @@ using namespace llvm::MachO;
 
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
 
-// Some structure definitions needed for parsing the dyld shared cache files
-// found on iOS devices.
-
-struct lldb_copy_dyld_cache_header_v1 {
-  char magic[16];         // e.g. "dyld_v0    i386", "dyld_v1   armv7", etc.
-  uint32_t mappingOffset; // file offset to first dyld_cache_mapping_info
-  uint32_t mappingCount;  // number of dyld_cache_mapping_info entries
-  uint32_t imagesOffset;
-  uint32_t imagesCount;
-  uint64_t dyldBaseAddress;
-  uint64_t codeSignatureOffset;
-  uint64_t codeSignatureSize;
-  uint64_t slideInfoOffset;
-  uint64_t slideInfoSize;
-  uint64_t localSymbolsOffset;
-  uint64_t localSymbolsSize;
-  uint8_t uuid[16]; // v1 and above, also recorded in dyld_all_image_infos v13
-                    // and later
-};
-
 static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
                                Stream &data) {
@@ -2170,35 +2150,6 @@ static SymbolType GetSymbolType(const char *&symbol_name,
     type = eSymbolTypeTrampoline;
   }
   return type;
-}
-
-// Read the UUID out of a dyld_shared_cache file on-disk.
-UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
-                                         const ByteOrder byte_order,
-                                         const uint32_t addr_byte_size) {
-  UUID dsc_uuid;
-  DataBufferSP DscData = MapFileData(
-      dyld_shared_cache, sizeof(struct lldb_copy_dyld_cache_header_v1), 0);
-  if (!DscData)
-    return dsc_uuid;
-  DataExtractor dsc_header_data(DscData, byte_order, addr_byte_size);
-
-  char version_str[7];
-  lldb::offset_t offset = 0;
-  memcpy(version_str, dsc_header_data.GetData(&offset, 6), 6);
-  version_str[6] = '\0';
-  if (strcmp(version_str, "dyld_v") == 0) {
-    offset = offsetof(struct lldb_copy_dyld_cache_header_v1, uuid);
-    dsc_uuid =
-        UUID(dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
-  }
-  Log *log = GetLog(LLDBLog::Symbols);
-  if (log && dsc_uuid.IsValid()) {
-    LLDB_LOGF(log, "Shared cache %s has UUID %s",
-              dyld_shared_cache.GetPath().c_str(),
-              dsc_uuid.GetAsString().c_str());
-  }
-  return dsc_uuid;
 }
 
 static std::optional<struct nlist_64>

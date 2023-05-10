@@ -1153,6 +1153,13 @@ ArrayRef<Decl *> ASTContext::getModuleInitializers(Module *M) {
   return Inits->Initializers;
 }
 
+void ASTContext::setCurrentNamedModule(Module *M) {
+  assert(M->isModulePurview());
+  assert(!CurrentCXXNamedModule &&
+         "We should set named module for ASTContext for only once");
+  CurrentCXXNamedModule = M;
+}
+
 ExternCContextDecl *ASTContext::getExternCContextDecl() const {
   if (!ExternCContext)
     ExternCContext = ExternCContextDecl::Create(*this, getTranslationUnitDecl());
@@ -11917,6 +11924,10 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
 
   if (VD->isThisDeclarationADefinition() == VarDecl::DeclarationOnly &&
       !isMSStaticDataMemberInlineDefinition(VD))
+    return false;
+
+  // Variables in other module units shouldn't be forced to be emitted.
+  if (VD->isInAnotherModuleUnit())
     return false;
 
   // Variables that can be needed in other TUs are required.

@@ -133,17 +133,6 @@ void OpenACCDataOperandConversion::runOnOperation() {
   target.addDynamicallyLegalOp<acc::ParallelOp>(
       [allDataOperandsAreConverted](acc::ParallelOp op) {
         return allDataOperandsAreConverted(op.getReductionOperands()) &&
-               allDataOperandsAreConverted(op.getCopyOperands()) &&
-               allDataOperandsAreConverted(op.getCopyinOperands()) &&
-               allDataOperandsAreConverted(op.getCopyinReadonlyOperands()) &&
-               allDataOperandsAreConverted(op.getCopyoutOperands()) &&
-               allDataOperandsAreConverted(op.getCopyoutZeroOperands()) &&
-               allDataOperandsAreConverted(op.getCreateOperands()) &&
-               allDataOperandsAreConverted(op.getCreateZeroOperands()) &&
-               allDataOperandsAreConverted(op.getNoCreateOperands()) &&
-               allDataOperandsAreConverted(op.getPresentOperands()) &&
-               allDataOperandsAreConverted(op.getDevicePtrOperands()) &&
-               allDataOperandsAreConverted(op.getAttachOperands()) &&
                allDataOperandsAreConverted(op.getGangPrivateOperands()) &&
                allDataOperandsAreConverted(op.getGangFirstPrivateOperands());
       });
