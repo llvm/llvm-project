@@ -6018,6 +6018,9 @@ The current supported opcode vocabulary is limited:
     - ``AsmPrinter`` pass when a call site parameter value
       (``DW_AT_call_site_parameter_value``) is represented as entry value of
       the parameter.
+    - ``CoroSplit`` pass, which may move variables from allocas into a
+      coroutine frame. If the coroutine frame is a :ref:`_swiftasync` argument,
+      the variable is described with an ``DW_OP_LLVM_entry_value`` operation.
 
 - ``DW_OP_LLVM_arg, N`` is used in debug intrinsics that refer to more than one
   value, such as one that calculates the sum of two registers. This is always
