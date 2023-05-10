@@ -11,6 +11,7 @@
 
 #include "../utils/RenamerClangTidyCheck.h"
 #include <optional>
+#include <string>
 namespace clang::tidy {
 namespace readability {
 
@@ -202,7 +203,6 @@ private:
   mutable llvm::StringMap<FileStyle> NamingStylesCache;
   FileStyle *MainFileStyle;
   ClangTidyContext *Context;
-  const StringRef CheckName;
   const bool GetConfigPerFile;
   const bool IgnoreFailedSplit;
   HungarianNotation HungarianNotation;
