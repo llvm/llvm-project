@@ -72,12 +72,11 @@ public:
   struct binary_image_information {
     std::string filename;
     uint64_t load_address;
-    uint64_t mod_date; // may not be available - 0 if so
     struct mach_o_information macho_info;
     bool is_valid_mach_header;
 
     binary_image_information()
-        : filename(), load_address(INVALID_NUB_ADDRESS), mod_date(0),
+        : filename(), load_address(INVALID_NUB_ADDRESS),
           is_valid_mach_header(false) {}
   };
 
@@ -259,7 +258,8 @@ public:
                                      int wordsize,
                                      struct mach_o_information &inf);
   JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON(
-      const std::vector<struct binary_image_information> &image_infos);
+      const std::vector<struct binary_image_information> &image_infos,
+      bool report_load_commands);
   uint32_t GetPlatform();
   /// Get the runtime platform from DYLD via SPI.
   uint32_t GetProcessPlatformViaDYLDSPI();
@@ -271,12 +271,12 @@ public:
   /// command details.
   void GetAllLoadedBinariesViaDYLDSPI(
       std::vector<struct binary_image_information> &image_infos);
-  JSONGenerator::ObjectSP GetLoadedDynamicLibrariesInfos(
-      nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count);
   JSONGenerator::ObjectSP
   GetLibrariesInfoForAddresses(nub_process_t pid,
                                std::vector<uint64_t> &macho_addresses);
-  JSONGenerator::ObjectSP GetAllLoadedLibrariesInfos(nub_process_t pid);
+  JSONGenerator::ObjectSP
+  GetAllLoadedLibrariesInfos(nub_process_t pid,
+                             bool fetch_report_load_commands);
   JSONGenerator::ObjectSP GetSharedCacheInfo(nub_process_t pid);
 
   nub_size_t GetNumThreads() const;
