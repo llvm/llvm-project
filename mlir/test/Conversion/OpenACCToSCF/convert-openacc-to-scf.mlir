@@ -24,38 +24,41 @@ func.func @testexitdataop(%a: memref<10xf32>, %ifCond: i1) -> () {
 
 // -----
 
-func.func @testupdateop(%a: memref<10xf32>, %ifCond: i1) -> () {
-  acc.update if(%ifCond) host(%a: memref<10xf32>)
+func.func @testupdateop(%a: memref<f32>, %ifCond: i1) -> () {
+  %0 = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
+  acc.update if(%ifCond) dataOperands(%0 : memref<f32>)
   return
 }
 
-// CHECK:      func @testupdateop(%{{.*}}: memref<10xf32>, [[IFCOND:%.*]]: i1)
+// CHECK:      func @testupdateop(%{{.*}}: memref<f32>, [[IFCOND:%.*]]: i1)
 // CHECK:        scf.if [[IFCOND]] {
-// CHECK-NEXT:     acc.update host(%{{.*}} : memref<10xf32>)
+// CHECK:          acc.update dataOperands(%{{.*}} : memref<f32>)
 // CHECK-NEXT:   }
 
 // -----
 
-func.func @update_true(%arg0: memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+func.func @update_true(%arg0: memref<f32>) {
   %true = arith.constant true
-  acc.update if(%true) host(%arg0 : memref<10xf32, #spirv.storage_class<StorageBuffer>>)
+  %0 = acc.update_device varPtr(%arg0 : memref<f32>) -> memref<f32>
+  acc.update if(%true) dataOperands(%0 : memref<f32>)
   return
 }
 
 // CHECK-LABEL: func.func @update_true
-// CHECK-NOT:if
-// CHECK:acc.update host
+// CHECK-NOT:     if
+// CHECK:         acc.update dataOperands
 
 // -----
 
-func.func @update_false(%arg0: memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+func.func @update_false(%arg0: memref<f32>) {
   %false = arith.constant false
-  acc.update if(%false) host(%arg0 : memref<10xf32, #spirv.storage_class<StorageBuffer>>)
+  %0 = acc.update_device varPtr(%arg0 : memref<f32>) -> memref<f32>
+  acc.update if(%false) dataOperands(%0 : memref<f32>)
   return
 }
 
 // CHECK-LABEL: func.func @update_false
-// CHECK-NOT:acc.update
+// CHECK-NOT:     acc.update dataOperands
 
 // -----
 
@@ -66,8 +69,8 @@ func.func @enter_data_true(%d1 : memref<10xf32>) {
 }
 
 // CHECK-LABEL: func.func @enter_data_true
-// CHECK-NOT:if
-// CHECK:acc.enter_data create
+// CHECK-NOT:     if
+// CHECK:           acc.enter_data create
 
 // -----
 
