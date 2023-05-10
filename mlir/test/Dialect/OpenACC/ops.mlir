@@ -480,20 +480,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
-  acc.serial copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.serial copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.serial copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.serial copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
-  }
-  acc.serial copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
-  }
-  acc.serial no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.serial deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
   acc.serial private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
   }
   acc.serial {
@@ -529,20 +515,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:      acc.serial wait([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
