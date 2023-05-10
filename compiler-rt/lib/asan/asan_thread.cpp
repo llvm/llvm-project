@@ -579,10 +579,6 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
       threads);
 }
 
-void FinishThreadLocked(u32 tid) {
-  GetAsanThreadRegistryLocked()->FinishThread(tid);
-}
-
 }  // namespace __lsan
 
 // ---------------------- Interface ---------------- {{{1
