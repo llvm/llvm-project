@@ -582,6 +582,7 @@ void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
   bool HasFunctionName = Record.readInt();
   E->PredefinedExprBits.HasFunctionName = HasFunctionName;
   E->PredefinedExprBits.Kind = Record.readInt();
+  E->PredefinedExprBits.IsTransparent = Record.readInt();
   E->setLocation(readSourceLocation());
   if (HasFunctionName)
     E->setFunctionName(cast<StringLiteral>(Record.readSubExpr()));

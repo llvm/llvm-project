@@ -438,6 +438,9 @@ Bug Fixes to C++ Support
 - Fix a crash when expanding a pack as the index of a subscript expression.
 - Fix handling of constexpr dynamic memory allocations in template
   arguments. (`#62462 <https://github.com/llvm/llvm-project/issues/62462>`_)
+- Some predefined expressions are now treated as string literals in MSVC
+  compatibility mode.
+  (`#114 <https://github.com/llvm/llvm-project/issues/114>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
