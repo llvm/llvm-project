@@ -223,7 +223,7 @@ static bool mergeNoteRecords(llvm::msgpack::DocNode &From,
 template <class ELFT>
 static bool processNote(const Elf_Note<ELFT> &Note, DataMeta *MetaP,
                         llvm::msgpack::DocNode &Root) {
-  auto DescString = Note.getDescAsStringRef();
+  auto DescString = Note.getDescAsStringRef(4);
 
   if (Note.getName() == "AMD" && Note.getType() == ELF::NT_AMD_HSA_METADATA) {
 
@@ -557,7 +557,7 @@ getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
 
     switch (Note.getType()) {
     case ELF::NT_AMD_HSA_CODE_OBJECT_VERSION: {
-      if (Note.getDesc().size() <
+      if (Note.getDesc(4).size() <
           sizeof(amdgpu_hsa_note_code_object_version_s)) {
         IsError = true;
         return true;
@@ -565,7 +565,7 @@ getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
 
       const auto *NoteCodeObjectVersion =
           reinterpret_cast<const amdgpu_hsa_note_code_object_version_s *>(
-              Note.getDesc().data());
+              Note.getDesc(4).data());
 
       // Only code objects up to version 2 used note records.
       if (NoteCodeObjectVersion->major_version > 2) {
@@ -578,7 +578,7 @@ getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
     }
 
     case ELF::NT_AMD_HSA_HSAIL: {
-      if (Note.getDesc().size() < sizeof(amdgpu_hsa_note_hsail_s)) {
+      if (Note.getDesc(4).size() < sizeof(amdgpu_hsa_note_hsail_s)) {
         IsError = true;
         return true;
       }
@@ -588,21 +588,21 @@ getElfIsaNameFromElfNotes(const ELFObjectFile<ELFT> *Obj,
     }
 
     case ELF::NT_AMD_HSA_ISA_VERSION: {
-      if (Note.getDesc().size() <
+      if (Note.getDesc(4).size() <
           offsetof(amdgpu_hsa_note_isa_s, vendor_and_architecture_name)) {
         IsError = true;
         return true;
       }
 
       const auto *NoteIsa = reinterpret_cast<const amdgpu_hsa_note_isa_s *>(
-          Note.getDesc().data());
+          Note.getDesc(4).data());
 
       if (!NoteIsa->vendor_name_size || !NoteIsa->architecture_name_size) {
         IsError = true;
         return true;
       }
 
-      if (Note.getDesc().size() <
+      if (Note.getDesc(4).size() <
           offsetof(amdgpu_hsa_note_isa_s, vendor_and_architecture_name) +
               NoteIsa->vendor_name_size + NoteIsa->architecture_name_size) {
         IsError = true;
