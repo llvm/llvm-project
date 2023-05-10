@@ -415,9 +415,10 @@ static mlir::Value genScalarLit(
   if (!outlineBigConstantsInReadOnlyMemory)
     return genInlinedStructureCtorLitImpl(converter, loc, value, eleTy);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  std::string globalName = Fortran::lower::mangle::mangleArrayLiteral(
-      eleTy,
-      Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived>(value));
+  auto expr = std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(
+      Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived>(value)));
+  llvm::StringRef globalName =
+      converter.getUniqueLitName(loc, std::move(expr), eleTy);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     global = builder.createGlobalConstant(
@@ -525,8 +526,9 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
                    const Fortran::evaluate::Constant<T> &constant) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Type eleTy = arrayTy.cast<fir::SequenceType>().getEleTy();
-  std::string globalName =
-      Fortran::lower::mangle::mangleArrayLiteral(eleTy, constant);
+  llvm::StringRef globalName = converter.getUniqueLitName(
+      loc, std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(constant)),
+      eleTy);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     // Using a dense attribute for the initial value instead of creating an
