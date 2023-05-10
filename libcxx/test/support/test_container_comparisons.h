@@ -62,7 +62,7 @@ constexpr void test_sequence_container_spaceship_with_type() {
 // Tests the `operator<=>` on sequence containers
 template <template <typename...> typename Container>
 constexpr bool test_sequence_container_spaceship() {
-  // The container should fulfil `std::three_way_comparable`
+  // The container should fulfill `std::three_way_comparable`
   static_assert(std::three_way_comparable<Container<int>>);
 
   // Test different comparison categories
@@ -71,7 +71,7 @@ constexpr bool test_sequence_container_spaceship() {
   test_sequence_container_spaceship_with_type<Container, WeakOrder, std::weak_ordering>();
   test_sequence_container_spaceship_with_type<Container, PartialOrder, std::partial_ordering>();
 
-  // `LessAndEqComp` does not have `operator<=>`. ordering is sythesized based on `operator<`
+  // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
   test_sequence_container_spaceship_with_type<Container, LessAndEqComp, std::weak_ordering>();
 
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
@@ -186,7 +186,7 @@ constexpr void test_ordered_map_container_spaceship_with_type() {
 // Tests the `operator<=>` on ordered containers
 template <template <typename...> typename Container>
 constexpr bool test_ordered_map_container_spaceship() {
-  // The container should fulfil `std::three_way_comparable`
+  // The container should fulfill `std::three_way_comparable`
   static_assert(std::three_way_comparable<Container<int, int>>);
 
   // Test different comparison categories
@@ -195,7 +195,7 @@ constexpr bool test_ordered_map_container_spaceship() {
   test_ordered_map_container_spaceship_with_type<Container, int, WeakOrder, std::weak_ordering>();
   test_ordered_map_container_spaceship_with_type<Container, int, PartialOrder, std::partial_ordering>();
 
-  // `LessAndEqComp` does not have `operator<=>`. ordering is sythesized based on `operator<`
+  // `LessAndEqComp` does not have `operator<=>`. Ordering is synthesized based on `operator<`
   test_ordered_map_container_spaceship_with_type<Container, int, LessAndEqComp, std::weak_ordering>();
 
   // Thanks to SFINAE, the following is not a compiler error but returns `false`
