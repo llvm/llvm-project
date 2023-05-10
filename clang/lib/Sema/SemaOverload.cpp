@@ -6543,7 +6543,7 @@ void Sema::AddOverloadCandidate(
   }
 
   // Functions with internal linkage are only viable in the same module unit.
-  if (getLangOpts().CPlusPlusModules && !Function->isInCurrentModuleUnit()) {
+  if (getLangOpts().CPlusPlusModules && Function->isInAnotherModuleUnit()) {
     /// FIXME: Currently, the semantics of linkage in clang is slightly
     /// different from the semantics in C++ spec. In C++ spec, only names
     /// have linkage. So that all entities of the same should share one

@@ -1023,24 +1023,26 @@ bool Decl::isInExportDeclContext() const {
   return DC && isa<ExportDecl>(DC);
 }
 
-bool Decl::isInCurrentModuleUnit() const {
+bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 
   if (!M)
-    return true;
+    return false;
 
   M = M->getTopLevelModule();
   // FIXME: It is problematic if the header module lives in another module
   // unit. Consider to fix this by techniques like
   // ExternalASTSource::hasExternalDefinitions.
   if (M->isHeaderLikeModule())
-    return true;
+    return false;
 
+  // A global module without parent implies that we're parsing the global
+  // module. So it can't be in another module unit.
   if (M->isGlobalModule())
-    return true;
+    return false;
 
   assert(M->isModulePurview() && "New module kind?");
-  return M == getASTContext().getCurrentNamedModule();
+  return M != getASTContext().getCurrentNamedModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
