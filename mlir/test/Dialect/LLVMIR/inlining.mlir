@@ -16,6 +16,10 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   "llvm.intr.memset"(%ptr, %byte, %0, %volatile) : (!llvm.ptr, i8, i32, i1) -> ()
   "llvm.intr.memmove"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
   "llvm.intr.memcpy"(%ptr, %ptr, %0, %volatile) : (!llvm.ptr, !llvm.ptr, i32, i1) -> ()
+  llvm.fence release
+  %2 = llvm.atomicrmw add %ptr, %0 monotonic : !llvm.ptr, i32
+  %3 = llvm.cmpxchg %ptr, %0, %1 acq_rel monotonic : !llvm.ptr, i32
+  llvm.inline_asm has_side_effects "foo", "bar" : () -> ()
   llvm.cond_br %volatile, ^bb1, ^bb2
 ^bb1:
   llvm.unreachable
@@ -35,6 +39,10 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: "llvm.intr.memset"(%[[PTR]]
 // CHECK: "llvm.intr.memmove"(%[[PTR]], %[[PTR]]
 // CHECK: "llvm.intr.memcpy"(%[[PTR]], %[[PTR]]
+// CHECK: llvm.fence release
+// CHECK: llvm.atomicrmw add %[[PTR]], %[[CST]] monotonic
+// CHECK: llvm.cmpxchg %[[PTR]], %[[CST]], %[[RES]] acq_rel monotonic
+// CHECK: llvm.inline_asm has_side_effects "foo", "bar"
 // CHECK: llvm.unreachable
 // CHECK: llvm.intr.stackrestore %[[STACK]]
 func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
@@ -44,17 +52,21 @@ func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
 
 // -----
 
-func.func @inner_func_not_inlinable() -> i32 {
-  %0 = llvm.inline_asm has_side_effects "foo", "bar" : () -> i32
-  return %0 : i32
+llvm.metadata @metadata {
+  llvm.access_group @group
+  llvm.return
 }
 
-// CHECK-LABEL: func.func @test_not_inline() -> i32 {
-// CHECK-NEXT: %[[RES:.*]] = call @inner_func_not_inlinable() : () -> i32
-// CHECK-NEXT: return %[[RES]] : i32
-func.func @test_not_inline() -> i32 {
-  %0 = call @inner_func_not_inlinable() : () -> i32
-  return %0 : i32
+llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
+  %0 = llvm.load %ptr { access_groups = [@metadata::@group] } : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-LABEL: func @test_not_inline
+llvm.func @test_not_inline(%ptr : !llvm.ptr) -> i32 {
+  // CHECK-NEXT: llvm.call @inlinee
+  %0 = llvm.call @inlinee(%ptr) : (!llvm.ptr) -> (i32)
+  llvm.return %0 : i32
 }
 
 // -----
