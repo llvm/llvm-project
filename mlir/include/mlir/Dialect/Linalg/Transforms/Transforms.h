@@ -901,8 +901,21 @@ splitReductionByScaling(RewriterBase &b, LinalgOp op,
                         const ControlSplitReductionFn &controlSplitReductionFn,
                         bool useAlloc = false);
 
-/// Collapses dimensions of linalg.generic operation. It also collapses inputs
-/// before the op and expands outputs after the op.
+/// Return `true`  if a given sequence of dimensions are contiguous in the
+/// range of the specified indexing map.
+bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
+/// Return `true` if all sequences of dimensions specified in `dimSequences` are
+/// contiguous in all the ranges of the `maps`.
+bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
+                              ArrayRef<ReassociationIndices> dimSequences);
+
+/// Collapses dimensions of linalg.generic operation. A precondition to
+/// calling this method is that for each list in `foldedIterationDim`, the
+/// sequence of dimensions is contiguous in domains of all `indexing_maps` of
+/// the `genericOp`. This can be checked using `areDimSequencePreserved` method.
+/// When valid, the method also collapses the operands of the op. Returns
+/// replacement values of the results of the original `genericOp` by inserting
+/// reshapes to get back values of compatible types.
 FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
     GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
     RewriterBase &rewriter);

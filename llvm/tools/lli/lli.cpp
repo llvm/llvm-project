@@ -824,6 +824,20 @@ loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   return orc::ThreadSafeModule(std::move(M), std::move(TSCtx));
 }
 
+int mingw_noop_main(void) {
+  // Cygwin and MinGW insert calls from the main function to the runtime
+  // function __main. The __main function is responsible for setting up main's
+  // environment (e.g. running static constructors), however this is not needed
+  // when running under lli: the executor process will have run non-JIT ctors,
+  // and ORC will take care of running JIT'd ctors. To avoid a missing symbol
+  // error we just implement __main as a no-op.
+  //
+  // FIXME: Move this to ORC-RT (and the ORC-RT substitution library once it
+  //        exists). That will allow it to work out-of-process, and for all
+  //        ORC tools (the problem isn't lli specific).
+  return 0;
+}
+
 int runOrcJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
@@ -831,16 +845,23 @@ int runOrcJIT(const char *ProgName) {
   orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
   auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
-  // Get TargetTriple and DataLayout from the main module if they're explicitly
-  // set.
+  // If -mtriple option is given then use it, otherwise take the triple from
+  // the main module if it's present.
   std::optional<Triple> TT;
-  std::optional<DataLayout> DL;
-  MainModule.withModuleDo([&](Module &M) {
+  if (!TargetTriple.empty())
+    TT = Triple(TargetTriple);
+  else
+    MainModule.withModuleDo([&](Module &M) {
       if (!M.getTargetTriple().empty())
         TT = Triple(M.getTargetTriple());
-      if (!M.getDataLayout().isDefault())
-        DL = M.getDataLayout();
     });
+
+  // Get the DataLayout from the main module if it's explicitly set.
+  std::optional<DataLayout> DL;
+  MainModule.withModuleDo([&](Module &M) {
+    if (!M.getDataLayout().isDefault())
+      DL = M.getDataLayout();
+  });
 
   orc::LLLazyJITBuilder Builder;
 
@@ -988,6 +1009,14 @@ int runOrcJIT(const char *ProgName) {
         std::make_unique<LLIBuiltinFunctionGenerator>(GenerateBuiltinFunctions,
                                                       Mangle));
   }
+
+  // If this is a Mingw or Cygwin executor then we need to alias __main to
+  // orc_rt_int_void_return_0.
+  if (J->getTargetTriple().isOSCygMing())
+    ExitOnErr(J->getProcessSymbolsJITDylib()->define(
+        orc::absoluteSymbols({{J->mangleAndIntern("__main"),
+                               {orc::ExecutorAddr::fromPtr(mingw_noop_main),
+                                JITSymbolFlags::Exported}}})));
 
   // Regular modules are greedy: They materialize as a whole and trigger
   // materialization for all required symbols recursively. Lazy modules go

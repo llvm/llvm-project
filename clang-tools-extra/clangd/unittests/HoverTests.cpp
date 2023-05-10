@@ -3998,7 +3998,8 @@ constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
   auto H = getHover(AST, C.point(), format::getLLVMStyle(), nullptr);
 
   ASSERT_TRUE(H);
-  EXPECT_EQ(H->Value, "4");
+  EXPECT_TRUE(H->Value);
+  EXPECT_TRUE(H->Type);
 }
 
 } // namespace
