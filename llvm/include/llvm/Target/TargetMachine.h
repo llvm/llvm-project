@@ -235,6 +235,8 @@ public:
   /// Set the code model.
   void setCodeModel(CodeModel::Model CM) { CMModel = CM; }
 
+  bool isLargeData() const;
+
   bool isPositionIndependent() const;
 
   bool shouldAssumeDSOLocal(const Module &M, const GlobalValue *GV) const;
