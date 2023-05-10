@@ -179,18 +179,6 @@ public:
   /// with a symbolic representation of the `this` pointee.
   Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
-  LLVM_DEPRECATED("Use getDataflowAnalysisContext().getOptions() instead.", "")
-  const DataflowAnalysisContext::Options &getAnalysisOptions() const {
-    return DACtx->getOptions();
-  }
-
-  LLVM_DEPRECATED("Use getDataflowAnalysisContext().arena() instead.", "")
-  Arena &arena() const { return DACtx->arena(); }
-
-  LLVM_DEPRECATED("Use getDataflowAnalysisContext().getOptions().Log instead.",
-                  "")
-  Logger &logger() const { return *DACtx->getOptions().Log; }
-
   /// Creates and returns an environment to use for an inline analysis  of the
   /// callee. Uses the storage location from each argument in the `Call` as the
   /// storage location for the corresponding parameter in the callee.
@@ -421,14 +409,6 @@ public:
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
   /// given `MaxDepth`.
   bool canDescend(unsigned MaxDepth, const DeclContext *Callee) const;
-
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
-  /// returns null.
-  LLVM_DEPRECATED(
-      "Use getDataflowAnalysisContext().getControlFlowContext(F) instead.", "")
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F) {
-    return DACtx->getControlFlowContext(F);
-  }
 
   /// Returns the `DataflowAnalysisContext` used by the environment.
   DataflowAnalysisContext &getDataflowAnalysisContext() const { return *DACtx; }
