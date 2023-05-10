@@ -12155,6 +12155,23 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+bool RISCVTargetLowering::shouldTransformSignedTruncationCheck(
+    EVT XVT, unsigned KeptBits) const {
+  // For vectors, we don't have a preference..
+  if (XVT.isVector())
+    return false;
+
+  if (XVT != MVT::i32 && XVT != MVT::i64)
+    return false;
+
+  // We can use sext.w for RV64 or an srai 31 on RV32.
+  if (KeptBits == 32 || KeptBits == 64)
+    return true;
+
+  // With Zbb we can use sext.h. sext.b does not seem to be profitable.
+  return Subtarget.hasStdExtZbb() && KeptBits == 16;
+}
+
 bool RISCVTargetLowering::isDesirableToCommuteWithShift(
     const SDNode *N, CombineLevel Level) const {
   assert((N->getOpcode() == ISD::SHL || N->getOpcode() == ISD::SRA ||
