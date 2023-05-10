@@ -19,4 +19,6 @@ void test(void) {
   register float a5 asm ("f0");
 // CHECK: :[[#@LINE+1]]:26: error: unknown register name 'fa0' in asm
   register float a6 asm ("fa0");
+// CHECK: :[[#@LINE+1]]:15: error: unknown register name 'fcc0' in asm
+  asm ("" ::: "fcc0");
 }
