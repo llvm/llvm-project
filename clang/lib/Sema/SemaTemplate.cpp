@@ -2851,8 +2851,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         NewDefaultLoc = NewTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
 
-        if (!OldTypeParm->getOwningModule() ||
-            isModuleUnitOfCurrentTU(OldTypeParm->getOwningModule()))
+        if (OldTypeParm->isInCurrentModuleUnit())
           RedundantDefaultArg = true;
         else if (!getASTContext().isSameDefaultTemplateArgument(OldTypeParm,
                                                                 NewTypeParm)) {
@@ -2904,8 +2903,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldNonTypeParm->getDefaultArgumentLoc();
         NewDefaultLoc = NewNonTypeParm->getDefaultArgumentLoc();
         SawDefaultArgument = true;
-        if (!OldNonTypeParm->getOwningModule() ||
-            isModuleUnitOfCurrentTU(OldNonTypeParm->getOwningModule()))
+        if (OldNonTypeParm->isInCurrentModuleUnit())
           RedundantDefaultArg = true;
         else if (!getASTContext().isSameDefaultTemplateArgument(
                      OldNonTypeParm, NewNonTypeParm)) {
@@ -2956,8 +2954,7 @@ bool Sema::CheckTemplateParameterList(TemplateParameterList *NewParams,
         OldDefaultLoc = OldTemplateParm->getDefaultArgument().getLocation();
         NewDefaultLoc = NewTemplateParm->getDefaultArgument().getLocation();
         SawDefaultArgument = true;
-        if (!OldTemplateParm->getOwningModule() ||
-            isModuleUnitOfCurrentTU(OldTemplateParm->getOwningModule()))
+        if (OldTemplateParm->isInCurrentModuleUnit())
           RedundantDefaultArg = true;
         else if (!getASTContext().isSameDefaultTemplateArgument(
                      OldTemplateParm, NewTemplateParm)) {

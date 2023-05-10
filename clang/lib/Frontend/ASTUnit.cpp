@@ -879,7 +879,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
 
   Module *M = HeaderInfo.lookupModule(AST->getLangOpts().CurrentModule);
   if (M && AST->getLangOpts().isCompilingModule() && M->isModulePurview())
-    AST->Ctx->setNamedModuleForCodeGen(M);
+    AST->Ctx->setCurrentNamedModule(M);
 
   // Create an AST consumer, even though it isn't used.
   if (ToLoad >= LoadASTOnly)

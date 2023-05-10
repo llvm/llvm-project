@@ -1905,14 +1905,11 @@ bool LookupResult::isReachableSlow(Sema &SemaRef, NamedDecl *D) {
   Module *DeclModule = SemaRef.getOwningModule(D);
   assert(DeclModule && "hidden decl has no owning module");
 
-  // Entities in module map modules are reachable only if they're visible.
-  if (DeclModule->isModuleMapModule())
+  // Entities in header like modules are reachable only if they're visible.
+  if (DeclModule->isHeaderLikeModule())
     return false;
 
-  // If D comes from a module and SemaRef doesn't own a module, it implies D
-  // comes from another TU. In case SemaRef owns a module, we could judge if D
-  // comes from another TU by comparing the module unit.
-  if (SemaRef.isModuleUnitOfCurrentTU(DeclModule))
+  if (D->isInCurrentModuleUnit())
     return true;
 
   // [module.reach]/p3:
@@ -3892,7 +3889,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                    "bad export context");
             // .. are attached to a named module M, do not appear in the
             // translation unit containing the point of the lookup..
-            if (!isModuleUnitOfCurrentTU(FM) &&
+            if (!D->isInCurrentModuleUnit() &&
                 llvm::any_of(AssociatedClasses, [&](auto *E) {
                   // ... and have the same innermost enclosing non-inline
                   // namespace scope as a declaration of an associated entity
