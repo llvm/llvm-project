@@ -111,7 +111,7 @@ static cl::opt<bool> DisableOpenMPOptStateMachineRewrite(
 static cl::opt<bool> DisableOpenMPOptBarrierElimination(
     "openmp-opt-disable-barrier-elimination",
     cl::desc("Disable OpenMP optimizations that eliminate barriers."),
-    cl::Hidden, cl::init(true));
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> PrintModuleAfterOptimizations(
     "openmp-opt-print-module-after",
