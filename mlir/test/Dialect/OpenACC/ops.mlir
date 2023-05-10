@@ -1305,12 +1305,20 @@ func.func @testunstructuredclauseops(%a: memref<10xf32>) -> () {
 
 // -----
 
-func.func @host_device_ops(%a: memref<10xf32>) -> () {
-  %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) -> memref<10xf32> {dataClause = 16}
-  acc.update_host accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) {structured = false}
-  acc.update dataOperands(%devptr : memref<10xf32>)
+func.func @host_device_ops(%a: memref<f32>) -> () {
+  %devptr = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32> {dataClause = 16}
+  acc.update_host accPtr(%devptr : memref<f32>) to varPtr(%a : memref<f32>) {structured = false}
+  acc.update dataOperands(%devptr : memref<f32>)
 
-  %accPtr = acc.update_device varPtr(%a : memref<10xf32>) -> memref<10xf32>
-  acc.update dataOperands(%accPtr : memref<10xf32>)
+  %accPtr = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
+  acc.update dataOperands(%accPtr : memref<f32>)
   return
 }
+
+// CHECK-LABEL: func.func @host_device_ops(
+// CHECK-SAME:    %[[A:.*]]: memref<f32>)
+// CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[A]] : memref<f32>)   -> memref<f32>
+// CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : memref<f32>) to varPtr(%[[A]] : memref<f32>) {structured = false}
+// CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
+// CHECK: %[[DEVPTR_A:.*]] = acc.update_device varPtr(%[[A]] : memref<f32>)   -> memref<f32>
+// CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
