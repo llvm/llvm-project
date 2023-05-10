@@ -3154,7 +3154,7 @@ private:
     // Gather some information about the assignment that will impact how it is
     // lowered.
     const bool isWholeAllocatableAssignment =
-        !userDefinedAssignment &&
+        !userDefinedAssignment && !isInsideHlfirWhere() &&
         Fortran::lower::isWholeAllocatable(assign.lhs);
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
@@ -3243,8 +3243,6 @@ private:
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
     mlir::Location loc = toLocation();
     if (lowerToHighLevelFIR()) {
-      if (!implicitIterSpace.empty())
-        TODO(loc, "HLFIR assignment inside WHERE");
       std::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::Assignment::Intrinsic &) {
@@ -3452,23 +3450,47 @@ private:
       Fortran::lower::createArrayMergeStores(*this, explicitIterSpace);
   }
 
-  bool isInsideHlfirForallOrWhere() const {
+  // Is the insertion point of the builder directly or indirectly set
+  // inside any operation of type "Op"?
+  template <typename... Op>
+  bool isInsideOp() const {
     mlir::Block *block = builder->getInsertionBlock();
     mlir::Operation *op = block ? block->getParentOp() : nullptr;
     while (op) {
-      if (mlir::isa<hlfir::ForallOp, hlfir::WhereOp>(op))
+      if (mlir::isa<Op...>(op))
         return true;
       op = op->getParentOp();
     }
     return false;
   }
+  bool isInsideHlfirForallOrWhere() const {
+    return isInsideOp<hlfir::ForallOp, hlfir::WhereOp>();
+  }
+  bool isInsideHlfirWhere() const { return isInsideOp<hlfir::WhereOp>(); }
 
   void genFIR(const Fortran::parser::WhereConstruct &c) {
-    implicitIterSpace.growStack();
+    mlir::Location loc = getCurrentLocation();
+    hlfir::WhereOp whereOp;
+
+    if (!lowerToHighLevelFIR()) {
+      implicitIterSpace.growStack();
+    } else {
+      whereOp = builder->create<hlfir::WhereOp>(loc);
+      builder->createBlock(&whereOp.getMaskRegion());
+    }
+
+    // Lower the where mask. For HLFIR, this is done in the hlfir.where mask
+    // region.
     genNestedStatement(
         std::get<
             Fortran::parser::Statement<Fortran::parser::WhereConstructStmt>>(
             c.t));
+
+    // Lower WHERE body. For HLFIR, this is done in the hlfir.where body
+    // region.
+    if (whereOp)
+      builder->createBlock(&whereOp.getBody());
+
     for (const auto &body :
          std::get<std::list<Fortran::parser::WhereBodyConstruct>>(c.t))
       genFIR(body);
@@ -3484,6 +3506,13 @@ private:
     genNestedStatement(
         std::get<Fortran::parser::Statement<Fortran::parser::EndWhereStmt>>(
             c.t));
+
+    if (whereOp) {
+      // For HLFIR, create fir.end terminator in the last hlfir.elsewhere, or
+      // in the hlfir.where if it had no elsewhere.
+      builder->create<fir::FirEndOp>(loc);
+      builder->setInsertionPointAfter(whereOp);
+    }
   }
   void genFIR(const Fortran::parser::WhereBodyConstruct &body) {
     std::visit(
@@ -3499,24 +3528,61 @@ private:
         },
         body.u);
   }
+
+  /// Lower a Where or Elsewhere mask into an hlfir mask region.
+  void lowerWhereMaskToHlfir(mlir::Location loc,
+                             const Fortran::semantics::SomeExpr *maskExpr) {
+    assert(maskExpr && "mask semantic analysis failed");
+    Fortran::lower::StatementContext maskContext;
+    hlfir::Entity mask = Fortran::lower::convertExprToHLFIR(
+        loc, *this, *maskExpr, localSymbols, maskContext);
+    mask = hlfir::loadTrivialScalar(loc, *builder, mask);
+    auto yieldOp = builder->create<hlfir::YieldOp>(loc, mask);
+    genCleanUpInRegionIfAny(loc, *builder, yieldOp.getCleanup(), maskContext);
+  }
   void genFIR(const Fortran::parser::WhereConstructStmt &stmt) {
-    implicitIterSpace.append(Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
+    const Fortran::semantics::SomeExpr *maskExpr = Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t));
+    if (lowerToHighLevelFIR())
+      lowerWhereMaskToHlfir(getCurrentLocation(), maskExpr);
+    else
+      implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
+    mlir::Location loc = getCurrentLocation();
+    hlfir::ElseWhereOp elsewhereOp;
+    if (lowerToHighLevelFIR()) {
+      elsewhereOp = builder->create<hlfir::ElseWhereOp>(loc);
+      // Lower mask in the mask region.
+      builder->createBlock(&elsewhereOp.getMaskRegion());
+    }
     genNestedStatement(
         std::get<
             Fortran::parser::Statement<Fortran::parser::MaskedElsewhereStmt>>(
             ew.t));
+
+    // For HLFIR, lower the body in the hlfir.elsewhere body region.
+    if (elsewhereOp)
+      builder->createBlock(&elsewhereOp.getBody());
+
     for (const auto &body :
          std::get<std::list<Fortran::parser::WhereBodyConstruct>>(ew.t))
       genFIR(body);
   }
   void genFIR(const Fortran::parser::MaskedElsewhereStmt &stmt) {
-    implicitIterSpace.append(Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
+    const auto *maskExpr = Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t));
+    if (lowerToHighLevelFIR())
+      lowerWhereMaskToHlfir(getCurrentLocation(), maskExpr);
+    else
+      implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
+    if (lowerToHighLevelFIR()) {
+      auto elsewhereOp =
+          builder->create<hlfir::ElseWhereOp>(getCurrentLocation());
+      builder->createBlock(&elsewhereOp.getBody());
+    }
     genNestedStatement(
         std::get<Fortran::parser::Statement<Fortran::parser::ElsewhereStmt>>(
             ew.t));
@@ -3525,18 +3591,32 @@ private:
       genFIR(body);
   }
   void genFIR(const Fortran::parser::ElsewhereStmt &stmt) {
-    implicitIterSpace.append(nullptr);
+    if (!lowerToHighLevelFIR())
+      implicitIterSpace.append(nullptr);
   }
   void genFIR(const Fortran::parser::EndWhereStmt &) {
-    implicitIterSpace.shrinkStack();
+    if (!lowerToHighLevelFIR())
+      implicitIterSpace.shrinkStack();
   }
 
   void genFIR(const Fortran::parser::WhereStmt &stmt) {
     Fortran::lower::StatementContext stmtCtx;
     const auto &assign = std::get<Fortran::parser::AssignmentStmt>(stmt.t);
+    const auto *mask = Fortran::semantics::GetExpr(
+        std::get<Fortran::parser::LogicalExpr>(stmt.t));
+    if (lowerToHighLevelFIR()) {
+      mlir::Location loc = getCurrentLocation();
+      auto whereOp = builder->create<hlfir::WhereOp>(loc);
+      builder->createBlock(&whereOp.getMaskRegion());
+      lowerWhereMaskToHlfir(loc, mask);
+      builder->createBlock(&whereOp.getBody());
+      genAssignment(*assign.typedAssignment->v);
+      builder->create<fir::FirEndOp>(loc);
+      builder->setInsertionPointAfter(whereOp);
+      return;
+    }
     implicitIterSpace.growStack();
-    implicitIterSpace.append(Fortran::semantics::GetExpr(
-        std::get<Fortran::parser::LogicalExpr>(stmt.t)));
+    implicitIterSpace.append(mask);
     genAssignment(*assign.typedAssignment->v);
     implicitIterSpace.shrinkStack();
   }
