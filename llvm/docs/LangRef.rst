@@ -1364,6 +1364,8 @@ Currently, only the following parameter attributes are defined:
     a valid attribute for return values and can only be applied to one
     parameter.
 
+.. _swiftasync:
+
 ``swiftasync``
     This indicates that the parameter is the asynchronous context parameter and
     triggers the creation of a target-specific extended frame record to store
@@ -6005,7 +6007,8 @@ The current supported opcode vocabulary is limited:
   instruction.
 
   Because ``DW_OP_LLVM_entry_value`` is defined in terms of registers, it is
-  only allowed in MIR. The operation is introduced by:
+  usually used in MIR, but it is also allowed in LLVM IR when targetting a
+  :ref:`_swiftasync` argument. The operation is introduced by:
 
     - ``LiveDebugValues`` pass, which applies it to function parameters that
       are unmodified throughout the function. Support is limited to simple
