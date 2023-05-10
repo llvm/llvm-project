@@ -417,11 +417,11 @@ defm "" : LMULSchedWrites<"WriteVMIdxV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-defm "" : LMULSchedWrites<"WriteVIMovVX">;
-defm "" : LMULSchedWrites<"WriteVIMovXV">;
+def WriteVIMovVX : SchedWrite;
+def WriteVIMovXV : SchedWrite;
 // 16.2. Floating-Point Scalar Move Instructions
-defm "" : LMULSchedWrites<"WriteVFMovVF">;
-defm "" : LMULSchedWrites<"WriteVFMovFV">;
+def WriteVFMovVF : SchedWrite;
+def WriteVFMovFV : SchedWrite;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedWrites<"WriteVISlideX">;
 defm "" : LMULSchedWrites<"WriteVISlideI">;
@@ -637,13 +637,13 @@ defm "" : LMULSchedReads<"ReadVMIotV">;
 
 // 16. Vector Permutation Instructions
 // 16.1. Integer Scalar Move Instructions
-defm "" : LMULSchedReads<"ReadVIMovVX">;
-defm "" : LMULSchedReads<"ReadVIMovXV">;
-defm "" : LMULSchedReads<"ReadVIMovXX">;
+def ReadVIMovVX : SchedRead;
+def ReadVIMovXV : SchedRead;
+def ReadVIMovXX : SchedRead;
 // 16.2. Floating-Point Scalar Move Instructions
-defm "" : LMULSchedReads<"ReadVFMovVF">;
-defm "" : LMULSchedReads<"ReadVFMovFV">;
-defm "" : LMULSchedReads<"ReadVFMovFX">;
+def ReadVFMovVF : SchedRead;
+def ReadVFMovFV : SchedRead;
+def ReadVFMovFX : SchedRead;
 // 16.3. Vector Slide Instructions
 defm "" : LMULSchedReads<"ReadVISlideV">;
 defm "" : LMULSchedReads<"ReadVISlideX">;
@@ -837,10 +837,10 @@ defm "" : LMULWriteRes<"WriteVMIotV", []>;
 defm "" : LMULWriteRes<"WriteVMIdxV", []>;
 
 // 16. Vector Permutation Instructions
-defm "" : LMULWriteRes<"WriteVIMovVX", []>;
-defm "" : LMULWriteRes<"WriteVIMovXV", []>;
-defm "" : LMULWriteRes<"WriteVFMovVF", []>;
-defm "" : LMULWriteRes<"WriteVFMovFV", []>;
+def : WriteRes<WriteVIMovVX, []>;
+def : WriteRes<WriteVIMovXV, []>;
+def : WriteRes<WriteVFMovVF, []>;
+def : WriteRes<WriteVFMovFV, []>;
 defm "" : LMULWriteRes<"WriteVISlideX", []>;
 defm "" : LMULWriteRes<"WriteVISlideI", []>;
 defm "" : LMULWriteRes<"WriteVISlide1X", []>;
@@ -993,12 +993,12 @@ defm "" : LMULReadAdvance<"ReadVMSFSV", 0>;
 defm "" : LMULReadAdvance<"ReadVMIotV", 0>;
 
 // 16. Vector Permutation Instructions
-defm "" : LMULReadAdvance<"ReadVIMovVX", 0>;
-defm "" : LMULReadAdvance<"ReadVIMovXV", 0>;
-defm "" : LMULReadAdvance<"ReadVIMovXX", 0>;
-defm "" : LMULReadAdvance<"ReadVFMovVF", 0>;
-defm "" : LMULReadAdvance<"ReadVFMovFV", 0>;
-defm "" : LMULReadAdvance<"ReadVFMovFX", 0>;
+def : ReadAdvance<ReadVIMovVX, 0>;
+def : ReadAdvance<ReadVIMovXV, 0>;
+def : ReadAdvance<ReadVIMovXX, 0>;
+def : ReadAdvance<ReadVFMovVF, 0>;
+def : ReadAdvance<ReadVFMovFV, 0>;
+def : ReadAdvance<ReadVFMovFX, 0>;
 defm "" : LMULReadAdvance<"ReadVISlideV", 0>;
 defm "" : LMULReadAdvance<"ReadVISlideX", 0>;
 defm "" : LMULReadAdvance<"ReadVFSlideV", 0>;
