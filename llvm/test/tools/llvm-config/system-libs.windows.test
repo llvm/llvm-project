@@ -1,6 +1,6 @@
 RUN: llvm-config --link-static --system-libs Support 2>&1 | FileCheck %s
 REQUIRES: static-libs
-REQUIRES: target={{.*-windows-msvc}}
+REQUIRES: system-windows
 CHECK-NOT: -l
 CHECK: psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib
 CHECK-NOT: error
