@@ -440,7 +440,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
   // A mapping from a specialisation signature to the index of the respective
   // entry in the all specialisation array. Used to ensure uniqueness of
   // specialisations.
-  DenseMap<SpecSig, unsigned> UM;
+  DenseMap<SpecSig, unsigned> UniqueSpecs;
 
   // Get a list of interesting arguments.
   SmallVector<Argument *> Args;
@@ -451,7 +451,6 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
   if (Args.empty())
     return false;
 
-  bool Found = false;
   for (User *U : F->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -488,7 +487,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       continue;
 
     // Check if we have encountered the same specialisation already.
-    if (auto It = UM.find(S); It != UM.end()) {
+    if (auto It = UniqueSpecs.find(S); It != UniqueSpecs.end()) {
       // Existing specialisation. Add the call to the list to rewrite, unless
       // it's a recursive call. A specialisation, generated because of a
       // recursive call may end up as not the best specialisation for all
@@ -515,14 +514,13 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
-      UM[S] = Index;
+      UniqueSpecs[S] = Index;
       if (auto [It, Inserted] = SM.try_emplace(F, Index, Index + 1); !Inserted)
         It->second.second = Index + 1;
-      Found = true;
     }
   }
 
-  return Found;
+  return !UniqueSpecs.empty();
 }
 
 bool FunctionSpecializer::isCandidateFunction(Function *F) {
