@@ -36,7 +36,7 @@ template <typename ELFT> BuildIDRef getBuildID(const ELFFile<ELFT> &Obj) {
     for (auto N : Obj.notes(P, Err))
       if (N.getType() == ELF::NT_GNU_BUILD_ID &&
           N.getName() == ELF::ELF_NOTE_GNU)
-        return N.getDesc();
+        return N.getDesc(P.p_align);
     consumeError(std::move(Err));
   }
   return {};
