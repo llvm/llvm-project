@@ -4,7 +4,7 @@
 declare void @maythrow()
 declare void @use(i16)
 
-define void @sdiv_not_ok(i16 %n, i16 noundef %xx) {
+define void @sdiv_not_ok(i16 %n, i16 %xx) {
 ; CHECK-LABEL: @sdiv_not_ok(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
@@ -25,7 +25,7 @@ loop:
   br label %loop
 }
 
-define void @srem_not_ok2(i16 %nn, i16 noundef %x) {
+define void @srem_not_ok2(i16 %nn, i16 %x) {
 ; CHECK-LABEL: @srem_not_ok2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = and i16 [[NN:%.*]], 1323
@@ -46,15 +46,15 @@ loop:
   br label %loop
 }
 
-define void @sdiv_ok(i16 %n, i16 noundef %xx) {
+define void @sdiv_ok(i16 %n, i16 %xx) {
 ; CHECK-LABEL: @sdiv_ok(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[XO:%.*]] = or i16 [[XX:%.*]], 1
 ; CHECK-NEXT:    [[X:%.*]] = and i16 [[XO]], 123
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[N:%.*]], [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[N:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i16 [[DIV]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -69,15 +69,15 @@ loop:
   br label %loop
 }
 
-define void @srem_ok2(i16 noundef %nn, i16 noundef %xx) {
+define void @srem_ok2(i16 %nn, i16 %xx) {
 ; CHECK-LABEL: @srem_ok2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = and i16 [[NN:%.*]], 123
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = srem i16 [[N]], [[X]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    [[DIV:%.*]] = srem i16 [[N]], [[X]]
 ; CHECK-NEXT:    call void @use(i16 [[DIV]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -92,53 +92,7 @@ loop:
   br label %loop
 }
 
-define void @sdiv_not_ok3_maybe_poison_denum(i16 noundef %nn, i16 %xx) {
-; CHECK-LABEL: @sdiv_not_ok3_maybe_poison_denum(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = and i16 [[NN:%.*]], 123
-; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[N]], [[X]]
-; CHECK-NEXT:    call void @use(i16 [[DIV]])
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  %n = and i16 %nn, 123
-  %x = or i16 %xx, 1
-  br label %loop
-loop:
-  call void @maythrow()
-  %div = sdiv i16 %n, %x
-  call void @use(i16 %div)
-  br label %loop
-}
-
-define void @sdiv_not_ok3_maybe_poison_num(i16 %nn, i16 noundef  %xx) {
-; CHECK-LABEL: @sdiv_not_ok3_maybe_poison_num(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = and i16 [[NN:%.*]], 123
-; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i16 [[N]], [[X]]
-; CHECK-NEXT:    call void @use(i16 [[DIV]])
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  %n = and i16 %nn, 123
-  %x = or i16 %xx, 1
-  br label %loop
-loop:
-  call void @maythrow()
-  %div = sdiv i16 %n, %x
-  call void @use(i16 %div)
-  br label %loop
-}
-
-define void @udiv_not_ok(i16 %n, i16 noundef %xx) {
+define void @udiv_not_ok(i16 %n, i16 %xx) {
 ; CHECK-LABEL: @udiv_not_ok(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = xor i16 [[XX:%.*]], 1
@@ -159,29 +113,8 @@ loop:
   br label %loop
 }
 
-define void @udiv_ok(i16 %n, i16 noundef %xx) {
+define void @udiv_ok(i16 %n, i16 %xx) {
 ; CHECK-LABEL: @udiv_ok(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i16 [[N:%.*]], [[X]]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    call void @maythrow()
-; CHECK-NEXT:    call void @use(i16 [[DIV]])
-; CHECK-NEXT:    br label [[LOOP]]
-;
-entry:
-  %x = or i16 %xx, 1
-  br label %loop
-loop:
-  call void @maythrow()
-  %div = udiv i16 %n, %x
-  call void @use(i16 %div)
-  br label %loop
-}
-
-define void @urem_not_ok_maybe_poison(i16 %n, i16 %xx) {
-; CHECK-LABEL: @urem_not_ok_maybe_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = or i16 [[XX:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
