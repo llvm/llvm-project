@@ -2897,16 +2897,20 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
     Init *II = BI->convertInitializerTo(IntRecTy::get(RK));
     if (!II || !isa<IntInit>(II))
       error("Bits value must be constants!");
-    return ParseTreePattern(II, OpName);
+    return II ? ParseTreePattern(II, OpName) : nullptr;
   }
 
   DagInit *Dag = dyn_cast<DagInit>(TheInit);
   if (!Dag) {
     TheInit->print(errs());
     error("Pattern has unexpected init kind!");
+    return nullptr;
   }
   DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
-  if (!OpDef) error("Pattern has unexpected operator type!");
+  if (!OpDef) {
+    error("Pattern has unexpected operator type!");
+    return nullptr;
+  }
   Record *Operator = OpDef->getDef();
 
   if (Operator->isSubClassOf("ValueType")) {
@@ -3480,7 +3484,8 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
       DefInit *Val = dyn_cast<DefInit>(Dest->getLeafValue());
       if (!Val || !Val->getDef()->isSubClassOf("Register"))
         I.error("implicitly defined value should be a register!");
-      InstImpResults.push_back(Val->getDef());
+      if (Val)
+        InstImpResults.push_back(Val->getDef());
     }
     return;
   }
