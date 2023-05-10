@@ -553,20 +553,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.kernels wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
-  acc.kernels copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.kernels copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.kernels copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.kernels copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
-  }
-  acc.kernels copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
-  }
-  acc.kernels no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.kernels deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
   acc.kernels {
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.kernels {
@@ -600,20 +586,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:      acc.kernels wait([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
