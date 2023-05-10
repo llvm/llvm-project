@@ -1172,6 +1172,12 @@ public:
     }
   }
 
+  /// Clears the namespace of this declaration.
+  ///
+  /// This is useful if we want this declaration to be available for
+  /// redeclaration lookup but otherwise hidden for ordinary name lookups.
+  void clearIdentifierNamespace() { IdentifierNamespace = 0; }
+
   enum FriendObjectKind {
     FOK_None,      ///< Not a friend object.
     FOK_Declared,  ///< A friend of a previously-declared entity.
