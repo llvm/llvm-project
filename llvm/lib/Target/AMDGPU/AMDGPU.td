@@ -1227,6 +1227,40 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FullRate64Ops,
    FeatureBackOffBarrier]>;
 
+def FeatureISAVersion9_4_1 : FeatureSet<
+  [FeatureGFX9,
+   FeatureGFX90AInsts,
+   FeatureGFX940Insts,
+   FeatureFmaMixInsts,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureFmacF64Inst,
+   FeatureDot1Insts,
+   FeatureDot2Insts,
+   FeatureDot3Insts,
+   FeatureDot4Insts,
+   FeatureDot5Insts,
+   FeatureDot6Insts,
+   FeatureDot7Insts,
+   FeatureDot10Insts,
+   FeatureAtomicDsPkAdd16Insts,
+   FeatureAtomicFlatPkAdd16Insts,
+   Feature64BitDPP,
+   FeaturePackedFP32Ops,
+   FeatureMAIInsts,
+   FeatureFP8Insts,
+   FeaturePkFmacF16Inst,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureAtomicBufferGlobalPkAddF16Insts,
+   FeatureAtomicGlobalPkAddBF16Inst,
+   FeatureFlatAtomicFaddF32Inst,
+   FeatureSupportsSRAMECC,
+   FeaturePackedTID,
+   FeatureArchitectedFlatScratch,
+   FullRate64Ops,
+   FeatureBackOffBarrier]>;
+
 // TODO: Organize more features into groups.
 def FeatureGroup {
   // Bugs present on gfx10.1.
