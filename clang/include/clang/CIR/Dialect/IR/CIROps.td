@@ -468,8 +468,8 @@ def TernaryOp : CIR_Op<"ternary",
 
   let assemblyFormat = [{
     `(` $cond `,`
-      `true_region` $trueRegion `,`
-      `false_region` $falseRegion
+      `true` $trueRegion `,`
+      `false` $falseRegion
     `)` `:` type($result) attr-dict
   }];
 }
