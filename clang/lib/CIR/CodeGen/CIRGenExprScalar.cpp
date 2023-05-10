@@ -1537,6 +1537,80 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
         });
   }
 
-  [[maybe_unused]] CIRGenFunction::ConditionalEvaluation eval(CGF);
-  llvm_unreachable("NYI");
+  mlir::Value condV = CGF.buildOpOnBoolExpr(condExpr, loc, lhsExpr, rhsExpr);
+  CIRGenFunction::ConditionalEvaluation eval(CGF);
+  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
+  mlir::Type yieldTy{};
+  auto patchVoidOrThrowSites = [&]() {
+    if (insertPoints.empty())
+      return;
+    // If both arms are void, so be it.
+    if (!yieldTy)
+      yieldTy = CGF.VoidTy;
+    for (auto &toInsert : insertPoints) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(toInsert);
+      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+      builder.create<mlir::cir::YieldOp>(loc, op0);
+    }
+  };
+
+  return builder.create<mlir::cir::TernaryOp>(
+      loc, condV, /*trueBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        // FIXME: abstract all this massive location handling elsewhere.
+        SmallVector<mlir::Location, 2> locs;
+        if (loc.isa<mlir::FileLineColLoc>()) {
+          locs.push_back(loc);
+          locs.push_back(loc);
+        } else if (loc.isa<mlir::FusedLoc>()) {
+          auto fusedLoc = loc.cast<mlir::FusedLoc>();
+          locs.push_back(fusedLoc.getLocations()[0]);
+          locs.push_back(fusedLoc.getLocations()[1]);
+        }
+        CIRGenFunction::LexicalScopeContext lexScope{locs[0], locs[1],
+                                                     b.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
+        CGF.currLexScope->setAsTernary();
+
+        assert(!UnimplementedFeature::incrementProfileCounter());
+        eval.begin(CGF);
+        auto lhs = Visit(lhsExpr);
+        eval.end(CGF);
+
+        if (lhs) {
+          yieldTy = lhs.getType();
+          b.create<mlir::cir::YieldOp>(loc, lhs);
+          return;
+        }
+        // If LHS or RHS is a throw or void expression we need to patch arms
+        // as to properly match yield types.
+        insertPoints.push_back(b.saveInsertionPoint());
+      },
+      /*falseBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        auto fusedLoc = loc.cast<mlir::FusedLoc>();
+        auto locBegin = fusedLoc.getLocations()[0];
+        auto locEnd = fusedLoc.getLocations()[1];
+        CIRGenFunction::LexicalScopeContext lexScope{locBegin, locEnd,
+                                                     b.getInsertionBlock()};
+        CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+        CGF.currLexScope->setAsTernary();
+
+        assert(!UnimplementedFeature::incrementProfileCounter());
+        eval.begin(CGF);
+        auto rhs = Visit(rhsExpr);
+        eval.end(CGF);
+
+        if (rhs) {
+          yieldTy = rhs.getType();
+          b.create<mlir::cir::YieldOp>(loc, rhs);
+        } else {
+          // If LHS or RHS is a throw or void expression we need to patch arms
+          // as to properly match yield types.
+          insertPoints.push_back(b.saveInsertionPoint());
+        }
+
+        patchVoidOrThrowSites();
+      });
 }

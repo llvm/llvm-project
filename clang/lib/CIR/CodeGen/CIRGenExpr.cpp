@@ -1726,43 +1726,13 @@ bool CIRGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
 
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
 /// appropriated regions.
-/// TODO(cir): PGO data
-/// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
 mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
                                                       mlir::Location loc,
                                                       const Stmt *thenS,
                                                       const Stmt *elseS) {
-  // TODO(CIR): scoped ApplyDebugLocation DL(*this, Cond);
-  // TODO(CIR): __builtin_unpredictable and profile counts?
-  cond = cond->IgnoreParens();
-
-  // if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(cond)) {
-  //   llvm_unreachable("binaryoperator ifstmt NYI");
-  // }
-
-  if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(cond)) {
-    llvm_unreachable("unaryoperator ifstmt NYI");
-  }
-
-  if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
-    llvm_unreachable("conditionaloperator ifstmt NYI");
-  }
-
-  if (const CXXThrowExpr *Throw = dyn_cast<CXXThrowExpr>(cond)) {
-    llvm_unreachable("throw expr ifstmt nyi");
-  }
-
   // Emit the code with the fully general case.
-  mlir::Value condV = evaluateExprAsBool(cond);
+  mlir::Value condV = buildOpOnBoolExpr(cond, loc, thenS, elseS);
   mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
-
-  auto *Call = dyn_cast<CallExpr>(cond->IgnoreImpCasts());
-  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    llvm_unreachable("NYI");
-  }
-
-  // TODO(CIR): emitCondLikelihoodViaExpectIntrinsic
-
   builder.create<mlir::cir::IfOp>(
       loc, condV, elseS,
       /*thenBuilder=*/
@@ -1795,6 +1765,41 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
 
   return mlir::LogicalResult::success(resThen.succeeded() &&
                                       resElse.succeeded());
+}
+
+/// TODO(cir): PGO data
+/// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
+mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
+                                              mlir::Location loc,
+                                              const Stmt *thenS,
+                                              const Stmt *elseS) {
+  // TODO(CIR): scoped ApplyDebugLocation DL(*this, Cond);
+  // TODO(CIR): __builtin_unpredictable and profile counts?
+  cond = cond->IgnoreParens();
+
+  // if (const BinaryOperator *CondBOp = dyn_cast<BinaryOperator>(cond)) {
+  //   llvm_unreachable("binaryoperator ifstmt NYI");
+  // }
+
+  if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(cond)) {
+    llvm_unreachable("unaryoperator ifstmt NYI");
+  }
+
+  if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
+    llvm_unreachable("conditionaloperator ifstmt NYI");
+  }
+
+  if (const CXXThrowExpr *Throw = dyn_cast<CXXThrowExpr>(cond)) {
+    llvm_unreachable("throw expr ifstmt nyi");
+  }
+
+  auto *Call = dyn_cast<CallExpr>(cond->IgnoreImpCasts());
+  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
+    llvm_unreachable("NYI");
+  }
+
+  // Emit the code with the fully general case.
+  return evaluateExprAsBool(cond);
 }
 
 mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
