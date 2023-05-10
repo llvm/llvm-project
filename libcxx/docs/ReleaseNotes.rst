@@ -53,6 +53,9 @@ Improvements and New Features
 - The performance of ``dynamic_cast`` on its hot paths is greatly improved and is as efficient as the
   ``libsupc++`` implementation. Note that the performance improvements are shipped in ``libcxxabi``.
 
+- `D122780 <https://reviews.llvm.org/D122780>`_ Improved the performance of ``std::sort`` and ``std::ranges::sort``
+  by up to 50% for arithmetic types and by approximately 10% for other types.
+
 Deprecations and Removals
 -------------------------
 
