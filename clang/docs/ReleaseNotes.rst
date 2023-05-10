@@ -376,6 +376,10 @@ Bug Fixes in This Version
 - Fix crash when attempting to pass a non-pointer type as first argument of
   ``__builtin_assume_aligned``.
   (`#62305 <https://github.com/llvm/llvm-project/issues/62305>`_)
+- A default argument for a non-type template parameter is evaluated and checked
+  at the point where it is required. This fixes:
+  (`#62224 <https://github.com/llvm/llvm-project/issues/62224>`_) and
+  (`#62596 <https://github.com/llvm/llvm-project/issues/62596>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

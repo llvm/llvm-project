@@ -1156,8 +1156,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, NonTypeTemplateParmDeclDefaultArg) {
   NonTypeTemplateParmDecl *To = Import(From, Lang_CXX03);
   ASSERT_TRUE(To->hasDefaultArgument());
   Stmt *ToArg = To->getDefaultArgument();
-  ASSERT_TRUE(isa<ConstantExpr>(ToArg));
-  ToArg = *ToArg->child_begin();
   ASSERT_TRUE(isa<IntegerLiteral>(ToArg));
   ASSERT_EQ(cast<IntegerLiteral>(ToArg)->getValue().getLimitedValue(), 1U);
 }

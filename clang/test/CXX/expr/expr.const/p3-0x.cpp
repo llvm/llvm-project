@@ -10,6 +10,7 @@ void NonConstF() {
     case nonconst: // expected-error {{case value is not a constant expression}} expected-note {{read of non-const}}
       break;
   }
+  NonConstT<> V; // expected-note {{while checking a default template argument used here}}
   return;
 }
 
