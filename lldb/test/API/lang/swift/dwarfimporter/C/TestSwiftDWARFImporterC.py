@@ -61,6 +61,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         #            substrs=["(DoubleLongUnion)", "long_val = 42"])
         self.expect("target variable fromSubmodule",
                     substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
+        self.expect("target variable withPointer",
+                    substrs=["(WithPointer)", "ptr = nil"])
 
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest

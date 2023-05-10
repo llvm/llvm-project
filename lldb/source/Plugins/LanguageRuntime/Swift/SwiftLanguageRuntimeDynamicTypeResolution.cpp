@@ -751,13 +751,10 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
   // The stride is the size rounded up to alignment.
   const size_t byte_stride = llvm::alignTo(*byte_size, byte_align);
   unsigned extra_inhabitants = 0;
-  if (clang_type.IsPointerType(nullptr)) {
-    lldb_assert(TypeSystemSwiftTypeRef::IsKnownSpecialImportedType(
-                    clang_type.GetDisplayTypeName().GetStringRef()),
-                "Expected clang pointer type to be a known special type!",
-              __FUNCTION__, __FILE__, __LINE__);
+  if (clang_type.IsPointerType() &&
+      TypeSystemSwiftTypeRef::IsKnownSpecialImportedType(
+          clang_type.GetDisplayTypeName().GetStringRef()))
     extra_inhabitants = swift::swift_getHeapObjectExtraInhabitantCount();
-  }
 
   if (fields.empty()) {
     auto it_b = m_clang_type_info.insert(
@@ -1432,7 +1429,7 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     auto fields = rti->getFields();
 
     // Handle tuples.
-    if (idx > rti->getNumFields())
+    if (idx >= rti->getNumFields())
       LLDB_LOGF(GetLog(LLDBLog::Types), "index %zu is out of bounds (%d)", idx,
                 rti->getNumFields());
     llvm::Optional<TypeSystemSwift::TupleElement> tuple;
