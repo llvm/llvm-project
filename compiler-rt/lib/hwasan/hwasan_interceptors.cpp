@@ -53,7 +53,7 @@ static void *HwasanThreadStartFunc(void *arg) {
   __hwasan_thread_enter();
   ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
   SetSigProcMask(&A.starting_sigset_, nullptr);
-  UnmapOrDie(arg, GetPageSizeCached());
+  InternalFree(arg);
   return A.callback(A.param);
 }
 
@@ -61,8 +61,7 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
             void *(*callback)(void *), void *param) {
   EnsureMainThreadIDIsCorrect();
   ScopedTaggingDisabler tagging_disabler;
-  ThreadStartArg *A = reinterpret_cast<ThreadStartArg *>(
-      MmapOrDie(GetPageSizeCached(), "pthread_create"));
+  ThreadStartArg *A = (ThreadStartArg *)InternalAlloc(sizeof(ThreadStartArg));
   A->callback = callback;
   A->param = param;
   ScopedBlockSignals block(&A->starting_sigset_);
@@ -70,7 +69,10 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
 #    if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler lsan_disabler;
 #    endif
-  return REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
+  int result = REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
+  if (result != 0)
+    InternalFree(A);
+  return result;
 }
 
 INTERCEPTOR(int, pthread_join, void *t, void **arg) {
