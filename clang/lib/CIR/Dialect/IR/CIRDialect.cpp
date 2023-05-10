@@ -620,7 +620,6 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
                       function_ref<void(OpBuilder &, Location)> falseBuilder) {
   result.addOperands(cond);
   OpBuilder::InsertionGuard guard(builder);
-
   Region *trueRegion = result.addRegion();
   auto *block = builder.createBlock(trueRegion);
   trueBuilder(builder, result.location);
@@ -629,7 +628,8 @@ void TernaryOp::build(OpBuilder &builder, OperationState &result, Value cond,
   falseBuilder(builder, result.location);
 
   auto yield = dyn_cast<YieldOp>(block->getTerminator());
-  assert(yield && "expected cir.yield terminator");
+  assert((yield && yield.getNumOperands() == 1) &&
+         "expected cir.yield terminator with one operand");
   result.addTypes(TypeRange{yield.getOperand(0).getType()});
 }
 

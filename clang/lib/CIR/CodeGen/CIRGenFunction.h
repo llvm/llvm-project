@@ -113,6 +113,7 @@ public:
     // FIXME: perhaps we can use some info encoded in operations.
     enum Kind {
       Regular, // cir.if, cir.scope, if_regions
+      Ternary, // cir.ternary
       Switch   // cir.switch
     } ScopeKind = Regular;
 
@@ -120,7 +121,9 @@ public:
     unsigned Depth = 0;
     bool HasReturn = false;
     LexicalScopeContext(mlir::Location b, mlir::Location e, mlir::Block *eb)
-        : EntryBlock(eb), BeginLoc(b), EndLoc(e) {}
+        : EntryBlock(eb), BeginLoc(b), EndLoc(e) {
+      assert(EntryBlock && "expected valid block");
+    }
     ~LexicalScopeContext() = default;
 
     // ---
@@ -134,7 +137,10 @@ public:
     // ---
     bool isRegular() { return ScopeKind == Kind::Regular; }
     bool isSwitch() { return ScopeKind == Kind::Switch; }
+    bool isTernary() { return ScopeKind == Kind::Ternary; }
+
     void setAsSwitch() { ScopeKind = Kind::Switch; }
+    void setAsTernary() { ScopeKind = Kind::Ternary; }
 
     // ---
     // Goto handling
@@ -975,6 +981,13 @@ public:
                                         mlir::Location loc,
                                         const clang::Stmt *thenS,
                                         const clang::Stmt *elseS);
+  mlir::Value buildTernaryOnBoolExpr(const clang::Expr *cond,
+                                     mlir::Location loc,
+                                     const clang::Stmt *thenS,
+                                     const clang::Stmt *elseS);
+  mlir::Value buildOpOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
+                                const clang::Stmt *thenS,
+                                const clang::Stmt *elseS);
 
   class ConstantEmission {
     // Cannot use mlir::TypedAttr directly here because of bit availability.

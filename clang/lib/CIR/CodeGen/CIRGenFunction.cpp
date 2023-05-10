@@ -344,9 +344,12 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToEnd(InsPt);
     // TODO: insert actual scope cleanup (dtors and etc)
-    if (localScope->Depth != 0) // end of any local scope != function
-      builder.create<YieldOp>(localScope->EndLoc);
-    else
+    if (localScope->Depth != 0) { // end of any local scope != function
+      // Ternary ops have to deal with matching arms for yielding types
+      // and do return a value, it must do its own cir.yield insertion.
+      if (!localScope->isTernary())
+        builder.create<YieldOp>(localScope->EndLoc);
+    } else
       (void)buildReturn(localScope->EndLoc);
   };
 
