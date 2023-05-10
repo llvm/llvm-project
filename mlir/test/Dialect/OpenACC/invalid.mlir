@@ -167,22 +167,26 @@ acc.loop {
 
 // -----
 
-// expected-error@+1 {{at least one operand in copyout, delete or detach must appear on the exit data operation}}
+// expected-error@+1 {{at least one operand must be present in dataOperands on the exit data operation}}
 acc.exit_data attributes {async}
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{async attribute cannot appear with asyncOperand}}
-acc.exit_data async(%cst: index) delete(%value : memref<10xf32>) attributes {async}
+acc.exit_data async(%cst: index) dataOperands(%0 : memref<f32>) attributes {async}
+acc.delete accPtr(%0 : memref<f32>)
 
 // -----
 
 %cst = arith.constant 1 : index
-%value = memref.alloc() : memref<10xf32>
+%value = memref.alloc() : memref<f32>
+%0 = acc.getdeviceptr varPtr(%value : memref<f32>) -> memref<f32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.exit_data wait_devnum(%cst: index) delete(%value : memref<10xf32>)
+acc.exit_data wait_devnum(%cst: index) dataOperands(%0 : memref<f32>)
+acc.delete accPtr(%0 : memref<f32>)
 
 // -----
 

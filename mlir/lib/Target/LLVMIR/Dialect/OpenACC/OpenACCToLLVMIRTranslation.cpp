@@ -202,17 +202,31 @@ processDataOperands(llvm::IRBuilderBase &builder,
 
   unsigned index = 0;
 
+  llvm::SmallVector<mlir::Value> deleteOperands, copyoutOperands;
+  for (mlir::Value dataOp : op.getDataClauseOperands()) {
+    if (auto devicePtrOp = mlir::dyn_cast_or_null<acc::GetDevicePtrOp>(
+            dataOp.getDefiningOp())) {
+      for (auto &u : devicePtrOp.getAccPtr().getUses()) {
+        if (mlir::dyn_cast_or_null<acc::DeleteOp>(u.getOwner()))
+          deleteOperands.push_back(devicePtrOp.getVarPtr());
+        else if (mlir::dyn_cast_or_null<acc::CopyoutOp>(u.getOwner()))
+          copyoutOperands.push_back(devicePtrOp.getVarPtr());
+      }
+    }
+  }
+
+  auto nbTotalOperands = deleteOperands.size() + copyoutOperands.size();
+
   // Delete operands are handled as `delete` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getDeleteOperands(), op.getNumDataOperands(),
-                             kDeleteFlag, flags, names, index, mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, deleteOperands,
+                             nbTotalOperands, kDeleteFlag, flags, names, index,
+                             mapperAllocas)))
     return failure();
 
   // Copyout operands are handled as `from` call.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyoutOperands(), op.getNumDataOperands(),
-                             kHostCopyoutFlag, flags, names, index,
-                             mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, copyoutOperands,
+                             nbTotalOperands, kHostCopyoutFlag, flags, names,
+                             index, mapperAllocas)))
     return failure();
 
   return success();
@@ -509,7 +523,8 @@ LogicalResult OpenACCDialectLLVMIRTranslationInterface::convertOperation(
                "unexpected OpenACC terminator with operands");
         return success();
       })
-      .Case<acc::CreateOp, acc::CopyinOp, acc::UpdateDeviceOp>([](auto op) {
+      .Case<acc::CreateOp, acc::CopyinOp, acc::CopyoutOp, acc::DeleteOp,
+            acc::UpdateDeviceOp, acc::GetDevicePtrOp>([](auto op) {
         // NOP
         return success();
       })

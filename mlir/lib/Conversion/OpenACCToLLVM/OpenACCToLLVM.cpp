@@ -156,7 +156,6 @@ class LegalizeDataOpForLLVMTranslation : public ConvertOpToLLVMPattern<Op> {
 void mlir::populateOpenACCToLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::DataOp>>(converter);
-  patterns.add<LegalizeDataOpForLLVMTranslation<acc::ExitDataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::ParallelOp>>(converter);
 }
 
@@ -206,13 +205,6 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
                allDataOperandsAreConverted(op.getPresentOperands()) &&
                allDataOperandsAreConverted(op.getDeviceptrOperands()) &&
                allDataOperandsAreConverted(op.getAttachOperands());
-      });
-
-  target.addDynamicallyLegalOp<acc::ExitDataOp>(
-      [allDataOperandsAreConverted](acc::ExitDataOp op) {
-        return allDataOperandsAreConverted(op.getCopyoutOperands()) &&
-               allDataOperandsAreConverted(op.getDeleteOperands()) &&
-               allDataOperandsAreConverted(op.getDetachOperands());
       });
 
   target.addDynamicallyLegalOp<acc::ParallelOp>(
