@@ -90,9 +90,9 @@ define void @si2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX8RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX8RV32-NEXT:    vle32.v v8, (a0)
 ; LMULMAX8RV32-NEXT:    vfcvt.f.x.v v8, v8
-; LMULMAX8RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX8RV32-NEXT:    addi a0, a1, 8
+; LMULMAX8RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV32-NEXT:    vse32.v v9, (a0)
 ; LMULMAX8RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX8RV32-NEXT:    vse32.v v8, (a1)
@@ -103,9 +103,9 @@ define void @si2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX8RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vle32.v v8, (a0)
 ; LMULMAX8RV64-NEXT:    vfcvt.f.x.v v8, v8
-; LMULMAX8RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX8RV64-NEXT:    addi a0, a1, 8
+; LMULMAX8RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX8RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vse64.v v8, (a1)
@@ -116,9 +116,9 @@ define void @si2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX1RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1RV32-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1RV32-NEXT:    vfcvt.f.x.v v8, v8
-; LMULMAX1RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX1RV32-NEXT:    addi a0, a1, 8
+; LMULMAX1RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV32-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1RV32-NEXT:    vse32.v v8, (a1)
@@ -129,9 +129,9 @@ define void @si2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX1RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1RV64-NEXT:    vfcvt.f.x.v v8, v8
-; LMULMAX1RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX1RV64-NEXT:    addi a0, a1, 8
+; LMULMAX1RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vse64.v v8, (a1)
@@ -148,9 +148,9 @@ define void @ui2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX8RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX8RV32-NEXT:    vle32.v v8, (a0)
 ; LMULMAX8RV32-NEXT:    vfcvt.f.xu.v v8, v8
-; LMULMAX8RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX8RV32-NEXT:    addi a0, a1, 8
+; LMULMAX8RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV32-NEXT:    vse32.v v9, (a0)
 ; LMULMAX8RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX8RV32-NEXT:    vse32.v v8, (a1)
@@ -161,9 +161,9 @@ define void @ui2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX8RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vle32.v v8, (a0)
 ; LMULMAX8RV64-NEXT:    vfcvt.f.xu.v v8, v8
-; LMULMAX8RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX8RV64-NEXT:    addi a0, a1, 8
+; LMULMAX8RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX8RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; LMULMAX8RV64-NEXT:    vse64.v v8, (a1)
@@ -174,9 +174,9 @@ define void @ui2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX1RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1RV32-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1RV32-NEXT:    vfcvt.f.xu.v v8, v8
-; LMULMAX1RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV32-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX1RV32-NEXT:    addi a0, a1, 8
+; LMULMAX1RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV32-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1RV32-NEXT:    vse32.v v8, (a1)
@@ -187,9 +187,9 @@ define void @ui2fp_v3i32_v3f32(ptr %x, ptr %y) {
 ; LMULMAX1RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1RV64-NEXT:    vfcvt.f.xu.v v8, v8
-; LMULMAX1RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vslidedown.vi v9, v8, 2
 ; LMULMAX1RV64-NEXT:    addi a0, a1, 8
+; LMULMAX1RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; LMULMAX1RV64-NEXT:    vse64.v v8, (a1)
