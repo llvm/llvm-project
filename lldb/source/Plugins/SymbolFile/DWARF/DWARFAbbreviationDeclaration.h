@@ -28,7 +28,8 @@ public:
   bool HasChildren() const { return m_has_children; }
   size_t NumAttributes() const { return m_attributes.size(); }
   dw_form_t GetFormByIndex(uint32_t idx) const {
-    return m_attributes.size() > idx ? m_attributes[idx].get_form() : 0;
+    return m_attributes.size() > idx ? m_attributes[idx].get_form()
+                                     : dw_form_t(0);
   }
 
   // idx is assumed to be valid when calling GetAttrAndFormByIndex()

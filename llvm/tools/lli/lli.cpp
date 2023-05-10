@@ -845,23 +845,16 @@ int runOrcJIT(const char *ProgName) {
   orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
   auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
-  // If -mtriple option is given then use it, otherwise take the triple from
-  // the main module if it's present.
+  // Get TargetTriple and DataLayout from the main module if they're explicitly
+  // set.
   std::optional<Triple> TT;
-  if (!TargetTriple.empty())
-    TT = Triple(TargetTriple);
-  else
-    MainModule.withModuleDo([&](Module &M) {
-      if (!M.getTargetTriple().empty())
-        TT = Triple(M.getTargetTriple());
-    });
-
-  // Get the DataLayout from the main module if it's explicitly set.
   std::optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
-    if (!M.getDataLayout().isDefault())
-      DL = M.getDataLayout();
-  });
+      if (!M.getTargetTriple().empty())
+        TT = Triple(M.getTargetTriple());
+      if (!M.getDataLayout().isDefault())
+        DL = M.getDataLayout();
+    });
 
   orc::LLLazyJITBuilder Builder;
 

@@ -12202,8 +12202,10 @@ bool RISCVTargetLowering::shouldTransformSignedTruncationCheck(
   if (KeptBits == 32 || KeptBits == 64)
     return true;
 
-  // With Zbb we can use sext.h. sext.b does not seem to be profitable.
-  return Subtarget.hasStdExtZbb() && KeptBits == 16;
+  // With Zbb we can use sext.h/sext.b.
+  return Subtarget.hasStdExtZbb() &&
+         ((KeptBits == 8 && XVT == MVT::i64 && !Subtarget.is64Bit()) ||
+          KeptBits == 16);
 }
 
 bool RISCVTargetLowering::isDesirableToCommuteWithShift(
@@ -14669,7 +14671,9 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
   }
 
   Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);

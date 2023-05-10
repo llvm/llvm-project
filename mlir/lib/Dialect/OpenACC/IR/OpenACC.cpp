@@ -325,13 +325,7 @@ LogicalResult acc::ParallelOp::verify() {
 //===----------------------------------------------------------------------===//
 
 unsigned SerialOp::getNumDataOperands() {
-  return getReductionOperands().size() + getCopyOperands().size() +
-         getCopyinOperands().size() + getCopyinReadonlyOperands().size() +
-         getCopyoutOperands().size() + getCopyoutZeroOperands().size() +
-         getCreateOperands().size() + getCreateZeroOperands().size() +
-         getNoCreateOperands().size() + getPresentOperands().size() +
-         getDevicePtrOperands().size() + getAttachOperands().size() +
-         getGangPrivateOperands().size() +
+  return getReductionOperands().size() + getGangPrivateOperands().size() +
          getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
 }
 
@@ -351,12 +345,7 @@ LogicalResult acc::SerialOp::verify() {
 //===----------------------------------------------------------------------===//
 
 unsigned KernelsOp::getNumDataOperands() {
-  return getCopyOperands().size() + getCopyinOperands().size() +
-         getCopyinReadonlyOperands().size() + getCopyoutOperands().size() +
-         getCopyoutZeroOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getNoCreateOperands().size() +
-         getPresentOperands().size() + getDevicePtrOperands().size() +
-         getAttachOperands().size() + getDataClauseOperands().size();
+  return getDataClauseOperands().size();
 }
 
 Value KernelsOp::getDataOperand(unsigned i) {

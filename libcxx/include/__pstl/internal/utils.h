@@ -10,8 +10,8 @@
 #ifndef _PSTL_UTILS_H
 #define _PSTL_UTILS_H
 
+#include <__config>
 #include <__exception/terminate.h>
-#include <__pstl/internal/pstl_config.h>
 #include <__utility/forward.h>
 #include <new>
 

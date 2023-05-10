@@ -166,6 +166,11 @@ inline Expr *IgnoreParensSingleStep(Expr *E) {
       return CE->getChosenSubExpr();
   }
 
+  else if (auto *PE = dyn_cast<PredefinedExpr>(E)) {
+    if (PE->isTransparent() && PE->getFunctionName())
+      return PE->getFunctionName();
+  }
+
   return E;
 }
 

@@ -59,9 +59,9 @@ define void @abs_v6i16(ptr %x) {
 ; LMULMAX1-RV64-NEXT:    vmax.vv v8, v8, v9
 ; LMULMAX1-RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
+; LMULMAX1-RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; LMULMAX1-RV64-NEXT:    addi a0, a0, 8
-; LMULMAX1-RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; LMULMAX1-RV64-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
   %a = load <6 x i16>, ptr %x
