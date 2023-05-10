@@ -219,8 +219,8 @@ private:
   /// Mark the entry blocks of the operation as executable.
   void markEntryBlocksLive(Operation *op);
 
-  /// Get the constant values of the operands of the operation. Returns none if
-  /// any of the operand lattices are uninitialized.
+  /// Get the constant values of the operands of the operation. Returns
+  /// std::nullopt if any of the operand lattices are uninitialized.
   std::optional<SmallVector<Attribute>> getOperandValues(Operation *op);
 
   /// The top-level operation the analysis is running on. This is used to detect
