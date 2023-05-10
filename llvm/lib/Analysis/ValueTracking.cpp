@@ -6686,7 +6686,7 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison,
 
 static bool impliesPoison(const Value *ValAssumedPoison, const Value *V,
                           unsigned Depth) {
-  if (isGuaranteedNotToBeUndefOrPoison(ValAssumedPoison))
+  if (isGuaranteedNotToBePoison(ValAssumedPoison))
     return true;
 
   if (directlyImpliesPoison(ValAssumedPoison, V, /* Depth */ 0))
