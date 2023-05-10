@@ -591,6 +591,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
       Target->setCodeModel(*CM_IR);
+    if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
+      Target->setLargeDataThreshold(*LDT);
   } else {
     TheTriple = Triple(Triple::normalize(TargetTriple));
     if (TheTriple.getTriple().empty())

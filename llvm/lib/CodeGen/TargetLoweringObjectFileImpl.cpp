@@ -651,8 +651,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     Name += utostr(EntrySize);
   } else {
     bool IsLarge = false;
-    if (isa<GlobalVariable>(GO))
-      IsLarge = TM.isLargeData();
+    if (auto *GV = dyn_cast<GlobalVariable>(GO))
+      IsLarge = TM.isLargeData(GV);
     Name = getSectionPrefixForGlobal(Kind, IsLarge);
   }
 
@@ -855,8 +855,8 @@ static MCSectionELF *selectELFSectionForGlobal(
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
   }
-  if (isa<GlobalVariable>(GO)) {
-    if (TM.isLargeData()) {
+  if (auto *GV = dyn_cast<GlobalVariable>(GO)) {
+    if (TM.isLargeData(GV)) {
       assert(TM.getTargetTriple().getArch() == Triple::x86_64);
       Flags |= ELF::SHF_X86_64_LARGE;
     }

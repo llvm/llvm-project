@@ -58,6 +58,7 @@ CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
 CGOPT(ThreadModel::Model, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
+CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
@@ -161,6 +162,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                  clEnumValN(CodeModel::Medium, "medium", "Medium code model"),
                  clEnumValN(CodeModel::Large, "large", "Large code model")));
   CGBINDOPT(CodeModel);
+
+  static cl::opt<uint64_t> LargeDataThreshold(
+      "large-data-threshold",
+      cl::desc("Choose large data threshold for x86_64 medium code model"),
+      cl::init(0));
+  CGBINDOPT(LargeDataThreshold);
 
   static cl::opt<ExceptionHandling> ExceptionModel(
       "exception-model", cl::desc("exception model"),
