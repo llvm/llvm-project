@@ -3894,9 +3894,7 @@ void Sema::ArgumentDependentLookup(DeclarationName Name, SourceLocation Loc,
                   // ... and have the same innermost enclosing non-inline
                   // namespace scope as a declaration of an associated entity
                   // attached to M
-                  if (!E->hasOwningModule() ||
-                      E->getOwningModule()->getTopLevelModuleName() !=
-                          FM->getTopLevelModuleName())
+                  if (E->getOwningModule() != FM)
                     return false;
                   // TODO: maybe this could be cached when generating the
                   // associated namespaces / entities.
