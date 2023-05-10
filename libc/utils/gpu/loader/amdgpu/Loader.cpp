@@ -359,8 +359,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   hsa_amd_agents_allow_access(1, &dev_agent, nullptr, buffer);
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(port_size, wavefront_size, &lock, server_inbox, server_outbox,
-               buffer);
+  server.reset(port_size, wavefront_size, server_inbox, server_outbox, buffer);
 
   // Obtain a queue with the minimum (power of two) size, used to send commands
   // to the HSA runtime and launch execution on the device.
