@@ -106,20 +106,20 @@ template <bool InvertInbox> struct Process {
 
   uint64_t port_count;
   uint32_t lane_size;
-  cpp::Atomic<uint32_t> *lock;
   cpp::Atomic<uint32_t> *inbox;
   cpp::Atomic<uint32_t> *outbox;
   Packet *packet;
 
+  cpp::Atomic<uint32_t> lock[default_port_count] = {0};
+
   /// Initialize the communication channels.
-  LIBC_INLINE void reset(uint64_t port_count, uint32_t lane_size, void *lock,
-                         void *inbox, void *outbox, void *packet) {
-    *this = {port_count,
-             lane_size,
-             reinterpret_cast<cpp::Atomic<uint32_t> *>(lock),
-             reinterpret_cast<cpp::Atomic<uint32_t> *>(inbox),
-             reinterpret_cast<cpp::Atomic<uint32_t> *>(outbox),
-             reinterpret_cast<Packet *>(packet)};
+  LIBC_INLINE void reset(uint64_t port_count, uint32_t lane_size, void *inbox,
+                         void *outbox, void *packet) {
+    this->port_count = port_count;
+    this->lane_size = lane_size;
+    this->inbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(inbox);
+    this->outbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(outbox);
+    this->packet = reinterpret_cast<Packet *>(packet);
   }
 
   /// The length of the packet is flexible because the server needs to look up

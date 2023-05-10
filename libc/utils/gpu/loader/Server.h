@@ -19,9 +19,6 @@
 
 static __llvm_libc::rpc::Server server;
 
-static __llvm_libc::cpp::Atomic<uint32_t>
-    lock[__llvm_libc::rpc::default_port_count] = {0};
-
 /// Queries the RPC client at least once and performs server-side work if there
 /// are any active requests.
 void handle_server() {
