@@ -42,7 +42,7 @@
 ;;
 ;; The IR was then reduced using llvm-reduce with the expected FileCheck input.
 
-; RUN: opt -passes=memprof-context-disambiguation \
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	%s -S 2>&1 | FileCheck %s --check-prefix=DUMP
 

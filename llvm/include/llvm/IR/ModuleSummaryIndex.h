@@ -1305,6 +1305,9 @@ private:
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
+  /// Indicates that we linked with allocator supporting hot/cold new operators.
+  bool WithSupportsHotColdNew = false;
+
   /// Indicates that distributed backend should skip compilation of the
   /// module. Flag is suppose to be set by distributed ThinLTO indexing
   /// when it detected that the module is not needed during the final
@@ -1512,6 +1515,9 @@ public:
 
   bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
   void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
+
+  bool withSupportsHotColdNew() const { return WithSupportsHotColdNew; }
+  void setWithSupportsHotColdNew() { WithSupportsHotColdNew = true; }
 
   bool skipModuleByDistributedBackend() const {
     return SkipModuleByDistributedBackend;

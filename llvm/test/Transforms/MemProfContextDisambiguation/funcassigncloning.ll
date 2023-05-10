@@ -48,7 +48,7 @@
 ;; -stats requires asserts
 ; REQUIRES: asserts
 
-; RUN: opt -passes=memprof-context-disambiguation \
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
 ; RUN:  %s -S 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=IR \
