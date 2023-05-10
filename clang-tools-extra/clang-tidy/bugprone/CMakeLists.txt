@@ -88,6 +88,7 @@ add_clang_library(clangTidyBugproneModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyBugproneModule
