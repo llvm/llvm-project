@@ -2066,13 +2066,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     if (!symbol.test(Symbol::Flag::ParentComp) &&
         unavailable.find(symbol.name()) == unavailable.cend()) {
       if (IsAllocatable(symbol)) {
-        // Set all remaining allocatables to explicit NULL()
+        // Set all remaining allocatables to explicit NULL().
         result.Add(symbol, Expr<SomeType>{NullPointer{}});
-      } else if (const auto *details{
-                     symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-        if (details->init()) {
-          result.Add(symbol, common::Clone(*details->init()));
-        } else { // C799
+      } else {
+        const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+        if (object && object->init()) {
+          result.Add(symbol, common::Clone(*object->init()));
+        } else if (IsPointer(symbol)) {
+          result.Add(symbol, Expr<SomeType>{NullPointer{}});
+        } else if (object) { // C799
           AttachDeclaration(Say(typeName,
                                 "Structure constructor lacks a value for "
                                 "component '%s'"_err_en_US,
