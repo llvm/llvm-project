@@ -588,12 +588,9 @@ LogicalResult acc::EnterDataOp::verify() {
   // 2.6.6. Data Enter Directive restriction
   // At least one copyin, create, or attach clause must appear on an enter data
   // directive.
-  if (getCopyinOperands().empty() && getCreateOperands().empty() &&
-      getCreateZeroOperands().empty() && getAttachOperands().empty() &&
-      getDataClauseOperands().empty())
-    return emitError(
-        "at least one operand in copyin, create, "
-        "create_zero or attach must appear on the enter data operation");
+  if (getDataClauseOperands().empty())
+    return emitError("at least one operand must be present in dataOperands on "
+                     "the enter data operation");
 
   // The async attribute represent the async clause without value. Therefore the
   // attribute and operand cannot appear at the same time.
@@ -617,9 +614,7 @@ LogicalResult acc::EnterDataOp::verify() {
 }
 
 unsigned EnterDataOp::getNumDataOperands() {
-  return getCopyinOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getAttachOperands().size() +
-         getDataClauseOperands().size();
+  return getDataClauseOperands().size();
 }
 
 Value EnterDataOp::getDataOperand(unsigned i) {
