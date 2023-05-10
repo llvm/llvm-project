@@ -7441,7 +7441,8 @@ Example:
 
 Embedding tuple of strings example:
 
-.. code-block:: test
+.. code-block:: text
+
   %a.ptr = getelementptr ptr, ptr %base, i64 0. !annotation !0
   !0 = !{!1}
   !1 = !{!"gep offset", !"0"}

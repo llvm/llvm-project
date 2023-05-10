@@ -302,13 +302,7 @@ static LogicalResult checkDataOperands(Op op,
 }
 
 unsigned ParallelOp::getNumDataOperands() {
-  return getReductionOperands().size() + getCopyOperands().size() +
-         getCopyinOperands().size() + getCopyinReadonlyOperands().size() +
-         getCopyoutOperands().size() + getCopyoutZeroOperands().size() +
-         getCreateOperands().size() + getCreateZeroOperands().size() +
-         getNoCreateOperands().size() + getPresentOperands().size() +
-         getDevicePtrOperands().size() + getAttachOperands().size() +
-         getGangPrivateOperands().size() +
+  return getReductionOperands().size() + getGangPrivateOperands().size() +
          getGangFirstPrivateOperands().size() + getDataClauseOperands().size();
 }
 
@@ -520,14 +514,7 @@ LogicalResult acc::DataOp::verify() {
   return success();
 }
 
-unsigned DataOp::getNumDataOperands() {
-  return getCopyOperands().size() + getCopyinOperands().size() +
-         getCopyinReadonlyOperands().size() + getCopyoutOperands().size() +
-         getCopyoutZeroOperands().size() + getCreateOperands().size() +
-         getCreateZeroOperands().size() + getNoCreateOperands().size() +
-         getPresentOperands().size() + getDeviceptrOperands().size() +
-         getAttachOperands().size() + getDataClauseOperands().size();
-}
+unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;

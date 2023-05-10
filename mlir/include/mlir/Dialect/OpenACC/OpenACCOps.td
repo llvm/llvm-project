@@ -420,17 +420,6 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        UnitAttr:$selfAttr,
                        OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
-                       Variadic<AnyType>:$copyOperands,
-                       Variadic<AnyType>:$copyinOperands,
-                       Variadic<AnyType>:$copyinReadonlyOperands,
-                       Variadic<AnyType>:$copyoutOperands,
-                       Variadic<AnyType>:$copyoutZeroOperands,
-                       Variadic<AnyType>:$createOperands,
-                       Variadic<AnyType>:$createZeroOperands,
-                       Variadic<AnyType>:$noCreateOperands,
-                       Variadic<AnyType>:$presentOperands,
-                       Variadic<AnyType>:$devicePtrOperands,
-                       Variadic<AnyType>:$attachOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
@@ -449,26 +438,12 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
   let assemblyFormat = [{
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `attach` `(` $attachOperands `:` type($attachOperands) `)`
       | `async` `(` $async `:` type($async) `)`
-      | `copy` `(` $copyOperands `:` type($copyOperands) `)`
-      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
-      | `copyin_readonly` `(` $copyinReadonlyOperands `:`
-          type($copyinReadonlyOperands) `)`
-      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
-      | `copyout_zero` `(` $copyoutZeroOperands `:`
-          type($copyoutZeroOperands) `)`
-      | `create` `(` $createOperands `:` type($createOperands) `)`
-      | `create_zero` `(` $createZeroOperands `:`
-          type($createZeroOperands) `)`
-      | `deviceptr` `(` $devicePtrOperands `:` type($devicePtrOperands) `)`
       | `firstprivate` `(` $gangFirstPrivateOperands `:`
             type($gangFirstPrivateOperands) `)`
-      | `no_create` `(` $noCreateOperands `:` type($noCreateOperands) `)`
       | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
       | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
       | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
-      | `present` `(` $presentOperands `:` type($presentOperands) `)`
       | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
       | `self` `(` $selfCond `)`
@@ -681,17 +656,6 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
 
   let arguments = (ins Optional<I1>:$ifCond,
-                       Variadic<AnyType>:$copyOperands,
-                       Variadic<AnyType>:$copyinOperands,
-                       Variadic<AnyType>:$copyinReadonlyOperands,
-                       Variadic<AnyType>:$copyoutOperands,
-                       Variadic<AnyType>:$copyoutZeroOperands,
-                       Variadic<AnyType>:$createOperands,
-                       Variadic<AnyType>:$createZeroOperands,
-                       Variadic<AnyType>:$noCreateOperands,
-                       Variadic<AnyType>:$presentOperands,
-                       Variadic<AnyType>:$deviceptrOperands,
-                       Variadic<AnyType>:$attachOperands,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
@@ -709,20 +673,6 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     oilist(
         `if` `(` $ifCond `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `copy` `(` $copyOperands `:` type($copyOperands) `)`
-      | `copyin` `(` $copyinOperands `:` type($copyinOperands) `)`
-      | `copyin_readonly` `(` $copyinReadonlyOperands `:`
-            type($copyinReadonlyOperands) `)`
-      | `copyout` `(` $copyoutOperands `:` type($copyoutOperands) `)`
-      | `copyout_zero` `(` $copyoutZeroOperands `:`
-            type($copyoutZeroOperands) `)`
-      | `create` `(` $createOperands `:` type($createOperands) `)`
-      | `create_zero` `(` $createZeroOperands `:`
-            type($createZeroOperands) `)`
-      | `no_create` `(` $noCreateOperands `:` type($noCreateOperands) `)`
-      | `present` `(` $presentOperands `:` type($presentOperands) `)`
-      | `deviceptr` `(` $deviceptrOperands `:` type($deviceptrOperands) `)`
-      | `attach` `(` $attachOperands `:` type($attachOperands) `)`
     )
     $region attr-dict-with-keyword
   }];

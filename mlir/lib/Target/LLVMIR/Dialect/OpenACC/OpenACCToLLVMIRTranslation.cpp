@@ -38,7 +38,6 @@ using OpenACCIRBuilder = llvm::OpenMPIRBuilder;
 static constexpr uint64_t kCreateFlag = 0x000;
 static constexpr uint64_t kDeviceCopyinFlag = 0x001;
 static constexpr uint64_t kHostCopyoutFlag = 0x002;
-static constexpr uint64_t kCopyFlag = kDeviceCopyinFlag | kHostCopyoutFlag;
 static constexpr uint64_t kPresentFlag = 0x1000;
 static constexpr uint64_t kDeleteFlag = 0x008;
 // Runtime extension to implement the OpenACC second reference counter.
@@ -306,57 +305,66 @@ static LogicalResult convertDataOp(acc::DataOp &op,
 
   // TODO handle no_create, deviceptr and attach operands.
 
-  if (failed(processOperands(
-          builder, moduleTranslation, op, op.getCopyOperands(), totalNbOperand,
-          kCopyFlag | kHoldFlag, flags, names, index, mapperAllocas)))
+  llvm::SmallVector<mlir::Value> copyin, copyout, create, present,
+      deleteOperands;
+  for (mlir::Value dataOp : op.getDataClauseOperands()) {
+    if (auto devicePtrOp = mlir::dyn_cast_or_null<acc::GetDevicePtrOp>(
+            dataOp.getDefiningOp())) {
+      for (auto &u : devicePtrOp.getAccPtr().getUses()) {
+        if (mlir::dyn_cast_or_null<acc::DeleteOp>(u.getOwner())) {
+          deleteOperands.push_back(devicePtrOp.getVarPtr());
+        } else if (mlir::dyn_cast_or_null<acc::CopyoutOp>(u.getOwner())) {
+          // TODO copyout zero currenlty handled as copyout. Update when
+          // extension available.
+          copyout.push_back(devicePtrOp.getVarPtr());
+        }
+      }
+    } else if (auto copyinOp = mlir::dyn_cast_or_null<acc::CopyinOp>(
+                   dataOp.getDefiningOp())) {
+      // TODO copyin readonly currenlty handled as copyin. Update when extension
+      // available.
+      copyin.push_back(copyinOp.getVarPtr());
+    } else if (auto createOp = mlir::dyn_cast_or_null<acc::CreateOp>(
+                   dataOp.getDefiningOp())) {
+      // TODO create zero currenlty handled as create. Update when extension
+      // available.
+      create.push_back(createOp.getVarPtr());
+    } else if (auto presentOp = mlir::dyn_cast_or_null<acc::PresentOp>(
+                   dataOp.getDefiningOp())) {
+      present.push_back(createOp.getVarPtr());
+    }
+  }
+
+  auto nbTotalOperands = copyin.size() + copyout.size() + create.size() +
+                         present.size() + deleteOperands.size();
+
+  // Copyin operands are handled as `to` call.
+  if (failed(processOperands(builder, moduleTranslation, op, copyin,
+                             nbTotalOperands, kDeviceCopyinFlag | kHoldFlag,
+                             flags, names, index, mapperAllocas)))
     return failure();
 
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyinOperands(), totalNbOperand,
-                             kDeviceCopyinFlag | kHoldFlag, flags, names, index,
+  // Delete operands are handled as `delete` call.
+  if (failed(processOperands(builder, moduleTranslation, op, deleteOperands,
+                             nbTotalOperands, kDeleteFlag, flags, names, index,
                              mapperAllocas)))
     return failure();
 
-  // TODO copyin readonly currenlty handled as copyin. Update when extension
-  // available.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyinReadonlyOperands(), totalNbOperand,
-                             kDeviceCopyinFlag | kHoldFlag, flags, names, index,
-                             mapperAllocas)))
+  // Copyout operands are handled as `from` call.
+  if (failed(processOperands(builder, moduleTranslation, op, copyout,
+                             nbTotalOperands, kHostCopyoutFlag | kHoldFlag,
+                             flags, names, index, mapperAllocas)))
     return failure();
 
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyoutOperands(), totalNbOperand,
-                             kHostCopyoutFlag | kHoldFlag, flags, names, index,
-                             mapperAllocas)))
+  // Create operands are handled as `alloc` call.
+  if (failed(processOperands(builder, moduleTranslation, op, create,
+                             nbTotalOperands, kCreateFlag | kHoldFlag, flags,
+                             names, index, mapperAllocas)))
     return failure();
 
-  // TODO copyout zero currenlty handled as copyout. Update when extension
-  // available.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCopyoutZeroOperands(), totalNbOperand,
-                             kHostCopyoutFlag | kHoldFlag, flags, names, index,
-                             mapperAllocas)))
-    return failure();
-
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCreateOperands(), totalNbOperand,
-                             kCreateFlag | kHoldFlag, flags, names, index,
-                             mapperAllocas)))
-    return failure();
-
-  // TODO create zero currenlty handled as create. Update when extension
-  // available.
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getCreateZeroOperands(), totalNbOperand,
-                             kCreateFlag | kHoldFlag, flags, names, index,
-                             mapperAllocas)))
-    return failure();
-
-  if (failed(processOperands(builder, moduleTranslation, op,
-                             op.getPresentOperands(), totalNbOperand,
-                             kPresentFlag | kHoldFlag, flags, names, index,
-                             mapperAllocas)))
+  if (failed(processOperands(builder, moduleTranslation, op, present,
+                             nbTotalOperands, kPresentFlag | kHoldFlag, flags,
+                             names, index, mapperAllocas)))
     return failure();
 
   llvm::GlobalVariable *maptypes =

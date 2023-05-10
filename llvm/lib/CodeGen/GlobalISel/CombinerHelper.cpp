@@ -1648,8 +1648,8 @@ bool CombinerHelper::matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) {
     return false;
 
   auto *SrcDef = MRI.getVRegDef(SrcReg);
-  assert(SrcDef->getOpcode() == TargetOpcode::G_ADD ||
-         SrcDef->getOpcode() == TargetOpcode::G_OR && "Unexpected op");
+  assert((SrcDef->getOpcode() == TargetOpcode::G_ADD ||
+          SrcDef->getOpcode() == TargetOpcode::G_OR) && "Unexpected op");
   LLT SrcTy = MRI.getType(SrcReg);
   MatchInfo = [=](MachineIRBuilder &B) {
     auto S1 = B.buildShl(SrcTy, X, ShiftReg);

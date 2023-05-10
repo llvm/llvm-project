@@ -21,8 +21,6 @@ namespace dwarf {
 }
 }
 
-typedef uint32_t dw_uleb128_t;
-typedef int32_t dw_sleb128_t;
 typedef uint16_t dw_attr_t;
 typedef uint16_t dw_form_t;
 typedef llvm::dwarf::Tag dw_tag_t;

@@ -1,4 +1,4 @@
-//===---- KCFI.cpp - Implements KCFI --------------------------------------===//
+//===---- KCFI.cpp - Implements Kernel Control-Flow Integrity (KCFI) ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass implements KCFI indirect call check lowering.
+// This pass implements Kernel Control-Flow Integrity (KCFI) indirect call
+// check lowering. For each call instruction with a cfi-type attribute, it
+// emits an arch-specific check before the call, and bundles the check and
+// the call to prevent unintentional modifications.
 //
 //===----------------------------------------------------------------------===//
 

@@ -1157,6 +1157,10 @@ The default is the current directory.}]>;
 def dsym_dir : JoinedOrSeparate<["-"], "dsym-dir">,
   Flags<[NoXarchOption, RenderAsInput]>,
   HelpText<"Directory to output dSYM's (if any) to">, MetaVarName<"<dir>">;
+// GCC style -dumpdir. We intentionally don't implement the less useful -dumpbase{,-ext}.
+def dumpdir : Separate<["-"], "dumpdir">, Flags<[CC1Option]>,
+  MetaVarName<"<dumppfx>">,
+  HelpText<"Use <dumpfpx> as a prefix to form auxiliary and dump file names">;
 def dumpmachine : Flag<["-"], "dumpmachine">;
 def dumpspecs : Flag<["-"], "dumpspecs">, Flags<[Unsupported]>;
 def dumpversion : Flag<["-"], "dumpversion">;

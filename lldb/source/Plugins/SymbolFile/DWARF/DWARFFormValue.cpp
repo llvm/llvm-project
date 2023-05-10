@@ -216,22 +216,22 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
   // in the .debug_info
   case DW_FORM_exprloc:
   case DW_FORM_block: {
-    dw_uleb128_t size = debug_info_data.GetULEB128(offset_ptr);
+    uint64_t size = debug_info_data.GetULEB128(offset_ptr);
     *offset_ptr += size;
   }
     return true;
   case DW_FORM_block1: {
-    dw_uleb128_t size = debug_info_data.GetU8(offset_ptr);
+    uint8_t size = debug_info_data.GetU8(offset_ptr);
     *offset_ptr += size;
   }
     return true;
   case DW_FORM_block2: {
-    dw_uleb128_t size = debug_info_data.GetU16(offset_ptr);
+    uint16_t size = debug_info_data.GetU16(offset_ptr);
     *offset_ptr += size;
   }
     return true;
   case DW_FORM_block4: {
-    dw_uleb128_t size = debug_info_data.GetU32(offset_ptr);
+    uint32_t size = debug_info_data.GetU32(offset_ptr);
     *offset_ptr += size;
   }
     return true;

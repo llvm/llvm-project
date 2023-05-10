@@ -887,6 +887,8 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? $body attr-dict
                           `:` functional-type(operands, results) }];
+
+  let hasFolder = 1;
   let hasRegionVerifier = 1;
 }
 
@@ -913,6 +915,8 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
                           (`uniform` $uniform^)? attr-dict
                           `:` functional-type(operands, results) }];
+
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 

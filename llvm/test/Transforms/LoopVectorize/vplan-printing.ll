@@ -580,6 +580,56 @@ exit:
   ret i32 %lcssa
 }
 
+define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) {
+; CHECK-LABEL: Checking a loop in 'print_fast_math_flags'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   CLONE ir<%gep.y> = getelementptr ir<%y>, vp<[[STEPS]]>
+; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.y>
+; CHECK-NEXT:   WIDEN ir<%add> = fadd ir<%lv>, ir<1.000000e+00>
+; CHECK-NEXT:   WIDEN ir<%mul> = fmul ir<%add>, ir<2.000000e+00>
+; CHECK-NEXT:   WIDEN ir<%div> = fdiv ir<%mul>, ir<2.000000e+00>
+; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr ir<%x>, vp<[[STEPS]]>
+; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%div>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %gep.y, align 4
+  %add = fadd nnan float %lv, 1.0
+  %mul = fmul fast float %add, 2.0
+  %div = fdiv nsz reassoc contract float %mul, 2.0
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %div, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 
