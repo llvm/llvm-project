@@ -192,6 +192,12 @@ public:
   uptr getMaxSize() const { return atomic_load_relaxed(&MaxSize); }
   uptr getCacheSize() const { return atomic_load_relaxed(&MaxCacheSize); }
 
+  // This is supposed to be used in test only.
+  bool isEmpty() {
+    ScopedLock L(CacheMutex);
+    return Cache.getSize() == 0U;
+  }
+
   void put(CacheT *C, Callback Cb, Node *Ptr, uptr Size) {
     C->enqueue(Cb, Ptr, Size);
     if (C->getSize() > getCacheSize())
