@@ -86,11 +86,18 @@ static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
 
   moveGlobalLifetimesIntoGlobalExpressions(M);
 
-  for (Function &F : M) {
-    for (BasicBlock &BB : F)
-      for (Instruction &I : make_early_inc_range(BB))
-        if (isa<DbgDefKillIntrinsic>(&I))
-          I.eraseFromParent();
+  Intrinsic::ID DbgDefKillIntrinsics[] = {Intrinsic::dbg_def,
+                                          Intrinsic::dbg_kill};
+  for (Intrinsic::ID DbgDefKill : DbgDefKillIntrinsics) {
+    Function *Intrinsic = M.getFunction(Intrinsic::getName(DbgDefKill));
+    if (!Intrinsic)
+      continue;
+
+    while (!Intrinsic->user_empty()) {
+      auto *I = cast<DbgDefKillIntrinsic>(Intrinsic->user_back());
+      I->eraseFromParent();
+    }
+    Intrinsic->eraseFromParent();
   }
   for (auto &GV : M.globals())
     GV.eraseMetadata(M.getContext().getMDKindID("dbg.def"));
