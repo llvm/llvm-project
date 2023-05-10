@@ -884,6 +884,11 @@ template <class NodeT, class IteratorT>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::addStackNodesForMIB(
     ContextNode *AllocNode, CallStack<NodeT, IteratorT> &StackContext,
     CallStack<NodeT, IteratorT> &CallsiteContext, AllocationType AllocType) {
+  // Treating the hot alloc type as NotCold before the disambiguation for "hot"
+  // is done.
+  if (AllocType == AllocationType::Hot)
+    AllocType = AllocationType::NotCold;
+
   ContextIdToAllocationType[++LastContextId] = AllocType;
 
   // Update alloc type and context ids for this MIB.
@@ -2055,6 +2060,14 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones() {
     identifyClones(Entry.second, Visited);
 }
 
+// helper function to check an AllocType is cold or notcold or both.
+bool checkColdOrNotCold(uint8_t AllocType) {
+  return (AllocType == (uint8_t)AllocationType::Cold) ||
+         (AllocType == (uint8_t)AllocationType::NotCold) ||
+         (AllocType ==
+          ((uint8_t)AllocationType::Cold | (uint8_t)AllocationType::NotCold));
+}
+
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     ContextNode *Node, DenseSet<const ContextNode *> &Visited) {
@@ -2118,13 +2131,12 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
   const unsigned AllocTypeCloningPriority[] = {/*None*/ 3, /*NotCold*/ 4,
                                                /*Cold*/ 1,
                                                /*NotColdCold*/ 2};
-  assert(std::size(AllocTypeCloningPriority) ==
-         (std::size_t)AllocationType::All + 1);
   std::stable_sort(Node->CallerEdges.begin(), Node->CallerEdges.end(),
                    [&](const std::shared_ptr<ContextEdge> &A,
                        const std::shared_ptr<ContextEdge> &B) {
-                     assert(A->AllocTypes != (uint8_t)AllocationType::None &&
-                            B->AllocTypes != (uint8_t)AllocationType::None);
+                     assert(checkColdOrNotCold(A->AllocTypes) &&
+                            checkColdOrNotCold(B->AllocTypes));
+
                      if (A->AllocTypes == B->AllocTypes)
                        // Use the first context id for each edge as a
                        // tie-breaker.

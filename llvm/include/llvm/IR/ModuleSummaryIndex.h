@@ -337,7 +337,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
 }
 
 // Allocation type assigned to an allocation reached by a given context.
-// More can be added but initially this is just noncold and cold.
+// More can be added, now this is cold, notcold and hot.
 // Values should be powers of two so that they can be ORed, in particular to
 // track allocations that have different behavior with different calling
 // contexts.
@@ -345,7 +345,8 @@ enum class AllocationType : uint8_t {
   None = 0,
   NotCold = 1,
   Cold = 2,
-  All = 3 // This should always be set to the OR of all values.
+  Hot = 4,
+  All = 7 // This should always be set to the OR of all values.
 };
 
 /// Summary of a single MIB in a memprof metadata on allocations.
