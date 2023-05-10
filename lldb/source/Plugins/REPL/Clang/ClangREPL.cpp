@@ -15,8 +15,10 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ClangREPL)
 
+char ClangREPL::ID;
+
 ClangREPL::ClangREPL(lldb::LanguageType language, Target &target)
-    : REPL(eKindClang, target), m_language(language),
+    : llvm::RTTIExtends<ClangREPL, REPL>(target), m_language(language),
       m_implicit_expr_result_regex("\\$[0-9]+") {}
 
 ClangREPL::~ClangREPL() = default;
