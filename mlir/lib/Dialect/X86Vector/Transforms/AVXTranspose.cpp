@@ -231,7 +231,6 @@ public:
 
     // Retrieve the sizes of the two dimensions greater than one to be
     // transposed.
-    auto srcShape = srcType.getShape();
     int64_t m = srcType.getDimSize(std::get<0>(srcGtOneDims.value()));
     int64_t n = srcType.getDimSize(std::get<1>(srcGtOneDims.value()));
 
