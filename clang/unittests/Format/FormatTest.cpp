@@ -6367,6 +6367,51 @@ TEST_F(FormatTest, FormatAlignInsidePreprocessorElseBlock) {
                "#endif\n"
                "}",
                Style);
+
+  verifyFormat("#if FOO\n"
+               "int a = 1;\n"
+               "#else\n"
+               "int ab = 2;\n"
+               "#endif\n"
+               "#ifdef BAR\n"
+               "int abc = 3;\n"
+               "#elifdef BAZ\n"
+               "int abcd = 4;\n"
+               "#endif",
+               Style);
+
+  verifyFormat("void f() {\n"
+               "  if (foo) {\n"
+               "#if FOO\n"
+               "    int a = 1;\n"
+               "#else\n"
+               "    bool a = true;\n"
+               "#endif\n"
+               "    int abc = 3;\n"
+               "#ifndef BAR\n"
+               "    int abcd = 4;\n"
+               "#elif BAZ\n"
+               "    bool abcd = true;\n"
+               "#endif\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("void f() {\n"
+               "#if FOO\n"
+               "  a = 1;\n"
+               "#else\n"
+               "  ab = 2;\n"
+               "#endif\n"
+               "}\n"
+               "void g() {\n"
+               "#if BAR\n"
+               "  abc = 3;\n"
+               "#elifndef BAZ\n"
+               "  abcd = 4;\n"
+               "#endif\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, FormatHashIfNotAtStartOfLine) {
