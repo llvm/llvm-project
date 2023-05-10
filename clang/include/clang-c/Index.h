@@ -3874,7 +3874,7 @@ CINDEX_LINKAGE unsigned clang_visitChildren(CXCursor parent,
 typedef enum CXChildVisitResult (^CXCursorVisitorBlock)(CXCursor cursor,
                                                         CXCursor parent);
 #else
-typedef _CXChildVisitResult *CXCursorVisitorBlock;
+typedef struct _CXChildVisitResult *CXCursorVisitorBlock;
 #endif
 
 /**
