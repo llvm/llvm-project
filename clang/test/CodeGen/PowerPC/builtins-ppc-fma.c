@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple powerpc64le-gnu-linux \
-// RUN: -target-feature +altivec -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck      \
+// RUN: -target-feature +vsx -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck      \
 // RUN: %s
 
 typedef __attribute__((vector_size(4 * sizeof(float)))) float vec_float;
