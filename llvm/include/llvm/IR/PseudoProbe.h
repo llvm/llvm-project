@@ -30,7 +30,8 @@ enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
 
 enum class PseudoProbeAttributes {
   Reserved = 0x1,
-  Sentinel = 0x2, // A place holder for split function entry address.
+  Sentinel = 0x2,         // A place holder for split function entry address.
+  HasDiscriminator = 0x4, // for probes with a discriminator
 };
 
 // The saturated distrution factor representing 100% for block probes.
@@ -89,6 +90,10 @@ struct PseudoProbe {
 
 static inline bool isSentinelProbe(uint32_t Flags) {
   return Flags & (uint32_t)PseudoProbeAttributes::Sentinel;
+}
+
+static inline bool hasDiscriminator(uint32_t Flags) {
+  return Flags & (uint32_t)PseudoProbeAttributes::HasDiscriminator;
 }
 
 std::optional<PseudoProbe> extractProbe(const Instruction &Inst);
