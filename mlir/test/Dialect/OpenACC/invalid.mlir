@@ -76,6 +76,14 @@ acc.data {
 
 // -----
 
+%value = memref.alloc() : memref<10xf32>
+// expected-error@+1 {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+acc.data dataOperands(%value : memref<10xf32>) {
+  acc.yield
+}
+
+// -----
+
 // expected-error@+1 {{at least one value must be present in hostOperands or deviceOperands}}
 acc.update
 
