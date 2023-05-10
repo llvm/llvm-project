@@ -1273,7 +1273,8 @@ def dpp_ctrl : NamedOperandU32<"DPPCtrl", NamedMatchClass<"DPPCtrl", 0>>;
 
 def row_mask : NamedOperandU32<"RowMask", NamedMatchClass<"RowMask">>;
 def bank_mask : NamedOperandU32<"BankMask", NamedMatchClass<"BankMask">>;
-def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl", "ConvertDppBoundCtrl">;
+def bound_ctrl : NamedIntOperand<i1, "bound_ctrl", "DppBoundCtrl",
+    "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
 def FI : NamedOperandU32<"FI", NamedMatchClass<"FI">>;
 
 def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;

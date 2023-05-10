@@ -1552,7 +1552,7 @@ public:
   OperandMatchResultTy
   parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
                      AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
-                     bool (*ConvertResult)(int64_t &) = nullptr);
+                     std::function<bool(int64_t &)> ConvertResult = nullptr);
 
   OperandMatchResultTy
   parseOperandArrayWithPrefix(const char *Prefix,
@@ -1785,6 +1785,7 @@ public:
 
   bool parseDimId(unsigned &Encoding);
   OperandMatchResultTy parseDim(OperandVector &Operands);
+  bool convertDppBoundCtrl(int64_t &BoundCtrl);
   OperandMatchResultTy parseDPP8(OperandVector &Operands);
   OperandMatchResultTy parseDPPCtrl(OperandVector &Operands);
   bool isSupportedDPPCtrl(StringRef Ctrl, const OperandVector &Operands);
@@ -5929,10 +5930,9 @@ AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, int64_t &IntVal) {
   return parseExpr(IntVal) ? MatchOperand_Success : MatchOperand_ParseFail;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
-                                    AMDGPUOperand::ImmTy ImmTy,
-                                    bool (*ConvertResult)(int64_t&)) {
+OperandMatchResultTy AMDGPUAsmParser::parseIntWithPrefix(
+    const char *Prefix, OperandVector &Operands, AMDGPUOperand::ImmTy ImmTy,
+    std::function<bool(int64_t &)> ConvertResult) {
   SMLoc S = getLoc();
   int64_t Value = 0;
 
@@ -8011,12 +8011,13 @@ static bool ConvertOmodDiv(int64_t &Div) {
   return false;
 }
 
-// Both bound_ctrl:0 and bound_ctrl:1 are encoded as 1.
+// For pre-gfx11 targets, both bound_ctrl:0 and bound_ctrl:1 are encoded as 1.
 // This is intentional and ensures compatibility with sp3.
 // See bug 35397 for details.
-static bool ConvertDppBoundCtrl(int64_t &BoundCtrl) {
+bool AMDGPUAsmParser::convertDppBoundCtrl(int64_t &BoundCtrl) {
   if (BoundCtrl == 0 || BoundCtrl == 1) {
-    BoundCtrl = 1;
+    if (!isGFX11Plus())
+      BoundCtrl = 1;
     return true;
   }
   return false;

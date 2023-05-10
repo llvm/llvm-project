@@ -70,6 +70,7 @@ def IRDL_Dialect : Dialect {
   }];
 
   let useDefaultTypePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
 
   let name = "irdl";
   let cppNamespace = "::mlir::irdl";

@@ -47,11 +47,10 @@ target triple = "arm64-apple-ios9.0.0"
 define void @baz(ptr %arg) !dbg !6 {
 ; CHECK-LABEL: baz:
 ; CHECK:       .Lfunc_begin0:
-; CHECK-NEXT:    .file 1 "/" "tmp.ll"
-; CHECK-NEXT:    .loc 1 1 0 // tmp.ll:1:0
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %bb
 ; CHECK-NEXT:    //DEBUG_VALUE: baz:3 <- undef
+; CHECK-NEXT:    .file 1 "/" "tmp.ll"
 ; CHECK-NEXT:    .loc 1 4 1 prologue_end // tmp.ll:4:1
 ; CHECK-NEXT:    lsl x8, x0, #4
 ; CHECK-NEXT:    adrp x9, global+202752

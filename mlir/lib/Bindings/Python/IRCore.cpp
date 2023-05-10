@@ -193,31 +193,6 @@ static MlirStringRef toMlirStringRef(const std::string &s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
-/// Create a block, using the current location context if no locations are
-/// specified.
-static MlirBlock createBlock(const py::sequence &pyArgTypes,
-                             const std::optional<py::sequence> &pyArgLocs) {
-  SmallVector<MlirType> argTypes;
-  argTypes.reserve(pyArgTypes.size());
-  for (const auto &pyType : pyArgTypes)
-    argTypes.push_back(pyType.cast<PyType &>());
-
-  SmallVector<MlirLocation> argLocs;
-  if (pyArgLocs) {
-    argLocs.reserve(pyArgLocs->size());
-    for (const auto &pyLoc : *pyArgLocs)
-      argLocs.push_back(pyLoc.cast<PyLocation &>());
-  } else if (!argTypes.empty()) {
-    argLocs.assign(argTypes.size(), DefaultingPyLocation::resolve());
-  }
-
-  if (argTypes.size() != argLocs.size())
-    throw py::value_error(("Expected " + Twine(argTypes.size()) +
-                           " locations, got: " + Twine(argLocs.size()))
-                              .str());
-  return mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
-}
-
 /// Wrapper for the global LLVM debugging flag.
 struct PyGlobalDebugFlag {
   static void set(py::object &o, bool enable) { mlirEnableGlobalDebug(enable); }
@@ -389,10 +364,21 @@ public:
     throw SetPyError(PyExc_IndexError, "attempt to access out of bounds block");
   }
 
-  PyBlock appendBlock(const py::args &pyArgTypes,
-                      const std::optional<py::sequence> &pyArgLocs) {
+  PyBlock appendBlock(const py::args &pyArgTypes) {
     operation->checkValid();
-    MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
+    llvm::SmallVector<MlirType, 4> argTypes;
+    llvm::SmallVector<MlirLocation, 4> argLocs;
+    argTypes.reserve(pyArgTypes.size());
+    argLocs.reserve(pyArgTypes.size());
+    for (auto &pyArg : pyArgTypes) {
+      argTypes.push_back(pyArg.cast<PyType &>());
+      // TODO: Pass in a proper location here.
+      argLocs.push_back(
+          mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
+    }
+
+    MlirBlock block =
+        mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
     mlirRegionAppendOwnedBlock(region, block);
     return PyBlock(operation, block);
   }
@@ -402,8 +388,7 @@ public:
         .def("__getitem__", &PyBlockList::dunderGetItem)
         .def("__iter__", &PyBlockList::dunderIter)
         .def("__len__", &PyBlockList::dunderLen)
-        .def("append", &PyBlockList::appendBlock, kAppendBlockDocstring,
-             py::arg("arg_locs") = std::nullopt);
+        .def("append", &PyBlockList::appendBlock, kAppendBlockDocstring);
   }
 
 private:
@@ -2981,17 +2966,27 @@ void mlir::python::populateIRCore(py::module &m) {
           "Returns a forward-optimized sequence of operations.")
       .def_static(
           "create_at_start",
-          [](PyRegion &parent, const py::list &pyArgTypes,
-             const std::optional<py::sequence> &pyArgLocs) {
+          [](PyRegion &parent, py::list pyArgTypes) {
             parent.checkValid();
-            MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
+            llvm::SmallVector<MlirType, 4> argTypes;
+            llvm::SmallVector<MlirLocation, 4> argLocs;
+            argTypes.reserve(pyArgTypes.size());
+            argLocs.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+              // TODO: Pass in a proper location here.
+              argLocs.push_back(
+                  mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data(),
+                                              argLocs.data());
             mlirRegionInsertOwnedBlock(parent, 0, block);
             return PyBlock(parent.getParentOperation(), block);
           },
           py::arg("parent"), py::arg("arg_types") = py::list(),
-          py::arg("arg_locs") = std::nullopt,
           "Creates and returns a new Block at the beginning of the given "
-          "region (with given argument types and locations).")
+          "region (with given argument types).")
       .def(
           "append_to",
           [](PyBlock &self, PyRegion &region) {
@@ -3003,30 +2998,50 @@ void mlir::python::populateIRCore(py::module &m) {
           "Append this block to a region, transferring ownership if necessary")
       .def(
           "create_before",
-          [](PyBlock &self, const py::args &pyArgTypes,
-             const std::optional<py::sequence> &pyArgLocs) {
+          [](PyBlock &self, py::args pyArgTypes) {
             self.checkValid();
-            MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
+            llvm::SmallVector<MlirType, 4> argTypes;
+            llvm::SmallVector<MlirLocation, 4> argLocs;
+            argTypes.reserve(pyArgTypes.size());
+            argLocs.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+              // TODO: Pass in a proper location here.
+              argLocs.push_back(
+                  mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
+            }
+
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data(),
+                                              argLocs.data());
             MlirRegion region = mlirBlockGetParentRegion(self.get());
             mlirRegionInsertOwnedBlockBefore(region, self.get(), block);
             return PyBlock(self.getParentOperation(), block);
           },
-          py::arg("arg_locs") = std::nullopt,
           "Creates and returns a new Block before this block "
-          "(with given argument types and locations).")
+          "(with given argument types).")
       .def(
           "create_after",
-          [](PyBlock &self, const py::args &pyArgTypes,
-             const std::optional<py::sequence> &pyArgLocs) {
+          [](PyBlock &self, py::args pyArgTypes) {
             self.checkValid();
-            MlirBlock block = createBlock(pyArgTypes, pyArgLocs);
+            llvm::SmallVector<MlirType, 4> argTypes;
+            llvm::SmallVector<MlirLocation, 4> argLocs;
+            argTypes.reserve(pyArgTypes.size());
+            argLocs.reserve(pyArgTypes.size());
+            for (auto &pyArg : pyArgTypes) {
+              argTypes.push_back(pyArg.cast<PyType &>());
+
+              // TODO: Pass in a proper location here.
+              argLocs.push_back(
+                  mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
+            }
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data(),
+                                              argLocs.data());
             MlirRegion region = mlirBlockGetParentRegion(self.get());
             mlirRegionInsertOwnedBlockAfter(region, self.get(), block);
             return PyBlock(self.getParentOperation(), block);
           },
-          py::arg("arg_locs") = std::nullopt,
           "Creates and returns a new Block after this block "
-          "(with given argument types and locations).")
+          "(with given argument types).")
       .def(
           "__iter__",
           [](PyBlock &self) {

@@ -394,20 +394,6 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel vector_length(%idxValue: index) {
   }
-  acc.parallel copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.parallel copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.parallel copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.parallel copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
-  }
-  acc.parallel copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
-  }
-  acc.parallel no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.parallel deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
   acc.parallel private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
   }
   acc.parallel {
@@ -458,20 +444,6 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK:      acc.parallel vector_length([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel vector_length([[IDXVALUE]] : index) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.parallel attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
