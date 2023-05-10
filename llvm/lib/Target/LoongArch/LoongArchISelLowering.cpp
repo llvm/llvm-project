@@ -2638,7 +2638,9 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(LoongArchISD::TAIL, DL, NodeTys, Ops);
+    DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
+    return Ret;
   }
 
   Chain = DAG.getNode(LoongArchISD::CALL, DL, NodeTys, Ops);
