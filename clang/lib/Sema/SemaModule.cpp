@@ -389,7 +389,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
 
-  getASTContext().setNamedModuleForCodeGen(Mod);
+  getASTContext().setCurrentNamedModule(Mod);
 
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
@@ -1020,17 +1020,4 @@ void Sema::PopImplicitGlobalModuleFragment() {
          getCurrentModule()->isImplicitGlobalModule() &&
          "left the wrong module scope, which is not global module fragment");
   ModuleScopes.pop_back();
-}
-
-bool Sema::isModuleUnitOfCurrentTU(const Module *M) const {
-  assert(M);
-
-  Module *CurrentModuleUnit = getCurrentModule();
-
-  // If we are not in a module currently, M must not be the module unit of
-  // current TU.
-  if (!CurrentModuleUnit)
-    return false;
-
-  return M->isSubModuleOf(CurrentModuleUnit->getTopLevelModule());
 }
