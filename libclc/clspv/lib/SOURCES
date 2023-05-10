@@ -1,5 +1,6 @@
 math/fma.cl
 math/nextafter.cl
+shared/vstore_half.cl
 subnormal_config.cl
 ../../generic/lib/geometric/distance.cl
 ../../generic/lib/geometric/length.cl
@@ -45,6 +46,12 @@ subnormal_config.cl
 ../../generic/lib/math/frexp.cl
 ../../generic/lib/math/half_cos.cl
 ../../generic/lib/math/half_divide.cl
+../../generic/lib/math/half_exp.cl
+../../generic/lib/math/half_exp10.cl
+../../generic/lib/math/half_exp2.cl
+../../generic/lib/math/half_log.cl
+../../generic/lib/math/half_log10.cl
+../../generic/lib/math/half_log2.cl
 ../../generic/lib/math/half_powr.cl
 ../../generic/lib/math/half_recip.cl
 ../../generic/lib/math/half_sin.cl
