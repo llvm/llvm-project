@@ -45,6 +45,11 @@
 // NOERROR-NOT: error:
 // ERROR: error: encountered non-reproducible token, caching will be skipped
 
+// Verify we don't double output without caching enabled.
+// RUN: env CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS=1 %clang -E %s | FileCheck %s -check-prefix=NO_CACHE
+// NO_CACHE: getit
+// NO_CACHE-NOT: getit
+
 void getit(const char **p1, const char **p2, const char **p3) {
   *p1 = __DATE__;
   *p2 = __TIMESTAMP__;

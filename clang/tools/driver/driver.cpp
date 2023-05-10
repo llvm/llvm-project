@@ -377,8 +377,13 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1") {
-    if (std::getenv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS")) {
-      // Perform the compile twice in order to catch differences in the output.
+    if (std::getenv("CLANG_CACHE_TEST_DETERMINISTIC_OUTPUTS") &&
+        find(ArgV, StringRef("-fcache-compile-job")) != ArgV.end()) {
+      // With caching enabled, perform the compile twice in order to catch
+      // differences in the output.
+      // FIXME: while it is unlikely caching will be enabled when the output
+      // is to stdout (e.g. `-E`, or `-S -o -`), we should avoid writing
+      // output twice.
       int RC = cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
       if (RC != 0)
         return RC;
