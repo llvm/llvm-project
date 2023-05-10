@@ -494,6 +494,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               }
               os << ")";
             }
+            if (x.isDefaultPrivate()) {
+              os << " isDefaultPrivate";
+            }
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());
