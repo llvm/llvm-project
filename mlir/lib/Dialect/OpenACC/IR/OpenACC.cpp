@@ -285,6 +285,21 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
+/// Check dataOperands for acc.parallel, acc.serial and acc.kernels.
+template <typename Op>
+static LogicalResult checkDataOperands(Op op,
+                                       const mlir::ValueRange &operands) {
+  for (mlir::Value operand : operands)
+    if (!mlir::isa<acc::AttachOp, acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+                   acc::DeleteOp, acc::DetachOp, acc::DevicePtrOp,
+                   acc::GetDevicePtrOp, acc::NoCreateOp, acc::PresentOp>(
+            operand.getDefiningOp()))
+      return op.emitError(
+          "expect data entry/exit operation or acc.getdeviceptr "
+          "as defining op");
+  return success();
+}
+
 unsigned ParallelOp::getNumDataOperands() {
   return getReductionOperands().size() + getCopyOperands().size() +
          getCopyinOperands().size() + getCopyinReadonlyOperands().size() +
@@ -304,6 +319,10 @@ Value ParallelOp::getDataOperand(unsigned i) {
   numOptional += getIfCond() ? 1 : 0;
   numOptional += getSelfCond() ? 1 : 0;
   return getOperand(getWaitOperands().size() + numOptional + i);
+}
+
+LogicalResult acc::ParallelOp::verify() {
+  return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
 
 //===----------------------------------------------------------------------===//
@@ -328,6 +347,10 @@ Value SerialOp::getDataOperand(unsigned i) {
   return getOperand(getWaitOperands().size() + numOptional + i);
 }
 
+LogicalResult acc::SerialOp::verify() {
+  return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
+}
+
 //===----------------------------------------------------------------------===//
 // KernelsOp
 //===----------------------------------------------------------------------===//
@@ -346,6 +369,10 @@ Value KernelsOp::getDataOperand(unsigned i) {
   numOptional += getIfCond() ? 1 : 0;
   numOptional += getSelfCond() ? 1 : 0;
   return getOperand(getWaitOperands().size() + numOptional + i);
+}
+
+LogicalResult acc::KernelsOp::verify() {
+  return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
 }
 
 //===----------------------------------------------------------------------===//
