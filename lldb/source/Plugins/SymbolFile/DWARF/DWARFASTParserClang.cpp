@@ -274,6 +274,8 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    default:
+      break;
     case DW_AT_abstract_origin:
       abstract_origin = form_value;
       break;
