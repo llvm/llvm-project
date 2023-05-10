@@ -27,18 +27,12 @@ class ClangExpressionDeclMap;
 class RecordingMemoryManager;
 
 // ClangExpressionHelper
-class ClangExpressionHelper : public ExpressionTypeSystemHelper {
+class ClangExpressionHelper
+    : public llvm::RTTIExtends<ClangExpressionHelper,
+                               ExpressionTypeSystemHelper> {
 public:
-  static bool classof(const ExpressionTypeSystemHelper *ts) {
-    return ts->getKind() == eKindClangHelper;
-  }
-
-  ClangExpressionHelper()
-      : ExpressionTypeSystemHelper(
-            ExpressionTypeSystemHelper::LLVMCastKind::eKindClangHelper) {}
-
-  /// Destructor
-  virtual ~ClangExpressionHelper() = default;
+  // LLVM RTTI support
+  static char ID;
 
   /// Return the object that the parser should use when resolving external
   /// values.  May be NULL if everything should be self-contained.
@@ -54,8 +48,6 @@ public:
   ASTTransformer(clang::ASTConsumer *passthrough) = 0;
 
   virtual void CommitPersistentDecls() {}
-
-protected:
 };
 
 } // namespace lldb_private
