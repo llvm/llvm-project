@@ -119,7 +119,7 @@ namespace PackInTypeConstraint {
     []() -> C<T> auto{ return T(); }(); // expected-error {{expression contains unexpanded parameter pack 'T'}}
   }
   template<typename ...T> void g5() {
-    ([]() -> C<T> auto{ // expected-error-re {{deduced type {{.*}} does not satisfy}}
+    ([]() -> C<T> auto{ // expected-error-re {{deduced type {{.*}} does not satisfy}} expected-note {{while substituting into a lambda}}
      return T();
      }(), ...);
   }
