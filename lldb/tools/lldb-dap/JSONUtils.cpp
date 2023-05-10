@@ -950,8 +950,11 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
   }
 }
 
-static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
-  lldb::SBStructuredData statistics = target.GetStatistics();
+void addStatisticsSummary(lldb::SBTarget &target, llvm::json::Object &event) {
+  lldb::SBStatisticsOptions options;
+  options.SetSummaryOnly(true);
+  lldb::SBStructuredData statistics = target.GetStatistics(options);
+
   bool is_dictionary =
       statistics.GetType() == lldb::eStructuredDataTypeDictionary;
   if (!is_dictionary)
@@ -971,13 +974,13 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
 
 llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {
   llvm::json::Object event(CreateEventObject("terminated"));
-  addStatistic(target, event);
+  addStatisticsSummary(target, event);
   return event;
 }
 
 llvm::json::Object CreateInitializedEventObject(lldb::SBTarget &target) {
   llvm::json::Object event(CreateEventObject("initialized"));
-  addStatistic(target, event);
+  addStatisticsSummary(target, event);
   return event;
 }
 
