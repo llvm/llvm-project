@@ -87,6 +87,7 @@ tools = [
     ToolSubst('llvm-nm', unresolved='fatal'),
     ToolSubst('llvm-objdump', unresolved='fatal'),
     ToolSubst('llvm-objcopy', unresolved='fatal'),
+    ToolSubst('llvm-strings', unresolved='fatal'),
     ToolSubst('llvm-strip', unresolved='fatal'),
     ToolSubst('llvm-readelf', unresolved='fatal'),
     ToolSubst('link_fdata', command=sys.executable, unresolved='fatal', extra_args=[link_fdata_cmd]),
