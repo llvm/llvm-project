@@ -40,7 +40,7 @@ DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
   m_has_children = data.GetU8(offset_ptr);
 
   while (data.ValidOffset(*offset_ptr)) {
-    dw_attr_t attr = data.GetULEB128(offset_ptr);
+    auto attr = static_cast<dw_attr_t>(data.GetULEB128(offset_ptr));
     auto form = static_cast<dw_form_t>(data.GetULEB128(offset_ptr));
 
     // This is the last attribute for this abbrev decl, but there may still be
