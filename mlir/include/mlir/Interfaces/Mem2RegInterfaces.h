@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INTERFACES_MEMORYSLOTINTERFACES_H
-#define MLIR_INTERFACES_MEMORYSLOTINTERFACES_H
+#ifndef MLIR_INTERFACES_MEM2REGINTERFACES_H
+#define MLIR_INTERFACES_MEM2REGINTERFACES_H
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpDefinition.h"
@@ -34,6 +34,6 @@ enum class DeletionKind {
 
 } // namespace mlir
 
-#include "mlir/Interfaces/MemorySlotOpInterfaces.h.inc"
+#include "mlir/Interfaces/Mem2RegInterfaces.h.inc"
 
-#endif // MLIR_INTERFACES_MEMORYSLOTINTERFACES_H
+#endif // MLIR_INTERFACES_MEM2REGINTERFACES_H
