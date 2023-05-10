@@ -54,9 +54,12 @@ public:
   const Scope *ancestor() const; // for submodule; nullptr for module
   const Scope *parent() const; // for submodule; nullptr for module
   void set_scope(const Scope *);
+  bool isDefaultPrivate() const { return isDefaultPrivate_; }
+  void set_isDefaultPrivate(bool yes = true) { isDefaultPrivate_ = yes; }
 
 private:
   bool isSubmodule_;
+  bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
 };
 
