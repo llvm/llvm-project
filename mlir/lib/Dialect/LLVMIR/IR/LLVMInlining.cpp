@@ -364,9 +364,13 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     }
     // clang-format off
     if (isa<LLVM::AllocaOp,
+            LLVM::AtomicRMWOp,
+            LLVM::AtomicCmpXchgOp,
             LLVM::CallOp,
             LLVM::DbgDeclareOp,
             LLVM::DbgValueOp,
+            LLVM::FenceOp,
+            LLVM::InlineAsmOp,
             LLVM::LifetimeEndOp,
             LLVM::LifetimeStartOp,
             LLVM::LoadOp,
