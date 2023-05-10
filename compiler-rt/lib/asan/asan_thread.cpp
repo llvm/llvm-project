@@ -40,11 +40,7 @@ void AsanThreadContext::OnFinished() {
   thread = nullptr;
 }
 
-// MIPS requires aligned address
-static ALIGNED(alignof(
-    ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
 static ThreadRegistry *asan_thread_registry;
-
 static Mutex mu_for_thread_context;
 static LowLevelAllocator allocator_for_thread_context;
 
@@ -63,6 +59,11 @@ static void InitThreads() {
   // in TSD and can't reliably tell when no more TSD destructors will
   // be called. It would be wrong to reuse AsanThreadContext for another
   // thread before all TSD destructors will be called for it.
+
+  // MIPS requires aligned address
+  static ALIGNED(alignof(
+      ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+
   asan_thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(GetAsanThreadContext);
   initialized = true;
