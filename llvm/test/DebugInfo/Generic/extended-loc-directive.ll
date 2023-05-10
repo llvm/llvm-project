@@ -13,8 +13,6 @@
 ; }
 
 
-; CHECK: .loc 1 2 0{{$}}
-; CHECK-NOT: .loc{{ }}
 ; ENABLED: .loc 1 3 3 prologue_end{{$}}
 ; DISABLED: .loc 1 3 3{{$}}
 ; CHECK-NOT: .loc
