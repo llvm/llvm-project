@@ -384,7 +384,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return I;
 
     // Only known if known in both the LHS and RHS.
-    Known = KnownBits::commonBits(LHSKnown, RHSKnown);
+    Known = LHSKnown.intersectWith(RHSKnown);
     break;
   }
   case Instruction::Trunc: {
