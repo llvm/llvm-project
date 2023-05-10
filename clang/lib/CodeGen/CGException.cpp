@@ -646,7 +646,7 @@ void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       // Under async exceptions, catch(...) need to catch HW exception too
       // Mark scope with SehTryBegin as a SEH __try scope
       if (getLangOpts().EHAsynch)
-        EmitRuntimeCallOrInvoke(getSehTryBeginFn(CGM));
+        EmitSehTryScopeBegin();
     }
   }
 }
