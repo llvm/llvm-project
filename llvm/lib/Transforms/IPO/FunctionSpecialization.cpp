@@ -274,17 +274,17 @@ bool FunctionSpecializer::run() {
     if (!isCandidateFunction(&F))
       continue;
 
-    auto Cost = getSpecializationCost(&F);
-    if (!Cost.isValid()) {
+    Cost SpecCost = getSpecializationCost(&F);
+    if (!SpecCost.isValid()) {
       LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialization cost for "
                         << F.getName() << "\n");
       continue;
     }
 
     LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
-                      << F.getName() << " is " << Cost << "\n");
+                      << F.getName() << " is " << SpecCost << "\n");
 
-    if (!findSpecializations(&F, Cost, AllSpecs, SM)) {
+    if (!findSpecializations(&F, SpecCost, AllSpecs, SM)) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization: No possible specializations found for "
                  << F.getName() << "\n");
@@ -304,8 +304,8 @@ bool FunctionSpecializer::run() {
   // Choose the most profitable specialisations, which fit in the module
   // specialization budget, which is derived from maximum number of
   // specializations per specialization candidate function.
-  auto CompareGain = [&AllSpecs](unsigned I, unsigned J) {
-    return AllSpecs[I].Gain > AllSpecs[J].Gain;
+  auto CompareScore = [&AllSpecs](unsigned I, unsigned J) {
+    return AllSpecs[I].Score > AllSpecs[J].Score;
   };
   const unsigned NSpecs =
       std::min(NumCandidates * MaxClones, unsigned(AllSpecs.size()));
@@ -317,11 +317,11 @@ bool FunctionSpecializer::run() {
                       << "FnSpecialization: Specializing the "
                       << NSpecs
                       << " most profitable candidates.\n");
-    std::make_heap(BestSpecs.begin(), BestSpecs.begin() + NSpecs, CompareGain);
+    std::make_heap(BestSpecs.begin(), BestSpecs.begin() + NSpecs, CompareScore);
     for (unsigned I = NSpecs, N = AllSpecs.size(); I < N; ++I) {
       BestSpecs[NSpecs] = I;
-      std::push_heap(BestSpecs.begin(), BestSpecs.end(), CompareGain);
-      std::pop_heap(BestSpecs.begin(), BestSpecs.end(), CompareGain);
+      std::push_heap(BestSpecs.begin(), BestSpecs.end(), CompareScore);
+      std::pop_heap(BestSpecs.begin(), BestSpecs.end(), CompareScore);
     }
   }
 
@@ -329,7 +329,7 @@ bool FunctionSpecializer::run() {
              for (unsigned I = 0; I < NSpecs; ++I) {
                const Spec &S = AllSpecs[BestSpecs[I]];
                dbgs() << "FnSpecialization: Function " << S.F->getName()
-                      << " , gain " << S.Gain << "\n";
+                      << " , score " << S.Score << "\n";
                for (const ArgInfo &Arg : S.Sig.Args)
                  dbgs() << "FnSpecialization:   FormalArg = "
                         << Arg.Formal->getNameOrAsOperand()
@@ -434,7 +434,7 @@ static Function *cloneCandidateFunction(Function *F) {
   return Clone;
 }
 
-bool FunctionSpecializer::findSpecializations(Function *F, InstructionCost Cost,
+bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
   // A mapping from a specialisation signature to the index of the respective
@@ -501,17 +501,17 @@ bool FunctionSpecializer::findSpecializations(Function *F, InstructionCost Cost,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      InstructionCost Gain = 0 - Cost;
+      Cost Score = 0 - SpecCost;
       for (ArgInfo &A : S.Args)
-        Gain +=
+        Score +=
             getSpecializationBonus(A.Formal, A.Actual, Solver.getLoopInfo(*F));
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && Gain <= 0)
+      if (!ForceSpecialization && Score <= 0)
         continue;
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, Gain);
+      auto &Spec = AllSpecs.emplace_back(F, S, Score);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
@@ -555,7 +555,8 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   return true;
 }
 
-Function *FunctionSpecializer::createSpecialization(Function *F, const SpecSig &S) {
+Function *FunctionSpecializer::createSpecialization(Function *F,
+                                                    const SpecSig &S) {
   Function *Clone = cloneCandidateFunction(F);
 
   // The original function does not neccessarily have internal linkage, but the
@@ -578,7 +579,7 @@ Function *FunctionSpecializer::createSpecialization(Function *F, const SpecSig &
 }
 
 /// Compute and return the cost of specializing function \p F.
-InstructionCost FunctionSpecializer::getSpecializationCost(Function *F) {
+Cost FunctionSpecializer::getSpecializationCost(Function *F) {
   CodeMetrics &Metrics = analyzeFunction(F);
   // If the code metrics reveal that we shouldn't duplicate the function, we
   // shouldn't specialize it. Set the specialization cost to Invalid.
@@ -594,8 +595,8 @@ InstructionCost FunctionSpecializer::getSpecializationCost(Function *F) {
   return Metrics.NumInsts * InlineConstants::getInstrCost();
 }
 
-static InstructionCost getUserBonus(User *U, llvm::TargetTransformInfo &TTI,
-                                    const LoopInfo &LI) {
+static Cost getUserBonus(User *U, TargetTransformInfo &TTI,
+                         const LoopInfo &LI) {
   auto *I = dyn_cast_or_null<Instruction>(U);
   // If not an instruction we do not know how to evaluate.
   // Keep minimum possible cost for now so that it doesnt affect
@@ -603,32 +604,31 @@ static InstructionCost getUserBonus(User *U, llvm::TargetTransformInfo &TTI,
   if (!I)
     return std::numeric_limits<unsigned>::min();
 
-  InstructionCost Cost =
+  Cost Bonus =
       TTI.getInstructionCost(U, TargetTransformInfo::TCK_SizeAndLatency);
 
   // Increase the cost if it is inside the loop.
   unsigned LoopDepth = LI.getLoopDepth(I->getParent());
-  Cost *= std::pow((double)AvgLoopIters, LoopDepth);
+  Bonus *= std::pow((double)AvgLoopIters, LoopDepth);
 
   // Traverse recursively if there are more uses.
   // TODO: Any other instructions to be added here?
   if (I->mayReadFromMemory() || I->isCast())
     for (auto *User : I->users())
-      Cost += getUserBonus(User, TTI, LI);
+      Bonus += getUserBonus(User, TTI, LI);
 
-  return Cost;
+  return Bonus;
 }
 
 /// Compute a bonus for replacing argument \p A with constant \p C.
-InstructionCost
-FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
-                                            const LoopInfo &LI) {
+Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
+                                                 const LoopInfo &LI) {
   Function *F = A->getParent();
   auto &TTI = (GetTTI)(*F);
   LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                     << C->getNameOrAsOperand() << "\n");
 
-  InstructionCost TotalCost = 0;
+  Cost TotalCost = 0;
   for (auto *U : A->users()) {
     TotalCost += getUserBonus(U, TTI, LI);
     LLVM_DEBUG(dbgs() << "FnSpecialization:   User cost ";
@@ -766,7 +766,7 @@ void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
     // Find the best matching specialisation.
     const Spec *BestSpec = nullptr;
     for (const Spec &S : make_range(Begin, End)) {
-      if (!S.Clone || (BestSpec && S.Gain <= BestSpec->Gain))
+      if (!S.Clone || (BestSpec && S.Score <= BestSpec->Score))
         continue;
 
       if (any_of(S.Sig.Args, [CS, this](const ArgInfo &Arg) {
