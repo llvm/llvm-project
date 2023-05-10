@@ -21,6 +21,7 @@
 namespace llvm {
 
 class Instruction;
+class DILocation;
 
 constexpr const char *PseudoProbeDescMetadataName = "llvm.pseudo_probe_desc";
 
@@ -78,10 +79,22 @@ public:
   constexpr static uint8_t FullDistributionFactor = 100;
 };
 
+class PseudoProbeDescriptor {
+  uint64_t FunctionGUID;
+  uint64_t FunctionHash;
+
+public:
+  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash)
+      : FunctionGUID(GUID), FunctionHash(Hash) {}
+  uint64_t getFunctionGUID() const { return FunctionGUID; }
+  uint64_t getFunctionHash() const { return FunctionHash; }
+};
+
 struct PseudoProbe {
   uint32_t Id;
   uint32_t Type;
   uint32_t Attr;
+  uint32_t Discriminator;
   // Distribution factor that estimates the portion of the real execution count.
   // A saturated distribution factor stands for 1.0 or 100%. A pesudo probe has
   // a factor with the value ranged from 0.0 to 1.0.
