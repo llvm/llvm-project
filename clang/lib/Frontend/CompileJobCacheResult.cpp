@@ -86,9 +86,9 @@ StringRef CompileJobCacheResult::getOutputKindName(OutputKind Kind) {
   case OutputKind::MainOutput:
     return "main";
   case OutputKind::SerializedDiagnostics:
-    return "deps";
-  case OutputKind::Dependencies:
     return "diags";
+  case OutputKind::Dependencies:
+    return "deps";
   }
 }
 
