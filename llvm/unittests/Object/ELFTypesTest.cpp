@@ -19,9 +19,9 @@ template <class ELFT> struct NoteTestData {
 
   const Elf_Note_Impl<ELFT> getElfNote(StringRef Name, uint32_t Type,
                                        ArrayRef<uint8_t> Desc) {
-    Data.resize(sizeof(Elf_Nhdr_Impl<ELFT>) +
-                    alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Name.size()) +
-                    alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Desc.size()),
+    constexpr uint64_t Align = 4;
+    Data.resize(alignTo(sizeof(Elf_Nhdr_Impl<ELFT>) + Name.size(), Align) +
+                    alignTo(Desc.size(), Align),
                 0);
 
     Elf_Nhdr_Impl<ELFT> *Nhdr =
@@ -34,7 +34,7 @@ template <class ELFT> struct NoteTestData {
     std::copy(Name.begin(), Name.end(), NameOffset);
 
     auto DescOffset =
-        NameOffset + alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Nhdr->n_namesz);
+        Data.begin() + alignTo(sizeof(*Nhdr) + Nhdr->n_namesz, Align);
     std::copy(Desc.begin(), Desc.end(), DescOffset);
 
     return Elf_Note_Impl<ELFT>(*Nhdr);
@@ -50,8 +50,8 @@ TEST(ELFTypesTest, NoteTest) {
                                    RandomData);
   EXPECT_EQ(Note1.getName(), "AMD");
   EXPECT_EQ(Note1.getType(), ELF::NT_AMDGPU_METADATA);
-  EXPECT_EQ(Note1.getDesc(), RandomData);
-  EXPECT_EQ(Note1.getDescAsStringRef(),
+  EXPECT_EQ(Note1.getDesc(4), RandomData);
+  EXPECT_EQ(Note1.getDescAsStringRef(4),
             StringRef(reinterpret_cast<const char *>(Random), sizeof(Random)));
 
   auto Note2 = TestData.getElfNote("", ELF::NT_AMDGPU_METADATA, RandomData);
@@ -59,5 +59,5 @@ TEST(ELFTypesTest, NoteTest) {
 
   auto Note3 =
       TestData.getElfNote("AMD", ELF::NT_AMDGPU_METADATA, ArrayRef<uint8_t>());
-  EXPECT_EQ(Note3.getDescAsStringRef(), StringRef(""));
+  EXPECT_EQ(Note3.getDescAsStringRef(4), StringRef(""));
 }
