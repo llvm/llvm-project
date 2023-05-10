@@ -298,8 +298,26 @@ TypeSystemSwiftTypeRef::GetClangTypeNode(CompilerType clang_type,
   llvm::StringRef swift_name;
   llvm::StringRef module_name = swift::MANGLING_MODULE_OBJC;
   CompilerType pointee;
-  if (clang_type.IsPointerType(&pointee))
+  if (clang_type.IsPointerType(&pointee)) {
     clang_type = pointee;
+    if (clang_type.IsVoidType()) {
+      // Sugar (void *) as "UnsafeMutableRawPointer?".
+      NodePointer optional = dem.createNode(Node::Kind::SugaredOptional);
+      NodePointer type = dem.createNode(Node::Kind::Type);
+      NodePointer module = dem.createNodeWithAllocatedText(Node::Kind::Module,
+                                                           swift::STDLIB_NAME);
+      NodePointer identifier = dem.createNodeWithAllocatedText(
+          Node::Kind::Identifier, clang_type.IsConst()
+                                      ? "UnsafeRawPointer"
+                                      : "UnsafeMutableRawPointer");
+      NodePointer nominal = dem.createNode(kind);
+      nominal->addChild(module, dem);
+      nominal->addChild(identifier, dem);
+      type->addChild(nominal, dem);
+      optional->addChild(type, dem);
+      return optional;
+    }
+  }
   llvm::StringRef clang_name = clang_type.GetTypeName().GetStringRef();
 #define MAP_TYPE(C_TYPE_NAME, C_TYPE_KIND, C_TYPE_BITWIDTH, SWIFT_MODULE_NAME, \
                  SWIFT_TYPE_NAME, CAN_BE_MISSING, C_NAME_MAPPING)              \

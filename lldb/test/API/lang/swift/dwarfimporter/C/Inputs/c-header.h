@@ -12,3 +12,8 @@ union DoubleLongUnion {
   double double_val;
   long long_val;
 };
+
+struct WithPointer {
+  void *ptr;
+  const void *const_ptr;
+};
