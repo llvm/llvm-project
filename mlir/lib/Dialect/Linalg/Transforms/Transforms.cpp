@@ -96,14 +96,6 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   // Fail if `currOpOperand` is not defined by an ExtractSliceOp or EmptyOp.
   auto sliceOp = currOpOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
   auto emptyOp = currOpOperand->get().getDefiningOp<tensor::EmptyOp>();
-  if (!sliceOp && !emptyOp) {
-    // TODO: may want to add support for going through loop iter args.
-    // This is not strictly necessary as we can pad before hoisting but it would
-    // make the system more resilient to minor transformation reordering.
-    LLVM_DEBUG(DBGS() << "--not defined by an extractSlice or emptyOp\n");
-    return rewriter.notifyMatchFailure(
-        opToPad, "not defined by an extractSlice or emptyOp");
-  }
 
   llvm::SmallBitVector droppedDims;
   SmallVector<OpFoldResult> mixedSizes;
@@ -111,10 +103,19 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     // Compute the dropped dimensions if `sliceOp` is rank-reducing.
     droppedDims = sliceOp.getDroppedDims();
     mixedSizes = sliceOp.getMixedSizes();
-  }
-  if (emptyOp) {
+  } else if (emptyOp) {
     mixedSizes = emptyOp.getMixedSizes();
     droppedDims.resize(mixedSizes.size());
+  } else if (hasStaticShape) {
+    mixedSizes = getAsIndexOpFoldResult(rewriter.getContext(), shape);
+    droppedDims.resize(mixedSizes.size());
+  } else {
+    // TODO: may want to add support for going through loop iter args.
+    // This is not strictly necessary as we can pad before hoisting but it would
+    // make the system more resilient to minor transformation reordering.
+    LLVM_DEBUG(DBGS() << "--not defined by an extractSlice or emptyOp\n");
+    return rewriter.notifyMatchFailure(
+        opToPad, "not defined by an extractSlice or emptyOp");
   }
   LLVM_DEBUG(llvm::interleaveComma(mixedSizes, DBGS() << "--mixedSizes:  ");
              llvm::dbgs() << "\n");
