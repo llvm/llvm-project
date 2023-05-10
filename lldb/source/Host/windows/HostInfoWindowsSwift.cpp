@@ -46,11 +46,17 @@ HostInfoWindows::GetSwiftResourceDir(llvm::Triple triple,
 }
 
 llvm::Expected<llvm::StringRef> HostInfoWindows::GetSDKRoot(SDKOptions options) {
-  std::string buffer;
-  if (wchar_t *path = _wgetenv(L"SDKROOT"))
-    if (llvm::convertUTF16ToUTF8String(
-            llvm::ArrayRef{reinterpret_cast<llvm::UTF16 *>(path), wcslen(path)},
-            buffer))
-      return buffer;
+  static std::once_flag g_flag;
+  static std::string g_sdkroot;
+
+  std::call_once(g_flag, []() {
+    if (wchar_t *path = _wgetenv(L"SDKROOT"))
+      llvm::convertUTF16ToUTF8String(
+          llvm::ArrayRef{reinterpret_cast<llvm::UTF16 *>(path), wcslen(path)},
+          g_sdkroot);
+  });
+
+  if (!g_sdkroot.empty())
+    return g_sdkroot;
   return llvm::make_error<HostInfoError>("`SDKROOT` is unset");
 }
