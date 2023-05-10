@@ -1459,6 +1459,8 @@ static bool isCheapEnoughToEvaluateUnconditionally(const Expr *E,
 
 mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     const AbstractConditionalOperator *E) {
+  auto &builder = CGF.getBuilder();
+  auto loc = CGF.getLoc(E->getSourceRange());
   TestAndClearIgnoreResultAssign();
 
   // Bind the common expression if necessary.
@@ -1510,7 +1512,29 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   // safe to evaluate the LHS and RHS unconditionally.
   if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
-    llvm_unreachable("NYI");
+    bool lhsIsVoid = false;
+    auto condV = CGF.evaluateExprAsBool(condExpr);
+    assert(!UnimplementedFeature::incrementProfileCounter());
+
+    return builder.create<mlir::cir::TernaryOp>(
+        loc, condV, /*thenBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto lhs = Visit(lhsExpr);
+          if (!lhs) {
+            lhs = builder.getNullValue(CGF.VoidTy, loc);
+            lhsIsVoid = true;
+          }
+          builder.create<mlir::cir::YieldOp>(loc, lhs);
+        },
+        /*elseBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          auto rhs = Visit(rhsExpr);
+          if (lhsIsVoid) {
+            assert(!rhs && "lhs and rhs types must match");
+            rhs = builder.getNullValue(CGF.VoidTy, loc);
+          }
+          builder.create<mlir::cir::YieldOp>(loc, rhs);
+        });
   }
 
   [[maybe_unused]] CIRGenFunction::ConditionalEvaluation eval(CGF);
