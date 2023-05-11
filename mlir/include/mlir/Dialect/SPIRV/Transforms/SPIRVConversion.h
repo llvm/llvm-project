@@ -26,9 +26,18 @@ namespace mlir {
 // Type Converter
 //===----------------------------------------------------------------------===//
 
+/// How sub-byte values are storaged in memory.
+enum class SPIRVSubByteTypeStorage {
+  /// Sub-byte values are tightly packed without any padding, e.g., 4xi2 -> i8.
+  Packed,
+};
+
 struct SPIRVConversionOptions {
   /// The number of bits to store a boolean value.
   unsigned boolNumBits{8};
+
+  /// How sub-byte values are storaged in memory.
+  SPIRVSubByteTypeStorage subByteTypeStorage{SPIRVSubByteTypeStorage::Packed};
 
   /// Whether to emulate narrower scalar types with 32-bit scalar types if not
   /// supported by the target.
