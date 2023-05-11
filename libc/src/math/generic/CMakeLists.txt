@@ -833,6 +833,26 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  log2
+  SRCS
+    log2.cpp
+  HDRS
+    ../log2.h
+  DEPENDS
+    .common_constants
+    .log_range_reduction
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   log2f
   SRCS
     log2f.cpp
