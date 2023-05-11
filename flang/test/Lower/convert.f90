@@ -21,11 +21,11 @@ end
 ! ALL: %[[VAL_8:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_7]], [0 : index, 1 : index] : (!fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>, !fir.ref<i8>) -> !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>
 ! ALL: fir.has_value %[[VAL_8]] : !fir.array<1xtuple<!fir.ref<i8>, !fir.ref<i8>>>
 
-! ALL: fir.global linkonce @[[FC_STR]] constant : !fir.char<1,13> {
+! ALL: fir.global internal @[[FC_STR]] constant : !fir.char<1,13> {
 ! ALL: %[[VAL_0:.*]] = fir.string_lit "FORT_CONVERT\00"(13) : !fir.char<1,13>
 ! ALL: fir.has_value %[[VAL_0]] : !fir.char<1,13>
 
-! ALL: fir.global linkonce @[[OPT_STR]] constant : !fir.char<1,[[OPT_STR_LEN]]> {
+! ALL: fir.global internal @[[OPT_STR]] constant : !fir.char<1,[[OPT_STR_LEN]]> {
 ! UNKNOWN: %[[VAL_0:.*]] = fir.string_lit "UNKNOWN\00"([[OPT_STR_LEN]]) : !fir.char<1,[[OPT_STR_LEN]]>
 ! NATIVE: %[[VAL_0:.*]] = fir.string_lit "NATIVE\00"([[OPT_STR_LEN]]) : !fir.char<1,[[OPT_STR_LEN]]>
 ! LITTLE_ENDIAN: %[[VAL_0:.*]] = fir.string_lit "LITTLE_ENDIAN\00"([[OPT_STR_LEN]]) : !fir.char<1,[[OPT_STR_LEN]]>
