@@ -1136,7 +1136,9 @@ void VPExpandSCEVRecipe::execute(VPTransformState &State) {
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),
                                  &*State.Builder.GetInsertPoint());
-
+  assert(!State.ExpandedSCEVs.contains(Expr) &&
+         "Same SCEV expanded multiple times");
+  State.ExpandedSCEVs[Expr] = Res;
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(this, Res, {Part, 0});
 }
