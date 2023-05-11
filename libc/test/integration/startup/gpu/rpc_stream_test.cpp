@@ -15,6 +15,7 @@
 #include "test/IntegrationTest/test.h"
 
 extern "C" void *malloc(uint64_t);
+extern "C" void free(void *);
 
 using namespace __llvm_libc;
 
