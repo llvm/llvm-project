@@ -40,11 +40,6 @@ END-SCRIPT
 
 #include <__config>
 
-// Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#   undef __DEPRECATED
-#endif
-
 int main(int, char**) { return 0; }
 
 // DO NOT MANUALLY EDIT ANYTHING BETWEEN THE MARKERS BELOW
@@ -748,18 +743,6 @@ int main(int, char**) { return 0; }
 // RUN: %{build} -DTEST_137
 #if defined(TEST_137) && __cplusplus >= 201103L
 #   include <experimental/vector>
-    using HandlerType = decltype(std::__libcpp_verbose_abort);
-#endif
-
-// RUN: %{build} -DTEST_138
-#if defined(TEST_138)
-#   include <ext/hash_map>
-    using HandlerType = decltype(std::__libcpp_verbose_abort);
-#endif
-
-// RUN: %{build} -DTEST_139
-#if defined(TEST_139)
-#   include <ext/hash_set>
     using HandlerType = decltype(std::__libcpp_verbose_abort);
 #endif
 
