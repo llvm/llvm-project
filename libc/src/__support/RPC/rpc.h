@@ -36,6 +36,7 @@ enum Opcode : uint16_t {
   PRINT_TO_STDERR = 1,
   EXIT = 2,
   TEST_INCREMENT = 3,
+  TEST_INTERFACE = 4,
 };
 
 /// A fixed size channel used to communicate between the RPC client and server.
@@ -252,7 +253,8 @@ template <bool InvertInbox> struct Process {
 template <bool T> struct Port {
   LIBC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint64_t index,
                    uint32_t out)
-      : process(process), lane_mask(lane_mask), index(index), out(out) {}
+      : process(process), lane_mask(lane_mask), index(index), out(out),
+        receive(false) {}
   LIBC_INLINE ~Port() = default;
 
 private:
@@ -278,13 +280,20 @@ public:
     return process.get_packet(index).header.opcode;
   }
 
-  LIBC_INLINE void close() { process.unlock(lane_mask, index); }
+  LIBC_INLINE void close() {
+    // If the server last did a receive it needs to exchange ownership before
+    // closing the port.
+    if (receive && T)
+      out = process.invert_outbox(index, out);
+    process.unlock(lane_mask, index);
+  }
 
 private:
   Process<T> &process;
   uint64_t lane_mask;
   uint64_t index;
   uint32_t out;
+  bool receive;
 };
 
 /// The RPC client used to make requests to the server.
@@ -325,10 +334,16 @@ template <bool T> template <typename F> LIBC_INLINE void Port<T>::send(F fill) {
   process.invoke_rpc(fill, process.get_packet(index));
   atomic_thread_fence(cpp::MemoryOrder::RELEASE);
   out = process.invert_outbox(index, out);
+  receive = false;
 }
 
 /// Applies \p use to the shared buffer and acknowledges the send.
 template <bool T> template <typename U> LIBC_INLINE void Port<T>::recv(U use) {
+  // We only exchange ownership of the buffer during a receive if we are waiting
+  // for a previous receive to finish.
+  if (receive)
+    out = process.invert_outbox(index, out);
+
   uint32_t in = process.load_inbox(index);
 
   // We need to wait until we own the buffer before receiving.
@@ -340,7 +355,7 @@ template <bool T> template <typename U> LIBC_INLINE void Port<T>::recv(U use) {
 
   // Apply the \p use function to read the memory out of the buffer.
   process.invoke_rpc(use, process.get_packet(index));
-  out = process.invert_outbox(index, out);
+  receive = true;
 }
 
 /// Combines a send and receive into a single function.
