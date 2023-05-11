@@ -4694,7 +4694,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back("-aux-triple");
     CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+
+    if (JA.isDeviceOffloading(Action::OFK_HIP) &&
+        getToolChain().getTriple().isAMDGPU()) {
+      // Device side compilation printf
+      if (Args.getLastArg(options::OPT_mprintf_kind_EQ)) {
+        CmdArgs.push_back(Args.MakeArgString(
+            "-mprintf-kind=" +
+            Args.getLastArgValue(options::OPT_mprintf_kind_EQ)));
+        // Force compiler error on invalid conversion specifiers
+        CmdArgs.push_back(
+            Args.MakeArgString("-Werror=format-invalid-specifier"));
+      }
+    }
   }
+
+  // Unconditionally claim the printf option now to avoid unused diagnostic.
+  if (const Arg *PF = Args.getLastArg(options::OPT_mprintf_kind_EQ))
+    PF->claim();
 
   if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
     CmdArgs.push_back("-fsycl-is-device");
