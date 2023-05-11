@@ -5,7 +5,8 @@
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
 ; RUN: llvm-profdata merge --sample -profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%t1.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV1,LOADER
-;
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%S/Inputs/fsloader_v1.afdo -profile-isfs -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV1,LOADER
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%S/Inputs/fsloader_v1.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=NOLOAD
 ;;
 ;; C source code for the test (compiler at -O3):
 ;; // A test case for loop unroll.
@@ -81,6 +82,9 @@
 ; LOADERV1: Set branch fs prob: MBB (14 -> 15): unroll.c:22:11 W=283590  0x40000000 / 0x80000000 = 50.00% --> 0x0535876c / 0x80000000 = 4.07%
 ; LOADER: Set branch fs prob: MBB (16 -> 18): unroll.c:24:11-->unroll.c:19:3 W=283590  0x30000000 / 0x80000000 = 37.50% --> 0x16588166 / 0x80000000 = 17.46%
 ; LOADER: Set branch fs prob: MBB (16 -> 17): unroll.c:24:11 W=283590  0x50000000 / 0x80000000 = 62.50% --> 0x69a77e9a / 0x80000000 = 82.54%
+
+;; Check that the profile is not loaded since the reader doesn't know it is a FS profile.
+; NOLOAD-NOT: Set branch fs prob
 
 target triple = "x86_64-unknown-linux-gnu"
 

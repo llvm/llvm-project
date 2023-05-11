@@ -483,6 +483,9 @@ public:
   /// Whether input profile contains ShouldBeInlined contexts.
   bool profileIsPreInlined() const { return ProfileIsPreInlined; }
 
+  /// Whether input profile is flow-sensitive.
+  bool profileIsFS() const { return ProfileIsFS; }
+
   virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() {
     return nullptr;
   };
