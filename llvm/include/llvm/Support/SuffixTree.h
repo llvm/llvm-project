@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include <vector>
 
 namespace llvm {
@@ -38,32 +39,53 @@ const unsigned EmptyIdx = -1;
 /// in \p Link. Each leaf node stores the start index of its respective
 /// suffix in \p SuffixIdx.
 struct SuffixTreeNode {
+public:
+  enum class NodeKind { ST_Leaf, ST_Internal };
 
-  /// The children of this node.
-  ///
-  /// A child existing on an unsigned integer implies that from the mapping
-  /// represented by the current node, there is a way to reach another
-  /// mapping by tacking that character on the end of the current string.
-  DenseMap<unsigned, SuffixTreeNode *> Children;
-
+private:
+  const NodeKind Kind;
   /// The start index of this node's substring in the main string.
   unsigned StartIdx = EmptyIdx;
 
+  /// The length of the string formed by concatenating the edge labels from
+  /// the root to this node.
+  unsigned ConcatLen = 0;
+
+public:
+  NodeKind getKind() const { return Kind; }
+
+  /// \return the start index of this node's substring in the entire string.
+  virtual unsigned getStartIdx() const { return StartIdx; }
+
+  /// \returns the end index of this node.
+  virtual unsigned getEndIdx() const = 0;
+
+  /// Advance this node's StartIdx by \p Inc.
+  void incrementStartIdx(unsigned Inc) { StartIdx += Inc; }
+
+  /// Set the length of the string from the root to this node to \p Len.
+  void setConcatLen(unsigned Len) { ConcatLen = Len; }
+
+  /// \returns the length of the string from the root to this node.
+  unsigned getConcatLen() const { return ConcatLen; }
+
+  SuffixTreeNode(NodeKind Kind, unsigned StartIdx)
+      : Kind(Kind), StartIdx(StartIdx) {}
+  virtual ~SuffixTreeNode() = default;
+};
+
+struct SuffixTreeInternalNode : SuffixTreeNode {
+private:
   /// The end index of this node's substring in the main string.
   ///
   /// Every leaf node must have its \p EndIdx incremented at the end of every
   /// step in the construction algorithm. To avoid having to update O(N)
   /// nodes individually at the end of every step, the end index is stored
   /// as a pointer.
-  unsigned *EndIdx = nullptr;
+  unsigned EndIdx = EmptyIdx;
 
-  /// For leaves, the start index of the suffix represented by this node.
-  ///
-  /// For all other nodes, this is ignored.
-  unsigned SuffixIdx = EmptyIdx;
-
-  /// For internal nodes, a pointer to the internal node representing
-  /// the same sequence with the first character chopped off.
+  /// A pointer to the internal node representing the same sequence with the
+  /// first character chopped off.
   ///
   /// This acts as a shortcut in Ukkonen's algorithm. One of the things that
   /// Ukkonen's algorithm does to achieve linear-time construction is
@@ -80,36 +102,77 @@ struct SuffixTreeNode {
   /// move to the next insertion point in O(1) time. If we don't, then we'd
   /// have to query from the root, which takes O(N) time. This would make the
   /// construction algorithm O(N^2) rather than O(N).
-  SuffixTreeNode *Link = nullptr;
+  SuffixTreeInternalNode *Link = nullptr;
 
-  /// The length of the string formed by concatenating the edge labels from the
-  /// root to this node.
-  unsigned ConcatLen = 0;
-
-  /// Returns true if this node is a leaf.
-  bool isLeaf() const { return SuffixIdx != EmptyIdx; }
-
-  /// Returns true if this node is the root of its owning \p SuffixTree.
-  bool isRoot() const { return StartIdx == EmptyIdx; }
-
-  /// Return the number of elements in the substring associated with this node.
-  size_t size() const {
-
-    // Is it the root? If so, it's the empty string so return 0.
-    if (isRoot())
-      return 0;
-
-    assert(*EndIdx != EmptyIdx && "EndIdx is undefined!");
-
-    // Size = the number of elements in the string.
-    // For example, [0 1 2 3] has length 4, not 3. 3-0 = 3, so we have 3-0+1.
-    return *EndIdx - StartIdx + 1;
+public:
+  static bool classof(const SuffixTreeNode *N) {
+    return N->getKind() == NodeKind::ST_Internal;
   }
 
-  SuffixTreeNode(unsigned StartIdx, unsigned *EndIdx, SuffixTreeNode *Link)
-      : StartIdx(StartIdx), EndIdx(EndIdx), Link(Link) {}
+  /// \returns true if this node is the root of its owning \p SuffixTree.
+  bool isRoot() const { return getStartIdx() == EmptyIdx; }
 
-  SuffixTreeNode() = default;
+  /// \returns the end index of this node's substring in the entire string.
+  unsigned getEndIdx() const override { return EndIdx; }
+
+  /// Sets \p Link to \p L. Assumes \p L is not null.
+  void setLink(SuffixTreeInternalNode *L) {
+    assert(L && "Cannot set a null link?");
+    Link = L;
+  }
+
+  /// \returns the pointer to the Link node.
+  SuffixTreeInternalNode *getLink() const {
+    return Link;
+  }
+
+  /// The children of this node.
+  ///
+  /// A child existing on an unsigned integer implies that from the mapping
+  /// represented by the current node, there is a way to reach another
+  /// mapping by tacking that character on the end of the current string.
+  DenseMap<unsigned, SuffixTreeNode *> Children;
+
+  SuffixTreeInternalNode(unsigned StartIdx, unsigned EndIdx,
+                         SuffixTreeInternalNode *Link)
+      : SuffixTreeNode(NodeKind::ST_Internal, StartIdx), EndIdx(EndIdx),
+        Link(Link) {}
+
+  virtual ~SuffixTreeInternalNode() = default;
+};
+
+struct SuffixTreeLeafNode : SuffixTreeNode {
+private:
+  /// The start index of the suffix represented by this leaf.
+  unsigned SuffixIdx = EmptyIdx;
+
+  /// The end index of this node's substring in the main string.
+  ///
+  /// Every leaf node must have its \p EndIdx incremented at the end of every
+  /// step in the construction algorithm. To avoid having to update O(N)
+  /// nodes individually at the end of every step, the end index is stored
+  /// as a pointer.
+  unsigned *EndIdx = nullptr;
+
+public:
+  static bool classof(const SuffixTreeNode *N) {
+    return N->getKind() == NodeKind::ST_Leaf;
+  }
+
+  /// \returns the end index of this node's substring in the entire string.
+  unsigned getEndIdx() const override {
+    assert(EndIdx && "EndIdx is empty?");
+    return *EndIdx;
+  }
+
+  /// \returns the start index of the suffix represented by this leaf.
+  unsigned getSuffixIdx() const { return SuffixIdx; }
+  /// Sets the start index of the suffix represented by this leaf to \p Idx.
+  void setSuffixIdx(unsigned Idx) { SuffixIdx = Idx; }
+  SuffixTreeLeafNode(unsigned StartIdx, unsigned *EndIdx)
+      : SuffixTreeNode(NodeKind::ST_Leaf, StartIdx), EndIdx(EndIdx) {}
+
+  virtual ~SuffixTreeLeafNode() = default;
 };
 
 /// A data structure for fast substring queries.
@@ -149,23 +212,16 @@ public:
   };
 
 private:
-  /// Maintains each node in the tree.
-  SpecificBumpPtrAllocator<SuffixTreeNode> NodeAllocator;
+  /// Maintains internal nodes in the tree.
+  SpecificBumpPtrAllocator<SuffixTreeInternalNode> InternalNodeAllocator;
+  /// Maintains leaf nodes in the tree.
+  SpecificBumpPtrAllocator<SuffixTreeLeafNode> LeafNodeAllocator;
 
   /// The root of the suffix tree.
   ///
   /// The root represents the empty string. It is maintained by the
   /// \p NodeAllocator like every other node in the tree.
-  SuffixTreeNode *Root = nullptr;
-
-  /// Maintains the end indices of the internal nodes in the tree.
-  ///
-  /// Each internal node is guaranteed to never have its end index change
-  /// during the construction algorithm; however, leaves must be updated at
-  /// every step. Therefore, we need to store leaf end indices by reference
-  /// to avoid updating O(N) leaves at every step of construction. Thus,
-  /// every internal node must be allocated its own end index.
-  BumpPtrAllocator InternalEndIdxAllocator;
+  SuffixTreeInternalNode *Root = nullptr;
 
   /// The end index of each leaf in the tree.
   unsigned LeafEndIdx = -1;
@@ -174,7 +230,7 @@ private:
   /// Ukkonen's algorithm.
   struct ActiveState {
     /// The next node to insert at.
-    SuffixTreeNode *Node = nullptr;
+    SuffixTreeInternalNode *Node = nullptr;
 
     /// The index of the first character in the substring currently being added.
     unsigned Idx = EmptyIdx;
@@ -194,7 +250,7 @@ private:
   /// \param Edge The label on the edge leaving \p Parent to this node.
   ///
   /// \returns A pointer to the allocated leaf node.
-  SuffixTreeNode *insertLeaf(SuffixTreeNode &Parent, unsigned StartIdx,
+  SuffixTreeNode *insertLeaf(SuffixTreeInternalNode &Parent, unsigned StartIdx,
                              unsigned Edge);
 
   /// Allocate an internal node and add it to the tree.
@@ -205,8 +261,9 @@ private:
   /// \param Edge The label on the edge leaving \p Parent to this node.
   ///
   /// \returns A pointer to the allocated internal node.
-  SuffixTreeNode *insertInternalNode(SuffixTreeNode *Parent, unsigned StartIdx,
-                                     unsigned EndIdx, unsigned Edge);
+  SuffixTreeInternalNode *insertInternalNode(SuffixTreeInternalNode *Parent,
+                                             unsigned StartIdx, unsigned EndIdx,
+                                             unsigned Edge);
 
   /// Set the suffix indices of the leaves to the start indices of their
   /// respective suffixes.
@@ -244,7 +301,7 @@ public:
     RepeatedSubstring RS;
 
     /// The nodes left to visit.
-    SmallVector<SuffixTreeNode *> ToVisit;
+    SmallVector<SuffixTreeInternalNode *> InternalNodesToVisit;
 
     /// The minimum length of a repeated substring to find.
     /// Since we're outlining, we want at least two instructions in the range.
@@ -260,30 +317,31 @@ public:
       N = nullptr;
 
       // Each leaf node represents a repeat of a string.
-      SmallVector<SuffixTreeNode *> LeafChildren;
+      SmallVector<SuffixTreeLeafNode *> LeafChildren;
 
       // Continue visiting nodes until we find one which repeats more than once.
-      while (!ToVisit.empty()) {
-        SuffixTreeNode *Curr = ToVisit.back();
-        ToVisit.pop_back();
+      while (!InternalNodesToVisit.empty()) {
         LeafChildren.clear();
+        auto *Curr = InternalNodesToVisit.back();
+        InternalNodesToVisit.pop_back();
 
         // Keep track of the length of the string associated with the node. If
         // it's too short, we'll quit.
-        unsigned Length = Curr->ConcatLen;
+        unsigned Length = Curr->getConcatLen();
 
         // Iterate over each child, saving internal nodes for visiting, and
         // leaf nodes in LeafChildren. Internal nodes represent individual
         // strings, which may repeat.
         for (auto &ChildPair : Curr->Children) {
           // Save all of this node's children for processing.
-          if (!ChildPair.second->isLeaf())
-            ToVisit.push_back(ChildPair.second);
+          if (auto *InternalChild =
+                  dyn_cast<SuffixTreeInternalNode>(ChildPair.second))
+            InternalNodesToVisit.push_back(InternalChild);
 
           // It's not an internal node, so it must be a leaf. If we have a
           // long enough string, then save the leaf children.
           else if (Length >= MinLength)
-            LeafChildren.push_back(ChildPair.second);
+            LeafChildren.push_back(cast<SuffixTreeLeafNode>(ChildPair.second));
         }
 
         // The root never represents a repeated substring. If we're looking at
@@ -296,12 +354,11 @@ public:
           // Yes. Update the state to reflect this, and then bail out.
           N = Curr;
           RS.Length = Length;
-          for (SuffixTreeNode *Leaf : LeafChildren)
-            RS.StartIndices.push_back(Leaf->SuffixIdx);
+          for (SuffixTreeLeafNode *Leaf : LeafChildren)
+            RS.StartIndices.push_back(Leaf->getSuffixIdx());
           break;
         }
       }
-
       // At this point, either NewRS is an empty RepeatedSubstring, or it was
       // set in the above loop. Similarly, N is either nullptr, or the node
       // associated with NewRS.
@@ -329,14 +386,14 @@ public:
       return !(*this == Other);
     }
 
-    RepeatedSubstringIterator(SuffixTreeNode *N) : N(N) {
+    RepeatedSubstringIterator(SuffixTreeInternalNode *N) : N(N) {
       // Do we have a non-null node?
-      if (N) {
-        // Yes. At the first step, we need to visit all of N's children.
-        // Note: This means that we visit N last.
-        ToVisit.push_back(N);
-        advance();
-      }
+      if (!N)
+        return;
+      // Yes. At the first step, we need to visit all of N's children.
+      // Note: This means that we visit N last.
+      InternalNodesToVisit.push_back(N);
+      advance();
     }
   };
 
