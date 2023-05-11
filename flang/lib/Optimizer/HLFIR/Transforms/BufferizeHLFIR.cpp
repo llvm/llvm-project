@@ -215,8 +215,14 @@ struct ApplyOpConversion : public mlir::OpConversionPattern<hlfir::ApplyOp> {
     mlir::Value result = rewriter.create<hlfir::DesignateOp>(
         loc, resultType, bufferizedExpr, adaptor.getIndices(),
         adaptor.getTypeparams());
-    if (fir::isa_trivial(apply.getType()))
+    if (fir::isa_trivial(apply.getType())) {
       result = rewriter.create<fir::LoadOp>(loc, result);
+    } else {
+      auto module = apply->getParentOfType<mlir::ModuleOp>();
+      fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+      result =
+          packageBufferizedExpr(loc, builder, hlfir::Entity{result}, false);
+    }
     rewriter.replaceOp(apply, result);
     return mlir::success();
   }
@@ -451,8 +457,20 @@ struct NoReassocOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::NoReassocOp noreassoc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<hlfir::NoReassocOp>(
-        noreassoc, getBufferizedExprStorage(adaptor.getVal()));
+    mlir::Location loc = noreassoc->getLoc();
+    auto module = noreassoc->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    mlir::Value bufferizedExpr = getBufferizedExprStorage(adaptor.getVal());
+    mlir::Value result =
+        builder.create<hlfir::NoReassocOp>(loc, bufferizedExpr);
+
+    if (!fir::isa_trivial(bufferizedExpr.getType())) {
+      // NoReassocOp should not be needed on the mustFree path.
+      mlir::Value mustFree = getBufferizedExprMustFreeFlag(adaptor.getVal());
+      result =
+          packageBufferizedExpr(loc, builder, hlfir::Entity{result}, mustFree);
+    }
+    rewriter.replaceOp(noreassoc, result);
     return mlir::success();
   }
 };
