@@ -892,12 +892,6 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddInteger(AT->getMemOperand()->getFlags());
     break;
   }
-  case ISD::PREFETCH: {
-    const MemSDNode *PF = cast<MemSDNode>(N);
-    ID.AddInteger(PF->getPointerInfo().getAddrSpace());
-    ID.AddInteger(PF->getMemOperand()->getFlags());
-    break;
-  }
   case ISD::VECTOR_SHUFFLE: {
     const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(N);
     for (unsigned i = 0, e = N->getValueType(0).getVectorNumElements();
@@ -916,12 +910,17 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::AssertAlign:
     ID.AddInteger(cast<AssertAlignSDNode>(N)->getAlign().value());
     break;
+  case ISD::PREFETCH:
+  case ISD::INTRINSIC_VOID:
+  case ISD::INTRINSIC_W_CHAIN:
+    // Handled by MemIntrinsicSDNode check after the switch.
+    break;
   } // end switch (N->getOpcode())
 
-  // Target specific memory nodes could also have address spaces and flags
+  // MemIntrinsic nodes could also have subclass data, address spaces, and flags
   // to check.
-  if (N->isTargetMemoryOpcode()) {
-    const MemSDNode *MN = cast<MemSDNode>(N);
+  if (auto *MN = dyn_cast<MemIntrinsicSDNode>(N)) {
+    ID.AddInteger(MN->getRawSubclassData());
     ID.AddInteger(MN->getPointerInfo().getAddrSpace());
     ID.AddInteger(MN->getMemOperand()->getFlags());
   }
