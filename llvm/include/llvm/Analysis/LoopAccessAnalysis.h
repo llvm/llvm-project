@@ -616,9 +616,6 @@ public:
     return SymbolicStrides;
   }
 
-  /// Pointer has a symbolic stride.
-  bool hasStride(Value *V) const { return StrideSet.count(V); }
-
   /// Print the information about the memory accesses in the loop.
   void print(raw_ostream &OS, unsigned Depth = 0) const;
 
@@ -702,9 +699,6 @@ private:
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   DenseMap<Value *, const SCEV *> SymbolicStrides;
-
-  /// Set of symbolic strides values.
-  SmallPtrSet<Value *, 8> StrideSet;
 };
 
 Value *stripIntegerCast(Value *V);

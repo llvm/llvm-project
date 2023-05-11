@@ -2758,7 +2758,6 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // SCEVUnknown as we expect.
   Value *StrideVal = stripIntegerCast(Stride);
   SymbolicStrides[Ptr] = cast<SCEVUnknown>(PSE->getSCEV(StrideVal));
-  StrideSet.insert(Stride);
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,

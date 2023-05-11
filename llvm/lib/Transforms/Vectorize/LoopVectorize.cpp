@@ -6447,11 +6447,6 @@ static const SCEV *getAddressAccessSCEV(
   return PSE.getSCEV(Ptr);
 }
 
-static bool isStrideMul(Instruction *I, LoopVectorizationLegality *Legal) {
-  return Legal->hasStride(I->getOperand(0)) ||
-         Legal->hasStride(I->getOperand(1));
-}
-
 InstructionCost
 LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
                                                         ElementCount VF) {
@@ -7219,8 +7214,12 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    // Since we will replace the stride by 1 the multiplication should go away.
-    if (I->getOpcode() == Instruction::Mul && isStrideMul(I, Legal))
+    // If we're speculating on the stride being 1, the multiplication may
+    // fold away.  We can generalize this for all operations using the notion
+    // of neutral elements.  (TODO)
+    if (I->getOpcode() == Instruction::Mul &&
+        (PSE.getSCEV(I->getOperand(0))->isOne() ||
+         PSE.getSCEV(I->getOperand(1))->isOne()))
       return 0;
 
     // Detect reduction patterns
