@@ -59,7 +59,7 @@ DictionaryAttr NamedAttrList::getDictionary(MLIRContext *context) const {
   }
   if (!dictionarySorted.getPointer())
     dictionarySorted.setPointer(DictionaryAttr::getWithSorted(context, attrs));
-  return dictionarySorted.getPointer().cast<DictionaryAttr>();
+  return llvm::cast<DictionaryAttr>(dictionarySorted.getPointer());
 }
 
 /// Add an attribute with the specified name.
@@ -405,18 +405,19 @@ OperandRangeRange OperandRange::split(DenseI32ArrayAttr segmentSizes) const {
 OperandRangeRange::OperandRangeRange(OperandRange operands,
                                      Attribute operandSegments)
     : OperandRangeRange(OwnerT(operands.getBase(), operandSegments), 0,
-                        operandSegments.cast<DenseI32ArrayAttr>().size()) {}
+                        llvm::cast<DenseI32ArrayAttr>(operandSegments).size()) {
+}
 
 OperandRange OperandRangeRange::join() const {
   const OwnerT &owner = getBase();
-  ArrayRef<int32_t> sizeData = owner.second.cast<DenseI32ArrayAttr>();
+  ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(owner.second);
   return OperandRange(owner.first,
                       std::accumulate(sizeData.begin(), sizeData.end(), 0));
 }
 
 OperandRange OperandRangeRange::dereference(const OwnerT &object,
                                             ptrdiff_t index) {
-  ArrayRef<int32_t> sizeData = object.second.cast<DenseI32ArrayAttr>();
+  ArrayRef<int32_t> sizeData = llvm::cast<DenseI32ArrayAttr>(object.second);
   uint32_t startIndex =
       std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
   return OperandRange(object.first + startIndex, *(sizeData.begin() + index));
@@ -508,7 +509,7 @@ void MutableOperandRange::updateLength(unsigned newLength) {
 
   // Update any of the provided segment attributes.
   for (OperandSegment &segment : operandSegments) {
-    auto attr = segment.second.getValue().cast<DenseI32ArrayAttr>();
+    auto attr = llvm::cast<DenseI32ArrayAttr>(segment.second.getValue());
     SmallVector<int32_t, 8> segments(attr.asArrayRef());
     segments[segment.first] += diff;
     segment.second.setValue(
@@ -524,7 +525,8 @@ MutableOperandRangeRange::MutableOperandRangeRange(
     const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
     : MutableOperandRangeRange(
           OwnerT(operands, operandSegmentAttr), 0,
-          operandSegmentAttr.getValue().cast<DenseI32ArrayAttr>().size()) {}
+          llvm::cast<DenseI32ArrayAttr>(operandSegmentAttr.getValue()).size()) {
+}
 
 MutableOperandRange MutableOperandRangeRange::join() const {
   return getBase().first;
@@ -537,7 +539,7 @@ MutableOperandRangeRange::operator OperandRangeRange() const {
 MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
   ArrayRef<int32_t> sizeData =
-      object.second.getValue().cast<DenseI32ArrayAttr>();
+      llvm::cast<DenseI32ArrayAttr>(object.second.getValue());
   uint32_t startIndex =
       std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
   return object.first.slice(
@@ -782,8 +784,8 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
     auto sortValues = [](ValueRange values) {
       SmallVector<Value> sortedValues = llvm::to_vector(values);
       llvm::sort(sortedValues, [](Value a, Value b) {
-        auto aArg = a.dyn_cast<BlockArgument>();
-        auto bArg = b.dyn_cast<BlockArgument>();
+        auto aArg = llvm::dyn_cast<BlockArgument>(a);
+        auto bArg = llvm::dyn_cast<BlockArgument>(b);
 
         // Case 1. Both `a` and `b` are `BlockArgument`s.
         if (aArg && bArg) {

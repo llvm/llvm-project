@@ -22,7 +22,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 static bool isSupportedElementType(Type type) {
-  return type.isa<MemRefType>() ||
+  return llvm::isa<MemRefType>(type) ||
          OpBuilder(type.getContext()).getZeroAttr(type);
 }
 
