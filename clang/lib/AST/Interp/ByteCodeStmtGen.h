@@ -67,6 +67,7 @@ private:
   bool visitSwitchStmt(const SwitchStmt *S);
   bool visitCaseStmt(const CaseStmt *S);
   bool visitDefaultStmt(const DefaultStmt *S);
+  bool visitAsmStmt(const AsmStmt *S);
 
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
 
