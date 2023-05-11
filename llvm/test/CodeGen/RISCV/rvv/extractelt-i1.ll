@@ -10,7 +10,6 @@ define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -28,7 +27,6 @@ define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -46,7 +44,6 @@ define i1 @extractelt_nxv4i1(<vscale x 4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -64,7 +61,6 @@ define i1 @extractelt_nxv8i1(<vscale x 8 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
