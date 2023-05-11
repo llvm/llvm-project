@@ -679,6 +679,14 @@ Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
                                          builder.getIndexAttr(lvl));
 }
 
+Value sparse_tensor::genToCoordinatesBuffer(OpBuilder &builder, Location loc,
+                                            Value tensor) {
+  const auto srcTp = getSparseTensorType(tensor);
+  const Type crdTp = srcTp.getEncoding().getCrdType();
+  const Type memTp = get1DMemRefType(crdTp, /*withLayout=*/false);
+  return builder.create<ToCoordinatesBufferOp>(loc, memTp, tensor);
+}
+
 Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,
                                  Value tensor) {
   RankedTensorType srcTp = getRankedTensorType(tensor);
