@@ -52,6 +52,7 @@
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/InstVisitor.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -68,6 +69,9 @@ using SpecMap = DenseMap<Function *, std::pair<unsigned, unsigned>>;
 
 // Just a shorter abbreviation to improve indentation.
 using Cost = InstructionCost;
+
+// Map of known constants found during the specialization bonus estimation.
+using ConstMap = DenseMap<Value *, Constant *>;
 
 // Specialization signature, used to uniquely designate a specialization within
 // a function.
@@ -115,6 +119,39 @@ struct Spec {
       : F(F), Sig(S), Score(Score) {}
 };
 
+class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
+  const DataLayout &DL;
+  BlockFrequencyInfo &BFI;
+  TargetTransformInfo &TTI;
+  SCCPSolver &Solver;
+
+  ConstMap KnownConstants;
+
+  ConstMap::iterator LastVisited;
+
+public:
+  InstCostVisitor(const DataLayout &DL, BlockFrequencyInfo &BFI,
+                  TargetTransformInfo &TTI, SCCPSolver &Solver)
+      : DL(DL), BFI(BFI), TTI(TTI), Solver(Solver) {}
+
+  Cost getUserBonus(Instruction *User, Value *Use, Constant *C);
+
+private:
+  friend class InstVisitor<InstCostVisitor, Constant *>;
+
+  Cost estimateSwitchInst(SwitchInst &I);
+  Cost estimateBranchInst(BranchInst &I);
+
+  Constant *visitInstruction(Instruction &I) { return nullptr; }
+  Constant *visitLoadInst(LoadInst &I);
+  Constant *visitGetElementPtrInst(GetElementPtrInst &I);
+  Constant *visitSelectInst(SelectInst &I);
+  Constant *visitCastInst(CastInst &I);
+  Constant *visitCmpInst(CmpInst &I);
+  Constant *visitUnaryOperator(UnaryOperator &I);
+  Constant *visitBinaryOperator(BinaryOperator &I);
+};
+
 class FunctionSpecializer {
 
   /// The IPSCCP Solver.
@@ -148,6 +185,16 @@ public:
   ~FunctionSpecializer();
 
   bool run();
+
+  InstCostVisitor getInstCostVisitorFor(Function *F) {
+    auto &BFI = GetBFI(*F);
+    auto &TTI = GetTTI(*F);
+    return InstCostVisitor(M.getDataLayout(), BFI, TTI, Solver);
+  }
+
+  /// Compute a bonus for replacing argument \p A with constant \p C.
+  Cost getSpecializationBonus(Argument *A, Constant *C,
+                              InstCostVisitor &Visitor);
 
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);
@@ -191,9 +238,6 @@ private:
 
   /// Compute and return the cost of specializing function \p F.
   Cost getSpecializationCost(Function *F);
-
-  /// Compute a bonus for replacing argument \p A with constant \p C.
-  Cost getSpecializationBonus(Argument *A, Constant *C);
 
   /// Determine if it is possible to specialise the function for constant values
   /// of the formal parameter \p A.
