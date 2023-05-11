@@ -135,7 +135,7 @@ static SetVector<llvm::BasicBlock *>
 getTopologicallySortedBlocks(llvm::Function *func) {
   SetVector<llvm::BasicBlock *> blocks;
   for (llvm::BasicBlock &bb : *func) {
-    if (blocks.count(&bb) == 0) {
+    if (!blocks.contains(&bb)) {
       llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(&bb);
       blocks.insert(traversal.begin(), traversal.end());
     }
@@ -174,7 +174,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   workList.push_back(node);
   while (!workList.empty()) {
     const llvm::MDNode *current = workList.pop_back_val();
-    if (tbaaMapping.count(current))
+    if (tbaaMapping.contains(current))
       continue;
     // Allow cycles in TBAA metadata. Just import it as-is,
     // and diagnose the problem during LLVMIR dialect verification.
@@ -458,7 +458,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
         return emitError(loc) << "unsupported alias domain node: "
                               << diagMD(domain, llvmModule.get());
 
-      if (aliasScopeMapping.count(scope))
+      if (aliasScopeMapping.contains(scope))
         continue;
 
       // Set the insertion point to the end of the global metadata operation.
@@ -862,7 +862,7 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
 SetVector<llvm::Constant *>
 ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
   // Return the empty set if the constant has been translated before.
-  if (valueMapping.count(constant))
+  if (valueMapping.contains(constant))
     return {};
 
   // Traverse the constants in post-order and stop the traversal if a constant
@@ -906,8 +906,8 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     // `valueMapping` from an earlier translation and if it has not been
     // enqueued before.
     llvm::Constant *dependency = adjacencyIt->getSecond().pop_back_val();
-    if (valueMapping.count(dependency) || workList.count(dependency) ||
-        orderedSet.count(dependency))
+    if (valueMapping.contains(dependency) || workList.contains(dependency) ||
+        orderedSet.contains(dependency))
       continue;
     workList.insert(dependency);
   }
@@ -970,7 +970,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // Note: `processInstruction` does not call `convertConstant` recursively
     // since all constant dependencies have been converted before.
     assert(llvm::all_of(inst->operands(), [&](llvm::Value *value) {
-      return valueMapping.count(value);
+      return valueMapping.contains(value);
     }));
     if (failed(processInstruction(inst)))
       return failure();
@@ -1060,8 +1060,9 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
          "expected value to not be metadata");
 
   // Return the mapped value if it has been converted before.
-  if (valueMapping.count(value))
-    return lookupValue(value);
+  auto it = valueMapping.find(value);
+  if (it != valueMapping.end())
+    return it->getSecond();
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
@@ -1085,8 +1086,9 @@ FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
   value = node->getValue();
 
   // Return the mapped value if it has been converted before.
-  if (valueMapping.count(value))
-    return lookupValue(value);
+  auto it = valueMapping.find(value);
+  if (it != valueMapping.end())
+    return it->getSecond();
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
