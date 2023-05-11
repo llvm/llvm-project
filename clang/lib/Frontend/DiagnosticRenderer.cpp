@@ -493,7 +493,7 @@ static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
   SmallVector<CharSourceRange, 4> SpellingRanges;
   mapDiagnosticRanges(Loc, Ranges, SpellingRanges);
 
-  /// Count all valid ranges.
+  // Count all valid ranges.
   unsigned ValidCount = 0;
   for (const auto &Range : Ranges)
     if (Range.isValid())
@@ -502,11 +502,11 @@ static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
   if (ValidCount > SpellingRanges.size())
     return false;
 
-  /// To store the source location of the argument location.
+  // To store the source location of the argument location.
   FullSourceLoc ArgumentLoc;
 
-  /// Set the ArgumentLoc to the beginning location of the expansion of Loc
-  /// so to check if the ranges expands to the same beginning location.
+  // Set the ArgumentLoc to the beginning location of the expansion of Loc
+  // so to check if the ranges expands to the same beginning location.
   if (!Loc.isMacroArgExpansion(&ArgumentLoc))
     return false;
 
