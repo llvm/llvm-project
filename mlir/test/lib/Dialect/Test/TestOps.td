@@ -2909,6 +2909,34 @@ def OpCrashShort : TEST_Op<"op_crash_short"> {
 def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
 
 //===----------------------------------------------------------------------===//
+// Test DestinationStyleOpInterface.
+//===----------------------------------------------------------------------===//
+
+def TestDestinationStyleOp :
+    TEST_Op<"destination_style_op", [
+      DestinationStyleOpInterface,
+      AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<AnyType>:$inputs,
+    Variadic<AnyType>:$outputs,
+    Variadic<AnyType>:$other_operands);
+  let results = (outs Variadic<AnyType>:$results);
+  let assemblyFormat = [{
+    attr-dict (`ins` `(` $inputs^ `:` type($inputs) `)`)?
+    (`outs` `(` $outputs^  `:` type($outputs) `)`)?
+    (`(` $other_operands^ `:` type($other_operands) `)`)?
+    (`->` type($results)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      int64_t numOperands = this->getNumOperands();
+      return {numOperands - getOutputs().size(), numOperands};
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Test LinalgConvolutionOpInterface.
 //===----------------------------------------------------------------------===//
 
