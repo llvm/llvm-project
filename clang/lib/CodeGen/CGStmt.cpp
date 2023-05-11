@@ -177,8 +177,18 @@ CodeGenFunction::EmitNoLoopIV(const OMPLoopDirective &LD) {
   // Emit the original loop indices
   for (const Expr *CE : LD.counters()) {
     const auto *CEDecl = cast<VarDecl>(cast<DeclRefExpr>(CE)->getDecl());
-    if (!hasAddrOfLocalVar(CEDecl))
-      EmitVarDecl(*CEDecl);
+    if (!hasAddrOfLocalVar(CEDecl)) {
+      if (CEDecl->hasLocalStorage())
+        EmitVarDecl(*CEDecl);
+      else {
+        llvm::Type *CEDeclType = ConvertTypeForMem(CEDecl->getType());
+        llvm::AllocaInst *LocalForGlobal =
+            Builder.CreateAlloca(CEDeclType, nullptr, "lglobal");
+        setAddrOfLocalVar(CEDecl, Address(LocalForGlobal, CEDeclType,
+                                          getContext().getTypeAlignInChars(
+                                              CEDecl->getType())));
+      }
+    }
   }
 
   // Emit the preinits
@@ -542,14 +552,17 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   // Compute *xteam_red_local_addr + rhs_value
   llvm::Value *RedRHS = nullptr;
   llvm::Type *RedVarType = ConvertTypeForMem(RedVarDecl->getType());
-  if (RedVarType->isFloatTy() || RedVarType->isDoubleTy())
-    RedRHS =
-        Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSValue);
-  else if (RedVarType->isIntegerTy())
-    RedRHS =
-        Builder.CreateAdd(Builder.CreateLoad(XteamRedLocalAddr),
-                          Builder.CreateIntCast(RHSValue, RedVarType, false));
-  else
+  if (RedVarType->isFloatTy() || RedVarType->isDoubleTy()) {
+    auto RHSOp = RHSValue->getType()->isIntegerTy()
+                     ? Builder.CreateUIToFP(RHSValue, RedVarType)
+                     : Builder.CreateFPCast(RHSValue, RedVarType);
+    RedRHS = Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSOp);
+  } else if (RedVarType->isIntegerTy()) {
+    auto RHSOp = RHSValue->getType()->isIntegerTy()
+                     ? Builder.CreateIntCast(RHSValue, RedVarType, false)
+                     : Builder.CreateFPToUI(RHSValue, RedVarType);
+    RedRHS = Builder.CreateAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSOp);
+  } else
     llvm_unreachable("Unhandled type");
   // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
   Builder.CreateStore(RedRHS, XteamRedLocalAddr);
