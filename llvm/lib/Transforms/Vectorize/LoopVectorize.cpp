@@ -7684,11 +7684,15 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
 
 SCEV2ValueTy LoopVectorizationPlanner::executePlan(
     ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
-    InnerLoopVectorizer &ILV, DominatorTree *DT, bool IsEpilogueVectorization) {
+    InnerLoopVectorizer &ILV, DominatorTree *DT, bool IsEpilogueVectorization,
+    DenseMap<const SCEV *, Value *> *ExpandedSCEVs) {
   assert(BestVPlan.hasVF(BestVF) &&
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
+  assert(
+      (IsEpilogueVectorization || !ExpandedSCEVs) &&
+      "expanded SCEVs to reuse can only be used during epilogue vectorization");
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
                     << '\n');
@@ -7716,7 +7720,8 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
   // middle block. The vector loop is created during VPlan execution.
   Value *CanonicalIVStartValue;
   std::tie(State.CFG.PrevBB, CanonicalIVStartValue) =
-      ILV.createVectorizedLoopSkeleton(State.ExpandedSCEVs);
+      ILV.createVectorizedLoopSkeleton(ExpandedSCEVs ? *ExpandedSCEVs
+                                                     : State.ExpandedSCEVs);
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
@@ -10415,14 +10420,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
         Header->setName("vec.epilog.vector.body");
 
-        // Re-use the trip count expanded for the main loop, as skeleton
-        // creation needs it as a value that dominates both the scalar and
-        // vector epilogue loops
+        // Re-use the trip count and steps expanded for the main loop, as
+        // skeleton creation needs it as a value that dominates both the scalar
+        // and vector epilogue loops
+        // TODO: This is a workaround needed for epilogue vectorization and it
+        // should be removed once induction resume value creation is done
+        // directly in VPlan.
         EpilogILV.setTripCount(MainILV.getTripCount());
-        if (auto *R = BestEpiPlan.getTripCount()->getDefiningRecipe()) {
-          assert(BestEpiPlan.getTripCount()->getNumUsers() == 0 &&
-                 "trip count VPValue cannot be used in epilogue plan");
-          R->eraseFromParent();
+        for (auto &R : make_early_inc_range(*BestEpiPlan.getPreheader())) {
+          auto *ExpandR = cast<VPExpandSCEVRecipe>(&R);
+          auto *ExpandedVal = BestEpiPlan.getVPValueOrAddLiveIn(
+              ExpandedSCEVs.find(ExpandR->getSCEV())->second);
+          ExpandR->replaceAllUsesWith(ExpandedVal);
+          ExpandR->eraseFromParent();
         }
 
         // Ensure that the start values for any VPWidenIntOrFpInductionRecipe,
@@ -10462,7 +10472,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         }
 
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
-                        DT, true);
+                        DT, true, &ExpandedSCEVs);
         ++LoopsEpilogueVectorized;
 
         if (!MainILV.areSafetyChecksAdded())
