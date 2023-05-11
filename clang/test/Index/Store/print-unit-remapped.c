@@ -1,6 +1,8 @@
 #include "print-unit.h"
 #include "syshead.h"
 
+// XFAIL: !rdar108885594
+
 void foo(int i);
 
 // RUN: rm -rf %t
