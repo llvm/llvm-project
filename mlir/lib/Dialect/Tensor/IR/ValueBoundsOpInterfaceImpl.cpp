@@ -24,8 +24,8 @@ struct CastOpInterface
     auto castOp = cast<CastOp>(op);
     assert(value == castOp.getResult() && "invalid value");
 
-    if (castOp.getResult().getType().isa<RankedTensorType>() &&
-        castOp.getSource().getType().isa<RankedTensorType>()) {
+    if (llvm::isa<RankedTensorType>(castOp.getResult().getType()) &&
+        llvm::isa<RankedTensorType>(castOp.getSource().getType())) {
       cstr.bound(value)[dim] == cstr.getExpr(castOp.getSource(), dim);
     }
   }
@@ -100,7 +100,8 @@ struct RankOpInterface
     auto rankOp = cast<RankOp>(op);
     assert(value == rankOp.getResult() && "invalid value");
 
-    auto tensorType = rankOp.getTensor().getType().dyn_cast<RankedTensorType>();
+    auto tensorType =
+        llvm::dyn_cast<RankedTensorType>(rankOp.getTensor().getType());
     if (!tensorType)
       return;
     cstr.bound(value) == tensorType.getRank();

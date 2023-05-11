@@ -27,7 +27,7 @@ using namespace mlir::bufferization;
 FailureOr<Value>
 mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
                                               MemRefType destType) {
-  auto srcType = value.getType().cast<MemRefType>();
+  auto srcType = llvm::cast<MemRefType>(value.getType());
 
   // Element type, rank and memory space must match.
   if (srcType.getElementType() != destType.getElementType())
@@ -100,9 +100,9 @@ mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
     return success();
   }
 
-  auto rankedSrcType = srcType.dyn_cast<MemRefType>();
-  auto rankedDestType = destType.dyn_cast<MemRefType>();
-  auto unrankedSrcType = srcType.dyn_cast<UnrankedMemRefType>();
+  auto rankedSrcType = llvm::dyn_cast<MemRefType>(srcType);
+  auto rankedDestType = llvm::dyn_cast<MemRefType>(destType);
+  auto unrankedSrcType = llvm::dyn_cast<UnrankedMemRefType>(srcType);
 
   // Ranked memref -> Ranked memref cast.
   if (rankedSrcType && rankedDestType) {
@@ -132,13 +132,13 @@ mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
 void mlir::bufferization::populateDynamicDimSizes(
     OpBuilder &b, Location loc, Value shapedValue,
     SmallVector<Value> &dynamicDims) {
-  auto shapedType = shapedValue.getType().cast<ShapedType>();
+  auto shapedType = llvm::cast<ShapedType>(shapedValue.getType());
   for (int64_t i = 0; i < shapedType.getRank(); ++i) {
     if (shapedType.isDynamicDim(i)) {
-      if (shapedType.isa<MemRefType>()) {
+      if (llvm::isa<MemRefType>(shapedType)) {
         dynamicDims.push_back(b.create<memref::DimOp>(loc, shapedValue, i));
       } else {
-        assert(shapedType.isa<RankedTensorType>() && "expected tensor");
+        assert(llvm::isa<RankedTensorType>(shapedType) && "expected tensor");
         dynamicDims.push_back(b.create<tensor::DimOp>(loc, shapedValue, i));
       }
     }
@@ -191,7 +191,7 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
 
   // Should the buffer be deallocated?
   bool dealloc =
-      shouldDeallocateOpResult(getResult().cast<OpResult>(), options);
+      shouldDeallocateOpResult(llvm::cast<OpResult>(getResult()), options);
 
   // Replace op.
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
@@ -431,7 +431,7 @@ void AllocTensorOp::print(OpAsmPrinter &p) {
                               AllocTensorOp::getOperandSegmentSizeAttr()});
   p << " : ";
   auto type = getResult().getType();
-  if (auto validType = type.dyn_cast<::mlir::TensorType>())
+  if (auto validType = llvm::dyn_cast<::mlir::TensorType>(type))
     p.printStrippedAttrOrType(validType);
   else
     p << type;
@@ -620,8 +620,8 @@ struct ToMemrefOfCast : public OpRewritePattern<ToMemrefOp> {
         toMemref.getOperand().getDefiningOp<tensor::CastOp>();
     if (!tensorCastOperand)
       return failure();
-    auto srcTensorType =
-        tensorCastOperand.getOperand().getType().dyn_cast<RankedTensorType>();
+    auto srcTensorType = llvm::dyn_cast<RankedTensorType>(
+        tensorCastOperand.getOperand().getType());
     if (!srcTensorType)
       return failure();
     auto memrefType = MemRefType::get(srcTensorType.getShape(),
