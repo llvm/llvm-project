@@ -128,8 +128,7 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       writer.writeVarInt(concreteAttr.getV1());
       return success();
     }
-    writer.writeAttribute(attr);
-    return success();
+    return failure();
   }
 
   Attribute readAttribute(DialectBytecodeReader &reader,
