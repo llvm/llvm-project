@@ -58,7 +58,7 @@ def read(filename: str, fmt: Format,
 
 
 def write(filename: str, tensor: Tensor) -> None:
-  """Outputs a tensor to a given file.
+  """Outputs a tensor to a given file. Computations are performed using the default LLVM JIT pipeline.
 
   The name suffix of the file specifies the format of the output. We currently
   only support .tns format.
@@ -78,3 +78,25 @@ def write(filename: str, tensor: Tensor) -> None:
     raise ValueError(f"Expected a Tensor object: {tensor}.")
 
   tensor.to_file(filename)
+
+def write_kokkos(filename: str, tensor: Tensor) -> None:
+  """Outputs a tensor to a given file. Computations are performed using the MLIR->Kokkos pipeline.
+
+  The name suffix of the file specifies the format of the output. We currently
+  only support .tns format.
+
+  Args:
+    filename: A string output filename.
+    tensor: The tensor to output.
+
+  Raises:
+    ValueError: If filename doesn't end with .tns or tensor is not a Tensor.
+  """
+  if (not isinstance(filename, str) or
+      not filename.endswith(_TNS_FILENAME_SUFFIX)):
+    raise ValueError("Expected string filename ends with"
+                     f" {_TNS_FILENAME_SUFFIX}: {filename}.")
+  if not isinstance(tensor, Tensor):
+    raise ValueError(f"Expected a Tensor object: {tensor}.")
+
+  tensor.to_file_kokkos(filename)

@@ -22,6 +22,7 @@ get_index_vars = mlir_pytaco.get_index_vars
 from_array = mlir_pytaco.Tensor.from_array
 read = mlir_pytaco_io.read
 write = mlir_pytaco_io.write
+write_kokkos = mlir_pytaco_io.write_kokkos
 
 # Classes defined by PyTACO API.
 dtype = mlir_pytaco.DType
