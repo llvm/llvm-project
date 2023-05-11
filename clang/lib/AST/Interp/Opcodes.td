@@ -601,3 +601,6 @@ def Dup : Opcode {
   let Types = [AllTypeClass];
   let HasGroup = 1;
 }
+
+// [] -> []
+def Invalid : Opcode {}
