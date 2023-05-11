@@ -361,6 +361,14 @@ def HasStdExtCOrZcf
                                    "'C' (Compressed Instructions) or "
                                    "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
+def FeatureStdExtZcmp
+    : SubtargetFeature<"experimental-zcmp", "HasStdExtZcmp", "true",
+                       "'Zcmp' (sequenced instuctions for code-size reduction)", 
+                       [FeatureStdExtZca]>;
+def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZcmp, (not FeatureStdExtC)),
+                               "'Zcmp' (sequenced instuctions for code-size reduction)">;
+
 def FeatureStdExtZcmt
     : SubtargetFeature<"experimental-zcmt", "HasStdExtZcmt", "true",
                        "'Zcmt' (table jump instuctions for code-size reduction)", 
@@ -441,7 +449,7 @@ def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
 def FeatureStdExtZvfh
     : SubtargetFeature<"experimental-zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
-                       [FeatureStdExtZve32f]>;
+                       [FeatureStdExtZve32f, FeatureStdExtZfhmin]>;
 
 def HasStdExtZfhOrZvfh
     : Predicate<"Subtarget->hasStdExtZfh() || Subtarget->hasStdExtZvfh()">,

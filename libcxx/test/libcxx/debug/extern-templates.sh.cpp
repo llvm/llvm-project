@@ -21,8 +21,6 @@
 // option which clang doesn't accept on Windows.)
 // UNSUPPORTED: windows
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // RUN: %{cxx} %{flags} %{compile_flags} %s %{link_flags} -fPIC -DTU1 -fvisibility=hidden -shared -o %t.lib
 // RUN: cd %T && %{cxx} %{flags} %{compile_flags} %s ./%basename_t.tmp.lib %{link_flags} -DTU2 -fvisibility=hidden -o %t.exe
 // RUN: %{exec} %t.exe

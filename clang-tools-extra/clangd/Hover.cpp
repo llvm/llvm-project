@@ -463,8 +463,23 @@ std::optional<std::string> printExprValue(const Expr *E,
   return Constant.Val.getAsString(Ctx, T);
 }
 
-std::optional<std::string> printExprValue(const SelectionTree::Node *N,
-                                          const ASTContext &Ctx) {
+struct PrintExprResult {
+  /// The evaluation result on expression `Expr`.
+  std::optional<std::string> PrintedValue;
+  /// The Expr object that represents the closest evaluable
+  /// expression.
+  const clang::Expr *TheExpr;
+  /// The node of selection tree where the traversal stops.
+  const SelectionTree::Node *TheNode;
+};
+
+// Seek the closest evaluable expression along the ancestors of node N
+// in a selection tree. If a node in the path can be converted to an evaluable
+// Expr, a possible evaluation would happen and the associated context
+// is returned.
+// If evaluation couldn't be done, return the node where the traversal ends.
+PrintExprResult printExprValue(const SelectionTree::Node *N,
+                               const ASTContext &Ctx) {
   for (; N; N = N->Parent) {
     // Try to evaluate the first evaluatable enclosing expression.
     if (const Expr *E = N->ASTNode.get<Expr>()) {
@@ -473,14 +488,16 @@ std::optional<std::string> printExprValue(const SelectionTree::Node *N,
       if (!E->getType().isNull() && E->getType()->isVoidType())
         break;
       if (auto Val = printExprValue(E, Ctx))
-        return Val;
+        return PrintExprResult{/*PrintedValue=*/std::move(Val), /*Expr=*/E,
+                               /*Node=*/N};
     } else if (N->ASTNode.get<Decl>() || N->ASTNode.get<Stmt>()) {
       // Refuse to cross certain non-exprs. (TypeLoc are OK as part of Exprs).
       // This tries to ensure we're showing a value related to the cursor.
       break;
     }
   }
-  return std::nullopt;
+  return PrintExprResult{/*PrintedValue=*/std::nullopt, /*Expr=*/nullptr,
+                         /*Node=*/N};
 }
 
 std::optional<StringRef> fieldName(const Expr *E) {
@@ -677,6 +694,54 @@ getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
   return HI;
 }
 
+HoverInfo evaluateMacroExpansion(unsigned int SpellingBeginOffset,
+                                 unsigned int SpellingEndOffset,
+                                 llvm::ArrayRef<syntax::Token> Expanded,
+                                 ParsedAST &AST) {
+  auto &Context = AST.getASTContext();
+  auto &Tokens = AST.getTokens();
+  auto PP = getPrintingPolicy(Context.getPrintingPolicy());
+  auto Tree = SelectionTree::createRight(Context, Tokens, SpellingBeginOffset,
+                                         SpellingEndOffset);
+
+  // If macro expands to one single token, rule out punctuator or digraph.
+  // E.g., for the case `array L_BRACKET 42 R_BRACKET;` where L_BRACKET and
+  // R_BRACKET expand to
+  // '[' and ']' respectively, we don't want the type of
+  // 'array[42]' when user hovers on L_BRACKET.
+  if (Expanded.size() == 1)
+    if (tok::getPunctuatorSpelling(Expanded[0].kind()))
+      return {};
+
+  auto *StartNode = Tree.commonAncestor();
+  if (!StartNode)
+    return {};
+  // If the common ancestor is partially selected, do evaluate if it has no
+  // children, thus we can disallow evaluation on incomplete expression.
+  // For example,
+  // #define PLUS_2 +2
+  // 40 PL^US_2
+  // In this case we don't want to present 'value: 2' as PLUS_2 actually expands
+  // to a non-value rather than a binary operand.
+  if (StartNode->Selected == SelectionTree::Selection::Partial)
+    if (!StartNode->Children.empty())
+      return {};
+
+  HoverInfo HI;
+  // Attempt to evaluate it from Expr first.
+  auto ExprResult = printExprValue(StartNode, Context);
+  HI.Value = std::move(ExprResult.PrintedValue);
+  if (auto *E = ExprResult.TheExpr)
+    HI.Type = printType(E->getType(), Context, PP);
+
+  // If failed, extract the type from Decl if possible.
+  if (!HI.Value && !HI.Type && ExprResult.TheNode)
+    if (auto *VD = ExprResult.TheNode->ASTNode.get<VarDecl>())
+      HI.Type = printType(VD->getType(), Context, PP);
+
+  return HI;
+}
+
 /// Generate a \p Hover object given the macro \p MacroDecl.
 HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
                            ParsedAST &AST) {
@@ -732,6 +797,13 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, const syntax::Token &Tok,
       HI.Definition += "// Expands to\n";
       HI.Definition += ExpansionText;
     }
+
+    auto Evaluated = evaluateMacroExpansion(
+        /*SpellingBeginOffset=*/SM.getFileOffset(Tok.location()),
+        /*SpellingEndOffset=*/SM.getFileOffset(Tok.endLocation()),
+        /*Expanded=*/Expansion->Expanded, AST);
+    HI.Value = std::move(Evaluated.Value);
+    HI.Type = std::move(Evaluated.Type);
   }
   return HI;
 }
@@ -1293,7 +1365,7 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
           addLayoutInfo(*DeclToUse, *HI);
         // Look for a close enclosing expression to show the value of.
         if (!HI->Value)
-          HI->Value = printExprValue(N, AST.getASTContext());
+          HI->Value = printExprValue(N, AST.getASTContext()).PrintedValue;
         maybeAddCalleeArgInfo(N, *HI, PP);
         maybeAddSymbolProviders(AST, *HI, include_cleaner::Symbol{*DeclToUse});
       } else if (const Expr *E = N->ASTNode.get<Expr>()) {

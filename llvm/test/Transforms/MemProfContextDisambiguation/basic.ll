@@ -34,7 +34,7 @@
 ;; -stats requires asserts
 ; REQUIRES: asserts
 
-; RUN: opt -passes=memprof-context-disambiguation \
+; RUN: opt -passes=memprof-context-disambiguation -supports-hot-cold-new \
 ; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
 ; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:	-stats -pass-remarks=memprof-context-disambiguation \
@@ -44,6 +44,15 @@
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
 ; RUN:	cat %t.ccg.cloned.dot | FileCheck %s --check-prefix=DOTCLONED
+
+;; Check again without -supports-hot-cold-new and ensure all MIB are cold and
+;; that there is no cloning.
+; RUN: opt -passes=memprof-context-disambiguation \
+; RUN:	-memprof-verify-ccg -memprof-verify-nodes -memprof-dump-ccg \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
+; RUN:	-stats -pass-remarks=memprof-context-disambiguation \
+; RUN:	%s -S 2>&1 | FileCheck %s --implicit-check-not="Callsite Context Graph" \
+; RUN:	--implicit-check-not="created clone"
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

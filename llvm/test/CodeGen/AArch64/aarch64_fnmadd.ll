@@ -128,3 +128,26 @@ entry:
   store float %fneg, ptr %a, align 4
   ret void
 }
+
+define void @fnmaddd_two_uses(ptr %a, ptr %b, ptr %c, ptr %d) {
+; CHECK-LABEL: fnmaddd_two_uses:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr d0, [x1]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    fmadd d0, d0, d1, d2
+; CHECK-NEXT:    fneg d1, d0
+; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    str d0, [x3]
+; CHECK-NEXT:    ret
+entry:
+  %0 = load double, ptr %a, align 8
+  %1 = load double, ptr %b, align 8
+  %mul = fmul fast double %1, %0
+  %2 = load double, ptr %c, align 8
+  %add = fadd fast double %mul, %2
+  %fneg1 = fneg fast double %add
+  store double %fneg1, ptr %a, align 8
+  store double %add, ptr %d, align 8
+  ret void
+}

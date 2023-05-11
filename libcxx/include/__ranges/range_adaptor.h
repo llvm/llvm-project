@@ -18,6 +18,9 @@
 #include <__functional/compose.h>
 #include <__functional/invoke.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 

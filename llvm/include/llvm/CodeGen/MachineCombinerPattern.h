@@ -179,8 +179,7 @@ enum class MachineCombinerPattern {
   // X86 VNNI
   DPWSSD,
 
-  FNMADDS,
-  FNMADDD,
+  FNMADD,
 };
 
 } // end namespace llvm

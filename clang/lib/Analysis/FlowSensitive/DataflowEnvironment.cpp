@@ -245,7 +245,7 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   DACtx->addModeledFields(Fields);
 
   for (const VarDecl *D : Vars) {
-    if (getStorageLocation(*D, SkipPast::None) != nullptr)
+    if (getStorageLocation(*D) != nullptr)
       continue;
     auto &Loc = createStorageLocation(D->getType().getNonReferenceType());
     setStorageLocation(*D, Loc);
@@ -254,7 +254,7 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   }
 
   for (const FunctionDecl *FD : Funcs) {
-    if (getStorageLocation(*FD, SkipPast::None) != nullptr)
+    if (getStorageLocation(*FD) != nullptr)
       continue;
     auto &Loc = createStorageLocation(FD->getType());
     setStorageLocation(*FD, Loc);
@@ -605,10 +605,7 @@ void Environment::setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
   DeclToLoc[&D] = &Loc;
 }
 
-StorageLocation *Environment::getStorageLocation(const ValueDecl &D,
-                                                 SkipPast SP) const {
-  assert(SP != SkipPast::ReferenceThenPointer);
-
+StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
   auto It = DeclToLoc.find(&D);
   if (It == DeclToLoc.end())
     return nullptr;
@@ -683,10 +680,8 @@ Value *Environment::getValue(const StorageLocation &Loc) const {
   return It == LocToVal.end() ? nullptr : It->second;
 }
 
-Value *Environment::getValue(const ValueDecl &D, SkipPast SP) const {
-  assert(SP != SkipPast::ReferenceThenPointer);
-
-  auto *Loc = getStorageLocation(D, SP);
+Value *Environment::getValue(const ValueDecl &D) const {
+  auto *Loc = getStorageLocation(D);
   if (Loc == nullptr)
     return nullptr;
   return getValue(*Loc);

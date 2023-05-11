@@ -479,9 +479,37 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
   return res;
 }
 
-INTERCEPTOR(int, pthread_join, void *t, void **arg) {
-  return REAL(pthread_join)(t, arg);
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
+  return REAL(pthread_join)(thread, retval);
 }
+
+INTERCEPTOR(int, pthread_detach, void *thread) {
+  return REAL(pthread_detach)(thread);
+}
+
+INTERCEPTOR(int, pthread_exit, void *retval) {
+  return REAL(pthread_exit)(retval);
+}
+
+#  if SANITIZER_INTERCEPT_TRYJOIN
+INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
+  return REAL(pthread_tryjoin_np)(thread, ret);
+}
+#    define LSAN_MAYBE_INTERCEPT_TRYJOIN INTERCEPT_FUNCTION(pthread_tryjoin_np)
+#  else
+#    define LSAN_MAYBE_INTERCEPT_TRYJOIN
+#  endif  // SANITIZER_INTERCEPT_TRYJOIN
+
+#  if SANITIZER_INTERCEPT_TIMEDJOIN
+INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
+            const struct timespec *abstime) {
+  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
+}
+#    define LSAN_MAYBE_INTERCEPT_TIMEDJOIN \
+      INTERCEPT_FUNCTION(pthread_timedjoin_np)
+#  else
+#    define LSAN_MAYBE_INTERCEPT_TIMEDJOIN
+#  endif  // SANITIZER_INTERCEPT_TIMEDJOIN
 
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
@@ -518,6 +546,10 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);
   INTERCEPT_FUNCTION(pthread_join);
+  INTERCEPT_FUNCTION(pthread_detach);
+  INTERCEPT_FUNCTION(pthread_exit);
+  LSAN_MAYBE_INTERCEPT_TIMEDJOIN;
+  LSAN_MAYBE_INTERCEPT_TRYJOIN;
   INTERCEPT_FUNCTION(_exit);
 
   LSAN_MAYBE_INTERCEPT__LWP_EXIT;

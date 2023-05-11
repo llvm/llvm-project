@@ -99,7 +99,7 @@ TEST(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        EXPECT_EQ(Env.getStorageLocation(*FooDecl, SkipPast::None), nullptr);
+        EXPECT_EQ(Env.getStorageLocation(*FooDecl), nullptr);
       },
       LangStandard::lang_cxx17,
       /*ApplyBuiltinTransfer=*/false);
@@ -122,8 +122,7 @@ TEST(TransferTest, BoolVarDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -148,8 +147,7 @@ TEST(TransferTest, IntVarDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -175,8 +173,7 @@ TEST(TransferTest, StructIncomplete) {
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
-        auto *FooValue = dyn_cast_or_null<PointerValue>(
-            Env.getValue(*FooDecl, SkipPast::None));
+        auto *FooValue = dyn_cast_or_null<PointerValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooValue, NotNull());
 
         EXPECT_TRUE(isa<AggregateStorageLocation>(FooValue->getPointeeLoc()));
@@ -228,15 +225,15 @@ TEST(TransferTest, StructFieldUnmodeled) {
         }
         ASSERT_THAT(UnmodeledDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *UnmodeledLoc = &FooLoc->getChild(*UnmodeledDecl);
         ASSERT_TRUE(isa<ScalarStorageLocation>(UnmodeledLoc));
         ASSERT_THAT(Env.getValue(*UnmodeledLoc), IsNull());
 
         const ValueDecl *ZabDecl = findValueDecl(ASTCtx, "Zab");
         ASSERT_THAT(ZabDecl, NotNull());
-        EXPECT_THAT(Env.getValue(*ZabDecl, SkipPast::None), NotNull());
+        EXPECT_THAT(Env.getValue(*ZabDecl), NotNull());
       });
 }
 
@@ -275,8 +272,8 @@ TEST(TransferTest, StructVarDecl) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
             cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
 
@@ -323,8 +320,8 @@ TEST(TransferTest, StructVarDeclWithInit) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
             cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
 
@@ -370,8 +367,8 @@ TEST(TransferTest, ClassVarDecl) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
             cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
 
@@ -402,8 +399,7 @@ TEST(TransferTest, ReferenceVarDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<AggregateStorageLocation>(FooLoc));
 
         const Value *FooReferentVal = Env.getValue(*FooLoc);
@@ -490,8 +486,8 @@ TEST(TransferTest, SelfReferentialReferenceVarDecl) {
     ASSERT_THAT(BazRefDecl, NotNull());
     ASSERT_THAT(BazPtrDecl, NotNull());
 
-    const auto *FooLoc = cast<AggregateStorageLocation>(
-        Env.getStorageLocation(*FooDecl, SkipPast::None));
+    const auto *FooLoc =
+        cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
     const auto *FooReferentVal = cast<StructValue>(Env.getValue(*FooLoc));
 
     const auto *BarVal =
@@ -546,8 +542,7 @@ TEST(TransferTest, PointerVarDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const PointerValue *FooVal = cast<PointerValue>(Env.getValue(*FooLoc));
@@ -651,8 +646,8 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
         ASSERT_THAT(BazRefDecl, NotNull());
         ASSERT_THAT(BazPtrDecl, NotNull());
 
-        const auto *FooLoc = cast<ScalarStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *FooVal = cast<PointerValue>(Env.getValue(*FooLoc));
         const auto *FooPointeeVal =
             cast<StructValue>(Env.getValue(FooVal->getPointeeLoc()));
@@ -705,12 +700,10 @@ TEST(TransferTest, MultipleVarsDecl) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
-        const StorageLocation *BarLoc =
-            Env.getStorageLocation(*BarDecl, SkipPast::None);
+        const StorageLocation *BarLoc = Env.getStorageLocation(*BarDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -753,26 +746,25 @@ TEST(TransferTest, JoinVarDecl) {
 
     const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
 
-    const StorageLocation *FooLoc =
-        Env1.getStorageLocation(*FooDecl, SkipPast::None);
+    const StorageLocation *FooLoc = Env1.getStorageLocation(*FooDecl);
     EXPECT_THAT(FooLoc, NotNull());
-    EXPECT_THAT(Env1.getStorageLocation(*BarDecl, SkipPast::None), IsNull());
-    EXPECT_THAT(Env1.getStorageLocation(*BazDecl, SkipPast::None), IsNull());
+    EXPECT_THAT(Env1.getStorageLocation(*BarDecl), IsNull());
+    EXPECT_THAT(Env1.getStorageLocation(*BazDecl), IsNull());
 
     const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
-    EXPECT_EQ(Env2.getStorageLocation(*FooDecl, SkipPast::None), FooLoc);
-    EXPECT_THAT(Env2.getStorageLocation(*BarDecl, SkipPast::None), NotNull());
-    EXPECT_THAT(Env2.getStorageLocation(*BazDecl, SkipPast::None), IsNull());
+    EXPECT_EQ(Env2.getStorageLocation(*FooDecl), FooLoc);
+    EXPECT_THAT(Env2.getStorageLocation(*BarDecl), NotNull());
+    EXPECT_THAT(Env2.getStorageLocation(*BazDecl), IsNull());
 
     const Environment &Env3 = getEnvironmentAtAnnotation(Results, "p3");
-    EXPECT_EQ(Env3.getStorageLocation(*FooDecl, SkipPast::None), FooLoc);
-    EXPECT_THAT(Env3.getStorageLocation(*BarDecl, SkipPast::None), IsNull());
-    EXPECT_THAT(Env3.getStorageLocation(*BazDecl, SkipPast::None), NotNull());
+    EXPECT_EQ(Env3.getStorageLocation(*FooDecl), FooLoc);
+    EXPECT_THAT(Env3.getStorageLocation(*BarDecl), IsNull());
+    EXPECT_THAT(Env3.getStorageLocation(*BazDecl), NotNull());
 
     const Environment &Env4 = getEnvironmentAtAnnotation(Results, "p4");
-    EXPECT_EQ(Env4.getStorageLocation(*FooDecl, SkipPast::None), FooLoc);
-    EXPECT_THAT(Env4.getStorageLocation(*BarDecl, SkipPast::None), IsNull());
-    EXPECT_THAT(Env4.getStorageLocation(*BazDecl, SkipPast::None), IsNull());
+    EXPECT_EQ(Env4.getStorageLocation(*FooDecl), FooLoc);
+    EXPECT_THAT(Env4.getStorageLocation(*BarDecl), IsNull());
+    EXPECT_THAT(Env4.getStorageLocation(*BazDecl), IsNull());
   });
 }
 
@@ -795,13 +787,13 @@ TEST(TransferTest, BinaryOperatorAssign) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const Value *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+        const Value *FooVal = Env.getValue(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BarDecl, SkipPast::None), FooVal);
+        EXPECT_EQ(Env.getValue(*BarDecl), FooVal);
       });
 }
 
@@ -823,13 +815,13 @@ TEST(TransferTest, VarDeclInitAssign) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const Value *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+        const Value *FooVal = Env.getValue(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BarDecl, SkipPast::None), FooVal);
+        EXPECT_EQ(Env.getValue(*BarDecl), FooVal);
       });
 }
 
@@ -852,7 +844,7 @@ TEST(TransferTest, VarDeclInitAssignChained) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const Value *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+        const Value *FooVal = Env.getValue(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
@@ -861,8 +853,8 @@ TEST(TransferTest, VarDeclInitAssignChained) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BarDecl, SkipPast::None), FooVal);
-        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), FooVal);
+        EXPECT_EQ(Env.getValue(*BarDecl), FooVal);
+        EXPECT_EQ(Env.getValue(*BazDecl), FooVal);
       });
 }
 
@@ -886,20 +878,19 @@ TEST(TransferTest, VarDeclInitAssignPtrDeref) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const Value *FooVal = Env.getValue(*FooDecl, SkipPast::None);
+        const Value *FooVal = Env.getValue(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *BarVal =
-            cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(Env.getValue(BarVal->getPointeeLoc()), FooVal);
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), FooVal);
+        EXPECT_EQ(Env.getValue(*BazDecl), FooVal);
       });
 }
 
@@ -927,30 +918,30 @@ TEST(TransferTest, AssignToAndFromReference) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const Value *FooVal = Env1.getValue(*FooDecl, SkipPast::None);
+        const Value *FooVal = Env1.getValue(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const Value *BarVal = Env1.getValue(*BarDecl, SkipPast::None);
+        const Value *BarVal = Env1.getValue(*BarDecl);
         ASSERT_TRUE(isa_and_nonnull<IntegerValue>(BarVal));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::Reference), FooVal);
+        EXPECT_EQ(Env1.getValue(*BazDecl), FooVal);
 
-        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::Reference), BarVal);
-        EXPECT_EQ(Env2.getValue(*FooDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env2.getValue(*BazDecl), BarVal);
+        EXPECT_EQ(Env2.getValue(*FooDecl), BarVal);
 
         const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
         ASSERT_THAT(QuxDecl, NotNull());
-        EXPECT_EQ(Env2.getValue(*QuxDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env2.getValue(*QuxDecl), BarVal);
 
         const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
         ASSERT_THAT(QuuxDecl, NotNull());
-        EXPECT_EQ(Env2.getValue(*QuuxDecl, SkipPast::Reference), BarVal);
+        EXPECT_EQ(Env2.getValue(*QuuxDecl), BarVal);
       });
 }
 
@@ -971,8 +962,7 @@ TEST(TransferTest, MultipleParamDecls) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -981,8 +971,7 @@ TEST(TransferTest, MultipleParamDecls) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const StorageLocation *BarLoc =
-            Env.getStorageLocation(*BarDecl, SkipPast::None);
+        const StorageLocation *BarLoc = Env.getStorageLocation(*BarDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *BarVal = Env.getValue(*BarLoc);
@@ -1024,8 +1013,8 @@ TEST(TransferTest, StructParamDecl) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
             cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
 
@@ -1054,8 +1043,7 @@ TEST(TransferTest, ReferenceParamDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<AggregateStorageLocation>(FooLoc));
 
         const Value *FooReferentVal = Env.getValue(*FooLoc);
@@ -1082,8 +1070,7 @@ TEST(TransferTest, PointerParamDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const PointerValue *FooVal = cast<PointerValue>(Env.getValue(*FooLoc));
@@ -1129,15 +1116,15 @@ TEST(TransferTest, StructMember) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<IntegerValue>(FooVal->getChild(*BarDecl));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env.getValue(*BazDecl), BarVal);
       });
 }
 
@@ -1260,8 +1247,8 @@ TEST(TransferTest, DerivedBaseMemberClass) {
         ASSERT_THAT(APrivateDecl, NotNull());
         ASSERT_THAT(APublicDecl, NotNull());
 
-        const auto &FooLoc = *cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto &FooLoc =
+            *cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
 
         // Note: we can't test presence of children in `FooLoc`, because
@@ -1319,8 +1306,8 @@ static void derivedBaseMemberExpectations(
   }
   ASSERT_THAT(BarDecl, NotNull());
 
-  const auto &FooLoc = *cast<AggregateStorageLocation>(
-      Env.getStorageLocation(*FooDecl, SkipPast::None));
+  const auto &FooLoc =
+      *cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
   const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
   EXPECT_THAT(FooVal.getChild(*BarDecl), NotNull());
   EXPECT_EQ(Env.getValue(FooLoc.getChild(*BarDecl)), FooVal.getChild(*BarDecl));
@@ -1399,15 +1386,15 @@ TEST(TransferTest, ClassMember) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<IntegerValue>(FooVal->getChild(*BarDecl));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env.getValue(*BazDecl), BarVal);
       });
 }
 
@@ -1489,8 +1476,8 @@ TEST(TransferTest, ReferenceMember) {
         }
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<ReferenceValue>(FooVal->getChild(*BarDecl));
         const auto *BarReferentVal =
@@ -1499,7 +1486,7 @@ TEST(TransferTest, ReferenceMember) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), BarReferentVal);
+        EXPECT_EQ(Env.getValue(*BazDecl), BarReferentVal);
       });
 }
 
@@ -1544,7 +1531,7 @@ TEST(TransferTest, StructThisMember) {
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env.getValue(*FooDecl), BarVal);
 
         const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
         ASSERT_THAT(QuxDecl, NotNull());
@@ -1574,7 +1561,7 @@ TEST(TransferTest, StructThisMember) {
 
         const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
         ASSERT_THAT(QuuxDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*QuuxDecl, SkipPast::None), BazVal);
+        EXPECT_EQ(Env.getValue(*QuuxDecl), BazVal);
       });
 }
 
@@ -1619,7 +1606,7 @@ TEST(TransferTest, ClassThisMember) {
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env.getValue(*FooDecl), BarVal);
 
         const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
         ASSERT_THAT(QuxDecl, NotNull());
@@ -1649,7 +1636,7 @@ TEST(TransferTest, ClassThisMember) {
 
         const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
         ASSERT_THAT(QuuxDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*QuuxDecl, SkipPast::None), BazVal);
+        EXPECT_EQ(Env.getValue(*QuuxDecl), BazVal);
       });
 }
 
@@ -1737,7 +1724,7 @@ TEST(TransferTest, StructThisInLambda) {
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env.getValue(*FooDecl), BarVal);
       },
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator()");
 
@@ -1776,7 +1763,7 @@ TEST(TransferTest, StructThisInLambda) {
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None), BarVal);
+        EXPECT_EQ(Env.getValue(*FooDecl), BarVal);
       },
       LangStandard::lang_cxx17, /*ApplyBuiltinTransfer=*/true, "operator()");
 
@@ -1826,12 +1813,11 @@ TEST(TransferTest, ConstructorInitializer) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const auto *FooVal =
-            cast<IntegerValue>(Env.getValue(*FooDecl, SkipPast::None));
+        const auto *FooVal = cast<IntegerValue>(Env.getValue(*FooDecl));
 
         const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
         ASSERT_THAT(QuxDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*QuxDecl, SkipPast::None), FooVal);
+        EXPECT_EQ(Env.getValue(*QuxDecl), FooVal);
       });
 }
 
@@ -1861,12 +1847,11 @@ TEST(TransferTest, DefaultInitializer) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const auto *FooVal =
-            cast<IntegerValue>(Env.getValue(*FooDecl, SkipPast::None));
+        const auto *FooVal = cast<IntegerValue>(Env.getValue(*FooDecl));
 
         const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
         ASSERT_THAT(QuxDecl, NotNull());
-        EXPECT_EQ(Env.getValue(*QuxDecl, SkipPast::None), FooVal);
+        EXPECT_EQ(Env.getValue(*QuxDecl), FooVal);
       });
 }
 
@@ -1931,8 +1916,8 @@ TEST(TransferTest, TemporaryObject) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
             cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
 
@@ -1969,8 +1954,8 @@ TEST(TransferTest, ElidableConstructor) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
             cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
 
@@ -2013,10 +1998,10 @@ TEST(TransferTest, AssignmentOperator) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto *FooLoc1 = cast<AggregateStorageLocation>(
-            Env1.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarLoc1 = cast<AggregateStorageLocation>(
-            Env1.getStorageLocation(*BarDecl, SkipPast::None));
+        const auto *FooLoc1 =
+            cast<AggregateStorageLocation>(Env1.getStorageLocation(*FooDecl));
+        const auto *BarLoc1 =
+            cast<AggregateStorageLocation>(Env1.getStorageLocation(*BarDecl));
 
         const auto *FooVal1 = cast<StructValue>(Env1.getValue(*FooLoc1));
         const auto *BarVal1 = cast<StructValue>(Env1.getValue(*BarLoc1));
@@ -2028,10 +2013,10 @@ TEST(TransferTest, AssignmentOperator) {
             cast<IntegerValue>(Env1.getValue(BarLoc1->getChild(*BazDecl)));
         EXPECT_NE(FooBazVal1, BarBazVal1);
 
-        const auto *FooLoc2 = cast<AggregateStorageLocation>(
-            Env2.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarLoc2 = cast<AggregateStorageLocation>(
-            Env2.getStorageLocation(*BarDecl, SkipPast::None));
+        const auto *FooLoc2 =
+            cast<AggregateStorageLocation>(Env2.getStorageLocation(*FooDecl));
+        const auto *BarLoc2 =
+            cast<AggregateStorageLocation>(Env2.getStorageLocation(*BarDecl));
 
         const auto *FooVal2 = cast<StructValue>(Env2.getValue(*FooLoc2));
         const auto *BarVal2 = cast<StructValue>(Env2.getValue(*BarLoc2));
@@ -2074,10 +2059,10 @@ TEST(TransferTest, CopyConstructor) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*BarDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
+        const auto *BarLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<StructValue>(Env.getValue(*BarLoc));
@@ -2122,10 +2107,10 @@ TEST(TransferTest, CopyConstructorWithDefaultArgument) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*BarDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
+        const auto *BarLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<StructValue>(Env.getValue(*BarLoc));
@@ -2168,10 +2153,10 @@ TEST(TransferTest, CopyConstructorWithParens) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto *FooLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarLoc = cast<AggregateStorageLocation>(
-            Env.getStorageLocation(*BarDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
+        const auto *BarLoc =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<StructValue>(Env.getValue(*BarLoc));
@@ -2231,10 +2216,10 @@ TEST(TransferTest, MoveConstructor) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto *FooLoc1 = cast<AggregateStorageLocation>(
-            Env1.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarLoc1 = cast<AggregateStorageLocation>(
-            Env1.getStorageLocation(*BarDecl, SkipPast::None));
+        const auto *FooLoc1 =
+            cast<AggregateStorageLocation>(Env1.getStorageLocation(*FooDecl));
+        const auto *BarLoc1 =
+            cast<AggregateStorageLocation>(Env1.getStorageLocation(*BarDecl));
 
         const auto *FooVal1 = cast<StructValue>(Env1.getValue(*FooLoc1));
         const auto *BarVal1 = cast<StructValue>(Env1.getValue(*BarLoc1));
@@ -2246,8 +2231,8 @@ TEST(TransferTest, MoveConstructor) {
             cast<IntegerValue>(Env1.getValue(BarLoc1->getChild(*BazDecl)));
         EXPECT_NE(FooBazVal1, BarBazVal1);
 
-        const auto *FooLoc2 = cast<AggregateStorageLocation>(
-            Env2.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto *FooLoc2 =
+            cast<AggregateStorageLocation>(Env2.getStorageLocation(*FooDecl));
         const auto *FooVal2 = cast<StructValue>(Env2.getValue(*FooLoc2));
         EXPECT_EQ(FooVal2, BarVal1);
 
@@ -2286,10 +2271,8 @@ TEST(TransferTest, BindTemporary) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto &FooVal =
-            *cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
-        const auto *BarVal =
-            cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
+        const auto &FooVal = *cast<StructValue>(Env.getValue(*FooDecl));
+        const auto *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(BarVal, FooVal.getChild(*BazDecl));
       });
 }
@@ -2314,8 +2297,8 @@ TEST(TransferTest, StaticCast) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
-        const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+        const auto *FooVal = Env.getValue(*FooDecl);
+        const auto *BarVal = Env.getValue(*BarDecl);
         EXPECT_TRUE(isa<IntegerValue>(FooVal));
         EXPECT_TRUE(isa<IntegerValue>(BarVal));
         EXPECT_EQ(FooVal, BarVal);
@@ -2342,8 +2325,8 @@ TEST(TransferTest, IntegralCast) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
-        const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+        const auto *FooVal = Env.getValue(*FooDecl);
+        const auto *BarVal = Env.getValue(*BarDecl);
         EXPECT_TRUE(isa<IntegerValue>(FooVal));
         EXPECT_TRUE(isa<IntegerValue>(BarVal));
         EXPECT_EQ(FooVal, BarVal);
@@ -2370,8 +2353,8 @@ TEST(TransferTest, IntegraltoBooleanCast) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
-        const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+        const auto *FooVal = Env.getValue(*FooDecl);
+        const auto *BarVal = Env.getValue(*BarDecl);
         EXPECT_TRUE(isa<IntegerValue>(FooVal));
         EXPECT_TRUE(isa<BoolValue>(BarVal));
       });
@@ -2398,8 +2381,8 @@ TEST(TransferTest, IntegralToBooleanCastFromBool) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooVal = Env.getValue(*FooDecl, SkipPast::None);
-        const auto *BarVal = Env.getValue(*BarDecl, SkipPast::None);
+        const auto *FooVal = Env.getValue(*FooDecl);
+        const auto *BarVal = Env.getValue(*BarDecl);
         EXPECT_TRUE(isa<BoolValue>(FooVal));
         EXPECT_TRUE(isa<BoolValue>(BarVal));
         EXPECT_EQ(FooVal, BarVal);
@@ -2441,16 +2424,11 @@ TEST(TransferTest, NullToPointerCast) {
         const ValueDecl *NullDecl = findValueDecl(ASTCtx, "Null");
         ASSERT_THAT(NullDecl, NotNull());
 
-        const auto *FooXVal =
-            cast<PointerValue>(Env.getValue(*FooXDecl, SkipPast::None));
-        const auto *FooYVal =
-            cast<PointerValue>(Env.getValue(*FooYDecl, SkipPast::None));
-        const auto *BarVal =
-            cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
-        const auto *BazVal =
-            cast<PointerValue>(Env.getValue(*BazDecl, SkipPast::None));
-        const auto *NullVal =
-            cast<PointerValue>(Env.getValue(*NullDecl, SkipPast::None));
+        const auto *FooXVal = cast<PointerValue>(Env.getValue(*FooXDecl));
+        const auto *FooYVal = cast<PointerValue>(Env.getValue(*FooYDecl));
+        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
+        const auto *BazVal = cast<PointerValue>(Env.getValue(*BazDecl));
+        const auto *NullVal = cast<PointerValue>(Env.getValue(*NullDecl));
 
         EXPECT_EQ(FooXVal, FooYVal);
         EXPECT_NE(FooXVal, BarVal);
@@ -2494,8 +2472,8 @@ TEST(TransferTest, NullToMemberPointerCast) {
             findValueDecl(ASTCtx, "MemberPointer");
         ASSERT_THAT(MemberPointerDecl, NotNull());
 
-        const auto *MemberPointerVal = cast<PointerValue>(
-            Env.getValue(*MemberPointerDecl, SkipPast::None));
+        const auto *MemberPointerVal =
+            cast<PointerValue>(Env.getValue(*MemberPointerDecl));
 
         const StorageLocation &MemberLoc = MemberPointerVal->getPointeeLoc();
         EXPECT_THAT(Env.getValue(MemberLoc), IsNull());
@@ -2523,10 +2501,9 @@ TEST(TransferTest, AddrOfValue) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooLoc = cast<ScalarStorageLocation>(
-            Env.getStorageLocation(*FooDecl, SkipPast::None));
-        const auto *BarVal =
-            cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+        const auto *FooLoc =
+            cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
+        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
       });
 }
@@ -2551,10 +2528,8 @@ TEST(TransferTest, AddrOfReference) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooVal =
-            cast<PointerValue>(Env.getValue(*FooDecl, SkipPast::None));
-        const auto *BarVal =
-            cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+        const auto *FooVal = cast<PointerValue>(Env.getValue(*FooDecl));
+        const auto *BarVal = cast<PointerValue>(Env.getValue(*BarDecl));
         EXPECT_EQ(&BarVal->getPointeeLoc(), &FooVal->getPointeeLoc());
       });
 }
@@ -2580,8 +2555,7 @@ TEST(TransferTest, DerefDependentPtr) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *FooVal =
-            cast<PointerValue>(Env.getValue(*FooDecl, SkipPast::None));
+        const auto *FooVal = cast<PointerValue>(Env.getValue(*FooDecl));
         const auto *BarLoc = Env.getStorageLocation(*BarDecl);
         EXPECT_EQ(BarLoc, &FooVal->getPointeeLoc());
       });
@@ -2612,13 +2586,10 @@ TEST(TransferTest, VarDeclInitAssignConditionalOperator) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto *FooVal =
-            cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
-        const auto *BarVal =
-            cast<StructValue>(Env.getValue(*BarDecl, SkipPast::None));
+        const auto *FooVal = cast<StructValue>(Env.getValue(*FooDecl));
+        const auto *BarVal = cast<StructValue>(Env.getValue(*BarDecl));
 
-        const auto *BazVal =
-            dyn_cast<StructValue>(Env.getValue(*BazDecl, SkipPast::None));
+        const auto *BazVal = dyn_cast<StructValue>(Env.getValue(*BazDecl));
         ASSERT_THAT(BazVal, NotNull());
 
         EXPECT_NE(BazVal, FooVal);
@@ -2750,15 +2721,11 @@ TEST(TransferTest, AggregateInitialization) {
           const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
           ASSERT_THAT(QuuxDecl, NotNull());
 
-          const auto *FooArgVal =
-              cast<IntegerValue>(Env.getValue(*FooArgDecl, SkipPast::None));
-          const auto *BarArgVal =
-              cast<IntegerValue>(Env.getValue(*BarArgDecl, SkipPast::None));
-          const auto *QuxArgVal =
-              cast<IntegerValue>(Env.getValue(*QuxArgDecl, SkipPast::None));
+          const auto *FooArgVal = cast<IntegerValue>(Env.getValue(*FooArgDecl));
+          const auto *BarArgVal = cast<IntegerValue>(Env.getValue(*BarArgDecl));
+          const auto *QuxArgVal = cast<IntegerValue>(Env.getValue(*QuxArgDecl));
 
-          const auto *QuuxVal =
-              cast<StructValue>(Env.getValue(*QuuxDecl, SkipPast::None));
+          const auto *QuuxVal = cast<StructValue>(Env.getValue(*QuuxDecl));
           ASSERT_THAT(QuuxVal, NotNull());
 
           const auto *BazVal = cast<StructValue>(QuuxVal->getChild(*BazDecl));
@@ -2806,7 +2773,7 @@ TEST(TransferTest, AssignToUnionMember) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *BazLoc = dyn_cast_or_null<AggregateStorageLocation>(
-            Env.getStorageLocation(*BazDecl, SkipPast::None));
+            Env.getStorageLocation(*BazDecl));
         ASSERT_THAT(BazLoc, NotNull());
         ASSERT_THAT(Env.getValue(*BazLoc), NotNull());
 
@@ -2817,7 +2784,7 @@ TEST(TransferTest, AssignToUnionMember) {
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
-        const auto *BarLoc = Env.getStorageLocation(*BarDecl, SkipPast::None);
+        const auto *BarLoc = Env.getStorageLocation(*BarDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         EXPECT_EQ(Env.getValue(*BarLoc), FooValFromBazVal);
@@ -2843,15 +2810,15 @@ TEST(TransferTest, AssignFromBoolLiteral) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const auto *FooVal = dyn_cast_or_null<AtomicBoolValue>(
-            Env.getValue(*FooDecl, SkipPast::None));
+        const auto *FooVal =
+            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooVal, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *BarVal = dyn_cast_or_null<AtomicBoolValue>(
-            Env.getValue(*BarDecl, SkipPast::None));
+        const auto *BarVal =
+            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*BarDecl));
         ASSERT_THAT(BarVal, NotNull());
 
         EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
@@ -2877,29 +2844,29 @@ TEST(TransferTest, AssignFromCompositeBoolExpression) {
           const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
           ASSERT_THAT(FooDecl, NotNull());
 
-          const auto *FooVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*FooDecl, SkipPast::None));
+          const auto *FooVal =
+              dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
           ASSERT_THAT(FooVal, NotNull());
 
           const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
           ASSERT_THAT(BarDecl, NotNull());
 
-          const auto *BarVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*BarDecl, SkipPast::None));
+          const auto *BarVal =
+              dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl));
           ASSERT_THAT(BarVal, NotNull());
 
           const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
           ASSERT_THAT(QuxDecl, NotNull());
 
-          const auto *QuxVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*QuxDecl, SkipPast::None));
+          const auto *QuxVal =
+              dyn_cast_or_null<BoolValue>(Env.getValue(*QuxDecl));
           ASSERT_THAT(QuxVal, NotNull());
 
           const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
           ASSERT_THAT(BazDecl, NotNull());
 
-          const auto *BazVal = dyn_cast_or_null<ConjunctionValue>(
-              Env.getValue(*BazDecl, SkipPast::None));
+          const auto *BazVal =
+              dyn_cast_or_null<ConjunctionValue>(Env.getValue(*BazDecl));
           ASSERT_THAT(BazVal, NotNull());
           EXPECT_EQ(&BazVal->getLeftSubValue(), FooVal);
 
@@ -2927,29 +2894,29 @@ TEST(TransferTest, AssignFromCompositeBoolExpression) {
           const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
           ASSERT_THAT(FooDecl, NotNull());
 
-          const auto *FooVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*FooDecl, SkipPast::None));
+          const auto *FooVal =
+              dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
           ASSERT_THAT(FooVal, NotNull());
 
           const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
           ASSERT_THAT(BarDecl, NotNull());
 
-          const auto *BarVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*BarDecl, SkipPast::None));
+          const auto *BarVal =
+              dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl));
           ASSERT_THAT(BarVal, NotNull());
 
           const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
           ASSERT_THAT(QuxDecl, NotNull());
 
-          const auto *QuxVal = dyn_cast_or_null<BoolValue>(
-              Env.getValue(*QuxDecl, SkipPast::None));
+          const auto *QuxVal =
+              dyn_cast_or_null<BoolValue>(Env.getValue(*QuxDecl));
           ASSERT_THAT(QuxVal, NotNull());
 
           const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
           ASSERT_THAT(BazDecl, NotNull());
 
-          const auto *BazVal = dyn_cast_or_null<DisjunctionValue>(
-              Env.getValue(*BazDecl, SkipPast::None));
+          const auto *BazVal =
+              dyn_cast_or_null<DisjunctionValue>(Env.getValue(*BazDecl));
           ASSERT_THAT(BazVal, NotNull());
 
           const auto *BazLeftSubValVal =
@@ -2978,36 +2945,32 @@ TEST(TransferTest, AssignFromCompositeBoolExpression) {
           const ValueDecl *ADecl = findValueDecl(ASTCtx, "A");
           ASSERT_THAT(ADecl, NotNull());
 
-          const auto *AVal =
-              dyn_cast_or_null<BoolValue>(Env.getValue(*ADecl, SkipPast::None));
+          const auto *AVal = dyn_cast_or_null<BoolValue>(Env.getValue(*ADecl));
           ASSERT_THAT(AVal, NotNull());
 
           const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
           ASSERT_THAT(BDecl, NotNull());
 
-          const auto *BVal =
-              dyn_cast_or_null<BoolValue>(Env.getValue(*BDecl, SkipPast::None));
+          const auto *BVal = dyn_cast_or_null<BoolValue>(Env.getValue(*BDecl));
           ASSERT_THAT(BVal, NotNull());
 
           const ValueDecl *CDecl = findValueDecl(ASTCtx, "C");
           ASSERT_THAT(CDecl, NotNull());
 
-          const auto *CVal =
-              dyn_cast_or_null<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          const auto *CVal = dyn_cast_or_null<BoolValue>(Env.getValue(*CDecl));
           ASSERT_THAT(CVal, NotNull());
 
           const ValueDecl *DDecl = findValueDecl(ASTCtx, "D");
           ASSERT_THAT(DDecl, NotNull());
 
-          const auto *DVal =
-              dyn_cast_or_null<BoolValue>(Env.getValue(*DDecl, SkipPast::None));
+          const auto *DVal = dyn_cast_or_null<BoolValue>(Env.getValue(*DDecl));
           ASSERT_THAT(DVal, NotNull());
 
           const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
           ASSERT_THAT(FooDecl, NotNull());
 
-          const auto *FooVal = dyn_cast_or_null<ConjunctionValue>(
-              Env.getValue(*FooDecl, SkipPast::None));
+          const auto *FooVal =
+              dyn_cast_or_null<ConjunctionValue>(Env.getValue(*FooDecl));
           ASSERT_THAT(FooVal, NotNull());
 
           const auto &FooLeftSubVal =
@@ -3040,15 +3003,15 @@ TEST(TransferTest, AssignFromBoolNegation) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const auto *FooVal = dyn_cast_or_null<AtomicBoolValue>(
-            Env.getValue(*FooDecl, SkipPast::None));
+        const auto *FooVal =
+            dyn_cast_or_null<AtomicBoolValue>(Env.getValue(*FooDecl));
         ASSERT_THAT(FooVal, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const auto *BarVal = dyn_cast_or_null<NegationValue>(
-            Env.getValue(*BarDecl, SkipPast::None));
+        const auto *BarVal =
+            dyn_cast_or_null<NegationValue>(Env.getValue(*BarDecl));
         ASSERT_THAT(BarVal, NotNull());
 
         EXPECT_EQ(&BarVal->getSubVal(), FooVal);
@@ -3075,8 +3038,7 @@ TEST(TransferTest, BuiltinExpect) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
-                  Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_EQ(Env.getValue(*FooDecl), Env.getValue(*BarDecl));
       });
 }
 
@@ -3103,8 +3065,7 @@ TEST(TransferTest, BuiltinExpectBoolArg) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
-                  Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_EQ(Env.getValue(*FooDecl), Env.getValue(*BarDecl));
       });
 }
 
@@ -3136,8 +3097,7 @@ TEST(TransferTest, BuiltinUnreachable) {
         // `__builtin_unreachable` promises that the code is
         // unreachable, so the compiler treats the "then" branch as the
         // only possible predecessor of this statement.
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
-                  Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_EQ(Env.getValue(*FooDecl), Env.getValue(*BarDecl));
       });
 }
 
@@ -3168,8 +3128,7 @@ TEST(TransferTest, BuiltinTrap) {
 
         // `__builtin_trap` ensures program termination, so only the
         // "then" branch is a predecessor of this statement.
-        EXPECT_EQ(Env.getValue(*FooDecl, SkipPast::None),
-                  Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_EQ(Env.getValue(*FooDecl), Env.getValue(*BarDecl));
       });
 }
 
@@ -3199,8 +3158,7 @@ TEST(TransferTest, BuiltinDebugTrap) {
         ASSERT_THAT(BarDecl, NotNull());
 
         // `__builtin_debugtrap` doesn't ensure program termination.
-        EXPECT_NE(Env.getValue(*FooDecl, SkipPast::None),
-                  Env.getValue(*BarDecl, SkipPast::None));
+        EXPECT_NE(Env.getValue(*FooDecl), Env.getValue(*BarDecl));
       });
 }
 
@@ -3221,8 +3179,7 @@ TEST(TransferTest, StaticIntSingleVarDecl) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -3251,12 +3208,10 @@ TEST(TransferTest, StaticIntGroupVarDecl) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        const StorageLocation *FooLoc =
-            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        const StorageLocation *FooLoc = Env.getStorageLocation(*FooDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
-        const StorageLocation *BarLoc =
-            Env.getStorageLocation(*BarDecl, SkipPast::None);
+        const StorageLocation *BarLoc = Env.getStorageLocation(*BarDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -3292,10 +3247,8 @@ TEST(TransferTest, GlobalIntVarDecl) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const Value *BarVal =
-            cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
-        const Value *BazVal =
-            cast<IntegerValue>(Env.getValue(*BazDecl, SkipPast::None));
+        const Value *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
+        const Value *BazVal = cast<IntegerValue>(Env.getValue(*BazDecl));
         EXPECT_EQ(BarVal, BazVal);
       });
 }
@@ -3325,10 +3278,8 @@ TEST(TransferTest, StaticMemberIntVarDecl) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const Value *BarVal =
-            cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
-        const Value *BazVal =
-            cast<IntegerValue>(Env.getValue(*BazDecl, SkipPast::None));
+        const Value *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
+        const Value *BazVal = cast<IntegerValue>(Env.getValue(*BazDecl));
         EXPECT_EQ(BarVal, BazVal);
       });
 }
@@ -3358,10 +3309,8 @@ TEST(TransferTest, StaticMemberRefVarDecl) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const Value *BarVal =
-            cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
-        const Value *BazVal =
-            cast<IntegerValue>(Env.getValue(*BazDecl, SkipPast::None));
+        const Value *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
+        const Value *BazVal = cast<IntegerValue>(Env.getValue(*BazDecl));
         EXPECT_EQ(BarVal, BazVal);
       });
 }
@@ -3400,11 +3349,9 @@ TEST(TransferTest, AssignMemberBeforeCopy) {
         const ValueDecl *A2Decl = findValueDecl(ASTCtx, "A2");
         ASSERT_THAT(A2Decl, NotNull());
 
-        const auto *BarVal =
-            cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
+        const auto *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
 
-        const auto *A2Val =
-            cast<StructValue>(Env.getValue(*A2Decl, SkipPast::None));
+        const auto *A2Val = cast<StructValue>(Env.getValue(*A2Decl));
         EXPECT_EQ(A2Val->getChild(*FooDecl), BarVal);
       });
 }
@@ -3435,12 +3382,10 @@ TEST(TransferTest, BooleanEquality) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarValThen =
-            *cast<BoolValue>(EnvThen.getValue(*BarDecl, SkipPast::None));
+        auto &BarValThen = *cast<BoolValue>(EnvThen.getValue(*BarDecl));
         EXPECT_TRUE(EnvThen.flowConditionImplies(BarValThen));
 
-        auto &BarValElse =
-            *cast<BoolValue>(EnvElse.getValue(*BarDecl, SkipPast::None));
+        auto &BarValElse = *cast<BoolValue>(EnvElse.getValue(*BarDecl));
         EXPECT_FALSE(EnvElse.flowConditionImplies(BarValElse));
       });
 }
@@ -3471,12 +3416,10 @@ TEST(TransferTest, BooleanInequality) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarValThen =
-            *cast<BoolValue>(EnvThen.getValue(*BarDecl, SkipPast::None));
+        auto &BarValThen = *cast<BoolValue>(EnvThen.getValue(*BarDecl));
         EXPECT_FALSE(EnvThen.flowConditionImplies(BarValThen));
 
-        auto &BarValElse =
-            *cast<BoolValue>(EnvElse.getValue(*BarDecl, SkipPast::None));
+        auto &BarValElse = *cast<BoolValue>(EnvElse.getValue(*BarDecl));
         EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));
       });
 }
@@ -3512,20 +3455,20 @@ TEST(TransferTest, CorrelatedBranches) {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p0");
           const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
           ASSERT_THAT(BDecl, NotNull());
-          auto &BVal = *cast<BoolValue>(Env.getValue(*BDecl, SkipPast::None));
+          auto &BVal = *cast<BoolValue>(Env.getValue(*BDecl));
 
           EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BVal)));
         }
 
         {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p1");
-          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl));
           EXPECT_TRUE(Env.flowConditionImplies(CVal));
         }
 
         {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p2");
-          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
+          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl));
           EXPECT_TRUE(Env.flowConditionImplies(CVal));
         }
       });
@@ -3557,7 +3500,7 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       });
 }
@@ -3589,8 +3532,8 @@ TEST(TransferTest, LoopWithStagedAssignments) {
         const ValueDecl *ErrDecl = findValueDecl(ASTCtx, "Err");
         ASSERT_THAT(ErrDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
-        auto &ErrVal = *cast<BoolValue>(Env.getValue(*ErrDecl, SkipPast::None));
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
+        auto &ErrVal = *cast<BoolValue>(Env.getValue(*ErrDecl));
         EXPECT_TRUE(Env.flowConditionImplies(BarVal));
         // An unsound analysis, for example only evaluating the loop once, can
         // conclude that `Err` is false. So, we test that this conclusion is not
@@ -3624,8 +3567,7 @@ TEST(TransferTest, LoopWithReferenceAssignmentConverges) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarVal =
-            *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::Reference));
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       });
 }
@@ -3666,22 +3608,20 @@ TEST(TransferTest, LoopWithStructReferenceAssignmentConverges) {
         ASSERT_THAT(LDecl, NotNull());
 
         // Inner.
-        auto *LVal =
-            dyn_cast<PointerValue>(InnerEnv.getValue(*LDecl, SkipPast::None));
+        auto *LVal = dyn_cast<PointerValue>(InnerEnv.getValue(*LDecl));
         ASSERT_THAT(LVal, NotNull());
 
         EXPECT_EQ(&LVal->getPointeeLoc(),
-                  InnerEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
+                  InnerEnv.getStorageLocation(*ValDecl));
 
         // Outer.
-        LVal =
-            dyn_cast<PointerValue>(OuterEnv.getValue(*LDecl, SkipPast::None));
+        LVal = dyn_cast<PointerValue>(OuterEnv.getValue(*LDecl));
         ASSERT_THAT(LVal, NotNull());
 
         // The loop body may not have been executed, so we should not conclude
         // that `l` points to `val`.
         EXPECT_NE(&LVal->getPointeeLoc(),
-                  OuterEnv.getStorageLocation(*ValDecl, SkipPast::Reference));
+                  OuterEnv.getStorageLocation(*ValDecl));
       });
 }
 
@@ -3746,26 +3686,24 @@ TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToRefs) {
         const ValueDecl *BoundBarRefDecl = findValueDecl(ASTCtx, "BoundBarRef");
         ASSERT_THAT(BoundBarRefDecl, NotNull());
 
-        const StorageLocation *FooRefLoc =
-            Env.getStorageLocation(*FooRefDecl, SkipPast::Reference);
+        const StorageLocation *FooRefLoc = Env.getStorageLocation(*FooRefDecl);
         ASSERT_THAT(FooRefLoc, NotNull());
 
-        const StorageLocation *BarRefLoc =
-            Env.getStorageLocation(*BarRefDecl, SkipPast::Reference);
+        const StorageLocation *BarRefLoc = Env.getStorageLocation(*BarRefDecl);
         ASSERT_THAT(BarRefLoc, NotNull());
 
-        const Value *QuxVal = Env.getValue(*QuxDecl, SkipPast::None);
+        const Value *QuxVal = Env.getValue(*QuxDecl);
         ASSERT_THAT(QuxVal, NotNull());
 
         const StorageLocation *BoundFooRefLoc =
-            Env.getStorageLocation(*BoundFooRefDecl, SkipPast::Reference);
+            Env.getStorageLocation(*BoundFooRefDecl);
         EXPECT_EQ(BoundFooRefLoc, FooRefLoc);
 
         const StorageLocation *BoundBarRefLoc =
-            Env.getStorageLocation(*BoundBarRefDecl, SkipPast::Reference);
+            Env.getStorageLocation(*BoundBarRefDecl);
         EXPECT_EQ(BoundBarRefLoc, BarRefLoc);
 
-        EXPECT_EQ(Env.getValue(*BoundFooRefDecl, SkipPast::Reference), QuxVal);
+        EXPECT_EQ(Env.getValue(*BoundFooRefDecl), QuxVal);
       });
 }
 
@@ -3807,26 +3745,24 @@ TEST(TransferTest, StructuredBindingAssignFromStructRefMembersToRefs) {
         const ValueDecl *BoundBarRefDecl = findValueDecl(ASTCtx, "BoundBarRef");
         ASSERT_THAT(BoundBarRefDecl, NotNull());
 
-        const StorageLocation *FooRefLoc =
-            Env.getStorageLocation(*FooRefDecl, SkipPast::Reference);
+        const StorageLocation *FooRefLoc = Env.getStorageLocation(*FooRefDecl);
         ASSERT_THAT(FooRefLoc, NotNull());
 
-        const StorageLocation *BarRefLoc =
-            Env.getStorageLocation(*BarRefDecl, SkipPast::Reference);
+        const StorageLocation *BarRefLoc = Env.getStorageLocation(*BarRefDecl);
         ASSERT_THAT(BarRefLoc, NotNull());
 
-        const Value *QuxVal = Env.getValue(*QuxDecl, SkipPast::None);
+        const Value *QuxVal = Env.getValue(*QuxDecl);
         ASSERT_THAT(QuxVal, NotNull());
 
         const StorageLocation *BoundFooRefLoc =
-            Env.getStorageLocation(*BoundFooRefDecl, SkipPast::Reference);
+            Env.getStorageLocation(*BoundFooRefDecl);
         EXPECT_EQ(BoundFooRefLoc, FooRefLoc);
 
         const StorageLocation *BoundBarRefLoc =
-            Env.getStorageLocation(*BoundBarRefDecl, SkipPast::Reference);
+            Env.getStorageLocation(*BoundBarRefDecl);
         EXPECT_EQ(BoundBarRefLoc, BarRefLoc);
 
-        EXPECT_EQ(Env.getValue(*BoundFooRefDecl, SkipPast::Reference), QuxVal);
+        EXPECT_EQ(Env.getValue(*BoundFooRefDecl), QuxVal);
       });
 }
 
@@ -3869,26 +3805,24 @@ TEST(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
         const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
         ASSERT_THAT(QuxDecl, NotNull());
 
-        const StorageLocation *FooRefLoc =
-            Env.getStorageLocation(*FooRefDecl, SkipPast::Reference);
+        const StorageLocation *FooRefLoc = Env.getStorageLocation(*FooRefDecl);
         ASSERT_THAT(FooRefLoc, NotNull());
 
-        const StorageLocation *BarRefLoc =
-            Env.getStorageLocation(*BarRefDecl, SkipPast::Reference);
+        const StorageLocation *BarRefLoc = Env.getStorageLocation(*BarRefDecl);
         ASSERT_THAT(BarRefLoc, NotNull());
 
-        const Value *QuxVal = Env.getValue(*QuxDecl, SkipPast::None);
+        const Value *QuxVal = Env.getValue(*QuxDecl);
         ASSERT_THAT(QuxVal, NotNull());
 
         const StorageLocation *BoundFooLoc =
-            Env.getStorageLocation(*BoundFooDecl, SkipPast::Reference);
+            Env.getStorageLocation(*BoundFooDecl);
         EXPECT_NE(BoundFooLoc, FooRefLoc);
 
         const StorageLocation *BoundBarLoc =
-            Env.getStorageLocation(*BoundBarDecl, SkipPast::Reference);
+            Env.getStorageLocation(*BoundBarDecl);
         EXPECT_NE(BoundBarLoc, BarRefLoc);
 
-        EXPECT_EQ(Env.getValue(*BoundFooDecl, SkipPast::Reference), QuxVal);
+        EXPECT_EQ(Env.getValue(*BoundFooDecl), QuxVal);
       });
 }
 
@@ -3954,24 +3888,22 @@ TEST(TransferTest, StructuredBindingAssignFromTupleLikeType) {
 
         // BindingDecls always map to references -- either lvalue or rvalue, so
         // we still need to skip here.
-        const Value *BoundFooValue =
-            Env1.getValue(*BoundFooDecl, SkipPast::Reference);
+        const Value *BoundFooValue = Env1.getValue(*BoundFooDecl);
         ASSERT_THAT(BoundFooValue, NotNull());
         EXPECT_TRUE(isa<BoolValue>(BoundFooValue));
 
-        const Value *BoundBarValue =
-            Env1.getValue(*BoundBarDecl, SkipPast::Reference);
+        const Value *BoundBarValue = Env1.getValue(*BoundBarDecl);
         ASSERT_THAT(BoundBarValue, NotNull());
         EXPECT_TRUE(isa<IntegerValue>(BoundBarValue));
 
         // Test that a `DeclRefExpr` to a `BindingDecl` works as expected.
-        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::None), BoundFooValue);
+        EXPECT_EQ(Env1.getValue(*BazDecl), BoundFooValue);
 
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
 
         // Test that `BoundFooDecl` retains the value we expect, after the join.
-        BoundFooValue = Env2.getValue(*BoundFooDecl, SkipPast::Reference);
-        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::None), BoundFooValue);
+        BoundFooValue = Env2.getValue(*BoundFooDecl);
+        EXPECT_EQ(Env2.getValue(*BazDecl), BoundFooValue);
       });
 }
 
@@ -4035,13 +3967,11 @@ TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const Value *BoundFooValue =
-            Env1.getValue(*BoundFooDecl, SkipPast::Reference);
+        const Value *BoundFooValue = Env1.getValue(*BoundFooDecl);
         ASSERT_THAT(BoundFooValue, NotNull());
         EXPECT_TRUE(isa<BoolValue>(BoundFooValue));
 
-        const Value *BoundBarValue =
-            Env1.getValue(*BoundBarDecl, SkipPast::Reference);
+        const Value *BoundBarValue = Env1.getValue(*BoundBarDecl);
         ASSERT_THAT(BoundBarValue, NotNull());
         EXPECT_TRUE(isa<IntegerValue>(BoundBarValue));
 
@@ -4049,13 +3979,13 @@ TEST(TransferTest, StructuredBindingAssignRefFromTupleLikeType) {
         // works as expected. We don't test aliasing properties of the
         // reference, because we don't model `std::get` and so have no way to
         // equate separate references into the tuple.
-        EXPECT_EQ(Env1.getValue(*BazDecl, SkipPast::None), BoundFooValue);
+        EXPECT_EQ(Env1.getValue(*BazDecl), BoundFooValue);
 
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
 
         // Test that `BoundFooDecl` retains the value we expect, after the join.
-        BoundFooValue = Env2.getValue(*BoundFooDecl, SkipPast::Reference);
-        EXPECT_EQ(Env2.getValue(*BazDecl, SkipPast::None), BoundFooValue);
+        BoundFooValue = Env2.getValue(*BoundFooDecl);
+        EXPECT_EQ(Env2.getValue(*BazDecl), BoundFooValue);
       });
 }
 
@@ -4079,12 +4009,10 @@ TEST(TransferTest, BinaryOperatorComma) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const StorageLocation *BarLoc =
-            Env.getStorageLocation(*BarDecl, SkipPast::Reference);
+        const StorageLocation *BarLoc = Env.getStorageLocation(*BarDecl);
         ASSERT_THAT(BarLoc, NotNull());
 
-        const StorageLocation *BazLoc =
-            Env.getStorageLocation(*BazDecl, SkipPast::Reference);
+        const StorageLocation *BazLoc = Env.getStorageLocation(*BazDecl);
         EXPECT_EQ(BazLoc, BarLoc);
       });
 }
@@ -4114,12 +4042,10 @@ TEST(TransferTest, IfStmtBranchExtendsFlowCondition) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        BoolValue &ThenFooVal =
-            *cast<BoolValue>(ThenEnv.getValue(*FooDecl, SkipPast::None));
+        BoolValue &ThenFooVal = *cast<BoolValue>(ThenEnv.getValue(*FooDecl));
         EXPECT_TRUE(ThenEnv.flowConditionImplies(ThenFooVal));
 
-        BoolValue &ElseFooVal =
-            *cast<BoolValue>(ElseEnv.getValue(*FooDecl, SkipPast::None));
+        BoolValue &ElseFooVal = *cast<BoolValue>(ElseEnv.getValue(*FooDecl));
         EXPECT_TRUE(ElseEnv.flowConditionImplies(ElseEnv.makeNot(ElseFooVal)));
       });
 }
@@ -4150,11 +4076,11 @@ TEST(TransferTest, WhileStmtBranchExtendsFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
         EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
 
         BoolValue &AfterLoopFooVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl));
         EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
             AfterLoopEnv.makeNot(AfterLoopFooVal)));
       });
@@ -4191,16 +4117,16 @@ TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
         ASSERT_THAT(BarDecl, NotNull());
 
         BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
         BoolValue &LoopBodyBarVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*BarDecl, SkipPast::None));
+            *cast<BoolValue>(LoopBodyEnv.getValue(*BarDecl));
         EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(
             LoopBodyEnv.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
 
         BoolValue &AfterLoopFooVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl));
         BoolValue &AfterLoopBarVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*BarDecl, SkipPast::None));
+            *cast<BoolValue>(AfterLoopEnv.getValue(*BarDecl));
         EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
             AfterLoopEnv.makeNot(AfterLoopFooVal)));
         EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
@@ -4234,11 +4160,11 @@ TEST(TransferTest, ForStmtBranchExtendsFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
         EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
 
         BoolValue &AfterLoopFooVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl));
         EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
             AfterLoopEnv.makeNot(AfterLoopFooVal)));
       });
@@ -4265,7 +4191,7 @@ TEST(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
         ASSERT_THAT(FooDecl, NotNull());
 
         BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl, SkipPast::None));
+            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
         EXPECT_FALSE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
       });
 }
@@ -4291,7 +4217,7 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
@@ -4348,7 +4274,7 @@ TEST(TransferTest, ContextSensitiveDepthZero) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
@@ -4376,7 +4302,7 @@ TEST(TransferTest, ContextSensitiveSetTrue) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4403,7 +4329,7 @@ TEST(TransferTest, ContextSensitiveSetFalse) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4435,11 +4361,11 @@ TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       },
@@ -4468,7 +4394,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
@@ -4497,7 +4423,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
@@ -4526,7 +4452,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
@@ -4556,7 +4482,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
@@ -4598,7 +4524,7 @@ TEST(TransferTest, ContextSensitiveMutualRecursion) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         // ... but it also can't prove anything here.
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
@@ -4633,11 +4559,11 @@ TEST(TransferTest, ContextSensitiveSetMultipleLines) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
       },
@@ -4675,11 +4601,11 @@ TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
 
-        auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl, SkipPast::None));
+        auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl));
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
         EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(BazVal)));
       },
@@ -4724,7 +4650,7 @@ TEST(TransferTest, ContextSensitiveReturnTrue) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4749,7 +4675,7 @@ TEST(TransferTest, ContextSensitiveReturnFalse) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4777,7 +4703,7 @@ TEST(TransferTest, ContextSensitiveReturnArg) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl, SkipPast::None));
+        auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl));
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4825,7 +4751,7 @@ TEST(TransferTest, ContextSensitiveMethodLiteral) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4857,7 +4783,7 @@ TEST(TransferTest, ContextSensitiveMethodGetter) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4889,7 +4815,7 @@ TEST(TransferTest, ContextSensitiveMethodSetter) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4923,7 +4849,7 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4958,7 +4884,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4992,7 +4918,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5023,7 +4949,7 @@ TEST(TransferTest, ContextSensitiveConstructorBody) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5054,7 +4980,7 @@ TEST(TransferTest, ContextSensitiveConstructorInitializer) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5085,7 +5011,7 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});

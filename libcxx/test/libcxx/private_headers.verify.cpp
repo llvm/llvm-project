@@ -580,6 +580,7 @@ END-SCRIPT
 #include <__ranges/as_rvalue_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/as_rvalue_view.h'}}
 #include <__ranges/common_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/common_view.h'}}
 #include <__ranges/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/concepts.h'}}
+#include <__ranges/container_compatible_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/container_compatible_range.h'}}
 #include <__ranges/copyable_box.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/copyable_box.h'}}
 #include <__ranges/counted.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/counted.h'}}
 #include <__ranges/dangling.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/dangling.h'}}
@@ -592,6 +593,7 @@ END-SCRIPT
 #include <__ranges/enable_borrowed_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_borrowed_range.h'}}
 #include <__ranges/enable_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_view.h'}}
 #include <__ranges/filter_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/filter_view.h'}}
+#include <__ranges/from_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/from_range.h'}}
 #include <__ranges/iota_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/iota_view.h'}}
 #include <__ranges/istream_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/istream_view.h'}}
 #include <__ranges/join_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/join_view.h'}}
@@ -731,6 +733,7 @@ END-SCRIPT
 #include <__type_traits/is_trivially_copyable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_copyable.h'}}
 #include <__type_traits/is_trivially_default_constructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_default_constructible.h'}}
 #include <__type_traits/is_trivially_destructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_destructible.h'}}
+#include <__type_traits/is_trivially_lexicographically_comparable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_lexicographically_comparable.h'}}
 #include <__type_traits/is_trivially_move_assignable.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_move_assignable.h'}}
 #include <__type_traits/is_trivially_move_constructible.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_trivially_move_constructible.h'}}
 #include <__type_traits/is_unbounded_array.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/is_unbounded_array.h'}}

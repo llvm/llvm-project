@@ -19,3 +19,27 @@ void g(void) {
 }
 
 } // end namespace PR61118
+
+namespace GH62156 {
+union U1 {
+   int x;
+   float y;
+};
+
+struct NonTrivial {
+  NonTrivial();
+  ~NonTrivial();
+};
+
+union U2 {
+   NonTrivial x;
+   float y;
+};
+
+void f() {
+   U1 u{.x=2,  // expected-note {{previous initialization is here}}
+        .y=1}; // expected-error {{initializer partially overrides prior initialization of this subobject}}
+   new U2{.x = NonTrivial{}, // expected-note {{previous initialization is here}}
+          .y=1}; // expected-error {{initializer would partially override prior initialization of object of type 'NonTrivial' with non-trivial destruction}}
+}
+}

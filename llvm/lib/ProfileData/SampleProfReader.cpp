@@ -546,11 +546,27 @@ ErrorOr<StringRef> SampleProfileReaderBinary::readStringFromTable() {
   return SR;
 }
 
-ErrorOr<SampleContext> SampleProfileReaderBinary::readSampleContextFromTable() {
-  auto FName(readStringFromTable());
-  if (std::error_code EC = FName.getError())
+ErrorOr<SampleContextFrames> SampleProfileReaderBinary::readContextFromTable() {
+  auto ContextIdx = readNumber<size_t>();
+  if (std::error_code EC = ContextIdx.getError())
     return EC;
-  return SampleContext(*FName);
+  if (*ContextIdx >= CSNameTable.size())
+    return sampleprof_error::truncated_name_table;
+  return CSNameTable[*ContextIdx];
+}
+
+ErrorOr<SampleContext> SampleProfileReaderBinary::readSampleContextFromTable() {
+  if (ProfileIsCS) {
+    auto FContext(readContextFromTable());
+    if (std::error_code EC = FContext.getError())
+      return EC;
+    return SampleContext(*FContext);
+  } else {
+    auto FName(readStringFromTable());
+    if (std::error_code EC = FName.getError())
+      return EC;
+    return SampleContext(*FName);
+  }
 }
 
 std::error_code
@@ -669,31 +685,6 @@ std::error_code SampleProfileReaderBinary::readImpl() {
   }
 
   return sampleprof_error::success;
-}
-
-ErrorOr<SampleContextFrames>
-SampleProfileReaderExtBinaryBase::readContextFromTable() {
-  auto ContextIdx = readNumber<size_t>();
-  if (std::error_code EC = ContextIdx.getError())
-    return EC;
-  if (*ContextIdx >= CSNameTable->size())
-    return sampleprof_error::truncated_name_table;
-  return (*CSNameTable)[*ContextIdx];
-}
-
-ErrorOr<SampleContext>
-SampleProfileReaderExtBinaryBase::readSampleContextFromTable() {
-  if (ProfileIsCS) {
-    auto FContext(readContextFromTable());
-    if (std::error_code EC = FContext.getError())
-      return EC;
-    return SampleContext(*FContext);
-  } else {
-    auto FName(readStringFromTable());
-    if (std::error_code EC = FName.getError())
-      return EC;
-    return SampleContext(*FName);
-  }
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
@@ -1035,7 +1026,7 @@ std::error_code
 SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
                                                    bool FixedLengthMD5) {
   if (FixedLengthMD5) {
-    if (IsMD5)
+    if (!IsMD5)
       errs() << "If FixedLengthMD5 is true, UseMD5 has to be true";
     auto Size = readNumber<size_t>();
     if (std::error_code EC = Size.getError())
@@ -1089,11 +1080,10 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
   if (std::error_code EC = Size.getError())
     return EC;
 
-  std::vector<SampleContextFrameVector> *PNameVec =
-      new std::vector<SampleContextFrameVector>();
-  PNameVec->reserve(*Size);
+  CSNameTable.clear();
+  CSNameTable.reserve(*Size);
   for (size_t I = 0; I < *Size; ++I) {
-    PNameVec->emplace_back(SampleContextFrameVector());
+    CSNameTable.emplace_back(SampleContextFrameVector());
     auto ContextSize = readNumber<uint32_t>();
     if (std::error_code EC = ContextSize.getError())
       return EC;
@@ -1112,18 +1102,15 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
       if (std::error_code EC = Discriminator.getError())
         return EC;
 
-      PNameVec->back().emplace_back(
+      CSNameTable.back().emplace_back(
           FName.get(), LineLocation(LineOffset.get(), Discriminator.get()));
     }
   }
 
-  // From this point the underlying object of CSNameTable should be immutable.
-  CSNameTable.reset(PNameVec);
   return sampleprof_error::success;
 }
 
 std::error_code
-
 SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
                                                    FunctionSamples *FProfile) {
   if (Data < End) {

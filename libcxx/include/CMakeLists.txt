@@ -581,6 +581,7 @@ set(files
   __ranges/as_rvalue_view.h
   __ranges/common_view.h
   __ranges/concepts.h
+  __ranges/container_compatible_range.h
   __ranges/copyable_box.h
   __ranges/counted.h
   __ranges/dangling.h
@@ -593,6 +594,7 @@ set(files
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
   __ranges/filter_view.h
+  __ranges/from_range.h
   __ranges/iota_view.h
   __ranges/istream_view.h
   __ranges/join_view.h
@@ -747,6 +749,7 @@ set(files
   __type_traits/is_trivially_copyable.h
   __type_traits/is_trivially_default_constructible.h
   __type_traits/is_trivially_destructible.h
+  __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_move_assignable.h
   __type_traits/is_trivially_move_constructible.h
   __type_traits/is_unbounded_array.h

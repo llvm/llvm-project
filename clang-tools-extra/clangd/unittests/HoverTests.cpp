@@ -18,6 +18,7 @@
 #include "clang/Format/Format.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 
 #include "gtest/gtest.h"
 #include <functional>
@@ -529,6 +530,8 @@ class Foo final {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "MACRO";
          HI.Kind = index::SymbolKind::Macro;
+         HI.Value = "41 (0x29)";
+         HI.Type = "int";
          HI.Definition = "#define MACRO 41\n\n"
                          "// Expands to\n"
                          "41";
@@ -560,6 +563,7 @@ class Foo final {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "DECL_STR";
          HI.Kind = index::SymbolKind::Macro;
+         HI.Type = HoverInfo::PrintedType("const char *");
          HI.Definition = "#define DECL_STR(NAME, VALUE) const char *v_##NAME = "
                          "STRINGIFY(VALUE)\n\n"
                          "// Expands to\n"
@@ -1850,6 +1854,8 @@ TEST(Hover, All) {
           )cpp",
           [](HoverInfo &HI) {
             HI.Name = "MACRO";
+            HI.Value = "0";
+            HI.Type = "int";
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition = "#define MACRO 0\n\n"
                             "// Expands to\n"
@@ -3769,6 +3775,233 @@ TEST(Hover, Typedefs) {
   EXPECT_EQ(H->Type->Type, "int");
   EXPECT_EQ(H->Definition, "using foo = type<true, int, double>");
 }
+
+TEST(Hover, EvaluateMacros) {
+  llvm::StringRef PredefinedCXX = R"cpp(
+#define X 42
+#define SizeOf sizeof
+#define AlignOf alignof
+#define PLUS_TWO +2
+#define TWO 2
+
+using u64 = unsigned long long;
+// calculate (a ** b) % p
+constexpr u64 pow_with_mod(u64 a, u64 b, u64 p) {
+  u64 ret = 1;
+  while (b) {
+    if (b & 1)
+      ret = (ret * a) % p;
+    a = (a * a) % p;
+    b >>= 1;
+  }
+  return ret;
+}
+#define last_n_digit(x, y, n)                                                  \
+  pow_with_mod(x, y, pow_with_mod(10, n, 2147483647))
+#define declare_struct(X, name, value)                                         \
+  struct X {                                                                   \
+    constexpr auto name() { return value; }                                    \
+  }
+#define gnu_statement_expression(value)                                        \
+  ({                                                                           \
+    declare_struct(Widget, getter, value);                                     \
+    Widget().getter();                                                         \
+  })
+#define define_lambda_begin(lambda, ...)                                       \
+  [&](__VA_ARGS__) {
+#define define_lambda_end() }
+
+#define left_bracket [
+#define right_bracket ]
+#define dg_left_bracket <:
+#define dg_right_bracket :>
+#define array_decl(type, name, size) type name left_bracket size right_bracket
+  )cpp";
+
+  struct {
+    llvm::StringRef Code;
+    const std::function<void(std::optional<HoverInfo>, size_t /*Id*/)>
+        Validator;
+  } Cases[] = {
+      {
+          /*Code=*/R"cpp(
+            X^;
+          )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_EQ(HI->Value, "42 (0x2a)");
+            EXPECT_EQ(HI->Type, HoverInfo::PrintedType("int"));
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+            Size^Of(int);
+          )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_TRUE(HI->Value);
+            EXPECT_TRUE(HI->Type);
+            // Don't validate type or value of `sizeof` and `alignof` as we're
+            // getting different values or desugared types on different
+            // platforms. Same as below.
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          struct Y {
+            int y;
+            double z;
+          };
+          Alig^nOf(Y);
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_TRUE(HI->Value);
+            EXPECT_TRUE(HI->Type);
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          // 2**32 == 4294967296
+          last_n_di^git(2, 32, 6);
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_EQ(HI->Value, "967296 (0xec280)");
+            EXPECT_EQ(HI->Type, "u64");
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          gnu_statement_exp^ression(42);
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_EQ(HI->Value, "42 (0x2a)");
+            EXPECT_EQ(HI->Type, "int");
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          40 + PLU^S_TWO;
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_EQ(HI->Value, "2");
+            EXPECT_EQ(HI->Type, "int");
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          40 PLU^S_TWO;
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_FALSE(HI->Value) << HI->Value;
+            EXPECT_FALSE(HI->Type) << HI->Type;
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          40 + TW^O;
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t) {
+            EXPECT_EQ(HI->Value, "2");
+            EXPECT_EQ(HI->Type, "int");
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          arra^y_decl(int, vector, 10);
+          vector left_b^racket 3 right_b^racket;
+          vector dg_le^ft_bracket 3 dg_righ^t_bracket;
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t Id) {
+            switch (Id) {
+            case 0:
+              EXPECT_EQ(HI->Type, HoverInfo::PrintedType("int[10]"));
+              break;
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+              EXPECT_FALSE(HI->Type) << HI->Type;
+              EXPECT_FALSE(HI->Value) << HI->Value;
+              break;
+            default:
+              ASSERT_TRUE(false) << "Unhandled id: " << Id;
+            }
+          },
+      },
+      {
+          /*Code=*/R"cpp(
+          constexpr auto value = define_lamb^da_begin(lambda, int, char)
+            // Check if the expansion range is right.
+            return ^last_n_digit(10, 3, 3)^;
+          define_lam^bda_end();
+        )cpp",
+          /*Validator=*/
+          [](std::optional<HoverInfo> HI, size_t Id) {
+            switch (Id) {
+            case 0:
+              EXPECT_FALSE(HI->Value);
+              EXPECT_EQ(HI->Type, HoverInfo::PrintedType("const (lambda)"));
+              break;
+            case 1:
+              EXPECT_EQ(HI->Value, "0");
+              EXPECT_EQ(HI->Type, HoverInfo::PrintedType("u64"));
+              break;
+            case 2:
+              EXPECT_FALSE(HI);
+              break;
+            case 3:
+              EXPECT_FALSE(HI->Type) << HI->Type;
+              EXPECT_FALSE(HI->Value) << HI->Value;
+              break;
+            default:
+              ASSERT_TRUE(false) << "Unhandled id: " << Id;
+            }
+          },
+      },
+  };
+
+  Config Cfg;
+  Cfg.Hover.ShowAKA = false;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  for (const auto &C : Cases) {
+    Annotations Code(
+        (PredefinedCXX + "void function() {\n" + C.Code + "}\n").str());
+    auto TU = TestTU::withCode(Code.code());
+    TU.ExtraArgs.push_back("-std=c++17");
+    auto AST = TU.build();
+    for (auto [Index, Position] : llvm::enumerate(Code.points())) {
+      C.Validator(getHover(AST, Position, format::getLLVMStyle(), nullptr),
+                  Index);
+    }
+  }
+
+  Annotations C(R"c(
+    #define alignof _Alignof
+    void foo() {
+      al^ignof(struct { int x; char y[10]; });
+    }
+  )c");
+
+  auto TU = TestTU::withCode(C.code());
+  TU.Filename = "TestTU.c";
+  TU.ExtraArgs = {
+      "-std=c17",
+  };
+  auto AST = TU.build();
+  auto H = getHover(AST, C.point(), format::getLLVMStyle(), nullptr);
+
+  ASSERT_TRUE(H);
+  EXPECT_TRUE(H->Value);
+  EXPECT_TRUE(H->Type);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -644,6 +644,9 @@ public:
     return getModuleOwnershipKind() > ModuleOwnershipKind::VisibleWhenImported;
   }
 
+  /// Whether this declaration comes from another module unit.
+  bool isInAnotherModuleUnit() const;
+
   /// FIXME: Implement discarding declarations actually in global module
   /// fragment. See [module.global.frag]p3,4 for details.
   bool isDiscardedInGlobalModuleFragment() const { return false; }
@@ -1171,6 +1174,12 @@ public:
         IdentifierNamespace |= IDNS_Ordinary;
     }
   }
+
+  /// Clears the namespace of this declaration.
+  ///
+  /// This is useful if we want this declaration to be available for
+  /// redeclaration lookup but otherwise hidden for ordinary name lookups.
+  void clearIdentifierNamespace() { IdentifierNamespace = 0; }
 
   enum FriendObjectKind {
     FOK_None,      ///< Not a friend object.

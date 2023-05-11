@@ -5414,12 +5414,12 @@ static bool getFNEGPatterns(MachineInstr &Root,
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  bool Found = false;
 
   auto Match = [&](unsigned Opcode, MachineCombinerPattern Pattern) -> bool {
     MachineOperand &MO = Root.getOperand(1);
     MachineInstr *MI = MRI.getUniqueVRegDef(MO.getReg());
-    if ((MI->getOpcode() == Opcode) &&
+    if (MI != nullptr && MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()) &&
+        (MI->getOpcode() == Opcode) &&
         Root.getFlag(MachineInstr::MIFlag::FmContract) &&
         Root.getFlag(MachineInstr::MIFlag::FmNsz) &&
         MI->getFlag(MachineInstr::MIFlag::FmContract) &&
@@ -5432,16 +5432,14 @@ static bool getFNEGPatterns(MachineInstr &Root,
 
   switch (Opc) {
   default:
-    return false;
+    break;
   case AArch64::FNEGDr:
-    Found |= Match(AArch64::FMADDDrrr, MachineCombinerPattern::FNMADDD);
-    break;
+    return Match(AArch64::FMADDDrrr, MachineCombinerPattern::FNMADD);
   case AArch64::FNEGSr:
-    Found |= Match(AArch64::FMADDSrrr, MachineCombinerPattern::FNMADDS);
-    break;
+    return Match(AArch64::FMADDSrrr, MachineCombinerPattern::FNMADD);
   }
 
-  return Found;
+  return false;
 }
 
 /// Return true when a code sequence can improve throughput. It
@@ -5708,9 +5706,18 @@ genFusedMultiply(MachineFunction &MF, MachineRegisterInfo &MRI,
 static MachineInstr *
 genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
                const TargetInstrInfo *TII, MachineInstr &Root,
-               SmallVectorImpl<MachineInstr *> &InsInstrs, unsigned Opc,
-               const TargetRegisterClass *RC) {
+               SmallVectorImpl<MachineInstr *> &InsInstrs) {
   MachineInstr *MAD = MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+
+  unsigned Opc = 0;
+  const TargetRegisterClass *RC = MRI.getRegClass(MAD->getOperand(0).getReg());
+  if (AArch64::FPR32RegClass.hasSubClassEq(RC))
+    Opc = AArch64::FNMADDSrrr;
+  else if (AArch64::FPR64RegClass.hasSubClassEq(RC))
+    Opc = AArch64::FNMADDDrrr;
+  else
+    return nullptr;
+
   Register ResultReg = Root.getOperand(0).getReg();
   Register SrcReg0 = MAD->getOperand(1).getReg();
   Register SrcReg1 = MAD->getOperand(2).getReg();
@@ -5718,7 +5725,6 @@ genFNegatedMAD(MachineFunction &MF, MachineRegisterInfo &MRI,
   bool Src0IsKill = MAD->getOperand(1).isKill();
   bool Src1IsKill = MAD->getOperand(2).isKill();
   bool Src2IsKill = MAD->getOperand(3).isKill();
-
   if (ResultReg.isVirtual())
     MRI.constrainRegClass(ResultReg, RC);
   if (SrcReg0.isVirtual())
@@ -6870,17 +6876,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                        &AArch64::FPR128_loRegClass, MRI);
     break;
   }
-
-  case MachineCombinerPattern::FNMADDS: {
-    Opc = AArch64::FNMADDSrrr;
-    RC = &AArch64::FPR32RegClass;
-    MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs, Opc, RC);
-    break;
-  }
-  case MachineCombinerPattern::FNMADDD: {
-    Opc = AArch64::FNMADDDrrr;
-    RC = &AArch64::FPR64RegClass;
-    MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs, Opc, RC);
+  case MachineCombinerPattern::FNMADD: {
+    MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs);
     break;
   }
 

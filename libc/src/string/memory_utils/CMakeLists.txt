@@ -18,6 +18,7 @@ add_header_library(
     x86_64/memcmp_implementations.h
     x86_64/memcpy_implementations.h
   DEPS
+    libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.type_traits

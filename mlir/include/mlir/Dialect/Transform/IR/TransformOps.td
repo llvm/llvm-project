@@ -372,6 +372,10 @@ def IncludeOp : TransformDialectOp<"include",
       return getTarget();
     }
 
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+      setTargetAttr(callee.get<SymbolRefAttr>());
+    }
+
     ::mlir::Operation::operand_range getArgOperands() {
       return getOperands();
     }
@@ -517,8 +521,8 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
   let description = [{
     Splits `handle` into one or multiple handles, as specified by the number
     of results of this operation. `handle` should be mapped to as many payload
-    ops as there are results. Otherwise, this transform will fail silently.
-    Each result handle is mapped to exactly one payload op. The order
+    ops as there are results. Otherwise, this transform will fail silently by
+    default. Each result handle is mapped to exactly one payload op. The order
     of the payload ops is preserved, i.e., the i-th payload op is mapped to the
     i-th result handle.
 
@@ -526,12 +530,23 @@ def SplitHandleOp : TransformDialectOp<"split_handle",
     operations are tracked by the source `handle` and to extract them into
     individual handles that can be further manipulated in isolation.
 
-    If `handle` is empty, this transform will succeed and all result handles
-    are empty.
+    If there are more payload ops than results, the remaining ops are mapped to
+    the result with index `overflow_result`. If no `overflow_result` is
+    specified, the transform fails silently.
+
+    If there are fewer payload ops than results, the transform fails silently
+    if `fail_on_payload_too_small` is set to "true". Otherwise, it succeeds and
+    the remaining result handles are not mapped to any op. It also succeeds if
+    `handle` is empty and `pass_through_empty_handle` is set to "true",
+    regardless of `fail_on_payload_too_small`.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$handle);
+  let arguments = (ins TransformHandleTypeInterface:$handle,
+                       DefaultValuedAttr<BoolAttr, "true">:$pass_through_empty_handle,
+                       DefaultValuedAttr<BoolAttr, "true">:$fail_on_payload_too_small,
+                       OptionalAttr<I64Attr>:$overflow_result);
   let results = (outs Variadic<TransformHandleTypeInterface>:$results);
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$handle, "int64_t":$numResultHandles)>

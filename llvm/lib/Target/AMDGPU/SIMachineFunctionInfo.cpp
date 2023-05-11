@@ -50,6 +50,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     WorkGroupIDY(false),
     WorkGroupIDZ(false),
     WorkGroupInfo(false),
+    WaveID(false),
     LDSKernelId(false),
     PrivateSegmentWaveByteOffset(false),
     WorkItemIDX(false),
@@ -118,8 +119,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   else if (ST.isMesaGfxShader(F))
     ImplicitBufferPtr = true;
 
-  if (!AMDGPU::isGraphics(CC) ||
-      (CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs())) {
+  bool HasArchitectedSGPRs =
+      CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs();
+  if (!AMDGPU::isGraphics(CC) || HasArchitectedSGPRs) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 
@@ -154,6 +156,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!IsKernel && !F.hasFnAttribute("amdgpu-no-lds-kernel-id"))
       LDSKernelId = true;
   }
+
+  // For gfx12+
+  if (HasArchitectedSGPRs)
+    WaveID = true;
 
   // FIXME: This attribute is a hack, we just need an analysis on the function
   // to look for allocas.

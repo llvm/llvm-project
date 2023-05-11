@@ -49,8 +49,16 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           unsigned Spaces,
                                           unsigned StartOfTokenColumn,
                                           bool IsAligned, bool InPPDirective) {
-  if (Tok.Finalized || (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg))
+  auto PPBranchDirectiveStartsLine = [&Tok] {
+    return Tok.is(tok::hash) && !Tok.Previous && Tok.Next &&
+           Tok.Next->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef,
+                             tok::pp_elif, tok::pp_elifdef, tok::pp_elifndef,
+                             tok::pp_else, tok::pp_endif);
+  };
+  if ((Tok.Finalized && !PPBranchDirectiveStartsLine()) ||
+      (Tok.MacroCtx && Tok.MacroCtx->Role == MR_ExpandedArg)) {
     return;
+  }
   Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
   Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
                            Spaces, StartOfTokenColumn, Newlines, "", "",
@@ -522,13 +530,6 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
                                    ? Changes[StartAt].indentAndNestingLevel()
                                    : std::tuple<unsigned, unsigned, unsigned>();
 
-  // Keep track if the first token has a non-zero indent and nesting level.
-  // This can happen when aligning the contents of "#else" preprocessor blocks,
-  // which is done separately.
-  bool HasInitialIndentAndNesting =
-      StartAt == 0 &&
-      IndentAndNestingLevel > std::tuple<unsigned, unsigned, unsigned>();
-
   // Keep track of the number of commas before the matching tokens, we will only
   // align a sequence of matching tokens if they are preceded by the same number
   // of commas.
@@ -563,19 +564,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   unsigned i = StartAt;
   for (unsigned e = Changes.size(); i != e; ++i) {
-    if (Changes[i].indentAndNestingLevel() < IndentAndNestingLevel) {
-      if (!HasInitialIndentAndNesting)
-        break;
-      // The contents of preprocessor blocks are aligned separately.
-      // If the initial preprocessor block is indented or nested (e.g. it's in
-      // a function), do not align and exit after finishing this scope block.
-      // Instead, align, and then lower the baseline indent and nesting level
-      // in order to continue aligning subsequent blocks.
-      EndOfSequence = i;
-      AlignCurrentSequence();
-      IndentAndNestingLevel =
-          Changes[i].indentAndNestingLevel(); // new baseline
-    }
+    if (Changes[i].indentAndNestingLevel() < IndentAndNestingLevel)
+      break;
 
     if (Changes[i].NewlinesBefore != 0) {
       CommasBeforeMatch = 0;
