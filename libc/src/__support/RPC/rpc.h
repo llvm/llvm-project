@@ -74,7 +74,7 @@ struct alignas(64) Packet {
 //       of thumb is that you should have at least as many ports as possible
 //       concurrent work items on the GPU to mitigate the lack offorward
 //       progress guarantees on the GPU.
-constexpr uint64_t default_port_count = 64;
+constexpr uint64_t DEFAULT_PORT_COUNT = 64;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains an inbox and an outbox used for signaling
@@ -111,7 +111,7 @@ template <bool InvertInbox> struct Process {
   cpp::Atomic<uint32_t> *outbox;
   Packet *packet;
 
-  cpp::Atomic<uint32_t> lock[default_port_count] = {0};
+  cpp::Atomic<uint32_t> lock[DEFAULT_PORT_COUNT] = {0};
 
   /// Initialize the communication channels.
   LIBC_INLINE void reset(uint64_t port_count, uint32_t lane_size, void *state) {
