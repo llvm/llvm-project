@@ -1,0 +1,11 @@
+// RUN: cir-tool %s | FileCheck %s
+
+module {
+  cir.func @l0() {
+    cir.return
+  }
+
+  cir.func @l1() alias(@l0)
+}
+
+// CHECK: cir.func @l0()

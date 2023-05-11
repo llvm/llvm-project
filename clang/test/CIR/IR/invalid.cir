@@ -275,3 +275,15 @@ module {
     #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>}>>
     : !cir.struct<"", !cir.ptr<i32>>
 } // expected-error {{'cir.global' expected constant attribute to match type}}
+
+// -----
+
+module {
+  cir.func @l0() {
+    cir.return
+  }
+
+  cir.func @l1() alias(@l0) { // expected-error {{function alias shall not have a body}}
+    cir.return
+  }
+}
