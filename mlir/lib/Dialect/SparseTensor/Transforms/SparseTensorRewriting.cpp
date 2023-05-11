@@ -895,9 +895,7 @@ private:
       // coordinates for the storage ordering of the dst tensor.  Use SortCoo
       // if the COO tensor has the same ordering as the dst tensor.
       if (dimRank > 1 && srcTp.hasSameDimToLvlMap(dstTp)) {
-        MemRefType coordsTp =
-            get1DMemRefType(encSrc.getCrdType(), /*withLayout=*/false);
-        Value xs = rewriter.create<ToCoordinatesBufferOp>(loc, coordsTp, src);
+        Value xs = genToCoordinatesBuffer(rewriter, loc, src);
         rewriter.create<SortCooOp>(
             loc, nnz, xs, ValueRange{y}, rewriter.getIndexAttr(dimRank),
             rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
