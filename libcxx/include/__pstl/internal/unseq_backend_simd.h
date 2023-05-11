@@ -12,12 +12,15 @@
 
 #include <__config>
 #include <__functional/operations.h>
+#include <__iterator/iterator_traits.h>
 #include <__type_traits/is_arithmetic.h>
+#include <__type_traits/is_same.h>
+#include <__utility/move.h>
 #include <__utility/pair.h>
 #include <cstddef>
 #include <cstdint>
 
-#include "utils.h"
+#include <__pstl/internal/utils.h>
 
 // This header defines the minimum set of vector routines required
 // to support parallel STL.

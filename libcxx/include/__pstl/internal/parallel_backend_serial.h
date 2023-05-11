@@ -14,6 +14,7 @@
 #include <__memory/allocator.h>
 #include <__pstl/internal/execution_impl.h>
 #include <__utility/forward.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
