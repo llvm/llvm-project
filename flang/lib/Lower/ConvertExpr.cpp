@@ -1080,7 +1080,16 @@ public:
   GENBIN(Multiply, Complex, fir::MulcOp)
   GENBIN(Divide, Integer, mlir::arith::DivSIOp)
   GENBIN(Divide, Real, mlir::arith::DivFOp)
-  GENBIN(Divide, Complex, fir::DivcOp)
+
+  template <int KIND>
+  ExtValue genval(const Fortran::evaluate::Divide<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Complex, KIND>> &op) {
+    mlir::Type ty =
+        converter.genType(Fortran::common::TypeCategory::Complex, KIND);
+    mlir::Value lhs = genunbox(op.left());
+    mlir::Value rhs = genunbox(op.right());
+    return fir::genDivC(builder, getLoc(), ty, lhs, rhs);
+  }
 
   template <Fortran::common::TypeCategory TC, int KIND>
   ExtValue genval(
@@ -5082,7 +5091,21 @@ private:
   GENBIN(Multiply, Complex, fir::MulcOp)
   GENBIN(Divide, Integer, mlir::arith::DivSIOp)
   GENBIN(Divide, Real, mlir::arith::DivFOp)
-  GENBIN(Divide, Complex, fir::DivcOp)
+
+  template <int KIND>
+  CC genarr(const Fortran::evaluate::Divide<Fortran::evaluate::Type<
+                Fortran::common::TypeCategory::Complex, KIND>> &x) {
+    mlir::Location loc = getLoc();
+    mlir::Type ty =
+        converter.genType(Fortran::common::TypeCategory::Complex, KIND);
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value lhs = fir::getBase(lf(iters));
+      mlir::Value rhs = fir::getBase(rf(iters));
+      return fir::genDivC(builder, loc, ty, lhs, rhs);
+    };
+  }
 
   template <Fortran::common::TypeCategory TC, int KIND>
   CC genarr(
