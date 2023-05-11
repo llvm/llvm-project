@@ -1266,3 +1266,24 @@ func.func @host_device_ops(%a: memref<f32>) -> () {
 // CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
 // CHECK: %[[DEVPTR_A:.*]] = acc.update_device varPtr(%[[A]] : memref<f32>)   -> memref<f32>
 // CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
+
+// -----
+
+func.func @host_data_ops(%a: !llvm.ptr<f32>, %ifCond: i1) -> () {
+  %0 = acc.use_device varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.host_data dataOperands(%0: !llvm.ptr<f32>) {
+  }
+  acc.host_data dataOperands(%0: !llvm.ptr<f32>) {
+  } attributes {if_present}
+  acc.host_data if(%ifCond) dataOperands(%0: !llvm.ptr<f32>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @host_data_ops(
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<f32>, %[[IFCOND:.*]]: i1)
+// CHECK: %[[PTR:.*]] = acc.use_device varPtr(%[[A]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>)
+// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>) {
+// CHECK: } attributes {if_present}
+// CHECK: acc.host_data if(%[[IFCOND]]) dataOperands(%[[PTR]] : !llvm.ptr<f32>)
