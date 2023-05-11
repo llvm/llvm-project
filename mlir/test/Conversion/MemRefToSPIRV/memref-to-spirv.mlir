@@ -105,6 +105,24 @@ func.func @store_i1(%dst: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i:
   return
 }
 
+// CHECK-LABEL: @load_i16
+func.func @load_i16(%arg0: memref<i16, #spirv.storage_class<StorageBuffer>>) {
+  // CHECK-NOT: spirv.SDiv
+  //     CHECK: spirv.Load
+  // CHECK-NOT: spirv.ShiftRightArithmetic
+  %0 = memref.load %arg0[] : memref<i16, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
+// CHECK-LABEL: @store_i16
+func.func @store_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, %index: index, %value: i16) {
+  //     CHECK: spirv.Store
+  // CHECK-NOT: spirv.AtomicAnd
+  // CHECK-NOT: spirv.AtomicOr
+  memref.store %value, %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
 } // end module
 
 // -----
@@ -319,15 +337,6 @@ func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, 
   return
 }
 
-// CHECK-LABEL: @load_i32
-func.func @load_i32(%arg0: memref<i32, #spirv.storage_class<StorageBuffer>>) {
-  // CHECK-NOT: spirv.SDiv
-  //     CHECK: spirv.Load
-  // CHECK-NOT: spirv.ShiftRightArithmetic
-  %0 = memref.load %arg0[] : memref<i32, #spirv.storage_class<StorageBuffer>>
-  return
-}
-
 // CHECK-LABEL: @load_f32
 func.func @load_f32(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
   // CHECK-NOT: spirv.SDiv
@@ -416,96 +425,12 @@ func.func @store_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>,
   return
 }
 
-// CHECK-LABEL: @store_i32
-func.func @store_i32(%arg0: memref<i32, #spirv.storage_class<StorageBuffer>>, %value: i32) {
-  //     CHECK: spirv.Store
-  // CHECK-NOT: spirv.AtomicAnd
-  // CHECK-NOT: spirv.AtomicOr
-  memref.store %value, %arg0[] : memref<i32, #spirv.storage_class<StorageBuffer>>
-  return
-}
-
 // CHECK-LABEL: @store_f32
 func.func @store_f32(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>, %value: f32) {
   //     CHECK: spirv.Store
   // CHECK-NOT: spirv.AtomicAnd
   // CHECK-NOT: spirv.AtomicOr
   memref.store %value, %arg0[] : memref<f32, #spirv.storage_class<StorageBuffer>>
-  return
-}
-
-} // end module
-
-// -----
-
-// Check that access chain indices are properly adjusted if non-16/32-bit types
-// are emulated via 32-bit types.
-module attributes {
-  spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.0, [Int16, StorageBuffer16BitAccess, Shader],
-    [SPV_KHR_storage_buffer_storage_class, SPV_KHR_16bit_storage]>, #spirv.resource_limits<>>
-} {
-
-// CHECK-LABEL: @load_i8
-func.func @load_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>) {
-  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
-  //     CHECK: %[[FOUR1:.+]] = spirv.Constant 4 : i32
-  //     CHECK: %[[QUOTIENT:.+]] = spirv.SDiv %[[ZERO]], %[[FOUR1]] : i32
-  //     CHECK: %[[PTR:.+]] = spirv.AccessChain %{{.+}}[%[[ZERO]], %[[QUOTIENT]]]
-  //     CHECK: %[[LOAD:.+]] = spirv.Load  "StorageBuffer" %[[PTR]]
-  //     CHECK: %[[FOUR2:.+]] = spirv.Constant 4 : i32
-  //     CHECK: %[[EIGHT:.+]] = spirv.Constant 8 : i32
-  //     CHECK: %[[IDX:.+]] = spirv.UMod %[[ZERO]], %[[FOUR2]] : i32
-  //     CHECK: %[[BITS:.+]] = spirv.IMul %[[IDX]], %[[EIGHT]] : i32
-  //     CHECK: %[[VALUE:.+]] = spirv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
-  //     CHECK: %[[MASK:.+]] = spirv.Constant 255 : i32
-  //     CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
-  //     CHECK: %[[T2:.+]] = spirv.Constant 24 : i32
-  //     CHECK: %[[T3:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
-  //     CHECK: spirv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
-  %0 = memref.load %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
-  return
-}
-
-// CHECK-LABEL: @load_i16
-func.func @load_i16(%arg0: memref<i16, #spirv.storage_class<StorageBuffer>>) {
-  // CHECK-NOT: spirv.SDiv
-  //     CHECK: spirv.Load
-  // CHECK-NOT: spirv.ShiftRightArithmetic
-  %0 = memref.load %arg0[] : memref<i16, #spirv.storage_class<StorageBuffer>>
-  return
-}
-
-// CHECK-LABEL: @store_i8
-//       CHECK: (%[[ARG0:.+]]: {{.*}}, %[[ARG1:.+]]: i8)
-func.func @store_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>, %value: i8) {
-  //     CHECK-DAG: %[[ARG1_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : i8 to i32
-  //     CHECK-DAG: %[[ARG0_CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
-  //     CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
-  //     CHECK: %[[FOUR:.+]] = spirv.Constant 4 : i32
-  //     CHECK: %[[EIGHT:.+]] = spirv.Constant 8 : i32
-  //     CHECK: %[[IDX:.+]] = spirv.UMod %[[ZERO]], %[[FOUR]] : i32
-  //     CHECK: %[[OFFSET:.+]] = spirv.IMul %[[IDX]], %[[EIGHT]] : i32
-  //     CHECK: %[[MASK1:.+]] = spirv.Constant 255 : i32
-  //     CHECK: %[[TMP1:.+]] = spirv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32
-  //     CHECK: %[[MASK:.+]] = spirv.Not %[[TMP1]] : i32
-  //     CHECK: %[[CLAMPED_VAL:.+]] = spirv.BitwiseAnd %[[ARG1_CAST]], %[[MASK1]] : i32
-  //     CHECK: %[[STORE_VAL:.+]] = spirv.ShiftLeftLogical %[[CLAMPED_VAL]], %[[OFFSET]] : i32, i32
-  //     CHECK: %[[FOUR2:.+]] = spirv.Constant 4 : i32
-  //     CHECK: %[[ACCESS_IDX:.+]] = spirv.SDiv %[[ZERO]], %[[FOUR2]] : i32
-  //     CHECK: %[[PTR:.+]] = spirv.AccessChain %[[ARG0_CAST]][%[[ZERO]], %[[ACCESS_IDX]]]
-  //     CHECK: spirv.AtomicAnd "Device" "AcquireRelease" %[[PTR]], %[[MASK]]
-  //     CHECK: spirv.AtomicOr "Device" "AcquireRelease" %[[PTR]], %[[STORE_VAL]]
-  memref.store %value, %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
-  return
-}
-
-// CHECK-LABEL: @store_i16
-func.func @store_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, %index: index, %value: i16) {
-  //     CHECK: spirv.Store
-  // CHECK-NOT: spirv.AtomicAnd
-  // CHECK-NOT: spirv.AtomicOr
-  memref.store %value, %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
   return
 }
 
