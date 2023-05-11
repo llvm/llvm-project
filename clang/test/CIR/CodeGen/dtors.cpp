@@ -25,10 +25,10 @@ public:
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>
 
 // @B::~B() #1 declaration
-// CHECK:   cir.func @_ZN1BD2Ev(!cir.ptr<![[ClassB]]>) attributes {sym_visibility = "private"}
+// CHECK:   cir.func private @_ZN1BD2Ev(!cir.ptr<![[ClassB]]>)
 
 // operator delete(void*) declaration
-// CHECK:   cir.func @_ZdlPv(!cir.ptr<i8>) attributes {sym_visibility = "private"}
+// CHECK:   cir.func private @_ZdlPv(!cir.ptr<i8>)
 
 // B dtor => @B::~B() #2
 // Calls dtor #1

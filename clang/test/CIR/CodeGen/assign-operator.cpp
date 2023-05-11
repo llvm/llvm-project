@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -clangir-disable-emit-cxx-default %s -o - | FileCheck %s --check-prefix=DISABLE
+// RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+// RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -clangir-disable-emit-cxx-default %s -o %t-disable.cir
+// RUN: FileCheck --input-file=%t-disable.cir %s --check-prefix=DISABLE
 
 int strlen(char const *);
 
@@ -59,7 +62,7 @@ struct String {
   // CHECK:   cir.return %8 : !cir.ptr<!ty_22struct2EStringView22>
   // CHECK: }
 
-  // DISABLE: cir.func @_ZN10StringViewaSEOS_
+  // DISABLE: cir.func private @_ZN10StringViewaSEOS_
   // DISABLE-NEXT: cir.func @main()
 };
 

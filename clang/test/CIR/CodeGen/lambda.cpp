@@ -9,7 +9,7 @@ void fn() {
 //      CHECK: !ty_22class2Eanon22 = !cir.struct<"class.anon", i8>
 //  CHECK-DAG: module
 
-//      CHECK: cir.func lambda internal @_ZZ2fnvENK3$_0clEv
+//      CHECK: cir.func lambda internal private @_ZZ2fnvENK3$_0clEv
 
 //      CHECK:   cir.func @_Z2fnv()
 // CHECK-NEXT:     %0 = cir.alloca !ty_22class2Eanon22, cir.ptr <!ty_22class2Eanon22>, ["a"]
@@ -21,7 +21,7 @@ void l0() {
   a();
 }
 
-// CHECK: cir.func lambda internal @_ZZ2l0vENK3$_0clEv(
+// CHECK: cir.func lambda internal private @_ZZ2l0vENK3$_0clEv(
 
 // CHECK: %0 = cir.alloca !cir.ptr<!ty_22class2Eanon221>, cir.ptr <!cir.ptr<!ty_22class2Eanon221>>, ["this", init]
 // CHECK: %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2Eanon221>>, !cir.ptr<!ty_22class2Eanon221>
@@ -98,13 +98,13 @@ int g3() {
 }
 
 // lambda operator()
-// CHECK: cir.func lambda internal @_ZZ2g3vENK3$_0clERKi
+// CHECK: cir.func lambda internal private @_ZZ2g3vENK3$_0clERKi
 
 // lambda __invoke()
-// CHECK:   cir.func internal @_ZZ2g3vEN3$_08__invokeERKi
+// CHECK:   cir.func internal private @_ZZ2g3vEN3$_08__invokeERKi
 
 // lambda operator int (*)(int const&)()
-// CHECK:   cir.func internal @_ZZ2g3vENK3$_0cvPFiRKiEEv
+// CHECK:   cir.func internal private @_ZZ2g3vENK3$_0cvPFiRKiEEv
 
 // CHECK: cir.func @_Z2g3v() -> i32 {
 // CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}

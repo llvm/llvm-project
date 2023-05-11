@@ -1288,6 +1288,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   auto builtinNameAttr = getBuiltinAttrName(state.name);
   auto coroutineNameAttr = getCoroutineAttrName(state.name);
   auto lambdaNameAttr = getLambdaAttrName(state.name);
+  auto visNameAttr = getSymVisibilityAttrName(state.name);
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(
@@ -1302,6 +1303,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
                          parser.getContext(),
                          parseOptionalCIRKeyword<GlobalLinkageKind>(
                              parser, GlobalLinkageKind::ExternalLinkage)));
+
+  ::llvm::StringRef visAttrStr;
+  if (parser.parseOptionalKeyword(&visAttrStr, {"private", "public", "nested"})
+          .succeeded()) {
+    state.addAttribute(visNameAttr,
+                       parser.getBuilder().getStringAttr(visAttrStr));
+  }
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::Argument, 8> arguments;
@@ -1399,6 +1407,7 @@ bool cir::FuncOp::isDeclaration() {
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
   p << ' ';
+
   if (getBuiltin())
     p << "builtin ";
 
@@ -1411,6 +1420,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << stringifyGlobalLinkageKind(getLinkage()) << ' ';
 
+  auto vis = getVisibility();
+  if (vis != mlir::SymbolTable::Visibility::Public)
+    p << vis << " ";
+
   // Print function name, signature, and control.
   p.printSymbolName(getSymName());
   auto fnType = getFunctionType();
@@ -1418,10 +1431,15 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
                                                   /*isVariadic=*/false,
                                                   fnType.getResults());
   function_interface_impl::printFunctionAttributes(
-      p, *this, {getFunctionTypeAttrName(), getLinkageAttrName()});
+      p, *this,
+      {getSymVisibilityAttrName(), getAliaseeAttrName(),
+       getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName()});
 
-  if (auto aliaseeName = getAliasee())
+  if (auto aliaseeName = getAliasee()) {
+    p << " alias(";
     p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);

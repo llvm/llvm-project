@@ -351,14 +351,43 @@ static StructorCIRGen getCIRGenToUse(CIRGenModule &CGM,
 static void emitConstructorDestructorAlias(CIRGenModule &CGM,
                                            GlobalDecl AliasDecl,
                                            GlobalDecl TargetDecl) {
-  [[maybe_unused]] auto Linkage = CGM.getFunctionLinkage(AliasDecl);
+  auto Linkage = CGM.getFunctionLinkage(AliasDecl);
 
+  // Does this function alias already exists?
   StringRef MangledName = CGM.getMangledName(AliasDecl);
   auto Entry =
       dyn_cast_or_null<mlir::cir::FuncOp>(CGM.getGlobalValue(MangledName));
   if (Entry && !Entry.isDeclaration())
     return;
-  llvm_unreachable("NYI");
+
+  // Retrieve aliasee info.
+  auto Aliasee =
+      dyn_cast_or_null<mlir::cir::FuncOp>(CGM.GetAddrOfGlobal(TargetDecl));
+  assert(Aliasee && "expected cir.func");
+  auto *AliasFD = dyn_cast<FunctionDecl>(AliasDecl.getDecl());
+  assert(AliasFD && "expected FunctionDecl");
+
+  // Populate actual alias.
+  auto Alias =
+      CGM.createCIRFunction(CGM.getLoc(AliasDecl.getDecl()->getSourceRange()),
+                            MangledName, Aliasee.getFunctionType(), AliasFD);
+  Alias.setAliasee(Aliasee.getName());
+  Alias.setLinkage(Linkage);
+  mlir::SymbolTable::setSymbolVisibility(
+      Alias, CGM.getMLIRVisibilityFromCIRLinkage(Linkage));
+
+  // Alias constructors and destructors are always unnamed_addr.
+  assert(!UnimplementedFeature::unnamedAddr());
+
+  // Switch any previous uses to the alias.
+  if (Entry) {
+    llvm_unreachable("NYI");
+  } else {
+    // Name already set by createCIRFunction
+  }
+
+  // Finally, set up the alias with its proper name and attributes.
+  CGM.setCommonAttributes(AliasDecl, Alias);
 }
 
 void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {

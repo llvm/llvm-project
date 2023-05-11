@@ -274,6 +274,12 @@ public:
   /// in AST is always in default address space.
   LangAS getGlobalConstantAddressSpace() const;
 
+  /// Set attributes which are common to any form of a global definition (alias,
+  /// Objective-C method, function, global variable).
+  ///
+  /// NOTE: This should only be called for definitions.
+  void setCommonAttributes(GlobalDecl GD, mlir::Operation *GV);
+
   // TODO: this obviously overlaps with
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
