@@ -472,7 +472,11 @@ public:
   /// that are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPBlockBase objects. They are used for concrete
   /// type identification.
-  using VPBlockTy = enum { VPBasicBlockSC, VPRegionBlockSC };
+  using VPBlockTy = enum {
+    VPBasicBlockSC,
+    VPRegionBlockSC,
+    VPIRWrapperBlockSC
+  };
 
   using VPBlocksTy = SmallVectorImpl<VPBlockBase *>;
 
@@ -605,6 +609,12 @@ public:
     assert(Predecessors.empty() && "Block predecessors already set.");
     for (auto *Pred : NewPreds)
       appendPredecessor(Pred);
+  }
+
+  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
+    assert(Successors.empty() && "Block predecessors already set.");
+    for (auto *Succ : NewSuccs)
+      appendSuccessor(Succ);
   }
 
   /// Remove all the predecessor of this block.
@@ -1318,6 +1328,7 @@ public:
     default:
       return false;
     case VPInstruction::BranchOnCount:
+    case VPInstruction::BranchOnCond:
     case VPInstruction::CanonicalIVIncrementForPart:
       return true;
     };
@@ -2822,6 +2833,43 @@ public:
   }
 };
 
+class VPIRWrapperBlock : public VPBlockBase {
+  BasicBlock *WrappedBlock;
+
+public:
+  VPIRWrapperBlock(BasicBlock *WrappedBlock)
+      : VPBlockBase(VPIRWrapperBlockSC, WrappedBlock->getName().str()),
+        WrappedBlock(WrappedBlock) {}
+
+  static inline bool classof(const VPBlockBase *V) {
+    return V->getVPBlockID() == VPBlockBase::VPIRWrapperBlockSC;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p
+  /// SlotTracker is used to print unnamed VPValue's using consequtive numbers.
+  ///
+  /// Note that the numbering is applied to the whole VPlan, so printing
+  /// individual blocks is consistent with the whole VPlan printing.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+  using VPBlockBase::print; // Get the print(raw_stream &O) version.
+#endif
+  /// The method which generates the output IR instructions that correspond to
+  /// this VPBasicBlock, thereby "executing" the VPlan.
+  void execute(VPTransformState *State) override;
+
+  VPIRWrapperBlock *clone() override {
+    return new VPIRWrapperBlock(WrappedBlock);
+  }
+
+  void dropAllReferences(VPValue *NewValue) override {}
+
+  void resetBlock(BasicBlock *N) { WrappedBlock = N; }
+
+  BasicBlock *getWrappedBlock() { return WrappedBlock; }
+};
+
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
 /// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
@@ -3144,7 +3192,9 @@ public:
   /// pre-header, followed by a region for the vector loop, followed by the
   /// middle VPBasicBlock.
   static VPlanPtr createInitialVPlan(const SCEV *TripCount,
-                                     ScalarEvolution &PSE);
+                                     ScalarEvolution &PSE,
+                                     bool RequiresScalarEpilogueCheck,
+                                     bool TailFolded, Loop *TheLoop);
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
@@ -3320,6 +3370,8 @@ class VPlanPrinter {
   /// Print a given \p BasicBlock, including its VPRecipes, followed by printing
   /// its successor blocks.
   void dumpBasicBlock(const VPBasicBlock *BasicBlock);
+
+  void dumpIRWrapperBlock(const VPIRWrapperBlock *WrapperBlock);
 
   /// Print a given \p Region of the Plan.
   void dumpRegion(const VPRegionBlock *Region);

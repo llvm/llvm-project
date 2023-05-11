@@ -34,8 +34,11 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     ScalarEvolution &SE, const TargetLibraryInfo &TLI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan->getEntry());
+      Plan->getVectorLoopRegion());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    // Skip blocks outside region
+    if (!VPBB->getParent())
+      break;
     VPRecipeBase *Term = VPBB->getTerminator();
     auto EndIter = Term ? Term->getIterator() : VPBB->end();
     // Introduce each ingredient into VPlan.

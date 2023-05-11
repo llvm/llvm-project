@@ -442,6 +442,28 @@ BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG,
   return NewBB;
 }
 
+void VPIRWrapperBlock::execute(VPTransformState *State) {
+  for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
+    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
+    auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
+    BasicBlock *PredBB = State->CFG.VPBB2IRBB[PredVPBB];
+
+    assert(PredBB && "Predecessor basic-block not found building successor.");
+    auto *PredBBTerminator = PredBB->getTerminator();
+    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+
+    auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
+    if (TermBr) {
+      // Set each forward successor here when it is created, excluding
+      // backedges. A backward successor is set when the branch is created.
+      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+      assert(!TermBr->getSuccessor(idx) &&
+             "Trying to reset an existing successor block.");
+      TermBr->setSuccessor(idx, WrappedBlock);
+    }
+  }
+}
+
 void VPBasicBlock::execute(VPTransformState *State) {
   bool Replica = State->Instance && !State->Instance->isFirstIteration();
   VPBasicBlock *PrevVPBB = State->CFG.PrevVPBB;
@@ -469,6 +491,14 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // The Exit block of a loop is always set to be successor 0 of the Exiting
     // block.
     cast<BranchInst>(ExitingBB->getTerminator())->setSuccessor(0, NewBB);
+    // Set the insert point for recipe execution in the block.
+    State->Builder.SetInsertPoint(NewBB->getTerminator());
+    if (getSuccessors().size() == 1) {
+      BranchInst *Br = State->Builder.CreateBr(NewBB);
+      Br->setSuccessor(0, nullptr);
+      NewBB->getTerminator()->eraseFromParent();
+      State->Builder.SetInsertPoint(NewBB->getTerminator());
+    }
     State->DTU.applyUpdates({{DominatorTree::Insert, ExitingBB, NewBB}});
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
@@ -625,6 +655,13 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 
   printSuccessors(O, Indent);
 }
+
+void VPIRWrapperBlock::print(raw_ostream &O, const Twine &Indent,
+                             VPSlotTracker &SlotTracker) const {
+  O << Indent << "ir-bb<" << getName() << ">\n";
+  printSuccessors(O, Indent);
+}
+
 #endif
 
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
@@ -640,10 +677,21 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
       Entry);
   for (VPBlockBase *BB : RPOT) {
     VPBlockBase *NewBB = BB->clone();
-    for (VPBlockBase *Pred : BB->getPredecessors())
-      VPBlockUtils::connectBlocks(Old2NewVPBlocks[Pred], NewBB);
-
     Old2NewVPBlocks[BB] = NewBB;
+  }
+
+  for (VPBlockBase *BB : RPOT) {
+    VPBlockBase *NewBB = Old2NewVPBlocks[BB];
+    SmallVector<VPBlockBase *> NewPreds;
+    for (VPBlockBase *Pred : BB->getPredecessors()) {
+      NewPreds.push_back(Old2NewVPBlocks[Pred]);
+    }
+    NewBB->setPredecessors(NewPreds);
+    SmallVector<VPBlockBase *> NewSuccs;
+    for (VPBlockBase *Succ : BB->successors()) {
+      NewSuccs.push_back(Old2NewVPBlocks[Succ]);
+    }
+    NewBB->setSuccessors(NewSuccs);
   }
 
 #if !defined(NDEBUG)
@@ -769,7 +817,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
+VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
+                                   bool RequiresScalarEpilogueCheck,
+                                   bool TailFolded, Loop *TheLoop) {
   VPBasicBlock *Preheader = new VPBasicBlock("ph");
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
@@ -780,6 +830,35 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
   VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
+
+  BasicBlock *EB = TheLoop->getUniqueExitBlock();
+  if (RequiresScalarEpilogueCheck) {
+    VPIRWrapperBlock *EBWrapper = new VPIRWrapperBlock(EB);
+    VPBlockUtils::insertBlockAfter(EBWrapper, MiddleVPBB);
+
+    auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
+    // Here we use the same DebugLoc as the scalar loop latch terminator instead
+    // of the corresponding compare because they may have ended up with
+    // different line numbers and we want to avoid awkward line stepping while
+    // debugging. Eg. if the compare has got a line number inside the loop.
+    VPValue *Cmp =
+        TailFolded
+            ? Plan->getOrAddLiveIn(ConstantInt::getTrue(
+                  IntegerType::getInt1Ty(TripCount->getType()->getContext())))
+            : new VPInstruction(Instruction::ICmp, CmpInst::ICMP_EQ,
+                                Plan->getTripCount(),
+                                &Plan->getVectorTripCount(),
+                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
+    if (auto *VPI = Cmp->getDefiningRecipe())
+      MiddleVPBB->appendRecipe(VPI);
+    auto *Br = new VPInstruction(VPInstruction::BranchOnCond, {Cmp},
+                                 ScalarLatchTerm->getDebugLoc());
+    MiddleVPBB->appendRecipe(Br);
+  }
+  BasicBlock *Header = TheLoop->getHeader();
+  VPIRWrapperBlock *PHWrapper = new VPIRWrapperBlock(Header);
+  VPBlockUtils::connectBlocks(MiddleVPBB, PHWrapper);
+
   return Plan;
 }
 
@@ -1129,6 +1208,8 @@ void VPlanPrinter::dumpBlock(const VPBlockBase *Block) {
     dumpBasicBlock(BasicBlock);
   else if (const VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
     dumpRegion(Region);
+  else if (const auto *Wrapper = dyn_cast<VPIRWrapperBlock>(Block))
+    dumpIRWrapperBlock(Wrapper);
   else
     llvm_unreachable("Unsupported kind of VPBlock.");
 }
@@ -1137,8 +1218,10 @@ void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
                             bool Hidden, const Twine &Label) {
   // Due to "dot" we print an edge between two regions as an edge between the
   // exiting basic block and the entry basic of the respective regions.
-  const VPBlockBase *Tail = From->getExitingBasicBlock();
-  const VPBlockBase *Head = To->getEntryBasicBlock();
+  const VPBlockBase *Tail =
+      isa<VPIRWrapperBlock>(From) ? From : From->getExitingBasicBlock();
+  const VPBlockBase *Head =
+      isa<VPIRWrapperBlock>(To) ? To : To->getEntryBasicBlock();
   OS << Indent << getUID(Tail) << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
   if (Tail != From)
@@ -1192,6 +1275,34 @@ void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
   OS << Indent << "]\n";
 
   dumpEdges(BasicBlock);
+}
+
+void VPlanPrinter::dumpIRWrapperBlock(const VPIRWrapperBlock *WrapperBlock) {
+  OS << Indent << getUID(WrapperBlock) << " [label =\n";
+  bumpIndent(1);
+  std::string Str;
+  raw_string_ostream SS(Str);
+  // Use no indentation as we need to wrap the lines into quotes ourselves.
+  WrapperBlock->print(SS, "", SlotTracker);
+
+  // We need to process each line of the output separately, so split
+  // single-string plain-text dump.
+  SmallVector<StringRef, 0> Lines;
+  StringRef(Str).rtrim('\n').split(Lines, "\n");
+
+  auto EmitLine = [&](StringRef Line, StringRef Suffix) {
+    OS << Indent << '"' << DOT::EscapeString(Line.str()) << "\\l\"" << Suffix;
+  };
+
+  // Don't need the "+" after the last line.
+  for (auto Line : make_range(Lines.begin(), Lines.end() - 1))
+    EmitLine(Line, " +\n");
+  EmitLine(Lines.back(), "\n");
+
+  bumpIndent(-1);
+  OS << Indent << "]\n";
+
+  dumpEdges(WrapperBlock);
 }
 
 void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
