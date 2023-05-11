@@ -336,6 +336,9 @@ TYPE_PARSER(
                 parenthesized(Parser<OmpObjectList>{}))) ||
     "USE_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::UseDevicePtr>(
                             parenthesized(Parser<OmpObjectList>{}))) ||
+    "USE_DEVICE_ADDR" >>
+        construct<OmpClause>(construct<OmpClause::UseDeviceAddr>(
+            parenthesized(Parser<OmpObjectList>{}))) ||
     "UNIFIED_ADDRESS" >>
         construct<OmpClause>(construct<OmpClause::UnifiedAddress>()) ||
     "UNIFIED_SHARED_MEMORY" >>

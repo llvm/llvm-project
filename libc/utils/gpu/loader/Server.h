@@ -19,9 +19,6 @@
 
 static __llvm_libc::rpc::Server server;
 
-static __llvm_libc::cpp::Atomic<uint32_t>
-    lock[__llvm_libc::rpc::default_port_count] = {0};
-
 /// Queries the RPC client at least once and performs server-side work if there
 /// are any active requests.
 void handle_server() {
@@ -58,6 +55,41 @@ void handle_server() {
       port->recv_and_send([](__llvm_libc::rpc::Buffer *buffer) {
         reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
       });
+      break;
+    }
+    case __llvm_libc::rpc::Opcode::TEST_INTERFACE: {
+      uint64_t cnt = 0;
+      bool end_with_recv;
+      port->recv([&](__llvm_libc::rpc::Buffer *buffer) {
+        end_with_recv = buffer->data[0];
+      });
+      port->recv(
+          [&](__llvm_libc::rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->send([&](__llvm_libc::rpc::Buffer *buffer) {
+        buffer->data[0] = cnt = cnt + 1;
+      });
+      port->recv(
+          [&](__llvm_libc::rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->send([&](__llvm_libc::rpc::Buffer *buffer) {
+        buffer->data[0] = cnt = cnt + 1;
+      });
+      port->recv(
+          [&](__llvm_libc::rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->recv(
+          [&](__llvm_libc::rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      port->send([&](__llvm_libc::rpc::Buffer *buffer) {
+        buffer->data[0] = cnt = cnt + 1;
+      });
+      port->send([&](__llvm_libc::rpc::Buffer *buffer) {
+        buffer->data[0] = cnt = cnt + 1;
+      });
+      if (end_with_recv)
+        port->recv(
+            [&](__llvm_libc::rpc::Buffer *buffer) { cnt = buffer->data[0]; });
+      else
+        port->send([&](__llvm_libc::rpc::Buffer *buffer) {
+          buffer->data[0] = cnt = cnt + 1;
+        });
       break;
     }
     default:

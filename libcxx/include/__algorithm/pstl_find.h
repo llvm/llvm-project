@@ -12,8 +12,12 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/find.h>
 #include <__config>
+#include <__functional/operations.h>
+#include <__iterator/iterator_traits.h>
+#include <__pstl/internal/execution_impl.h>
 #include <__pstl/internal/parallel_impl.h>
 #include <__pstl/internal/unseq_backend_simd.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/terminate_on_exception.h>
