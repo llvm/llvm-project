@@ -260,8 +260,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error("Failed to allocate memory the RPC client / server.");
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(port_size, warp_size, &lock, server_inbox, server_outbox,
-               buffer);
+  server.reset(port_size, warp_size, server_inbox, server_outbox, buffer);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   // Call the kernel to

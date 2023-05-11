@@ -15,8 +15,6 @@ extern "C" int main(int argc, char **argv, char **envp);
 
 namespace __llvm_libc {
 
-static cpp::Atomic<uint32_t> lock[rpc::default_port_count] = {0};
-
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
 extern "C" uintptr_t __fini_array_start[];
@@ -44,8 +42,8 @@ _begin(int argc, char **argv, char **env, void *in, void *out, void *buffer) {
   // We need to set up the RPC client first in case any of the constructors
   // require it.
   __llvm_libc::rpc::client.reset(__llvm_libc::rpc::default_port_count,
-                                 __llvm_libc::gpu::get_lane_size(),
-                                 &__llvm_libc::lock, in, out, buffer);
+                                 __llvm_libc::gpu::get_lane_size(), in, out,
+                                 buffer);
 
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
