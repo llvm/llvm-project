@@ -37,6 +37,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_stoptheworld_win.cpp
   sanitizer_suppressions.cpp
   sanitizer_tls_get_addr.cpp
+  sanitizer_thread_arg_retval.cpp
   sanitizer_thread_registry.cpp
   sanitizer_type_traits.cpp
   sanitizer_win.cpp
