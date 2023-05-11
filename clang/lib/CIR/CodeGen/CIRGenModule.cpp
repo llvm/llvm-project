@@ -440,6 +440,10 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
   return g;
 }
 
+void CIRGenModule::setCommonAttributes(GlobalDecl GD, mlir::Operation *GV) {
+  assert(!UnimplementedFeature::setCommonAttributes());
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return an mlir GlobalOp with the specified type (TODO(cir):
 /// address space).

@@ -24,3 +24,17 @@ void t() {
 // CHECK-NEXT:     %2 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<i8 x 5>>), !cir.ptr<i8>
 // CHECK-NEXT:     cir.call @_ZN11DummyStringC2EPKc(%0, %2) : (!cir.ptr<!ty_22struct2EDummyString22>, !cir.ptr<i8>) -> ()
 // CHECK-NEXT:     cir.return
+
+struct B {
+  B();
+};
+B::B() {
+}
+
+// CHECK: cir.func @_ZN1BC2Ev(%arg0: !cir.ptr<!ty_22struct2EB22>
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22struct2EB22>, cir.ptr <!cir.ptr<!ty_22struct2EB22>>, ["this", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22struct2EB22>, cir.ptr <!cir.ptr<!ty_22struct2EB22>>
+// CHECK:   %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22struct2EB22>>, !cir.ptr<!ty_22struct2EB22>
+// CHECK:   cir.return
+// CHECK: }
+// CHECK: cir.func @_ZN1BC1Ev(!cir.ptr<!ty_22struct2EB22>) alias(@_ZN1BC2Ev)

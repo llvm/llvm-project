@@ -137,10 +137,10 @@ co_invoke_fn co_invoke;
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22struct2Efolly3A3Acoro3A3Aco_invoke_fn22
 
-// CHECK: cir.func builtin @__builtin_coro_id(i32, !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>) -> i32 attributes {builtin, sym_visibility = "private"}
-// CHECK: cir.func builtin @__builtin_coro_alloc(i32) -> !cir.bool attributes {builtin, sym_visibility = "private"}
-// CHECK: cir.func builtin @__builtin_coro_size() -> i64 attributes {builtin, sym_visibility = "private"}
-// CHECK: cir.func builtin @__builtin_coro_begin(i32, !cir.ptr<i8>) -> !cir.ptr<i8> attributes {builtin, sym_visibility = "private"}
+// CHECK: cir.func builtin private @__builtin_coro_id(i32, !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>) -> i32
+// CHECK: cir.func builtin private @__builtin_coro_alloc(i32) -> !cir.bool
+// CHECK: cir.func builtin private @__builtin_coro_size() -> i64
+// CHECK: cir.func builtin private @__builtin_coro_begin(i32, !cir.ptr<i8>) -> !cir.ptr<i8>
 
 using VoidTask = folly::coro::Task<void>;
 
@@ -341,7 +341,7 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CHECK: cir.func coroutine lambda internal @_ZZ10go1_lambdavENK3$_0clEv
+// CHECK: cir.func coroutine lambda internal private @_ZZ10go1_lambdavENK3$_0clEv
 // CHECK: cir.func coroutine @_Z10go1_lambdav()
 
 folly::coro::Task<int> go4() {
