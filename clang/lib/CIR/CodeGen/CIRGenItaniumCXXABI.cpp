@@ -348,6 +348,19 @@ static StructorCIRGen getCIRGenToUse(CIRGenModule &CGM,
   return StructorCIRGen::Alias;
 }
 
+static void emitConstructorDestructorAlias(CIRGenModule &CGM,
+                                           GlobalDecl AliasDecl,
+                                           GlobalDecl TargetDecl) {
+  [[maybe_unused]] auto Linkage = CGM.getFunctionLinkage(AliasDecl);
+
+  StringRef MangledName = CGM.getMangledName(AliasDecl);
+  auto Entry =
+      dyn_cast_or_null<mlir::cir::FuncOp>(CGM.getGlobalValue(MangledName));
+  if (Entry && !Entry.isDeclaration())
+    return;
+  llvm_unreachable("NYI");
+}
+
 void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
   auto *MD = cast<CXXMethodDecl>(GD.getDecl());
   auto *CD = dyn_cast<CXXConstructorDecl>(MD);
@@ -365,7 +378,8 @@ void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
 
     if (CIRGenType == StructorCIRGen::Alias ||
         CIRGenType == StructorCIRGen::COMDAT) {
-      llvm_unreachable("NYI");
+      emitConstructorDestructorAlias(CGM, GD, BaseDecl);
+      return;
     }
 
     if (CIRGenType == StructorCIRGen::RAUW) {
