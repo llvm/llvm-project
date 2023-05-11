@@ -10491,6 +10491,9 @@ def err_omp_lastprivate_incomplete_type : Error<
   "a lastprivate variable with incomplete type %0">;
 def err_omp_reduction_incomplete_type : Error<
   "a reduction list item with incomplete type %0">;
+def warn_omp_minus_in_reduction_deprecated : Warning<
+  "minus(-) operator for reductions is deprecated; use + or user defined reduction instead">,
+  InGroup<Deprecated>;
 def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
 def err_omp_unexpected_call_to_omp_runtime_api
