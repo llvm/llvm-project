@@ -44,6 +44,9 @@ from mlir.dialects.linalg.opdsl import lang
 
 from . import mlir_pytaco_utils as utils
 
+# Import Kokkos pipeline
+from torch_mlir_e2e_test.linalg_kokkos_backend import KokkosBackend
+
 # TACO naming prefixes.
 _TACO_INDEX_PREFIX = "i"
 _TACO_TENSOR_PREFIX = "A"
@@ -777,6 +780,35 @@ class IndexExpr(abc.ABC):
             engine = utils.compile_and_build_engine(module)
 
         return engine
+
+  def compile_kokkos(
+      self,
+      dst: "Tensor",
+      dst_indices: Tuple["IndexVar", ...],
+  ) -> execution_engine.ExecutionEngine:
+    """Compiles the tensor assignment dst[dst_indices] = expression.
+
+    Args:
+      dst: The destination tensor.
+      dst_indices: The tuple of IndexVar used to access the destination tensor.
+
+    Returns:
+      The Kokkos/CTypes execution engine for the tensor assignment.
+
+    Raises:
+      ValueError: If the expression is not proper or not supported.
+    """
+    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+    input_accesses = self.get_input_accesses()
+
+    # Build and compile the module to produce the execution engine.
+    with ir.Context(), ir.Location.unknown():
+      module = ir.Module.create()
+      self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                            input_accesses)
+      backend = KokkosBackend.KokkosBackendLinalgOnTensorsBackend(dump_mlir=True, before_mlir_filename = "dump_pytaco.mlir", after_mlir_filename = "lowered_dump_pytaco.mlir")
+      engine = backend.compile_sparse(module)
+    return engine
 
   def get_module(
       self,
@@ -1659,7 +1691,6 @@ def _emit_operand(
       indices: A tuple of IndexVar used to access the tensor.
       name: A unique string name of the tensor.
       kind: An OperandKind for the operand.
-
     Returns:
       An OperandDef representing the operand.
     """

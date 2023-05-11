@@ -1492,23 +1492,26 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   // Enforce types on all inputs
   for(size_t i = 0; i < numParams; i++)
   {
-    py_os << "param" << i << " = ";
     auto paramType = ftype.getInput(i);
-    if(auto memrefType = paramType.dyn_cast<MemRefType>())
+    if(!paramType.isa<LLVM::LLVMPointerType>())
     {
-      std::string numpyDType = getNumpyType(memrefType.getElementType());
-      if(!numpyDType.size())
-        return failure();
-      py_os << "numpy.require(param" << i << ", dtype=" << numpyDType << ", requirements=['C'])\n";
-    }
-    else
-    {
-      //Wrap scalar primitives in 1D NumPy array.
-      //This gives it the correct type, and lets us use the same ndarray CTypes API as memrefs.
-      std::string numpyDType = getNumpyType(paramType);
-      if(!numpyDType.size())
-        return failure();
-      py_os << "numpy.array(param" << i << ", dtype=" << numpyDType << ", ndmin=1)\n";
+      py_os << "param" << i << " = ";
+      if(auto memrefType = paramType.dyn_cast<MemRefType>())
+      {
+        std::string numpyDType = getNumpyType(memrefType.getElementType());
+        if(!numpyDType.size())
+          return failure();
+        py_os << "numpy.require(param" << i << ", dtype=" << numpyDType << ", requirements=['C'])\n";
+      }
+      else 
+      {
+        //Wrap scalar primitives in 1D NumPy array.
+        //This gives it the correct type, and lets us use the same ndarray CTypes API as memrefs.
+        std::string numpyDType = getNumpyType(paramType);
+        if(!numpyDType.size())
+          return failure();
+        py_os << "numpy.array(param" << i << ", dtype=" << numpyDType << ", ndmin=1)\n";
+      }
     }
   }
   // Construct outputs
@@ -1531,6 +1534,11 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
       }
       py_os << "), dtype=" << numpyDType << ")\n";
     }
+    else if(retType.isa<LLVM::LLVMPointerType>())
+    {
+      //For pointer results, declare a void* and pass its address (void**)
+      py_os << "ret" << i << " = c_void_p()\n";
+    }
     else
     {
       //For scalars, construct a single-element numpy ndarray so that we can use its CTypes API
@@ -1545,17 +1553,35 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   // Outputs go first
   for(size_t i = 0; i < numResults; i++)
   {
+    auto retType = ftype.getResult(i);
     if(i != 0)
       py_os << ", ";
-    py_os << "ret" << i << ".ctypes.data_as(ctypes.c_void_p)";
+    if(retType.isa<LLVM::LLVMPointerType>())
+    {
+      // Pointer
+      py_os << "pointer(ret" << i << ")";
+    }
+    else
+    {
+      // numpy array, or scalar
+      py_os << "ret" << i << ".ctypes.data_as(ctypes.c_void_p)";
+    }
   }
   for(size_t i = 0; i < numParams; i++)
   {
+    auto paramType = ftype.getInput(i);
     if(i != 0 || numResults != size_t(0))
     {
       py_os << ", ";
     }
-    py_os << "param" << i << ".ctypes.data_as(ctypes.c_void_p)";
+    if(paramType.isa<LLVM::LLVMPointerType>())
+    {
+      py_os << "param" << i;
+    }
+    else
+    {
+      py_os << "param" << i << ".ctypes.data_as(ctypes.c_void_p)";
+    }
   }
   py_os << ")\n";
   // Finally, generate the return. Note that in Python, a 1-elem tuple is equivalent to scalar.
@@ -1567,7 +1593,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
       if(i != 0)
         py_os << ", ";
       auto retType = ftype.getResult(i);
-      if(auto memrefType = retType.dyn_cast<MemRefType>())
+      if(retType.isa<MemRefType>() || retType.isa<LLVM::LLVMPointerType>())
       {
         //Return the whole memref
         py_os << "ret" << i;
