@@ -29,7 +29,7 @@ subroutine some()
   write (buffer, 10) "compiler"
   read (buffer, 10) greeting
 end
-! CHECK-LABEL: fir.global linkonce @_QQcl.636F6D70696C6572
+! CHECK-LABEL: fir.global internal @_QQcl.636F6D70696C6572
 ! CHECK: %[[lit:.*]] = fir.string_lit "compiler"(8) : !fir.char<1,8>
 ! CHECK: fir.has_value %[[lit]] : !fir.char<1,8>
 ! CHECK: }
