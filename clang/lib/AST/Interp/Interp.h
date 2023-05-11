@@ -1700,7 +1700,7 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC) {
   return Call(S, OpPC, F);
 }
 
-inline bool GetFnPtr(InterpState &S, CodePtr &PC, const Function *Func) {
+inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func);
   S.Stk.push<FunctionPointer>(Func);
   return true;
