@@ -881,15 +881,31 @@ genAllocateClause(Fortran::lower::AbstractConverter &converter,
   mlir::Value allocatorOperand;
   const Fortran::parser::OmpObjectList &ompObjectList =
       std::get<Fortran::parser::OmpObjectList>(ompAllocateClause.t);
-  const auto &allocatorValue =
-      std::get<std::optional<Fortran::parser::OmpAllocateClause::Allocator>>(
-          ompAllocateClause.t);
+  const auto &allocateModifier = std::get<
+      std::optional<Fortran::parser::OmpAllocateClause::AllocateModifier>>(
+      ompAllocateClause.t);
+
+  // If the allocate modifier is present, check if we only use the allocator
+  // submodifier.  ALIGN in this context is unimplemented
+  const bool onlyAllocator =
+      allocateModifier &&
+      std::holds_alternative<
+          Fortran::parser::OmpAllocateClause::AllocateModifier::Allocator>(
+          allocateModifier->u);
+
+  if (allocateModifier && !onlyAllocator) {
+    TODO(converter.getCurrentLocation(), "OmpAllocateClause ALIGN modifier");
+  }
+
   // Check if allocate clause has allocator specified. If so, add it
   // to list of allocators, otherwise, add default allocator to
   // list of allocators.
-  if (allocatorValue) {
+  if (onlyAllocator) {
+    const auto &allocatorValue = std::get<
+        Fortran::parser::OmpAllocateClause::AllocateModifier::Allocator>(
+        allocateModifier->u);
     allocatorOperand = fir::getBase(converter.genExprValue(
-        *Fortran::semantics::GetExpr(allocatorValue->v), stmtCtx));
+        *Fortran::semantics::GetExpr(allocatorValue.v), stmtCtx));
     allocatorOperands.insert(allocatorOperands.end(), ompObjectList.v.size(),
                              allocatorOperand);
   } else {
@@ -2379,6 +2395,10 @@ void Fortran::lower::genOpenMPConstruct(
           [&](const Fortran::parser::OpenMPExecutableAllocate
                   &execAllocConstruct) {
             TODO(converter.getCurrentLocation(), "OpenMPExecutableAllocate");
+          },
+          [&](const Fortran::parser::OpenMPAllocatorsConstruct
+                  &allocsConstruct) {
+            TODO(converter.getCurrentLocation(), "OpenMPAllocatorsConstruct");
           },
           [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
             genOMP(converter, eval, blockConstruct);
