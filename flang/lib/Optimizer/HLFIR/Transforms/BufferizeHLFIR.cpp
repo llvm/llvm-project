@@ -350,8 +350,10 @@ struct AssociateOpConversion
           builder.createConvert(loc, associate.getResultTypes()[0], hlfirVar);
       associate.getResult(0).replaceAllUsesWith(hlfirVar);
       mlir::Type associateFirVarType = associate.getResultTypes()[1];
-      if (firVar.getType().isa<fir::BaseBoxType>() &&
-          !associateFirVarType.isa<fir::BaseBoxType>())
+      if ((firVar.getType().isa<fir::BaseBoxType>() &&
+           !associateFirVarType.isa<fir::BaseBoxType>()) ||
+          (firVar.getType().isa<fir::BoxCharType>() &&
+           !associateFirVarType.isa<fir::BoxCharType>()))
         firVar =
             builder.create<fir::BoxAddrOp>(loc, associateFirVarType, firVar);
       else
