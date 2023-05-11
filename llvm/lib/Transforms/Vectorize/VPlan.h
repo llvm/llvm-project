@@ -411,6 +411,10 @@ struct VPTransformState {
   /// This is currently only used to add no-alias metadata based on the
   /// memchecks.  The actually versioning is performed manually.
   LoopVersioning *LVer = nullptr;
+
+  /// Map SCEVs to their expanded values. Populated when executing
+  /// VPExpandSCEVRecipes.
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
 };
 
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
