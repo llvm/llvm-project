@@ -2034,12 +2034,12 @@ OperandMatchResultTy RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
 
 OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   SMLoc S = getLoc();
-  if (getLexer().isNot(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
 
   SmallVector<AsmToken, 7> VTypeIElements;
   // Put all the tokens for vtypei operand into VTypeIElements vector.
   while (getLexer().isNot(AsmToken::EndOfStatement)) {
+    if (getLexer().isNot(AsmToken::Identifier))
+      goto MatchFail;
     VTypeIElements.push_back(getLexer().getTok());
     getLexer().Lex();
     if (getLexer().is(AsmToken::EndOfStatement))
