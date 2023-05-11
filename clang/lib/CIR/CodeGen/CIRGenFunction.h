@@ -540,6 +540,8 @@ public:
   void buildLambdaDelegatingInvokeBody(const CXXMethodDecl *MD);
   void buildLambdaStaticInvokeBody(const CXXMethodDecl *MD);
 
+  LValue buildPredefinedLValue(const PredefinedExpr *E);
+
   /// When generating code for a C++ member function, this will
   /// hold the implicit 'this' declaration.
   clang::ImplicitParamDecl *CXXABIThisDecl = nullptr;

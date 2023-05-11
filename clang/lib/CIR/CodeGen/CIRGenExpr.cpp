@@ -21,6 +21,8 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "llvm/ADT/StringExtras.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"
 
@@ -1672,7 +1674,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildStringLiteralLValue(cast<StringLiteral>(E));
   case Expr::MemberExprClass:
     return buildMemberExpr(cast<MemberExpr>(E));
-
+  case Expr::PredefinedExprClass:
+    return buildPredefinedLValue(cast<PredefinedExpr>(E));
   case Expr::CStyleCastExprClass:
   case Expr::CXXFunctionalCastExprClass:
   case Expr::CXXDynamicCastExprClass:
@@ -2168,4 +2171,20 @@ mlir::Value CIRGenFunction::buildScalarConstant(
                              E->getExprLoc())
         .getScalarVal();
   return builder.getConstant(getLoc(E->getSourceRange()), Constant.getValue());
+}
+
+LValue CIRGenFunction::buildPredefinedLValue(const PredefinedExpr *E) {
+  auto SL = E->getFunctionName();
+  assert(SL != nullptr && "No StringLiteral name in PredefinedExpr");
+  StringRef FnName = CurFn.getName();
+  if (FnName.starts_with("\01"))
+    FnName = FnName.substr(1);
+  StringRef NameItems[] = {PredefinedExpr::getIdentKindName(E->getIdentKind()),
+                           FnName};
+  std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
+  if (auto *BD = dyn_cast_or_null<BlockDecl>(CurCodeDecl)) {
+    llvm_unreachable("NYI");
+  }
+
+  return buildStringLiteralLValue(SL);
 }
