@@ -196,7 +196,6 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
   libc.src.string.bzero_opt_host.__internal__
   libc.src.string.memmove_opt_host.__internal__
   benchmark_main
-  -static
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
 
