@@ -114,13 +114,30 @@ template <bool InvertInbox> struct Process {
   cpp::Atomic<uint32_t> lock[default_port_count] = {0};
 
   /// Initialize the communication channels.
-  LIBC_INLINE void reset(uint64_t port_count, uint32_t lane_size, void *inbox,
-                         void *outbox, void *packet) {
+  LIBC_INLINE void reset(uint64_t port_count, uint32_t lane_size, void *state) {
+    uint64_t p = memory_offset_primary_mailbox(port_count);
+    uint64_t s = memory_offset_secondary_mailbox(port_count);
     this->port_count = port_count;
     this->lane_size = lane_size;
-    this->inbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(inbox);
-    this->outbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(outbox);
-    this->packet = reinterpret_cast<Packet *>(packet);
+    this->inbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(
+        static_cast<char *>(state) + (InvertInbox ? s : p));
+    this->outbox = reinterpret_cast<cpp::Atomic<uint32_t> *>(
+        static_cast<char *>(state) + (InvertInbox ? p : s));
+    this->packet = reinterpret_cast<Packet *>(static_cast<char *>(state) +
+                                              memory_offset_buffer(port_count));
+  }
+
+  /// Allocate a single block of memory for use by client and server
+  /// template<size_t N>, N is generally a runtime value
+  /// struct equivalent {
+  ///   atomic<uint32_t> primary[N];
+  ///   atomic<uint32_t> secondary[N];
+  ///   Packet buffer[N];
+  /// };
+  LIBC_INLINE static uint64_t allocation_size(uint64_t port_count,
+                                              uint32_t lane_size) {
+    return memory_offset_buffer(port_count) +
+           memory_allocated_buffer(port_count, lane_size);
   }
 
   /// The length of the packet is flexible because the server needs to look up
@@ -244,6 +261,34 @@ template <bool InvertInbox> struct Process {
         if (packet.header.mask & 1ul << i)
           fn(&packet.payload.slot[i], i);
     }
+  }
+
+  /// Number of bytes allocated for mailbox or buffer
+  LIBC_INLINE static uint64_t memory_allocated_mailbox(uint64_t port_count) {
+    return port_count * sizeof(cpp::Atomic<uint32_t>);
+  }
+
+  LIBC_INLINE static uint64_t memory_allocated_buffer(uint64_t port_count,
+                                                      uint32_t lane_size) {
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+    (void)lane_size;
+    return port_count * sizeof(Packet);
+#else
+    return port_count * (sizeof(Packet) + sizeof(Buffer) * lane_size);
+#endif
+  }
+
+  /// Offset of mailbox/buffer in single allocation
+  LIBC_INLINE static uint64_t
+  memory_offset_primary_mailbox(uint64_t /*port_count*/) {
+    return 0;
+  }
+  LIBC_INLINE static uint64_t
+  memory_offset_secondary_mailbox(uint64_t port_count) {
+    return memory_allocated_mailbox(port_count);
+  }
+  LIBC_INLINE static uint64_t memory_offset_buffer(uint64_t port_count) {
+    return align_up(2 * memory_allocated_mailbox(port_count), alignof(Packet));
   }
 };
 
