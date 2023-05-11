@@ -799,32 +799,57 @@ struct BBAddrMap {
   uint64_t Addr; // Function address
   // Struct representing the BBAddrMap information for one basic block.
   struct BBEntry {
+    struct Metadata {
+      bool HasReturn : 1;   // If this block ends with a return (or tail call).
+      bool HasTailCall : 1; // If this block ends with a tail call.
+      bool IsEHPad : 1;     // If this is an exception handling block.
+      bool CanFallThrough : 1; // If this block can fall through to its next.
+
+      bool operator==(const Metadata &Other) const {
+        return HasReturn == Other.HasReturn &&
+               HasTailCall == Other.HasTailCall && IsEHPad == Other.IsEHPad &&
+               CanFallThrough == Other.CanFallThrough;
+      }
+
+      // Encodes this struct as a uint32_t value.
+      uint32_t encode() const {
+        return static_cast<uint32_t>(HasReturn) |
+               (static_cast<uint32_t>(HasTailCall) << 1) |
+               (static_cast<uint32_t>(IsEHPad) << 2) |
+               (static_cast<uint32_t>(CanFallThrough) << 3);
+      }
+
+      // Decodes and returns a Metadata struct from a uint32_t value.
+      static Expected<Metadata> decode(uint32_t V) {
+        Metadata MD{/*HasReturn=*/static_cast<bool>(V & 1),
+                    /*HasTailCall=*/static_cast<bool>(V & (1 << 1)),
+                    /*IsEHPad=*/static_cast<bool>(V & (1 << 2)),
+                    /*CanFallThrough=*/static_cast<bool>(V & (1 << 3))};
+        if (MD.encode() != V)
+          return createStringError(
+              std::error_code(), "invalid encoding for BBEntry::Metadata: 0x%x",
+              V);
+        return MD;
+      }
+    };
+
     uint32_t ID;     // Unique ID of this basic block.
     uint32_t Offset; // Offset of basic block relative to function start.
     uint32_t Size;   // Size of the basic block.
+    Metadata MD;     // Metdata for this basic block.
 
-    // The following fields are decoded from the Metadata field. The encoding
-    // happens in AsmPrinter.cpp:getBBAddrMapMetadata.
-    bool HasReturn;      // If this block ends with a return (or tail call).
-    bool HasTailCall;    // If this block ends with a tail call.
-    bool IsEHPad;        // If this is an exception handling block.
-    bool CanFallThrough; // If this block can fall through to its next.
-
-    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, uint32_t Metadata)
-        : ID(ID), Offset(Offset), Size(Size), HasReturn(Metadata & 1),
-          HasTailCall(Metadata & (1 << 1)), IsEHPad(Metadata & (1 << 2)),
-          CanFallThrough(Metadata & (1 << 3)){};
+    BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD)
+        : ID(ID), Offset(Offset), Size(Size), MD(MD){};
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&
-             HasReturn == Other.HasReturn && HasTailCall == Other.HasTailCall &&
-             IsEHPad == Other.IsEHPad && CanFallThrough == Other.CanFallThrough;
+             MD == Other.MD;
     }
 
-    bool hasReturn() const { return HasReturn; }
-    bool hasTailCall() const { return HasTailCall; }
-    bool isEHPad() const { return IsEHPad; }
-    bool canFallThrough() const { return CanFallThrough; }
+    bool hasReturn() const { return MD.HasReturn; }
+    bool hasTailCall() const { return MD.HasTailCall; }
+    bool isEHPad() const { return MD.IsEHPad; }
+    bool canFallThrough() const { return MD.CanFallThrough; }
   };
   std::vector<BBEntry> BBEntries; // Basic block entries for this function.
 
