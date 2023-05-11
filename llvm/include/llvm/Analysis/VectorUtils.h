@@ -917,7 +917,7 @@ private:
   /// Collect all the accesses with a constant stride in program order.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides);
+      const ValueToValueMap &Strides);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
   static bool isStrided(int Stride);

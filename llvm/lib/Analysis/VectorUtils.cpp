@@ -1011,7 +1011,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-    const DenseMap<Value*, const SCEV*> &Strides) {
+    const ValueToValueMap &Strides) {
   auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
@@ -1091,7 +1091,7 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
 void InterleavedAccessInfo::analyzeInterleaving(
                                  bool EnablePredicatedInterleavedMemAccesses) {
   LLVM_DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
-  const auto &Strides = LAI->getSymbolicStrides();
+  const ValueToValueMap &Strides = LAI->getSymbolicStrides();
 
   // Holds all accesses with a constant stride.
   MapVector<Instruction *, StrideDescriptor> AccessStrideInfo;
