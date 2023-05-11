@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <iostream>
 
@@ -60,4 +61,35 @@ TEST(ELFTypesTest, NoteTest) {
   auto Note3 =
       TestData.getElfNote("AMD", ELF::NT_AMDGPU_METADATA, ArrayRef<uint8_t>());
   EXPECT_EQ(Note3.getDescAsStringRef(4), StringRef(""));
+}
+
+TEST(ELFTypesTest, BBEntryMetadataEncodingTest) {
+  const std::array<BBAddrMap::BBEntry::Metadata, 6> Decoded = {
+      {{false, false, false, false},
+       {true, false, false, false},
+       {false, true, false, false},
+       {false, false, true, false},
+       {false, false, false, true},
+       {true, true, true, true}}};
+  const std::array<uint32_t, 6> Encoded = {{0, 1, 2, 4, 8, 15}};
+  for (size_t i = 0; i < Decoded.size(); ++i)
+    EXPECT_EQ(Decoded[i].encode(), Encoded[i]);
+  for (size_t i = 0; i < Encoded.size(); ++i) {
+    Expected<BBAddrMap::BBEntry::Metadata> MetadataOrError =
+        BBAddrMap::BBEntry::Metadata::decode(Encoded[i]);
+    ASSERT_THAT_EXPECTED(MetadataOrError, Succeeded());
+    EXPECT_EQ(*MetadataOrError, Decoded[i]);
+  }
+}
+
+TEST(ELFTypesTest, BBEntryMetadataInvalidEncodingTest) {
+  const std::array<std::string, 2> Errors = {
+      "invalid encoding for BBEntry::Metadata: 0xffff",
+      "invalid encoding for BBEntry::Metadata: 0x100001"};
+  const std::array<uint32_t, 2> Values = {{0xFFFF, 0x100001}};
+  for (size_t i = 0; i < Values.size(); ++i) {
+    EXPECT_THAT_ERROR(
+        BBAddrMap::BBEntry::Metadata::decode(Values[i]).takeError(),
+        FailedWithMessage(Errors[i]));
+  }
 }
