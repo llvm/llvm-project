@@ -72,7 +72,6 @@ std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
-std::unique_ptr<mlir::Pass> createOpenACCDataOperandConversionPass();
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
