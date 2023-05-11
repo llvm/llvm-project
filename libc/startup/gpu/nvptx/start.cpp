@@ -42,12 +42,12 @@ static void call_fini_array_callbacks() {
 } // namespace __llvm_libc
 
 extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
-_begin(int argc, char **argv, char **env, void *in, void *out, void *buffer) {
+_begin(int argc, char **argv, char **env, void *rpc_shared_buffer) {
   // We need to set up the RPC client first in case any of the constructors
   // require it.
   __llvm_libc::rpc::client.reset(__llvm_libc::rpc::default_port_count,
-                                 __llvm_libc::gpu::get_lane_size(), in, out,
-                                 buffer);
+                                 __llvm_libc::gpu::get_lane_size(),
+                                 rpc_shared_buffer);
 
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init
