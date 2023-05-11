@@ -845,6 +845,9 @@ private:
         Region->AllocatedUser -
         (Region->Stats.PoppedBlocks - Region->Stats.PushedBlocks) * BlockSize;
 
+    if (UNLIKELY(BytesInFreeList == 0))
+      return 0;
+
     bool MaySkip = false;
 
     // Always update `BytesInFreeListAtLastCheckpoint` with the smallest value

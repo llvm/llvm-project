@@ -493,108 +493,404 @@ _mm256_sign_epi32(__m256i __a, __m256i __b)
     return (__m256i)__builtin_ia32_psignd256((__v8si)__a, (__v8si)__b);
 }
 
+/// Shifts each 128-bit half of the 256-bit integer vector \a a left by
+///    \a imm bytes, shifting in zero bytes, and returns the result. If \a imm
+///    is greater than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_slli_si256(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSLLDQ instruction.
+///
+/// \param a
+///    A 256-bit integer vector to be shifted.
+/// \param imm
+///     An unsigned immediate value specifying the shift count (in bytes).
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_slli_si256(a, imm) \
   ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm)))
 
+/// Shifts each 128-bit half of the 256-bit integer vector \a a left by
+///    \a imm bytes, shifting in zero bytes, and returns the result. If \a imm
+///    is greater than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_bslli_epi128(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSLLDQ instruction.
+///
+/// \param a
+///    A 256-bit integer vector to be shifted.
+/// \param imm
+///    An unsigned immediate value specifying the shift count (in bytes).
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_bslli_epi128(a, imm) \
   ((__m256i)__builtin_ia32_pslldqi256_byteshift((__v4di)(__m256i)(a), (int)(imm)))
 
+/// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
+///    left by \a __count bits, shifting in zero bits, and returns the result.
+///    If \a __count is greater than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_slli_epi16(__m256i __a, int __count)
 {
   return (__m256i)__builtin_ia32_psllwi256((__v16hi)__a, __count);
 }
 
+/// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
+///    left by the number of bits specified by the lower 64 bits of \a __count,
+///    shifting in zero bits, and returns the result. If \a __count is greater
+///    than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sll_epi16(__m256i __a, __m128i __count)
 {
   return (__m256i)__builtin_ia32_psllw256((__v16hi)__a, (__v8hi)__count);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __a
+///    left by \a __count bits, shifting in zero bits, and returns the result.
+///    If \a __count is greater than 31, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_slli_epi32(__m256i __a, int __count)
 {
   return (__m256i)__builtin_ia32_pslldi256((__v8si)__a, __count);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __a
+///    left by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in zero bits, and returns the result. If \a __count is greater
+///    than 31, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sll_epi32(__m256i __a, __m128i __count)
 {
   return (__m256i)__builtin_ia32_pslld256((__v8si)__a, (__v4si)__count);
 }
 
+/// Shifts each 64-bit element of the 256-bit vector of [4 x i64] in \a __a
+///    left by \a __count bits, shifting in zero bits, and returns the result.
+///    If \a __count is greater than 63, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_slli_epi64(__m256i __a, int __count)
 {
   return __builtin_ia32_psllqi256((__v4di)__a, __count);
 }
 
+/// Shifts each 64-bit element of the 256-bit vector of [4 x i64] in \a __a
+///    left by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in zero bits, and returns the result. If \a __count is greater
+///    than 63, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sll_epi64(__m256i __a, __m128i __count)
 {
   return __builtin_ia32_psllq256((__v4di)__a, __count);
 }
 
+/// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
+///    right by \a __count bits, shifting in sign bits, and returns the result.
+///    If \a __count is greater than 15, each element of the result is either
+///    0 or -1 according to the corresponding input sign bit.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRAW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srai_epi16(__m256i __a, int __count)
 {
   return (__m256i)__builtin_ia32_psrawi256((__v16hi)__a, __count);
 }
 
+/// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
+///    right by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in sign bits, and returns the result. If \a __count is greater
+///    than 15, each element of the result is either 0 or -1 according to the
+///    corresponding input sign bit.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRAW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sra_epi16(__m256i __a, __m128i __count)
 {
   return (__m256i)__builtin_ia32_psraw256((__v16hi)__a, (__v8hi)__count);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __a
+///    right by \a __count bits, shifting in sign bits, and returns the result.
+///    If \a __count is greater than 31, each element of the result is either
+///    0 or -1 according to the corresponding input sign bit.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRAD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srai_epi32(__m256i __a, int __count)
 {
   return (__m256i)__builtin_ia32_psradi256((__v8si)__a, __count);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __a
+///    right by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in sign bits, and returns the result. If \a __count is greater
+///    than 31, each element of the result is either 0 or -1 according to the
+///    corresponding input sign bit.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRAD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sra_epi32(__m256i __a, __m128i __count)
 {
   return (__m256i)__builtin_ia32_psrad256((__v8si)__a, (__v4si)__count);
 }
 
+/// Shifts each 128-bit half of the 256-bit integer vector in \a a right by
+///    \a imm bytes, shifting in zero bytes, and returns the result. If
+///    \a imm is greater than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_srli_si256(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSRLDQ instruction.
+///
+/// \param a
+///    A 256-bit integer vector to be shifted.
+/// \param imm
+///    An unsigned immediate value specifying the shift count (in bytes).
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_srli_si256(a, imm) \
   ((__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm)))
 
+/// Shifts each 128-bit half of the 256-bit integer vector in \a a right by
+///    \a imm bytes, shifting in zero bytes, and returns the result. If
+///    \a imm is greater than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// \code
+/// __m256i _mm256_bsrli_epi128(__m256i a, const int imm);
+/// \endcode
+///
+/// This intrinsic corresponds to the \c VPSRLDQ instruction.
+///
+/// \param a
+///    A 256-bit integer vector to be shifted.
+/// \param imm
+///     An unsigned immediate value specifying the shift count (in bytes).
+/// \returns A 256-bit integer vector containing the result.
 #define _mm256_bsrli_epi128(a, imm) \
   ((__m256i)__builtin_ia32_psrldqi256_byteshift((__m256i)(a), (int)(imm)))
 
+/// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
+///    right by \a __count bits, shifting in zero bits, and returns the result.
+///    If \a __count is greater than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srli_epi16(__m256i __a, int __count)
 {
   return (__m256i)__builtin_ia32_psrlwi256((__v16hi)__a, __count);
 }
 
+/// Shifts each 16-bit element of the 256-bit vector of [16 x i16] in \a __a
+///    right by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in zero bits, and returns the result. If \a __count is greater
+///    than 15, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srl_epi16(__m256i __a, __m128i __count)
 {
   return (__m256i)__builtin_ia32_psrlw256((__v16hi)__a, (__v8hi)__count);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __a
+///    right by \a __count bits, shifting in zero bits, and returns the result.
+///    If \a __count is greater than 31, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srli_epi32(__m256i __a, int __count)
 {
   return (__m256i)__builtin_ia32_psrldi256((__v8si)__a, __count);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __a
+///    right by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in zero bits, and returns the result. If \a __count is greater
+///    than 31, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srl_epi32(__m256i __a, __m128i __count)
 {
   return (__m256i)__builtin_ia32_psrld256((__v8si)__a, (__v4si)__count);
 }
 
+/// Shifts each 64-bit element of the 256-bit vector of [4 x i64] in \a __a
+///    right by \a __count bits, shifting in zero bits, and returns the result.
+///    If \a __count is greater than 63, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] to be shifted.
+/// \param __count
+///    An unsigned integer value specifying the shift count (in bits).
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srli_epi64(__m256i __a, int __count)
 {
   return __builtin_ia32_psrlqi256((__v4di)__a, __count);
 }
 
+/// Shifts each 64-bit element of the 256-bit vector of [4 x i64] in \a __a
+///    right by the number of bits given in the lower 64 bits of \a __count,
+///    shifting in zero bits, and returns the result. If \a __count is greater
+///    than 63, the returned result is all zeroes.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] to be shifted.
+/// \param __count
+///    A 128-bit vector of [2 x i64] whose lower element gives the unsigned
+///    shift count (in bits). The upper element is ignored.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srl_epi64(__m256i __a, __m128i __count)
 {
@@ -875,60 +1171,222 @@ _mm_maskstore_epi64(long long *__X, __m128i __M, __m128i __Y)
   __builtin_ia32_maskstoreq(( __v2di *)__X, (__v2di)__M, (__v2di)__Y);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __X
+///    left by the number of bits given in the corresponding element of the
+///    256-bit vector of [8 x i32] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    31, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLVD instruction.
+///
+/// \param __X
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __Y
+///    A 256-bit vector of [8 x i32] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sllv_epi32(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psllv8si((__v8si)__X, (__v8si)__Y);
 }
 
+/// Shifts each 32-bit element of the 128-bit vector of [4 x i32] in \a __X
+///    left by the number of bits given in the corresponding element of the
+///    128-bit vector of [4 x i32] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    31, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLVD instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x i32] to be shifted.
+/// \param __Y
+///    A 128-bit vector of [4 x i32] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_sllv_epi32(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psllv4si((__v4si)__X, (__v4si)__Y);
 }
 
+/// Shifts each 64-bit element of the 256-bit vector of [4 x i64] in \a __X
+///    left by the number of bits given in the corresponding element of the
+///    128-bit vector of [4 x i64] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    63, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLVQ instruction.
+///
+/// \param __X
+///    A 256-bit vector of [4 x i64] to be shifted.
+/// \param __Y
+///    A 256-bit vector of [4 x i64] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_sllv_epi64(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psllv4di((__v4di)__X, (__v4di)__Y);
 }
 
+/// Shifts each 64-bit element of the 128-bit vector of [2 x i64] in \a __X
+///    left by the number of bits given in the corresponding element of the
+///    128-bit vector of [2 x i64] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    63, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSLLVQ instruction.
+///
+/// \param __X
+///    A 128-bit vector of [2 x i64] to be shifted.
+/// \param __Y
+///    A 128-bit vector of [2 x i64] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 128-bit vector of [2 x i64] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_sllv_epi64(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psllv2di((__v2di)__X, (__v2di)__Y);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __X
+///    right by the number of bits given in the corresponding element of the
+///    256-bit vector of [8 x i32] in \a __Y, shifting in sign bits, and
+///    returns the result. If the shift count for any element is greater than
+///    31, the result for that element is 0 or -1 according to the sign bit
+///    for that element.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRAVD instruction.
+///
+/// \param __X
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __Y
+///    A 256-bit vector of [8 x i32] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srav_epi32(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psrav8si((__v8si)__X, (__v8si)__Y);
 }
 
+/// Shifts each 32-bit element of the 128-bit vector of [4 x i32] in \a __X
+///    right by the number of bits given in the corresponding element of the
+///    128-bit vector of [4 x i32] in \a __Y, shifting in sign bits, and
+///    returns the result. If the shift count for any element is greater than
+///    31, the result for that element is 0 or -1 according to the sign bit
+///    for that element.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRAVD instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x i32] to be shifted.
+/// \param __Y
+///    A 128-bit vector of [4 x i32] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_srav_epi32(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psrav4si((__v4si)__X, (__v4si)__Y);
 }
 
+/// Shifts each 32-bit element of the 256-bit vector of [8 x i32] in \a __X
+///    right by the number of bits given in the corresponding element of the
+///    256-bit vector of [8 x i32] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    31, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLVD instruction.
+///
+/// \param __X
+///    A 256-bit vector of [8 x i32] to be shifted.
+/// \param __Y
+///    A 256-bit vector of [8 x i32] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srlv_epi32(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psrlv8si((__v8si)__X, (__v8si)__Y);
 }
 
+/// Shifts each 32-bit element of the 128-bit vector of [4 x i32] in \a __X
+///    right by the number of bits given in the corresponding element of the
+///    128-bit vector of [4 x i32] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    31, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLVD instruction.
+///
+/// \param __X
+///    A 128-bit vector of [4 x i32] to be shifted.
+/// \param __Y
+///    A 128-bit vector of [4 x i32] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 128-bit vector of [4 x i32] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_srlv_epi32(__m128i __X, __m128i __Y)
 {
   return (__m128i)__builtin_ia32_psrlv4si((__v4si)__X, (__v4si)__Y);
 }
 
+/// Shifts each 64-bit element of the 256-bit vector of [4 x i64] in \a __X
+///    right by the number of bits given in the corresponding element of the
+///    128-bit vector of [4 x i64] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    63, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLVQ instruction.
+///
+/// \param __X
+///    A 256-bit vector of [4 x i64] to be shifted.
+/// \param __Y
+///    A 256-bit vector of [4 x i64] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_srlv_epi64(__m256i __X, __m256i __Y)
 {
   return (__m256i)__builtin_ia32_psrlv4di((__v4di)__X, (__v4di)__Y);
 }
 
+/// Shifts each 64-bit element of the 128-bit vector of [2 x i64] in \a __X
+///    right by the number of bits given in the corresponding element of the
+///    128-bit vector of [2 x i64] in \a __Y, shifting in zero bits, and
+///    returns the result. If the shift count for any element is greater than
+///    63, the result for that element is zero.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPSRLVQ instruction.
+///
+/// \param __X
+///    A 128-bit vector of [2 x i64] to be shifted.
+/// \param __Y
+///    A 128-bit vector of [2 x i64] containing the unsigned shift counts (in
+///    bits).
+/// \returns A 128-bit vector of [2 x i64] containing the result.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_srlv_epi64(__m128i __X, __m128i __Y)
 {

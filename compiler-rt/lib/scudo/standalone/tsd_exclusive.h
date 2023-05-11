@@ -59,6 +59,15 @@ template <class Allocator> struct TSDRegistryExT {
     Initialized = false;
   }
 
+  void drainCaches(Allocator *Instance) {
+    // We don't have a way to iterate all thread local `ThreadTSD`s. Simply
+    // drain the `ThreadTSD` of current thread and `FallbackTSD`.
+    Instance->drainCache(&ThreadTSD);
+    FallbackTSD.lock();
+    Instance->drainCache(&FallbackTSD);
+    FallbackTSD.unlock();
+  }
+
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
     if (LIKELY(State.InitState != ThreadState::NotInitialized))
       return;
