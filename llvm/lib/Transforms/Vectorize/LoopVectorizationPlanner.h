@@ -314,8 +314,7 @@ public:
   /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
   /// to re-use expansion results generated during main plan execution. Returns
   /// a mapping of SCEVs to their expanded IR values. Note that this is a
-  /// temporary workaround needed due to the current epilogue handling
-  /// workaround needed due to the current epilogue handling.
+  /// temporary workaround needed due to the current epilogue handling.
   DenseMap<const SCEV *, Value *>
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
