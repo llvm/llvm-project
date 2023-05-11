@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test operator new[] replacement by replacing only operator new
+// void* operator new(std::size_t, std::nothrow_t const&);
+
+// Test that we can replace the operator by replacing `operator new(std::size_t)` (the throwing version).
 
 // UNSUPPORTED: sanitizer-new-delete
 // XFAIL: libcpp-no-vcruntime
@@ -16,46 +18,33 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cassert>
-#include <limits>
 
 #include "test_macros.h"
 
 int new_called = 0;
+int delete_called = 0;
 
-void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
-{
+TEST_WORKAROUND_BUG_109234844_WEAK
+void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc) {
     ++new_called;
     void* ret = std::malloc(s);
     if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
-    return  ret;
+    return ret;
 }
 
-void  operator delete(void* p) TEST_NOEXCEPT
-{
-    --new_called;
+void operator delete(void* p) TEST_NOEXCEPT {
+    ++delete_called;
     std::free(p);
 }
 
-int A_constructed = 0;
-
-struct A
-{
-    A() {++A_constructed;}
-    ~A() {--A_constructed;}
-};
-
-int main(int, char**)
-{
-    new_called = 0;
-    A *ap = new A[3];
-    DoNotOptimize(ap);
-    assert(ap);
-    assert(A_constructed == 3);
+int main(int, char**) {
+    new_called = delete_called = 0;
+    int* x = new (std::nothrow) int(3);
+    assert(x != nullptr);
     ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
-    delete [] ap;
-    DoNotOptimize(ap);
-    assert(A_constructed == 0);
-    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 0);
 
-  return 0;
+    delete x;
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(delete_called == 1);
+
+    return 0;
 }
