@@ -177,13 +177,12 @@ enum class ArithOp { Add, Sub };
 // Returning values
 //===----------------------------------------------------------------------===//
 
-template <PrimType Name, bool Builtin = false,
-          class T = typename PrimConv<Name>::T>
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (Builtin || !S.checkingPotentialConstantExpression())
+  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     S.Current->popArgs();
 
   if (InterpFrame *Caller = S.Current->Caller) {
@@ -200,10 +199,9 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   return true;
 }
 
-template <bool Builtin = false>
 inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (Builtin || !S.checkingPotentialConstantExpression())
+  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     S.Current->popArgs();
 
   if (InterpFrame *Caller = S.Current->Caller) {
