@@ -3477,7 +3477,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
 static bool containsDecreasingPointers(Loop *TheLoop,
                                        PredicatedScalarEvolution *PSE) {
-  const ValueToValueMap &Strides = ValueToValueMap();
+  const auto &Strides = DenseMap<Value *, const SCEV *>();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
     // consecutive and decreasing.
