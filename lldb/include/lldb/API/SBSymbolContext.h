@@ -17,6 +17,12 @@
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBSymbol.h"
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBSymbolContext {
@@ -24,10 +30,6 @@ public:
   SBSymbolContext();
 
   SBSymbolContext(const lldb::SBSymbolContext &rhs);
-
-#ifndef SWIG
-  SBSymbolContext(const lldb_private::SymbolContext &sc_ptr);
-#endif
 
   ~SBSymbolContext();
 
@@ -63,6 +65,10 @@ protected:
   friend class SBThread;
   friend class SBTarget;
   friend class SBSymbolContextList;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBSymbolContext(const lldb_private::SymbolContext &sc_ptr);
 
   lldb_private::SymbolContext *operator->() const;
 
