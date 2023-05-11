@@ -308,6 +308,15 @@ bool MIRProfileLoader::doInitialization(Module &M) {
 }
 
 bool MIRProfileLoader::runOnFunction(MachineFunction &MF) {
+  // Do not load non-FS profiles. A line or probe can get a zero-valued
+  // discriminator at certain pass which could result in accidentally loading
+  // the corresponding base counter in the non-FS profile, while a non-zero
+  // discriminator would end up getting zero samples. This could in turn undo
+  // the sample distribution effort done by previous BFI maintenance and the
+  // probe distribution factor work for pseudo probes.
+  if (!Reader->profileIsFS())
+    return false;
+
   Function &Func = MF.getFunction();
   clearFunctionData(false);
   Samples = Reader->getSamplesFor(Func);
