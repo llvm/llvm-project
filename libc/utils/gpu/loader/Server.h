@@ -32,17 +32,13 @@ void handle_server() {
 
     switch (port->get_opcode()) {
     case rpc::Opcode::PRINT_TO_STDERR: {
-      uint64_t str_size[rpc::MAX_LANE_SIZE] = {0};
-      char *strs[rpc::MAX_LANE_SIZE] = {nullptr};
-      port->recv_n([&](uint64_t size, uint32_t id) {
-        str_size[id] = size;
-        strs[id] = new char[size];
-        return strs[id];
-      });
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *strs[rpc::MAX_LANE_SIZE] = {nullptr};
+      port->recv_n(strs, sizes, [&](uint64_t size) { return new char[size]; });
       for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
         if (strs[i]) {
-          fwrite(strs[i], str_size[i], 1, stderr);
-          delete[] strs[i];
+          fwrite(strs[i], sizes[i], 1, stderr);
+          delete[] reinterpret_cast<uint8_t *>(strs[i]);
         }
       }
       break;
@@ -76,6 +72,17 @@ void handle_server() {
       else
         port->send(
             [&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
+      break;
+    }
+    case rpc::Opcode::TEST_STREAM: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *dst[rpc::MAX_LANE_SIZE] = {nullptr};
+      port->recv_n(dst, sizes, [](uint64_t size) { return new char[size]; });
+      port->send_n(dst, sizes);
+      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
+        if (dst[i])
+          delete[] reinterpret_cast<uint8_t *>(dst[i]);
+      }
       break;
     }
     default:
