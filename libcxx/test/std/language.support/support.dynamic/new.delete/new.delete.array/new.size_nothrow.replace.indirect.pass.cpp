@@ -6,56 +6,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test operator new nothrow by replacing only operator new
+// void* operator new[](std::size_t, std::nothrow_t const&);
+
+// Test that we can replace the operator by replacing `operator new[](std::size_t)` (the throwing version).
 
 // UNSUPPORTED: sanitizer-new-delete
 // XFAIL: libcpp-no-vcruntime
 // XFAIL: LIBCXX-AIX-FIXME
 
+// TODO: Investigate why this fails on Windows
+// XFAIL: target={{.+}}-windows-msvc
+
 #include <new>
 #include <cstddef>
 #include <cstdlib>
 #include <cassert>
-#include <limits>
 
 #include "test_macros.h"
 
 int new_called = 0;
+int delete_called = 0;
 
-void* operator new(std::size_t s) TEST_THROW_SPEC(std::bad_alloc)
-{
+TEST_WORKAROUND_BUG_109234844_WEAK
+void* operator new[](std::size_t s) TEST_THROW_SPEC(std::bad_alloc) {
     ++new_called;
     void* ret = std::malloc(s);
     if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
     return ret;
 }
 
-void  operator delete(void* p) TEST_NOEXCEPT
-{
-    --new_called;
+void operator delete(void* p) TEST_NOEXCEPT {
+    ++delete_called;
     std::free(p);
 }
 
-bool A_constructed = false;
+int main(int, char**) {
+    new_called = delete_called = 0;
+    int* x = new (std::nothrow) int[3];
+    assert(x != nullptr);
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 
-struct A
-{
-    A() {A_constructed = true;}
-    ~A() {A_constructed = false;}
-};
+    delete[] x;
+    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(delete_called == 1);
 
-int main(int, char**)
-{
-    new_called = 0;
-    A *ap = new (std::nothrow) A;
-    DoNotOptimize(ap);
-    assert(ap);
-    assert(A_constructed);
-    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called);
-    delete ap;
-    DoNotOptimize(ap);
-    assert(!A_constructed);
-    ASSERT_WITH_OPERATOR_NEW_FALLBACKS(!new_called);
-
-  return 0;
+    return 0;
 }

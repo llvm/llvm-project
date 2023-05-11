@@ -13,7 +13,7 @@
 // using those with -faligned-allocation results in a link error.
 // XFAIL: availability-aligned_allocation-missing
 
-// Libcxx when built for z/OS doesn't contain the aligned allocation functions,
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
