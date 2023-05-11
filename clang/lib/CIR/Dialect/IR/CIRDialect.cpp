@@ -1340,12 +1340,28 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       builder, state, arguments, resultAttrs, getArgAttrsAttrName(state.name),
       getResAttrsAttrName(state.name));
 
+  bool hasAlias = false;
+  auto aliaseeNameAttr = getAliaseeAttrName(state.name);
+  if (::mlir::succeeded(parser.parseOptionalKeyword("alias"))) {
+    if (parser.parseLParen().failed())
+      return failure();
+    StringAttr aliaseeAttr;
+    if (parser.parseOptionalSymbolName(aliaseeAttr).failed())
+      return failure();
+    state.addAttribute(aliaseeNameAttr, FlatSymbolRefAttr::get(aliaseeAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+    hasAlias = true;
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   llvm::SMLoc loc = parser.getCurrentLocation();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, arguments, /*enableNameShadowing=*/false);
   if (parseResult.has_value()) {
+    if (hasAlias)
+      parser.emitError(loc, "function alias shall not have a body");
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
@@ -1353,6 +1369,32 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       return parser.emitError(loc, "expected non-empty function body");
   }
   return success();
+}
+
+bool cir::FuncOp::isDeclaration() {
+  auto aliasee = getAliasee();
+  if (!aliasee)
+    return isExternal();
+
+  auto *modOp = getOperation()->getParentOp();
+  auto targetFn = dyn_cast_or_null<mlir::cir::FuncOp>(
+      mlir::SymbolTable::lookupSymbolIn(modOp, *aliasee));
+  assert(targetFn && "expected aliasee to exist");
+  return targetFn.isDeclaration();
+}
+
+::mlir::Region *cir::FuncOp::getCallableRegion() {
+  auto aliasee = getAliasee();
+  if (!aliasee)
+    return isExternal() ? nullptr : &getBody();
+
+  // Note that we forward the region from the original aliasee
+  // function.
+  auto *modOp = getOperation()->getParentOp();
+  auto targetFn = dyn_cast_or_null<mlir::cir::FuncOp>(
+      mlir::SymbolTable::lookupSymbolIn(modOp, *aliasee));
+  assert(targetFn && "expected aliasee to exist");
+  return targetFn.getCallableRegion();
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
@@ -1377,6 +1419,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
                                                   fnType.getResults());
   function_interface_impl::printFunctionAttributes(
       p, *this, {getFunctionTypeAttrName(), getLinkageAttrName()});
+
+  if (auto aliaseeName = getAliasee())
+    p.printSymbolName(*aliaseeName);
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);
@@ -1435,6 +1480,13 @@ LogicalResult cir::FuncOp::verify() {
     if (!foundAwait)
       return emitOpError()
              << "coroutine body must use at least one cir.await op";
+  }
+
+  // Function alias should have an empty body.
+  if (auto fn = getAliasee()) {
+    if (fn && !getBody().empty())
+      return emitOpError() << "a function alias '" << *fn
+                           << "' must have empty body";
   }
   return success();
 }

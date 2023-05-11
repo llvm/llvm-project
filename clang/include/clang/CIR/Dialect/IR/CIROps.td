@@ -1394,6 +1394,7 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        OptionalAttr<ASTFunctionDeclAttr>:$ast);
   let regions = (region AnyRegion:$body);
   let skipDefaultBuilders = 1;
@@ -1409,9 +1410,7 @@ def FuncOp : CIR_Op<"func", [
     /// Returns the region on the current operation that is callable. This may
     /// return null in the case of an external callable object, e.g. an external
     /// function.
-    ::mlir::Region *getCallableRegion() {
-      return isExternal() ? nullptr : &getBody();
-    }
+    ::mlir::Region *getCallableRegion();
 
     /// Returns the results types that the callable region produces when
     /// executed.
@@ -1447,7 +1446,7 @@ def FuncOp : CIR_Op<"func", [
     // SymbolOpInterface Methods
     //===------------------------------------------------------------------===//
 
-    bool isDeclaration() { return isExternal(); }
+    bool isDeclaration();
   }];
 
   let hasCustomAssemblyFormat = 1;
