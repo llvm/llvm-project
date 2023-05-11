@@ -168,19 +168,57 @@
 @array_constant = internal constant [2 x float] [float 1., float 2.]
 
 ; CHECK: llvm.mlir.global internal constant @nested_array_constant
-; CHECK-SAME:  (dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>)
-; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<2 x array<2 x i32>>
+; CHECK-SAME-LITERAL:  (dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>)
+; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<2 x array<2 x i32>>
 @nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
 
 ; CHECK: llvm.mlir.global internal constant @nested_array_constant3
-; CHECK-SAME:  (dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>)
-; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
+; CHECK-SAME-LITERAL:  (dense<[[[1, 2], [3, 4]]]> : tensor<1x2x2xi32>)
+; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
 @nested_array_constant3 = internal constant [1 x [2 x [2 x i32]]] [[2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]]
 
 ; CHECK: llvm.mlir.global internal constant @nested_array_vector
-; CHECK-SAME:  (dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>)
-; CHECK-SAME:   {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
+; CHECK-SAME-LITERAL:  (dense<[[[1, 2], [3, 4]]]> : vector<1x2x2xi32>)
+; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
+
+; CHECK:  llvm.mlir.global internal constant @vector_constant_zero
+; CHECK-SAME:  (dense<0> : vector<2xi24>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : vector<2xi24>
+@vector_constant_zero = internal constant <2 x i24> zeroinitializer
+
+; CHECK:  llvm.mlir.global internal constant @array_constant_zero
+; CHECK-SAME:  (dense<0.000000e+00> : tensor<2xbf16>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<2 x bf16>
+@array_constant_zero = internal constant [2 x bfloat] zeroinitializer
+
+; CHECK: llvm.mlir.global internal constant @nested_array_constant3_zero
+; CHECK-SAME:  (dense<0> : tensor<1x2x2xi32>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
+@nested_array_constant3_zero = internal constant [1 x [2 x [2 x i32]]] zeroinitializer
+
+; CHECK: llvm.mlir.global internal constant @nested_array_vector_zero
+; CHECK-SAME:  (dense<0> : vector<1x2x2xi32>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
+@nested_array_vector_zero = internal constant [1 x [2 x <2 x i32>]] zeroinitializer
+
+; CHECK: llvm.mlir.global internal constant @nested_bool_array_constant
+; CHECK-SAME-LITERAL:  (dense<[[true, false]]> : tensor<1x2xi1>)
+; CHECK-SAME-LITERAL:  {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x i1>>
+@nested_bool_array_constant = internal constant [1 x [2 x i1]] [[2 x i1] [i1 1, i1 0]]
+
+; CHECK: llvm.mlir.global internal constant @quad_float_constant
+; CHECK-SAME:  dense<[
+; CHECK-SAME:    529.340000000000031832314562052488327
+; CHECK-SAME:    529.340000000001850821718107908964157
+; CHECK-SAME:  ]> : vector<2xf128>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : vector<2xf128>
+@quad_float_constant = internal constant <2 x fp128> <fp128 0xLF000000000000000400808AB851EB851, fp128 0xLF000000000000000400808AB851EB852>
+
+; CHECK: llvm.mlir.global internal constant @quad_float_splat_constant
+; CHECK-SAME:  dense<529.340000000000031832314562052488327> : vector<2xf128>)
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local} : vector<2xf128>
+@quad_float_splat_constant = internal constant <2 x fp128> <fp128 0xLF000000000000000400808AB851EB851, fp128 0xLF000000000000000400808AB851EB851>
 
 ; // -----
 
