@@ -115,8 +115,7 @@ public:
                                       uint64_t fail_value) const;
 
   enum class Recurse : bool { no, yes };
-  size_t GetAttributes(DWARFAttributes &attributes,
-                       Recurse recurse = Recurse::yes) const;
+  DWARFAttributes GetAttributes(Recurse recurse = Recurse::yes) const;
 
 protected:
   DWARFUnit *m_cu = nullptr;
