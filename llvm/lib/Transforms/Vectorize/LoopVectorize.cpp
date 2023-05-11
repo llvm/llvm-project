@@ -842,9 +842,7 @@ public:
   // Override this function to handle the more complex control flow around the
   // three loops.
   std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton(
-
       const SCEV2ValueTy &ExpandedSCEVs) final {
-
     return createEpilogueVectorizedLoopSkeleton(ExpandedSCEVs);
   }
 
