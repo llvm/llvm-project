@@ -164,11 +164,11 @@ public:
       N = nullptr;
 
       // Each leaf node represents a repeat of a string.
-      SmallVector<SuffixTreeLeafNode *> LeafChildren;
+      SmallVector<unsigned> RepeatedSubstringStarts;
 
       // Continue visiting nodes until we find one which repeats more than once.
       while (!InternalNodesToVisit.empty()) {
-        LeafChildren.clear();
+        RepeatedSubstringStarts.clear();
         auto *Curr = InternalNodesToVisit.back();
         InternalNodesToVisit.pop_back();
 
@@ -182,13 +182,17 @@ public:
         for (auto &ChildPair : Curr->Children) {
           // Save all of this node's children for processing.
           if (auto *InternalChild =
-                  dyn_cast<SuffixTreeInternalNode>(ChildPair.second))
+                  dyn_cast<SuffixTreeInternalNode>(ChildPair.second)) {
             InternalNodesToVisit.push_back(InternalChild);
+            continue;
+          }
 
-          // It's not an internal node, so it must be a leaf. If we have a
-          // long enough string, then save the leaf children.
-          else if (Length >= MinLength)
-            LeafChildren.push_back(cast<SuffixTreeLeafNode>(ChildPair.second));
+          if (Length < MinLength)
+            continue;
+
+          // Have an occurrence of a potentially repeated string. Save it.
+          auto *Leaf = cast<SuffixTreeLeafNode>(ChildPair.second);
+          RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
         }
 
         // The root never represents a repeated substring. If we're looking at
@@ -197,14 +201,15 @@ public:
           continue;
 
         // Do we have any repeated substrings?
-        if (LeafChildren.size() >= 2) {
-          // Yes. Update the state to reflect this, and then bail out.
-          N = Curr;
-          RS.Length = Length;
-          for (SuffixTreeLeafNode *Leaf : LeafChildren)
-            RS.StartIndices.push_back(Leaf->getSuffixIdx());
-          break;
-        }
+        if (RepeatedSubstringStarts.size() < 2)
+          continue;
+
+        // Yes. Update the state to reflect this, and then bail out.
+        N = Curr;
+        RS.Length = Length;
+        for (unsigned StartIdx : RepeatedSubstringStarts)
+          RS.StartIndices.push_back(StartIdx);
+        break;
       }
       // At this point, either NewRS is an empty RepeatedSubstring, or it was
       // set in the above loop. Similarly, N is either nullptr, or the node
