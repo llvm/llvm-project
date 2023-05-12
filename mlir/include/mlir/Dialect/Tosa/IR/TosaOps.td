@@ -999,6 +999,8 @@ def Tosa_ExpOp : Tosa_Op<"exp", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
