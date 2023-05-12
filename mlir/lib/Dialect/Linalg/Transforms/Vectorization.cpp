@@ -1296,14 +1296,19 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   // transfer_write_in_bounds(transfer_read_masked(pad_source, pad_value))
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(padOp);
-  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto emptyOp =
-      rewriter.create<tensor::EmptyOp>(loc, padOp.getResultType(),
-                                       /*dynamicSizes=*/ValueRange{});
+
+  ReifiedRankedShapedTypeDims reifiedReturnShapes;
+  LogicalResult status =
+      cast<ReifyRankedShapedTypeOpInterface>(padOp.getOperation())
+          .reifyResultShapes(rewriter, reifiedReturnShapes);
+  assert(succeeded(status) && "failed to reify result shapes");
+  auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
+                                                  padValue.getType());
   SmallVector<OpFoldResult> mixedSourceDims =
       getMixedDimensions(rewriter, loc, padOp.getSource());
   Value mask =
       rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+  auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   auto transferReadOp = rewriter.create<vector::TransferReadOp>(
       loc,
       /*vectorType=*/vectorType,
@@ -1313,13 +1318,14 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
       /*inBounds=*/SmallVector<bool>(rank, true));
   auto maskedOp = cast<vector::MaskOp>(
       mlir::vector::maskOperation(rewriter, transferReadOp, mask));
-  auto transferWriteOp = rewriter.create<vector::TransferWriteOp>(
+  Operation *write = rewriter.create<vector::TransferWriteOp>(
       loc,
       /*vector=*/maskedOp->getResult(0),
       /*source=*/emptyOp,
       /*indices=*/SmallVector<Value>(rank, zero),
       /*inBounds=*/SmallVector<bool>(rank, true));
-  newResults.push_back(transferWriteOp.getResult());
+  write = mlir::vector::maskOperation(rewriter, write, mask);
+  newResults.push_back(write->getResult(0));
   return success();
 }
 
@@ -1354,6 +1360,37 @@ static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
   return success();
 }
 
+/// Returns success if `inputVectorSizes` is a valid masking configuraion for
+/// given `shape`, i.e., it meets:
+///   1. The numbers of elements in both array are equal.
+///   2. `inputVectorSizes` does nos have dynamic dimensions.
+///   3. All the values in `inputVectorSizes` are greater than or equal to
+///      static sizes in `shape`.
+static LogicalResult
+isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                         ArrayRef<int64_t> inputVectorSizes) {
+  if (inputVectorSizes.size() != shape.size()) {
+    LDBG("Input vector sizes don't match the number of loops");
+    return failure();
+  }
+  if (ShapedType::isDynamicShape(inputVectorSizes)) {
+    LDBG("Input vector sizes can't have dynamic dimensions");
+    return failure();
+  }
+  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
+                    [](std::tuple<int64_t, int64_t> sizePair) {
+                      int64_t staticSize = std::get<0>(sizePair);
+                      int64_t inputSize = std::get<1>(sizePair);
+                      return ShapedType::isDynamic(staticSize) ||
+                             staticSize <= inputSize;
+                    })) {
+    LDBG("Input vector sizes must be greater than or equal to iteration space "
+         "static sizes");
+    return failure();
+  }
+  return success();
+}
+
 static LogicalResult
 vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                               ArrayRef<int64_t> inputVectorSizes,
@@ -1363,23 +1400,10 @@ vectorizeLinalgOpPrecondition(LinalgOp linalgOp,
                    [](int64_t dim) { return dim == 0; }))
     return failure();
   // Check API contract for input vector sizes.
-  if (!inputVectorSizes.empty()) {
-    assert(inputVectorSizes.size() == linalgOp.getNumLoops() &&
-           "Input vector sizes don't match the number of loops");
-    assert(!ShapedType::isDynamicShape(inputVectorSizes) &&
-           "Input vector sizes can't have dynamic dimensions");
-    assert(
-        llvm::all_of(
-            llvm::zip(linalgOp.getStaticLoopRanges(), inputVectorSizes),
-            [](std::tuple<int64_t, int64_t> sizePair) {
-              int64_t staticSize = std::get<0>(sizePair);
-              int64_t inputSize = std::get<1>(sizePair);
-              return ShapedType::isDynamic(staticSize) ||
-                     staticSize <= inputSize;
-            }) &&
-        "Input vector sizes must be greater than or equal to iteration space "
-        "static sizes");
-  }
+  if (!inputVectorSizes.empty() &&
+      failed(isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
+                                      inputVectorSizes)))
+    return failure();
 
   if (linalgOp.hasDynamicShape() &&
       failed(vectorizeDynamicLinalgOpPrecondition(linalgOp))) {
@@ -1445,11 +1469,8 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   }
 
   ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
-  if (!(resultTensorShape == inputVectorSizes)) {
-    LDBG("result tensor shape must match input vector sizes: " << padOp
-                                                               << "\n");
+  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
     return failure();
-  }
 
   if (llvm::any_of(padOp.getLow(), [](Value v) {
         std::optional<int64_t> res = getConstantIntValue(v);
