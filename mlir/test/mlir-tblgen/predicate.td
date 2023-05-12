@@ -27,12 +27,12 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 // CHECK-NOT.        << " must be 32-bit integer or floating-point type, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult [[$TENSOR_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK:       if (!(((type.isa<::mlir::TensorType>())) && ([](::mlir::Type elementType) { return (true); }(type.cast<::mlir::ShapedType>().getElementType())))) {
+// CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return (true); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:        << " must be tensor of any type values, but got " << type;
 
 // CHECK: static ::mlir::LogicalResult [[$TENSOR_INTEGER_FLOAT_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
-// CHECK:       if (!(((type.isa<::mlir::TensorType>())) && ([](::mlir::Type elementType) { return ((elementType.isF32())) || ((elementType.isSignlessInteger(32))); }(type.cast<::mlir::ShapedType>().getElementType())))) {
+// CHECK:       if (!(((::llvm::isa<::mlir::TensorType>(type))) && ([](::mlir::Type elementType) { return ((elementType.isF32())) || ((elementType.isSignlessInteger(32))); }(::llvm::cast<::mlir::ShapedType>(type).getElementType())))) {
 // CHECK-NEXT:    return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:        << " must be tensor of 32-bit float or 32-bit signless integer values, but got " << type;
 
@@ -54,7 +54,7 @@ def OpF : NS_Op<"op_for_int_min_val", []> {
 }
 
 // CHECK-LABEL: OpFAdaptor::verify
-// CHECK:       (tblgen_attr.cast<::mlir::IntegerAttr>().getInt() >= 10)
+// CHECK:       (::llvm::cast<::mlir::IntegerAttr>(tblgen_attr).getInt() >= 10)
 // CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 10"
 
 def OpFX : NS_Op<"op_for_int_max_val", []> {
@@ -62,7 +62,7 @@ def OpFX : NS_Op<"op_for_int_max_val", []> {
 }
 
 // CHECK-LABEL: OpFXAdaptor::verify
-// CHECK:       (tblgen_attr.cast<::mlir::IntegerAttr>().getInt() <= 10)
+// CHECK:       (::llvm::cast<::mlir::IntegerAttr>(tblgen_attr).getInt() <= 10)
 // CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: 32-bit signless integer attribute whose maximum value is 10"
 
 def OpG : NS_Op<"op_for_arr_min_count", []> {
@@ -70,7 +70,7 @@ def OpG : NS_Op<"op_for_arr_min_count", []> {
 }
 
 // CHECK-LABEL: OpGAdaptor::verify
-// CHECK:       (tblgen_attr.cast<::mlir::ArrayAttr>().size() >= 8)
+// CHECK:       (::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() >= 8)
 // CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: array attribute with at least 8 elements"
 
 def OpH : NS_Op<"op_for_arr_value_at_index", []> {
@@ -78,7 +78,7 @@ def OpH : NS_Op<"op_for_arr_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpHAdaptor::verify
-// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() == 8)))))
+// CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() == 8)))))
 // CHECK-NEXT:  "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be 8"
 
 def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
@@ -86,7 +86,7 @@ def OpI: NS_Op<"op_for_arr_min_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpIAdaptor::verify
-// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() >= 8)))))
+// CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() >= 8)))))
 // CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 8"
 
 def OpJ: NS_Op<"op_for_arr_max_value_at_index", []> {
@@ -94,7 +94,7 @@ def OpJ: NS_Op<"op_for_arr_max_value_at_index", []> {
 }
 
 // CHECK-LABEL: OpJAdaptor::verify
-// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() <= 8)))))
+// CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() <= 8)))))
 // CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at most 8"
 
 def OpK: NS_Op<"op_for_arr_in_range_at_index", []> {
@@ -102,7 +102,7 @@ def OpK: NS_Op<"op_for_arr_in_range_at_index", []> {
 }
 
 // CHECK-LABEL: OpKAdaptor::verify
-// CHECK: (((tblgen_attr.cast<::mlir::ArrayAttr>().size() > 0)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() >= 4)) && ((tblgen_attr.cast<::mlir::ArrayAttr>()[0].cast<::mlir::IntegerAttr>().getInt() <= 8)))))
+// CHECK: (((::llvm::cast<::mlir::ArrayAttr>(tblgen_attr).size() > 0)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() >= 4)) && ((::llvm::cast<::mlir::IntegerAttr>(::llvm::cast<::mlir::ArrayAttr>(tblgen_attr)[0]).getInt() <= 8)))))
 // CHECK-NEXT: "attribute 'attr' failed to satisfy constraint: array attribute whose 0-th element must be at least 4 and at most 8"
 
 def OpL: NS_Op<"op_for_TCopVTEtAreSameAt", [
@@ -134,7 +134,7 @@ def OpM : NS_Op<"op_for_AnyTensorOf", []> {
 
 def OpN : NS_Op<"op_for_StringEscaping", []> {
   let arguments = (ins
-    StringBasedAttr<CPred<"$_self.cast<StringAttr>().getValue() == \"foo\"">,
+    StringBasedAttr<CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"foo\"">,
                     "only value \"foo\" is allowed">:$s
   );
 }

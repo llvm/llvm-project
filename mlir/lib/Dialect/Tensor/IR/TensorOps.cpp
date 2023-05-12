@@ -42,13 +42,13 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
     return op;
   if (complex::ConstantOp::isBuildableWith(value, type))
     return builder.create<complex::ConstantOp>(loc, type,
-                                               value.cast<ArrayAttr>());
+                                               llvm::cast<ArrayAttr>(value));
   return nullptr;
 }
 
 SmallVector<OpFoldResult> tensor::getMixedSizes(OpBuilder &builder,
                                                 Location loc, Value value) {
-  auto tensorType = value.getType().cast<RankedTensorType>();
+  auto tensorType = llvm::cast<RankedTensorType>(value.getType());
   SmallVector<OpFoldResult> result;
   for (int64_t i = 0; i < tensorType.getRank(); ++i) {
     if (tensorType.isDynamicDim(i)) {
@@ -63,7 +63,7 @@ SmallVector<OpFoldResult> tensor::getMixedSizes(OpBuilder &builder,
 
 FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
                                                 OpResult opResult) {
-  auto tensorType = opResult.getType().dyn_cast<TensorType>();
+  auto tensorType = llvm::dyn_cast<TensorType>(opResult.getType());
   assert(tensorType && "expected tensor type");
 
   // If the op has a destination, it implements DestinationStyleOpInterface and
@@ -100,7 +100,7 @@ LogicalResult tensor::getOrCreateDestinations(OpBuilder &b, Location loc,
                                               Operation *op,
                                               SmallVector<Value> &result) {
   for (OpResult opResult : op->getResults()) {
-    if (opResult.getType().isa<TensorType>()) {
+    if (llvm::isa<TensorType>(opResult.getType())) {
       FailureOr<Value> destination = getOrCreateDestination(b, loc, opResult);
       if (failed(destination))
         return failure();
@@ -111,8 +111,8 @@ LogicalResult tensor::getOrCreateDestinations(OpBuilder &b, Location loc,
 }
 
 bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
-  if (auto rtp1 = tp1.dyn_cast<RankedTensorType>()) {
-    if (auto rtp2 = tp2.dyn_cast<RankedTensorType>())
+  if (auto rtp1 = llvm::dyn_cast<RankedTensorType>(tp1)) {
+    if (auto rtp2 = llvm::dyn_cast<RankedTensorType>(tp2))
       return rtp1.getShape() == rtp2.getShape() &&
              rtp1.getElementType() == rtp2.getElementType();
     return false;
@@ -131,7 +131,7 @@ static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
     // Rank-reduced dims must have a static unit dimension.
     bool isStaticUnitSize =
         size.value().is<Attribute>() &&
-        size.value().get<Attribute>().cast<IntegerAttr>().getInt() == 1;
+        llvm::cast<IntegerAttr>(size.value().get<Attribute>()).getInt() == 1;
 
     if (shapePos == static_cast<int64_t>(reducedShape.size())) {
       // There are no more dims in the reduced shape. All remaining sizes must
@@ -220,8 +220,8 @@ void CastOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 /// Returns true if `target` is a ranked tensor type that preserves static
 /// information available in the `source` ranked tensor type.
 bool mlir::tensor::preservesStaticInformation(Type source, Type target) {
-  auto sourceType = source.dyn_cast<RankedTensorType>();
-  auto targetType = target.dyn_cast<RankedTensorType>();
+  auto sourceType = llvm::dyn_cast<RankedTensorType>(source);
+  auto targetType = llvm::dyn_cast<RankedTensorType>(target);
 
   // Requires RankedTensorType.
   if (!sourceType || !targetType)
@@ -322,8 +322,8 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
   Type a = inputs.front(), b = outputs.front();
-  auto aT = a.dyn_cast<TensorType>();
-  auto bT = b.dyn_cast<TensorType>();
+  auto aT = llvm::dyn_cast<TensorType>(a);
+  auto bT = llvm::dyn_cast<TensorType>(b);
   if (!aT || !bT)
     return false;
 
@@ -380,9 +380,9 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
       return failure();
 
     auto sourceType =
-        tensorCastOperand.getOperand().getType().cast<TensorType>();
-    auto intermediateType = tensorCastOperand.getType().cast<TensorType>();
-    auto resultType = tensorCast.getType().cast<TensorType>();
+        llvm::cast<TensorType>(tensorCastOperand.getOperand().getType());
+    auto intermediateType = llvm::cast<TensorType>(tensorCastOperand.getType());
+    auto resultType = llvm::cast<TensorType>(tensorCast.getType());
 
     // We can remove the intermediate cast if joining all three produces the
     // same result as just joining the source and result shapes.
@@ -427,15 +427,15 @@ struct TensorCastExtractSlice : public OpRewritePattern<CastOp> {
         tensorCast.getOperand().getDefiningOp<ExtractSliceOp>();
 
     // Cannot fold cast to unranked tensor.
-    auto rankedResultType = tensorCast.getType().dyn_cast<RankedTensorType>();
+    auto rankedResultType =
+        llvm::dyn_cast<RankedTensorType>(tensorCast.getType());
     if (!rankedResultType)
       return failure();
 
     if (!extractOperand || !canFoldIntoProducerOp(tensorCast) ||
-        rankedResultType.getShape() == tensorCast.getSource()
-                                           .getType()
-                                           .cast<RankedTensorType>()
-                                           .getShape())
+        rankedResultType.getShape() ==
+            llvm::cast<RankedTensorType>(tensorCast.getSource().getType())
+                .getShape())
       return failure();
 
     SmallVector<OpFoldResult, 4> sizes = extractOperand.getMixedSizes();
@@ -506,7 +506,7 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
     return {};
 
   // Folding for unranked types (UnrankedTensorType) is not supported.
-  auto tensorType = getSource().getType().dyn_cast<RankedTensorType>();
+  auto tensorType = llvm::dyn_cast<RankedTensorType>(getSource().getType());
   if (!tensorType)
     return {};
 
@@ -527,7 +527,7 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // Fold dim to the operand of tensor.generate.
   if (auto fromElements = dyn_cast_or_null<tensor::GenerateOp>(definingOp)) {
     auto resultType =
-        fromElements.getResult().getType().cast<RankedTensorType>();
+        llvm::cast<RankedTensorType>(fromElements.getResult().getType());
     // The case where the type encodes the size of the dimension is handled
     // above.
     assert(ShapedType::isDynamic(resultType.getShape()[index.getInt()]));
@@ -751,7 +751,8 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
     if (!producer)
       return failure();
 
-    auto resultType = castOp->getResult(0).getType().cast<RankedTensorType>();
+    auto resultType =
+        llvm::cast<RankedTensorType>(castOp->getResult(0).getType());
     ArrayRef<int64_t> resultShape = resultType.getShape();
     SmallVector<OpFoldResult> currMixedSizes = producer.getMixedSizes();
     SmallVector<OpFoldResult> newMixedSizes;
@@ -765,7 +766,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
       // result dim matches.
       if (auto attr = currDim.dyn_cast<Attribute>()) {
         if (ShapedType::isDynamic(newDim) ||
-            newDim != attr.cast<IntegerAttr>().getInt()) {
+            newDim != llvm::cast<IntegerAttr>(attr).getInt()) {
           // Something is off, the cast result shape cannot be more dynamic
           // than the empty tensor result shape (enforced by
           // `canFoldIntoProducer`). Abort for now.
@@ -826,7 +827,7 @@ struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
     auto tensorCast = extract.getTensor().getDefiningOp<tensor::CastOp>();
     if (!tensorCast)
       return failure();
-    if (!tensorCast.getSource().getType().isa<RankedTensorType>())
+    if (!llvm::isa<RankedTensorType>(tensorCast.getSource().getType()))
       return failure();
     rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
         extract, tensorCast.getSource(), extract.getIndices());
@@ -843,7 +844,7 @@ void ExtractOp::getAsmResultNames(
 
 LogicalResult ExtractOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  auto tensorType = getTensor().getType().cast<RankedTensorType>();
+  auto tensorType = llvm::cast<RankedTensorType>(getTensor().getType());
   if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
     return emitOpError("incorrect number of indices for extract_element");
   return success();
@@ -853,20 +854,20 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // If this is a splat elements attribute, simply return the value. All of
   // the elements of a splat attribute are the same.
   if (Attribute tensor = adaptor.getTensor())
-    if (auto splatTensor = tensor.dyn_cast<SplatElementsAttr>())
+    if (auto splatTensor = llvm::dyn_cast<SplatElementsAttr>(tensor))
       return splatTensor.getSplatValue<Attribute>();
 
   // Collect the constant indices into the tensor.
   SmallVector<uint64_t, 8> indices;
   for (Attribute indice : adaptor.getIndices()) {
-    if (!indice || !indice.isa<IntegerAttr>())
+    if (!indice || !llvm::isa<IntegerAttr>(indice))
       return {};
-    indices.push_back(indice.cast<IntegerAttr>().getInt());
+    indices.push_back(llvm::cast<IntegerAttr>(indice).getInt());
   }
 
   // Fold extract(from_elements(...)).
   if (auto fromElementsOp = getTensor().getDefiningOp<FromElementsOp>()) {
-    auto tensorType = fromElementsOp.getType().cast<RankedTensorType>();
+    auto tensorType = llvm::cast<RankedTensorType>(fromElementsOp.getType());
     auto rank = tensorType.getRank();
     assert(static_cast<int64_t>(indices.size()) == tensorType.getRank() &&
            "rank mismatch");
@@ -887,7 +888,7 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
 
   // If this is an elements attribute, query the value at the given indices.
   if (Attribute tensor = adaptor.getTensor()) {
-    auto elementsAttr = tensor.dyn_cast<ElementsAttr>();
+    auto elementsAttr = llvm::dyn_cast<ElementsAttr>(tensor);
     if (elementsAttr && elementsAttr.isValidIndex(indices))
       return elementsAttr.getValues<Attribute>()[indices];
   }
@@ -1070,7 +1071,7 @@ void InsertOp::getAsmResultNames(
 
 LogicalResult InsertOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  auto destType = getDest().getType().cast<RankedTensorType>();
+  auto destType = llvm::cast<RankedTensorType>(getDest().getType());
   if (destType.getRank() != static_cast<int64_t>(getIndices().size()))
     return emitOpError("incorrect number of indices");
   return success();
@@ -1080,7 +1081,7 @@ OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
   Attribute scalar = adaptor.getScalar();
   Attribute dest = adaptor.getDest();
   if (scalar && dest)
-    if (auto splatDest = dest.dyn_cast<SplatElementsAttr>())
+    if (auto splatDest = llvm::dyn_cast<SplatElementsAttr>(dest))
       if (scalar == splatDest.getSplatValue<Attribute>())
         return dest;
   return {};
@@ -1113,7 +1114,7 @@ LogicalResult GenerateOp::reifyResultShapes(
 LogicalResult GenerateOp::verify() {
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
-  RankedTensorType resultTy = getType().cast<RankedTensorType>();
+  RankedTensorType resultTy = llvm::cast<RankedTensorType>(getType());
   if (getNumOperands() != resultTy.getNumDynamicDims())
     return emitError("must have as many index operands as dynamic extents "
                      "in the result type");
@@ -1122,7 +1123,7 @@ LogicalResult GenerateOp::verify() {
 }
 
 LogicalResult GenerateOp::verifyRegions() {
-  RankedTensorType resultTy = getType().cast<RankedTensorType>();
+  RankedTensorType resultTy = llvm::cast<RankedTensorType>(getType());
   // Ensure that region arguments span the index space.
   if (!llvm::all_of(getBody().getArgumentTypes(),
                     [](Type ty) { return ty.isIndex(); }))
@@ -1150,7 +1151,7 @@ void GenerateOp::build(
   // Build and populate body.
   OpBuilder::InsertionGuard guard(b);
   Region *bodyRegion = result.regions.front().get();
-  auto rank = resultTy.cast<RankedTensorType>().getRank();
+  auto rank = llvm::cast<RankedTensorType>(resultTy).getRank();
   SmallVector<Type, 2> argumentTypes(rank, b.getIndexType());
   SmallVector<Location, 2> argumentLocs(rank, result.location);
   Block *bodyBlock =
@@ -1170,7 +1171,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
   LogicalResult matchAndRewrite(GenerateOp tensorFromElements,
                                 PatternRewriter &rewriter) const final {
     auto resultType =
-        tensorFromElements.getResult().getType().cast<RankedTensorType>();
+        llvm::cast<RankedTensorType>(tensorFromElements.getResult().getType());
 
     if (resultType.hasStaticShape())
       return failure();
@@ -1261,7 +1262,7 @@ void RankOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 OpFoldResult RankOp::fold(FoldAdaptor adaptor) {
   // Constant fold rank when the rank of the operand is known.
   auto type = getOperand().getType();
-  auto shapedType = type.dyn_cast<ShapedType>();
+  auto shapedType = llvm::dyn_cast<ShapedType>(type);
   if (shapedType && shapedType.hasRank())
     return IntegerAttr::get(IndexType::get(getContext()), shapedType.getRank());
   return IntegerAttr();
@@ -1284,17 +1285,17 @@ static int64_t getNumElements(ShapedType type) {
 }
 
 LogicalResult ReshapeOp::verify() {
-  TensorType operandType = getSource().getType().cast<TensorType>();
-  TensorType resultType = getResult().getType().cast<TensorType>();
+  TensorType operandType = llvm::cast<TensorType>(getSource().getType());
+  TensorType resultType = llvm::cast<TensorType>(getResult().getType());
 
   if (operandType.getElementType() != resultType.getElementType())
     return emitOpError("element types of source and destination tensor "
                        "types should be the same");
 
   int64_t shapeSize =
-      getShape().getType().cast<RankedTensorType>().getDimSize(0);
-  auto resultRankedType = resultType.dyn_cast<RankedTensorType>();
-  auto operandRankedType = operandType.dyn_cast<RankedTensorType>();
+      llvm::cast<RankedTensorType>(getShape().getType()).getDimSize(0);
+  auto resultRankedType = llvm::dyn_cast<RankedTensorType>(resultType);
+  auto operandRankedType = llvm::dyn_cast<RankedTensorType>(operandType);
 
   if (resultRankedType) {
     if (operandRankedType && resultRankedType.hasStaticShape() &&
@@ -1392,7 +1393,7 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
   auto resultType = inferCollapsedType(
-      src.getType().cast<RankedTensorType>(),
+      llvm::cast<RankedTensorType>(src.getType()),
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b.getContext(), reassociation)));
   build(b, result, resultType, src, attrs);
@@ -1488,7 +1489,7 @@ struct FoldReshapeWithFromElements : OpRewritePattern<TensorReshapeOp> {
     if (!fromElements)
       return failure();
 
-    auto shapedTy = reshapeOp.getType().template cast<ShapedType>();
+    auto shapedTy = llvm::cast<ShapedType>(reshapeOp.getType());
 
     if (!shapedTy.hasStaticShape())
       return failure();
@@ -1510,7 +1511,7 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
       return failure();
 
     RankedTensorType srcType =
-        castOp.getSource().getType().cast<RankedTensorType>();
+        llvm::cast<RankedTensorType>(castOp.getSource().getType());
     RankedTensorType newResultType = CollapseShapeOp::inferCollapsedType(
         srcType, collapseShapeOp.getReassociationMaps());
 
@@ -1693,9 +1694,8 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
     ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
     ArrayRef<int64_t> strides) {
   // Type inferred in the absence of rank-reducing behavior.
-  auto inferredType =
-      inferResultType(sourceRankedTensorType, offsets, sizes, strides)
-          .cast<RankedTensorType>();
+  auto inferredType = llvm::cast<RankedTensorType>(
+      inferResultType(sourceRankedTensorType, offsets, sizes, strides));
   int rankDiff = inferredType.getRank() - desiredResultRank;
   if (rankDiff > 0) {
     auto shape = inferredType.getShape();
@@ -1739,13 +1739,11 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  auto sourceRankedTensorType = source.getType().cast<RankedTensorType>();
+  auto sourceRankedTensorType = llvm::cast<RankedTensorType>(source.getType());
   // Structuring implementation this way avoids duplication between builders.
   if (!resultType) {
-    resultType =
-        ExtractSliceOp::inferResultType(sourceRankedTensorType, staticOffsets,
-                                        staticSizes, staticStrides)
-            .cast<RankedTensorType>();
+    resultType = llvm::cast<RankedTensorType>(ExtractSliceOp::inferResultType(
+        sourceRankedTensorType, staticOffsets, staticSizes, staticStrides));
   }
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
         dynamicStrides, b.getDenseI64ArrayAttr(staticOffsets),
@@ -1831,7 +1829,7 @@ llvm::SmallBitVector ExtractSliceOp::getDroppedDims() {
 FailureOr<Value>
 ExtractSliceOp::rankReduceIfNeeded(OpBuilder &b, Location loc, Value value,
                                    ArrayRef<int64_t> desiredShape) {
-  auto sourceTensorType = value.getType().dyn_cast<RankedTensorType>();
+  auto sourceTensorType = llvm::dyn_cast<RankedTensorType>(value.getType());
   assert(sourceTensorType && "not a ranked tensor type");
   auto sourceShape = sourceTensorType.getShape();
   if (sourceShape.equals(desiredShape))
@@ -1968,8 +1966,8 @@ public:
       return failure();
 
     // Dynamic result shape is not supported.
-    auto sourceType = op.getSource().getType().cast<ShapedType>();
-    auto resultType = op.getResult().getType().cast<ShapedType>();
+    auto sourceType = llvm::cast<ShapedType>(op.getSource().getType());
+    auto resultType = llvm::cast<ShapedType>(op.getResult().getType());
     if (!sourceType.hasStaticShape() || !resultType.hasStaticShape())
       return failure();
 
@@ -2004,13 +2002,13 @@ public:
     // New attribute constructed by the sliced values.
     DenseElementsAttr newAttr;
 
-    if (auto elems = attr.dyn_cast<DenseIntElementsAttr>()) {
+    if (auto elems = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
       SmallVector<APInt> outValues;
       outValues.reserve(sourceType.getNumElements());
       sliceElements<DenseElementsAttr::IntElementIterator, APInt>(
           elems.begin(), counts, offsets, sizes, strides, &outValues);
       newAttr = DenseElementsAttr::get(resultType, outValues);
-    } else if (auto elems = attr.dyn_cast<DenseFPElementsAttr>()) {
+    } else if (auto elems = llvm::dyn_cast<DenseFPElementsAttr>(attr)) {
       SmallVector<APFloat> outValues;
       outValues.reserve(sourceType.getNumElements());
       sliceElements<DenseElementsAttr::FloatElementIterator, APFloat>(
@@ -2109,7 +2107,7 @@ static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
 
 OpFoldResult ExtractSliceOp::fold(FoldAdaptor adaptor) {
   if (auto splat = adaptor.getSource().dyn_cast_or_null<SplatElementsAttr>()) {
-    auto resultType = getResult().getType().cast<ShapedType>();
+    auto resultType = llvm::cast<ShapedType>(getResult().getType());
     if (resultType.hasStaticShape())
       return splat.resizeSplat(resultType);
   }
@@ -2124,7 +2122,7 @@ OpFoldResult ExtractSliceOp::fold(FoldAdaptor adaptor) {
 
 Value mlir::tensor::createCanonicalRankReducingExtractSliceOp(
     OpBuilder &b, Location loc, Value tensor, RankedTensorType targetType) {
-  auto rankedTensorType = tensor.getType().cast<RankedTensorType>();
+  auto rankedTensorType = llvm::cast<RankedTensorType>(tensor.getType());
   unsigned rank = rankedTensorType.getRank();
   SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
   SmallVector<OpFoldResult> sizes = getMixedSizes(b, loc, tensor);
@@ -2372,8 +2370,8 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     auto src =
         (sourceCastSource ? *sourceCastSource : insertSliceOp.getSource());
     auto dst = (destCastSource ? *destCastSource : insertSliceOp.getDest());
-    auto srcType = src.getType().template dyn_cast<RankedTensorType>();
-    auto dstType = dst.getType().template dyn_cast<RankedTensorType>();
+    auto srcType = llvm::dyn_cast<RankedTensorType>(src.getType());
+    auto dstType = llvm::dyn_cast<RankedTensorType>(dst.getType());
     if (!srcType || !dstType)
       return failure();
     if (verifyInsertSliceOp(srcType, dstType, insertSliceOp.getStaticOffsets(),
@@ -2482,7 +2480,7 @@ Value mlir::tensor::createCanonicalRankReducingInsertSliceOp(OpBuilder &b,
                                                              Location loc,
                                                              Value tensor,
                                                              Value dest) {
-  auto rankedTensorType = dest.getType().cast<RankedTensorType>();
+  auto rankedTensorType = llvm::cast<RankedTensorType>(dest.getType());
   unsigned rank = rankedTensorType.getRank();
   SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
   SmallVector<OpFoldResult> sizes = getMixedSizes(b, loc, dest);
@@ -2514,8 +2512,8 @@ parseInferType(OpAsmParser &parser,
 }
 
 LogicalResult PadOp::verify() {
-  auto sourceType = getSource().getType().cast<RankedTensorType>();
-  auto resultType = getResult().getType().cast<RankedTensorType>();
+  auto sourceType = llvm::cast<RankedTensorType>(getSource().getType());
+  auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
   auto expectedType =
       PadOp::inferResultType(sourceType, getStaticLow(), getStaticHigh());
   if (!expectedType) {
@@ -2542,7 +2540,7 @@ LogicalResult PadOp::verify() {
 
 LogicalResult PadOp::verifyRegions() {
   auto &region = getRegion();
-  unsigned rank = getResult().getType().cast<RankedTensorType>().getRank();
+  unsigned rank = llvm::cast<RankedTensorType>(getResult().getType()).getRank();
   Block &block = region.front();
   if (block.getNumArguments() != rank)
     return emitError("expected the block to have ") << rank << " arguments";
@@ -2557,7 +2555,7 @@ LogicalResult PadOp::verifyRegions() {
   // Ensure that the region yields an element of the right type.
   auto yieldOp = llvm::cast<YieldOp>(block.getTerminator());
   if (yieldOp.getValue().getType() !=
-      getType().cast<ShapedType>().getElementType())
+      llvm::cast<ShapedType>(getType()).getElementType())
     return emitOpError("expected yield type to match shape element type");
 
   return success();
@@ -2597,7 +2595,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
                   Value source, ArrayRef<int64_t> staticLow,
                   ArrayRef<int64_t> staticHigh, ValueRange low, ValueRange high,
                   bool nofold, ArrayRef<NamedAttribute> attrs) {
-  auto sourceType = source.getType().cast<RankedTensorType>();
+  auto sourceType = llvm::cast<RankedTensorType>(source.getType());
   if (!resultType)
     resultType = inferResultType(sourceType, staticLow, staticHigh);
   build(b, result, resultType, source, low, high,
@@ -2609,7 +2607,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
                   Value source, ValueRange low, ValueRange high, bool nofold,
                   ArrayRef<NamedAttribute> attrs) {
-  auto sourceType = source.getType().cast<RankedTensorType>();
+  auto sourceType = llvm::cast<RankedTensorType>(source.getType());
   unsigned rank = sourceType.getRank();
   SmallVector<int64_t, 4> staticVector(rank, ShapedType::kDynamic);
   build(b, result, resultType, source, staticVector, staticVector, low, high,
@@ -2620,7 +2618,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
                   Value source, ArrayRef<OpFoldResult> low,
                   ArrayRef<OpFoldResult> high, bool nofold,
                   ArrayRef<NamedAttribute> attrs) {
-  auto sourceType = source.getType().cast<RankedTensorType>();
+  auto sourceType = llvm::cast<RankedTensorType>(source.getType());
   SmallVector<Value, 4> dynamicLow, dynamicHigh;
   SmallVector<int64_t, 4> staticLow, staticHigh;
   // staticLow and staticHigh have full information of the padding config.
@@ -2632,7 +2630,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   if (!resultType) {
     resultType = PadOp::inferResultType(sourceType, staticLow, staticHigh);
   }
-  assert(resultType.isa<RankedTensorType>());
+  assert(llvm::isa<RankedTensorType>(resultType));
   build(b, result, resultType, source, dynamicLow, dynamicHigh,
         b.getDenseI64ArrayAttr(staticLow), b.getDenseI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
@@ -2647,7 +2645,7 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
 
   // Add a region and a block to yield the pad value.
   Region *region = result.regions[0].get();
-  int sourceRank = source.getType().cast<RankedTensorType>().getRank();
+  int sourceRank = llvm::cast<RankedTensorType>(source.getType()).getRank();
   SmallVector<Type> blockArgTypes(sourceRank, b.getIndexType());
   SmallVector<Location> blockArgLocs(sourceRank, result.location);
 
@@ -2700,7 +2698,7 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
       return failure();
 
     auto newResultType = PadOp::inferResultType(
-        castOp.getSource().getType().cast<RankedTensorType>(),
+        llvm::cast<RankedTensorType>(castOp.getSource().getType()),
         padTensorOp.getStaticLow(), padTensorOp.getStaticHigh(),
         padTensorOp.getResultType().getShape());
 
@@ -2919,9 +2917,9 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
   LogicalResult matchAndRewrite(PadOp padTensorOp,
                                 PatternRewriter &rewriter) const override {
     Value input = padTensorOp.getSource();
-    if (!input.getType().isa<RankedTensorType>())
+    if (!llvm::isa<RankedTensorType>(input.getType()))
       return failure();
-    auto inputDims = input.getType().cast<RankedTensorType>().getShape();
+    auto inputDims = llvm::cast<RankedTensorType>(input.getType()).getShape();
     auto inputRank = inputDims.size();
 
     auto oldResultType =
@@ -3240,7 +3238,7 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
-  ShapedType resultType = op.getResult().getType().template cast<ShapedType>();
+  ShapedType resultType = llvm::cast<ShapedType>(op.getResult().getType());
   for (auto dim : llvm::seq<int64_t>(0, destRank)) {
     if (resultType.isDynamicDim(dim)) {
       reifiedReturnShapes[0][dim] =
@@ -3655,8 +3653,8 @@ Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
   };
 
   SmallVector<OpFoldResult> mixedSizes;
-  for (auto [index, value] :
-       llvm::enumerate(source.getType().cast<RankedTensorType>().getShape())) {
+  for (auto [index, value] : llvm::enumerate(
+           llvm::cast<RankedTensorType>(source.getType()).getShape())) {
     if (ShapedType::isDynamic(value))
       mixedSizes.push_back(b.create<DimOp>(loc, source, index).getResult());
     else
@@ -3671,7 +3669,7 @@ Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
     applyPermutationToVector<OpFoldResult>(mixedSizes, outerDimsPerm);
 
   mixedSizes.append(innerTileSizes.begin(), innerTileSizes.end());
-  auto elemType = source.getType().cast<ShapedType>().getElementType();
+  auto elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
   return b.create<tensor::EmptyOp>(loc, mixedSizes, elemType);
 }
 
@@ -3789,7 +3787,7 @@ static bool isLikePadUnPad(PackOrUnpackOp packOp,
 
 bool PackOp::isLikePad() {
   auto packedTensorType =
-      (*this)->getResultTypes().front().cast<RankedTensorType>();
+      llvm::cast<RankedTensorType>((*this)->getResultTypes().front());
   return isLikePadUnPad(*this, packedTensorType);
 }
 
@@ -3861,7 +3859,7 @@ Value UnPackOp::createDestinationTensor(OpBuilder &b, Location loc,
   };
 
   SmallVector<OpFoldResult> mixedSizes;
-  auto srcType = source.getType().cast<RankedTensorType>();
+  auto srcType = llvm::cast<RankedTensorType>(source.getType());
   for (auto i :
        llvm::seq<unsigned>(0, srcType.getRank() - innerTileSizes.size())) {
     if (srcType.isDynamicDim(i))
@@ -3944,7 +3942,7 @@ struct FoldTensorCastProducerOp
     // If no operand comes from a tensor::CastOp and can be folded then fail.
     bool hasTensorCastOperand =
         llvm::any_of(op->getOpOperands(), [&](OpOperand &opOperand) {
-          if (opOperand.get().isa<BlockArgument>())
+          if (llvm::isa<BlockArgument>(opOperand.get()))
             return false;
           auto castOp = opOperand.get().getDefiningOp<tensor::CastOp>();
           return castOp && canFoldIntoConsumerOp(castOp);
@@ -3961,7 +3959,7 @@ struct FoldTensorCastProducerOp
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
       if (op.isDpsInit(&opOperand) &&
-          !newOperands.back().getType().isa<MemRefType>())
+          !llvm::isa<MemRefType>(newOperands.back().getType()))
         newResultTypes.push_back(newOperands.back().getType());
     }
 

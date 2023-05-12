@@ -1840,8 +1840,7 @@ define i32 @partial_reduction_sub_v16i32(<16 x i32> %x) {
 ; AVX2-FAST:       # %bb.0:
 ; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX2-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-FAST-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vphsubd %xmm0, %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq

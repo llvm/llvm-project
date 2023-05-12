@@ -623,7 +623,7 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
 
 /// Returns if `type` is a scalar integer or floating-point type.
 static bool isScalarType(Type type) {
-  return type.isa<IntegerType, FloatType>();
+  return isa<IntegerType, FloatType>(type);
 }
 
 /// Returns `type` if it is a builtin integer or floating-point vector type that
@@ -970,7 +970,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert constants that can be represented as attributes.
   if (Attribute attr = getConstantAsAttr(constant)) {
     Type type = convertType(constant->getType());
-    if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>()) {
+    if (auto symbolRef = dyn_cast<FlatSymbolRefAttr>(attr)) {
       return builder.create<AddressOfOp>(loc, type, symbolRef.getValue())
           .getResult();
     }
@@ -1047,7 +1047,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
 
     // Generate an UndefOp as root value and insert the aggregate elements.
     Type rootType = convertType(constant->getType());
-    bool isArrayOrStruct = rootType.isa<LLVMArrayType, LLVMStructType>();
+    bool isArrayOrStruct = isa<LLVMArrayType, LLVMStructType>(rootType);
     assert((isArrayOrStruct || LLVM::isCompatibleVectorType(rootType)) &&
            "unrecognized aggregate type");
     Value root = builder.create<UndefOp>(loc, rootType);
@@ -1609,7 +1609,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   clearBlockAndValueMapping();
 
   auto functionType =
-      convertType(func->getFunctionType()).dyn_cast<LLVMFunctionType>();
+      dyn_cast<LLVMFunctionType>(convertType(func->getFunctionType()));
   if (func->isIntrinsic() &&
       iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();

@@ -39,7 +39,8 @@ ThreadArgRetval::Args ThreadArgRetval::GetArgs(uptr thread) const {
 void ThreadArgRetval::Finish(uptr thread, void* retval) {
   __sanitizer::Lock lock(&mtx_);
   auto t = data_.find(thread);
-  CHECK(t);
+  if (!t)
+    return;
   if (t->second.detached) {
     // Retval of detached thread connot be retrieved.
     data_.erase(t);
@@ -74,7 +75,7 @@ void ThreadArgRetval::DetachLocked(uptr thread) {
   CHECK(t);
   CHECK(!t->second.detached);
   if (t->second.done) {
-    // Detached thread has no use after it started and returned args.
+    // We can't retrive retval after detached thread finished.
     data_.erase(t);
     return;
   }

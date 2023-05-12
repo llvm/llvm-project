@@ -57,7 +57,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     // always 1.
     if (llvm::all_of(strides, [](OpFoldResult &valueOrAttr) {
           Attribute attr = valueOrAttr.dyn_cast<Attribute>();
-          return attr && attr.cast<IntegerAttr>().getInt() == 1;
+          return attr && cast<IntegerAttr>(attr).getInt() == 1;
         })) {
       strides = SmallVector<OpFoldResult>(sourceOp.getMixedStrides().size(),
                                           rewriter.getI64IntegerAttr(1));
@@ -93,8 +93,8 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
         // If both offsets are static we can simply calculate the combined
         // offset statically.
         offsets.push_back(rewriter.getI64IntegerAttr(
-            opOffsetAttr.cast<IntegerAttr>().getInt() +
-            sourceOffsetAttr.cast<IntegerAttr>().getInt()));
+            cast<IntegerAttr>(opOffsetAttr).getInt() +
+            cast<IntegerAttr>(sourceOffsetAttr).getInt()));
       } else {
         // When either offset is dynamic, we must emit an additional affine
         // transformation to add the two offsets together dynamically.
@@ -102,7 +102,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
         SmallVector<Value> affineApplyOperands;
         for (auto valueOrAttr : {opOffset, sourceOffset}) {
           if (auto attr = valueOrAttr.dyn_cast<Attribute>()) {
-            expr = expr + attr.cast<IntegerAttr>().getInt();
+            expr = expr + cast<IntegerAttr>(attr).getInt();
           } else {
             expr =
                 expr + rewriter.getAffineSymbolExpr(affineApplyOperands.size());

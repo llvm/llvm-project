@@ -73,7 +73,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     if (!key)
       continue;
     if (key.getValue() == DLTIDialect::kDataLayoutEndiannessKey) {
-      auto value = entry.getValue().cast<StringAttr>();
+      auto value = cast<StringAttr>(entry.getValue());
       bool isLittleEndian =
           value.getValue() == DLTIDialect::kDataLayoutEndiannessLittle;
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
@@ -81,7 +81,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutAllocaMemorySpaceKey) {
-      auto value = entry.getValue().cast<IntegerAttr>();
+      auto value = cast<IntegerAttr>(entry.getValue());
       uint64_t space = value.getValue().getZExtValue();
       // Skip the default address space.
       if (space == 0)
@@ -91,7 +91,7 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       continue;
     }
     if (key.getValue() == DLTIDialect::kDataLayoutStackAlignmentKey) {
-      auto value = entry.getValue().cast<IntegerAttr>();
+      auto value = cast<IntegerAttr>(entry.getValue());
       uint64_t alignment = value.getValue().getZExtValue();
       // Skip the default stack alignment.
       if (alignment == 0)
@@ -112,14 +112,14 @@ translateDataLayout(DataLayoutSpecInterface attribute,
     if (!type)
       continue;
     // Data layout for the index type is irrelevant at this point.
-    if (type.isa<IndexType>())
+    if (isa<IndexType>(type))
       continue;
     layoutStream << "-";
     LogicalResult result =
         llvm::TypeSwitch<Type, LogicalResult>(type)
             .Case<IntegerType, Float16Type, Float32Type, Float64Type,
                   Float80Type, Float128Type>([&](Type type) -> LogicalResult {
-              if (auto intType = type.dyn_cast<IntegerType>()) {
+              if (auto intType = dyn_cast<IntegerType>(type)) {
                 if (intType.getSignedness() != IntegerType::Signless)
                   return emitError(*loc)
                          << "unsupported data layout for non-signless integer "
@@ -250,7 +250,7 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
 
   // Compute the shape of all dimensions but the innermost. Note that the
   // innermost dimension may be that of the vector element type.
-  bool hasVectorElementType = type.getElementType().isa<VectorType>();
+  bool hasVectorElementType = isa<VectorType>(type.getElementType());
   unsigned numAggregates =
       denseElementsAttr.getNumElements() /
       (hasVectorElementType ? 1
@@ -261,7 +261,7 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
 
   // Handle the case of vector splat, LLVM has special support for it.
   if (denseElementsAttr.isSplat() &&
-      (type.isa<VectorType>() || hasVectorElementType)) {
+      (isa<VectorType>(type) || hasVectorElementType)) {
     llvm::Constant *splatValue = LLVM::detail::getLLVMConstant(
         innermostLLVMType, denseElementsAttr.getSplatValue<Attribute>(), loc,
         moduleTranslation);
@@ -277,8 +277,8 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
   // In case of non-splat, create a constructor for the innermost constant from
   // a piece of raw data.
   std::function<llvm::Constant *(StringRef)> buildCstData;
-  if (type.isa<TensorType>()) {
-    auto vectorElementType = type.getElementType().dyn_cast<VectorType>();
+  if (isa<TensorType>(type)) {
+    auto vectorElementType = dyn_cast<VectorType>(type.getElementType());
     if (vectorElementType && vectorElementType.getRank() == 1) {
       buildCstData = [&](StringRef data) {
         return llvm::ConstantDataVector::getRaw(
@@ -290,7 +290,7 @@ convertDenseElementsAttr(Location loc, DenseElementsAttr denseElementsAttr,
                                                innermostLLVMType);
       };
     }
-  } else if (type.isa<VectorType>()) {
+  } else if (isa<VectorType>(type)) {
     buildCstData = [&](StringRef data) {
       return llvm::ConstantDataVector::getRaw(data, type.getShape().back(),
                                               innermostLLVMType);
@@ -326,7 +326,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   if (!attr)
     return llvm::UndefValue::get(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
-    auto arrayAttr = attr.dyn_cast<ArrayAttr>();
+    auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr || arrayAttr.size() != 2) {
       emitError(loc, "expected struct type to be a complex number");
       return nullptr;
@@ -344,11 +344,11 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
-  if (auto intAttr = attr.dyn_cast<IntegerAttr>())
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr))
     return llvm::ConstantInt::get(
         llvmType,
         intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
-  if (auto floatAttr = attr.dyn_cast<FloatAttr>()) {
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     if (llvmType !=
         llvm::Type::getFloatingPointTy(llvmType->getContext(),
                                        floatAttr.getValue().getSemantics())) {
@@ -357,10 +357,10 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     }
     return llvm::ConstantFP::get(llvmType, floatAttr.getValue());
   }
-  if (auto funcAttr = attr.dyn_cast<FlatSymbolRefAttr>())
+  if (auto funcAttr = dyn_cast<FlatSymbolRefAttr>(attr))
     return llvm::ConstantExpr::getBitCast(
         moduleTranslation.lookupFunction(funcAttr.getValue()), llvmType);
-  if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(attr)) {
     llvm::Type *elementType;
     uint64_t numElements;
     bool isScalable = false;
@@ -401,13 +401,13 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
 
   // Try using raw elements data if possible.
   if (llvm::Constant *result =
-          convertDenseElementsAttr(loc, attr.dyn_cast<DenseElementsAttr>(),
+          convertDenseElementsAttr(loc, dyn_cast<DenseElementsAttr>(attr),
                                    llvmType, moduleTranslation)) {
     return result;
   }
 
   // Fall back to element-by-element construction otherwise.
-  if (auto elementsAttr = attr.dyn_cast<ElementsAttr>()) {
+  if (auto elementsAttr = dyn_cast<ElementsAttr>(attr)) {
     assert(elementsAttr.getShapedType().hasStaticShape());
     assert(!elementsAttr.getShapedType().getShape().empty() &&
            "unexpected empty elements attribute shape");
@@ -428,7 +428,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     return result;
   }
 
-  if (auto stringAttr = attr.dyn_cast<StringAttr>()) {
+  if (auto stringAttr = dyn_cast<StringAttr>(attr)) {
     return llvm::ConstantDataArray::get(
         moduleTranslation.getLLVMContext(),
         ArrayRef<char>{stringAttr.getValue().data(),
@@ -685,7 +685,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
     if (op.getValueOrNull()) {
       // String attributes are treated separately because they cannot appear as
       // in-function constants and are thus not supported by getLLVMConstant.
-      if (auto strAttr = op.getValueOrNull().dyn_cast_or_null<StringAttr>()) {
+      if (auto strAttr = dyn_cast_or_null<StringAttr>(op.getValueOrNull())) {
         cst = llvm::ConstantDataArray::getString(
             llvmModule->getContext(), strAttr.getValue(), /*AddNull=*/false);
         type = cst->getType();
@@ -763,11 +763,10 @@ LogicalResult ModuleTranslation::convertGlobals() {
         ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
     for (auto symbolAndPriority : range) {
       llvm::Function *f = lookupFunction(
-          std::get<0>(symbolAndPriority).cast<FlatSymbolRefAttr>().getValue());
-      appendGlobalFn(
-          *llvmModule, f,
-          std::get<1>(symbolAndPriority).cast<IntegerAttr>().getInt(),
-          /*Data=*/nullptr);
+          cast<FlatSymbolRefAttr>(std::get<0>(symbolAndPriority)).getValue());
+      appendGlobalFn(*llvmModule, f,
+                     cast<IntegerAttr>(std::get<1>(symbolAndPriority)).getInt(),
+                     /*Data=*/nullptr);
     }
   }
 
@@ -830,20 +829,20 @@ forwardPassthroughAttributes(Location loc, std::optional<ArrayAttr> attributes,
     return success();
 
   for (Attribute attr : *attributes) {
-    if (auto stringAttr = attr.dyn_cast<StringAttr>()) {
+    if (auto stringAttr = dyn_cast<StringAttr>(attr)) {
       if (failed(
               checkedAddLLVMFnAttribute(loc, llvmFunc, stringAttr.getValue())))
         return failure();
       continue;
     }
 
-    auto arrayAttr = attr.dyn_cast<ArrayAttr>();
+    auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr || arrayAttr.size() != 2)
       return emitError(loc)
              << "expected 'passthrough' to contain string or array attributes";
 
-    auto keyAttr = arrayAttr[0].dyn_cast<StringAttr>();
-    auto valueAttr = arrayAttr[1].dyn_cast<StringAttr>();
+    auto keyAttr = dyn_cast<StringAttr>(arrayAttr[0]);
+    auto valueAttr = dyn_cast<StringAttr>(arrayAttr[1]);
     if (!keyAttr || !valueAttr)
       return emitError(loc)
              << "expected arrays within 'passthrough' to contain two strings";
@@ -985,7 +984,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
-      DictionaryAttr resultAttrs = allResultAttrs[0].cast<DictionaryAttr>();
+      DictionaryAttr resultAttrs = cast<DictionaryAttr>(allResultAttrs[0]);
       llvmFunc->addRetAttrs(convertParameterAttrs(resultAttrs));
     }
 
@@ -1133,7 +1132,7 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
     return;
   }
 
-  SymbolRefAttr tagRef = tagRefs[0].cast<SymbolRefAttr>();
+  SymbolRefAttr tagRef = cast<SymbolRefAttr>(tagRefs[0]);
   llvm::MDNode *node = getTBAANode(op, tagRef);
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
@@ -1192,7 +1191,7 @@ LogicalResult ModuleTranslation::createTBAAMetadata() {
         // The type references are in 1, 3, 5, etc. positions.
         unsigned opNum = 1;
         for (Attribute typeAttr : tdOp.getMembers()) {
-          refNames.push_back(typeAttr.cast<FlatSymbolRefAttr>().getValue());
+          refNames.push_back(cast<FlatSymbolRefAttr>(typeAttr).getValue());
           operandIndices.push_back(opNum);
           opNum += 2;
         }
@@ -1299,7 +1298,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
   if (auto dataLayoutAttr =
           m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
-    llvmModule->setDataLayout(dataLayoutAttr.cast<StringAttr>().getValue());
+    llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
   } else {
     FailureOr<llvm::DataLayout> llvmDataLayout(llvm::DataLayout(""));
     if (auto iface = dyn_cast<DataLayoutOpInterface>(m)) {
@@ -1319,7 +1318,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   }
   if (auto targetTripleAttr =
           m->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
-    llvmModule->setTargetTriple(targetTripleAttr.cast<StringAttr>().getValue());
+    llvmModule->setTargetTriple(cast<StringAttr>(targetTripleAttr).getValue());
 
   // Inject declarations for `malloc` and `free` functions that can be used in
   // memref allocation/deallocation coming from standard ops lowering.

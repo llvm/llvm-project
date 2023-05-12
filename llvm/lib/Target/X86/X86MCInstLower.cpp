@@ -502,7 +502,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (auto MaybeMCOp = LowerMachineOperand(MI, MO))
       OutMI.addOperand(*MaybeMCOp);
 
-  if (X86::optimizeInstFromVEX3ToVEX2(OutMI))
+  if (X86::optimizeInstFromVEX3ToVEX2(OutMI, MI->getDesc()))
     return;
 
   // Handle a few special cases to eliminate operand modifiers.
@@ -905,12 +905,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
     break;
   }
-
-  case X86::VMOVHLPSrr:
-  case X86::VUNPCKHPDrr:
-    // These are not truly commutable so hide them from the default case.
-    break;
-
   case X86::MASKMOVDQU:
   case X86::VMASKMOVDQU:
     if (AsmPrinter.getSubtarget().is64Bit())
@@ -918,19 +912,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
 
   default: {
-    // If the instruction is a commutable arithmetic instruction we might be
-    // able to commute the operands to get a 2 byte VEX prefix.
-    uint64_t TSFlags = MI->getDesc().TSFlags;
-    if (MI->getDesc().isCommutable() &&
-        (TSFlags & X86II::EncodingMask) == X86II::VEX &&
-        (TSFlags & X86II::OpMapMask) == X86II::TB &&
-        (TSFlags & X86II::FormMask) == X86II::MRMSrcReg &&
-        !(TSFlags & X86II::REX_W) && (TSFlags & X86II::VEX_4V) &&
-        OutMI.getNumOperands() == 3) {
-      if (!X86II::isX86_64ExtendedReg(OutMI.getOperand(1).getReg()) &&
-          X86II::isX86_64ExtendedReg(OutMI.getOperand(2).getReg()))
-        std::swap(OutMI.getOperand(1), OutMI.getOperand(2));
-    }
     // Add an REP prefix to BSF instructions so that new processors can
     // recognize as TZCNT, which has better performance than BSF.
     if (X86::isBSF(OutMI.getOpcode()) && !MF.getFunction().hasOptSize()) {

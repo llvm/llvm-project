@@ -107,9 +107,7 @@ INTERCEPTOR(int, pthread_detach, void *thread) {
 }
 
 INTERCEPTOR(int, pthread_exit, void *retval) {
-  auto *t = GetCurrentThread();
-  if (t && !t->IsMainThread())
-    hwasanThreadArgRetval().Finish(GetThreadSelf(), retval);
+  hwasanThreadArgRetval().Finish(GetThreadSelf(), retval);
   return REAL(pthread_exit)(retval);
 }
 

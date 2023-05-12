@@ -7,6 +7,14 @@
 ; RUN:     | FileCheck --check-prefix=RV64IZFH %s
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+zfh,+d < %s \
 ; RUN:     | FileCheck --check-prefix=RV64IDZFH %s
+; RUN: llc -mtriple=riscv32 -target-abi ilp32 -mattr=+zhinx < %s \
+; RUN:     | FileCheck --check-prefix=RV32IZHINX %s
+; RUN: llc -mtriple=riscv32 -target-abi ilp32 -mattr=+zhinx,+zdinx < %s \
+; RUN:     | FileCheck --check-prefix=RV32IZDINXZHINX %s
+; RUN: llc -mtriple=riscv64 -target-abi lp64 -mattr=+zhinx < %s \
+; RUN:     | FileCheck --check-prefix=RV64IZHINX %s
+; RUN: llc -mtriple=riscv64 -target-abi lp64 -mattr=+zhinx,+zdinx < %s \
+; RUN:     | FileCheck --check-prefix=RV64IZDINXZHINX %s
 
 define half @f16_positive_zero(ptr %pf) nounwind {
 ; RV32IZFH-LABEL: f16_positive_zero:
@@ -28,6 +36,26 @@ define half @f16_positive_zero(ptr %pf) nounwind {
 ; RV64IDZFH:       # %bb.0:
 ; RV64IDZFH-NEXT:    fmv.h.x fa0, zero
 ; RV64IDZFH-NEXT:    ret
+;
+; RV32IZHINX-LABEL: f16_positive_zero:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    li a0, 0
+; RV32IZHINX-NEXT:    ret
+;
+; RV32IZDINXZHINX-LABEL: f16_positive_zero:
+; RV32IZDINXZHINX:       # %bb.0:
+; RV32IZDINXZHINX-NEXT:    li a0, 0
+; RV32IZDINXZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: f16_positive_zero:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    li a0, 0
+; RV64IZHINX-NEXT:    ret
+;
+; RV64IZDINXZHINX-LABEL: f16_positive_zero:
+; RV64IZDINXZHINX:       # %bb.0:
+; RV64IZDINXZHINX-NEXT:    li a0, 0
+; RV64IZDINXZHINX-NEXT:    ret
   ret half 0.0
 }
 
@@ -55,5 +83,25 @@ define half @f16_negative_zero(ptr %pf) nounwind {
 ; RV64IDZFH-NEXT:    lui a0, 1048568
 ; RV64IDZFH-NEXT:    fmv.h.x fa0, a0
 ; RV64IDZFH-NEXT:    ret
+;
+; RV32IZHINX-LABEL: f16_negative_zero:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    lui a0, 1048568
+; RV32IZHINX-NEXT:    ret
+;
+; RV32IZDINXZHINX-LABEL: f16_negative_zero:
+; RV32IZDINXZHINX:       # %bb.0:
+; RV32IZDINXZHINX-NEXT:    lui a0, 1048568
+; RV32IZDINXZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: f16_negative_zero:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    lui a0, 1048568
+; RV64IZHINX-NEXT:    ret
+;
+; RV64IZDINXZHINX-LABEL: f16_negative_zero:
+; RV64IZDINXZHINX:       # %bb.0:
+; RV64IZDINXZHINX-NEXT:    lui a0, 1048568
+; RV64IZDINXZHINX-NEXT:    ret
   ret half -0.0
 }

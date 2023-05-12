@@ -169,7 +169,7 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
     return success();
   }
   if (attribute.getName().getValue() == kTargetTagAttrName) {
-    if (!attribute.getValue().isa<StringAttr>()) {
+    if (!llvm::isa<StringAttr>(attribute.getValue())) {
       return op->emitError()
              << attribute.getName() << " attribute must be a string";
     }
@@ -177,7 +177,7 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
   }
   if (attribute.getName().getValue() == kArgConsumedAttrName ||
       attribute.getName().getValue() == kArgReadOnlyAttrName) {
-    if (!attribute.getValue().isa<UnitAttr>()) {
+    if (!llvm::isa<UnitAttr>(attribute.getValue())) {
       return op->emitError()
              << attribute.getName() << " must be a unit attribute";
     }

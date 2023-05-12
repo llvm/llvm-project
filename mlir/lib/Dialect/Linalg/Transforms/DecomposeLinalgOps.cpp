@@ -132,12 +132,12 @@ SmallVector<OpFoldResult> permuteValues(ArrayRef<OpFoldResult> values,
 static Value getZero(OpBuilder &b, Location loc, Type elementType) {
   assert(elementType.isIntOrIndexOrFloat() &&
          "expected scalar type while computing zero value");
-  if (elementType.isa<IntegerType>())
+  if (isa<IntegerType>(elementType))
     return b.create<arith::ConstantIntOp>(loc, 0, elementType);
   if (elementType.isIndex())
     return b.create<arith::ConstantIndexOp>(loc, 0);
   // Assume float.
-  auto floatType = elementType.cast<FloatType>();
+  auto floatType = cast<FloatType>(elementType);
   return b.create<arith::ConstantFloatOp>(
       loc, APFloat::getZero(floatType.getFloatSemantics()), floatType);
 }
@@ -179,7 +179,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
     if (resultNumber) {
       newInitValues.push_back(
           genericOp.getDpsInitOperand(*resultNumber)->get());
-      OpResult result = genericOp.getResult(*resultNumber).cast<OpResult>();
+      OpResult result = cast<OpResult>(genericOp.getResult(*resultNumber));
       newResultTypes.push_back(result.getType());
       peeledGenericOpIndexingMaps.push_back(
           genericOp.getIndexingMapMatchingResult(result));
@@ -231,7 +231,7 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
       }));
   for (auto resultNum :
        llvm::seq<unsigned>(origNumResults, peeledGenericOpNumResults)) {
-    OpResult result = peeledGenericOp.getResult(resultNum).cast<OpResult>();
+    OpResult result = cast<OpResult>(peeledGenericOp.getResult(resultNum));
     indexingMaps.push_back(
         peeledGenericOp.getIndexingMapMatchingResult(result));
   }
@@ -348,7 +348,7 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   /// the peeled operation.
   SmallVector<Value> replacements;
   for (const auto &yieldValue : llvm::enumerate(yieldOp->getOperands())) {
-    OpResult opr = yieldValue.value().dyn_cast<OpResult>();
+    OpResult opr = dyn_cast<OpResult>(yieldValue.value());
     if (!opr || opr.getOwner() != peeledScalarOperation)
       replacements.push_back(residualGenericOp.getResult(yieldValue.index()));
     else

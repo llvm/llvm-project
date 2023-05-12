@@ -7,12 +7,20 @@
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh -verify-machineinstrs \
 ; RUN:   < %s | FileCheck -check-prefix=RV64IZFH %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   < %s | FileCheck -check-prefix=RV32IZHINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   < %s | FileCheck -check-prefix=RV64IZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   < %s | FileCheck -check-prefix=RV32IZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   < %s | FileCheck -check-prefix=RV64IZFHMIN %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   < %s | FileCheck --check-prefixes=RVIZHINXMIN,RV32IZHINXMIN %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   < %s | FileCheck --check-prefixes=RVIZHINXMIN,RV64IZHINXMIN %s
 
 ; This file tests cases where simple floating point operations can be
 ; profitably handled though bit manipulation if a soft-float ABI is being used
@@ -45,6 +53,18 @@ define half @fneg(half %a) nounwind {
 ; RV64IZFH-NEXT:    xor a0, a0, a1
 ; RV64IZFH-NEXT:    ret
 ;
+; RV32IZHINX-LABEL: fneg:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    lui a1, 1048568
+; RV32IZHINX-NEXT:    xor a0, a0, a1
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: fneg:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    lui a1, 1048568
+; RV64IZHINX-NEXT:    xor a0, a0, a1
+; RV64IZHINX-NEXT:    ret
+;
 ; RV32IZFHMIN-LABEL: fneg:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    lui a1, 1048568
@@ -56,6 +76,12 @@ define half @fneg(half %a) nounwind {
 ; RV64IZFHMIN-NEXT:    lui a1, 1048568
 ; RV64IZFHMIN-NEXT:    xor a0, a0, a1
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RVIZHINXMIN-LABEL: fneg:
+; RVIZHINXMIN:       # %bb.0:
+; RVIZHINXMIN-NEXT:    lui a1, 1048568
+; RVIZHINXMIN-NEXT:    xor a0, a0, a1
+; RVIZHINXMIN-NEXT:    ret
   %1 = fneg half %a
   ret half %1
 }
@@ -87,6 +113,18 @@ define half @fabs(half %a) nounwind {
 ; RV64IZFH-NEXT:    srli a0, a0, 49
 ; RV64IZFH-NEXT:    ret
 ;
+; RV32IZHINX-LABEL: fabs:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    slli a0, a0, 17
+; RV32IZHINX-NEXT:    srli a0, a0, 17
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: fabs:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    slli a0, a0, 49
+; RV64IZHINX-NEXT:    srli a0, a0, 49
+; RV64IZHINX-NEXT:    ret
+;
 ; RV32IZFHMIN-LABEL: fabs:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    slli a0, a0, 17
@@ -98,6 +136,18 @@ define half @fabs(half %a) nounwind {
 ; RV64IZFHMIN-NEXT:    slli a0, a0, 49
 ; RV64IZFHMIN-NEXT:    srli a0, a0, 49
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: fabs:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    slli a0, a0, 17
+; RV32IZHINXMIN-NEXT:    srli a0, a0, 17
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: fabs:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    slli a0, a0, 49
+; RV64IZHINXMIN-NEXT:    srli a0, a0, 49
+; RV64IZHINXMIN-NEXT:    ret
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
 }
@@ -145,6 +195,16 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV64IZFH-NEXT:    fmv.x.h a0, fa5
 ; RV64IZFH-NEXT:    ret
 ;
+; RV32IZHINX-LABEL: fcopysign_fneg:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    fsgnjn.h a0, a0, a1
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: fcopysign_fneg:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    fsgnjn.h a0, a0, a1
+; RV64IZHINX-NEXT:    ret
+;
 ; RV32IZFHMIN-LABEL: fcopysign_fneg:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16
@@ -186,6 +246,46 @@ define half @fcopysign_fneg(half %a, half %b) nounwind {
 ; RV64IZFHMIN-NEXT:    fmv.x.h a0, fa5
 ; RV64IZFHMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFHMIN-NEXT:    ret
+;
+; RV32IZHINXMIN-LABEL: fcopysign_fneg:
+; RV32IZHINXMIN:       # %bb.0:
+; RV32IZHINXMIN-NEXT:    addi sp, sp, -16
+; RV32IZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; RV32IZHINXMIN-NEXT:    fneg.s a1, a1
+; RV32IZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; RV32IZHINXMIN-NEXT:    addi a2, sp, 8
+; RV32IZHINXMIN-NEXT:    sh a0, 0(a2)
+; RV32IZHINXMIN-NEXT:    addi a0, sp, 12
+; RV32IZHINXMIN-NEXT:    sh a1, 0(a0)
+; RV32IZHINXMIN-NEXT:    lbu a0, 9(sp)
+; RV32IZHINXMIN-NEXT:    lbu a1, 13(sp)
+; RV32IZHINXMIN-NEXT:    andi a0, a0, 127
+; RV32IZHINXMIN-NEXT:    andi a1, a1, 128
+; RV32IZHINXMIN-NEXT:    or a0, a0, a1
+; RV32IZHINXMIN-NEXT:    sb a0, 9(sp)
+; RV32IZHINXMIN-NEXT:    lh a0, 0(a2)
+; RV32IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV32IZHINXMIN-NEXT:    ret
+;
+; RV64IZHINXMIN-LABEL: fcopysign_fneg:
+; RV64IZHINXMIN:       # %bb.0:
+; RV64IZHINXMIN-NEXT:    addi sp, sp, -16
+; RV64IZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; RV64IZHINXMIN-NEXT:    fneg.s a1, a1
+; RV64IZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; RV64IZHINXMIN-NEXT:    mv a2, sp
+; RV64IZHINXMIN-NEXT:    sh a0, 0(a2)
+; RV64IZHINXMIN-NEXT:    addi a0, sp, 8
+; RV64IZHINXMIN-NEXT:    sh a1, 0(a0)
+; RV64IZHINXMIN-NEXT:    lbu a0, 1(sp)
+; RV64IZHINXMIN-NEXT:    lbu a1, 9(sp)
+; RV64IZHINXMIN-NEXT:    andi a0, a0, 127
+; RV64IZHINXMIN-NEXT:    andi a1, a1, 128
+; RV64IZHINXMIN-NEXT:    or a0, a0, a1
+; RV64IZHINXMIN-NEXT:    sb a0, 1(sp)
+; RV64IZHINXMIN-NEXT:    lh a0, 0(a2)
+; RV64IZHINXMIN-NEXT:    addi sp, sp, 16
+; RV64IZHINXMIN-NEXT:    ret
   %1 = fneg half %b
   %2 = call half @llvm.copysign.f16(half %a, half %1)
   ret half %2

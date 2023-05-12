@@ -356,7 +356,6 @@ libcxx/include/__format/format_error.h
 libcxx/include/__format/format_functions.h
 libcxx/include/__format/format_parse_context.h
 libcxx/include/__format/format_string.h
-libcxx/include/__format/formatter_bool.h
 libcxx/include/__format/formatter_char.h
 libcxx/include/__format/formatter_floating_point.h
 libcxx/include/__format/formatter.h

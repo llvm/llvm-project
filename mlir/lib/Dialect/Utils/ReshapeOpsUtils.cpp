@@ -162,7 +162,7 @@ ArrayAttr mlir::getReassociationIndicesAttribute(
   SmallVector<Attribute, 4> reassociationAttr =
       llvm::to_vector<4>(llvm::map_range(
           reassociation, [&](const ReassociationIndices &indices) -> Attribute {
-            return b.getI64ArrayAttr(indices).cast<Attribute>();
+            return cast<Attribute>(b.getI64ArrayAttr(indices));
           }));
   return b.getArrayAttr(reassociationAttr);
 }
@@ -267,7 +267,7 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
 }
 
 bool mlir::hasNonIdentityLayout(Type type) {
-  if (auto memrefType = type.dyn_cast<MemRefType>())
+  if (auto memrefType = dyn_cast<MemRefType>(type))
     return !memrefType.getLayout().isIdentity();
   return false;
 }
