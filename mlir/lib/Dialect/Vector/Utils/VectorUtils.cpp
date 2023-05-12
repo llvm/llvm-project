@@ -36,9 +36,9 @@ using namespace mlir;
 /// the type of `source`.
 Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
                                       int64_t dim) {
-  if (source.getType().isa<UnrankedMemRefType, MemRefType>())
+  if (isa<UnrankedMemRefType, MemRefType>(source.getType()))
     return b.createOrFold<memref::DimOp>(loc, source, dim);
-  if (source.getType().isa<UnrankedTensorType, RankedTensorType>())
+  if (isa<UnrankedTensorType, RankedTensorType>(source.getType()))
     return b.createOrFold<tensor::DimOp>(loc, source, dim);
   llvm_unreachable("Expected MemRefType or TensorType");
 }
@@ -89,7 +89,7 @@ mlir::vector::isTranspose2DSlice(vector::TransposeOp op) {
 
   SmallVector<int64_t> transp;
   for (auto attr : op.getTransp())
-    transp.push_back(attr.cast<IntegerAttr>().getInt());
+    transp.push_back(cast<IntegerAttr>(attr).getInt());
 
   // Check whether the two source vector dimensions that are greater than one
   // must be transposed with each other so that we can apply one of the 2-D
@@ -223,7 +223,7 @@ bool matcher::operatesOnSuperVectorsOf(Operation &op,
     }
     return false;
   } else if (op.getNumResults() == 1) {
-    if (auto v = op.getResult(0).getType().dyn_cast<VectorType>()) {
+    if (auto v = dyn_cast<VectorType>(op.getResult(0).getType())) {
       superVectorType = v;
     } else {
       // Not a vector type.

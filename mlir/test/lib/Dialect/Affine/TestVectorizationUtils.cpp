@@ -127,7 +127,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
     // As a consequence we write only Ops with a single return type for the
     // purpose of this test. If we need to test more intricate behavior in the
     // future we can always extend.
-    auto superVectorType = opInst->getResult(0).getType().cast<VectorType>();
+    auto superVectorType = cast<VectorType>(opInst->getResult(0).getType());
     auto ratio =
         computeShapeRatio(superVectorType.getShape(), subVectorType.getShape());
     if (!ratio) {
@@ -211,8 +211,8 @@ void VectorizerTestPass::testComposeMaps(llvm::raw_ostream &outs) {
   maps.reserve(matches.size());
   for (auto m : llvm::reverse(matches)) {
     auto *opInst = m.getMatchedOperation();
-    auto map = opInst->getAttr(VectorizerTestPass::kTestAffineMapAttrName)
-                   .cast<AffineMapAttr>()
+    auto map = cast<AffineMapAttr>(
+                   opInst->getAttr(VectorizerTestPass::kTestAffineMapAttrName))
                    .getValue();
     maps.push_back(map);
   }

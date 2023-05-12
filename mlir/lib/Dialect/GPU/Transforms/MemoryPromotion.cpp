@@ -30,7 +30,7 @@ using namespace mlir::gpu;
 /// single-iteration loops. Maps the innermost loops to thread dimensions, in
 /// reverse order to enable access coalescing in the innermost loop.
 static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
-  auto memRefType = from.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(from.getType());
   auto rank = memRefType.getRank();
 
   SmallVector<Value, 4> lbs, ubs, steps;
@@ -121,8 +121,8 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
 /// pointed to by "from". In case a smaller block would be sufficient, the
 /// caller can create a subview of the memref and promote it instead.
 static void insertCopies(Region &region, Location loc, Value from, Value to) {
-  auto fromType = from.getType().cast<MemRefType>();
-  auto toType = to.getType().cast<MemRefType>();
+  auto fromType = cast<MemRefType>(from.getType());
+  auto toType = cast<MemRefType>(to.getType());
   (void)fromType;
   (void)toType;
   assert(fromType.getShape() == toType.getShape());
@@ -143,7 +143,7 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
 /// copies will be inserted in the beginning and in the end of the function.
 void mlir::promoteToWorkgroupMemory(GPUFuncOp op, unsigned arg) {
   Value value = op.getArgument(arg);
-  auto type = value.getType().dyn_cast<MemRefType>();
+  auto type = dyn_cast<MemRefType>(value.getType());
   assert(type && type.hasStaticShape() && "can only promote memrefs");
 
   // Get the type of the buffer in the workgroup memory.

@@ -640,7 +640,7 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   auto loc = genericOp.getLoc();
   Value unPackDest = producerUnPackOp.getDest();
   auto genericOutType =
-      genericOp.getDpsInitOperand(0)->get().getType().cast<RankedTensorType>();
+      cast<RankedTensorType>(genericOp.getDpsInitOperand(0)->get().getType());
   if (producerUnPackOp.getDestType() != genericOutType ||
       !genericOutType.hasStaticShape()) {
     unPackDest = tensor::UnPackOp::createDestinationTensor(

@@ -222,7 +222,7 @@ SmallVector<IntT> convertArrayToIndices(ArrayRef<Attribute> attrs) {
   SmallVector<IntT> indices;
   indices.reserve(attrs.size());
   for (Attribute attr : attrs)
-    indices.push_back(attr.cast<IntegerAttr>().getInt());
+    indices.push_back(cast<IntegerAttr>(attr).getInt());
   return indices;
 }
 

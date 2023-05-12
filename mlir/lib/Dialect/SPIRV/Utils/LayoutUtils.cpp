@@ -53,7 +53,7 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
     // must be a runtime array.
     assert(memberSize != std::numeric_limits<Size>().max() ||
            (i + 1 == e &&
-            structType.getElementType(i).isa<spirv::RuntimeArrayType>()));
+            isa<spirv::RuntimeArrayType>(structType.getElementType(i))));
     // According to the Vulkan spec:
     // "A structure has a base alignment equal to the largest base alignment of
     // any of its members."
@@ -79,23 +79,23 @@ VulkanLayoutUtils::decorateType(spirv::StructType structType,
 
 Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
                                      VulkanLayoutUtils::Size &alignment) {
-  if (type.isa<spirv::ScalarType>()) {
+  if (isa<spirv::ScalarType>(type)) {
     alignment = getScalarTypeAlignment(type);
     // Vulkan spec does not specify any padding for a scalar type.
     size = alignment;
     return type;
   }
-  if (auto structType = type.dyn_cast<spirv::StructType>())
+  if (auto structType = dyn_cast<spirv::StructType>(type))
     return decorateType(structType, size, alignment);
-  if (auto arrayType = type.dyn_cast<spirv::ArrayType>())
+  if (auto arrayType = dyn_cast<spirv::ArrayType>(type))
     return decorateType(arrayType, size, alignment);
-  if (auto vectorType = type.dyn_cast<VectorType>())
+  if (auto vectorType = dyn_cast<VectorType>(type))
     return decorateType(vectorType, size, alignment);
-  if (auto arrayType = type.dyn_cast<spirv::RuntimeArrayType>()) {
+  if (auto arrayType = dyn_cast<spirv::RuntimeArrayType>(type)) {
     size = std::numeric_limits<Size>().max();
     return decorateType(arrayType, alignment);
   }
-  if (type.isa<spirv::PointerType>()) {
+  if (isa<spirv::PointerType>(type)) {
     // TODO: Add support for `PhysicalStorageBufferAddresses`.
     return nullptr;
   }
@@ -161,13 +161,13 @@ VulkanLayoutUtils::getScalarTypeAlignment(Type scalarType) {
 }
 
 bool VulkanLayoutUtils::isLegalType(Type type) {
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType) {
     return true;
   }
 
   auto storageClass = ptrType.getStorageClass();
-  auto structType = ptrType.getPointeeType().dyn_cast<spirv::StructType>();
+  auto structType = dyn_cast<spirv::StructType>(ptrType.getPointeeType());
   if (!structType) {
     return true;
   }

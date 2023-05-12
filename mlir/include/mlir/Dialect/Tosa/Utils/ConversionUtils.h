@@ -51,7 +51,7 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
   SmallVector<ShapedType> dynTypes;
   SmallVector<Value> dynamicDims;
   for (const Value &param : params) {
-    auto paramTy = param.getType().cast<ShapedType>();
+    auto paramTy = cast<ShapedType>(param.getType());
     if (!paramTy.hasStaticShape())
       dynTypes.push_back(paramTy);
   }

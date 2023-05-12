@@ -44,9 +44,9 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
 
   auto result = operation->getResult(0);
 
-  auto kernelTy = kernel.getType().dyn_cast<RankedTensorType>();
-  auto initTy = init.getType().dyn_cast<RankedTensorType>();
-  auto resultTy = result.getType().template dyn_cast<RankedTensorType>();
+  auto kernelTy = dyn_cast<RankedTensorType>(kernel.getType());
+  auto initTy = dyn_cast<RankedTensorType>(init.getType());
+  auto resultTy = dyn_cast<RankedTensorType>(result.getType());
   if (!kernelTy || !initTy || !resultTy)
     return failure();
 

@@ -89,11 +89,11 @@ public:
 
   LogicalResult matchAndRewrite(memref::ReshapeOp op,
                                 PatternRewriter &rewriter) const final {
-    auto shapeType = op.getShape().getType().cast<MemRefType>();
+    auto shapeType = cast<MemRefType>(op.getShape().getType());
     if (!shapeType.hasStaticShape())
       return failure();
 
-    int64_t rank = shapeType.cast<MemRefType>().getDimSize(0);
+    int64_t rank = cast<MemRefType>(shapeType).getDimSize(0);
     SmallVector<OpFoldResult, 4> sizes, strides;
     sizes.resize(rank);
     strides.resize(rank);
@@ -106,7 +106,7 @@ public:
       if (op.getType().isDynamicDim(i)) {
         Value index = rewriter.create<arith::ConstantIndexOp>(loc, i);
         size = rewriter.create<memref::LoadOp>(loc, op.getShape(), index);
-        if (!size.getType().isa<IndexType>())
+        if (!isa<IndexType>(size.getType()))
           size = rewriter.create<arith::IndexCastOp>(
               loc, rewriter.getIndexType(), size);
         sizes[i] = size;
@@ -141,7 +141,7 @@ struct ExpandOpsPass : public memref::impl::ExpandOpsBase<ExpandOpsPass> {
                  op.getKind() != arith::AtomicRMWKind::minf;
         });
     target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
-      return !op.getShape().getType().cast<MemRefType>().hasStaticShape();
+      return !cast<MemRefType>(op.getShape().getType()).hasStaticShape();
     });
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

@@ -785,7 +785,7 @@ public:
     Attribute baseResult;
     if (failed(parseAttribute(reader, baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return reader.emitError("expected attribute of type: ",
                             llvm::getTypeName<T>(), ", but got: ", baseResult);
