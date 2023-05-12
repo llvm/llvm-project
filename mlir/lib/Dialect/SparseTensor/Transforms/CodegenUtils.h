@@ -364,6 +364,9 @@ Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
 Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
                        Level lvl, Level cooStart);
 
+/// Infers the result type and generates `ToCoordinatesBufferOp`.
+Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
+
 /// Infers the result type and generates `ToValuesOp`.
 Value genToValues(OpBuilder &builder, Location loc, Value tensor);
 

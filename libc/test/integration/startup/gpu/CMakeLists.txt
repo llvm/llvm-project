@@ -43,3 +43,12 @@ add_integration_test(
   SRCS
    rpc_interface_test.cpp
 )
+
+add_integration_test(
+  startup_rpc_stream_test
+  SUITE libc-startup-tests
+  SRCS
+   rpc_stream_test.cpp
+  LOADER_ARGS
+   --threads-x 32
+)

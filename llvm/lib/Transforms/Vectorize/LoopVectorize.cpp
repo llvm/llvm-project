@@ -442,6 +442,8 @@ static std::optional<unsigned> getSmallBestKnownTC(ScalarEvolution &SE,
 namespace {
 // Forward declare GeneratedRTChecks.
 class GeneratedRTChecks;
+
+using SCEV2ValueTy = DenseMap<const SCEV *, Value *>;
 } // namespace
 
 namespace llvm {
@@ -497,8 +499,10 @@ public:
   /// loop and the start value for the canonical induction, if it is != 0. The
   /// latter is the case when vectorizing the epilogue loop. In the case of
   /// epilogue vectorization, this function is overriden to handle the more
-  /// complex control flow around the loops.
-  virtual std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton();
+  /// complex control flow around the loops.  \p ExpandedSCEVs is used to
+  /// look up SCEV expansions for expressions needed during skeleton creation.
+  virtual std::pair<BasicBlock *, Value *>
+  createVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop(VPTransformState &State, VPlan &Plan);
@@ -555,12 +559,13 @@ public:
 
   /// Create a new phi node for the induction variable \p OrigPhi to resume
   /// iteration count in the scalar epilogue, from where the vectorized loop
-  /// left off. In cases where the loop skeleton is more complicated (eg.
-  /// epilogue vectorization) and the resume values can come from an additional
-  /// bypass block, the \p AdditionalBypass pair provides information about the
-  /// bypass block and the end value on the edge from bypass to this loop.
+  /// left off. \p Step is the SCEV-expanded induction step to use. In cases
+  /// where the loop skeleton is more complicated (i.e., epilogue vectorization)
+  /// and the resume values can come from an additional bypass block, the \p
+  /// AdditionalBypass pair provides information about the bypass block and the
+  /// end value on the edge from bypass to this loop.
   PHINode *createInductionResumeValue(
-      PHINode *OrigPhi, const InductionDescriptor &ID,
+      PHINode *OrigPhi, const InductionDescriptor &ID, Value *Step,
       ArrayRef<BasicBlock *> BypassBlocks,
       std::pair<BasicBlock *, Value *> AdditionalBypass = {nullptr, nullptr});
 
@@ -646,6 +651,7 @@ protected:
   /// block, the \p AdditionalBypass pair provides information about the bypass
   /// block and the end value on the edge from bypass to this loop.
   void createInductionResumeValues(
+      const SCEV2ValueTy &ExpandedSCEVs,
       std::pair<BasicBlock *, Value *> AdditionalBypass = {nullptr, nullptr});
 
   /// Complete the loop skeleton by adding debug MDs, creating appropriate
@@ -835,15 +841,16 @@ public:
 
   // Override this function to handle the more complex control flow around the
   // three loops.
-  std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton() final {
-    return createEpilogueVectorizedLoopSkeleton();
+  std::pair<BasicBlock *, Value *> createVectorizedLoopSkeleton(
+      const SCEV2ValueTy &ExpandedSCEVs) final {
+    return createEpilogueVectorizedLoopSkeleton(ExpandedSCEVs);
   }
 
   /// The interface for creating a vectorized skeleton using one of two
   /// different strategies, each corresponding to one execution of the vplan
   /// as described above.
   virtual std::pair<BasicBlock *, Value *>
-  createEpilogueVectorizedLoopSkeleton() = 0;
+  createEpilogueVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) = 0;
 
   /// Holds and updates state information required to vectorize the main loop
   /// and its epilogue in two separate passes. This setup helps us avoid
@@ -871,7 +878,8 @@ public:
                                        EPI, LVL, CM, BFI, PSI, Check) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
-  std::pair<BasicBlock *, Value *> createEpilogueVectorizedLoopSkeleton() final;
+  std::pair<BasicBlock *, Value *>
+  createEpilogueVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) final;
 
 protected:
   /// Emits an iteration count bypass check once for the main loop (when \p
@@ -901,7 +909,8 @@ public:
   }
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (ie the second pass of vplan execution).
-  std::pair<BasicBlock *, Value *> createEpilogueVectorizedLoopSkeleton() final;
+  std::pair<BasicBlock *, Value *>
+  createEpilogueVectorizedLoopSkeleton(const SCEV2ValueTy &ExpandedSCEVs) final;
 
 protected:
   /// Emits an iteration count bypass check after the main vector loop has
@@ -2424,21 +2433,6 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
   }
 }
 
-// Generate code for the induction step. Note that induction steps are
-// required to be loop-invariant
-static Value *CreateStepValue(const SCEV *Step, ScalarEvolution &SE,
-                              Instruction *InsertBefore,
-                              Loop *OrigLoop = nullptr) {
-  const DataLayout &DL = SE.getDataLayout();
-  assert((!OrigLoop || SE.isLoopInvariant(Step, OrigLoop)) &&
-         "Induction step should be loop invariant");
-  if (auto *E = dyn_cast<SCEVUnknown>(Step))
-    return E->getValue();
-
-  SCEVExpander Exp(SE, DL, "induction");
-  return Exp.expandCodeFor(Step, Step->getType(), InsertBefore);
-}
-
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.
@@ -3142,7 +3136,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
 }
 
 PHINode *InnerLoopVectorizer::createInductionResumeValue(
-    PHINode *OrigPhi, const InductionDescriptor &II,
+    PHINode *OrigPhi, const InductionDescriptor &II, Value *Step,
     ArrayRef<BasicBlock *> BypassBlocks,
     std::pair<BasicBlock *, Value *> AdditionalBypass) {
   Value *VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
@@ -3161,8 +3155,6 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
     if (II.getInductionBinOp() && isa<FPMathOperator>(II.getInductionBinOp()))
       B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
 
-    Value *Step =
-        CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
     EndValue =
         emitTransformedIndex(B, VectorTripCount, II.getStartValue(), Step, II);
     EndValue->setName("ind.end");
@@ -3170,8 +3162,6 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
     // Compute the end value for the additional bypass (if applicable).
     if (AdditionalBypass.first) {
       B.SetInsertPoint(&(*AdditionalBypass.first->getFirstInsertionPt()));
-      Value *Step =
-          CreateStepValue(II.getStep(), *PSE.getSE(), &*B.GetInsertPoint());
       EndValueFromAdditionalBypass = emitTransformedIndex(
           B, AdditionalBypass.second, II.getStartValue(), Step, II);
       EndValueFromAdditionalBypass->setName("ind.end");
@@ -3200,7 +3190,22 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
   return BCResumeVal;
 }
 
+/// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
+/// expansion results.
+static Value *getExpandedStep(const InductionDescriptor &ID,
+                              const SCEV2ValueTy &ExpandedSCEVs) {
+  const SCEV *Step = ID.getStep();
+  if (auto *C = dyn_cast<SCEVConstant>(Step))
+    return C->getValue();
+  if (auto *U = dyn_cast<SCEVUnknown>(Step))
+    return U->getValue();
+  auto I = ExpandedSCEVs.find(Step);
+  assert(I != ExpandedSCEVs.end() && "SCEV must be expanded at this point");
+  return I->second;
+}
+
 void InnerLoopVectorizer::createInductionResumeValues(
+    const SCEV2ValueTy &ExpandedSCEVs,
     std::pair<BasicBlock *, Value *> AdditionalBypass) {
   assert(((AdditionalBypass.first && AdditionalBypass.second) ||
           (!AdditionalBypass.first && !AdditionalBypass.second)) &&
@@ -3216,7 +3221,8 @@ void InnerLoopVectorizer::createInductionResumeValues(
     PHINode *OrigPhi = InductionEntry.first;
     const InductionDescriptor &II = InductionEntry.second;
     PHINode *BCResumeVal = createInductionResumeValue(
-        OrigPhi, II, LoopBypassBlocks, AdditionalBypass);
+        OrigPhi, II, getExpandedStep(II, ExpandedSCEVs), LoopBypassBlocks,
+        AdditionalBypass);
     OrigPhi->setIncomingValueForBlock(LoopScalarPreHeader, BCResumeVal);
   }
 }
@@ -3257,7 +3263,8 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton() {
 }
 
 std::pair<BasicBlock *, Value *>
-InnerLoopVectorizer::createVectorizedLoopSkeleton() {
+InnerLoopVectorizer::createVectorizedLoopSkeleton(
+    const SCEV2ValueTy &ExpandedSCEVs) {
   /*
    In this function we generate a new loop. The new loop will contain
    the vectorized instructions while the old loop will continue to run the
@@ -3312,7 +3319,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   emitMemRuntimeChecks(LoopScalarPreHeader);
 
   // Emit phis for the new starting index of the scalar loop.
-  createInductionResumeValues();
+  createInductionResumeValues(ExpandedSCEVs);
 
   return {completeLoopSkeleton(), nullptr};
 }
@@ -6438,11 +6445,6 @@ static const SCEV *getAddressAccessSCEV(
   return PSE.getSCEV(Ptr);
 }
 
-static bool isStrideMul(Instruction *I, LoopVectorizationLegality *Legal) {
-  return Legal->hasStride(I->getOperand(0)) ||
-         Legal->hasStride(I->getOperand(1));
-}
-
 InstructionCost
 LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
                                                         ElementCount VF) {
@@ -7210,8 +7212,12 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor: {
-    // Since we will replace the stride by 1 the multiplication should go away.
-    if (I->getOpcode() == Instruction::Mul && isStrideMul(I, Legal))
+    // If we're speculating on the stride being 1, the multiplication may
+    // fold away.  We can generalize this for all operations using the notion
+    // of neutral elements.  (TODO)
+    if (I->getOpcode() == Instruction::Mul &&
+        (PSE.getSCEV(I->getOperand(0))->isOne() ||
+         PSE.getSCEV(I->getOperand(1))->isOne()))
       return 0;
 
     // Detect reduction patterns
@@ -7674,15 +7680,17 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
-                                           VPlan &BestVPlan,
-                                           InnerLoopVectorizer &ILV,
-                                           DominatorTree *DT,
-                                           bool IsEpilogueVectorization) {
+SCEV2ValueTy LoopVectorizationPlanner::executePlan(
+    ElementCount BestVF, unsigned BestUF, VPlan &BestVPlan,
+    InnerLoopVectorizer &ILV, DominatorTree *DT, bool IsEpilogueVectorization,
+    DenseMap<const SCEV *, Value *> *ExpandedSCEVs) {
   assert(BestVPlan.hasVF(BestVF) &&
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
+  assert(
+      (IsEpilogueVectorization || !ExpandedSCEVs) &&
+      "expanded SCEVs to reuse can only be used during epilogue vectorization");
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << BestVF << ", UF=" << BestUF
                     << '\n');
@@ -7710,7 +7718,8 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   // middle block. The vector loop is created during VPlan execution.
   Value *CanonicalIVStartValue;
   std::tie(State.CFG.PrevBB, CanonicalIVStartValue) =
-      ILV.createVectorizedLoopSkeleton();
+      ILV.createVectorizedLoopSkeleton(ExpandedSCEVs ? *ExpandedSCEVs
+                                                     : State.ExpandedSCEVs);
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
@@ -7778,6 +7787,8 @@ void LoopVectorizationPlanner::executePlan(ElementCount BestVF, unsigned BestUF,
   ILV.fixVectorizedLoop(State, BestVPlan);
 
   ILV.printDebugTracesAtEnd();
+
+  return State.ExpandedSCEVs;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -7799,7 +7810,8 @@ Value *InnerLoopUnroller::getBroadcastInstrs(Value *V) { return V; }
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 std::pair<BasicBlock *, Value *>
-EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
+EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
+    const SCEV2ValueTy &ExpandedSCEVs) {
   createVectorLoopSkeleton("");
 
   // Generate the code to check the minimum iteration count of the vector
@@ -7917,7 +7929,8 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 /// This function is partially responsible for generating the control flow
 /// depicted in https://llvm.org/docs/Vectorizers.html#epilogue-vectorization.
 std::pair<BasicBlock *, Value *>
-EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
+EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
+    const SCEV2ValueTy &ExpandedSCEVs) {
   createVectorLoopSkeleton("vec.epilog.");
 
   // Now, compare the remaining count and if there aren't enough iterations to
@@ -8015,7 +8028,8 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   // check, then the resume value for the induction variable comes from
   // the trip count of the main vector loop, hence passing the AdditionalBypass
   // argument.
-  createInductionResumeValues({VecEpilogueIterationCountCheck,
+  createInductionResumeValues(ExpandedSCEVs,
+                              {VecEpilogueIterationCountCheck,
                                EPI.VectorTripCount} /* AdditionalBypass */);
 
   return {completeLoopSkeleton(), EPResumeVal};
@@ -10387,8 +10401,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                            EPI, &LVL, &CM, BFI, PSI, Checks);
 
         VPlan &BestMainPlan = LVP.getBestPlanFor(EPI.MainLoopVF);
-        LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan, MainILV,
-                        DT, true);
+        auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
+                                             BestMainPlan, MainILV, DT, true);
         ++LoopsVectorized;
 
         // Second pass vectorizes the epilogue and adjusts the control flow
@@ -10404,14 +10418,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
         Header->setName("vec.epilog.vector.body");
 
-        // Re-use the trip count expanded for the main loop, as skeleton
-        // creation needs it as a value that dominates both the scalar and
-        // vector epilogue loops
+        // Re-use the trip count and steps expanded for the main loop, as
+        // skeleton creation needs it as a value that dominates both the scalar
+        // and vector epilogue loops
+        // TODO: This is a workaround needed for epilogue vectorization and it
+        // should be removed once induction resume value creation is done
+        // directly in VPlan.
         EpilogILV.setTripCount(MainILV.getTripCount());
-        if (auto *R = BestEpiPlan.getTripCount()->getDefiningRecipe()) {
-          assert(BestEpiPlan.getTripCount()->getNumUsers() == 0 &&
-                 "trip count VPValue cannot be used in epilogue plan");
-          R->eraseFromParent();
+        for (auto &R : make_early_inc_range(*BestEpiPlan.getPreheader())) {
+          auto *ExpandR = cast<VPExpandSCEVRecipe>(&R);
+          auto *ExpandedVal = BestEpiPlan.getVPValueOrAddLiveIn(
+              ExpandedSCEVs.find(ExpandR->getSCEV())->second);
+          ExpandR->replaceAllUsesWith(ExpandedVal);
+          ExpandR->eraseFromParent();
         }
 
         // Ensure that the start values for any VPWidenIntOrFpInductionRecipe,
@@ -10442,7 +10461,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
             }
 
             ResumeV = MainILV.createInductionResumeValue(
-                IndPhi, *ID, {EPI.MainLoopIterationCountCheck});
+                IndPhi, *ID, getExpandedStep(*ID, ExpandedSCEVs),
+                {EPI.MainLoopIterationCountCheck});
           }
           assert(ResumeV && "Must have a resume value");
           VPValue *StartVal = BestEpiPlan.getVPValueOrAddLiveIn(ResumeV);
@@ -10450,7 +10470,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         }
 
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
-                        DT, true);
+                        DT, true, &ExpandedSCEVs);
         ++LoopsEpilogueVectorized;
 
         if (!MainILV.areSafetyChecksAdded())

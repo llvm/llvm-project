@@ -1184,6 +1184,54 @@ static mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
   return libCall.getResult(0);
 }
 
+static mlir::Value genLibSplitComplexArgsCall(
+    fir::FirOpBuilder &builder, mlir::Location loc, llvm::StringRef libFuncName,
+    mlir::FunctionType libFuncType, llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2 && "Incorrect #args to genLibSplitComplexArgsCall");
+
+  auto getSplitComplexArgsType = [&builder, &args]() -> mlir::FunctionType {
+    mlir::Type ctype = args[0].getType();
+    auto fKind = ctype.cast<fir::ComplexType>().getFKind();
+    mlir::Type ftype;
+
+    if (fKind == 2)
+      ftype = builder.getF16Type();
+    else if (fKind == 3)
+      ftype = builder.getBF16Type();
+    else if (fKind == 4)
+      ftype = builder.getF32Type();
+    else if (fKind == 8)
+      ftype = builder.getF64Type();
+    else if (fKind == 10)
+      ftype = builder.getF80Type();
+    else if (fKind == 16)
+      ftype = builder.getF128Type();
+    else
+      assert(0 && "Unsupported Complex Type");
+
+    return builder.getFunctionType({ftype, ftype, ftype, ftype}, {ctype});
+  };
+
+  llvm::SmallVector<mlir::Value, 4> splitArgs;
+  mlir::Value cplx1 = args[0];
+  auto real1 = fir::factory::Complex{builder, loc}.extractComplexPart(
+      cplx1, /*isImagPart=*/false);
+  splitArgs.push_back(real1);
+  auto imag1 = fir::factory::Complex{builder, loc}.extractComplexPart(
+      cplx1, /*isImagPart=*/true);
+  splitArgs.push_back(imag1);
+  mlir::Value cplx2 = args[1];
+  auto real2 = fir::factory::Complex{builder, loc}.extractComplexPart(
+      cplx2, /*isImagPart=*/false);
+  splitArgs.push_back(real2);
+  auto imag2 = fir::factory::Complex{builder, loc}.extractComplexPart(
+      cplx2, /*isImagPart=*/true);
+  splitArgs.push_back(imag2);
+
+  return genLibCall(builder, loc, libFuncName, getSplitComplexArgsType(),
+                    splitArgs);
+}
+
 template <typename T>
 static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
                              llvm::StringRef mathLibFuncName,
@@ -1345,6 +1393,22 @@ static constexpr MathOperation mathOperations[] = {
     {"cosh", "cosh", genF64F64FuncType, genLibCall},
     {"cosh", "ccoshf", genComplexComplexFuncType<4>, genLibCall},
     {"cosh", "ccosh", genComplexComplexFuncType<8>, genLibCall},
+    {"divc",
+     {},
+     genComplexComplexComplexFuncType<2>,
+     genComplexMathOp<mlir::complex::DivOp>},
+    {"divc",
+     {},
+     genComplexComplexComplexFuncType<3>,
+     genComplexMathOp<mlir::complex::DivOp>},
+    {"divc", "__divsc3", genComplexComplexComplexFuncType<4>,
+     genLibSplitComplexArgsCall},
+    {"divc", "__divdc3", genComplexComplexComplexFuncType<8>,
+     genLibSplitComplexArgsCall},
+    {"divc", "__divxc3", genComplexComplexComplexFuncType<10>,
+     genLibSplitComplexArgsCall},
+    {"divc", "__divtc3", genComplexComplexComplexFuncType<16>,
+     genLibSplitComplexArgsCall},
     {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
     {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
     {"erfc", "erfcf", genF32F32FuncType, genLibCall},
@@ -4843,6 +4907,13 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
 
   // Get the DIM argument.
   mlir::Value dim = fir::getBase(args[1]);
+  if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
+    // If it is a compile time constant, skip the runtime call.
+    return builder.createConvert(loc, resultType,
+                                 fir::factory::readExtent(builder, loc,
+                                                          fir::BoxValue{array},
+                                                          cstDim.value() - 1));
+  }
   if (!fir::isa_ref_type(dim.getType()))
     return builder.createConvert(
         loc, resultType, fir::runtime::genSizeDim(builder, loc, array, dim));
@@ -5659,6 +5730,11 @@ mlir::Value fir::genMin(fir::FirOpBuilder &builder, mlir::Location loc,
   return IntrinsicLibrary{builder, loc}
       .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
                                                               args);
+}
+
+mlir::Value fir::genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Type type, mlir::Value x, mlir::Value y) {
+  return IntrinsicLibrary{builder, loc}.genRuntimeCall("divc", type, {x, y});
 }
 
 mlir::Value fir::genPow(fir::FirOpBuilder &builder, mlir::Location loc,

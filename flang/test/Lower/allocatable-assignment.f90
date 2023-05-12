@@ -1242,7 +1242,7 @@ subroutine test_both_sides_with_elemental_call(x)
 ! CHECK:       }
 end subroutine
 
-! CHECK: fir.global linkonce @[[error_message]] constant : !fir.char<1,76> {
+! CHECK: fir.global internal @[[error_message]] constant : !fir.char<1,76> {
 ! CHECK:   %[[msg:.*]] = fir.string_lit "array left hand side must be allocated when the right hand side is a scalar\00"(76) : !fir.char<1,76>
 ! CHECK:   fir.has_value %[[msg:.*]] : !fir.char<1,76>
 ! CHECK: }

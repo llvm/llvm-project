@@ -13,11 +13,6 @@
 // RUN: %{cxx} -o %t.exe %t.first.o %t.second.o %{flags} %{link_flags}
 // RUN: %{run}
 
-// Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#    undef __DEPRECATED
-#endif
-
 /*
 BEGIN-SCRIPT
 
@@ -260,8 +255,6 @@ END-SCRIPT
 #if __cplusplus >= 201103L
 #   include <experimental/vector>
 #endif
-#include <ext/hash_map>
-#include <ext/hash_set>
 // GENERATED-MARKER
 
 #if defined(WITH_MAIN)

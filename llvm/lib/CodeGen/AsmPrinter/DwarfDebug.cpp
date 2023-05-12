@@ -1569,7 +1569,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
 
   SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
   LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF side table\n");
-  for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
+  for (const auto &VI : Asm->MF->getInStackSlotVariableDbgInfo()) {
     if (!VI.Var)
       continue;
     assert(VI.Var->isValidLocationForIntrinsic(VI.Loc) &&
@@ -1589,7 +1589,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
     auto RegVar = std::make_unique<OldDbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
-    RegVar->initializeMMI(VI.Expr, VI.Slot);
+    RegVar->initializeMMI(VI.Expr, VI.getStackSlot());
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
                       << "\n");
 

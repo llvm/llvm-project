@@ -246,7 +246,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (CUresult err = cuMemsetD32(dev_ret, 0, 1))
     handle_error(err);
 
-  uint64_t port_size = __llvm_libc::rpc::default_port_count;
+  uint64_t port_size = __llvm_libc::rpc::DEFAULT_PORT_COUNT;
   uint32_t warp_size = 32;
 
   uint64_t rpc_shared_buffer_size =

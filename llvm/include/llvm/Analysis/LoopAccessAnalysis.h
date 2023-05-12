@@ -184,7 +184,7 @@ public:
   ///
   /// Only checks sets with elements in \p CheckDeps.
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-                   const ValueToValueMap &Strides);
+                   const DenseMap<Value *, const SCEV *> &Strides);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -316,7 +316,7 @@ private:
   /// Otherwise, this function returns true signaling a possible dependence.
   Dependence::DepType isDependent(const MemAccessInfo &A, unsigned AIdx,
                                   const MemAccessInfo &B, unsigned BIdx,
-                                  const ValueToValueMap &Strides);
+                                  const DenseMap<Value *, const SCEV *> &Strides);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
@@ -612,10 +612,9 @@ public:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  const ValueToValueMap &getSymbolicStrides() const { return SymbolicStrides; }
-
-  /// Pointer has a symbolic stride.
-  bool hasStride(Value *V) const { return StrideSet.count(V); }
+  const DenseMap<Value *, const SCEV *> &getSymbolicStrides() const {
+    return SymbolicStrides;
+  }
 
   /// Print the information about the memory accesses in the loop.
   void print(raw_ostream &OS, unsigned Depth = 0) const;
@@ -699,10 +698,7 @@ private:
 
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
-  ValueToValueMap SymbolicStrides;
-
-  /// Set of symbolic strides values.
-  SmallPtrSet<Value *, 8> StrideSet;
+  DenseMap<Value *, const SCEV *> SymbolicStrides;
 };
 
 Value *stripIntegerCast(Value *V);
@@ -716,9 +712,10 @@ Value *stripIntegerCast(Value *V);
 ///
 /// \p PtrToStride provides the mapping between the pointer value and its
 /// stride as collected by LoopVectorizationLegality::collectStridedAccess.
-const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
-                                      const ValueToValueMap &PtrToStride,
-                                      Value *Ptr);
+const SCEV *
+replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
+                          const DenseMap<Value *, const SCEV *> &PtrToStride,
+                          Value *Ptr);
 
 /// If the pointer has a constant stride return it in units of the access type
 /// size.  Otherwise return std::nullopt.
@@ -737,7 +734,7 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp,
-             const ValueToValueMap &StridesMap = ValueToValueMap(),
+             const DenseMap<Value *, const SCEV *> &StridesMap = DenseMap<Value *, const SCEV *>(),
              bool Assume = false, bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are

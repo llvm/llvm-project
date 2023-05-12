@@ -311,9 +311,15 @@ public:
   /// TODO: \p IsEpilogueVectorization is needed to avoid issues due to epilogue
   /// vectorization re-using plans for both the main and epilogue vector loops.
   /// It should be removed once the re-use issue has been fixed.
-  void executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
-                   InnerLoopVectorizer &LB, DominatorTree *DT,
-                   bool IsEpilogueVectorization);
+  /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
+  /// to re-use expansion results generated during main plan execution. Returns
+  /// a mapping of SCEVs to their expanded IR values. Note that this is a
+  /// temporary workaround needed due to the current epilogue handling.
+  DenseMap<const SCEV *, Value *>
+  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+              InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool IsEpilogueVectorization,
+              DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);

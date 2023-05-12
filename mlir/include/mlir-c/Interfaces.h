@@ -60,6 +60,33 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirInferTypeOpInterfaceInferReturnTypes(
     void *properties, intptr_t nRegions, MlirRegion *regions,
     MlirTypesCallback callback, void *userData);
 
+//===----------------------------------------------------------------------===//
+// InferShapedTypeOpInterface.
+//===----------------------------------------------------------------------===//
+
+/// Returns the interface TypeID of the InferShapedTypeOpInterface.
+MLIR_CAPI_EXPORTED MlirTypeID mlirInferShapedTypeOpInterfaceTypeID();
+
+/// These callbacks are used to return multiple shaped type components from
+/// functions while transferring ownership to the caller. The first argument is
+/// the has rank boolean followed by the the rank and a pointer to the shape
+/// (if applicable). The next argument is the element type, then the attribute.
+/// The last argument is an opaque pointer forwarded to the callback by the
+/// caller. This callback will be called potentially multiple times for each
+/// shaped type components.
+typedef void (*MlirShapedTypeComponentsCallback)(bool, intptr_t,
+                                                 const int64_t *, MlirType,
+                                                 MlirAttribute, void *);
+
+/// Infers the return shaped type components of the operation. Calls `callback`
+/// with the types of inferred arguments on success. Returns failure otherwise.
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirInferShapedTypeOpInterfaceInferReturnTypes(
+    MlirStringRef opName, MlirContext context, MlirLocation location,
+    intptr_t nOperands, MlirValue *operands, MlirAttribute attributes,
+    void *properties, intptr_t nRegions, MlirRegion *regions,
+    MlirShapedTypeComponentsCallback callback, void *userData);
+
 #ifdef __cplusplus
 }
 #endif

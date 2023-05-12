@@ -243,7 +243,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 
   // Skip any line #0 entries - they are implementation details
   if (line.line == 0)
-    return false;
+    return true;
 
   ThreadSP thread_sp = exe_ctx.GetThreadSP();
   if (thread_sp) {

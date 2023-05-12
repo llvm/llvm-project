@@ -1370,6 +1370,41 @@ For example, compiling code with ``-fmodules`` enables the use of Modules.
 
 More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
+Language Extensions Back-ported to Previous Standards
+=====================================================
+
+=================================== ================================ ============= ============= ==================================
+Feature                             Feature Test Macro               Introduced In Backported To Required Flags
+=================================== ================================ ============= ============= ==================================
+variadic templates                  __cpp_variadic_templates         C++11         C++03
+Alias templates                     __cpp_alias_templates            C++11         C++03
+Non-static data member initializers __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop            __cpp_range_based_for            C++11         C++03
+RValue references                   __cpp_rvalue_references          C++11         C++03
+Attributes                          __cpp_attributes                 C++11         C++03         -fdouble-square-bracket-attributes
+variable templates                  __cpp_variable_templates         C++14         C++03
+Binary literals                     __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                   __cpp_constexpr                  C++14         C++11
+``if constexpr``                    __cpp_if_constexpr               C++17         C++11
+fold expressions                    __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value   __cpp_capture_star_this          C++17         C++11
+Attributes on enums                 __cpp_enumerator_attributes      C++17         C++11
+Guaranteed copy elision             __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals       __cpp_hex_float                  C++17         C++03
+``inline`` variables                __cpp_inline_variables           C++17         C++03
+Attributes on namespaces            __cpp_namespace_attributes       C++17         C++11
+Structured bindings                 __cpp_structured_bindings        C++17         C++03
+template template arguments         __cpp_template_template_args     C++17         C++03
+``static operator[]``               __cpp_multidimensional_subscript C++20         C++03
+Designated initializers             __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``            __cpp_conditional_explicit       C++20         C++03
+``using enum``                      __cpp_using_enum                 C++20         C++03
+``if consteval``                    __cpp_if_consteval               C++23         C++20
+``static operator()``               __cpp_static_call_operator       C++23         C++03
+----------------------------------- -------------------------------- ------------- ------------- ----------------------------------
+Designated initializers                                              C99           C89
+=================================== ================================ ============= ============= ==================================
+
 Type Trait Primitives
 =====================
 
