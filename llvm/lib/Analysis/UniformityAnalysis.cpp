@@ -66,16 +66,16 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
 }
 
 template <>
-bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
-    const Instruction &I, const Cycle &DefCycle) const {
-  assert(!isAlwaysUniform(I));
-  for (const Use &U : I.operands()) {
-    if (auto *I = dyn_cast<Instruction>(&U)) {
-      if (DefCycle.contains(I->getParent()))
-        return true;
-    }
+void llvm::GenericUniformityAnalysisImpl<
+    SSAContext>::propagateTemporalDivergence(const Instruction &I,
+                                             const Cycle &DefCycle) {
+  for (const Use &U : I.uses()) {
+    auto *UserInstr = cast<Instruction>(U.getUser());
+    if (DefCycle.contains(UserInstr->getParent()))
+      continue;
+    if (markDivergent(*UserInstr))
+      Worklist.push_back(UserInstr);
   }
-  return false;
 }
 
 template <>

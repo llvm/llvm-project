@@ -456,14 +456,12 @@ private:
 
   /// \brief Mark all instruction as divergent that use a value defined in \p
   /// OuterDivCycle. Push their users on the worklist.
-  void analyzeTemporalDivergence(const InstructionT &I,
-                                 const CycleT &OuterDivCycle);
+  void propagateTemporalDivergence(const InstructionT &I,
+                                   const CycleT &OuterDivCycle);
 
   /// \brief Push all users of \p Val (in the region) to the worklist.
   void pushUsers(const InstructionT &I);
   void pushUsers(ConstValueRefT V);
-
-  bool usesValueFromCycle(const InstructionT &I, const CycleT &DefCycle) const;
 
   /// \brief Whether \p Def is divergent when read in \p ObservingBlock.
   bool isTemporalDivergent(const BlockT &ObservingBlock,
@@ -809,24 +807,6 @@ void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
   UniformOverrides.insert(&Instr);
 }
 
-template <typename ContextT>
-void GenericUniformityAnalysisImpl<ContextT>::analyzeTemporalDivergence(
-    const InstructionT &I, const CycleT &OuterDivCycle) {
-  if (isDivergent(I))
-    return;
-
-  LLVM_DEBUG(dbgs() << "Analyze temporal divergence: " << Context.print(&I)
-                    << "\n");
-  if (isAlwaysUniform(I))
-    return;
-
-  if (!usesValueFromCycle(I, OuterDivCycle))
-    return;
-
-  if (markDivergent(I))
-    Worklist.push_back(&I);
-}
-
 // Mark all external users of values defined inside \param
 // OuterDivCycle as divergent.
 //
@@ -841,74 +821,9 @@ void GenericUniformityAnalysisImpl<ContextT>::analyzeTemporalDivergence(
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::analyzeCycleExitDivergence(
     const CycleT &OuterDivCycle) {
-  // Set of blocks that are dominated by the cycle, i.e., each is only
-  // reachable from paths that pass through the cycle.
-  SmallPtrSet<BlockT *, 16> DomRegion;
-
-  // The boundary of DomRegion, formed by blocks that are not
-  // dominated by the cycle.
-  SmallVector<BlockT *> DomFrontier;
-  OuterDivCycle.getExitBlocks(DomFrontier);
-
-  // Returns true if BB is dominated by the cycle.
-  auto isInDomRegion = [&](BlockT *BB) {
-    for (auto *P : predecessors(BB)) {
-      if (OuterDivCycle.contains(P))
-        continue;
-      if (DomRegion.count(P))
-        continue;
-      return false;
-    }
-    return true;
-  };
-
-  // Keep advancing the frontier along successor edges, while
-  // promoting blocks to DomRegion.
-  while (true) {
-    bool Promoted = false;
-    SmallVector<BlockT *> Temp;
-    for (auto *W : DomFrontier) {
-      if (!isInDomRegion(W)) {
-        Temp.push_back(W);
-        continue;
-      }
-      DomRegion.insert(W);
-      Promoted = true;
-      for (auto *Succ : successors(W)) {
-        if (DomRegion.contains(Succ))
-          continue;
-        Temp.push_back(Succ);
-      }
-    }
-    if (!Promoted)
-      break;
-
-    // Restore the set property for the temporary vector
-    llvm::sort(Temp);
-    Temp.erase(std::unique(Temp.begin(), Temp.end()), Temp.end());
-
-    DomFrontier = Temp;
-  }
-
-  // At DomFrontier, only the PHI nodes are affected by temporal
-  // divergence.
-  for (const auto *UserBlock : DomFrontier) {
-    LLVM_DEBUG(dbgs() << "Analyze phis after cycle exit: "
-                      << Context.print(UserBlock) << "\n");
-    for (const auto &Phi : UserBlock->phis()) {
-      LLVM_DEBUG(dbgs() << "  " << Context.print(&Phi) << "\n");
-      analyzeTemporalDivergence(Phi, OuterDivCycle);
-    }
-  }
-
-  // All instructions inside the dominance region are affected by
-  // temporal divergence.
-  for (const auto *UserBlock : DomRegion) {
-    LLVM_DEBUG(dbgs() << "Analyze non-phi users after cycle exit: "
-                      << Context.print(UserBlock) << "\n");
-    for (const auto &I : *UserBlock) {
-      LLVM_DEBUG(dbgs() << "  " << Context.print(&I) << "\n");
-      analyzeTemporalDivergence(I, OuterDivCycle);
+  for (auto *BB : OuterDivCycle.blocks()) {
+    for (auto &II : *BB) {
+      propagateTemporalDivergence(II, OuterDivCycle);
     }
   }
 }

@@ -93,24 +93,23 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
 }
 
 template <>
-bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
-    const MachineInstr &I, const MachineCycle &DefCycle) const {
-  assert(!isAlwaysUniform(I));
+void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
+    propagateTemporalDivergence(const MachineInstr &I,
+                                const MachineCycle &DefCycle) {
+  const auto &RegInfo = F.getRegInfo();
   for (auto &Op : I.operands()) {
-    if (!Op.isReg() || !Op.readsReg())
+    if (!Op.isReg() || !Op.isDef())
+      continue;
+    if (!Op.getReg().isVirtual())
       continue;
     auto Reg = Op.getReg();
-
-    // FIXME: Physical registers need to be properly checked instead of always
-    // returning true
-    if (Reg.isPhysical())
-      return true;
-
-    auto *Def = F.getRegInfo().getVRegDef(Reg);
-    if (DefCycle.contains(Def->getParent()))
-      return true;
+    for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
+      if (DefCycle.contains(UserInstr.getParent()))
+        continue;
+      if (markDivergent(UserInstr))
+        Worklist.push_back(&UserInstr);
+    }
   }
-  return false;
 }
 
 template <>
