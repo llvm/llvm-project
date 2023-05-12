@@ -1813,6 +1813,7 @@ mlir::cir::FuncOp CIRGenModule::GetOrCreateCIRFunction(
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
+  assert(SLoc.isValid() && "expected valid source location");
   const SourceManager &SM = astCtx.getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
   StringRef Filename = PLoc.getFilename();
@@ -1821,6 +1822,7 @@ mlir::Location CIRGenModule::getLoc(SourceLocation SLoc) {
 }
 
 mlir::Location CIRGenModule::getLoc(SourceRange SLoc) {
+  assert(SLoc.isValid() && "expected valid source location");
   mlir::Location B = getLoc(SLoc.getBegin());
   mlir::Location E = getLoc(SLoc.getEnd());
   SmallVector<mlir::Location, 2> locs = {B, E};
