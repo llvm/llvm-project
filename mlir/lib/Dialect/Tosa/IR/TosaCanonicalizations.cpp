@@ -1006,3 +1006,13 @@ OpFoldResult tosa::LogOp::fold(FoldAdaptor adaptor) {
 
   return {};
 }
+
+OpFoldResult tosa::ExpOp::fold(FoldAdaptor adaptor) {
+  auto input = getInput1();
+  // Element-wise exp(log(x)) = x
+  if (auto op = input.getDefiningOp<tosa::LogOp>()) {
+    return op.getInput1();
+  }
+
+  return {};
+}
