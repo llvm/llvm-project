@@ -51,7 +51,8 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
 //
 //===----------------------------------------------------------------------===//
 def CIR_BoolType :
-    CIR_Type<"Bool", "bool"> {
+    CIR_Type<"Bool", "bool",
+             [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
 
   let summary = "CIR bool type";
   let description = [{
