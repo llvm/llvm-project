@@ -20,9 +20,6 @@
 
 namespace llvm {
 
-/// Represents an undefined index in the suffix tree.
-const unsigned EmptyIdx = -1;
-
 /// A node in a suffix tree which represents a substring or suffix.
 ///
 /// Each node has either no children or at least two children, with the root
@@ -40,6 +37,8 @@ const unsigned EmptyIdx = -1;
 /// suffix in \p SuffixIdx.
 struct SuffixTreeNode {
 public:
+  /// Represents an undefined index in the suffix tree.
+  static const unsigned EmptyIdx = -1;
   enum class NodeKind { ST_Leaf, ST_Internal };
 
 private:
@@ -233,7 +232,7 @@ private:
     SuffixTreeInternalNode *Node = nullptr;
 
     /// The index of the first character in the substring currently being added.
-    unsigned Idx = EmptyIdx;
+    unsigned Idx = SuffixTreeNode::EmptyIdx;
 
     /// The length of the substring we have to add at the current step.
     unsigned Len = 0;
@@ -264,6 +263,11 @@ private:
   SuffixTreeInternalNode *insertInternalNode(SuffixTreeInternalNode *Parent,
                                              unsigned StartIdx, unsigned EndIdx,
                                              unsigned Edge);
+
+  /// Allocate the root node and add it to the tree.
+  ///
+  /// \returns A pointer to the root.
+  SuffixTreeInternalNode *insertRoot();
 
   /// Set the suffix indices of the leaves to the start indices of their
   /// respective suffixes.
