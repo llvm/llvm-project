@@ -104,8 +104,8 @@ on support follow.
      ``Zfh``          Supported
      ``Zfhmin``       Supported
      ``Zfinx``        Supported
-     ``Zhinx``        Assembly Support
-     ``Zhinxmin``     Assembly Support
+     ``Zhinx``        Supported
+     ``Zhinxmin``     Supported
      ``Zicbom``       Assembly Support
      ``Zicbop``       Assembly Support
      ``Zicboz``       Assembly Support
