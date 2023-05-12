@@ -311,8 +311,9 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI,
   // TODO:
   //       - Further, data dependency and alias analysis can validate
   //         that load and stores never derive from the stack pointer.
-  if (MI.mayLoadOrStore() && (MI.isCall() || MI.hasUnmodeledSideEffects() ||
-                              !all_of(MI.memoperands(), IsKnownNonStackPtr)))
+  if (MI.mayLoadOrStore() &&
+      (MI.isCall() || MI.hasUnmodeledSideEffects() || MI.memoperands_empty() ||
+       !all_of(MI.memoperands(), IsKnownNonStackPtr)))
     return true;
 
   if (MI.getOpcode() == FrameSetupOpcode ||
