@@ -221,6 +221,10 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
              /*timeout_hint=*/1024, HSA_WAIT_STATE_ACTIVE) != 0)
     handle_server();
 
+  // Handle the server one more time in case the kernel exited with a pending
+  // send still in flight.
+  handle_server();
+
   // Destroy the resources acquired to launch the kernel and return.
   if (hsa_status_t err = hsa_amd_memory_pool_free(args))
     handle_error(err);
