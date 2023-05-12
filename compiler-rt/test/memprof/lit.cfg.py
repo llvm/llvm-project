@@ -6,15 +6,6 @@ import re
 
 import lit.formats
 
-# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
-# it's not available.
-try:
-  import shlex
-  sh_quote = shlex.quote
-except:
-  import pipes
-  sh_quote = pipes.quote
-
 def get_required_attr(config, attr_name):
   attr_value = getattr(config, attr_name, None)
   if attr_value == None:
