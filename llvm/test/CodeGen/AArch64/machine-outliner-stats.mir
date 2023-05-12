@@ -1,0 +1,33 @@
+# RUN: llc %s -mtriple aarch64 -stats -run-pass=machine-outliner -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Check that we can collect both outliner and suffix tree statistics.
+#
+# For the suffix tree, we should get
+# - 1 leaf per suffix
+# - 2 internal nodes, 1 for the root and 1 for the duplicate instruction
+
+# CHECK: 1 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
+# CHECK-NEXT: 8 machine-outliner - Outlinable instructions mapped
+# CHECK-NEXT: 1 machine-outliner - Sentinel values inserted during mapping
+# CHECK-NEXT: 9 machine-outliner - Total number of instructions mapped and saved to mapping vector
+# CHECK-NEXT: 2 suffix-tree      - Internal nodes allocated
+# CHECK-NEXT: 9 suffix-tree      - Leaf nodes allocated
+
+...
+---
+name:           fn
+tracksRegLiveness: true
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    liveins: $x9
+    $x9 = ADDXri $x9, 16, 1
+    $x9 = ADDXri $x9, 16, 2
+    $x9 = ADDXri $x9, 16, 3
+    $x9 = ADDXri $x9, 16, 4
+    $x9 = ADDXri $x9, 16, 5
+    $x9 = ADDXri $x9, 16, 6
+    $x9 = ADDXri $x9, 16, 1
+    RET undef $x9

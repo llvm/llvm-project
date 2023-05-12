@@ -33,10 +33,17 @@
 #define LLVM_SUPPORT_SUFFIXTREE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SuffixTreeNode.h"
+#define DEBUG_TYPE "suffix-tree"
 
 namespace llvm {
+// Statistics for the number of nodes allocated. Useful for estimating tree
+// memory usage.
+STATISTIC(NumLeafNodesAllocated, "Leaf nodes allocated");
+STATISTIC(NumInternalNodesAllocated, "Internal nodes allocated");
+
 class SuffixTree {
 public:
   /// Each element is an integer representing an instruction in the module.
@@ -196,5 +203,5 @@ public:
 };
 
 } // namespace llvm
-
+#undef DEBUG_TYPE
 #endif // LLVM_SUPPORT_SUFFIXTREE_H
