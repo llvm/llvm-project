@@ -14,6 +14,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/NativeFormatting.h"
 #include <cctype>
+#include <cerrno>
 #include <optional>
 
 namespace llvm {

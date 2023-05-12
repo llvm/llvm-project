@@ -163,6 +163,14 @@ HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
     assert(ClassTemplSpec->getSpecializedTemplate() && "No class template?");
     if (ClassTemplSpec->getSpecializedTemplate()->isMemberSpecialization())
       return Response::Done();
+
+    // If this was instantiated from a partial template specialization, we need
+    // to get the next level of declaration context from the partial
+    // specialization, as the ClassTemplateSpecializationDecl's
+    // DeclContext/LexicalDeclContext will be for the primary template.
+    if (auto *InstFromPartialTempl = ClassTemplSpec->getSpecializedTemplateOrPartial()
+                      .dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+      return Response::ChangeDecl(InstFromPartialTempl->getLexicalDeclContext());
   }
   return Response::UseNextDecl(ClassTemplSpec);
 }

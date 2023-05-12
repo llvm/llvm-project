@@ -235,6 +235,18 @@ LogicalResult acc::UpdateDeviceOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// UseDeviceOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::UseDeviceOp::verify() {
+  // Test for all clauses this operation can be decomposed from:
+  if (getDataClause() != acc::DataClause::acc_use_device)
+    return emitError(
+        "data clause associated with use_device operation must match its intent"
+        " or specify original clause this operation was decomposed from");
+  return success();
+}
+
 template <typename StructureOp>
 static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
                                 unsigned nRegions = 1) {
@@ -357,6 +369,21 @@ Value KernelsOp::getDataOperand(unsigned i) {
 
 LogicalResult acc::KernelsOp::verify() {
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
+}
+
+//===----------------------------------------------------------------------===//
+// HostDataOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::HostDataOp::verify() {
+  if (getDataOperands().empty())
+    return emitError("at least one operand must appear on the host_data "
+                     "operation");
+
+  for (mlir::Value operand : getDataOperands())
+    if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
+      return emitError("expect data entry operation as defining op");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

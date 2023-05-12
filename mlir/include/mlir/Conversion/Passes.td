@@ -733,20 +733,6 @@ def ConvertOpenACCToSCF : Pass<"convert-openacc-to-scf", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
-// OpenACCToLLVM
-//===----------------------------------------------------------------------===//
-
-def ConvertOpenACCToLLVMPass : Pass<"convert-openacc-to-llvm", "ModuleOp"> {
-  let summary = "Convert the OpenACC ops to LLVM dialect";
-  let dependentDialects = ["LLVM::LLVMDialect"];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-           /*default=*/"true", "Generate LLVM IR using opaque pointers "
-           "instead of typed pointers">,
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // OpenMPToLLVM
 //===----------------------------------------------------------------------===//
 

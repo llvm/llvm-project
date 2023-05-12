@@ -87,6 +87,7 @@ def OpenACC_GetDevicePtrClause    : I64EnumAttrCase<"acc_getdeviceptr", 16>;
 def OpenACC_UpdateHost            : I64EnumAttrCase<"acc_update_host", 17>;
 def OpenACC_UpdateSelf            : I64EnumAttrCase<"acc_update_self", 18>;
 def OpenACC_UpdateDevice          : I64EnumAttrCase<"acc_update_device", 19>;
+def OpenACC_UseDevice             : I64EnumAttrCase<"acc_use_device", 20>;
 
 def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
     "data clauses supported by OpenACC",
@@ -96,7 +97,7 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
      OpenACC_AttachClause, OpenACC_DetachClause, OpenACC_NoCreateClause,
      OpenACC_PrivateClause, OpenACC_FirstPrivateClause,
      OpenACC_IsDevicePtrClause, OpenACC_GetDevicePtrClause, OpenACC_UpdateHost,
-     OpenACC_UpdateSelf, OpenACC_UpdateDevice,
+     OpenACC_UpdateSelf, OpenACC_UpdateDevice, OpenACC_UseDevice,
     ]> {
   let cppNamespace = "::mlir::acc";
 }
@@ -296,6 +297,14 @@ def OpenACC_GetDevicePtrOp : OpenACC_DataEntryOp<"getdeviceptr",
 def OpenACC_UpdateDeviceOp : OpenACC_DataEntryOp<"update_device",
     "mlir::acc::DataClause::acc_update_device"> {
   let summary = "Represents acc update device semantics.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.8 use_device clause
+//===----------------------------------------------------------------------===//
+def OpenACC_UseDeviceOp : OpenACC_DataEntryOp<"use_device",
+    "mlir::acc::DataClause::acc_use_device"> {
+  let summary = "Represents acc use_device semantics.";
 }
 
 // Data exit operation does not refer to OpenACC spec terminology, but to
@@ -737,6 +746,43 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
   }];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.8 Host_Data Construct
+//===----------------------------------------------------------------------===//
+
+def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
+  let summary = "host_data construct";
+
+  let description = [{
+    The "acc.host_data" operation represents the OpenACC host_data construct.
+
+    Example:
+
+    ```mlir
+    %0 = acc.use_device varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+    acc.host_data dataOperands(%0 : !llvm.ptr<f32>) {
+
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataOperands,
+                       UnitAttr:$ifPresent);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+      | `dataOperands` `(` $dataOperands `:` type($dataOperands) `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+
   let hasVerifier = 1;
 }
 
