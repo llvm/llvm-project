@@ -109,6 +109,11 @@ class MMAMatrixOf<list<Type> allowedTypes> :
   "::llvm::cast<::mlir::gpu::MMAMatrixType>($_self).getElementType()",
   "gpu.mma_matrix", "::mlir::gpu::MMAMatrixType">;
 
+// Generic type for all sparse handles (could be refined).
+def GPU_SparseHandle : DialectType<
+  GPU_Dialect, CPred<"$_self.isa<::mlir::gpu::SparseHandleType>()">, "sparse handle type">,
+             BuildableType<"mlir::gpu::SparseHandleType::get($_builder.getContext())">;
+
 //===----------------------------------------------------------------------===//
 // GPU Interfaces.
 //===----------------------------------------------------------------------===//

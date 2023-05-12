@@ -266,20 +266,22 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
 }
 
 ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
-  DWARFAttributes attributes;
-  size_t num_attributes = die.GetAttributes(attributes);
-  for (size_t i = 0; i < num_attributes; ++i) {
+  DWARFAttributes attributes = die.GetAttributes();
+  for (size_t i = 0; i < attributes.Size(); ++i) {
     dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    default:
+      break;
     case DW_AT_abstract_origin:
       abstract_origin = form_value;
       break;
 
     case DW_AT_accessibility:
-      accessibility = DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
+      accessibility =
+          DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
       break;
 
     case DW_AT_artificial:
@@ -1383,9 +1385,8 @@ void DWARFASTParserClang::ParseInheritance(
     return;
 
   // TODO: implement DW_TAG_inheritance type parsing.
-  DWARFAttributes attributes;
-  const size_t num_attributes = die.GetAttributes(attributes);
-  if (num_attributes == 0)
+  DWARFAttributes attributes = die.GetAttributes();
+  if (attributes.Size() == 0)
     return;
 
   DWARFFormValue encoding_form;
@@ -1394,7 +1395,7 @@ void DWARFASTParserClang::ParseInheritance(
   bool is_base_of_class = true;
   off_t member_byte_offset = 0;
 
-  for (uint32_t i = 0; i < num_attributes; ++i) {
+  for (uint32_t i = 0; i < attributes.Size(); ++i) {
     const dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -1426,7 +1427,8 @@ void DWARFASTParserClang::ParseInheritance(
         break;
 
       case DW_AT_accessibility:
-        accessibility = DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
+        accessibility =
+            DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
         break;
 
       case DW_AT_virtuality:
@@ -2001,87 +2003,86 @@ bool DWARFASTParserClang::ParseTemplateDIE(
     [[fallthrough]];
   case DW_TAG_template_type_parameter:
   case DW_TAG_template_value_parameter: {
-    DWARFAttributes attributes;
-    const size_t num_attributes = die.GetAttributes(attributes);
+    DWARFAttributes attributes = die.GetAttributes();
+    if (attributes.Size() == 0)
+      return true;
+
     const char *name = nullptr;
     const char *template_name = nullptr;
     CompilerType clang_type;
     uint64_t uval64 = 0;
     bool uval64_valid = false;
     bool is_default_template_arg = false;
-    if (num_attributes > 0) {
-      DWARFFormValue form_value;
-      for (size_t i = 0; i < num_attributes; ++i) {
-        const dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+    for (size_t i = 0; i < attributes.Size(); ++i) {
+      const dw_attr_t attr = attributes.AttributeAtIndex(i);
 
-        switch (attr) {
-        case DW_AT_name:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            name = form_value.AsCString();
-          break;
+      switch (attr) {
+      case DW_AT_name:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          name = form_value.AsCString();
+        break;
 
-        case DW_AT_GNU_template_name:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            template_name = form_value.AsCString();
-          break;
+      case DW_AT_GNU_template_name:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          template_name = form_value.AsCString();
+        break;
 
-        case DW_AT_type:
-          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-            Type *lldb_type = die.ResolveTypeUID(form_value.Reference());
-            if (lldb_type)
-              clang_type = lldb_type->GetForwardCompilerType();
-          }
-          break;
-
-        case DW_AT_const_value:
-          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-            uval64_valid = true;
-            uval64 = form_value.Unsigned();
-          }
-          break;
-        case DW_AT_default_value:
-          if (attributes.ExtractFormValueAtIndex(i, form_value))
-            is_default_template_arg = form_value.Boolean();
-          break;
-        default:
-          break;
+      case DW_AT_type:
+        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+          Type *lldb_type = die.ResolveTypeUID(form_value.Reference());
+          if (lldb_type)
+            clang_type = lldb_type->GetForwardCompilerType();
         }
+        break;
+
+      case DW_AT_const_value:
+        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+          uval64_valid = true;
+          uval64 = form_value.Unsigned();
+        }
+        break;
+      case DW_AT_default_value:
+        if (attributes.ExtractFormValueAtIndex(i, form_value))
+          is_default_template_arg = form_value.Boolean();
+        break;
+      default:
+        break;
       }
+    }
 
-      clang::ASTContext &ast = m_ast.getASTContext();
-      if (!clang_type)
-        clang_type = m_ast.GetBasicType(eBasicTypeVoid);
+    clang::ASTContext &ast = m_ast.getASTContext();
+    if (!clang_type)
+      clang_type = m_ast.GetBasicType(eBasicTypeVoid);
 
-      if (!is_template_template_argument) {
-        bool is_signed = false;
-        // Get the signed value for any integer or enumeration if available
-        clang_type.IsIntegerOrEnumerationType(is_signed);
+    if (!is_template_template_argument) {
+      bool is_signed = false;
+      // Get the signed value for any integer or enumeration if available
+      clang_type.IsIntegerOrEnumerationType(is_signed);
 
-        if (name && !name[0])
-          name = nullptr;
+      if (name && !name[0])
+        name = nullptr;
 
-        if (tag == DW_TAG_template_value_parameter && uval64_valid) {
-          std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
-          if (!size)
-            return false;
-          llvm::APInt apint(*size, uval64, is_signed);
-          template_param_infos.InsertArg(
-              name,
-              clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
-                                      ClangUtil::GetQualType(clang_type),
-                                      is_default_template_arg));
-        } else {
-          template_param_infos.InsertArg(
-              name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
-                                            /*isNullPtr*/ false,
-                                            is_default_template_arg));
-        }
-      } else {
-        auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
+      if (tag == DW_TAG_template_value_parameter && uval64_valid) {
+        std::optional<uint64_t> size = clang_type.GetBitSize(nullptr);
+        if (!size)
+          return false;
+        llvm::APInt apint(*size, uval64, is_signed);
         template_param_infos.InsertArg(
-            name, clang::TemplateArgument(clang::TemplateName(tplt_type),
+            name, clang::TemplateArgument(ast, llvm::APSInt(apint, !is_signed),
+                                          ClangUtil::GetQualType(clang_type),
+                                          is_default_template_arg));
+      } else {
+        template_param_infos.InsertArg(
+            name, clang::TemplateArgument(ClangUtil::GetQualType(clang_type),
+                                          /*isNullPtr*/ false,
                                           is_default_template_arg));
       }
+    } else {
+      auto *tplt_type = m_ast.CreateTemplateTemplateParmDecl(template_name);
+      template_param_infos.InsertArg(
+          name, clang::TemplateArgument(clang::TemplateName(tplt_type),
+                                        is_default_template_arg));
     }
   }
     return true;
@@ -2241,7 +2242,6 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   const dw_tag_t tag = die.Tag();
 
   assert(clang_type);
-  DWARFAttributes attributes;
   switch (tag) {
   case DW_TAG_structure_type:
   case DW_TAG_union_type:
@@ -2302,57 +2302,57 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
 
   for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
-    if (tag == DW_TAG_enumerator) {
-      DWARFAttributes attributes;
-      const size_t num_child_attributes = die.GetAttributes(attributes);
-      if (num_child_attributes > 0) {
-        const char *name = nullptr;
-        bool got_value = false;
-        int64_t enum_value = 0;
-        Declaration decl;
+    if (tag != DW_TAG_enumerator)
+      continue;
 
-        uint32_t i;
-        for (i = 0; i < num_child_attributes; ++i) {
-          const dw_attr_t attr = attributes.AttributeAtIndex(i);
-          DWARFFormValue form_value;
-          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-            switch (attr) {
-            case DW_AT_const_value:
-              got_value = true;
-              if (is_signed)
-                enum_value = form_value.Signed();
-              else
-                enum_value = form_value.Unsigned();
-              break;
+    DWARFAttributes attributes = die.GetAttributes();
+    if (attributes.Size() == 0)
+      continue;
 
-            case DW_AT_name:
-              name = form_value.AsCString();
-              break;
+    const char *name = nullptr;
+    bool got_value = false;
+    int64_t enum_value = 0;
+    Declaration decl;
 
-            case DW_AT_description:
-            default:
-            case DW_AT_decl_file:
-              decl.SetFile(attributes.CompileUnitAtIndex(i)->GetFile(
-                  form_value.Unsigned()));
-              break;
-            case DW_AT_decl_line:
-              decl.SetLine(form_value.Unsigned());
-              break;
-            case DW_AT_decl_column:
-              decl.SetColumn(form_value.Unsigned());
-              break;
-            case DW_AT_sibling:
-              break;
-            }
-          }
-        }
+    for (size_t i = 0; i < attributes.Size(); ++i) {
+      const dw_attr_t attr = attributes.AttributeAtIndex(i);
+      DWARFFormValue form_value;
+      if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+        switch (attr) {
+        case DW_AT_const_value:
+          got_value = true;
+          if (is_signed)
+            enum_value = form_value.Signed();
+          else
+            enum_value = form_value.Unsigned();
+          break;
 
-        if (name && name[0] && got_value) {
-          m_ast.AddEnumerationValueToEnumerationType(
-              clang_type, decl, name, enum_value, enumerator_byte_size * 8);
-          ++enumerators_added;
+        case DW_AT_name:
+          name = form_value.AsCString();
+          break;
+
+        case DW_AT_description:
+        default:
+        case DW_AT_decl_file:
+          decl.SetFile(
+              attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
+          break;
+        case DW_AT_decl_line:
+          decl.SetLine(form_value.Unsigned());
+          break;
+        case DW_AT_decl_column:
+          decl.SetColumn(form_value.Unsigned());
+          break;
+        case DW_AT_sibling:
+          break;
         }
       }
+    }
+
+    if (name && name[0] && got_value) {
+      m_ast.AddEnumerationValueToEnumerationType(
+          clang_type, decl, name, enum_value, enumerator_byte_size * 8);
+      ++enumerators_added;
     }
   }
   return enumerators_added;
@@ -2501,9 +2501,8 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
                                    ModuleSP module_sp) {
   member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
 
-  DWARFAttributes attributes;
-  const size_t num_attributes = die.GetAttributes(attributes);
-  for (std::size_t i = 0; i < num_attributes; ++i) {
+  DWARFAttributes attributes = die.GetAttributes();
+  for (size_t i = 0; i < attributes.Size(); ++i) {
     const dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -2555,7 +2554,8 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
         break;
 
       case DW_AT_accessibility:
-        accessibility = DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
+        accessibility =
+            DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
         break;
       case DW_AT_artificial:
         is_artificial = form_value.Boolean();
@@ -2586,9 +2586,8 @@ MemberAttributes::MemberAttributes(const DWARFDIE &die,
 
 PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
 
-  DWARFAttributes attributes;
-  const size_t num_attributes = die.GetAttributes(attributes);
-  for (size_t i = 0; i < num_attributes; ++i) {
+  DWARFAttributes attributes = die.GetAttributes();
+  for (size_t i = 0; i < attributes.Size(); ++i) {
     const dw_attr_t attr = attributes.AttributeAtIndex(i);
     DWARFFormValue form_value;
     if (attributes.ExtractFormValueAtIndex(i, form_value)) {
@@ -3064,87 +3063,87 @@ size_t DWARFASTParserClang::ParseChildParameters(
     const dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter: {
-      DWARFAttributes attributes;
-      const size_t num_attributes = die.GetAttributes(attributes);
-      if (num_attributes > 0) {
-        const char *name = nullptr;
-        DWARFFormValue param_type_die_form;
-        bool is_artificial = false;
-        // one of None, Auto, Register, Extern, Static, PrivateExtern
+      DWARFAttributes attributes = die.GetAttributes();
+      if (attributes.Size() == 0) {
+        arg_idx++;
+        break;
+      }
 
-        clang::StorageClass storage = clang::SC_None;
-        uint32_t i;
-        for (i = 0; i < num_attributes; ++i) {
-          const dw_attr_t attr = attributes.AttributeAtIndex(i);
-          DWARFFormValue form_value;
-          if (attributes.ExtractFormValueAtIndex(i, form_value)) {
-            switch (attr) {
-            case DW_AT_name:
-              name = form_value.AsCString();
-              break;
-            case DW_AT_type:
-              param_type_die_form = form_value;
-              break;
-            case DW_AT_artificial:
-              is_artificial = form_value.Boolean();
-              break;
-            case DW_AT_location:
-            case DW_AT_const_value:
-            case DW_AT_default_value:
-            case DW_AT_description:
-            case DW_AT_endianity:
-            case DW_AT_is_optional:
-            case DW_AT_segment:
-            case DW_AT_variable_parameter:
-            default:
-            case DW_AT_abstract_origin:
-            case DW_AT_sibling:
-              break;
+      const char *name = nullptr;
+      DWARFFormValue param_type_die_form;
+      bool is_artificial = false;
+      // one of None, Auto, Register, Extern, Static, PrivateExtern
+
+      clang::StorageClass storage = clang::SC_None;
+      uint32_t i;
+      for (i = 0; i < attributes.Size(); ++i) {
+        const dw_attr_t attr = attributes.AttributeAtIndex(i);
+        DWARFFormValue form_value;
+        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+          switch (attr) {
+          case DW_AT_name:
+            name = form_value.AsCString();
+            break;
+          case DW_AT_type:
+            param_type_die_form = form_value;
+            break;
+          case DW_AT_artificial:
+            is_artificial = form_value.Boolean();
+            break;
+          case DW_AT_location:
+          case DW_AT_const_value:
+          case DW_AT_default_value:
+          case DW_AT_description:
+          case DW_AT_endianity:
+          case DW_AT_is_optional:
+          case DW_AT_segment:
+          case DW_AT_variable_parameter:
+          default:
+          case DW_AT_abstract_origin:
+          case DW_AT_sibling:
+            break;
+          }
+        }
+      }
+
+      bool skip = false;
+      if (skip_artificial && is_artificial) {
+        // In order to determine if a C++ member function is "const" we
+        // have to look at the const-ness of "this"...
+        if (arg_idx == 0 &&
+            DeclKindIsCXXClass(containing_decl_ctx->getDeclKind()) &&
+            // Often times compilers omit the "this" name for the
+            // specification DIEs, so we can't rely upon the name being in
+            // the formal parameter DIE...
+            (name == nullptr || ::strcmp(name, "this") == 0)) {
+          Type *this_type = die.ResolveTypeUID(param_type_die_form.Reference());
+          if (this_type) {
+            uint32_t encoding_mask = this_type->GetEncodingMask();
+            if (encoding_mask & Type::eEncodingIsPointerUID) {
+              is_static = false;
+
+              if (encoding_mask & (1u << Type::eEncodingIsConstUID))
+                type_quals |= clang::Qualifiers::Const;
+              if (encoding_mask & (1u << Type::eEncodingIsVolatileUID))
+                type_quals |= clang::Qualifiers::Volatile;
             }
           }
         }
+        skip = true;
+      }
 
-        bool skip = false;
-        if (skip_artificial && is_artificial) {
-          // In order to determine if a C++ member function is "const" we
-          // have to look at the const-ness of "this"...
-          if (arg_idx == 0 &&
-              DeclKindIsCXXClass(containing_decl_ctx->getDeclKind()) &&
-              // Often times compilers omit the "this" name for the
-              // specification DIEs, so we can't rely upon the name being in
-              // the formal parameter DIE...
-              (name == nullptr || ::strcmp(name, "this") == 0)) {
-            Type *this_type =
-                die.ResolveTypeUID(param_type_die_form.Reference());
-            if (this_type) {
-              uint32_t encoding_mask = this_type->GetEncodingMask();
-              if (encoding_mask & Type::eEncodingIsPointerUID) {
-                is_static = false;
+      if (!skip) {
+        Type *type = die.ResolveTypeUID(param_type_die_form.Reference());
+        if (type) {
+          function_param_types.push_back(type->GetForwardCompilerType());
 
-                if (encoding_mask & (1u << Type::eEncodingIsConstUID))
-                  type_quals |= clang::Qualifiers::Const;
-                if (encoding_mask & (1u << Type::eEncodingIsVolatileUID))
-                  type_quals |= clang::Qualifiers::Volatile;
-              }
-            }
-          }
-          skip = true;
-        }
+          clang::ParmVarDecl *param_var_decl = m_ast.CreateParameterDeclaration(
+              containing_decl_ctx, GetOwningClangModule(die), name,
+              type->GetForwardCompilerType(), storage);
+          assert(param_var_decl);
+          function_param_decls.push_back(param_var_decl);
 
-        if (!skip) {
-          Type *type = die.ResolveTypeUID(param_type_die_form.Reference());
-          if (type) {
-            function_param_types.push_back(type->GetForwardCompilerType());
-
-            clang::ParmVarDecl *param_var_decl =
-                m_ast.CreateParameterDeclaration(
-                    containing_decl_ctx, GetOwningClangModule(die), name,
-                    type->GetForwardCompilerType(), storage);
-            assert(param_var_decl);
-            function_param_decls.push_back(param_var_decl);
-
-            m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
-          }
+          m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
         }
       }
       arg_idx++;
@@ -3173,21 +3172,24 @@ size_t DWARFASTParserClang::ParseChildParameters(
 }
 
 Type *DWARFASTParserClang::GetTypeForDIE(const DWARFDIE &die) {
-  if (die) {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
-    DWARFAttributes attributes;
-    const size_t num_attributes = die.GetAttributes(attributes);
-    if (num_attributes > 0) {
-      DWARFFormValue type_die_form;
-      for (size_t i = 0; i < num_attributes; ++i) {
-        dw_attr_t attr = attributes.AttributeAtIndex(i);
-        DWARFFormValue form_value;
+  if (!die)
+    return nullptr;
 
-        if (attr == DW_AT_type &&
-            attributes.ExtractFormValueAtIndex(i, form_value))
-          return dwarf->ResolveTypeUID(form_value.Reference(), true);
-      }
-    }
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (!dwarf)
+    return nullptr;
+
+  DWARFAttributes attributes = die.GetAttributes();
+  if (attributes.Size() == 0)
+    return nullptr;
+
+  DWARFFormValue type_die_form;
+  for (size_t i = 0; i < attributes.Size(); ++i) {
+    dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+
+    if (attr == DW_AT_type && attributes.ExtractFormValueAtIndex(i, form_value))
+      return dwarf->ResolveTypeUID(form_value.Reference(), true);
   }
 
   return nullptr;

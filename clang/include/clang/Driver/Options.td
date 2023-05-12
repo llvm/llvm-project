@@ -3004,8 +3004,7 @@ def ftime_trace : Flag<["-"], "ftime-trace">, Group<f_Group>,
 Turn on time profiler. Generates JSON file based on output filename. Results
 can be analyzed with chrome://tracing or `Speedscope App
 <https://www.speedscope.app>`_ for flamegraph visualization.}]>,
-  Flags<[CC1Option, CoreOption]>,
-  MarshallingInfoFlag<FrontendOpts<"TimeTrace">>;
+  Flags<[CoreOption]>;
 def ftime_trace_granularity_EQ : Joined<["-"], "ftime-trace-granularity=">, Group<f_Group>,
   HelpText<"Minimum time granularity (in microseconds) traced by time profiler">,
   Flags<[CC1Option, CoreOption]>,

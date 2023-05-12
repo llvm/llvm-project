@@ -71,6 +71,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
       continue;
+    if (!loop->isAncestor(user))
+      continue;
     return false;
   }
   return true;

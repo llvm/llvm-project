@@ -135,15 +135,16 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   // multipled.
   auto *BO = dyn_cast<BinaryOperator>(Start);
   if (!BO || (BO->getOpcode() != Instruction::Add &&
+              BO->getOpcode() != Instruction::Shl &&
               BO->getOpcode() != Instruction::Mul))
     return std::make_pair(nullptr, nullptr);
 
   // Look for an operand that is splatted.
-  unsigned OtherIndex = 1;
-  Value *Splat = getSplatValue(BO->getOperand(0));
-  if (!Splat) {
-    Splat = getSplatValue(BO->getOperand(1));
-    OtherIndex = 0;
+  unsigned OtherIndex = 0;
+  Value *Splat = getSplatValue(BO->getOperand(1));
+  if (!Splat && Instruction::isCommutative(BO->getOpcode())) {
+    Splat = getSplatValue(BO->getOperand(0));
+    OtherIndex = 1;
   }
   if (!Splat)
     return std::make_pair(nullptr, nullptr);
@@ -158,13 +159,22 @@ static std::pair<Value *, Value *> matchStridedStart(Value *Start,
   Builder.SetCurrentDebugLocation(DebugLoc());
   // Add the splat value to the start or multiply the start and stride by the
   // splat.
-  if (BO->getOpcode() == Instruction::Add) {
+  switch (BO->getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case Instruction::Add:
     Start = Builder.CreateAdd(Start, Splat);
-  } else {
-    assert(BO->getOpcode() == Instruction::Mul && "Unexpected opcode");
+    break;
+  case Instruction::Mul:
     Start = Builder.CreateMul(Start, Splat);
     Stride = Builder.CreateMul(Stride, Splat);
+    break;
+  case Instruction::Shl:
+    Start = Builder.CreateShl(Start, Splat);
+    Stride = Builder.CreateShl(Stride, Splat);
+    break;
   }
+
   return std::make_pair(Start, Stride);
 }
 
@@ -225,20 +235,21 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   if (!BO)
     return false;
 
-  if (BO->getOpcode() != Instruction::Add &&
-      BO->getOpcode() != Instruction::Or &&
-      BO->getOpcode() != Instruction::Mul &&
-      BO->getOpcode() != Instruction::Shl)
+  switch (BO->getOpcode()) {
+  default:
     return false;
-
-  // Only support shift by constant.
-  if (BO->getOpcode() == Instruction::Shl && !isa<Constant>(BO->getOperand(1)))
-    return false;
-
-  // We need to be able to treat Or as Add.
-  if (BO->getOpcode() == Instruction::Or &&
-      !haveNoCommonBitsSet(BO->getOperand(0), BO->getOperand(1), *DL))
-    return false;
+  case Instruction::Or:
+    // We need to be able to treat Or as Add.
+    if (!haveNoCommonBitsSet(BO->getOperand(0), BO->getOperand(1), *DL))
+      return false;
+    break;
+  case Instruction::Add:
+    break;
+  case Instruction::Shl:
+    break;
+  case Instruction::Mul:
+    break;
+  }
 
   // We should have one operand in the loop and one splat.
   Value *OtherOp;
@@ -247,7 +258,8 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     Index = cast<Instruction>(BO->getOperand(0));
     OtherOp = BO->getOperand(1);
   } else if (isa<Instruction>(BO->getOperand(1)) &&
-             L->contains(cast<Instruction>(BO->getOperand(1)))) {
+             L->contains(cast<Instruction>(BO->getOperand(1))) &&
+             Instruction::isCommutative(BO->getOpcode())) {
     Index = cast<Instruction>(BO->getOperand(1));
     OtherOp = BO->getOperand(0);
   } else {
@@ -291,7 +303,6 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       Start = SplatOp;
     else
       Start = Builder.CreateAdd(Start, SplatOp, "start");
-    BasePtr->setIncomingValue(StartBlock, Start);
     break;
   }
   case Instruction::Mul: {
@@ -306,8 +317,6 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       Stride = SplatOp;
     else
       Stride = Builder.CreateMul(Stride, SplatOp, "stride");
-    Inc->setOperand(StepIndex, Step);
-    BasePtr->setIncomingValue(StartBlock, Start);
     break;
   }
   case Instruction::Shl: {
@@ -316,12 +325,12 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
       Start = Builder.CreateShl(Start, SplatOp, "start");
     Step = Builder.CreateShl(Step, SplatOp, "step");
     Stride = Builder.CreateShl(Stride, SplatOp, "stride");
-    Inc->setOperand(StepIndex, Step);
-    BasePtr->setIncomingValue(StartBlock, Start);
     break;
   }
   }
 
+  Inc->setOperand(StepIndex, Step);
+  BasePtr->setIncomingValue(StartBlock, Start);
   return true;
 }
 
