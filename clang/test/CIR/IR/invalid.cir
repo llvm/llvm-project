@@ -184,7 +184,7 @@ module {
 // -----
 
 module {
-  cir.global @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, private, extern_weak, common]}}
+  cir.global @a = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i32 x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, cir_private, extern_weak, common]}}
 }
 
 // -----

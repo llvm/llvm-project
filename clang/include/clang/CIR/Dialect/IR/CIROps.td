@@ -1098,9 +1098,10 @@ def Global_WeakODRLinkage :
 // Rename collisions when linking (static functions).
 def Global_InternalLinkage :
   I32EnumAttrCase<"InternalLinkage", 7, "internal">;
-// Like Internal, but omit from symbol table.
+// Like Internal, but omit from symbol table, prefix it with
+// "cir_" to prevent clash with MLIR's symbol "private".
 def Global_PrivateLinkage :
-  I32EnumAttrCase<"PrivateLinkage", 8, "private">;
+  I32EnumAttrCase<"PrivateLinkage", 8, "cir_private">;
 // ExternalWeak linkage description.
 def Global_ExternalWeakLinkage :
   I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">;
