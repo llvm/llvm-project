@@ -3324,13 +3324,35 @@ Floating point builtins
 
    double __builtin_canonicalize(double);
    float __builtin_canonicalizef(float);
-   long double__builtin_canonicalizel(long double);
+   long double __builtin_canonicalizel(long double);
 
 Returns the platform specific canonical encoding of a floating point
 number. This canonicalization is useful for implementing certain
 numeric primitives such as frexp. See `LLVM canonicalize intrinsic
 <https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic>`_ for
 more information on the semantics.
+
+``__builtin_flt_rounds`` and ``__builtin_set_flt_rounds``
+---------------------------------------------------------
+
+.. code-block:: c
+
+   int __builtin_flt_rounds();
+   void __builtin_set_flt_rounds(int);
+
+Returns and sets current floating point rounding mode. The encoding of returned
+values and input parameters is same as the result of FLT_ROUNDS, specified by C
+standard:
+- ``0``  - toward zero
+- ``1``  - to nearest, ties to even
+- ``2``  - toward positive infinity
+- ``3``  - toward negative infinity
+- ``4``  - to nearest, ties away from zero
+The effect of passing some other value to ``__builtin_flt_rounds`` is
+implementation-defined. ``__builtin_set_flt_rounds`` is currently only supported
+to work on x86, x86_64, Arm and AArch64 targets. These builtins read and modify
+the floating-point environment, which is not always allowed and may have unexpected
+behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
 
 String builtins
 ---------------
