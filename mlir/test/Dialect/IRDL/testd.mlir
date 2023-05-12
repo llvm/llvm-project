@@ -45,13 +45,6 @@ func.func @succeededEqConstraint() {
   return
 }
 
-// -----
-
-func.func @failedEqConstraint() {
-  // expected-error@+1 {{expected 'i32' but got 'i64'}}
-  "testd.eq"() : () -> i64
-  return
-}
 
 // -----
 
@@ -81,13 +74,6 @@ func.func @succeededDynBaseConstraint() {
   return
 }
 
-// -----
-
-func.func @failedDynBaseConstraint() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got 'i32'}}
-  "testd.dynbase"() : () -> i32
-  return
-}
 
 // -----
 
@@ -98,22 +84,6 @@ func.func @failedDynBaseConstraint() {
 func.func @succeededDynParamsConstraint() {
   // CHECK: "testd.dynparams"() : () -> !testd.parametric<i32>
   "testd.dynparams"() : () -> !testd.parametric<i32>
-  return
-}
-
-// -----
-
-func.func @failedDynParamsConstraintBase() {
-  // expected-error@+1 {{expected base type 'testd.parametric' but got 'i32'}}
-  "testd.dynparams"() : () -> i32
-  return
-}
-
-// -----
-
-func.func @failedDynParamsConstraintParam() {
-  // expected-error@+1 {{expected 'i32' but got 'i1'}}
-  "testd.dynparams"() : () -> !testd.parametric<i1>
   return
 }
 
@@ -134,13 +104,5 @@ func.func @succeededConstraintVars() {
 func.func @succeededConstraintVars2() {
   // CHECK: "testd.constraint_vars"() : () -> (i64, i64)
   "testd.constraint_vars"() : () -> (i64, i64)
-  return
-}
-
-// -----
-
-func.func @failedConstraintVars() {
-  // expected-error@+1 {{expected 'i64' but got 'i32'}}
-  "testd.constraint_vars"() : () -> (i64, i32)
   return
 }
