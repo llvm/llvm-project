@@ -2700,26 +2700,20 @@ define i64 @rmw64_umax_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    call __atomic_compare_exchange_8@plt
 ; RV32-NEXT:    lw a1, 4(sp)
 ; RV32-NEXT:    lw a4, 0(sp)
-; RV32-NEXT:    bnez a0, .LBB51_6
+; RV32-NEXT:    bnez a0, .LBB51_4
 ; RV32-NEXT:  .LBB51_2: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    beqz a1, .LBB51_4
-; RV32-NEXT:  # %bb.3: # %atomicrmw.start
-; RV32-NEXT:    # in Loop: Header=BB51_2 Depth=1
 ; RV32-NEXT:    snez a0, a1
+; RV32-NEXT:    sltiu a2, a4, 2
+; RV32-NEXT:    xori a2, a2, 1
+; RV32-NEXT:    or a0, a2, a0
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    bnez a0, .LBB51_1
-; RV32-NEXT:    j .LBB51_5
-; RV32-NEXT:  .LBB51_4: # in Loop: Header=BB51_2 Depth=1
-; RV32-NEXT:    sltiu a0, a4, 2
-; RV32-NEXT:    xori a0, a0, 1
-; RV32-NEXT:    mv a2, a4
-; RV32-NEXT:    bnez a0, .LBB51_1
-; RV32-NEXT:  .LBB51_5: # %atomicrmw.start
+; RV32-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB51_2 Depth=1
 ; RV32-NEXT:    li a2, 1
 ; RV32-NEXT:    j .LBB51_1
-; RV32-NEXT:  .LBB51_6: # %atomicrmw.end
+; RV32-NEXT:  .LBB51_4: # %atomicrmw.end
 ; RV32-NEXT:    mv a0, a4
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload

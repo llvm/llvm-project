@@ -353,15 +353,10 @@ define i1 @add_ultcmp_i64_i16(i64 %x) nounwind {
 ; RV32I-NEXT:    add a2, a0, a2
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    li a1, -1
-; RV32I-NEXT:    beq a0, a1, .LBB10_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltiu a0, a0, -1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB10_2:
-; RV32I-NEXT:    lui a0, 1048560
-; RV32I-NEXT:    sltu a0, a2, a0
+; RV32I-NEXT:    lui a1, 1048560
+; RV32I-NEXT:    sltu a1, a2, a1
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_ultcmp_i64_i16:
@@ -399,14 +394,9 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 ; RV32I-NEXT:    addi a2, a0, -128
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    li a1, -1
-; RV32I-NEXT:    beq a0, a1, .LBB11_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltiu a0, a0, -1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB11_2:
-; RV32I-NEXT:    sltiu a0, a2, -256
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    sltiu a1, a2, -256
+; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: add_ultcmp_i64_i8:
@@ -614,14 +604,11 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, a0, 128
 ; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    add a1, a1, a0
-; RV32I-NEXT:    beqz a1, .LBB18_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    snez a0, a1
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB18_2:
-; RV32I-NEXT:    sltiu a0, a2, 256
-; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    sltiu a1, a2, 256
+; RV32I-NEXT:    xori a1, a1, 1
+; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64-LABEL: add_ugecmp_i64_i8:

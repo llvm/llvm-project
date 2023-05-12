@@ -1320,44 +1320,37 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IF-NEXT:  .LBB20_2:
 ; RV32IF-NEXT:    seqz a2, a0
 ; RV32IF-NEXT:  .LBB20_3: # %entry
-; RV32IF-NEXT:    lw a3, 12(sp)
-; RV32IF-NEXT:    xori a4, a0, 1
-; RV32IF-NEXT:    or a4, a4, a1
-; RV32IF-NEXT:    seqz a4, a4
-; RV32IF-NEXT:    addi a4, a4, -1
-; RV32IF-NEXT:    and a2, a4, a2
-; RV32IF-NEXT:    neg a4, a2
-; RV32IF-NEXT:    bnez a2, .LBB20_5
+; RV32IF-NEXT:    xori a3, a0, 1
+; RV32IF-NEXT:    or a3, a3, a1
+; RV32IF-NEXT:    seqz a3, a3
+; RV32IF-NEXT:    addi a3, a3, -1
+; RV32IF-NEXT:    and a3, a3, a2
+; RV32IF-NEXT:    neg a2, a3
+; RV32IF-NEXT:    bnez a3, .LBB20_5
 ; RV32IF-NEXT:  # %bb.4: # %entry
 ; RV32IF-NEXT:    li a0, 1
 ; RV32IF-NEXT:  .LBB20_5: # %entry
-; RV32IF-NEXT:    lw a5, 8(sp)
-; RV32IF-NEXT:    and a2, a4, a1
-; RV32IF-NEXT:    and a1, a4, a3
-; RV32IF-NEXT:    beqz a2, .LBB20_8
+; RV32IF-NEXT:    lw a3, 8(sp)
+; RV32IF-NEXT:    lw a4, 12(sp)
+; RV32IF-NEXT:    and a5, a2, a1
+; RV32IF-NEXT:    beqz a5, .LBB20_7
 ; RV32IF-NEXT:  # %bb.6: # %entry
-; RV32IF-NEXT:    sgtz a3, a2
-; RV32IF-NEXT:    and a4, a4, a5
-; RV32IF-NEXT:    bnez a1, .LBB20_9
+; RV32IF-NEXT:    sgtz a1, a5
+; RV32IF-NEXT:    j .LBB20_8
 ; RV32IF-NEXT:  .LBB20_7:
-; RV32IF-NEXT:    snez a5, a4
-; RV32IF-NEXT:    or a0, a0, a2
+; RV32IF-NEXT:    snez a1, a0
+; RV32IF-NEXT:  .LBB20_8: # %entry
+; RV32IF-NEXT:    and a4, a2, a4
+; RV32IF-NEXT:    or a0, a0, a5
+; RV32IF-NEXT:    and a2, a2, a3
 ; RV32IF-NEXT:    bnez a0, .LBB20_10
-; RV32IF-NEXT:    j .LBB20_11
-; RV32IF-NEXT:  .LBB20_8:
-; RV32IF-NEXT:    snez a3, a0
-; RV32IF-NEXT:    and a4, a4, a5
-; RV32IF-NEXT:    beqz a1, .LBB20_7
-; RV32IF-NEXT:  .LBB20_9: # %entry
-; RV32IF-NEXT:    snez a5, a1
-; RV32IF-NEXT:    or a0, a0, a2
-; RV32IF-NEXT:    beqz a0, .LBB20_11
+; RV32IF-NEXT:  # %bb.9:
+; RV32IF-NEXT:    or a0, a2, a4
+; RV32IF-NEXT:    snez a1, a0
 ; RV32IF-NEXT:  .LBB20_10: # %entry
-; RV32IF-NEXT:    mv a5, a3
-; RV32IF-NEXT:  .LBB20_11: # %entry
-; RV32IF-NEXT:    neg a2, a5
-; RV32IF-NEXT:    and a0, a2, a4
-; RV32IF-NEXT:    and a1, a2, a1
+; RV32IF-NEXT:    neg a1, a1
+; RV32IF-NEXT:    and a0, a1, a2
+; RV32IF-NEXT:    and a1, a1, a4
 ; RV32IF-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    addi sp, sp, 32
 ; RV32IF-NEXT:    ret
@@ -1406,44 +1399,37 @@ define i64 @ustest_f64i64(double %x) {
 ; RV32IFD-NEXT:  .LBB20_2:
 ; RV32IFD-NEXT:    seqz a2, a0
 ; RV32IFD-NEXT:  .LBB20_3: # %entry
-; RV32IFD-NEXT:    lw a3, 12(sp)
-; RV32IFD-NEXT:    xori a4, a0, 1
-; RV32IFD-NEXT:    or a4, a4, a1
-; RV32IFD-NEXT:    seqz a4, a4
-; RV32IFD-NEXT:    addi a4, a4, -1
-; RV32IFD-NEXT:    and a2, a4, a2
-; RV32IFD-NEXT:    neg a4, a2
-; RV32IFD-NEXT:    bnez a2, .LBB20_5
+; RV32IFD-NEXT:    xori a3, a0, 1
+; RV32IFD-NEXT:    or a3, a3, a1
+; RV32IFD-NEXT:    seqz a3, a3
+; RV32IFD-NEXT:    addi a3, a3, -1
+; RV32IFD-NEXT:    and a3, a3, a2
+; RV32IFD-NEXT:    neg a2, a3
+; RV32IFD-NEXT:    bnez a3, .LBB20_5
 ; RV32IFD-NEXT:  # %bb.4: # %entry
 ; RV32IFD-NEXT:    li a0, 1
 ; RV32IFD-NEXT:  .LBB20_5: # %entry
-; RV32IFD-NEXT:    lw a5, 8(sp)
-; RV32IFD-NEXT:    and a2, a4, a1
-; RV32IFD-NEXT:    and a1, a4, a3
-; RV32IFD-NEXT:    beqz a2, .LBB20_8
+; RV32IFD-NEXT:    lw a3, 8(sp)
+; RV32IFD-NEXT:    lw a4, 12(sp)
+; RV32IFD-NEXT:    and a5, a2, a1
+; RV32IFD-NEXT:    beqz a5, .LBB20_7
 ; RV32IFD-NEXT:  # %bb.6: # %entry
-; RV32IFD-NEXT:    sgtz a3, a2
-; RV32IFD-NEXT:    and a4, a4, a5
-; RV32IFD-NEXT:    bnez a1, .LBB20_9
+; RV32IFD-NEXT:    sgtz a1, a5
+; RV32IFD-NEXT:    j .LBB20_8
 ; RV32IFD-NEXT:  .LBB20_7:
-; RV32IFD-NEXT:    snez a5, a4
-; RV32IFD-NEXT:    or a0, a0, a2
+; RV32IFD-NEXT:    snez a1, a0
+; RV32IFD-NEXT:  .LBB20_8: # %entry
+; RV32IFD-NEXT:    and a4, a2, a4
+; RV32IFD-NEXT:    or a0, a0, a5
+; RV32IFD-NEXT:    and a2, a2, a3
 ; RV32IFD-NEXT:    bnez a0, .LBB20_10
-; RV32IFD-NEXT:    j .LBB20_11
-; RV32IFD-NEXT:  .LBB20_8:
-; RV32IFD-NEXT:    snez a3, a0
-; RV32IFD-NEXT:    and a4, a4, a5
-; RV32IFD-NEXT:    beqz a1, .LBB20_7
-; RV32IFD-NEXT:  .LBB20_9: # %entry
-; RV32IFD-NEXT:    snez a5, a1
-; RV32IFD-NEXT:    or a0, a0, a2
-; RV32IFD-NEXT:    beqz a0, .LBB20_11
+; RV32IFD-NEXT:  # %bb.9:
+; RV32IFD-NEXT:    or a0, a2, a4
+; RV32IFD-NEXT:    snez a1, a0
 ; RV32IFD-NEXT:  .LBB20_10: # %entry
-; RV32IFD-NEXT:    mv a5, a3
-; RV32IFD-NEXT:  .LBB20_11: # %entry
-; RV32IFD-NEXT:    neg a2, a5
-; RV32IFD-NEXT:    and a0, a2, a4
-; RV32IFD-NEXT:    and a1, a2, a1
+; RV32IFD-NEXT:    neg a1, a1
+; RV32IFD-NEXT:    and a0, a1, a2
+; RV32IFD-NEXT:    and a1, a1, a4
 ; RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    addi sp, sp, 32
 ; RV32IFD-NEXT:    ret
@@ -1602,44 +1588,37 @@ define i64 @ustest_f32i64(float %x) {
 ; RV32-NEXT:  .LBB23_2:
 ; RV32-NEXT:    seqz a2, a0
 ; RV32-NEXT:  .LBB23_3: # %entry
-; RV32-NEXT:    lw a3, 12(sp)
-; RV32-NEXT:    xori a4, a0, 1
-; RV32-NEXT:    or a4, a4, a1
-; RV32-NEXT:    seqz a4, a4
-; RV32-NEXT:    addi a4, a4, -1
-; RV32-NEXT:    and a2, a4, a2
-; RV32-NEXT:    neg a4, a2
-; RV32-NEXT:    bnez a2, .LBB23_5
+; RV32-NEXT:    xori a3, a0, 1
+; RV32-NEXT:    or a3, a3, a1
+; RV32-NEXT:    seqz a3, a3
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    and a3, a3, a2
+; RV32-NEXT:    neg a2, a3
+; RV32-NEXT:    bnez a3, .LBB23_5
 ; RV32-NEXT:  # %bb.4: # %entry
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:  .LBB23_5: # %entry
-; RV32-NEXT:    lw a5, 8(sp)
-; RV32-NEXT:    and a2, a4, a1
-; RV32-NEXT:    and a1, a4, a3
-; RV32-NEXT:    beqz a2, .LBB23_8
+; RV32-NEXT:    lw a3, 8(sp)
+; RV32-NEXT:    lw a4, 12(sp)
+; RV32-NEXT:    and a5, a2, a1
+; RV32-NEXT:    beqz a5, .LBB23_7
 ; RV32-NEXT:  # %bb.6: # %entry
-; RV32-NEXT:    sgtz a3, a2
-; RV32-NEXT:    and a4, a4, a5
-; RV32-NEXT:    bnez a1, .LBB23_9
+; RV32-NEXT:    sgtz a1, a5
+; RV32-NEXT:    j .LBB23_8
 ; RV32-NEXT:  .LBB23_7:
-; RV32-NEXT:    snez a5, a4
-; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    snez a1, a0
+; RV32-NEXT:  .LBB23_8: # %entry
+; RV32-NEXT:    and a4, a2, a4
+; RV32-NEXT:    or a0, a0, a5
+; RV32-NEXT:    and a2, a2, a3
 ; RV32-NEXT:    bnez a0, .LBB23_10
-; RV32-NEXT:    j .LBB23_11
-; RV32-NEXT:  .LBB23_8:
-; RV32-NEXT:    snez a3, a0
-; RV32-NEXT:    and a4, a4, a5
-; RV32-NEXT:    beqz a1, .LBB23_7
-; RV32-NEXT:  .LBB23_9: # %entry
-; RV32-NEXT:    snez a5, a1
-; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    beqz a0, .LBB23_11
+; RV32-NEXT:  # %bb.9:
+; RV32-NEXT:    or a0, a2, a4
+; RV32-NEXT:    snez a1, a0
 ; RV32-NEXT:  .LBB23_10: # %entry
-; RV32-NEXT:    mv a5, a3
-; RV32-NEXT:  .LBB23_11: # %entry
-; RV32-NEXT:    neg a2, a5
-; RV32-NEXT:    and a0, a2, a4
-; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a2
+; RV32-NEXT:    and a1, a1, a4
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
@@ -1865,44 +1844,37 @@ define i64 @ustest_f16i64(half %x) {
 ; RV32-NEXT:  .LBB26_2:
 ; RV32-NEXT:    seqz a2, a0
 ; RV32-NEXT:  .LBB26_3: # %entry
-; RV32-NEXT:    lw a3, 12(sp)
-; RV32-NEXT:    xori a4, a0, 1
-; RV32-NEXT:    or a4, a4, a1
-; RV32-NEXT:    seqz a4, a4
-; RV32-NEXT:    addi a4, a4, -1
-; RV32-NEXT:    and a2, a4, a2
-; RV32-NEXT:    neg a4, a2
-; RV32-NEXT:    bnez a2, .LBB26_5
+; RV32-NEXT:    xori a3, a0, 1
+; RV32-NEXT:    or a3, a3, a1
+; RV32-NEXT:    seqz a3, a3
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    and a3, a3, a2
+; RV32-NEXT:    neg a2, a3
+; RV32-NEXT:    bnez a3, .LBB26_5
 ; RV32-NEXT:  # %bb.4: # %entry
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:  .LBB26_5: # %entry
-; RV32-NEXT:    lw a5, 8(sp)
-; RV32-NEXT:    and a2, a4, a1
-; RV32-NEXT:    and a1, a4, a3
-; RV32-NEXT:    beqz a2, .LBB26_8
+; RV32-NEXT:    lw a3, 8(sp)
+; RV32-NEXT:    lw a4, 12(sp)
+; RV32-NEXT:    and a5, a2, a1
+; RV32-NEXT:    beqz a5, .LBB26_7
 ; RV32-NEXT:  # %bb.6: # %entry
-; RV32-NEXT:    sgtz a3, a2
-; RV32-NEXT:    and a4, a4, a5
-; RV32-NEXT:    bnez a1, .LBB26_9
+; RV32-NEXT:    sgtz a1, a5
+; RV32-NEXT:    j .LBB26_8
 ; RV32-NEXT:  .LBB26_7:
-; RV32-NEXT:    snez a5, a4
-; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    snez a1, a0
+; RV32-NEXT:  .LBB26_8: # %entry
+; RV32-NEXT:    and a4, a2, a4
+; RV32-NEXT:    or a0, a0, a5
+; RV32-NEXT:    and a2, a2, a3
 ; RV32-NEXT:    bnez a0, .LBB26_10
-; RV32-NEXT:    j .LBB26_11
-; RV32-NEXT:  .LBB26_8:
-; RV32-NEXT:    snez a3, a0
-; RV32-NEXT:    and a4, a4, a5
-; RV32-NEXT:    beqz a1, .LBB26_7
-; RV32-NEXT:  .LBB26_9: # %entry
-; RV32-NEXT:    snez a5, a1
-; RV32-NEXT:    or a0, a0, a2
-; RV32-NEXT:    beqz a0, .LBB26_11
+; RV32-NEXT:  # %bb.9:
+; RV32-NEXT:    or a0, a2, a4
+; RV32-NEXT:    snez a1, a0
 ; RV32-NEXT:  .LBB26_10: # %entry
-; RV32-NEXT:    mv a5, a3
-; RV32-NEXT:  .LBB26_11: # %entry
-; RV32-NEXT:    neg a2, a5
-; RV32-NEXT:    and a0, a2, a4
-; RV32-NEXT:    and a1, a2, a1
+; RV32-NEXT:    neg a1, a1
+; RV32-NEXT:    and a0, a1, a2
+; RV32-NEXT:    and a1, a1, a4
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 32
 ; RV32-NEXT:    ret
