@@ -3175,8 +3175,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   unsigned Opc = IsTA ? I->UnmaskedPseudo : I->UnmaskedTUPseudo;
 
   // Check that we're dropping the mask operand and any policy operand
-  // when we transform to this unmasked pseudo. Additionally, if this insturtion
-  // is tail agnostic, the unmasked instruction should not have a merge op.
+  // when we transform to this unmasked pseudo. Additionally, if this
+  // instruction is tail agnostic, the unmasked instruction should not have a
+  // merge op.
   uint64_t TSFlags = TII.get(Opc).TSFlags;
   assert((IsTA != RISCVII::hasMergeOp(TSFlags)) &&
          RISCVII::hasDummyMaskOp(TSFlags) &&
