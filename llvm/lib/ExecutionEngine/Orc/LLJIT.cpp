@@ -1103,7 +1103,7 @@ class LoadAndLinkDynLibrary {
 public:
   LoadAndLinkDynLibrary(LLJIT &J) : J(J) {}
   Error operator()(JITDylib &JD, StringRef DLLName) {
-    if (!DLLName.endswith_insensitive(".dll"))
+    if (!DLLName.ends_with_insensitive(".dll"))
       return make_error<StringError>("DLLName not ending with .dll",
                                      inconvertibleErrorCode());
     auto DLLNameStr = DLLName.str(); // Guarantees null-termination.
