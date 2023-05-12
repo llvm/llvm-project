@@ -1,12 +1,5 @@
 add_mlir_dialect(IRDL irdl)
 
-# Add IRDL interfaces
-set(LLVM_TARGET_DEFINITIONS IRDLInterfaces.td)
-mlir_tablegen(IRDLInterfaces.h.inc -gen-op-interface-decls)
-mlir_tablegen(IRDLInterfaces.cpp.inc -gen-op-interface-defs)
-add_public_tablegen_target(MLIRIRDLInterfacesIncGen)
-add_dependencies(mlir-generic-headers MLIRIRDLInterfacesIncGen)
-
 # Add IRDL operations
 set(LLVM_TARGET_DEFINITIONS IRDLOps.td)
 mlir_tablegen(IRDLOps.h.inc -gen-op-decls)
