@@ -42788,9 +42788,9 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
 /// low half of each source vector and does not set any high half elements in
 /// the destination vector, narrow the shuffle to half its original size.
 static SDValue narrowShuffle(ShuffleVectorSDNode *Shuf, SelectionDAG &DAG) {
-  if (!Shuf->getValueType(0).isSimple())
+  EVT VT = Shuf->getValueType(0);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Shuf->getValueType(0)))
     return SDValue();
-  MVT VT = Shuf->getSimpleValueType(0);
   if (!VT.is256BitVector() && !VT.is512BitVector())
     return SDValue();
 
@@ -42814,7 +42814,7 @@ static SDValue narrowShuffle(ShuffleVectorSDNode *Shuf, SelectionDAG &DAG) {
   // the wide shuffle that we started with.
   return getShuffleHalfVectors(SDLoc(Shuf), Shuf->getOperand(0),
                                Shuf->getOperand(1), HalfMask, HalfIdx1,
-                               HalfIdx2, false, DAG, /*UseConcat*/true);
+                               HalfIdx2, false, DAG, /*UseConcat*/ true);
 }
 
 static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
