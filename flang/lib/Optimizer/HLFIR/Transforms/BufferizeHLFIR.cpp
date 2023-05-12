@@ -346,9 +346,27 @@ struct AssociateOpConversion
 
     auto replaceWith = [&](mlir::Value hlfirVar, mlir::Value firVar,
                            mlir::Value flag) {
-      hlfirVar =
-          builder.createConvert(loc, associate.getResultTypes()[0], hlfirVar);
+      // 0-dim variables may need special handling:
+      //   %0 = hlfir.as_expr %x move %true :
+      //       (!fir.box<!fir.heap<!fir.type<_T{y:i32}>>>, i1) ->
+      //       !hlfir.expr<!fir.type<_T{y:i32}>>
+      //   %1:3 = hlfir.associate %0 {uniq_name = "adapt.valuebyref"} :
+      //       (!hlfir.expr<!fir.type<_T{y:i32}>>) ->
+      //       (!fir.ref<!fir.type<_T{y:i32}>>,
+      //        !fir.ref<!fir.type<_T{y:i32}>>,
+      //        i1)
+      //
+      // !fir.box<!fir.heap<!fir.type<_T{y:i32}>>> value must be propagated
+      // as the box address !fir.ref<!fir.type<_T{y:i32}>>.
+      mlir::Type associateHlfirVarType = associate.getResultTypes()[0];
+      if (hlfirVar.getType().isa<fir::BaseBoxType>() &&
+          !associateHlfirVarType.isa<fir::BaseBoxType>())
+        hlfirVar = builder.create<fir::BoxAddrOp>(loc, associateHlfirVarType,
+                                                  hlfirVar);
+      else
+        hlfirVar = builder.createConvert(loc, associateHlfirVarType, hlfirVar);
       associate.getResult(0).replaceAllUsesWith(hlfirVar);
+
       mlir::Type associateFirVarType = associate.getResultTypes()[1];
       if ((firVar.getType().isa<fir::BaseBoxType>() &&
            !associateFirVarType.isa<fir::BaseBoxType>()) ||
