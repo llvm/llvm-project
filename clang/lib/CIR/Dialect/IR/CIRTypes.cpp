@@ -169,6 +169,24 @@ void ArrayType::print(mlir::AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
+BoolType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                            ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(8);
+}
+
+uint64_t
+BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                          ::mlir::DataLayoutEntryListRef params) const {
+  return 1;
+}
+
+uint64_t
+BoolType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                                ::mlir::DataLayoutEntryListRef params) const {
+  return 1;
+}
+
+llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                ::mlir::DataLayoutEntryListRef params) const {
   // FIXME: improve this in face of address spaces
