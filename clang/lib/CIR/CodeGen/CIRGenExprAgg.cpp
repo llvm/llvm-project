@@ -134,7 +134,10 @@ public:
     llvm_unreachable("NYI");
   }
   void VisitNoInitExpr(NoInitExpr *E) { llvm_unreachable("NYI"); }
-  void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) { llvm_unreachable("NYI"); }
+  void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *DAE) {
+    CIRGenFunction::CXXDefaultArgExprScope Scope(CGF, DAE);
+    Visit(DAE->getExpr());
+  }
   void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *DIE) {
     CIRGenFunction::CXXDefaultInitExprScope Scope(CGF, DIE);
     Visit(DIE->getExpr());
