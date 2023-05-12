@@ -111,6 +111,7 @@ class SubtargetEmitter {
   Record *FindReadAdvance(const CodeGenSchedRW &SchedRead,
                           const CodeGenProcModel &ProcModel);
   void ExpandProcResources(RecVec &PRVec, std::vector<int64_t> &Cycles,
+                           std::vector<int64_t> &StartAtCycles,
                            const CodeGenProcModel &ProcModel);
   void GenSchedClassTables(const CodeGenProcModel &ProcModel,
                            SchedClassTables &SchedTables);
@@ -968,6 +969,7 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
 // resource groups and super resources that cover them.
 void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
                                            std::vector<int64_t> &Cycles,
+                                           std::vector<int64_t> &StartAtCycles,
                                            const CodeGenProcModel &PM) {
   assert(PRVec.size() == Cycles.size() && "failed precondition");
   for (unsigned i = 0, e = PRVec.size(); i != e; ++i) {
@@ -990,6 +992,7 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
                                          SubDef->getLoc());
         PRVec.push_back(SuperDef);
         Cycles.push_back(Cycles[i]);
+        StartAtCycles.push_back(StartAtCycles[i]);
         SubDef = SuperDef;
       }
     }
@@ -1006,6 +1009,7 @@ void SubtargetEmitter::ExpandProcResources(RecVec &PRVec,
       if (SubI == SubE) {
         PRVec.push_back(PR);
         Cycles.push_back(Cycles[i]);
+        StartAtCycles.push_back(StartAtCycles[i]);
       }
     }
   }
@@ -1140,22 +1144,48 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
         std::vector<int64_t> Cycles =
           WriteRes->getValueAsListOfInts("ResourceCycles");
 
-        if (Cycles.empty()) {
-          // If ResourceCycles is not provided, default to one cycle per
-          // resource.
-          Cycles.resize(PRVec.size(), 1);
-        } else if (Cycles.size() != PRVec.size()) {
+        std::vector<int64_t> StartAtCycles =
+            WriteRes->getValueAsListOfInts("StartAtCycles");
+
+        // Check consistency of the two vectors carrying the start and
+        // stop cycles of the resources.
+        if (!Cycles.empty() && Cycles.size() != PRVec.size()) {
           // If ResourceCycles is provided, check consistency.
           PrintFatalError(
               WriteRes->getLoc(),
-              Twine("Inconsistent resource cycles: !size(ResourceCycles) != "
-                    "!size(ProcResources): ")
+              Twine("Inconsistent resource cycles: size(ResourceCycles) != "
+                    "size(ProcResources): ")
                   .concat(Twine(PRVec.size()))
                   .concat(" vs ")
                   .concat(Twine(Cycles.size())));
         }
 
-        ExpandProcResources(PRVec, Cycles, ProcModel);
+        if (!StartAtCycles.empty() && StartAtCycles.size() != PRVec.size()) {
+          PrintFatalError(
+              WriteRes->getLoc(),
+              Twine("Inconsistent resource cycles: size(StartAtCycles) != "
+                    "size(ProcResources): ")
+                  .concat(Twine(StartAtCycles.size()))
+                  .concat(" vs ")
+                  .concat(Twine(PRVec.size())));
+        }
+
+        if (Cycles.empty()) {
+          // If ResourceCycles is not provided, default to one cycle
+          // per resource.
+          Cycles.resize(PRVec.size(), 1);
+        }
+
+        if (StartAtCycles.empty()) {
+          // If StartAtCycles is not provided, reserve the resource
+          // starting from cycle 0.
+          StartAtCycles.resize(PRVec.size(), 0);
+        }
+
+        assert(StartAtCycles.size() == Cycles.size());
+
+        ExpandProcResources(PRVec, Cycles, StartAtCycles, ProcModel);
+        assert(StartAtCycles.size() == Cycles.size());
 
         for (unsigned PRIdx = 0, PREnd = PRVec.size();
              PRIdx != PREnd; ++PRIdx) {
@@ -1163,6 +1193,17 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
           WPREntry.ProcResourceIdx = ProcModel.getProcResourceIdx(PRVec[PRIdx]);
           assert(WPREntry.ProcResourceIdx && "Bad ProcResourceIdx");
           WPREntry.Cycles = Cycles[PRIdx];
+          WPREntry.StartAtCycle = StartAtCycles[PRIdx];
+          if (StartAtCycles[PRIdx] > Cycles[PRIdx]) {
+            PrintFatalError(WriteRes->getLoc(),
+                            Twine("Inconsistent resource cycles: StartAtCycles "
+                                  "< Cycles must hold."));
+          }
+          if (StartAtCycles[PRIdx] < 0) {
+            PrintFatalError(WriteRes->getLoc(),
+                            Twine("Invalid value: StartAtCycle "
+                                  "must be a non-negative value."));
+          }
           // If this resource is already used in this sequence, add the current
           // entry's cycles so that the same resource appears to be used
           // serially, rather than multiple parallel uses. This is important for
@@ -1171,6 +1212,15 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
           for( ; WPRIdx != WPREnd; ++WPRIdx) {
             if (WriteProcResources[WPRIdx].ProcResourceIdx
                 == WPREntry.ProcResourceIdx) {
+              // TODO: multiple use of the same resources would
+              // require either 1. thinking of how to handle multiple
+              // intervals for the same resource in
+              // `<Target>WriteProcResTable` (see
+              // `SubtargetEmitter::EmitSchedClassTables`), or
+              // 2. thinking how to merge multiple intervals into a
+              // single interval.
+              assert(WPREntry.StartAtCycle == 0 &&
+                     "multiple use ofthe same resource is not yet handled");
               WriteProcResources[WPRIdx].Cycles += WPREntry.Cycles;
               break;
             }
@@ -1275,15 +1325,16 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
 void SubtargetEmitter::EmitSchedClassTables(SchedClassTables &SchedTables,
                                             raw_ostream &OS) {
   // Emit global WriteProcResTable.
-  OS << "\n// {ProcResourceIdx, Cycles}\n"
-     << "extern const llvm::MCWriteProcResEntry "
-     << Target << "WriteProcResTable[] = {\n"
-     << "  { 0,  0}, // Invalid\n";
+  OS << "\n// {ProcResourceIdx, Cycles, StartAtCycle}\n"
+     << "extern const llvm::MCWriteProcResEntry " << Target
+     << "WriteProcResTable[] = {\n"
+     << "  { 0,  0,  0 }, // Invalid\n";
   for (unsigned WPRIdx = 1, WPREnd = SchedTables.WriteProcResources.size();
        WPRIdx != WPREnd; ++WPRIdx) {
     MCWriteProcResEntry &WPREntry = SchedTables.WriteProcResources[WPRIdx];
     OS << "  {" << format("%2d", WPREntry.ProcResourceIdx) << ", "
-       << format("%2d", WPREntry.Cycles) << "}";
+       << format("%2d", WPREntry.Cycles) << ",  "
+       << format("%2d", WPREntry.StartAtCycle) << "}";
     if (WPRIdx + 1 < WPREnd)
       OS << ',';
     OS << " // #" << WPRIdx << '\n';
