@@ -12,6 +12,8 @@
 
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/SuffixTreeNode.h"
 
 using namespace llvm;
 
@@ -182,9 +184,9 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
       //                      n   l
 
       // The node s from the diagram
-      SuffixTreeInternalNode *SplitNode =
-          insertInternalNode(Active.Node, NextNode->getStartIdx(),
-                             NextNode->getStartIdx() + Active.Len - 1, FirstChar);
+      SuffixTreeInternalNode *SplitNode = insertInternalNode(
+          Active.Node, NextNode->getStartIdx(),
+          NextNode->getStartIdx() + Active.Len - 1, FirstChar);
 
       // Insert the new node representing the new substring into the tree as
       // a child of the split node. This is the node l from the diagram.
@@ -218,4 +220,63 @@ unsigned SuffixTree::extend(unsigned EndIdx, unsigned SuffixesToAdd) {
   }
 
   return SuffixesToAdd;
+}
+
+void SuffixTree::RepeatedSubstringIterator::advance() {
+  // Clear the current state. If we're at the end of the range, then this
+  // is the state we want to be in.
+  RS = RepeatedSubstring();
+  N = nullptr;
+
+  // Each leaf node represents a repeat of a string.
+  SmallVector<unsigned> RepeatedSubstringStarts;
+
+  // Continue visiting nodes until we find one which repeats more than once.
+  while (!InternalNodesToVisit.empty()) {
+    RepeatedSubstringStarts.clear();
+    auto *Curr = InternalNodesToVisit.back();
+    InternalNodesToVisit.pop_back();
+
+    // Keep track of the length of the string associated with the node. If
+    // it's too short, we'll quit.
+    unsigned Length = Curr->getConcatLen();
+
+    // Iterate over each child, saving internal nodes for visiting, and
+    // leaf nodes in LeafChildren. Internal nodes represent individual
+    // strings, which may repeat.
+    for (auto &ChildPair : Curr->Children) {
+      // Save all of this node's children for processing.
+      if (auto *InternalChild =
+              dyn_cast<SuffixTreeInternalNode>(ChildPair.second)) {
+        InternalNodesToVisit.push_back(InternalChild);
+        continue;
+      }
+
+      if (Length < MinLength)
+        continue;
+
+      // Have an occurrence of a potentially repeated string. Save it.
+      auto *Leaf = cast<SuffixTreeLeafNode>(ChildPair.second);
+      RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
+    }
+
+    // The root never represents a repeated substring. If we're looking at
+    // that, then skip it.
+    if (Curr->isRoot())
+      continue;
+
+    // Do we have any repeated substrings?
+    if (RepeatedSubstringStarts.size() < 2)
+      continue;
+
+    // Yes. Update the state to reflect this, and then bail out.
+    N = Curr;
+    RS.Length = Length;
+    for (unsigned StartIdx : RepeatedSubstringStarts)
+      RS.StartIndices.push_back(StartIdx);
+    break;
+  }
+  // At this point, either NewRS is an empty RepeatedSubstring, or it was
+  // set in the above loop. Similarly, N is either nullptr, or the node
+  // associated with NewRS.
 }
