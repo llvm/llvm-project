@@ -41,11 +41,11 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
                   ConversionPatternRewriter &rewriter) const override {
     // Check for unranked memref types which are currently not supported.
     Type type = op.getType();
-    if (type.isa<UnrankedMemRefType>()) {
+    if (isa<UnrankedMemRefType>(type)) {
       return rewriter.notifyMatchFailure(
           op, "UnrankedMemRefType is not supported.");
     }
-    MemRefType memrefType = type.cast<MemRefType>();
+    MemRefType memrefType = cast<MemRefType>(type);
     MemRefLayoutAttrInterface layout;
     auto allocType =
         MemRefType::get(memrefType.getShape(), memrefType.getElementType(),

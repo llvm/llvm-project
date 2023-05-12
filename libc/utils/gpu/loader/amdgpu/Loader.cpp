@@ -330,37 +330,23 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   hsa_amd_memory_fill(dev_ret, 0, sizeof(int));
 
   // Allocate finegrained memory for the RPC server and client to share.
-  uint64_t port_size = __llvm_libc::rpc::default_port_count;
+  uint64_t port_size = __llvm_libc::rpc::DEFAULT_PORT_COUNT;
   uint32_t wavefront_size = 0;
   if (hsa_status_t err = hsa_agent_get_info(
           dev_agent, HSA_AGENT_INFO_WAVEFRONT_SIZE, &wavefront_size))
     handle_error(err);
-  void *server_inbox;
-  void *server_outbox;
-  void *buffer;
-  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool, port_size * sizeof(__llvm_libc::cpp::Atomic<int>),
-          /*flags=*/0, &server_inbox))
+
+  uint64_t rpc_shared_buffer_size =
+      __llvm_libc::rpc::Server::allocation_size(port_size, wavefront_size);
+  void *rpc_shared_buffer;
+  if (hsa_status_t err =
+          hsa_amd_memory_pool_allocate(finegrained_pool, rpc_shared_buffer_size,
+                                       /*flags=*/0, &rpc_shared_buffer))
     handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool, port_size * sizeof(__llvm_libc::cpp::Atomic<int>),
-          /*flags=*/0, &server_outbox))
-    handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_allocate(
-          finegrained_pool,
-          port_size *
-              align_up(sizeof(__llvm_libc::rpc::Header) +
-                           (wavefront_size * sizeof(__llvm_libc::rpc::Buffer)),
-                       alignof(__llvm_libc::rpc::Packet)),
-          /*flags=*/0, &buffer))
-    handle_error(err);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, server_inbox);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, server_outbox);
-  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, buffer);
+  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, rpc_shared_buffer);
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(port_size, wavefront_size, &lock, server_inbox, server_outbox,
-               buffer);
+  server.reset(port_size, wavefront_size, rpc_shared_buffer);
 
   // Obtain a queue with the minimum (power of two) size, used to send commands
   // to the HSA runtime and launch execution on the device.
@@ -375,8 +361,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
-  begin_args_t init_args = {argc,          dev_argv,     dev_envp,
-                            server_outbox, server_inbox, buffer};
+  begin_args_t init_args = {argc, dev_argv, dev_envp, rpc_shared_buffer};
   if (hsa_status_t err =
           launch_kernel(dev_agent, executable, kernargs_pool, queue,
                         single_threaded_params, "_begin.kd", init_args))
@@ -423,11 +408,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_free(dev_ret))
     handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_free(server_inbox))
-    handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_free(server_outbox))
-    handle_error(err);
-  if (hsa_status_t err = hsa_amd_memory_pool_free(buffer))
+  if (hsa_status_t err = hsa_amd_memory_pool_free(rpc_shared_buffer))
     handle_error(err);
   if (hsa_status_t err = hsa_amd_memory_pool_free(host_ret))
     handle_error(err);

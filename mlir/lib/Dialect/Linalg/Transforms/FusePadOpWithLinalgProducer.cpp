@@ -86,12 +86,12 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     // result of the generic op. The low pad values are the offsets, the size of
     // the source is the size of the slice.
     // TODO: This insert/extract could be potentially made a utility method.
-    unsigned resultNumber = source.cast<OpResult>().getResultNumber();
+    unsigned resultNumber = cast<OpResult>(source).getResultNumber();
     SmallVector<OpFoldResult> offsets = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> sizes;
     sizes.reserve(offsets.size());
-    for (const auto &shape : llvm::enumerate(
-             source.getType().cast<RankedTensorType>().getShape())) {
+    for (const auto &shape :
+         llvm::enumerate(cast<RankedTensorType>(source.getType()).getShape())) {
       if (ShapedType::isDynamic(shape.value())) {
         sizes.push_back(
             rewriter.create<tensor::DimOp>(loc, source, shape.index())

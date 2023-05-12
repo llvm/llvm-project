@@ -10,14 +10,17 @@
 #ifndef _PSTL_UNSEQ_BACKEND_SIMD_H
 #define _PSTL_UNSEQ_BACKEND_SIMD_H
 
+#include <__config>
 #include <__functional/operations.h>
+#include <__iterator/iterator_traits.h>
 #include <__type_traits/is_arithmetic.h>
+#include <__type_traits/is_same.h>
+#include <__utility/move.h>
 #include <__utility/pair.h>
 #include <cstddef>
 #include <cstdint>
 
-#include "pstl_config.h"
-#include "utils.h"
+#include <__pstl/internal/utils.h>
 
 // This header defines the minimum set of vector routines required
 // to support parallel STL.
@@ -513,11 +516,11 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
     _CombinerType __combined_init{__init, &__binary_op};
 
     _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
-    _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
+    _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __combined_init)
     for (_Size __i = 0; __i < __n; ++__i)
     {
         __result[__i] = __combined_init.__value_;
-        _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__init_)
+        _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(__combined_init)
         __combined_init.__value_ = __binary_op(__combined_init.__value_, __unary_op(__first[__i]));
     }
     return std::make_pair(__result + __n, __combined_init.__value_);
@@ -553,11 +556,11 @@ __simd_scan(_InputIterator __first, _Size __n, _OutputIterator __result, _UnaryO
     _CombinerType __combined_init{__init, &__binary_op};
 
     _PSTL_PRAGMA_DECLARE_REDUCTION(__bin_op, _CombinerType)
-    _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __init_)
+    _PSTL_PRAGMA_SIMD_SCAN(__bin_op : __combined_init)
     for (_Size __i = 0; __i < __n; ++__i)
     {
         __combined_init.__value_ = __binary_op(__combined_init.__value_, __unary_op(__first[__i]));
-        _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__init_)
+        _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(__combined_init)
         __result[__i] = __combined_init.__value_;
     }
     return std::make_pair(__result + __n, __combined_init.__value_);

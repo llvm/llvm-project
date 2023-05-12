@@ -326,7 +326,7 @@ func.func @matching_inits(%m: memref<?x?xf32>, %t: tensor<?x?xf32>) {
 func.func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
   %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf32>
-  // expected-error @+1 {{expected the number of results (0) to be equal to the number of output tensors (1)}}
+  // expected-error @+1 {{expected the number of tensor results (0) to be equal to the number of output tensors (1)}}
   linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>)
 }
 
@@ -335,7 +335,7 @@ func.func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f
 func.func @illegal_fill_memref_with_tensor_return
   (%arg0 : memref<?x?xf32>, %arg1 : f32) -> tensor<?x?xf32>
 {
-  // expected-error @+1 {{expected the number of results (1) to be equal to the number of output tensors (0)}}
+  // expected-error @+1 {{expected the number of tensor results (1) to be equal to the number of output tensors (0)}}
   %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : memref<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }

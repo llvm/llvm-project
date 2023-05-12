@@ -52,6 +52,7 @@ def SPIRV_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
+  let usePropertiesForAttributes = 1;
 
   let extraClassDeclaration = [{
     void registerAttributes();
@@ -4045,7 +4046,7 @@ def SPIRV_MatrixLayoutAttr  :
 
 def SPIRV_VerCapExtAttr : DialectAttr<
     SPIRV_Dialect,
-    CPred<"$_self.isa<::mlir::spirv::VerCapExtAttr>()">,
+    CPred<"::llvm::isa<::mlir::spirv::VerCapExtAttr>($_self)">,
     "version-capability-extension attribute"> {
   let storageType = "::mlir::spirv::VerCapExtAttr";
   let returnType = "::mlir::spirv::VerCapExtAttr";
@@ -4067,17 +4068,17 @@ class SignlessOrUnsignedIntOfWidths<list<int> widths> :
     AnyTypeOf<!foreach(w, widths, IOrUI<w>),
               !interleave(widths, "/") # "-bit signless/unsigned integer">;
 
-def SPIRV_IsArrayType : CPred<"$_self.isa<::mlir::spirv::ArrayType>()">;
+def SPIRV_IsArrayType : CPred<"::llvm::isa<::mlir::spirv::ArrayType>($_self)">;
 def SPIRV_IsCooperativeMatrixType :
-  CPred<"$_self.isa<::mlir::spirv::CooperativeMatrixNVType>()">;
-def SPIRV_IsImageType : CPred<"$_self.isa<::mlir::spirv::ImageType>()">;
+  CPred<"::llvm::isa<::mlir::spirv::CooperativeMatrixNVType>($_self)">;
+def SPIRV_IsImageType : CPred<"::llvm::isa<::mlir::spirv::ImageType>($_self)">;
 def SPIRV_IsJointMatrixType :
-  CPred<"$_self.isa<::mlir::spirv::JointMatrixINTELType>()">;
-def SPIRV_IsMatrixType : CPred<"$_self.isa<::mlir::spirv::MatrixType>()">;
-def SPIRV_IsPtrType : CPred<"$_self.isa<::mlir::spirv::PointerType>()">;
-def SPIRV_IsRTArrayType : CPred<"$_self.isa<::mlir::spirv::RuntimeArrayType>()">;
-def SPIRV_IsSampledImageType : CPred<"$_self.isa<::mlir::spirv::SampledImageType>()">;
-def SPIRV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
+  CPred<"::llvm::isa<::mlir::spirv::JointMatrixINTELType>($_self)">;
+def SPIRV_IsMatrixType : CPred<"::llvm::isa<::mlir::spirv::MatrixType>($_self)">;
+def SPIRV_IsPtrType : CPred<"::llvm::isa<::mlir::spirv::PointerType>($_self)">;
+def SPIRV_IsRTArrayType : CPred<"::llvm::isa<::mlir::spirv::RuntimeArrayType>($_self)">;
+def SPIRV_IsSampledImageType : CPred<"::llvm::isa<::mlir::spirv::SampledImageType>($_self)">;
+def SPIRV_IsStructType : CPred<"::llvm::isa<::mlir::spirv::StructType>($_self)">;
 
 
 // See https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_types
@@ -4133,12 +4134,12 @@ def SPIRV_SignlessOrUnsignedInt : SignlessOrUnsignedIntOfWidths<[8, 16, 32, 64]>
 
 class SPIRV_CoopMatrixOfType<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsCooperativeMatrixType,
-    "$_self.cast<::mlir::spirv::CooperativeMatrixNVType>().getElementType()",
+    "::llvm::cast<::mlir::spirv::CooperativeMatrixNVType>($_self).getElementType()",
     "Cooperative Matrix">;
 
 class SPIRV_JointMatrixOfType<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsJointMatrixType,
-    "$_self.cast<::mlir::spirv::JointMatrixINTELType>().getElementType()",
+    "::llvm::cast<::mlir::spirv::JointMatrixINTELType>($_self).getElementType()",
     "Joint Matrix">;
 
 class SPIRV_ScalarOrVectorOf<Type type> :

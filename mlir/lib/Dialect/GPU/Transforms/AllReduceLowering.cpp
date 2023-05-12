@@ -214,7 +214,7 @@ private:
 
   /// Returns an accumulator factory that creates an op specified by opName.
   AccumulatorFactory getFactory(gpu::AllReduceOperation opName) {
-    bool isFloatingPoint = valueType.isa<FloatType>();
+    bool isFloatingPoint = isa<FloatType>(valueType);
     switch (opName) {
     case gpu::AllReduceOperation::ADD:
       return isFloatingPoint ? getFactory<arith::AddFOp>()

@@ -111,9 +111,9 @@ Value SpecifierStructBuilder::getInitValue(OpBuilder &builder, Location loc,
   Value metaData = builder.create<LLVM::UndefOp>(loc, structType);
   SpecifierStructBuilder md(metaData);
   if (!source) {
-    auto memSizeArrayType = structType.cast<LLVM::LLVMStructType>()
-                                .getBody()[kMemSizePosInSpecifier]
-                                .cast<LLVM::LLVMArrayType>();
+    auto memSizeArrayType =
+        cast<LLVM::LLVMArrayType>(cast<LLVM::LLVMStructType>(structType)
+                                      .getBody()[kMemSizePosInSpecifier]);
 
     Value zero = constantZero(builder, loc, memSizeArrayType.getElementType());
     // Fill memSizes array with zero.

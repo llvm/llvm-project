@@ -767,6 +767,12 @@ def FeatureVALUTransUseHazard : SubtargetFeature<"valu-trans-use-hazard",
   "Hazard when TRANS instructions are closely followed by a use of the result"
 >;
 
+def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
+  "HasForceStoreSC0SC1",
+  "true",
+  "Has SC0 and SC1 on stores"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1193,7 +1199,7 @@ def FeatureISAVersion9_0_C : FeatureSet<
    FeatureMadMacF32Insts,
    FeatureImageGather4D16Bug]>;
 
-def FeatureISAVersion9_4_0 : FeatureSet<
+def FeatureISAVersion9_4_Common : FeatureSet<
   [FeatureGFX9,
    FeatureGFX90AInsts,
    FeatureGFX940Insts,
@@ -1226,6 +1232,18 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureArchitectedFlatScratch,
    FullRate64Ops,
    FeatureBackOffBarrier]>;
+
+def FeatureISAVersion9_4_0 : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+    [FeatureForceStoreSC0SC1])>;
+
+def FeatureISAVersion9_4_1 : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+    [FeatureForceStoreSC0SC1])>;
+
+def FeatureISAVersion9_4_2 : FeatureSet<
+  !listconcat(FeatureISAVersion9_4_Common.Features,
+    [])>;
 
 // TODO: Organize more features into groups.
 def FeatureGroup {

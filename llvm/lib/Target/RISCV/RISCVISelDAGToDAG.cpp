@@ -881,7 +881,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected size");
     case MVT::f16:
-      Opc = RISCV::FMV_H_X;
+      Opc =
+          Subtarget->hasStdExtZhinxOrZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
       break;
     case MVT::f32:
       Opc = Subtarget->hasStdExtZfinx() ? RISCV::COPY : RISCV::FMV_W_X;
@@ -3174,8 +3175,9 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   unsigned Opc = IsTA ? I->UnmaskedPseudo : I->UnmaskedTUPseudo;
 
   // Check that we're dropping the mask operand and any policy operand
-  // when we transform to this unmasked pseudo. Additionally, if this insturtion
-  // is tail agnostic, the unmasked instruction should not have a merge op.
+  // when we transform to this unmasked pseudo. Additionally, if this
+  // instruction is tail agnostic, the unmasked instruction should not have a
+  // merge op.
   uint64_t TSFlags = TII.get(Opc).TSFlags;
   assert((IsTA != RISCVII::hasMergeOp(TSFlags)) &&
          RISCVII::hasDummyMaskOp(TSFlags) &&

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/OpenACC/OpenACCToLLVMIRTranslation.h"
-#include "mlir/Conversion/OpenACCToLLVM/ConvertOpenACCToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -100,14 +99,7 @@ processOperands(llvm::IRBuilderBase &builder,
     llvm::Value *dataPtr;
     llvm::Value *dataSize;
 
-    // Handle operands that were converted to DataDescriptor.
-    if (DataDescriptor::isValid(data)) {
-      dataPtrBase =
-          builder.CreateExtractValue(dataValue, kPtrBasePosInDataDescriptor);
-      dataPtr = builder.CreateExtractValue(dataValue, kPtrPosInDataDescriptor);
-      dataSize =
-          builder.CreateExtractValue(dataValue, kSizePosInDataDescriptor);
-    } else if (data.getType().isa<LLVM::LLVMPointerType>()) {
+    if (isa<LLVM::LLVMPointerType>(data.getType())) {
       dataPtrBase = dataValue;
       dataPtr = dataValue;
       dataSize = accBuilder->getSizeInBytes(dataValue);

@@ -112,7 +112,7 @@ Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   if (ConstantOp::isBuildableWith(value, type))
     return builder.create<ConstantOp>(loc, type,
-                                      value.cast<FlatSymbolRefAttr>());
+                                      llvm::cast<FlatSymbolRefAttr>(value));
   return nullptr;
 }
 
@@ -209,7 +209,7 @@ void ConstantOp::getAsmResultNames(
 }
 
 bool ConstantOp::isBuildableWith(Attribute value, Type type) {
-  return value.isa<FlatSymbolRefAttr>() && type.isa<FunctionType>();
+  return llvm::isa<FlatSymbolRefAttr>(value) && llvm::isa<FunctionType>(type);
 }
 
 //===----------------------------------------------------------------------===//

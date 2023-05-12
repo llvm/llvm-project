@@ -98,7 +98,7 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
   auto constituents = op.getConstituents();
 
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
-    auto constituent = constituents[index].dyn_cast<FlatSymbolRefAttr>();
+    auto constituent = dyn_cast<FlatSymbolRefAttr>(constituents[index]);
 
     auto constituentName = constituent.getValue();
     auto constituentID = getSpecConstID(constituentName);
@@ -280,7 +280,7 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   auto attr = op->getAttr(spirv::attributeName<spirv::StorageClass>());
   if (attr) {
     operands.push_back(
-        static_cast<uint32_t>(attr.cast<spirv::StorageClassAttr>().getValue()));
+        static_cast<uint32_t>(cast<spirv::StorageClassAttr>(attr).getValue()));
   }
   elidedAttrs.push_back(spirv::attributeName<spirv::StorageClass>());
   for (auto arg : op.getODSOperands(0)) {
@@ -491,7 +491,7 @@ LogicalResult Serializer::processBranchConditionalOp(
 
   if (auto weights = condBranchOp.getBranchWeights()) {
     for (auto val : weights->getValue())
-      arguments.push_back(val.cast<IntegerAttr>().getInt());
+      arguments.push_back(cast<IntegerAttr>(val).getInt());
   }
 
   if (failed(emitDebugLine(functionBody, condBranchOp.getLoc())))
@@ -554,7 +554,7 @@ Serializer::processOp<spirv::EntryPointOp>(spirv::EntryPointOp op) {
   // Add the interface values.
   if (auto interface = op.getInterface()) {
     for (auto var : interface.getValue()) {
-      auto id = getVariableID(var.cast<FlatSymbolRefAttr>().getValue());
+      auto id = getVariableID(cast<FlatSymbolRefAttr>(var).getValue());
       if (!id) {
         return op.emitError(
             "referencing undefined global variable."
@@ -617,7 +617,7 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
     operands.push_back(valueID);
   }
 
-  if (!resultTy.isa<NoneType>())
+  if (!isa<NoneType>(resultTy))
     valueIDMap[op.getResult(0)] = funcCallID;
 
   encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionCall, operands);
@@ -638,28 +638,28 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
 
   if (auto attr = op->getAttr("memory_access")) {
     operands.push_back(
-        static_cast<uint32_t>(attr.cast<spirv::MemoryAccessAttr>().getValue()));
+        static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
   }
 
   elidedAttrs.push_back("memory_access");
 
   if (auto attr = op->getAttr("alignment")) {
     operands.push_back(static_cast<uint32_t>(
-        attr.cast<IntegerAttr>().getValue().getZExtValue()));
+        cast<IntegerAttr>(attr).getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("alignment");
 
   if (auto attr = op->getAttr("source_memory_access")) {
     operands.push_back(
-        static_cast<uint32_t>(attr.cast<spirv::MemoryAccessAttr>().getValue()));
+        static_cast<uint32_t>(cast<spirv::MemoryAccessAttr>(attr).getValue()));
   }
 
   elidedAttrs.push_back("source_memory_access");
 
   if (auto attr = op->getAttr("source_alignment")) {
     operands.push_back(static_cast<uint32_t>(
-        attr.cast<IntegerAttr>().getValue().getZExtValue()));
+        cast<IntegerAttr>(attr).getValue().getZExtValue()));
   }
 
   elidedAttrs.push_back("source_alignment");
@@ -689,7 +689,7 @@ LogicalResult Serializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   for (Value operand : op->getOperands())
     operands.push_back(getValueID(operand));
   spirv::StorageClass resultStorage =
-      resultTy.cast<spirv::PointerType>().getStorageClass();
+      cast<spirv::PointerType>(resultTy).getStorageClass();
   operands.push_back(static_cast<uint32_t>(resultStorage));
   encodeInstructionInto(functionBody, spirv::Opcode::OpGenericCastToPtrExplicit,
                         operands);

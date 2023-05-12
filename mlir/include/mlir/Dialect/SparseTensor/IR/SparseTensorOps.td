@@ -358,6 +358,52 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]>,
+    Arguments<(ins AnySparseTensor:$tensor)>,
+    Results<(outs Index:$result)> {
+  let summary = "Returns the number of entries that are stored in the tensor.";
+  let description = [{
+    Returns the number of entries that are stored in the given sparse tensor.
+    Note that this is typically the number of nonzero elements in the tensor,
+    but since explicit zeros may appear in the storage formats, the more
+    accurate nomenclature is used.
+
+    Example:
+
+    ```mlir
+    %noe = sparse_tensor.number_of_entries %tensor : tensor<64x64xf64, #CSR>
+    ```
+  }];
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
+    Arguments<(ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension)>,
+    Results<(outs AnyRankedTensor:$result)> {
+
+  let summary = "Concatenates a list of tensors into a single tensor.";
+  let description = [{
+     Concatenates a list input tensors and the output tensor with the same
+     dimension-rank.  The concatenation happens on the specified `dimension`
+     (0 <= dimension < dimRank).  The resulting `dimension` size is the
+     sum of all the input sizes for that dimension, while all the other
+     dimensions should have the same size in the input and output tensors.
+
+     Only statically-sized input tensors are accepted, while the output tensor
+     can be dynamically-sized.
+
+     Example:
+
+     ```mlir
+     %0 = sparse_tensor.concatenate %1, %2 { dimension = 0 : index }
+       : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
+     ```
+   }];
+
+  let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
+  let hasVerifier = 1;
+}
+
 def SparseTensor_ToSliceOffsetOp : SparseTensor_Op<"slice.offset", [Pure]>,
     Arguments<(ins AnySparseTensorSlice:$slice, IndexAttr:$dim)>,
     Results<(outs Index:$offset)> {
@@ -413,7 +459,12 @@ def SparseTensor_ToSliceStrideOp : SparseTensor_Op<"slice.stride", [Pure]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.init", [Pure]>,
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Storage Specifier Operations.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_StorageSpecifierInitOp : SparseTensor_Op<"storage_specifier.init",
+  [Pure]>,
     Arguments<(ins Optional<SparseTensorStorageSpecifier>:$source)>,
     Results<(outs SparseTensorStorageSpecifier:$result)> {
   let summary = "";
@@ -501,52 +552,6 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
   let hasVerifier = 1;
 }
 
-def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]>,
-    Arguments<(ins AnySparseTensor:$tensor)>,
-    Results<(outs Index:$result)> {
-  let summary = "Returns the number of entries that are stored in the tensor.";
-  let description = [{
-    Returns the number of entries that are stored in the given sparse tensor.
-    Note that this is typically the number of nonzero elements in the tensor,
-    but since explicit zeros may appear in the storage formats, the more
-    accurate nomenclature is used.
-
-    Example:
-
-    ```mlir
-    %noe = sparse_tensor.number_of_entries %tensor : tensor<64x64xf64, #CSR>
-    ```
-  }];
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
-}
-
-def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
-    Arguments<(ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension)>,
-    Results<(outs AnyRankedTensor:$result)> {
-
-  let summary = "Concatenates a list of tensors into a single tensor.";
-  let description = [{
-     Concatenates a list input tensors and the output tensor with the same
-     dimension-rank.  The concatenation happens on the specified `dimension`
-     (0 <= dimension < dimRank).  The resulting `dimension` size is the
-     sum of all the input sizes for that dimension, while all the other
-     dimensions should have the same size in the input and output tensors.
-
-     Only statically-sized input tensors are accepted, while the output tensor
-     can be dynamically-sized.
-
-     Example:
-
-     ```mlir
-     %0 = sparse_tensor.concatenate %1, %2 { dimension = 0 : index }
-       : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
-     ```
-   }];
-
-  let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
-  let hasVerifier = 1;
-}
-
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Management Operations. These operations are "impure" in the
 // sense that some behavior is defined by side-effects. These operations provide
@@ -558,7 +563,7 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
 def SparseTensor_InsertOp : SparseTensor_Op<"insert",
     [TypesMatchWith<"value type matches element type of tensor",
                     "tensor", "value",
-                    "$_self.cast<ShapedType>().getElementType()">,
+                    "::llvm::cast<ShapedType>($_self).getElementType()">,
      AllTypesMatch<["tensor", "result"]>]>,
     Arguments<(ins AnyType:$value,
                AnySparseTensor:$tensor,
@@ -600,7 +605,7 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert",
 def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     [TypesMatchWith<"value type matches element type of inBuffer",
                     "inBuffer", "value",
-                    "$_self.cast<ShapedType>().getElementType()">,
+                    "::llvm::cast<ShapedType>($_self).getElementType()">,
      AllTypesMatch<["inBuffer", "outBuffer"]>]>,
     Arguments<(ins Index:$curSize,
                StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
@@ -802,6 +807,10 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
   }];
   let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
 }
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Sorting Operations.
+//===----------------------------------------------------------------------===//
 
 def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
     // TODO: May want to extend tablegen with

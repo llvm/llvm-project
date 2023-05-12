@@ -11,6 +11,7 @@
 #define _PSTL_ALGORITHM_IMPL_H
 
 #include <__assert>
+#include <__config>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -22,7 +23,6 @@
 #include "parallel_backend.h"
 #include "parallel_backend_utils.h"
 #include "parallel_impl.h"
-#include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
 namespace __pstl {

@@ -10,6 +10,7 @@
 //
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2B %s
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2b -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2B %s
 //
 // CXX2B:#define __GNUG__ 4
 // CXX2B:#define __GXX_EXPERIMENTAL_CXX0X__ 1
@@ -134,6 +135,7 @@
 // FREESTANDING:#define __STDC_HOSTED__ 0
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2B %s
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2b -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2B %s
 //
 // GXX2B:#define __GNUG__ 4
 // GXX2B:#define __GXX_WEAK__ 1

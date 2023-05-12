@@ -367,7 +367,7 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
   if (criticalOp.getNameAttr()) {
     // The verifiers in OpenMP Dialect guarentee that all the pointers are
     // non-null
-    auto symbolRef = criticalOp.getNameAttr().cast<SymbolRefAttr>();
+    auto symbolRef = cast<SymbolRefAttr>(criticalOp.getNameAttr());
     auto criticalDeclareOp =
         SymbolTable::lookupNearestSymbolFrom<omp::CriticalDeclareOp>(criticalOp,
                                                                      symbolRef);
@@ -389,7 +389,7 @@ static omp::ReductionDeclareOp findReductionDecl(omp::WsLoopOp container,
   for (unsigned i = 0, e = container.getNumReductionVars(); i < e; ++i) {
     if (container.getReductionVars()[i] != reduction.getAccumulator())
       continue;
-    reductionSymbol = (*container.getReductions())[i].cast<SymbolRefAttr>();
+    reductionSymbol = cast<SymbolRefAttr>((*container.getReductions())[i]);
     break;
   }
   assert(reductionSymbol &&
@@ -705,7 +705,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
          llvm::zip(taskOp.getDependVars(), taskOp.getDepends()->getValue())) {
       llvm::omp::RTLDependenceKindTy type;
       switch (
-          std::get<1>(dep).cast<mlir::omp::ClauseTaskDependAttr>().getValue()) {
+          cast<mlir::omp::ClauseTaskDependAttr>(std::get<1>(dep)).getValue()) {
       case mlir::omp::ClauseTaskDepend::taskdependin:
         type = llvm::omp::RTLDependenceKindTy::DepIn;
         break;
@@ -1379,7 +1379,7 @@ static LogicalResult processMapOperand(
     llvm::Value *mapOpPtr;
     llvm::Value *mapOpSize;
 
-    if (mapOp.getType().isa<LLVM::LLVMPointerType>()) {
+    if (isa<LLVM::LLVMPointerType>(mapOp.getType())) {
       mapOpPtrBase = mapOpValue;
       mapOpPtr = mapOpValue;
       mapOpSize = ompBuilder->getSizeInBytes(mapOpValue);
@@ -1410,7 +1410,7 @@ static LogicalResult processMapOperand(
         {builder.getInt32(0), builder.getInt32(index)});
     builder.CreateStore(mapOpSize, sizeGEP);
 
-    mapTypeFlags.push_back(mapTypeOp.dyn_cast<mlir::IntegerAttr>().getInt());
+    mapTypeFlags.push_back(dyn_cast<mlir::IntegerAttr>(mapTypeOp).getInt());
     llvm::Constant *mapName =
         mlir::LLVM::createMappingInformation(mapOp.getLoc(), *ompBuilder);
     mapNames.push_back(mapName);
@@ -1445,7 +1445,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               if (auto constOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(
                       devId.getDefiningOp()))
                 if (auto intAttr =
-                        constOp.getValue().dyn_cast<mlir::IntegerAttr>())
+                        dyn_cast<mlir::IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
             numMapOperands = dataOp.getMapOperands().size();
@@ -1464,7 +1464,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               if (auto constOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(
                       devId.getDefiningOp()))
                 if (auto intAttr =
-                        constOp.getValue().dyn_cast<mlir::IntegerAttr>())
+                        dyn_cast<mlir::IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
             numMapOperands = enterDataOp.getMapOperands().size();
@@ -1483,7 +1483,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
               if (auto constOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(
                       devId.getDefiningOp()))
                 if (auto intAttr =
-                        constOp.getValue().dyn_cast<mlir::IntegerAttr>())
+                        dyn_cast<mlir::IntegerAttr>(constOp.getValue()))
                   deviceID = intAttr.getInt();
 
             numMapOperands = exitDataOp.getMapOperands().size();

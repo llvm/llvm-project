@@ -122,9 +122,6 @@ protected:
     // some may just be failing due to bugs in this testcase.
     if (Triple.startswith("armv7") || Triple.startswith("armv8l"))
       return false;
-    llvm::Triple T(Triple);
-    if (T.isOSAIX() && T.isPPC64())
-      return false;
     return true;
   }
 
@@ -425,7 +422,11 @@ TEST_F(OrcCAPITestBase, DefinitionGenerators) {
   ASSERT_EQ(ExpectedAddr, OutAddr);
 }
 
+#if defined(_AIX)
+TEST_F(OrcCAPITestBase, DISABLED_ResourceTrackerDefinitionLifetime) {
+#else
 TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
+#endif
   // This test case ensures that all symbols loaded into a JITDylib with a
   // ResourceTracker attached are cleared from the JITDylib once the RT is
   // removed.
@@ -450,7 +451,11 @@ TEST_F(OrcCAPITestBase, ResourceTrackerDefinitionLifetime) {
   LLVMOrcReleaseResourceTracker(RT);
 }
 
+#if defined(_AIX)
+TEST_F(OrcCAPITestBase, DISABLED_ResourceTrackerTransfer) {
+#else
 TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
+#endif
   LLVMOrcResourceTrackerRef DefaultRT =
       LLVMOrcJITDylibGetDefaultResourceTracker(MainDylib);
   LLVMOrcResourceTrackerRef RT2 =
@@ -469,7 +474,11 @@ TEST_F(OrcCAPITestBase, ResourceTrackerTransfer) {
   LLVMOrcReleaseResourceTracker(RT2);
 }
 
+#if defined(_AIX)
+TEST_F(OrcCAPITestBase, DISABLED_AddObjectBuffer) {
+#else
 TEST_F(OrcCAPITestBase, AddObjectBuffer) {
+#endif
   LLVMOrcObjectLayerRef ObjLinkingLayer = LLVMOrcLLJITGetObjLinkingLayer(Jit);
   LLVMMemoryBufferRef ObjBuffer = createTestObject(SumExample, "sum.ll");
 
@@ -485,7 +494,11 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
   ASSERT_TRUE(!!SumAddr);
 }
 
+#if defined(_AIX)
+TEST_F(OrcCAPITestBase, DISABLED_ExecutionTest) {
+#else
 TEST_F(OrcCAPITestBase, ExecutionTest) {
+#endif
   using SumFunctionType = int32_t (*)(int32_t, int32_t);
 
   // This test performs OrcJIT compilation of a simple sum module

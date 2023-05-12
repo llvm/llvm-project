@@ -679,21 +679,14 @@ public:
   DoubleAPFloat(DoubleAPFloat &&RHS);
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
-
-  DoubleAPFloat &operator=(DoubleAPFloat &&RHS) {
-    if (this != &RHS) {
-      this->~DoubleAPFloat();
-      new (this) DoubleAPFloat(std::move(RHS));
-    }
-    return *this;
-  }
+  inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
 
   bool needsCleanup() const { return Floats != nullptr; }
 
-  APFloat &getFirst() { return Floats[0]; }
-  const APFloat &getFirst() const { return Floats[0]; }
-  APFloat &getSecond() { return Floats[1]; }
-  const APFloat &getSecond() const { return Floats[1]; }
+  inline APFloat &getFirst();
+  inline const APFloat &getFirst() const;
+  inline APFloat &getSecond();
+  inline const APFloat &getSecond() const;
 
   opStatus add(const DoubleAPFloat &RHS, roundingMode RM);
   opStatus subtract(const DoubleAPFloat &RHS, roundingMode RM);
@@ -1407,6 +1400,27 @@ inline APFloat maximum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+// We want the following functions to be available in the header for inlining.
+// We cannot define them inline in the class definition of `DoubleAPFloat`
+// because doing so would instantiate `std::unique_ptr<APFloat[]>` before
+// `APFloat` is defined, and that would be undefined behavior.
+namespace detail {
+
+DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {
+  if (this != &RHS) {
+    this->~DoubleAPFloat();
+    new (this) DoubleAPFloat(std::move(RHS));
+  }
+  return *this;
+}
+
+APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
+const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
+APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
+const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+} // namespace detail
 
 } // namespace llvm
 

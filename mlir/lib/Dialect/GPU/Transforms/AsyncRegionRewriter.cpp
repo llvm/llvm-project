@@ -158,9 +158,9 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
   transform(executeOp.getResultTypes(), std::back_inserter(resultTypes),
             [](Type type) {
               // Extract value type from !async.value.
-              if (auto valueType = type.dyn_cast<async::ValueType>())
+              if (auto valueType = dyn_cast<async::ValueType>(type))
                 return valueType.getValueType();
-              assert(type.isa<async::TokenType>() && "expected token type");
+              assert(isa<async::TokenType>(type) && "expected token type");
               return type;
             });
   transform(results, std::back_inserter(resultTypes),
@@ -305,9 +305,9 @@ struct GpuAsyncRegionPass::SingleTokenUseCallback {
         executeOp.getBodyResults(), [](OpResult result) {
           if (result.use_empty() || result.hasOneUse())
             return false;
-          auto valueType = result.getType().dyn_cast<async::ValueType>();
+          auto valueType = dyn_cast<async::ValueType>(result.getType());
           return valueType &&
-                 valueType.getValueType().isa<gpu::AsyncTokenType>();
+                 isa<gpu::AsyncTokenType>(valueType.getValueType());
         });
     if (multiUseResults.empty())
       return;

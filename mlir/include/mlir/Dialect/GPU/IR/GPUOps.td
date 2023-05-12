@@ -1152,7 +1152,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
                  Optional<GPU_AsyncToken>:$asyncToken);
 
   let extraClassDeclaration = [{
-    MemRefType getType() { return getMemref().getType().cast<MemRefType>(); }
+    MemRefType getType() { return ::llvm::cast<MemRefType>(getMemref().getType()); }
   }];
 
   let assemblyFormat = [{
@@ -1415,7 +1415,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
     [Pure,
      TypesMatchWith<"value type matches element type of mma_matrix",
                     "res", "value",
-                    "$_self.cast<gpu::MMAMatrixType>().getElementType()">]>{
+                    "::llvm::cast<gpu::MMAMatrixType>($_self).getElementType()">]>{
 
   let summary = "GPU warp synchronous constant matrix";
 
@@ -1447,7 +1447,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return getRes().getType().cast<gpu::MMAMatrixType>();
+      return ::llvm::cast<gpu::MMAMatrixType>(getRes().getType());
     }
   }];
 
@@ -1524,7 +1524,7 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return getRes().getType().cast<gpu::MMAMatrixType>();
+      return ::llvm::cast<gpu::MMAMatrixType>(getRes().getType());
     }
   }];
 

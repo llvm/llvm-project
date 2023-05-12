@@ -17,6 +17,7 @@
 #include "hwasan.h"
 #include "hwasan_checks.h"
 #include "hwasan_thread.h"
+#include "hwasan_thread_list.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -44,8 +45,6 @@ using namespace __hwasan;
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 struct ThreadStartArg {
-  thread_callback_t callback;
-  void *param;
   __sanitizer_sigset_t starting_sigset_;
 };
 
@@ -54,47 +53,84 @@ static void *HwasanThreadStartFunc(void *arg) {
   ThreadStartArg A = *reinterpret_cast<ThreadStartArg *>(arg);
   SetSigProcMask(&A.starting_sigset_, nullptr);
   InternalFree(arg);
-  return A.callback(A.param);
+  auto self = GetThreadSelf();
+  auto args = hwasanThreadArgRetval().GetArgs(self);
+  void *retval = (*args.routine)(args.arg_retval);
+  hwasanThreadArgRetval().Finish(self, retval);
+  return retval;
 }
 
-INTERCEPTOR(int, pthread_create, void *th, void *attr,
+extern "C" {
+int pthread_attr_getdetachstate(void *attr, int *v);
+}
+
+INTERCEPTOR(int, pthread_create, void *thread, void *attr,
             void *(*callback)(void *), void *param) {
   EnsureMainThreadIDIsCorrect();
   ScopedTaggingDisabler tagging_disabler;
+  int detached = 0;
+  if (attr)
+    pthread_attr_getdetachstate(attr, &detached);
   ThreadStartArg *A = (ThreadStartArg *)InternalAlloc(sizeof(ThreadStartArg));
-  A->callback = callback;
-  A->param = param;
   ScopedBlockSignals block(&A->starting_sigset_);
   // ASAN uses the same approach to disable leaks from pthread_create.
 #    if CAN_SANITIZE_LEAKS
   __lsan::ScopedInterceptorDisabler lsan_disabler;
 #    endif
-  int result = REAL(pthread_create)(th, attr, &HwasanThreadStartFunc, A);
+
+  int result;
+  hwasanThreadArgRetval().Create(detached, {callback, param}, [&]() -> uptr {
+    result = REAL(pthread_create)(thread, attr, &HwasanThreadStartFunc, A);
+    return result ? 0 : *(uptr *)(thread);
+  });
   if (result != 0)
     InternalFree(A);
   return result;
 }
 
-INTERCEPTOR(int, pthread_join, void *t, void **arg) {
-  return REAL(pthread_join)(t, arg);
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
+  int result;
+  hwasanThreadArgRetval().Join((uptr)thread, [&]() {
+    result = REAL(pthread_join)(thread, retval);
+    return !result;
+  });
+  return result;
 }
 
 INTERCEPTOR(int, pthread_detach, void *thread) {
-  return REAL(pthread_detach)(thread);
+  int result;
+  hwasanThreadArgRetval().Detach((uptr)thread, [&]() {
+    result = REAL(pthread_detach)(thread);
+    return !result;
+  });
+  return result;
 }
 
 INTERCEPTOR(int, pthread_exit, void *retval) {
+  auto *t = GetCurrentThread();
+  if (t && !t->IsMainThread())
+    hwasanThreadArgRetval().Finish(GetThreadSelf(), retval);
   return REAL(pthread_exit)(retval);
 }
 
 #    if SANITIZER_GLIBC
 INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
-  return REAL(pthread_tryjoin_np)(thread, ret);
+  int result;
+  hwasanThreadArgRetval().Join((uptr)thread, [&]() {
+    result = REAL(pthread_tryjoin_np)(thread, ret);
+    return !result;
+  });
+  return result;
 }
 
 INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
             const struct timespec *abstime) {
-  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
+  int result;
+  hwasanThreadArgRetval().Join((uptr)thread, [&]() {
+    result = REAL(pthread_timedjoin_np)(thread, ret, abstime);
+    return !result;
+  });
+  return result;
 }
 #    endif
 

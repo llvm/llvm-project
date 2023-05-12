@@ -186,7 +186,7 @@ function(create_libc_unittest fq_target_name)
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND $<TARGET_FILE:${fq_build_target_name}>
+      COMMAND ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
     )
   endif()

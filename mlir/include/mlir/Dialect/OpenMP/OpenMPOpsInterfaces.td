@@ -49,7 +49,7 @@ def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
 
 def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   let description = [{
-    Operations that represent a module for offloading (host or device) 
+    Operations that represent a module for offloading (host or device)
     should have this interface.
   }];
 
@@ -58,7 +58,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   let methods = [
     InterfaceMethod<
       /*description=*/[{
-        Set the attribute IsDeviceAttr on the current module with the 
+        Set the attribute IsDeviceAttr on the current module with the
         specified boolean argument.
       }],
       /*retTy=*/"void",
@@ -77,29 +77,29 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       /*methodName=*/"getIsDevice",
       (ins), [{}], [{
         if (Attribute isDevice = $_op->getAttr("omp.is_device"))
-          if (isDevice.isa<mlir::omp::IsDeviceAttr>())
-            return isDevice.dyn_cast<IsDeviceAttr>().getIsDevice();
+          if (::llvm::isa<mlir::omp::IsDeviceAttr>(isDevice))
+            return ::llvm::dyn_cast<IsDeviceAttr>(isDevice).getIsDevice();
         return false;
       }]>,
       InterfaceMethod<
       /*description=*/[{
-        Get the FlagsAttr attribute on the current module if it exists 
+        Get the FlagsAttr attribute on the current module if it exists
         and return the attribute, if it doesn't exit it returns a nullptr
       }],
       /*retTy=*/"mlir::omp::FlagsAttr",
-      /*methodName=*/"getFlags", 
+      /*methodName=*/"getFlags",
       (ins), [{}], [{
         if (Attribute flags = $_op->getAttr("omp.flags"))
           return flags.dyn_cast_or_null<mlir::omp::FlagsAttr>();
         return nullptr;
-      }]>,  
+      }]>,
       InterfaceMethod<
       /*description=*/[{
-        Apply an omp.FlagsAttr to a module with the specified values 
+        Apply an omp.FlagsAttr to a module with the specified values
         for the flags
       }],
       /*retTy=*/"void",
-      /*methodName=*/"setFlags", 
+      /*methodName=*/"setFlags",
       (ins "uint32_t":$debugKind,
             "bool":$assumeTeamsOversubscription,
             "bool":$assumeThreadsOversubscription,
@@ -107,7 +107,7 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
             "bool":$assumeNoNestedParallelism), [{}], [{
         $_op->setAttr(("omp." + mlir::omp::FlagsAttr::getMnemonic()).str(),
                   mlir::omp::FlagsAttr::get($_op->getContext(), debugKind,
-                      assumeTeamsOversubscription, assumeThreadsOversubscription, 
+                      assumeTeamsOversubscription, assumeThreadsOversubscription,
                       assumeNoThreadState, assumeNoNestedParallelism));
       }]>,
     InterfaceMethod<
@@ -140,12 +140,12 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       }]>,
       InterfaceMethod<
       /*description=*/[{
-        Set a StringAttr on the current module containing the host IR file path. This 
+        Set a StringAttr on the current module containing the host IR file path. This
         file path is used in two-phase compilation during the device phase to generate
-        device side LLVM IR when lowering MLIR. 
+        device side LLVM IR when lowering MLIR.
       }],
       /*retTy=*/"void",
-      /*methodName=*/"setHostIRFilePath", 
+      /*methodName=*/"setHostIRFilePath",
       (ins "std::string":$hostIRFilePath), [{}], [{
         $_op->setAttr(
           mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.host_ir_filepath"}),
@@ -153,17 +153,17 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
        }]>,
       InterfaceMethod<
       /*description=*/[{
-        Find the host-ir file path StringAttr from the current module if it exists and 
-        return its contained value, if it doesn't exist it returns an empty string. This 
+        Find the host-ir file path StringAttr from the current module if it exists and
+        return its contained value, if it doesn't exist it returns an empty string. This
         file path is used in two-phase compilation during the device phase to generate
-        device side LLVM IR when lowering MLIR. 
+        device side LLVM IR when lowering MLIR.
       }],
       /*retTy=*/"llvm::StringRef",
-      /*methodName=*/"getHostIRFilePath", 
+      /*methodName=*/"getHostIRFilePath",
       (ins), [{}], [{
         if (Attribute filepath = $_op->getAttr("omp.host_ir_filepath"))
-          if (filepath.isa<mlir::StringAttr>())
-            return filepath.dyn_cast<mlir::StringAttr>().getValue();
+          if (::llvm::isa<mlir::StringAttr>(filepath))
+            return ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
         return {};
       }]>
   ];

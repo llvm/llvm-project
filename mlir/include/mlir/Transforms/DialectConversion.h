@@ -358,7 +358,7 @@ private:
     return [callback = std::forward<FnT>(callback)](
                Type type, SmallVectorImpl<Type> &results,
                ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
-      T derivedType = type.dyn_cast<T>();
+      T derivedType = dyn_cast<T>(type);
       if (!derivedType)
         return std::nullopt;
       return callback(derivedType, results, callStack);
@@ -380,7 +380,7 @@ private:
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
                Location loc) -> std::optional<Value> {
-      if (T derivedType = resultType.dyn_cast<T>())
+      if (T derivedType = dyn_cast<T>(resultType))
         return callback(builder, derivedType, inputs, loc);
       return std::nullopt;
     };
@@ -395,8 +395,8 @@ private:
   wrapTypeAttributeConversion(FnT &&callback) {
     return [callback = std::forward<FnT>(callback)](
                Type type, Attribute attr) -> AttributeConversionResult {
-      if (T derivedType = type.dyn_cast<T>()) {
-        if (A derivedAttr = attr.dyn_cast_or_null<A>())
+      if (T derivedType = dyn_cast<T>(type)) {
+        if (A derivedAttr = dyn_cast_or_null<A>(attr))
           return callback(derivedType, derivedAttr);
       }
       return AttributeConversionResult::na();

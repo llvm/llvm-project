@@ -6339,7 +6339,17 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
   if (!E || !E->isValid())
     return;
 
-  CheckDI(!E->isEntryValue(), "Entry values are only allowed in MIR", &I);
+  // We allow EntryValues for swift async arguments, as they have an
+  // ABI-guarantee to be turned into a specific register.
+  if (isa<ValueAsMetadata>(I.getRawLocation()))
+    if (auto *ArgLoc = dyn_cast_or_null<Argument>(I.getVariableLocationOp(0));
+        ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
+      return;
+
+  CheckDI(!E->isEntryValue(),
+          "Entry values are only allowed in MIR unless they target a "
+          "swiftasync Argument",
+          &I);
 }
 
 void Verifier::verifyCompileUnits() {

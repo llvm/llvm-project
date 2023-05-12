@@ -528,9 +528,9 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     Operation *op = operand.getOwner();
     Type type = operand.get().getType();
 
-    bool isToken = type.isa<TokenType>();
-    bool isGroup = type.isa<GroupType>();
-    bool isValue = type.isa<ValueType>();
+    bool isToken = isa<TokenType>(type);
+    bool isGroup = isa<GroupType>(type);
+    bool isValue = isa<ValueType>(type);
 
     // Drop reference after async token or group error check (coro await).
     if (auto await = dyn_cast<RuntimeIsErrorOp>(op))

@@ -381,6 +381,34 @@ void test_strlen() {
 #endif
 }
 
+void test_strnlen() {
+  char str1[] = "str1";
+  dfsan_set_label(i_label, &str1[3], 1);
+
+  int maxlen = 4;
+  dfsan_set_label(j_label, &maxlen, sizeof(maxlen));
+
+  int rv = strnlen(str1, maxlen);
+  assert(rv == 4);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
+
+  maxlen = 2;
+  dfsan_set_label(j_label, &maxlen, sizeof(maxlen));
+  rv = strnlen(str1, maxlen);
+  assert(rv == 2);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, j_label);
+  ASSERT_EQ_ORIGIN(rv, maxlen);
+#endif
+}
+
 void test_strdup() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -2085,6 +2113,7 @@ int main(void) {
   test_strcpy();
   test_strdup();
   test_strlen();
+  test_strnlen();
   test_strncasecmp();
   test_strncmp();
   test_strncpy();

@@ -246,27 +246,22 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (CUresult err = cuMemsetD32(dev_ret, 0, 1))
     handle_error(err);
 
-  uint64_t port_size = __llvm_libc::rpc::default_port_count;
+  uint64_t port_size = __llvm_libc::rpc::DEFAULT_PORT_COUNT;
   uint32_t warp_size = 32;
-  void *server_inbox =
-      allocator(port_size * sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *server_outbox =
-      allocator(port_size * sizeof(__llvm_libc::cpp::Atomic<int>));
-  void *buffer = allocator(
-      port_size * align_up(sizeof(__llvm_libc::rpc::Header) +
-                               (warp_size * sizeof(__llvm_libc::rpc::Buffer)),
-                           alignof(__llvm_libc::rpc::Packet)));
-  if (!server_inbox || !server_outbox || !buffer)
+
+  uint64_t rpc_shared_buffer_size =
+      __llvm_libc::rpc::Server::allocation_size(port_size, warp_size);
+  void *rpc_shared_buffer = allocator(rpc_shared_buffer_size);
+
+  if (!rpc_shared_buffer)
     handle_error("Failed to allocate memory the RPC client / server.");
 
   // Initialize the RPC server's buffer for host-device communication.
-  server.reset(port_size, warp_size, &lock, server_inbox, server_outbox,
-               buffer);
+  server.reset(port_size, warp_size, rpc_shared_buffer);
 
   LaunchParameters single_threaded_params = {1, 1, 1, 1, 1, 1};
   // Call the kernel to
-  begin_args_t init_args = {argc,          dev_argv,     dev_envp,
-                            server_outbox, server_inbox, buffer};
+  begin_args_t init_args = {argc, dev_argv, dev_envp, rpc_shared_buffer};
   if (CUresult err = launch_kernel(binary, stream, single_threaded_params,
                                    "_begin", init_args))
     handle_error(err);
@@ -296,11 +291,7 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
     handle_error(err);
   if (CUresult err = cuMemFreeHost(dev_argv))
     handle_error(err);
-  if (CUresult err = cuMemFreeHost(server_inbox))
-    handle_error(err);
-  if (CUresult err = cuMemFreeHost(server_outbox))
-    handle_error(err);
-  if (CUresult err = cuMemFreeHost(buffer))
+  if (CUresult err = cuMemFreeHost(rpc_shared_buffer))
     handle_error(err);
 
   // Destroy the context and the loaded binary.

@@ -11,12 +11,17 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
+#include <__algorithm/pstl_backend.h>
+#include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__pstl/internal/parallel_backend.h>
+#include <__pstl/internal/parallel_backend_serial.h>
 #include <__pstl/internal/unseq_backend_simd.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/void_t.h>
 #include <__utility/terminate_on_exception.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -30,41 +35,37 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _Function,
-          enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
-for_each(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Function __func) {
-  if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __is_cpp17_random_access_iterator<_ForwardIterator>::value) {
-    std::__terminate_on_exception([&] {
-      __pstl::__par_backend::__parallel_for(
-          {},
-          __policy,
-          __first,
-          __last,
-          [&__policy, __func](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            std::for_each(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __func);
-          });
-    });
-  } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __is_cpp17_random_access_iterator<_ForwardIterator>::value) {
-    __pstl::__unseq_backend::__simd_walk_1(__first, __last - __first, __func);
-  } else {
-    std::for_each(__first, __last, __func);
-  }
+for_each(_ExecutionPolicy&&, _ForwardIterator __first, _ForwardIterator __last, _Function __func) {
+  using _Backend = typename __select_backend<_RawPolicy>::type;
+  std::__pstl_for_each<_RawPolicy>(_Backend{}, std::move(__first), std::move(__last), std::move(__func));
 }
+
+template <class>
+void __pstl_for_each_n(); // declaration needed for the frontend dispatch below
 
 template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _Size,
           class _Function,
-          enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 for_each_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __size, _Function __func) {
-  if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value) {
-    std::for_each(__policy, __first, __first + __size, __func);
-  } else {
-    std::for_each_n(__first, __size, __func);
-  }
+  return std::__pstl_frontend_dispatch(
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_for_each_n),
+      [&](_ForwardIterator __g_first, _Size __g_size, _Function __g_func) {
+        if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value) {
+          std::for_each(__policy, std::move(__g_first), __g_first + __g_size, std::move(__g_func));
+        } else {
+          std::for_each_n(std::move(__g_first), __g_size, std::move(__g_func));
+        }
+      },
+      __first,
+      __size,
+      std::move(__func));
 }
 
 _LIBCPP_END_NAMESPACE_STD

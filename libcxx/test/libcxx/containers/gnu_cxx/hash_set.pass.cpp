@@ -9,9 +9,7 @@
 // UNSUPPORTED: modules-build
 
 // Prevent <ext/hash_set> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#   undef __DEPRECATED
-#endif
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
 #include <ext/hash_set>
 #include <cassert>

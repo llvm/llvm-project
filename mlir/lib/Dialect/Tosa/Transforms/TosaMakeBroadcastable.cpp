@@ -82,8 +82,8 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
                                           Location loc,
                                           RankedTensorType outputType,
                                           Value &input1, Value &input2) {
-  auto input1Ty = input1.getType().dyn_cast<RankedTensorType>();
-  auto input2Ty = input2.getType().dyn_cast<RankedTensorType>();
+  auto input1Ty = dyn_cast<RankedTensorType>(input1.getType());
+  auto input2Ty = dyn_cast<RankedTensorType>(input2.getType());
 
   if (!input1Ty || !input2Ty) {
     return rewriter.notifyMatchFailure(loc, "input not a ranked tensor");
@@ -106,9 +106,9 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
   }
 
   ArrayRef<int64_t> higherRankShape =
-      higherTensorValue.getType().cast<RankedTensorType>().getShape();
+      cast<RankedTensorType>(higherTensorValue.getType()).getShape();
   ArrayRef<int64_t> lowerRankShape =
-      lowerTensorValue.getType().cast<RankedTensorType>().getShape();
+      cast<RankedTensorType>(lowerTensorValue.getType()).getShape();
 
   SmallVector<int64_t, 4> reshapeOutputShape;
 
@@ -116,7 +116,7 @@ static LogicalResult reshapeLowerToHigher(PatternRewriter &rewriter,
           .failed())
     return rewriter.notifyMatchFailure(loc, "fail to compute a reshape type");
 
-  auto reshapeInputType = lowerTensorValue.getType().cast<RankedTensorType>();
+  auto reshapeInputType = cast<RankedTensorType>(lowerTensorValue.getType());
   auto reshapeOutputType = RankedTensorType::get(
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
 
@@ -155,7 +155,7 @@ struct ConvertTosaOp : public OpRewritePattern<OpTy> {
     Value input2 = tosaBinaryOp.getInput2();
     Value output = tosaBinaryOp.getResult();
 
-    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+    auto outputType = dyn_cast<RankedTensorType>(output.getType());
     if (!outputType)
       return failure();
 
@@ -183,7 +183,7 @@ struct ConvertTosaOp<tosa::MulOp> : public OpRewritePattern<tosa::MulOp> {
     Value input2 = tosaBinaryOp.getInput2();
     int32_t shift = tosaBinaryOp.getShift();
     Value output = tosaBinaryOp.getResult();
-    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+    auto outputType = dyn_cast<RankedTensorType>(output.getType());
     if (!outputType)
       return failure();
 
@@ -214,7 +214,7 @@ struct ConvertTosaOp<tosa::ArithmeticRightShiftOp>
     Value input2 = tosaBinaryOp.getInput2();
     int32_t round = tosaBinaryOp.getRound();
     Value output = tosaBinaryOp.getResult();
-    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+    auto outputType = dyn_cast<RankedTensorType>(output.getType());
     if (!outputType)
       return failure();
 
@@ -242,7 +242,7 @@ struct ConvertTosaOp<tosa::SelectOp> : public OpRewritePattern<tosa::SelectOp> {
     Value input3 = tosaOp.getOnFalse();
     Value output = tosaOp.getResult();
 
-    auto outputType = output.getType().dyn_cast<RankedTensorType>();
+    auto outputType = dyn_cast<RankedTensorType>(output.getType());
     if (!outputType)
       return rewriter.notifyMatchFailure(tosaOp, "output not a ranked tensor");
 
@@ -265,9 +265,9 @@ struct ConvertTosaOp<tosa::SelectOp> : public OpRewritePattern<tosa::SelectOp> {
           tosaOp,
           "cannot rewrite as the rank of all operands is already aligned");
 
-    int32_t result1Rank = input1.getType().cast<RankedTensorType>().getRank();
-    int32_t result2Rank = input2.getType().cast<RankedTensorType>().getRank();
-    int32_t result3Rank = input3.getType().cast<RankedTensorType>().getRank();
+    int32_t result1Rank = cast<RankedTensorType>(input1.getType()).getRank();
+    int32_t result2Rank = cast<RankedTensorType>(input2.getType()).getRank();
+    int32_t result3Rank = cast<RankedTensorType>(input3.getType()).getRank();
 
     if ((result1Rank != result2Rank) || (result2Rank != result3Rank))
       return rewriter.notifyMatchFailure(

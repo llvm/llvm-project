@@ -3635,7 +3635,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   if (ForcedVEXEncoding != VEXEncoding_VEX3 &&
-      X86::optimizeInstFromVEX3ToVEX2(Inst))
+      X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))
     return true;
 
   if (X86::optimizeShiftRotateWithImmediateOne(Inst))

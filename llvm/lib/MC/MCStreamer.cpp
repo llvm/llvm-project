@@ -1105,7 +1105,7 @@ void MCStreamer::emitInstruction(const MCInst &Inst, const MCSubtargetInfo &) {
 }
 
 void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
-                                 uint64_t Attr,
+                                 uint64_t Attr, uint64_t Discriminator,
                                  const MCPseudoProbeInlineStack &InlineStack,
                                  MCSymbol *FnSym) {
   auto &Context = getContext();
@@ -1117,7 +1117,7 @@ void MCStreamer::emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
   emitLabel(ProbeSym);
 
   // Create a (local) probe entry with the symbol.
-  MCPseudoProbe Probe(ProbeSym, Guid, Index, Type, Attr);
+  MCPseudoProbe Probe(ProbeSym, Guid, Index, Type, Attr, Discriminator);
 
   // Add the probe entry to this section's entries.
   Context.getMCPseudoProbeTable().getProbeSections().addPseudoProbe(
@@ -1196,7 +1196,7 @@ void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
 }
 
 void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
-                                          const MCSymbol *Trap, 
+                                          const MCSymbol *Trap,
                                           unsigned Lang, unsigned Reason,
                                           unsigned FunctionSize,
                                           bool hasDebug) {
