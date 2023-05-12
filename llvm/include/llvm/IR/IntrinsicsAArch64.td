@@ -2791,6 +2791,16 @@ let TargetPrefix = "aarch64" in {
       : DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_aarch64_svcount_ty, llvm_i32_ty],
                               [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
+  // While (predicate-as-counter) intrinsics
+  foreach cmp = ["ge", "gt", "hi", "hs", "le", "lo", "ls", "lt"] in {
+    foreach ty = ["c8", "c16", "c32", "c64"] in {
+      def int_aarch64_sve_while # cmp # _ # ty
+          : DefaultAttrsIntrinsic<[llvm_aarch64_svcount_ty],
+                                  [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
+                                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+    }
+  }
+
   //
   // SME2 Intrinsics
   //
