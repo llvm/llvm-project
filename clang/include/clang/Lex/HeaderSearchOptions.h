@@ -216,6 +216,9 @@ public:
 
   unsigned ModulesValidateDiagnosticOptions : 1;
 
+  /// Whether to entirely skip writing diagnostic options.
+  unsigned ModulesSkipDiagnosticOptions : 1;
+
   unsigned ModulesHashContent : 1;
 
   /// Whether we should include all things that could impact the module in the
@@ -234,7 +237,8 @@ public:
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ValidateASTInputFilesContent(false), UseDebugInfo(false),
-        ModulesValidateDiagnosticOptions(true), ModulesHashContent(false),
+        ModulesValidateDiagnosticOptions(true),
+        ModulesSkipDiagnosticOptions(false), ModulesHashContent(false),
         ModulesStrictContextHash(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.

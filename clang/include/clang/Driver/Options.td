@@ -6856,6 +6856,11 @@ defm cache_disable_replay : BoolFOption<"cache-disable-replay",
     PosFlag<SetTrue, [], "Disable replaying a cached compile job">,
     NegFlag<SetFalse>>;
 
+defm modules_skip_diagnostic_options : BoolFOption<"modules-skip-diagnostic-options",
+    HeaderSearchOpts<"ModulesSkipDiagnosticOptions">, DefaultFalse,
+    PosFlag<SetTrue, [], "Disable writing diagnostic options">,
+    NegFlag<SetFalse>>;
+
 def fcompilation_caching_service_path : Separate<["-"], "fcompilation-caching-service-path">,
     Group<f_Group>, MetaVarName<"<pathname>">,
     HelpText<"Specify the socket path for connecting to a remote caching service">,

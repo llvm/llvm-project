@@ -36,15 +36,20 @@ void tooling::dependencies::configureInvocationForCaching(
     CI.getCodeGenOpts().CoverageNotesFile.clear();
   }
 
+  HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
+  // Avoid writing potentially volatile diagnostic options into pcms.
+  HSOpts.ModulesSkipDiagnosticOptions = true;
+
   // "Fix" the CAS options.
   auto &FileSystemOpts = CI.getFileSystemOpts();
   if (ProduceIncludeTree) {
     FrontendOpts.CASIncludeTreeID = std::move(RootID);
     FrontendOpts.Inputs.clear();
     FrontendOpts.ModuleMapFiles.clear();
-    HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
     HeaderSearchOptions OriginalHSOpts;
     std::swap(HSOpts, OriginalHSOpts);
+    HSOpts.ModulesSkipDiagnosticOptions =
+        OriginalHSOpts.ModulesSkipDiagnosticOptions;
     // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
     // availability checking.
     HSOpts.Sysroot = std::move(OriginalHSOpts.Sysroot);

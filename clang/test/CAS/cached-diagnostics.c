@@ -54,9 +54,32 @@
 // RUN: %clang @%t/t2.rsp 2> %t/cached-diags2.txt
 // RUN: diff -u %t/regular-diags2.txt %t/cached-diags2.txt
 
+// RUN: %clang -cc1depscan -fdepscan=inline -fdepscan-include-tree -o %t/terr.rsp -cc1-args \
+// RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -fdepscan-prefix-map=%t/src=/^src \
+// RUN:     -emit-obj %t/src/main.c -o %t/out/output.o -I %t/src/inc -Rcompile-job-cache -DERROR
+
+// RUN: not %clang @%t/terr.rsp -ferror-limit 1 2> %t/diags_error1.txt
+// RUN: FileCheck %s -check-prefix=ERROR1 -input-file %t/diags_error1.txt
+
+// ERROR1: error: E1
+// ERROR1-NOT: error:
+// ERROR1: fatal error: too many errors emitted
+
+// RUN: not %clang @%t/terr.rsp -ferror-limit 2 2> %t/diags_error2.txt
+// RUN: FileCheck %s -check-prefix=ERROR2 -input-file %t/diags_error2.txt
+
+// ERROR2: error: E1
+// ERROR2: error: E2
+// ERROR2-NOT: error:
+
 //--- main.c
 
 #include "t1.h"
+
+#ifdef ERROR
+#error E1
+#error E2
+#endif
 
 //--- inc/t1.h
 

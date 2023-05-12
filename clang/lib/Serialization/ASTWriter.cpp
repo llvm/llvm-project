@@ -1165,6 +1165,9 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   // Diagnostic options.
   const auto &Diags = Context.getDiagnostics();
   const DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesSkipDiagnosticOptions) {
 #define DIAGOPT(Name, Bits, Default) Record.push_back(DiagOpts.Name);
 #define ENUM_DIAGOPT(Name, Type, Bits, Default)                                \
   Record.push_back(static_cast<unsigned>(DiagOpts.get##Name()));
@@ -1179,6 +1182,7 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   // are generally transient files and will almost always be overridden.
   Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
   Record.clear();
+  }
 
   // Header search paths.
   Record.clear();

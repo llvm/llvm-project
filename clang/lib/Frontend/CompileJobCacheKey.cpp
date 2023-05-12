@@ -95,6 +95,8 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
   DiagOpts.UseANSIEscapeCodes = false;
   DiagOpts.VerifyDiagnostics = false;
   DiagOpts.setVerifyIgnoreUnexpected(DiagnosticLevelMask::None);
+  // Note: ErrorLimit affects the set of diagnostics emitted, but since we do
+  // not cache compilation failures, it's safe to clear here.
   DiagOpts.ErrorLimit = 0;
   DiagOpts.MacroBacktraceLimit = 0;
   DiagOpts.SnippetLineLimit = 0;
