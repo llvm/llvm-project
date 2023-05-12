@@ -153,6 +153,17 @@ LogicalResult tosa::AvgPool2dOp::verify() {
           llvm::dyn_cast<mlir::quant::UniformQuantizedType>(resultETy))
     resultETy = quantType.getStorageType();
 
+  auto accType = getAccType();
+  if (inputETy.isa<IntegerType>() && !accType.isInteger(32))
+    return emitOpError("accumulator type for integer tensor is not i32");
+
+  if ((inputETy.isBF16() || inputETy.isF16()) &&
+      !(accType.isF16() || accType.isF32()))
+    return emitOpError("accumulator type for f16/bf16 tensor is not f16/f32");
+
+  if (inputETy.isF32() && !accType.isF32())
+    return emitOpError("accumulator type for f32 tensor is not f32");
+
   if (inputETy.isF32() && resultETy.isF32())
     return success();
   if (inputETy.isInteger(8) && resultETy.isInteger(8))
@@ -268,13 +279,16 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
 /// Both the tosa.avg_pool2d and unary ops use the same UnaruOpQuantizationAttr
 /// but avg_pool operator has its own builder as it has additional parameters
 /// not part of the unary ops.
-static void buildAvgPool2dOpWithQuantInfo(
-    OpBuilder &builder, OperationState &result, Type outputType, Value input,
-    DenseArrayAttr kernel, DenseArrayAttr stride, DenseArrayAttr pad) {
+static void
+buildAvgPool2dOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                              Type outputType, Value input,
+                              DenseArrayAttr kernel, DenseArrayAttr stride,
+                              DenseArrayAttr pad, TypeAttr acc_type) {
   result.addOperands(input);
   result.addAttribute("kernel", kernel);
   result.addAttribute("stride", stride);
   result.addAttribute("pad", pad);
+  result.addAttribute("acc_type", acc_type);
   auto quantAttr = buildUnaryOpQuantizationAttr(builder, input, outputType);
   if (quantAttr)
     result.addAttribute("quantization_info", quantAttr);
