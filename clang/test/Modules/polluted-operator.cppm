@@ -51,7 +51,20 @@ module;
 export module b;
 import a;
 
+void b() {
+  std::variant<int, double> v;
+}
+
 // expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
 // expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
 // expected-error@* {{from module 'a.<global>' is not present in definition of 'variant<_Types...>' provided earlier}}
 // expected-note@* {{declaration of 'swap' does not match}}
+
+//--- c.cppm
+module;
+#include "bar.h"
+export module c;
+import a;
+
+// expected-error@* {{has different definitions in different modules; first difference is defined here found data member '_S_copy_ctor' with an initializer}}
+// expected-note@* {{but in 'a.<global>' found data member '_S_copy_ctor' with a different initializer}}
