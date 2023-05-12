@@ -33,20 +33,17 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    store i32 1, ptr addrspace(3) @G, align 4
 ; CHECK-NEXT:    br label [[IF_MERGE:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr addrspace(3) @G, align 4
-; CHECK-NEXT:    call void @use1(i32 [[L]]) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CHECK-NEXT:    call void @llvm.assume(i1 undef)
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_MERGE]]
 ; CHECK:       if.merge:
 ; CHECK-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    store i32 2, ptr addrspace(3) @G, align 4
 ; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
