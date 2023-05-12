@@ -656,64 +656,61 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   Status err;
 
+  auto error = [&](const char *error_msg, const char *detail = nullptr) {
+    if (detail)
+      LLDB_LOG(log, "%s: %s", error_msg, detail);
+    else
+      LLDB_LOG(log, error_msg);
+
+    diagnostic_manager.PutString(eDiagnosticSeverityError, error_msg);
+    if (detail)
+      diagnostic_manager.AppendMessageToDiagnostic(detail);
+    return false;
+  };
+
   InstallContext(exe_ctx);
   Target *target = exe_ctx.GetTargetPtr();
-  if (!target) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                 "couldn't start parsing (no target)");
-    return false;
-  }
+  if (!target)
+    return error("couldn't start parsing (no target)");
 
   StackFrame *frame = exe_ctx.GetFramePtr();
-  if (!frame) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                 "couldn't start parsing - no stack frame");
-    LLDB_LOG(log, "no stack frame");
-    return false;
-  }
+  if (!frame)
+    return error("couldn't start parsing - no stack frame");
 
   auto *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  if (!exe_scope) {
-    LLDB_LOG(log, "no execution context scope");
-    return false;
-  }
+  if (!exe_scope)
+    return error( "no execution context scope");
 
   m_swift_scratch_ctx = target->GetSwiftScratchContext(m_err, *exe_scope);
-  if (!m_swift_scratch_ctx) {
-    LLDB_LOG(log, "no scratch context", m_err.AsCString());
-    return false;
-  }
+  if (!m_swift_scratch_ctx)
+    return error("could not create a Swift scratch context: ",
+                 m_err.AsCString());
+
   m_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
       m_swift_scratch_ctx->get()->GetSwiftASTContext());
 
-  if (!m_swift_ast_ctx) {
-    LLDB_LOG(log, "no Swift AST context");
-    return false;
-  }
+  if (!m_swift_ast_ctx)
+    return error("could not create a Swift AST context");
 
   if (m_swift_ast_ctx->HasFatalErrors()) {
+    m_swift_ast_ctx->PrintDiagnostics(diagnostic_manager);
     LLDB_LOG(log, "Swift AST context is in a fatal error state");
     return false;
   }
   
   // This may destroy the scratch context.
   auto *persistent_state = GetPersistentState(target, exe_ctx);
-  if (!persistent_state) {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                 "couldn't start parsing (no persistent data)");
-    return false;
-  }
+  if (!persistent_state)
+    return error("could not start parsing (no persistent data)");
 
-  Status error;
+  Status status;
   SourceModule module_info;
   module_info.path.emplace_back("Swift");
   swift::ModuleDecl *module_decl =
-      m_swift_ast_ctx->GetModule(module_info, error);
+      m_swift_ast_ctx->GetModule(module_info, status);
 
-  if (error.Fail() || !module_decl) {
-    LLDB_LOG(log, "couldn't load Swift Standard Library\n");
-    return false;
-  }
+  if (status.Fail() || !module_decl)
+    return error("could not load Swift Standard Library", status.AsCString());
 
   persistent_state->AddHandLoadedModule(ConstString("Swift"),
                                         swift::ImportedModule(module_decl));
@@ -722,10 +719,9 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
  
   ScanContext(exe_ctx, err);
 
-  if (!err.Success()) {
-    diagnostic_manager.Printf(eDiagnosticSeverityError, "warning: %s\n",
+  if (!err.Success())
+    diagnostic_manager.Printf(eDiagnosticSeverityWarning, "warning: %s\n",
                               err.AsCString());
-  }
 
   StreamString m_transformed_stream;
 
@@ -748,7 +744,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   
   while (true) {
     SwiftExpressionParser::ParseResult parse_result =
-        GetTextAndSetExpressionParser(diagnostic_manager, source_code, exe_ctx, exe_scope);
+        GetTextAndSetExpressionParser(diagnostic_manager, source_code, exe_ctx,
+                                      exe_scope);
 
     if (parse_result == ParseResult::success)
       break;
@@ -844,15 +841,12 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
       m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());
     return true;
-  } else {
-    const char *error_cstr = jit_error.AsCString();
-    if (error_cstr && error_cstr[0])
-      diagnostic_manager.PutString(eDiagnosticSeverityError, error_cstr);
-    else
-      diagnostic_manager.PutString(eDiagnosticSeverityError,
-                                    "expression can't be interpreted or run\n");
-    return false;
   }
+
+  const char *error_cstr = jit_error.AsCString();
+  if (!error_cstr || !error_cstr[0])
+    error_cstr = "expression can't be interpreted or run";
+  return error(error_cstr);
 }
 
 bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
