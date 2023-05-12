@@ -1278,40 +1278,40 @@ bool PPCAsmParser::MatchRegisterName(MCRegister &RegNo, int64_t &IntVal) {
   } else if (Name.equals_insensitive("vrsave")) {
     RegNo = PPC::VRSAVE;
     IntVal = 256;
-  } else if (Name.startswith_insensitive("r") &&
+  } else if (Name.starts_with_insensitive("r") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = isPPC64() ? XRegs[IntVal] : RRegs[IntVal];
-  } else if (Name.startswith_insensitive("f") &&
+  } else if (Name.starts_with_insensitive("f") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = FRegs[IntVal];
-  } else if (Name.startswith_insensitive("vs") &&
+  } else if (Name.starts_with_insensitive("vs") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 64) {
     RegNo = VSRegs[IntVal];
-  } else if (Name.startswith_insensitive("v") &&
+  } else if (Name.starts_with_insensitive("v") &&
              !Name.substr(1).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = VRegs[IntVal];
-  } else if (Name.startswith_insensitive("cr") &&
+  } else if (Name.starts_with_insensitive("cr") &&
              !Name.substr(2).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = CRRegs[IntVal];
-  } else if (Name.startswith_insensitive("acc") &&
+  } else if (Name.starts_with_insensitive("acc") &&
              !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = ACCRegs[IntVal];
-  } else if (Name.startswith_insensitive("wacc_hi") &&
+  } else if (Name.starts_with_insensitive("wacc_hi") &&
              !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = ACCRegs[IntVal];
-  } else if (Name.startswith_insensitive("wacc") &&
+  } else if (Name.starts_with_insensitive("wacc") &&
              !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = WACCRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmrrowp") &&
+  } else if (Name.starts_with_insensitive("dmrrowp") &&
              !Name.substr(7).getAsInteger(10, IntVal) && IntVal < 32) {
     RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmrrow") &&
+  } else if (Name.starts_with_insensitive("dmrrow") &&
              !Name.substr(6).getAsInteger(10, IntVal) && IntVal < 64) {
     RegNo = DMRROWRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmrp") &&
+  } else if (Name.starts_with_insensitive("dmrp") &&
              !Name.substr(4).getAsInteger(10, IntVal) && IntVal < 4) {
     RegNo = DMRROWpRegs[IntVal];
-  } else if (Name.startswith_insensitive("dmr") &&
+  } else if (Name.starts_with_insensitive("dmr") &&
              !Name.substr(3).getAsInteger(10, IntVal) && IntVal < 8) {
     RegNo = DMRRegs[IntVal];
   } else
