@@ -22,29 +22,36 @@
 
 // REQUIRES: pointer-tagging
 
+#include <inttypes.h>
 #include <stdlib.h>
+
+struct data {
+  uint64_t x;
+  uint64_t y;
+};
 
 // GlobalOpt may replace the current GV with a new boolean-typed GV. Previously,
 // this resulted in the "nosanitize" getting dropped because while the data/code
 // references to the GV were updated, the old metadata references weren't.
-int* f() {
+struct data *f() {
 #ifdef USE_NOSANITIZE
-__attribute__((no_sanitize("hwaddress"))) static int x = 1;
+  __attribute__((no_sanitize("hwaddress"))) static struct data x = {1, 0};
 #else // USE_NOSANITIZE
-  static int x = 1;
+  static struct data x = {1, 0};
 #endif // USE_NOSANITIZE
-  if (x == 1) x = 0;
+  if (x.x == 1)
+    x.x = 0;
   return &x;
 }
 
 int main(int argc, char **argv) {
   // CHECK: Cause: global-overflow
-  // RSYM: is located 0 bytes after a 4-byte global variable f.x {{.*}} in {{.*}}global-with-reduction.c.tmp
-  // RNOSYM: is located after a 4-byte global variable in
+  // RSYM: is located 0 bytes after a 16-byte global variable f.x {{.*}} in {{.*}}global-with-reduction.c.tmp
+  // RNOSYM: is located after a 16-byte global variable in
   // RNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global-with-reduction.c.tmp+{{.*}})
-  // LSYM: is located 4 bytes before a 4-byte global variable f.x {{.*}} in {{.*}}global-with-reduction.c.tmp
-  // LNOSYM: is located before a 4-byte global variable in
+  // LSYM: is located 16 bytes before a 16-byte global variable f.x {{.*}} in {{.*}}global-with-reduction.c.tmp
+  // LNOSYM: is located before a 16-byte global variable in
   // LNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global-with-reduction.c.tmp+{{.*}})
   // CHECK-NOT: can not describe
-  f()[atoi(argv[1])] = 1;
+  f()[atoi(argv[1])].x = 1;
 }

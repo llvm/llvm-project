@@ -147,14 +147,14 @@ public:
   }
 
   StringSwitch &EndsWithLower(StringLiteral S, T Value) {
-    if (!Result && Str.endswith_insensitive(S))
+    if (!Result && Str.ends_with_insensitive(S))
       Result = Value;
 
     return *this;
   }
 
   StringSwitch &StartsWithLower(StringLiteral S, T Value) {
-    if (!Result && Str.startswith_insensitive(S))
+    if (!Result && Str.starts_with_insensitive(S))
       Result = std::move(Value);
 
     return *this;
