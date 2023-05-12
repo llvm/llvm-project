@@ -130,7 +130,8 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                                     ArrayRef<int64_t> dstStaticShape,
                                     ArrayRef<AffineMap> reassocation) {
   return dstStaticShape.size() >
-                 static_cast<size_t>(src.getType().cast<ShapedType>().getRank())
+                 static_cast<size_t>(
+                     llvm::cast<ShapedType>(src.getType()).getRank())
              ? getExpandedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation)
              : getCollapsedOutputShapeFromInputShape(
@@ -185,7 +186,7 @@ struct ReifyPadOp
           return;
         }
         int64_t staticValue =
-            valueOrAttr.get<Attribute>().cast<IntegerAttr>().getInt();
+            llvm::cast<IntegerAttr>(valueOrAttr.get<Attribute>()).getInt();
         expr = expr + staticValue;
       };
       addOpFoldResult(lowPad[dim]);
