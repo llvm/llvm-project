@@ -51,8 +51,8 @@
 // LINK2: -cc1{{.*}} "-ftime-trace=f/gb.json" "-ftime-trace-granularity=0"
 
 // RUN: %clang -### -ftime-trace=e -ftime-trace-granularity=0 d/a.cpp d/b.c -o f/x -dumpdir f/ 2>&1 | FileCheck %s --check-prefix=LINK3
-// LINK3: -cc1{{.*}} "-ftime-trace=e/a-{{[^.]*}}.json" "-ftime-trace-granularity=0"
-// LINK3: -cc1{{.*}} "-ftime-trace=e/b-{{[^.]*}}.json" "-ftime-trace-granularity=0"
+// LINK3: -cc1{{.*}} "-ftime-trace=e{{/|\\\\}}a-{{[^.]*}}.json" "-ftime-trace-granularity=0"
+// LINK3: -cc1{{.*}} "-ftime-trace=e{{/|\\\\}}b-{{[^.]*}}.json" "-ftime-trace-granularity=0"
 
 // RUN: %clang -### -ftime-trace -ftime-trace=e -ftime-trace-granularity=1 -xassembler d/a.cpp 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=UNUSED --implicit-check-not=warning:
