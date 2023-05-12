@@ -110,19 +110,35 @@ mlir::Type CIRGenFunction::convertType(QualType T) {
 }
 
 mlir::Location CIRGenFunction::getLoc(SourceLocation SLoc) {
-  const SourceManager &SM = getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
-  StringRef Filename = PLoc.getFilename();
-  return mlir::FileLineColLoc::get(builder.getStringAttr(Filename),
-                                   PLoc.getLine(), PLoc.getColumn());
+  // Some AST nodes might contain invalid source locations (e.g.
+  // CXXDefaultArgExpr), workaround that to still get something out.
+  if (SLoc.isValid()) {
+    const SourceManager &SM = getContext().getSourceManager();
+    PresumedLoc PLoc = SM.getPresumedLoc(SLoc);
+    StringRef Filename = PLoc.getFilename();
+    return mlir::FileLineColLoc::get(builder.getStringAttr(Filename),
+                                     PLoc.getLine(), PLoc.getColumn());
+  } else {
+    // Do our best...
+    assert(currSrcLoc && "expected to inherit some source location");
+    return *currSrcLoc;
+  }
 }
 
 mlir::Location CIRGenFunction::getLoc(SourceRange SLoc) {
-  mlir::Location B = getLoc(SLoc.getBegin());
-  mlir::Location E = getLoc(SLoc.getEnd());
-  SmallVector<mlir::Location, 2> locs = {B, E};
-  mlir::Attribute metadata;
-  return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  // Some AST nodes might contain invalid source locations (e.g.
+  // CXXDefaultArgExpr), workaround that to still get something out.
+  if (SLoc.isValid()) {
+    mlir::Location B = getLoc(SLoc.getBegin());
+    mlir::Location E = getLoc(SLoc.getEnd());
+    SmallVector<mlir::Location, 2> locs = {B, E};
+    mlir::Attribute metadata;
+    return mlir::FusedLoc::get(locs, metadata, builder.getContext());
+  } else {
+    // Do our best...
+    assert(currSrcLoc && "expected to inherit some source location");
+    return *currSrcLoc;
+  }
 }
 
 mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
