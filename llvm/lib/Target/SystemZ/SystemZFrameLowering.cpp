@@ -1315,6 +1315,10 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   if (StackAllocMI == nullptr)
     return;
 
+  bool NeedSaveSP = hasFP(MF);
+  bool NeedSaveArg = PrologMBB.isLiveIn(SystemZ::R3D);
+  const int64_t SaveSlotR3 = 2192;
+
   MachineBasicBlock &MBB = PrologMBB;
   const DebugLoc DL = StackAllocMI->getDebugLoc();
 
@@ -1334,7 +1338,25 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   // BASR r3,r3
   BuildMI(StackExtMBB, DL, ZII->get(SystemZ::CallBASR_STACKEXT))
       .addReg(SystemZ::R3D);
-
+  if (NeedSaveArg) {
+    if (!NeedSaveSP) {
+      // LGR r0,r3
+      BuildMI(MBB, StackAllocMI, DL, ZII->get(SystemZ::LGR))
+          .addReg(SystemZ::R0D, RegState::Define)
+          .addReg(SystemZ::R3D);
+    } else {
+      // In this case, the incoming value of r4 is saved in r0 so the
+      // latter register is unavailable. Store r3 in its corresponding
+      // slot in the parameter list instead. Do this at the start of
+      // the prolog before r4 is manipulated by anything else.
+      // STG r3, 2192(r4)
+      BuildMI(MBB, MBB.begin(), DL, ZII->get(SystemZ::STG))
+          .addReg(SystemZ::R3D)
+          .addReg(SystemZ::R4D)
+          .addImm(SaveSlotR3)
+          .addReg(0);
+    }
+  }
   // LLGT r3,1208
   BuildMI(MBB, StackAllocMI, DL, ZII->get(SystemZ::LLGT), SystemZ::R3D)
       .addReg(0)
@@ -1355,6 +1377,28 @@ void SystemZXPLINKFrameLowering::inlineStackProbe(
   NextMBB = SystemZ::splitBlockBefore(StackAllocMI, &MBB);
   MBB.addSuccessor(NextMBB);
   MBB.addSuccessor(StackExtMBB);
+  if (NeedSaveArg) {
+    if (!NeedSaveSP) {
+      // LGR r3, r0
+      BuildMI(*NextMBB, StackAllocMI, DL, ZII->get(SystemZ::LGR))
+          .addReg(SystemZ::R3D, RegState::Define)
+          .addReg(SystemZ::R0D, RegState::Kill);
+    } else {
+      // In this case, the incoming value of r4 is saved in r0 so the
+      // latter register is unavailable. We stored r3 in its corresponding
+      // slot in the parameter list instead and we now restore it from there.
+      // LGR r3, r0
+      BuildMI(*NextMBB, StackAllocMI, DL, ZII->get(SystemZ::LGR))
+          .addReg(SystemZ::R3D, RegState::Define)
+          .addReg(SystemZ::R0D);
+      // LG r3, 2192(r3)
+      BuildMI(*NextMBB, StackAllocMI, DL, ZII->get(SystemZ::LG))
+          .addReg(SystemZ::R3D, RegState::Define)
+          .addReg(SystemZ::R3D)
+          .addImm(SaveSlotR3)
+          .addReg(0);
+    }
+  }
 
   // Add jump back from stack extension BB.
   BuildMI(StackExtMBB, DL, ZII->get(SystemZ::J)).addMBB(NextMBB);
