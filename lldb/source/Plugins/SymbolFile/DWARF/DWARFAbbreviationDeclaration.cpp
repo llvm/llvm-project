@@ -53,12 +53,13 @@ DWARFAbbreviationDeclaration::extract(const DWARFDataExtractor &data,
       return llvm::make_error<llvm::object::GenericBinaryError>(
           "malformed abbreviation declaration attribute");
 
-    DWARFFormValue::ValueType val;
+    if (form == DW_FORM_implicit_const) {
+      int64_t value = data.GetSLEB128(offset_ptr);
+      m_attributes.emplace_back(attr, form, value);
+      continue;
+    }
 
-    if (form == DW_FORM_implicit_const)
-      val.value.sval = data.GetSLEB128(offset_ptr);
-
-    m_attributes.push_back(DWARFAttribute(attr, form, val));
+    m_attributes.emplace_back(attr, form);
   }
 
   return llvm::make_error<llvm::object::GenericBinaryError>(
@@ -72,10 +73,8 @@ bool DWARFAbbreviationDeclaration::IsValid() {
 
 uint32_t
 DWARFAbbreviationDeclaration::FindAttributeIndex(dw_attr_t attr) const {
-  uint32_t i;
-  const uint32_t kNumAttributes = m_attributes.size();
-  for (i = 0; i < kNumAttributes; ++i) {
-    if (m_attributes[i].get_attr() == attr)
+  for (size_t i = 0; i < m_attributes.size(); ++i) {
+    if (m_attributes[i].GetAttribute() == attr)
       return i;
   }
   return DW_INVALID_INDEX;
