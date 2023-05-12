@@ -25,7 +25,7 @@ static size_t numElementsInSubstring(const SuffixTreeNode *N) {
 }
 
 SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str) : Str(Str) {
-  Root = insertInternalNode(nullptr, EmptyIdx, EmptyIdx, 0);
+  Root = insertRoot();
   Active.Node = Root;
 
   // Keep track of the number of suffixes we have to add of the current
@@ -60,13 +60,18 @@ SuffixTree::insertInternalNode(SuffixTreeInternalNode *Parent,
                                unsigned StartIdx, unsigned EndIdx,
                                unsigned Edge) {
   assert(StartIdx <= EndIdx && "String can't start after it ends!");
-  assert(!(!Parent && StartIdx != EmptyIdx) &&
+  assert(!(!Parent && StartIdx != SuffixTreeNode::EmptyIdx) &&
          "Non-root internal nodes must have parents!");
   auto *N = new (InternalNodeAllocator.Allocate())
       SuffixTreeInternalNode(StartIdx, EndIdx, Root);
   if (Parent)
     Parent->Children[Edge] = N;
   return N;
+}
+
+SuffixTreeInternalNode *SuffixTree::insertRoot() {
+  return insertInternalNode(/*Parent = */ nullptr, SuffixTreeNode::EmptyIdx,
+                            SuffixTreeNode::EmptyIdx, /*Edge = */ 0);
 }
 
 void SuffixTree::setSuffixIndices() {
