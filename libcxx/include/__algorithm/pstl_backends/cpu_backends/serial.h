@@ -28,6 +28,8 @@ _LIBCPP_HIDE_FROM_ABI void __parallel_for(_RandomAccessIterator __first, _Random
   __f(__first, __last);
 }
 
+_LIBCPP_HIDE_FROM_ABI inline void __cancel_execution() {}
+
 // TODO: Complete this list
 
 } // namespace __serial_cpu_backend

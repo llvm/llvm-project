@@ -98,52 +98,6 @@ __simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept
     return false;
 }
 
-template <class _Index, class _DifferenceType, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _Index
-__simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept
-{
-    // Experiments show good block sizes like this
-    const _DifferenceType __block_size = 8;
-    alignas(__lane_size) _DifferenceType __lane[__block_size] = {0};
-    while (__end - __begin >= __block_size)
-    {
-        _DifferenceType __found = 0;
-            _PSTL_PRAGMA_SIMD_REDUCTION(|
-                                        : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size;
-                                                        ++__i)
-        {
-            const _DifferenceType __t = __comp(__first, __i);
-            __lane[__i - __begin] = __t;
-            __found |= __t;
-        }
-        if (__found)
-        {
-            _DifferenceType __i;
-            // This will vectorize
-            for (__i = 0; __i < __block_size; ++__i)
-            {
-                if (__lane[__i])
-                {
-                    break;
-                }
-            }
-            return __first + __begin + __i;
-        }
-        __begin += __block_size;
-    }
-
-    //Keep remainder scalar
-    while (__begin != __end)
-    {
-        if (__comp(__first, __begin))
-        {
-            return __first + __begin;
-        }
-        ++__begin;
-    }
-    return __first + __end;
-}
-
 template <class _Index1, class _DifferenceType, class _Index2, class _Pred>
 _LIBCPP_HIDE_FROM_ABI std::pair<_Index1, _Index2>
 __simd_first(_Index1 __first1, _DifferenceType __n, _Index2 __first2, _Pred __pred) noexcept
@@ -321,17 +275,6 @@ __simd_partition_by_mask(_InputIterator __first, _DifferenceType __n, _OutputIte
             ++__cnt_false;
         }
     }
-}
-
-template <class _Index, class _DifferenceType, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Index
-__simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept
-{
-    _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-    _PSTL_PRAGMA_SIMD
-    for (_DifferenceType __i = 0; __i < __n; ++__i)
-        __first[__i] = __value;
-    return __first + __n;
 }
 
 template <class _Index, class _DifferenceType, class _Generator>
