@@ -5,10 +5,30 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// A data structure for fast substring queries.
 //
-// This file defines the Suffix Tree class and Suffix Tree Node struct.
+// Suffix trees represent the suffixes of their input strings in their leaves.
+// A suffix tree is a type of compressed trie structure where each node
+// represents an entire substring rather than a single character. Each leaf
+// of the tree is a suffix.
 //
+// A suffix tree can be seen as a type of state machine where each state is a
+// substring of the full string. The tree is structured so that, for a string
+// of length N, there are exactly N leaves in the tree. This structure allows
+// us to quickly find repeated substrings of the input string.
+//
+// In this implementation, a "string" is a vector of unsigned integers.
+// These integers may result from hashing some data type. A suffix tree can
+// contain 1 or many strings, which can then be queried as one large string.
+//
+// The suffix tree is implemented using Ukkonen's algorithm for linear-time
+// suffix tree construction. Ukkonen's algorithm is explained in more detail
+// in the paper by Esko Ukkonen "On-line construction of suffix trees. The
+// paper is available at
+//
+// https://www.cs.helsinki.fi/u/ukkonen/SuffixT1withFigs.pdf
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_SUPPORT_SUFFIXTREE_H
 #define LLVM_SUPPORT_SUFFIXTREE_H
 
@@ -19,28 +39,6 @@
 #include <vector>
 
 namespace llvm {
-/// A data structure for fast substring queries.
-///
-/// Suffix trees represent the suffixes of their input strings in their leaves.
-/// A suffix tree is a type of compressed trie structure where each node
-/// represents an entire substring rather than a single character. Each leaf
-/// of the tree is a suffix.
-///
-/// A suffix tree can be seen as a type of state machine where each state is a
-/// substring of the full string. The tree is structured so that, for a string
-/// of length N, there are exactly N leaves in the tree. This structure allows
-/// us to quickly find repeated substrings of the input string.
-///
-/// In this implementation, a "string" is a vector of unsigned integers.
-/// These integers may result from hashing some data type. A suffix tree can
-/// contain 1 or many strings, which can then be queried as one large string.
-///
-/// The suffix tree is implemented using Ukkonen's algorithm for linear-time
-/// suffix tree construction. Ukkonen's algorithm is explained in more detail
-/// in the paper by Esko Ukkonen "On-line construction of suffix trees. The
-/// paper is available at
-///
-/// https://www.cs.helsinki.fi/u/ukkonen/SuffixT1withFigs.pdf
 class SuffixTree {
 public:
   /// Each element is an integer representing an instruction in the module.
