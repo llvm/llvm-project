@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 struct Bar {
@@ -108,3 +108,25 @@ void m() { Adv C; }
 // CHECK:     cir.store %8, %7 : i32, cir.ptr <i32>
 // CHECK:     cir.return
 // CHECK:   }
+
+struct A {
+  int a;
+};
+
+A get_default() { return A{2}; }
+
+struct S {
+  S(A a = get_default());
+};
+
+void h() { S s; }
+
+// CHECK: cir.func @_Z1hv() {
+// CHECK:   %0 = cir.alloca !ty_22struct2ES22, cir.ptr <!ty_22struct2ES22>, ["s", init] {alignment = 1 : i64}
+// CHECK:   %1 = cir.alloca !ty_22struct2EA22, cir.ptr <!ty_22struct2EA22>, ["agg.tmp0"] {alignment = 4 : i64}
+// CHECK:   %2 = cir.call @_Z11get_defaultv() : () -> !ty_22struct2EA22
+// CHECK:   cir.store %2, %1 : !ty_22struct2EA22, cir.ptr <!ty_22struct2EA22>
+// CHECK:   %3 = cir.load %1 : cir.ptr <!ty_22struct2EA22>, !ty_22struct2EA22
+// CHECK:   cir.call @_ZN1SC1E1A(%0, %3) : (!cir.ptr<!ty_22struct2ES22>, !ty_22struct2EA22) -> ()
+// CHECK:   cir.return
+// CHECK: }
