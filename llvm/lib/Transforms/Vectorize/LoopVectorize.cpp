@@ -9638,7 +9638,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
 
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGatherScatter = !Consecutive;
+  bool CreateGatherScatter = !isConsecutive();
 
   auto &Builder = State.Builder;
   InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
@@ -9655,13 +9655,13 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
     // or query DataLayout for a more suitable index type otherwise.
     const DataLayout &DL =
         Builder.GetInsertBlock()->getModule()->getDataLayout();
-    Type *IndexTy = State.VF.isScalable() && (Reverse || Part > 0)
+    Type *IndexTy = State.VF.isScalable() && (isReverse() || Part > 0)
                         ? DL.getIndexType(ScalarDataTy->getPointerTo())
                         : Builder.getInt32Ty();
     bool InBounds = false;
     if (auto *gep = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
       InBounds = gep->isInBounds();
-    if (Reverse) {
+    if (isReverse()) {
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
       // RunTimeVF =  VScale * VF.getKnownMinValue()
@@ -9701,7 +9701,7 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
         NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
                                             MaskPart);
       } else {
-        if (Reverse) {
+        if (isReverse()) {
           // If we store to reverse consecutive memory locations, then we need
           // to reverse the order of elements in the stored value.
           StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
