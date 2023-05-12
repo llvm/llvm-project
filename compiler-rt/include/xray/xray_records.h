@@ -43,10 +43,13 @@ struct alignas(32) XRayFileHeader {
   // have different files for different information being stored.
   uint16_t Type = 0;
 
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wc++20-extensions"
   // What follows are a set of flags that indicate useful things for when
   // reading the data in the file.
   bool ConstantTSC : 1 = false;
   bool NonstopTSC : 1 = false;
+  #pragma clang diagnostic pop
 
   // The frequency by which TSC increases per-second.
   alignas(8) uint64_t CycleFrequency = 0;
