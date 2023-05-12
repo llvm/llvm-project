@@ -1738,7 +1738,8 @@ inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
 /// op is not valid in a constant context.
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
+      << S.Current->getRange(OpPC);
   return false;
 }
 

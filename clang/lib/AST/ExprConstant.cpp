@@ -5227,7 +5227,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       return ESR_Succeeded;
     }
 
-    Info.FFDiag(S->getBeginLoc());
+    Info.FFDiag(S->getBeginLoc()) << S->getSourceRange();
     return ESR_Failed;
 
   case Stmt::NullStmtClass:
@@ -7454,7 +7454,7 @@ public:
   /// Report an evaluation error. This should only be called when an error is
   /// first discovered. When propagating an error, just return false.
   bool Error(const Expr *E, diag::kind D) {
-    Info.FFDiag(E, D);
+    Info.FFDiag(E, D) << E->getSourceRange();
     return false;
   }
   bool Error(const Expr *E) {
