@@ -250,6 +250,7 @@ class WriteSequence<list<SchedWrite> writes, int rep = 1> : SchedWrite {
 class ProcWriteResources<list<ProcResourceKind> resources> {
   list<ProcResourceKind> ProcResources = resources;
   list<int> ResourceCycles = [];
+  list<int> StartAtCycles = [];
   int Latency = 1;
   int NumMicroOps = 1;
   bit BeginGroup = false;
