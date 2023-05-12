@@ -39,6 +39,7 @@
 #include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
 #include "swift/Runtime/Metadata.h"
+#include "swift/Strings.h"
 
 #include <sstream>
 
@@ -2971,7 +2972,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
     NodePointer cty = factory.createNode(Node::Kind::Type);
     list->addChild(cty, factory);
     NodePointer c = factory.createNode(Node::Kind::Class);
-    c->addChild(factory.createNode(Node::Kind::Module, "__C"), factory);
+    c->addChild(
+        factory.createNode(Node::Kind::Module, swift::MANGLING_MODULE_OBJC),
+        factory);
     c->addChild(factory.createNode(Node::Kind::Identifier, dyn_name), factory);
     cty->addChild(c, factory);
 

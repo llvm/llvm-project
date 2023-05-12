@@ -899,7 +899,7 @@ CompilerType TypeSystemSwiftTypeRef::GetBuiltinRawPointerType() {
 static bool IsImportedType(swift::Demangle::NodePointer node) {
   if (!node)
     return false;
-  if (node->hasText() && node->getText() == "__C")
+  if (node->hasText() && node->getText() == swift::MANGLING_MODULE_OBJC)
     return true;
   if (node->hasChildren())
     return IsImportedType(node->getFirstChild());
@@ -3920,7 +3920,7 @@ static bool IsSIMDNode(NodePointer node) {
     NodePointer module = node->getFirstChild();
     NodePointer identifier = node->getChild(1);
     return module->getKind() == Node::Kind::Module &&
-           module->getText() == "__C" &&
+           module->getText() == swift::MANGLING_MODULE_OBJC &&
            identifier->getKind() == Node::Kind::Identifier &&
            identifier->getText().startswith("simd_");
   }
