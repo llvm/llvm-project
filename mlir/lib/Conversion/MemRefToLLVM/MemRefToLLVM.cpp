@@ -1064,13 +1064,23 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
       if (failed(getStridesAndOffset(type, strides, offset)))
         return false;
 
+      // MemRef is contiguous if outer dimensions are size-1 and inner
+      // dimensions have unit strides.
       int64_t runningStride = 1;
-      for (unsigned i = strides.size(); i > 0; --i) {
-        if (strides[i - 1] != runningStride)
-          return false;
-        runningStride *= type.getDimSize(i - 1);
+      int64_t curDim = strides.size() - 1;
+      // Finds all inner dimensions with unit strides.
+      while (curDim >= 0 && strides[curDim] == runningStride) {
+        runningStride *= type.getDimSize(curDim);
+        --curDim;
       }
-      return true;
+
+      // Check if other dimensions are size-1.
+      while (curDim >= 0 && type.getDimSize(curDim) == 1) {
+        --curDim;
+      }
+
+      // All dims are unit-strided or size-1.
+      return curDim < 0;
     };
 
     auto isContiguousMemrefType = [&](BaseMemRefType type) {
