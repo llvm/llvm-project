@@ -429,18 +429,16 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
     return true;
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
-    if (CI->getBitWidth() > 64 ||
-        (CI->getBitWidth() & 7) != 0)
+    if ((CI->getBitWidth() & 7) != 0)
       return false;
-
-    uint64_t Val = CI->getZExtValue();
+    const APInt &Val = CI->getValue();
     unsigned IntBytes = unsigned(CI->getBitWidth()/8);
 
     for (unsigned i = 0; i != BytesLeft && ByteOffset != IntBytes; ++i) {
-      int n = ByteOffset;
+      unsigned n = ByteOffset;
       if (!DL.isLittleEndian())
         n = IntBytes - n - 1;
-      CurPtr[i] = (unsigned char)(Val >> (n * 8));
+      CurPtr[i] = Val.extractBits(8, n * 8).getZExtValue();
       ++ByteOffset;
     }
     return true;
