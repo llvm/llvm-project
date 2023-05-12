@@ -15,7 +15,6 @@
 #include "llvm/Support/Path.h"
 
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Plugins/SymbolFile/DWARF/DWARFAbbreviationDeclaration.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDataExtractor.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugAbbrev.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugArangeSet.h"
@@ -105,13 +104,13 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
   EXPECT_EQ(abbrev_set.GetIndexOffset(), 1u);
 
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(1);
-  EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
-  EXPECT_TRUE(abbrev1->HasChildren());
-  EXPECT_EQ(abbrev1->NumAttributes(), 1u);
+  EXPECT_EQ(abbrev1->getTag(), DW_TAG_compile_unit);
+  EXPECT_TRUE(abbrev1->hasChildren());
+  EXPECT_EQ(abbrev1->getNumAttributes(), 1u);
   auto abbrev2 = abbrev_set.GetAbbreviationDeclaration(2);
-  EXPECT_EQ(abbrev2->Tag(), DW_TAG_subprogram);
-  EXPECT_FALSE(abbrev2->HasChildren());
-  EXPECT_EQ(abbrev2->NumAttributes(), 1u);
+  EXPECT_EQ(abbrev2->getTag(), DW_TAG_subprogram);
+  EXPECT_FALSE(abbrev2->hasChildren());
+  EXPECT_EQ(abbrev2->getNumAttributes(), 1u);
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
@@ -150,13 +149,13 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
   EXPECT_EQ(abbrev_set.GetIndexOffset(), 5u);
 
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(5);
-  EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
-  EXPECT_TRUE(abbrev1->HasChildren());
-  EXPECT_EQ(abbrev1->NumAttributes(), 1u);
+  EXPECT_EQ(abbrev1->getTag(), DW_TAG_compile_unit);
+  EXPECT_TRUE(abbrev1->hasChildren());
+  EXPECT_EQ(abbrev1->getNumAttributes(), 1u);
   auto abbrev2 = abbrev_set.GetAbbreviationDeclaration(6);
-  EXPECT_EQ(abbrev2->Tag(), DW_TAG_subprogram);
-  EXPECT_FALSE(abbrev2->HasChildren());
-  EXPECT_EQ(abbrev2->NumAttributes(), 1u);
+  EXPECT_EQ(abbrev2->getTag(), DW_TAG_subprogram);
+  EXPECT_FALSE(abbrev2->hasChildren());
+  EXPECT_EQ(abbrev2->getNumAttributes(), 1u);
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
@@ -195,13 +194,13 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
   EXPECT_EQ(abbrev_set.GetIndexOffset(), UINT32_MAX);
 
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(2);
-  EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
-  EXPECT_TRUE(abbrev1->HasChildren());
-  EXPECT_EQ(abbrev1->NumAttributes(), 1u);
+  EXPECT_EQ(abbrev1->getTag(), DW_TAG_compile_unit);
+  EXPECT_TRUE(abbrev1->hasChildren());
+  EXPECT_EQ(abbrev1->getNumAttributes(), 1u);
   auto abbrev2 = abbrev_set.GetAbbreviationDeclaration(1);
-  EXPECT_EQ(abbrev2->Tag(), DW_TAG_subprogram);
-  EXPECT_FALSE(abbrev2->HasChildren());
-  EXPECT_EQ(abbrev2->NumAttributes(), 1u);
+  EXPECT_EQ(abbrev2->getTag(), DW_TAG_subprogram);
+  EXPECT_FALSE(abbrev2->hasChildren());
+  EXPECT_EQ(abbrev2->getNumAttributes(), 1u);
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevInvalidNULLTag) {
@@ -226,9 +225,8 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevInvalidNULLTag) {
   llvm::Error error = abbrev_set.extract(data, &data_offset);
   // Verify we get an error
   EXPECT_TRUE(bool(error));
-  EXPECT_EQ("abbrev decl requires non-null tag.",
+  EXPECT_EQ("abbreviation declaration requires a non-null tag",
             llvm::toString(std::move(error)));
-
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevNullAttrValidForm) {
@@ -255,7 +253,8 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevNullAttrValidForm) {
   llvm::Error error = abbrev_set.extract(data, &data_offset);
   // Verify we get an error
   EXPECT_TRUE(bool(error));
-  EXPECT_EQ("malformed abbreviation declaration attribute",
+  EXPECT_EQ("malformed abbreviation declaration attribute. Either the "
+            "attribute or the form is zero while the other is not",
             llvm::toString(std::move(error)));
 }
 
@@ -283,7 +282,8 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevValidAttrNullForm) {
   llvm::Error error = abbrev_set.extract(data, &data_offset);
   // Verify we get an error
   EXPECT_TRUE(bool(error));
-  EXPECT_EQ("malformed abbreviation declaration attribute",
+  EXPECT_EQ("malformed abbreviation declaration attribute. Either the "
+            "attribute or the form is zero while the other is not",
             llvm::toString(std::move(error)));
 }
 
@@ -309,8 +309,9 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevMissingTerminator) {
   llvm::Error error = abbrev_set.extract(data, &data_offset);
   // Verify we get an error
   EXPECT_TRUE(bool(error));
-  EXPECT_EQ("abbreviation declaration attribute list not terminated with a "
-            "null entry", llvm::toString(std::move(error)));
+  EXPECT_EQ("abbreviation declaration attribute list was not terminated with a "
+            "null entry",
+            llvm::toString(std::move(error)));
 }
 
 TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {

@@ -12,7 +12,7 @@
 #include "SymbolFileDWARF.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include "DWARFAbbreviationDeclaration.h"
+#include "DWARFAttribute.h"
 #include "DWARFBaseDIE.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugRanges.h"
@@ -20,6 +20,8 @@
 #include <optional>
 #include <set>
 #include <vector>
+
+#include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 
 class DWARFDeclContext;
 
@@ -111,7 +113,7 @@ public:
       std::optional<int> &call_column,
       lldb_private::DWARFExpressionList *frame_base = nullptr) const;
 
-  const DWARFAbbreviationDeclaration *
+  const llvm::DWARFAbbreviationDeclaration *
   GetAbbreviationDeclarationPtr(const DWARFUnit *cu) const;
 
   lldb::offset_t GetFirstAttributeOffset() const;
