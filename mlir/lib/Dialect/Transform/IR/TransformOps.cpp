@@ -180,18 +180,7 @@ transform::TrackingListener::findReplacementOp(Operation *op,
   if (op->getName() != defOp->getName())
     return nullptr;
 
-  // If the replacement op is not a new op, drop the mapping.
-  if (!isNewOp(defOp))
-    return nullptr;
-
   return defOp;
-}
-
-bool transform::TrackingListener::isNewOp(Operation *op) const {
-  auto it = newOps.find(op->getName());
-  if (it == newOps.end())
-    return false;
-  return it->second.contains(op);
 }
 
 LogicalResult transform::TrackingListener::notifyMatchFailure(
@@ -204,17 +193,9 @@ LogicalResult transform::TrackingListener::notifyMatchFailure(
   return failure();
 }
 
-void transform::TrackingListener::notifyOperationInserted(Operation *op) {
-  newOps[op->getName()].insert(op);
-}
-
 void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
   // TODO: Walk can be removed when D144193 has landed.
   op->walk([&](Operation *op) {
-    // Keep set of new ops up-to-date.
-    auto it = newOps.find(op->getName());
-    if (it != newOps.end())
-      it->second.erase(op);
     // Remove mappings for result values.
     for (OpResult value : op->getResults())
       (void)replacePayloadValue(value, nullptr);
