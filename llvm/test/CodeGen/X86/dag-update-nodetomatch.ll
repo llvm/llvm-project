@@ -196,10 +196,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    ja .LBB1_14
 ; CHECK-NEXT:  .LBB1_7: # %vector.body.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    leaq -4(%rcx), %r8
-; CHECK-NEXT:    movq %r8, %r11
-; CHECK-NEXT:    shrq $2, %r11
-; CHECK-NEXT:    btl $2, %r8d
+; CHECK-NEXT:    leaq -4(%rcx), %r11
+; CHECK-NEXT:    btl $2, %r11d
 ; CHECK-NEXT:    jb .LBB1_8
 ; CHECK-NEXT:  # %bb.9: # %vector.body.prol.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
@@ -208,12 +206,12 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movdqu %xmm0, (%r13,%rbp,8)
 ; CHECK-NEXT:    movdqu %xmm0, 16(%r13,%rbp,8)
 ; CHECK-NEXT:    movl $4, %r10d
-; CHECK-NEXT:    testq %r11, %r11
+; CHECK-NEXT:    shrq $2, %r11
 ; CHECK-NEXT:    jne .LBB1_11
 ; CHECK-NEXT:    jmp .LBB1_13
 ; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    xorl %r10d, %r10d
-; CHECK-NEXT:    testq %r11, %r11
+; CHECK-NEXT:    shrq $2, %r11
 ; CHECK-NEXT:    je .LBB1_13
 ; CHECK-NEXT:  .LBB1_11: # %vector.body.preheader.new
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1

@@ -102,17 +102,17 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    jns .LBB0_20
 ; CHECK-NEXT:  .LBB0_5: # %a50b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    shrl $31, %r9d
 ; CHECK-NEXT:    movl %eax, %r10d
 ; CHECK-NEXT:    orl %esi, %r10d
 ; CHECK-NEXT:    jns .LBB0_26
 ; CHECK-NEXT:  .LBB0_6: # %a57b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    shrl $31, %r10d
+; CHECK-NEXT:    shrl $31, %r9d
 ; CHECK-NEXT:    testb %r9b, %r9b
 ; CHECK-NEXT:    je .LBB0_30
 ; CHECK-NEXT:  .LBB0_7: # %a66b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    shrl $31, %r10d
 ; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:    .p2align 4, 0x90
