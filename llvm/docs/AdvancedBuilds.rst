@@ -270,12 +270,12 @@ and build a compiler (stage1), then use that compiler to rebuild the sources
 this, you have a stage2 and stage3 compiler that should be bit-for-bit
 identical.
 
-You can perform one of these 3-stage builds with LLVM & clang using the
+You can perform one of these 3-stage builds with LLVM and clang using the
 following commands:
 
 .. code-block:: console
 
   $ cmake -G Ninja -C <path to source>/clang/cmake/caches/3-stage.cmake <path to source>/llvm
-  $ cmake --build . --target stage3 --parallel
+  $ ninja stage3
 
-After the build you can compare the stage2 & stage3 compilers.
+After the build you can compare the stage2 and stage3 compilers.
