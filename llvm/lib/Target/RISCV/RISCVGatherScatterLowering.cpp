@@ -13,6 +13,7 @@
 
 #include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -67,11 +68,11 @@ private:
                                  Value *AlignOp);
 
   std::pair<Value *, Value *> determineBaseAndStride(GetElementPtrInst *GEP,
-                                                     IRBuilder<> &Builder);
+                                                     IRBuilderBase &Builder);
 
   bool matchStridedRecurrence(Value *Index, Loop *L, Value *&Stride,
                               PHINode *&BasePtr, BinaryOperator *&Inc,
-                              IRBuilder<> &Builder);
+                              IRBuilderBase &Builder);
 };
 
 } // end anonymous namespace
@@ -119,7 +120,7 @@ static std::pair<Value *, Value *> matchStridedConstant(Constant *StartC) {
 }
 
 static std::pair<Value *, Value *> matchStridedStart(Value *Start,
-                                                     IRBuilder<> &Builder) {
+                                                     IRBuilderBase &Builder) {
   // Base case, start is a strided constant.
   auto *StartC = dyn_cast<Constant>(Start);
   if (StartC)
@@ -186,7 +187,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
                                                         Value *&Stride,
                                                         PHINode *&BasePtr,
                                                         BinaryOperator *&Inc,
-                                                        IRBuilder<> &Builder) {
+                                                        IRBuilderBase &Builder) {
   // Our base case is a Phi.
   if (auto *Phi = dyn_cast<PHINode>(Index)) {
     // A phi node we want to perform this function on should be from the
@@ -297,32 +298,17 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   case Instruction::Or: {
     // An add only affects the start value. It's ok to do this for Or because
     // we already checked that there are no common set bits.
-
-    // If the start value is Zero, just take the SplatOp.
-    if (isa<ConstantInt>(Start) && cast<ConstantInt>(Start)->isZero())
-      Start = SplatOp;
-    else
-      Start = Builder.CreateAdd(Start, SplatOp, "start");
+    Start = Builder.CreateAdd(Start, SplatOp, "start");
     break;
   }
   case Instruction::Mul: {
-    // If the start is zero we don't need to multiply.
-    if (!isa<ConstantInt>(Start) || !cast<ConstantInt>(Start)->isZero())
-      Start = Builder.CreateMul(Start, SplatOp, "start");
-
+    Start = Builder.CreateMul(Start, SplatOp, "start");
     Step = Builder.CreateMul(Step, SplatOp, "step");
-
-    // If the Stride is 1 just take the SplatOpt.
-    if (isa<ConstantInt>(Stride) && cast<ConstantInt>(Stride)->isOne())
-      Stride = SplatOp;
-    else
-      Stride = Builder.CreateMul(Stride, SplatOp, "stride");
+    Stride = Builder.CreateMul(Stride, SplatOp, "stride");
     break;
   }
   case Instruction::Shl: {
-    // If the start is zero we don't need to shift.
-    if (!isa<ConstantInt>(Start) || !cast<ConstantInt>(Start)->isZero())
-      Start = Builder.CreateShl(Start, SplatOp, "start");
+    Start = Builder.CreateShl(Start, SplatOp, "start");
     Step = Builder.CreateShl(Step, SplatOp, "step");
     Stride = Builder.CreateShl(Stride, SplatOp, "stride");
     break;
@@ -336,7 +322,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
 
 std::pair<Value *, Value *>
 RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
-                                                   IRBuilder<> &Builder) {
+                                                   IRBuilderBase &Builder) {
 
   auto I = StridedAddrs.find(GEP);
   if (I != StridedAddrs.end())
@@ -467,7 +453,9 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
   if (!GEP)
     return false;
 
-  IRBuilder<> Builder(GEP);
+  LLVMContext &Ctx = GEP->getContext();
+  IRBuilder<InstSimplifyFolder> Builder(Ctx, *DL);
+  Builder.SetInsertPoint(GEP);
 
   Value *BasePtr, *Stride;
   std::tie(BasePtr, Stride) = determineBaseAndStride(GEP, Builder);

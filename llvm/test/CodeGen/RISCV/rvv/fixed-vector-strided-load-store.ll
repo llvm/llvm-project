@@ -794,15 +794,14 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[I10:%.*]] = and i64 [[I7]], 8589934560
 ; CHECK-NEXT:    [[I11:%.*]] = add nsw i64 [[I10]], [[I4]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 0, [[I4]]
-; CHECK-NEXT:    [[START:%.*]] = mul i64 [[TMP0]], 5
+; CHECK-NEXT:    [[START:%.*]] = mul i64 [[I4]], 5
 ; CHECK-NEXT:    br label [[BB15:%.*]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    [[I16:%.*]] = phi i64 [ 0, [[BB9]] ], [ [[I27:%.*]], [[BB15]] ]
 ; CHECK-NEXT:    [[I17_SCALAR:%.*]] = phi i64 [ [[START]], [[BB9]] ], [ [[I28_SCALAR:%.*]], [[BB15]] ]
 ; CHECK-NEXT:    [[I18:%.*]] = add i64 [[I16]], [[I4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[I17_SCALAR]]
-; CHECK-NEXT:    [[I21:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP1]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[I17_SCALAR]]
+; CHECK-NEXT:    [[I21:%.*]] = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
 ; CHECK-NEXT:    [[I22:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 [[I18]]
 ; CHECK-NEXT:    [[I24:%.*]] = load <32 x i8>, ptr [[I22]], align 1
 ; CHECK-NEXT:    [[I25:%.*]] = add <32 x i8> [[I24]], [[I21]]
