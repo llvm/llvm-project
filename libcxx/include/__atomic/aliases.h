@@ -82,7 +82,7 @@ using atomic_uintmax_t = atomic<uintmax_t>;
 
 // atomic_*_lock_free : prefer the contention type most highly, then the largest lock-free type
 
-#ifdef __cpp_lib_atomic_is_always_lock_free
+#if _LIBCPP_STD_VER >= 17
 #  define _LIBCPP_CONTENTION_LOCK_FREE ::std::__libcpp_is_always_lock_free<__cxx_contention_t>::__value
 #else
 #  define _LIBCPP_CONTENTION_LOCK_FREE false
