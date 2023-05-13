@@ -1049,7 +1049,6 @@ public:
 
   clang::QualType buildFunctionArgList(clang::GlobalDecl GD,
                                        FunctionArgList &Args);
-
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
     /// The address of the alloca for languages with explicit address space
@@ -1060,24 +1059,35 @@ public:
 
     /// True if the variable is of aggregate type and has a constant
     /// initializer.
-    bool IsConstantAggregate;
+    bool IsConstantAggregate = false;
 
     /// True if the variable is a __block variable that is captured by an
     /// escaping block.
     bool IsEscapingByRef = false;
 
+    mlir::Value NRVOFlag{};
+
     struct Invalid {};
     AutoVarEmission(Invalid) : Variable(nullptr), Addr(Address::invalid()) {}
 
     AutoVarEmission(const clang::VarDecl &variable)
-        : Variable(&variable), Addr(Address::invalid()),
-          IsConstantAggregate(false) {}
+        : Variable(&variable), Addr(Address::invalid()) {}
 
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
     /// address space for address space agnostic languages.
     Address getAllocatedAddress() const { return Addr; }
+
+    /// Returns the address of the object within this declaration.
+    /// Note that this does not chase the forwarding pointer for
+    /// __block decls.
+    Address getObjectAddress(CIRGenFunction &CGF) const {
+      if (!IsEscapingByRef)
+        return Addr;
+
+      llvm_unreachable("NYI");
+    }
   };
 
   LValue buildMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
@@ -1087,8 +1097,9 @@ public:
   AutoVarEmission buildAutoVarAlloca(const clang::VarDecl &D);
 
   void buildAutoVarInit(const AutoVarEmission &emission);
-
   void buildAutoVarCleanups(const AutoVarEmission &emission);
+  void buildAutoVarTypeCleanup(const AutoVarEmission &emission,
+                               clang::QualType::DestructionKind dtorKind);
 
   void buildStoreOfScalar(mlir::Value value, LValue lvalue);
   void buildStoreOfScalar(mlir::Value Value, Address Addr, bool Volatile,
@@ -1442,6 +1453,8 @@ public:
 
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer, bool useEHCleanupForArray);
+
+  Destroyer *getDestroyer(QualType::DestructionKind kind);
 
   /// An object to manage conditionally-evaluated expressions.
   class ConditionalEvaluation {
