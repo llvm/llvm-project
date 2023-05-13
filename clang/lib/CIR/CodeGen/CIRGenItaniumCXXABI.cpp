@@ -1215,7 +1215,7 @@ void CIRGenItaniumRTTIBuilder::BuildVTablePointer(mlir::Location loc,
     llvm_unreachable("NYI");
   } else {
     SmallVector<mlir::Attribute, 4> offsets{
-        mlir::IntegerAttr::get(PtrDiffTy, 2)};
+        mlir::cir::IntAttr::get(PtrDiffTy, 2)};
     field = mlir::cir::GlobalViewAttr::get(
         builder.getInt8PtrTy(),
         mlir::FlatSymbolRefAttr::get(VTable.getSymNameAttr()),

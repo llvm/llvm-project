@@ -45,10 +45,10 @@ public:
 
 // CHECK: cir.func @_Z4bluev() {
 // CHECK:   %0 = cir.alloca !ty_22class2EPSEvent22, cir.ptr <!ty_22class2EPSEvent22>, ["p", init] {alignment = 8 : i64}
-// CHECK:   %1 = cir.const(1 : i32) : i32
-// CHECK:   %2 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 5>>
-// CHECK:   %3 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<i8 x 5>>), !cir.ptr<i8>
-// CHECK:   cir.call @_ZN7PSEventC1E6EFModePKc(%0, %1, %3) : (!cir.ptr<!ty_22class2EPSEvent22>, i32, !cir.ptr<i8>) -> ()
+// CHECK:   %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK:   %2 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 5>>
+// CHECK:   %3 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!s8i x 5>>), !cir.ptr<!s8i>
+// CHECK:   cir.call @_ZN7PSEventC1E6EFModePKc(%0, %1, %3) : (!cir.ptr<!ty_22class2EPSEvent22>, !s32i, !cir.ptr<!s8i>) -> ()
 // CHECK:   cir.return
 // CHECK: }
 

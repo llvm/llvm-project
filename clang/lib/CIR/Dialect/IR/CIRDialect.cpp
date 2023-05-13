@@ -44,6 +44,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << "ty_" << structType.getTypeName();
       return AliasResult::OverridableAlias;
     }
+    if (auto intType = type.dyn_cast<IntType>()) {
+      os << intType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
 
     return AliasResult::NoAlias;
   }
@@ -189,6 +193,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
       attrType.isa<mlir::cir::ConstStructAttr>() ||
       attrType.isa<mlir::cir::VTableAttr>())
     return success();
+  if (attrType.isa<mlir::cir::IntAttr>())
+    return success();
 
   assert(attrType.isa<TypedAttr>() && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
@@ -238,14 +244,14 @@ LogicalResult CastOp::verify() {
   case cir::CastKind::int_to_bool: {
     if (!resType.isa<mlir::cir::BoolType>())
       return emitOpError() << "requires !cir.bool type for result";
-    if (!(srcType.isInteger(32) || srcType.isInteger(64)))
+    if (!srcType.isa<mlir::cir::IntType>())
       return emitOpError() << "requires integral type for result";
     return success();
   }
   case cir::CastKind::integral: {
-    if (!resType.isa<mlir::IntegerType>())
+    if (!resType.isa<mlir::cir::IntType>())
       return emitOpError() << "requires !IntegerType for result";
-    if (!srcType.isa<mlir::IntegerType>())
+    if (!srcType.isa<mlir::cir::IntType>())
       return emitOpError() << "requires !IntegerType for source";
     return success();
   }
@@ -750,7 +756,7 @@ parseSwitchOp(OpAsmParser &parser,
               ::mlir::ArrayAttr &casesAttr,
               mlir::OpAsmParser::UnresolvedOperand &cond,
               mlir::Type &condType) {
-  ::mlir::IntegerType intCondType;
+  mlir::cir::IntType intCondType;
   SmallVector<mlir::Attribute, 4> cases;
 
   auto parseAndCheckRegion = [&]() -> ParseResult {
@@ -828,7 +834,7 @@ parseSwitchOp(OpAsmParser &parser,
       int64_t val = 0;
       if (parser.parseInteger(val).failed())
         return ::mlir::failure();
-      caseEltValueListAttr.push_back(mlir::IntegerAttr::get(intCondType, val));
+      caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(intCondType, val));
       break;
     }
     case cir::CaseOpKind::Anyof: {
@@ -841,7 +847,7 @@ parseSwitchOp(OpAsmParser &parser,
             if (parser.parseInteger(val).failed())
               return ::mlir::failure();
             caseEltValueListAttr.push_back(
-                mlir::IntegerAttr::get(intCondType, val));
+                mlir::cir::IntAttr::get(intCondType, val));
             return ::mlir::success();
           }))
         return mlir::failure();
@@ -1768,7 +1774,7 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
 
   if (auto strAttr = attr.dyn_cast<mlir::StringAttr>()) {
     mlir::cir::ArrayType at = type.cast<mlir::cir::ArrayType>();
-    auto intTy = at.getEltType().dyn_cast<mlir::IntegerType>();
+    auto intTy = at.getEltType().dyn_cast<cir::IntType>();
 
     // TODO: add CIR type for char.
     if (!intTy || intTy.getWidth() != 8) {

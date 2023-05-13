@@ -16,9 +16,11 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.cpp.inc"
@@ -301,6 +303,91 @@ void StructType::computeSizeAndAlignment(
   size = structSize;
   align = structAlignment.value();
   padded = isPadded;
+}
+
+//===----------------------------------------------------------------------===//
+// IntType Definitions
+//===----------------------------------------------------------------------===//
+
+Type IntType::parse(mlir::AsmParser &parser) {
+  auto *context = parser.getBuilder().getContext();
+  auto loc = parser.getCurrentLocation();
+  bool isSigned;
+  unsigned width;
+
+  if (parser.parseLess())
+    return {};
+
+  // Fetch integer sign.
+  llvm::StringRef sign;
+  if (parser.parseKeyword(&sign))
+    return {};
+  if (sign.equals_insensitive("s"))
+    isSigned = true;
+  else if (sign.equals_insensitive("u"))
+    isSigned = false;
+  else {
+    parser.emitError(loc, "expected 's' or 'u'");
+    return {};
+  }
+
+  if (parser.parseComma())
+    return {};
+
+  // Fetch integer size.
+  if (parser.parseInteger(width))
+    return {};
+  if (width % 8 != 0) {
+    parser.emitError(loc, "expected integer width to be a multiple of 8");
+    return {};
+  }
+  if (width < 8 || width > 64) {
+    parser.emitError(loc, "expected integer width to be from 8 up to 64");
+    return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return IntType::get(context, width, isSigned);
+}
+
+void IntType::print(mlir::AsmPrinter &printer) const {
+  auto sign = isSigned() ? 's' : 'u';
+  printer << '<' << sign << ", " << getWidth() << '>';
+}
+
+llvm::TypeSize
+IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                           mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                  mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+uint64_t
+IntType::getPreferredAlignment(const ::mlir::DataLayout &dataLayout,
+                               ::mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+mlir::LogicalResult
+IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                unsigned width, bool isSigned) {
+
+  if (width < 8 || width > 64) {
+    emitError() << "IntType only supports widths from 8 up to 64";
+    return mlir::failure();
+  }
+  if (width % 8 != 0) {
+    emitError() << "IntType width is not a multiple of 8";
+    return mlir::failure();
+  }
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

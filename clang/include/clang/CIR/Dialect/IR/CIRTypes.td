@@ -27,6 +27,33 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
+// IntType
+//===----------------------------------------------------------------------===//
+
+def CIR_IntType : CIR_Type<"Int", "int",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+  let summary = "Integer type with arbitrary precision up to a fixed limit";
+  let description = [{
+    CIR type that represents C/C++ primitive integer types.
+    Said types are: `char`, `short`, `int`, `long`, `long long`, and their \
+    unsigned variations.
+  }];
+  let parameters = (ins "unsigned":$width, "bool":$isSigned);
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDeclaration = [{
+    /// Return true if this is a signed integer type.
+    bool isSigned() const { return getIsSigned(); }
+    /// Return true if this is an unsigned integer type.
+    bool isUnsigned() const { return !getIsSigned(); }
+    /// Return type alias.
+    std::string getAlias() const {
+      return (isSigned() ? 's' : 'u') + std::to_string(getWidth()) + 'i';
+    };
+  }];
+  let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // PointerType
 //===----------------------------------------------------------------------===//
 

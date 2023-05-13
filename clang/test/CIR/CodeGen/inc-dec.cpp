@@ -6,9 +6,9 @@ unsigned id0() {
   return ++a;
 }
 
-// CHECK: cir.func @_Z3id0v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK: cir.func @_Z3id0v() -> !u32i {
+// CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(inc, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
@@ -20,9 +20,9 @@ unsigned id1() {
   return --a;
 }
 
-// CHECK: cir.func @_Z3id1v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK: cir.func @_Z3id1v() -> !u32i {
+// CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(dec, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
@@ -33,9 +33,9 @@ unsigned id2() {
   return a++;
 }
 
-// CHECK: cir.func @_Z3id2v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK: cir.func @_Z3id2v() -> !u32i {
+// CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(inc, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
@@ -46,9 +46,9 @@ unsigned id3() {
   return a--;
 }
 
-// CHECK: cir.func @_Z3id3v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK: cir.func @_Z3id3v() -> !u32i {
+// CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(dec, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]

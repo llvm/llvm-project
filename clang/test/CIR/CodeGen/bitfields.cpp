@@ -15,4 +15,4 @@ void m() {
 }
 
 // CHECK: !ty_22struct2Eanon22 = !cir.struct<"struct.anon", i32, #cir.recdecl.ast>
-// CHECK: !ty_22struct2E__long22 = !cir.struct<"struct.__long", !ty_22struct2Eanon22, i32, !cir.ptr<i32>>
+// CHECK: !ty_22struct2E__long22 = !cir.struct<"struct.__long", !ty_22struct2Eanon22, !u32i, !cir.ptr<!u32i>>

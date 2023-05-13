@@ -24,6 +24,8 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -940,9 +942,9 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
   auto &builder = CGM.getBuilder();
   auto isNullValue = [&](mlir::Attribute f) {
     // TODO(cir): introduce char type in CIR and check for that instead.
-    auto intVal = f.dyn_cast_or_null<mlir::IntegerAttr>();
+    auto intVal = f.dyn_cast_or_null<mlir::cir::IntAttr>();
     assert(intVal && "not implemented");
-    if (intVal.getInt() == 0)
+    if (intVal.getValue() == 0)
       return true;
     return false;
   };
@@ -1425,8 +1427,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     mlir::Type ty = CGM.getCIRType(DestType);
     if (ty.isa<mlir::cir::BoolType>())
       return builder.getCIRBoolAttr(Value.getInt().getZExtValue());
-    assert(ty.isa<mlir::IntegerType>() && "expected integral type");
-    return builder.getIntegerAttr(ty, Value.getInt());
+    assert(ty.isa<mlir::cir::IntType>() && "expected integral type");
+    return CGM.getBuilder().getAttr<mlir::cir::IntAttr>(ty, Value.getInt());
   }
   case APValue::Float: {
     const llvm::APFloat &Init = Value.getFloat();
@@ -1445,9 +1447,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     unsigned NumInitElts = Value.getArrayInitializedElts();
     auto isNullValue = [&](mlir::Attribute f) {
       // TODO(cir): introduce char type in CIR and check for that instead.
-      auto intVal = f.dyn_cast_or_null<mlir::IntegerAttr>();
+      auto intVal = f.dyn_cast_or_null<mlir::cir::IntAttr>();
       assert(intVal && "not implemented");
-      if (intVal.getInt() == 0)
+      if (intVal.getValue() == 0)
         return true;
       return false;
     };

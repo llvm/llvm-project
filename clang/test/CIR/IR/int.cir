@@ -1,0 +1,39 @@
+// module {
+//     cir.global external @a = #cir.int<255> : !cir.int<u, 8>
+// }
+
+// RUN: cir-tool %s | FileCheck %s
+!s8i = !cir.int<s, 8>
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+!u8i = !cir.int<s, 8>
+!u16i = !cir.int<s, 16>
+!u32i = !cir.int<s, 32>
+!u64i = !cir.int<s, 64>
+
+cir.func @validIntTypesAndAttributes() -> () {
+
+    %1 = cir.const(#cir.int<-128> : !cir.int<s, 8>) : !s8i
+    %2 = cir.const(#cir.int<127> : !cir.int<s, 8>) : !s8i
+    %3 = cir.const(#cir.int<255> : !cir.int<u, 8>) : !u8i
+
+    %4 = cir.const(#cir.int<-32768> : !cir.int<s, 16>) : !s16i
+    %5 = cir.const(#cir.int<32767> : !cir.int<s, 16>) : !s16i
+    %6 = cir.const(#cir.int<65535> : !cir.int<u, 16>) : !u16i
+
+    %7 = cir.const(#cir.int<-2147483648> : !cir.int<s, 32>) : !s32i
+    %8 = cir.const(#cir.int<2147483647> : !cir.int<s, 32>) : !s32i
+    %9 = cir.const(#cir.int<4294967295> : !cir.int<u, 32>) : !u32i
+
+    // FIXME: MLIR is emitting a "too large" error for this one. Not sure why.
+    // %10 = cir.const(#cir.int<-9223372036854775808> : !cir.int<s, 64>) : !s64i
+    %11 = cir.const(#cir.int<9223372036854775807> : !cir.int<s, 64>) : !s64i
+    %12 = cir.const(#cir.int<18446744073709551615> : !cir.int<u, 64>) : !u64i
+
+    cir.return
+}
+
+// No need to check stuff. If it parses, it's fine.
+// CHECK: cir.func @validIntTypesAndAttributes()

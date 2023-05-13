@@ -80,13 +80,13 @@ public:
 // CHECK:   cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!cir.ptr<i8>>
 
 // typeinfo name for B
-// CHECK:   cir.global linkonce_odr @_ZTS1B = #cir.const_array<"1B" : !cir.array<i8 x 2>> : !cir.array<i8 x 2> {alignment = 1 : i64}
+// CHECK:   cir.global linkonce_odr @_ZTS1B = #cir.const_array<"1B" : !cir.array<!s8i x 2>> : !cir.array<!s8i x 2> {alignment = 1 : i64}
 
 // typeinfo for A
 // CHECK:   cir.global "private" constant external @_ZTI1A : !cir.ptr<i8>
 
 // typeinfo for B
-// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<<{#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<i8>,#cir.global_view<@_ZTS1B> : !cir.ptr<i8>,#cir.global_view<@_ZTI1A> : !cir.ptr<i8>}>> : ![[TypeInfoB]]
+// CHECK: cir.global constant external @_ZTI1B = #cir.typeinfo<<{#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [#cir.int<2> : !s64i]> : !cir.ptr<i8>,#cir.global_view<@_ZTS1B> : !cir.ptr<i8>,#cir.global_view<@_ZTI1A> : !cir.ptr<i8>}>> : ![[TypeInfoB]]
 
 // Checks for dtors in dtors.cpp
 

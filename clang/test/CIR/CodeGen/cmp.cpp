@@ -10,9 +10,9 @@ void c0(int a, int b) {
   x = a == b;
 }
 
-// CHECK: = cir.cmp(gt, %3, %4) : i32, !cir.bool
-// CHECK: = cir.cmp(lt, %6, %7) : i32, !cir.bool
-// CHECK: = cir.cmp(le, %9, %10) : i32, !cir.bool
-// CHECK: = cir.cmp(ge, %12, %13) : i32, !cir.bool
-// CHECK: = cir.cmp(ne, %15, %16) : i32, !cir.bool
-// CHECK: = cir.cmp(eq, %18, %19) : i32, !cir.bool
+// CHECK: = cir.cmp(gt, %3, %4) : !s32i, !cir.bool
+// CHECK: = cir.cmp(lt, %6, %7) : !s32i, !cir.bool
+// CHECK: = cir.cmp(le, %9, %10) : !s32i, !cir.bool
+// CHECK: = cir.cmp(ge, %12, %13) : !s32i, !cir.bool
+// CHECK: = cir.cmp(ne, %15, %16) : !s32i, !cir.bool
+// CHECK: = cir.cmp(eq, %18, %19) : !s32i, !cir.bool

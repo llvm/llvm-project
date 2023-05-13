@@ -1,45 +1,46 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
+!s32i = !cir.int<s, 32>
 module {
-  cir.func @dot(%arg0: !cir.ptr<f64>, %arg1: !cir.ptr<f64>, %arg2: i32) -> f64 {
+  cir.func @dot(%arg0: !cir.ptr<f64>, %arg1: !cir.ptr<f64>, %arg2: !s32i) -> f64 {
     %0 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["a", init] {alignment = 8 : i64}
     %1 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["b", init] {alignment = 8 : i64}
-    %2 = cir.alloca i32, cir.ptr <i32>, ["size", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["size", init] {alignment = 4 : i64}
     %3 = cir.alloca f64, cir.ptr <f64>, ["__retval"] {alignment = 8 : i64}
     %4 = cir.alloca f64, cir.ptr <f64>, ["q", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
     cir.store %arg1, %1 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
-    cir.store %arg2, %2 : i32, cir.ptr <i32>
+    cir.store %arg2, %2 : !s32i, cir.ptr <!s32i>
     %5 = cir.const(0.000000e+00 : f64) : f64
     cir.store %5, %4 : f64, cir.ptr <f64>
     cir.scope {
-      %8 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-      %9 = cir.const(0 : i32) : i32
-      cir.store %9, %8 : i32, cir.ptr <i32>
+      %8 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+      %9 = cir.const(#cir.int<0> : !s32i) : !s32i
+      cir.store %9, %8 : !s32i, cir.ptr <!s32i>
       cir.loop for(cond : {
-        %10 = cir.load %8 : cir.ptr <i32>, i32
-        %11 = cir.load %2 : cir.ptr <i32>, i32
-        %12 = cir.cmp(lt, %10, %11) : i32, i32
-        %13 = cir.cast(int_to_bool, %12 : i32), !cir.bool
+        %10 = cir.load %8 : cir.ptr <!s32i>, !s32i
+        %11 = cir.load %2 : cir.ptr <!s32i>, !s32i
+        %12 = cir.cmp(lt, %10, %11) : !s32i, !s32i
+        %13 = cir.cast(int_to_bool, %12 : !s32i), !cir.bool
         cir.brcond %13 ^bb1, ^bb2
       ^bb1:  // pred: ^bb0
         cir.yield continue
       ^bb2:  // pred: ^bb0
         cir.yield
       }, step : {
-        %10 = cir.load %8 : cir.ptr <i32>, i32
-        %11 = cir.unary(inc, %10) : i32, i32
-        cir.store %11, %8 : i32, cir.ptr <i32>
+        %10 = cir.load %8 : cir.ptr <!s32i>, !s32i
+        %11 = cir.unary(inc, %10) : !s32i, !s32i
+        cir.store %11, %8 : !s32i, cir.ptr <!s32i>
         cir.yield
       }) {
         %10 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
-        %11 = cir.load %8 : cir.ptr <i32>, i32
-        %12 = cir.ptr_stride(%10 : !cir.ptr<f64>, %11 : i32), !cir.ptr<f64>
+        %11 = cir.load %8 : cir.ptr <!s32i>, !s32i
+        %12 = cir.ptr_stride(%10 : !cir.ptr<f64>, %11 : !s32i), !cir.ptr<f64>
         %13 = cir.load %12 : cir.ptr <f64>, f64
         %14 = cir.load %1 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
-        %15 = cir.load %8 : cir.ptr <i32>, i32
-        %16 = cir.ptr_stride(%14 : !cir.ptr<f64>, %15 : i32), !cir.ptr<f64>
+        %15 = cir.load %8 : cir.ptr <!s32i>, !s32i
+        %16 = cir.ptr_stride(%14 : !cir.ptr<f64>, %15 : !s32i), !cir.ptr<f64>
         %17 = cir.load %16 : cir.ptr <f64>, f64
         %18 = cir.binop(mul, %13, %17) : f64
         %19 = cir.load %4 : cir.ptr <f64>, f64

@@ -8,13 +8,13 @@ int go1() {
   return x;
 }
 
-// CHECK: cir.func @_Z3go1v() -> i32 {
-// CHECK: %[[#XAddr:]] = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
+// CHECK: cir.func @_Z3go1v() -> !s32i {
+// CHECK: %[[#XAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
 // CHECK: %[[#RVal:]] = cir.scope {
-// CHECK-NEXT:   %[[#TmpAddr:]] = cir.alloca i32, cir.ptr <i32>, ["ref.tmp0", init] {alignment = 4 : i64}
-// CHECK-NEXT:   %[[#One:]] = cir.const(1 : i32) : i32
-// CHECK-NEXT:   cir.store %[[#One]], %[[#TmpAddr]] : i32, cir.ptr <i32>
-// CHECK-NEXT:   %[[#RValTmp:]] = cir.call @_Z2goRKi(%[[#TmpAddr]]) : (!cir.ptr<i32>) -> i32
-// CHECK-NEXT:   cir.yield %[[#RValTmp]] : i32
+// CHECK-NEXT:   %[[#TmpAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp0", init] {alignment = 4 : i64}
+// CHECK-NEXT:   %[[#One:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:   cir.store %[[#One]], %[[#TmpAddr]] : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:   %[[#RValTmp:]] = cir.call @_Z2goRKi(%[[#TmpAddr]]) : (!cir.ptr<!s32i>) -> !s32i
+// CHECK-NEXT:   cir.yield %[[#RValTmp]] : !s32i
 // CHECK-NEXT: }
-// CHECK-NEXT: cir.store %[[#RVal]], %[[#XAddr]] : i32, cir.ptr <i32>
+// CHECK-NEXT: cir.store %[[#RVal]], %[[#XAddr]] : !s32i, cir.ptr <!s32i>

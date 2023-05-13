@@ -139,7 +139,7 @@ co_invoke_fn co_invoke;
 
 // CHECK: cir.func builtin private @__builtin_coro_id(i32, !cir.ptr<i8>, !cir.ptr<i8>, !cir.ptr<i8>) -> i32
 // CHECK: cir.func builtin private @__builtin_coro_alloc(i32) -> !cir.bool
-// CHECK: cir.func builtin private @__builtin_coro_size() -> i64
+// CHECK: cir.func builtin private @__builtin_coro_size() -> !u64i
 // CHECK: cir.func builtin private @__builtin_coro_begin(i32, !cir.ptr<i8>) -> !cir.ptr<i8>
 
 using VoidTask = folly::coro::Task<void>;
@@ -168,8 +168,8 @@ VoidTask silly_task() {
 // CHECK: %[[#ShouldAlloc:]] = cir.call @__builtin_coro_alloc(%[[#CoroId]]) : (i32) -> !cir.bool
 // CHECK: cir.store %[[#NullPtr]], %[[#SavedFrameAddr]] : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK: cir.if %[[#ShouldAlloc]] {
-// CHECK:   %[[#CoroSize:]] = cir.call @__builtin_coro_size() : () -> i64
-// CHECK:   %[[#AllocAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (i64) -> !cir.ptr<i8>
+// CHECK:   %[[#CoroSize:]] = cir.call @__builtin_coro_size() : () -> !u64i
+// CHECK:   %[[#AllocAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (!u64i) -> !cir.ptr<i8>
 // CHECK:   cir.store %[[#AllocAddr]], %[[#SavedFrameAddr]] : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK: }
 // CHECK: %[[#Load0:]] = cir.load %[[#SavedFrameAddr]] : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
@@ -317,21 +317,21 @@ folly::coro::Task<int> go1() {
 
 // The call to go(1) has its own scope due to full-expression rules.
 // CHECK: cir.scope {
-// CHECK:   %[[#OneAddr:]] = cir.alloca i32, cir.ptr <i32>, ["ref.tmp1", init] {alignment = 4 : i64}
-// CHECK:   %[[#One:]] = cir.const(1 : i32) : i32
-// CHECK:   cir.store %[[#One]], %[[#OneAddr]] : i32, cir.ptr <i32>
-// CHECK:   %[[#IntTaskTmp:]] = cir.call @_Z2goRKi(%[[#OneAddr]]) : (!cir.ptr<i32>) -> ![[IntTask]]
+// CHECK:   %[[#OneAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
+// CHECK:   %[[#One:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK:   cir.store %[[#One]], %[[#OneAddr]] : !s32i, cir.ptr <!s32i>
+// CHECK:   %[[#IntTaskTmp:]] = cir.call @_Z2goRKi(%[[#OneAddr]]) : (!cir.ptr<!s32i>) -> ![[IntTask]]
 // CHECK:   cir.store %[[#IntTaskTmp]], %[[#IntTaskAddr]] : ![[IntTask]], cir.ptr <![[IntTask]]>
 // CHECK: }
 
-// CHECK: %[[#CoReturnValAddr:]] = cir.alloca i32, cir.ptr <i32>, ["__coawait_resume_rval"] {alignment = 1 : i64}
+// CHECK: %[[#CoReturnValAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__coawait_resume_rval"] {alignment = 1 : i64}
 // CHECK: cir.await(user, ready : {
 // CHECK: }, suspend : {
 // CHECK: }, resume : {
 // CHECK:   %[[#ResumeVal:]] = cir.call @_ZN5folly4coro4TaskIiE12await_resumeEv(%3)
-// CHECK:   cir.store %[[#ResumeVal]], %[[#CoReturnValAddr]] : i32, cir.ptr <i32>
+// CHECK:   cir.store %[[#ResumeVal]], %[[#CoReturnValAddr]] : !s32i, cir.ptr <!s32i>
 // CHECK: },)
-// CHECK: %[[#V:]] = cir.load %[[#CoReturnValAddr]] : cir.ptr <i32>, i32
+// CHECK: %[[#V:]] = cir.load %[[#CoReturnValAddr]] : cir.ptr <!s32i>, !s32i
 // CHECK: cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, %[[#V]])
 
 folly::coro::Task<int> go1_lambda() {
@@ -362,19 +362,19 @@ folly::coro::Task<int> go4() {
 // CHECK:   %17 = cir.alloca !ty_22class2Eanon221, cir.ptr <!ty_22class2Eanon221>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
-// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
-// CHECK:   cir.yield %19 : !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   cir.yield %19 : !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
 // CHECK: }
-// CHECK: cir.store %12, %3 : !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>
+// CHECK: cir.store %12, %3 : !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>
 // CHECK: cir.scope {
-// CHECK:   %17 = cir.alloca i32, cir.ptr <i32>, ["ref.tmp2", init] {alignment = 4 : i64}
-// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>, !cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
-// CHECK:   %19 = cir.const(3 : i32) : i32
-// CHECK:   cir.store %19, %17 : i32, cir.ptr <i32>
+// CHECK:   %17 = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
+// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>>, !cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>
+// CHECK:   %19 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:   cir.store %19, %17 : !s32i, cir.ptr <!s32i>
 
 // Call invoker, which calls operator() indirectly.
-// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<(!cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<i32>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221
+// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<(!cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221>, !cir.ptr<!s32i>) -> !ty_22struct2Efolly3A3Acoro3A3ATask221
 // CHECK:   cir.store %20, %4 : !ty_22struct2Efolly3A3Acoro3A3ATask221, cir.ptr <!ty_22struct2Efolly3A3Acoro3A3ATask221>
 // CHECK: }
 

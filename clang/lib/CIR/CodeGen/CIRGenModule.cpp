@@ -96,12 +96,25 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
       target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)), genTypes{*this},
       VTables{*this} {
 
-  // Initialize the type cache.
+  // Initialize signless integers types cache.
   VoidTy = ::mlir::IntegerType::get(builder.getContext(), 8);
   Int8Ty = ::mlir::IntegerType::get(builder.getContext(), 8);
   Int16Ty = ::mlir::IntegerType::get(builder.getContext(), 16);
   Int32Ty = ::mlir::IntegerType::get(builder.getContext(), 32);
   Int64Ty = ::mlir::IntegerType::get(builder.getContext(), 64);
+
+  // Initialize CIR signed integer types cache.
+  SInt8Ty = ::mlir::cir::IntType::get(builder.getContext(), 8, true);
+  SInt16Ty = ::mlir::cir::IntType::get(builder.getContext(), 16, true);
+  SInt32Ty = ::mlir::cir::IntType::get(builder.getContext(), 32, true);
+  SInt64Ty = ::mlir::cir::IntType::get(builder.getContext(), 64, true);
+
+  // Initialize CIR unsigned integer types cache.
+  UInt8Ty = ::mlir::cir::IntType::get(builder.getContext(), 8, false);
+  UInt16Ty = ::mlir::cir::IntType::get(builder.getContext(), 16, false);
+  UInt32Ty = ::mlir::cir::IntType::get(builder.getContext(), 32, false);
+  UInt64Ty = ::mlir::cir::IntType::get(builder.getContext(), 64, false);
+
   // TODO: HalfTy
   // TODO: BFloatTy
   FloatTy = builder.getF32Type();

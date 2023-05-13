@@ -9,36 +9,36 @@ int foo(int i) {
 }
 
 //      CHECK: module attributes {
-// CHECK-NEXT: cir.func @foo(%arg0: i32 loc({{.*}})) -> i32 {
-// CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-// CHECK-NEXT: cir.store %arg0, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT: %2 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT: %3 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT: cir.store %3, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT: %4 = cir.load %1 : cir.ptr <i32>, i32
-// CHECK-NEXT: cir.return %4 : i32
+// CHECK-NEXT: cir.func @foo(%arg0: !s32i loc({{.*}})) -> !s32i {
+// CHECK-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+// CHECK-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK-NEXT: cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: %3 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: cir.store %3, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: %4 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: cir.return %4 : !s32i
 
 int f2() { return 3; }
 
-// CHECK: cir.func @f2() -> i32 {
-// CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-// CHECK-NEXT: %1 = cir.const(3 : i32) : i32
-// CHECK-NEXT: cir.store %1, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT: %2 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT: cir.return %2 : i32
+// CHECK: cir.func @f2() -> !s32i {
+// CHECK-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK-NEXT: %1 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK-NEXT: cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: cir.return %2 : !s32i
 
 int f3() {
   int i = 3;
   return i;
 }
 
-// CHECK: cir.func @f3() -> i32 {
-// CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-// CHECK-NEXT: %2 = cir.const(3 : i32) : i32
-// CHECK-NEXT: cir.store %2, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT: %3 = cir.load %1 : cir.ptr <i32>, i32
-// CHECK-NEXT: cir.store %3, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT: %4 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT: cir.return %4 : i32
+// CHECK: cir.func @f3() -> !s32i {
+// CHECK-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+// CHECK-NEXT: %2 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK-NEXT: cir.store %2, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: cir.store %3, %0 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: %4 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT: cir.return %4 : !s32i

@@ -21,17 +21,17 @@ void init(unsigned numImages) {
   }
 }
 
-// CHECK: !ty_22struct2Etriple22 = !cir.struct<"struct.triple", i32, !cir.ptr<i8>, i32>
+// CHECK: !ty_22struct2Etriple22 = !cir.struct<"struct.triple", !u32i, !cir.ptr<i8>, !u32i>
 // CHECK: !ty_22class2Estd3A3Avector22 = !cir.struct<"class.std::vector", !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>>
 // CHECK: !ty_22struct2E__vector_iterator22 = !cir.struct<"struct.__vector_iterator", !cir.ptr<!ty_22struct2Etriple22>>
 
-// CHECK: cir.func @_Z4initj(%arg0: i32
-// CHECK:   %0 = cir.alloca i32, cir.ptr <i32>, ["numImages", init] {alignment = 4 : i64}
+// CHECK: cir.func @_Z4initj(%arg0: !u32i
+// CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["numImages", init] {alignment = 4 : i64}
 // CHECK:   %1 = cir.alloca !ty_22class2Estd3A3Avector22, cir.ptr <!ty_22class2Estd3A3Avector22>, ["images", init] {alignment = 8 : i64}
-// CHECK:   cir.store %arg0, %0 : i32, cir.ptr <i32>
-// CHECK:   %2 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:   %3 = cir.cast(integral, %2 : i32), i64
-// CHECK:   cir.call @_ZNSt6vectorI6tripleEC1Em(%1, %3) : (!cir.ptr<!ty_22class2Estd3A3Avector22>, i64) -> ()
+// CHECK:   cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
+// CHECK:   %2 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK:   %3 = cir.cast(integral, %2 : !u32i), !u64i
+// CHECK:   cir.call @_ZNSt6vectorI6tripleEC1Em(%1, %3) : (!cir.ptr<!ty_22class2Estd3A3Avector22>, !u64i) -> ()
 // CHECK:   cir.scope {
 // CHECK:     %4 = cir.alloca !cir.ptr<!ty_22class2Estd3A3Avector22>, cir.ptr <!cir.ptr<!ty_22class2Estd3A3Avector22>>, ["__range1", init] {alignment = 8 : i64}
 // CHECK:     %5 = cir.alloca !ty_22struct2E__vector_iterator22, cir.ptr <!ty_22struct2E__vector_iterator22>, ["__begin1", init] {alignment = 8 : i64}
@@ -61,11 +61,11 @@ void init(unsigned numImages) {
 // CHECK:         %13 = cir.alloca !ty_22struct2Etriple22, cir.ptr <!ty_22struct2Etriple22>, ["ref.tmp0"] {alignment = 8 : i64}
 // CHECK:         %14 = cir.const(#cir.zero : !ty_22struct2Etriple22) : !ty_22struct2Etriple22
 // CHECK:         cir.store %14, %13 : !ty_22struct2Etriple22, cir.ptr <!ty_22struct2Etriple22>
-// CHECK:         %15 = "cir.struct_element_addr"(%13) <{member_name = "type"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<i32>
-// CHECK:         %16 = cir.const(1000024002 : i32) : i32
-// CHECK:         cir.store %16, %15 : i32, cir.ptr <i32>
+// CHECK:         %15 = "cir.struct_element_addr"(%13) <{member_name = "type"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!u32i>
+// CHECK:         %16 = cir.const(#cir.int<1000024002> : !u32i) : !u32i
+// CHECK:         cir.store %16, %15 : !u32i, cir.ptr <!u32i>
 // CHECK:         %17 = "cir.struct_element_addr"(%13) <{member_name = "next"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!cir.ptr<i8>>
-// CHECK:         %18 = "cir.struct_element_addr"(%13) <{member_name = "image"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<i32>
+// CHECK:         %18 = "cir.struct_element_addr"(%13) <{member_name = "image"}> : (!cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!u32i>
 // CHECK:         %19 = cir.load %7 : cir.ptr <!cir.ptr<!ty_22struct2Etriple22>>, !cir.ptr<!ty_22struct2Etriple22>
 // CHECK:         %20 = cir.call @_ZN6tripleaSEOS_(%19, %13) : (!cir.ptr<!ty_22struct2Etriple22>, !cir.ptr<!ty_22struct2Etriple22>) -> !cir.ptr<!ty_22struct2Etriple22>
 // CHECK:       }

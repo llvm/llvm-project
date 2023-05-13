@@ -7,11 +7,11 @@ void foo() {
 }
 
 //      CHECK: cir.func @foo() {
-// CHECK-NEXT:   %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
-// CHECK-NEXT:   %1 = cir.const(0 : i32) : i32
-// CHECK-NEXT:   cir.store %1, %0 : i32, cir.ptr <i32>
-// CHECK-NEXT:   %2 = cir.const(1 : i32) : i32
-// CHECK-NEXT:   cir.store %2, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+// CHECK-NEXT:   %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:   cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:   %2 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK-NEXT:   cir.store %2, %0 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
 
