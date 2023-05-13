@@ -364,6 +364,10 @@ protected:
     /// for the predefined identifier.
     unsigned HasFunctionName : 1;
 
+    /// True if this PredefinedExpr should be treated as a StringLiteral (for
+    /// MSVC compatibility).
+    unsigned IsTransparent : 1;
+
     /// The location of this PredefinedExpr.
     SourceLocation Loc;
   };

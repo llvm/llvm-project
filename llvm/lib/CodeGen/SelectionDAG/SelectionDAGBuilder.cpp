@@ -10891,12 +10891,12 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 
   // If any argument copy elisions occurred and we have debug info, update the
   // stale frame indices used in the dbg.declare variable info table.
-  MachineFunction::VariableDbgInfoMapTy &DbgDeclareInfo = MF->getVariableDbgInfo();
-  if (!DbgDeclareInfo.empty() && !ArgCopyElisionFrameIndexMap.empty()) {
-    for (MachineFunction::VariableDbgInfo &VI : DbgDeclareInfo) {
-      auto I = ArgCopyElisionFrameIndexMap.find(VI.Slot);
+  if (!ArgCopyElisionFrameIndexMap.empty()) {
+    for (MachineFunction::VariableDbgInfo &VI :
+         MF->getInStackSlotVariableDbgInfo()) {
+      auto I = ArgCopyElisionFrameIndexMap.find(VI.getStackSlot());
       if (I != ArgCopyElisionFrameIndexMap.end())
-        VI.Slot = I->second;
+        VI.updateStackSlot(I->second);
     }
   }
 

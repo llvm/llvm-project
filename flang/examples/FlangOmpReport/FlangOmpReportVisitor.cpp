@@ -128,6 +128,10 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
             const CharBlock &source{std::get<0>(c.t).source};
             return normalize_construct_name(source.ToString());
           },
+          [&](const OpenMPAllocatorsConstruct &c) -> std::string {
+            const CharBlock &source{std::get<0>(c.t).source};
+            return normalize_construct_name(source.ToString());
+          },
           [&](const OpenMPAtomicConstruct &c) -> std::string {
             return std::visit(
                 [&](const auto &c) {

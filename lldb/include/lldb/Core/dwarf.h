@@ -21,8 +21,8 @@ namespace dwarf {
 }
 }
 
-typedef uint16_t dw_attr_t;
-typedef uint16_t dw_form_t;
+typedef llvm::dwarf::Attribute dw_attr_t;
+typedef llvm::dwarf::Form dw_form_t;
 typedef llvm::dwarf::Tag dw_tag_t;
 typedef uint64_t dw_addr_t; // Dwarf address define that must be big enough for
                             // any addresses in the compile units that get

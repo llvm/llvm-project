@@ -4418,9 +4418,8 @@ INTERCEPTOR(char **, backtrace_symbols, void **buffer, int size) {
   COMMON_INTERCEPTOR_ENTER(ctx, backtrace_symbols, buffer, size);
   if (buffer && size)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, buffer, size * sizeof(*buffer));
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
+  // The COMMON_INTERCEPTOR_READ_RANGE above ensures that 'buffer' is
+  // valid for reading.
   char **res = REAL(backtrace_symbols)(buffer, size);
   if (res && size) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, res, size * sizeof(*res));

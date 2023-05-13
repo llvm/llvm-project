@@ -532,7 +532,6 @@ protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
   bool emitAnnotations(Function &F);
   ErrorOr<uint64_t> getInstWeight(const Instruction &I) override;
-  ErrorOr<uint64_t> getProbeWeight(const Instruction &I);
   const FunctionSamples *findCalleeFunctionSamples(const CallBase &I) const;
   const FunctionSamples *
   findFunctionSamples(const Instruction &I) const override;
@@ -628,9 +627,6 @@ protected:
   // External inline advisor used to replay inline decision from remarks.
   std::unique_ptr<InlineAdvisor> ExternalInlineAdvisor;
 
-  // A pseudo probe helper to correlate the imported sample counts.
-  std::unique_ptr<PseudoProbeManager> ProbeManager;
-
   // A helper to implement the sample profile matching algorithm.
   std::unique_ptr<SampleProfileMatcher> MatchingManager;
 
@@ -667,68 +663,6 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
         return 0;
 
   return getInstWeightImpl(Inst);
-}
-
-// Here use error_code to represent: 1) The dangling probe. 2) Ignore the weight
-// of non-probe instruction. So if all instructions of the BB give error_code,
-// tell the inference algorithm to infer the BB weight.
-ErrorOr<uint64_t> SampleProfileLoader::getProbeWeight(const Instruction &Inst) {
-  assert(FunctionSamples::ProfileIsProbeBased &&
-         "Profile is not pseudo probe based");
-  std::optional<PseudoProbe> Probe = extractProbe(Inst);
-  // Ignore the non-probe instruction. If none of the instruction in the BB is
-  // probe, we choose to infer the BB's weight.
-  if (!Probe)
-    return std::error_code();
-
-  const FunctionSamples *FS = findFunctionSamples(Inst);
-  // If none of the instruction has FunctionSample, we choose to return zero
-  // value sample to indicate the BB is cold. This could happen when the
-  // instruction is from inlinee and no profile data is found.
-  // FIXME: This should not be affected by the source drift issue as 1) if the
-  // newly added function is top-level inliner, it won't match the CFG checksum
-  // in the function profile or 2) if it's the inlinee, the inlinee should have
-  // a profile, otherwise it wouldn't be inlined. For non-probe based profile,
-  // we can improve it by adding a switch for profile-sample-block-accurate for
-  // block level counts in the future.
-  if (!FS)
-    return 0;
-
-  // For non-CS profile, If a direct call/invoke instruction is inlined in
-  // profile (findCalleeFunctionSamples returns non-empty result), but not
-  // inlined here, it means that the inlined callsite has no sample, thus the
-  // call instruction should have 0 count.
-  // For CS profile, the callsite count of previously inlined callees is
-  // populated with the entry count of the callees.
-  if (!FunctionSamples::ProfileIsCS)
-    if (const auto *CB = dyn_cast<CallBase>(&Inst))
-      if (!CB->isIndirectCall() && findCalleeFunctionSamples(*CB))
-        return 0;
-
-  const ErrorOr<uint64_t> &R = FS->findSamplesAt(Probe->Id, 0);
-  if (R) {
-    uint64_t Samples = R.get() * Probe->Factor;
-    bool FirstMark = CoverageTracker.markSamplesUsed(FS, Probe->Id, 0, Samples);
-    if (FirstMark) {
-      ORE->emit([&]() {
-        OptimizationRemarkAnalysis Remark(DEBUG_TYPE, "AppliedSamples", &Inst);
-        Remark << "Applied " << ore::NV("NumSamples", Samples);
-        Remark << " samples from profile (ProbeId=";
-        Remark << ore::NV("ProbeId", Probe->Id);
-        Remark << ", Factor=";
-        Remark << ore::NV("Factor", Probe->Factor);
-        Remark << ", OriginalSamples=";
-        Remark << ore::NV("OriginalSamples", R.get());
-        Remark << ")";
-        return Remark;
-      });
-    }
-    LLVM_DEBUG(dbgs() << "    " << Probe->Id << ":" << Inst
-                      << " - weight: " << R.get() << " - factor: "
-                      << format("%0.2f", Probe->Factor) << ")\n");
-    return Samples;
-  }
-  return R;
 }
 
 /// Get the FunctionSamples for a call instruction.

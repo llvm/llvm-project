@@ -4410,16 +4410,6 @@ multiclass VPatUnaryS_M<string intrinsic_name,
   }
 }
 
-multiclass VPatUnaryV_V_AnyMask<string intrinsic, string instruction,
-                                list<VTypeInfo> vtilist> {
-  foreach vti = vtilist in {
-    def : VPatUnaryAnyMask<intrinsic, instruction, "VM",
-                           vti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, vti.RegClass,
-                           vti.RegClass>;
-  }
-}
-
 multiclass VPatUnaryV_V_AnyMask_E<string intrinsic, string instruction,
                                   list<VTypeInfo> vtilist> {
   foreach vti = vtilist in {

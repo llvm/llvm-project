@@ -134,3 +134,23 @@ namespace IgnorePartialSubstitution {
 
   _Static_assert(S::value, "");
 }
+
+namespace GH60778 {
+  template <bool B = false> class ClassTemplate {
+  public:
+      template <typename T, typename = void> class Nested {};
+  };
+
+  template <typename DerivedType> class Base {};
+
+  template <>
+  template <typename T>
+  class ClassTemplate<>::Nested<T> : public Base<ClassTemplate<>::Nested<T> > {};
+
+  void use() {
+    // This should instantiate the body of Nested with the template arguments
+    // from the Partial Specialization. This would previously get confused and
+    // get the template arguments from the primary template instead.
+    ClassTemplate<>::Nested<int> instantiation;
+  }
+}

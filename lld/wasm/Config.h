@@ -95,7 +95,7 @@ struct Configuration {
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 
   // The following config options do not directly correspond to any
-  // particular command line options, and should probably be moved to seperate
+  // particular command line options, and should probably be moved to separate
   // Ctx struct as in ELF/Config.h
 
   // True if we are creating position-independent code.

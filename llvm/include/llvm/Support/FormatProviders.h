@@ -76,7 +76,7 @@ protected:
   }
 
   static bool consumeHexStyle(StringRef &Str, HexPrintStyle &Style) {
-    if (!Str.startswith_insensitive("x"))
+    if (!Str.starts_with_insensitive("x"))
       return false;
 
     if (Str.consume_front("x-"))

@@ -2722,3 +2722,135 @@ loop:
 exit:
   ret void
 }
+
+; FIXME: Widening instructions should be used instead of tbl.
+define i32 @test_pr62620_widening_instr(ptr %p1, ptr %p2, i64 %lx, i32 %h) {
+; CHECK-LABEL: test_pr62620_widening_instr:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:  Lloh38:
+; CHECK-NEXT:    adrp x9, lCPI23_0@PAGE
+; CHECK-NEXT:  Lloh39:
+; CHECK-NEXT:    adrp x10, lCPI23_1@PAGE
+; CHECK-NEXT:  Lloh40:
+; CHECK-NEXT:    adrp x11, lCPI23_2@PAGE
+; CHECK-NEXT:  Lloh41:
+; CHECK-NEXT:    adrp x12, lCPI23_3@PAGE
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:  Lloh42:
+; CHECK-NEXT:    ldr q0, [x9, lCPI23_0@PAGEOFF]
+; CHECK-NEXT:    lsl x9, x2, #4
+; CHECK-NEXT:  Lloh43:
+; CHECK-NEXT:    ldr q1, [x10, lCPI23_1@PAGEOFF]
+; CHECK-NEXT:  Lloh44:
+; CHECK-NEXT:    ldr q2, [x11, lCPI23_2@PAGEOFF]
+; CHECK-NEXT:  Lloh45:
+; CHECK-NEXT:    ldr q3, [x12, lCPI23_3@PAGEOFF]
+; CHECK-NEXT:  LBB23_1: ; %loop
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr q4, [x8, x9]
+; CHECK-NEXT:    subs w3, w3, #1
+; CHECK-NEXT:    ldr q5, [x1, x9]
+; CHECK-NEXT:    tbl.16b v6, { v4 }, v0
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v17, { v5 }, v2
+; CHECK-NEXT:    tbl.16b v18, { v5 }, v3
+; CHECK-NEXT:    tbl.16b v19, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v5, { v5 }, v1
+; CHECK-NEXT:    sabd.4s v16, v16, v17
+; CHECK-NEXT:    sabd.4s v4, v4, v18
+; CHECK-NEXT:    saba.4s v16, v7, v5
+; CHECK-NEXT:    saba.4s v4, v6, v19
+; CHECK-NEXT:    add.4s v4, v4, v16
+; CHECK-NEXT:    addv.4s s4, v4
+; CHECK-NEXT:    fmov w10, s4
+; CHECK-NEXT:    add w0, w10, w0
+; CHECK-NEXT:    b.ne LBB23_1
+; CHECK-NEXT:  ; %bb.2: ; %exit
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh41, Lloh45
+; CHECK-NEXT:    .loh AdrpLdr Lloh40, Lloh44
+; CHECK-NEXT:    .loh AdrpLdr Lloh39, Lloh43
+; CHECK-NEXT:    .loh AdrpLdr Lloh38, Lloh42
+;
+; CHECK-BE-LABEL: test_pr62620_widening_instr:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    adrp x10, .LCPI23_0
+; CHECK-BE-NEXT:    add x10, x10, :lo12:.LCPI23_0
+; CHECK-BE-NEXT:    mov x8, x0
+; CHECK-BE-NEXT:    lsl x9, x2, #4
+; CHECK-BE-NEXT:    mov w0, wzr
+; CHECK-BE-NEXT:    add x8, x8, x9
+; CHECK-BE-NEXT:    ld1 { v0.16b }, [x10]
+; CHECK-BE-NEXT:    adrp x10, .LCPI23_1
+; CHECK-BE-NEXT:    add x10, x10, :lo12:.LCPI23_1
+; CHECK-BE-NEXT:    add x9, x1, x9
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x10]
+; CHECK-BE-NEXT:    adrp x10, .LCPI23_2
+; CHECK-BE-NEXT:    add x10, x10, :lo12:.LCPI23_2
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
+; CHECK-BE-NEXT:    adrp x10, .LCPI23_3
+; CHECK-BE-NEXT:    add x10, x10, :lo12:.LCPI23_3
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x10]
+; CHECK-BE-NEXT:  .LBB23_1: // %loop
+; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x8]
+; CHECK-BE-NEXT:    subs w3, w3, #1
+; CHECK-BE-NEXT:    ld1 { v5.16b }, [x9]
+; CHECK-BE-NEXT:    tbl v6.16b, { v4.16b }, v0.16b
+; CHECK-BE-NEXT:    tbl v7.16b, { v4.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v17.16b, { v5.16b }, v0.16b
+; CHECK-BE-NEXT:    tbl v18.16b, { v5.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v16.16b, { v4.16b }, v3.16b
+; CHECK-BE-NEXT:    tbl v4.16b, { v4.16b }, v2.16b
+; CHECK-BE-NEXT:    tbl v19.16b, { v5.16b }, v3.16b
+; CHECK-BE-NEXT:    tbl v5.16b, { v5.16b }, v2.16b
+; CHECK-BE-NEXT:    rev32 v7.16b, v7.16b
+; CHECK-BE-NEXT:    rev32 v6.16b, v6.16b
+; CHECK-BE-NEXT:    rev32 v18.16b, v18.16b
+; CHECK-BE-NEXT:    rev32 v17.16b, v17.16b
+; CHECK-BE-NEXT:    rev32 v16.16b, v16.16b
+; CHECK-BE-NEXT:    rev32 v4.16b, v4.16b
+; CHECK-BE-NEXT:    rev32 v19.16b, v19.16b
+; CHECK-BE-NEXT:    rev32 v5.16b, v5.16b
+; CHECK-BE-NEXT:    sabd v7.4s, v7.4s, v18.4s
+; CHECK-BE-NEXT:    sabd v6.4s, v6.4s, v17.4s
+; CHECK-BE-NEXT:    saba v7.4s, v4.4s, v5.4s
+; CHECK-BE-NEXT:    saba v6.4s, v16.4s, v19.4s
+; CHECK-BE-NEXT:    add v4.4s, v6.4s, v7.4s
+; CHECK-BE-NEXT:    addv s4, v4.4s
+; CHECK-BE-NEXT:    fmov w10, s4
+; CHECK-BE-NEXT:    add w0, w10, w0
+; CHECK-BE-NEXT:    b.ne .LBB23_1
+; CHECK-BE-NEXT:  // %bb.2: // %exit
+; CHECK-BE-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %s0 = phi i32 [ 0, %entry ], [ %op.rdx, %loop ]
+  %j.0261 = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %gep.1 = getelementptr inbounds <16 x i8>, ptr %p1, i64 %lx
+  %gep.2 = getelementptr inbounds <16 x i8>, ptr %p2, i64 %lx
+  %l1 = load <16 x i8>, ptr %gep.1
+  %z2 = zext <16 x i8> %l1 to <16 x i32>
+  %l4 = load <16 x i8>, ptr %gep.2
+  %z5 = zext <16 x i8> %l4 to <16 x i32>
+  %sub = sub nsw <16 x i32> %z2, %z5
+  %abs = tail call <16 x i32> @llvm.abs.v16i32(<16 x i32> %sub, i1 true)
+  %red = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %abs)
+  %op.rdx = add i32 %red, %s0
+  %inc = add nuw nsw i32 %j.0261, 1
+  %exitcond.not = icmp eq i32 %inc, %h
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %s1 = phi i32 [ %op.rdx, %loop ]
+  ret i32 %s1
+}
+
+declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1 immarg)
+
+declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)

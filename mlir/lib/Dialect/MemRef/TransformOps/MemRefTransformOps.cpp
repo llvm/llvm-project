@@ -69,7 +69,7 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
 
     results.push_back(*newBuffer);
   }
-  transformResults.set(getResult().cast<OpResult>(), results);
+  transformResults.set(cast<OpResult>(getResult()), results);
   return DiagnosedSilenceableFailure::success();
 }
 

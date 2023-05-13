@@ -158,6 +158,7 @@ void DWARFMappedHash::Prologue::AppendAtom(AtomType type, dw_form_t form) {
   atoms.push_back({type, form});
   atom_mask |= 1u << type;
   switch (form) {
+  default:
   case DW_FORM_indirect:
   case DW_FORM_exprloc:
   case DW_FORM_flag_present:
@@ -227,7 +228,7 @@ DWARFMappedHash::Prologue::Read(const lldb_private::DataExtractor &data,
   } else {
     for (uint32_t i = 0; i < atom_count; ++i) {
       AtomType type = (AtomType)data.GetU16(&offset);
-      dw_form_t form = (dw_form_t)data.GetU16(&offset);
+      auto form = static_cast<dw_form_t>(data.GetU16(&offset));
       AppendAtom(type, form);
     }
   }

@@ -39,7 +39,7 @@ struct attr_value_binder {
   attr_value_binder(ValueType *bv) : bind_value(bv) {}
 
   bool match(const Attribute &attr) {
-    if (auto intAttr = attr.dyn_cast<AttrClass>()) {
+    if (auto intAttr = llvm::dyn_cast<AttrClass>(attr)) {
       *bind_value = intAttr.getValue();
       return true;
     }
@@ -90,7 +90,7 @@ struct constant_op_binder {
     (void)result;
     assert(succeeded(result) && "expected ConstantLike op to be foldable");
 
-    if (auto attr = foldedOp.front().get<Attribute>().dyn_cast<AttrT>()) {
+    if (auto attr = llvm::dyn_cast<AttrT>(foldedOp.front().get<Attribute>())) {
       if (bind_value)
         *bind_value = attr;
       return true;
@@ -136,10 +136,10 @@ struct constant_float_op_binder {
       return false;
     auto type = op->getResult(0).getType();
 
-    if (type.isa<FloatType>())
+    if (llvm::isa<FloatType>(type))
       return attr_value_binder<FloatAttr>(bind_value).match(attr);
-    if (type.isa<VectorType, RankedTensorType>()) {
-      if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
+    if (llvm::isa<VectorType, RankedTensorType>(type)) {
+      if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr)) {
         return attr_value_binder<FloatAttr>(bind_value)
             .match(splatAttr.getSplatValue<Attribute>());
       }
@@ -173,10 +173,10 @@ struct constant_int_op_binder {
       return false;
     auto type = op->getResult(0).getType();
 
-    if (type.isa<IntegerType, IndexType>())
+    if (llvm::isa<IntegerType, IndexType>(type))
       return attr_value_binder<IntegerAttr>(bind_value).match(attr);
-    if (type.isa<VectorType, RankedTensorType>()) {
-      if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
+    if (llvm::isa<VectorType, RankedTensorType>(type)) {
+      if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr)) {
         return attr_value_binder<IntegerAttr>(bind_value)
             .match(splatAttr.getSplatValue<Attribute>());
       }

@@ -14,8 +14,9 @@
 #define LLVM_LIB_TARGET_X86_X86ENCODINGOPTIMIZATION_H
 namespace llvm {
 class MCInst;
+class MCInstrDesc;
 namespace X86 {
-bool optimizeInstFromVEX3ToVEX2(MCInst &MI);
+bool optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc);
 bool optimizeShiftRotateWithImmediateOne(MCInst &MI);
 } // namespace X86
 } // namespace llvm

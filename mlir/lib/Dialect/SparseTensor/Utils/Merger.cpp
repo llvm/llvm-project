@@ -1061,8 +1061,8 @@ bool Merger::maybeZero(ExprId e) const {
   if (expr.kind == TensorExp::Kind::kInvariant) {
     if (auto c = expr.val.getDefiningOp<complex::ConstantOp>()) {
       ArrayAttr arrayAttr = c.getValue();
-      return arrayAttr[0].cast<FloatAttr>().getValue().isZero() &&
-             arrayAttr[1].cast<FloatAttr>().getValue().isZero();
+      return cast<FloatAttr>(arrayAttr[0]).getValue().isZero() &&
+             cast<FloatAttr>(arrayAttr[1]).getValue().isZero();
     }
     if (auto c = expr.val.getDefiningOp<arith::ConstantIntOp>())
       return c.value() == 0;
@@ -1077,7 +1077,7 @@ Type Merger::inferType(ExprId e, Value src) const {
   Type dtp = exp(e).val.getType();
   // Inspect source type. For vector types, apply the same
   // vectorization to the destination type.
-  if (auto vtp = src.getType().dyn_cast<VectorType>())
+  if (auto vtp = dyn_cast<VectorType>(src.getType()))
     return VectorType::get(vtp.getNumElements(), dtp, vtp.getNumScalableDims());
   return dtp;
 }
@@ -1085,7 +1085,7 @@ Type Merger::inferType(ExprId e, Value src) const {
 /// Ensures that sparse compiler can generate code for expression.
 static bool isAdmissibleBranchExp(Operation *op, Block *block, Value v) {
   // Arguments are always admissible.
-  if (v.isa<BlockArgument>())
+  if (isa<BlockArgument>(v))
     return true;
   // Accept index anywhere.
   Operation *def = v.getDefiningOp();
@@ -1113,7 +1113,7 @@ static bool isAdmissibleBranch(Operation *op, Region &region) {
 }
 
 std::optional<ExprId> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
-  if (auto arg = v.dyn_cast<BlockArgument>()) {
+  if (auto arg = dyn_cast<BlockArgument>(v)) {
     const TensorId tid = makeTensorId(arg.getArgNumber());
     // Any argument of the generic op that is not marked as a scalar
     // argument is considered a tensor, indexed by the implicit loop
@@ -1346,8 +1346,8 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, ExprId e, Value v0,
   case TensorExp::Kind::kAbsF:
     return rewriter.create<math::AbsFOp>(loc, v0);
   case TensorExp::Kind::kAbsC: {
-    auto type = v0.getType().cast<ComplexType>();
-    auto eltType = type.getElementType().cast<FloatType>();
+    auto type = cast<ComplexType>(v0.getType());
+    auto eltType = cast<FloatType>(type.getElementType());
     return rewriter.create<complex::AbsOp>(loc, eltType, v0);
   }
   case TensorExp::Kind::kAbsI:
@@ -1407,13 +1407,13 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, ExprId e, Value v0,
   case TensorExp::Kind::kTruncI:
     return rewriter.create<arith::TruncIOp>(loc, inferType(e, v0), v0);
   case TensorExp::Kind::kCIm: {
-    auto type = v0.getType().cast<ComplexType>();
-    auto eltType = type.getElementType().cast<FloatType>();
+    auto type = cast<ComplexType>(v0.getType());
+    auto eltType = cast<FloatType>(type.getElementType());
     return rewriter.create<complex::ImOp>(loc, eltType, v0);
   }
   case TensorExp::Kind::kCRe: {
-    auto type = v0.getType().cast<ComplexType>();
-    auto eltType = type.getElementType().cast<FloatType>();
+    auto type = cast<ComplexType>(v0.getType());
+    auto eltType = cast<FloatType>(type.getElementType());
     return rewriter.create<complex::ReOp>(loc, eltType, v0);
   }
   case TensorExp::Kind::kBitCast:

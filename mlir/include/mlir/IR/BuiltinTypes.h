@@ -367,20 +367,21 @@ SliceVerificationResult isRankReducedType(ShapedType originalType,
 //===----------------------------------------------------------------------===//
 
 inline bool BaseMemRefType::classof(Type type) {
-  return type.isa<MemRefType, UnrankedMemRefType>();
+  return llvm::isa<MemRefType, UnrankedMemRefType>(type);
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
   return type.isIntOrIndexOrFloat() ||
-         type.isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>() ||
-         type.isa<MemRefElementTypeInterface>();
+         llvm::isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>(
+             type) ||
+         llvm::isa<MemRefElementTypeInterface>(type);
 }
 
 inline bool FloatType::classof(Type type) {
-  return type
-      .isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
-           Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type, Float16Type,
-           Float32Type, Float64Type, Float80Type, Float128Type>();
+  return llvm::isa<Float8E5M2Type, Float8E4M3FNType, Float8E5M2FNUZType,
+                   Float8E4M3FNUZType, Float8E4M3B11FNUZType, BFloat16Type,
+                   Float16Type, Float32Type, Float64Type, Float80Type,
+                   Float128Type>(type);
 }
 
 inline FloatType FloatType::getFloat8E5M2(MLIRContext *ctx) {
@@ -428,7 +429,7 @@ inline FloatType FloatType::getF128(MLIRContext *ctx) {
 }
 
 inline bool TensorType::classof(Type type) {
-  return type.isa<RankedTensorType, UnrankedTensorType>();
+  return llvm::isa<RankedTensorType, UnrankedTensorType>(type);
 }
 
 //===----------------------------------------------------------------------===//

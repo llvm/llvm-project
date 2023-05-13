@@ -116,6 +116,13 @@ public:
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
   bool hasStdExtZfhOrZfhmin() const { return HasStdExtZfh || HasStdExtZfhmin; }
+  bool hasStdExtZfhOrZhinx() const { return HasStdExtZfh || HasStdExtZhinx; }
+  bool hasStdExtZhinxOrZhinxmin() const {
+    return HasStdExtZhinx || HasStdExtZhinxmin;
+  }
+  bool hasStdExtZfhOrZfhminOrZhinxOrZhinxmin() const {
+    return hasStdExtZfhOrZfhmin() || hasStdExtZhinxOrZhinxmin();
+  }
   bool is64Bit() const { return IsRV64; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }

@@ -100,7 +100,7 @@ static Value genLaunchGPUFunc(OpBuilder &builder, gpu::GPUFuncOp gpuFunc,
 /// completion. Needs to cast the buffer to a unranked buffer.
 static Value genHostRegisterMemref(OpBuilder &builder, Location loc,
                                    Value mem) {
-  MemRefType memTp = mem.getType().cast<MemRefType>();
+  MemRefType memTp = cast<MemRefType>(mem.getType());
   UnrankedMemRefType resTp =
       UnrankedMemRefType::get(memTp.getElementType(), /*memorySpace=*/0);
   Value cast = builder.create<memref::CastOp>(loc, resTp, mem);
@@ -133,7 +133,7 @@ static void genBlockingWait(OpBuilder &builder, Location loc,
 ///       that feature does not seem to be fully supported yet.
 static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem,
                                    Value token) {
-  auto tp = mem.getType().cast<ShapedType>();
+  auto tp = cast<ShapedType>(mem.getType());
   auto elemTp = tp.getElementType();
   auto shape = tp.getShape();
   auto memTp = MemRefType::get(shape, elemTp);
@@ -304,7 +304,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       for (OpOperand &o : op->getOpOperands()) {
         Value val = o.get();
         Block *block;
-        if (auto arg = val.dyn_cast<BlockArgument>())
+        if (auto arg = dyn_cast<BlockArgument>(val))
           block = arg.getOwner();
         else
           block = val.getDefiningOp()->getBlock();
@@ -321,7 +321,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
       Type tp = val.getType();
       if (val.getDefiningOp<arith::ConstantOp>())
         constants.push_back(val);
-      else if (tp.isa<FloatType>() || tp.isIntOrIndex())
+      else if (isa<FloatType>(tp) || tp.isIntOrIndex())
         scalars.push_back(val);
       else if (isa<MemRefType>(tp))
         buffers.push_back(val);

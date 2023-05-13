@@ -1370,6 +1370,41 @@ For example, compiling code with ``-fmodules`` enables the use of Modules.
 
 More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
+Language Extensions Back-ported to Previous Standards
+=====================================================
+
+=================================== ================================ ============= ============= ==================================
+Feature                             Feature Test Macro               Introduced In Backported To Required Flags
+=================================== ================================ ============= ============= ==================================
+variadic templates                  __cpp_variadic_templates         C++11         C++03
+Alias templates                     __cpp_alias_templates            C++11         C++03
+Non-static data member initializers __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop            __cpp_range_based_for            C++11         C++03
+RValue references                   __cpp_rvalue_references          C++11         C++03
+Attributes                          __cpp_attributes                 C++11         C++03         -fdouble-square-bracket-attributes
+variable templates                  __cpp_variable_templates         C++14         C++03
+Binary literals                     __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                   __cpp_constexpr                  C++14         C++11
+``if constexpr``                    __cpp_if_constexpr               C++17         C++11
+fold expressions                    __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value   __cpp_capture_star_this          C++17         C++11
+Attributes on enums                 __cpp_enumerator_attributes      C++17         C++11
+Guaranteed copy elision             __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals       __cpp_hex_float                  C++17         C++03
+``inline`` variables                __cpp_inline_variables           C++17         C++03
+Attributes on namespaces            __cpp_namespace_attributes       C++17         C++11
+Structured bindings                 __cpp_structured_bindings        C++17         C++03
+template template arguments         __cpp_template_template_args     C++17         C++03
+``static operator[]``               __cpp_multidimensional_subscript C++20         C++03
+Designated initializers             __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``            __cpp_conditional_explicit       C++20         C++03
+``using enum``                      __cpp_using_enum                 C++20         C++03
+``if consteval``                    __cpp_if_consteval               C++23         C++20
+``static operator()``               __cpp_static_call_operator       C++23         C++03
+----------------------------------- -------------------------------- ------------- ------------- ----------------------------------
+Designated initializers                                              C99           C89
+=================================== ================================ ============= ============= ==================================
+
 Type Trait Primitives
 =====================
 
@@ -3289,13 +3324,35 @@ Floating point builtins
 
    double __builtin_canonicalize(double);
    float __builtin_canonicalizef(float);
-   long double__builtin_canonicalizel(long double);
+   long double __builtin_canonicalizel(long double);
 
 Returns the platform specific canonical encoding of a floating point
 number. This canonicalization is useful for implementing certain
 numeric primitives such as frexp. See `LLVM canonicalize intrinsic
 <https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic>`_ for
 more information on the semantics.
+
+``__builtin_flt_rounds`` and ``__builtin_set_flt_rounds``
+---------------------------------------------------------
+
+.. code-block:: c
+
+   int __builtin_flt_rounds();
+   void __builtin_set_flt_rounds(int);
+
+Returns and sets current floating point rounding mode. The encoding of returned
+values and input parameters is same as the result of FLT_ROUNDS, specified by C
+standard:
+- ``0``  - toward zero
+- ``1``  - to nearest, ties to even
+- ``2``  - toward positive infinity
+- ``3``  - toward negative infinity
+- ``4``  - to nearest, ties away from zero
+The effect of passing some other value to ``__builtin_flt_rounds`` is
+implementation-defined. ``__builtin_set_flt_rounds`` is currently only supported
+to work on x86, x86_64, Arm and AArch64 targets. These builtins read and modify
+the floating-point environment, which is not always allowed and may have unexpected
+behavior. Please see the section on `Accessing the floating point environment <https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment>`_ for more information.
 
 String builtins
 ---------------

@@ -108,7 +108,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
         const DenseMap<Value, BaseMemRefType> &fixedTypes);
 
     RankedTensorType getType() {
-      return getResult().getType().cast<RankedTensorType>();
+      return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
 
     // Return true if the size of the tensor is dynamic at `idx`
@@ -322,8 +322,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     /// The result of a to_tensor is always a tensor.
     TensorType getType() {
       Type resultType = getResult().getType();
-      if (resultType.isa<TensorType>())
-        return resultType.cast<TensorType>();
+      if (::llvm::isa<TensorType>(resultType))
+        return ::llvm::cast<TensorType>(resultType);
       return {};
     }
 
@@ -342,7 +342,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     FailureOr<BaseMemRefType> getBufferType(
         Value value, const BufferizationOptions &options,
         const DenseMap<Value, BaseMemRefType> &fixedTypes) {
-      return getMemref().getType().cast<BaseMemRefType>();
+      return ::llvm::cast<BaseMemRefType>(getMemref().getType());
     }
   }];
 

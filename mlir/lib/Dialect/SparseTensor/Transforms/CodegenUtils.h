@@ -260,7 +260,7 @@ Value reshapeValuesToLevels(OpBuilder &builder, Location loc,
 /// `IntegerType`), this also works for `RankedTensorType` and `VectorType`
 /// (for which it generates a constant `DenseElementsAttr` of zeros).
 inline Value constantZero(OpBuilder &builder, Location loc, Type tp) {
-  if (auto ctp = tp.dyn_cast<ComplexType>()) {
+  if (auto ctp = dyn_cast<ComplexType>(tp)) {
     auto zeroe = builder.getZeroAttr(ctp.getElementType());
     auto zeroa = builder.getArrayAttr({zeroe, zeroe});
     return builder.create<complex::ConstantOp>(loc, tp, zeroa);
@@ -271,7 +271,7 @@ inline Value constantZero(OpBuilder &builder, Location loc, Type tp) {
 /// Generates a 1-valued constant of the given type.  This supports all
 /// the same types as `constantZero`.
 inline Value constantOne(OpBuilder &builder, Location loc, Type tp) {
-  if (auto ctp = tp.dyn_cast<ComplexType>()) {
+  if (auto ctp = dyn_cast<ComplexType>(tp)) {
     auto zeroe = builder.getZeroAttr(ctp.getElementType());
     auto onee = getOneAttr(builder, ctp.getElementType());
     auto zeroa = builder.getArrayAttr({onee, zeroe});
@@ -350,7 +350,7 @@ inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
 }
 
 inline bool isZeroRankedTensorOrScalar(Type type) {
-  auto rtp = type.dyn_cast<RankedTensorType>();
+  auto rtp = dyn_cast<RankedTensorType>(type);
   return !rtp || rtp.getRank() == 0;
 }
 
@@ -363,6 +363,9 @@ Value genToPositions(OpBuilder &builder, Location loc, Value tensor, Level lvl);
 /// any specified layout.
 Value genToCoordinates(OpBuilder &builder, Location loc, Value tensor,
                        Level lvl, Level cooStart);
+
+/// Infers the result type and generates `ToCoordinatesBufferOp`.
+Value genToCoordinatesBuffer(OpBuilder &builder, Location loc, Value tensor);
 
 /// Infers the result type and generates `ToValuesOp`.
 Value genToValues(OpBuilder &builder, Location loc, Value tensor);

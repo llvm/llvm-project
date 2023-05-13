@@ -32,7 +32,7 @@ namespace {
 static unsigned getIntegerBitWidth(DialectBytecodeReader &reader, Type type) {
   if (auto intType = dyn_cast<IntegerType>(type)) {
     return intType.getWidth();
-  } else if (type.isa<IndexType>()) {
+  } else if (llvm::isa<IndexType>(type)) {
     return IndexType::kInternalStorageBitWidth;
   }
   reader.emitError()

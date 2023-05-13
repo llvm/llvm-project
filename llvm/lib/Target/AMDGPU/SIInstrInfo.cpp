@@ -578,9 +578,12 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   if (!RegsOverlap) {
     for (auto Def = MI, E = MBB.begin(); Def != E; ) {
       --Def;
-      if (!Def->definesRegister(SrcReg, &RI))
+
+      if (!Def->modifiesRegister(SrcReg, &RI))
         continue;
-      if (Def->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64)
+
+      if (Def->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
+          Def->getOperand(0).getReg() != SrcReg)
         break;
 
       MachineOperand &DefOp = Def->getOperand(1);

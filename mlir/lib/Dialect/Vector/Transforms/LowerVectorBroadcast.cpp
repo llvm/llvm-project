@@ -49,7 +49,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     VectorType dstType = op.getResultVectorType();
-    VectorType srcType = op.getSourceType().dyn_cast<VectorType>();
+    VectorType srcType = dyn_cast<VectorType>(op.getSourceType());
     Type eltType = dstType.getElementType();
 
     // Scalar to any vector can use splat.

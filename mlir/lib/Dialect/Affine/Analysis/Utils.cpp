@@ -190,7 +190,7 @@ void MemRefDependenceGraph::addEdge(unsigned srcId, unsigned dstId,
   if (!hasEdge(srcId, dstId, value)) {
     outEdges[srcId].push_back({dstId, value});
     inEdges[dstId].push_back({srcId, value});
-    if (value.getType().isa<MemRefType>())
+    if (isa<MemRefType>(value.getType()))
       memrefEdgeCount[value]++;
   }
 }
@@ -200,7 +200,7 @@ void MemRefDependenceGraph::removeEdge(unsigned srcId, unsigned dstId,
                                        Value value) {
   assert(inEdges.count(dstId) > 0);
   assert(outEdges.count(srcId) > 0);
-  if (value.getType().isa<MemRefType>()) {
+  if (isa<MemRefType>(value.getType())) {
     assert(memrefEdgeCount.count(value) > 0);
     memrefEdgeCount[value]--;
   }
@@ -289,7 +289,7 @@ void MemRefDependenceGraph::gatherDefiningNodes(
     // By definition of edge, if the edge value is a non-memref value,
     // then the dependence is between a graph node which defines an SSA value
     // and another graph node which uses the SSA value.
-    if (!edge.value.getType().isa<MemRefType>())
+    if (!isa<MemRefType>(edge.value.getType()))
       definingNodes.insert(edge.id);
 }
 
@@ -473,7 +473,7 @@ void MemRefDependenceGraph::forEachMemRefEdge(
     ArrayRef<Edge> edges, const std::function<void(Edge)> &callback) {
   for (const auto &edge : edges) {
     // Skip if 'edge' is not a memref dependence edge.
-    if (!edge.value.getType().isa<MemRefType>())
+    if (!isa<MemRefType>(edge.value.getType()))
       continue;
     assert(nodes.count(edge.id) > 0);
     // Skip if 'edge.id' is not a loop nest.
@@ -808,13 +808,13 @@ std::optional<bool> ComputationSliceState::isMaximal() const {
 }
 
 unsigned MemRefRegion::getRank() const {
-  return memref.getType().cast<MemRefType>().getRank();
+  return cast<MemRefType>(memref.getType()).getRank();
 }
 
 std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
     SmallVectorImpl<int64_t> *shape, std::vector<SmallVector<int64_t, 4>> *lbs,
     SmallVectorImpl<int64_t> *lbDivisors) const {
-  auto memRefType = memref.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(memref.getType());
   unsigned rank = memRefType.getRank();
   if (shape)
     shape->reserve(rank);
@@ -875,7 +875,7 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
 void MemRefRegion::getLowerAndUpperBound(unsigned pos, AffineMap &lbMap,
                                          AffineMap &ubMap) const {
   assert(pos < cst.getNumDimVars() && "invalid position");
-  auto memRefType = memref.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(memref.getType());
   unsigned rank = memRefType.getRank();
 
   assert(rank == cst.getNumDimVars() && "inconsistent memref region");
@@ -1049,7 +1049,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   // to guard against potential over-approximation from projection.
   // TODO: Support dynamic memref dimensions.
   if (addMemRefDimBounds) {
-    auto memRefType = memref.getType().cast<MemRefType>();
+    auto memRefType = cast<MemRefType>(memref.getType());
     for (unsigned r = 0; r < rank; r++) {
       cst.addBound(BoundType::LB, /*pos=*/r, /*value=*/0);
       if (memRefType.isDynamicDim(r))
@@ -1071,7 +1071,7 @@ mlir::affine::getMemRefIntOrFloatEltSizeInBytes(MemRefType memRefType) {
   unsigned sizeInBits;
   if (elementType.isIntOrFloat()) {
     sizeInBits = elementType.getIntOrFloatBitWidth();
-  } else if (auto vectorType = elementType.dyn_cast<VectorType>()) {
+  } else if (auto vectorType = dyn_cast<VectorType>(elementType)) {
     if (vectorType.getElementType().isIntOrFloat())
       sizeInBits =
           vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
@@ -1085,7 +1085,7 @@ mlir::affine::getMemRefIntOrFloatEltSizeInBytes(MemRefType memRefType) {
 
 // Returns the size of the region.
 std::optional<int64_t> MemRefRegion::getRegionSize() {
-  auto memRefType = memref.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(memref.getType());
 
   if (!memRefType.getLayout().isIdentity()) {
     LLVM_DEBUG(llvm::dbgs() << "Non-identity layout map not yet supported\n");
@@ -1119,7 +1119,7 @@ mlir::affine::getIntOrFloatMemRefSizeInBytes(MemRefType memRefType) {
   if (!memRefType.hasStaticShape())
     return std::nullopt;
   auto elementType = memRefType.getElementType();
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>())
+  if (!elementType.isIntOrFloat() && !isa<VectorType>(elementType))
     return std::nullopt;
 
   auto sizeInBytes = getMemRefIntOrFloatEltSizeInBytes(memRefType);
@@ -1708,7 +1708,7 @@ MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
 }
 
 unsigned MemRefAccess::getRank() const {
-  return memref.getType().cast<MemRefType>().getRank();
+  return cast<MemRefType>(memref.getType()).getRank();
 }
 
 bool MemRefAccess::isStore() const {

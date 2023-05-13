@@ -979,6 +979,26 @@ static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
   return memVTFromLoadIntrData(ST->getContainedType(0), MaxNumLanes);
 }
 
+/// Map address space 7 to MVT::v5i32 because that's its in-memory
+/// representation. This return value is vector-typed because there is no
+/// MVT::i160 and it is not clear if one can be added. While this could
+/// cause issues during codegen, these address space 7 pointers will be
+/// rewritten away by then. Therefore, we can return MVT::v5i32 in order
+/// to allow pre-codegen passes that query TargetTransformInfo, often for cost
+/// modeling, to work.
+MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
+  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+    return MVT::v5i32;
+  return AMDGPUTargetLowering::getPointerTy(DL, AS);
+}
+/// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
+/// v8i32 when padding is added.
+MVT SITargetLowering::getPointerMemTy(const DataLayout &DL, unsigned AS) const {
+  if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
+    return MVT::v8i32;
+  return AMDGPUTargetLowering::getPointerMemTy(DL, AS);
+}
+
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                           const CallInst &CI,
                                           MachineFunction &MF,
@@ -9550,6 +9570,8 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
 }
 
 // (shl (add x, c1), c2) -> add (shl x, c2), (shl c1, c2)
+// (shl (or x, c1), c2) -> add (shl x, c2), (shl c1, c2) iff x and c1 share no
+// bits
 
 // This is a variant of
 // (mul (add x, c1), c2) -> add (mul x, c2), (mul c1, c2),
@@ -9584,8 +9606,14 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   if (!CAdd)
     return SDValue();
 
-  // If the resulting offset is too large, we can't fold it into the addressing
-  // mode offset.
+  SelectionDAG &DAG = DCI.DAG;
+
+  if (N0->getOpcode() == ISD::OR &&
+      !DAG.haveNoCommonBitsSet(N0.getOperand(0), N0.getOperand(1)))
+    return SDValue();
+
+  // If the resulting offset is too large, we can't fold it into the
+  // addressing mode offset.
   APInt Offset = CAdd->getAPIntValue() << CN1->getAPIntValue();
   Type *Ty = MemVT.getTypeForEVT(*DCI.DAG.getContext());
 
@@ -9595,7 +9623,6 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   if (!isLegalAddressingMode(DCI.DAG.getDataLayout(), AM, Ty, AddrSpace))
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   EVT VT = N->getValueType(0);
 

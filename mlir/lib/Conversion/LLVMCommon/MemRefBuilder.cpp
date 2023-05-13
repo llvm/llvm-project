@@ -24,8 +24,7 @@ using namespace mlir;
 MemRefDescriptor::MemRefDescriptor(Value descriptor)
     : StructBuilder(descriptor) {
   assert(value != nullptr && "value cannot be null");
-  indexType = value.getType()
-                  .cast<LLVM::LLVMStructType>()
+  indexType = cast<LLVM::LLVMStructType>(value.getType())
                   .getBody()[kOffsetPosInMemRefDescriptor];
 }
 
@@ -193,10 +192,9 @@ void MemRefDescriptor::setConstantStride(OpBuilder &builder, Location loc,
 }
 
 LLVM::LLVMPointerType MemRefDescriptor::getElementPtrType() {
-  return value.getType()
-      .cast<LLVM::LLVMStructType>()
-      .getBody()[kAlignedPtrPosInMemRefDescriptor]
-      .cast<LLVM::LLVMPointerType>();
+  return cast<LLVM::LLVMPointerType>(
+      cast<LLVM::LLVMStructType>(value.getType())
+          .getBody()[kAlignedPtrPosInMemRefDescriptor]);
 }
 
 Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,

@@ -10,9 +10,8 @@
 #ifndef _PSTL_GLUE_ALGORITHM_IMPL_H
 #define _PSTL_GLUE_ALGORITHM_IMPL_H
 
+#include <__config>
 #include <functional>
-
-#include "pstl_config.h"
 
 #include "algorithm_fwd.h"
 #include "execution_defs.h"

@@ -91,9 +91,9 @@ Region *bufferization::getNextEnclosingRepetitiveRegion(
 }
 
 Operation *bufferization::getOwnerOfValue(Value value) {
-  if (auto opResult = value.dyn_cast<OpResult>())
+  if (auto opResult = llvm::dyn_cast<OpResult>(value))
     return opResult.getDefiningOp();
-  return value.cast<BlockArgument>().getOwner()->getParentOp();
+  return llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
 }
 
 bool bufferization::allocationDoesNotEscape(OpResult opResult) {
@@ -109,7 +109,7 @@ bool bufferization::allocationDoesNotEscape(OpResult opResult) {
     return false;
   auto attr =
       op->getAttrOfType<ArrayAttr>(BufferizationDialect::kEscapeAttrName);
-  return !attr[opResult.getResultNumber()].cast<BoolAttr>().getValue();
+  return !llvm::cast<BoolAttr>(attr[opResult.getResultNumber()]).getValue();
 }
 
 /// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
@@ -119,31 +119,31 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
     OpBuilder &b, Location loc, Value shapedValue, bool escape,
     const BufferizationOptions &options, bool copy) {
   Value tensor;
-  if (shapedValue.getType().isa<RankedTensorType>()) {
+  if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
-  } else if (shapedValue.getType().isa<MemRefType>()) {
+  } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
     tensor = b.create<ToTensorOp>(loc, shapedValue);
-  } else if (shapedValue.getType().isa<UnrankedTensorType>() ||
-             shapedValue.getType().isa<UnrankedMemRefType>()) {
+  } else if (llvm::isa<UnrankedTensorType>(shapedValue.getType()) ||
+             llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
     return getOwnerOfValue(shapedValue)
         ->emitError("copying of unranked tensors is not implemented");
   } else {
     llvm_unreachable("expected RankedTensorType or MemRefType");
   }
-  RankedTensorType tensorType = tensor.getType().cast<RankedTensorType>();
+  RankedTensorType tensorType = llvm::cast<RankedTensorType>(tensor.getType());
   SmallVector<Value> dynamicSizes;
   if (!copy) {
     // Compute the dynamic part of the shape.
     // First try to query the shape via ReifyRankedShapedTypeOpInterface.
     bool reifiedShapes = false;
-    if (shapedValue.getType().isa<RankedTensorType>() &&
-        shapedValue.isa<OpResult>()) {
+    if (llvm::isa<RankedTensorType>(shapedValue.getType()) &&
+        llvm::isa<OpResult>(shapedValue)) {
       ReifiedRankedShapedTypeDims resultDims;
       if (succeeded(
               reifyResultShapes(b, shapedValue.getDefiningOp(), resultDims))) {
         reifiedShapes = true;
         auto &shape =
-            resultDims[shapedValue.cast<OpResult>().getResultNumber()];
+            resultDims[llvm::cast<OpResult>(shapedValue).getResultNumber()];
         for (const auto &dim : enumerate(tensorType.getShape()))
           if (ShapedType::isDynamic(dim.value()))
             dynamicSizes.push_back(shape[dim.index()].get<Value>());
@@ -188,11 +188,11 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   // Find all out-of-place OpOperands.
   for (OpOperand &opOperand : op->getOpOperands()) {
     Type operandType = opOperand.get().getType();
-    if (!operandType.isa<TensorType>())
+    if (!llvm::isa<TensorType>(operandType))
       continue;
     if (state.isInPlace(opOperand))
       continue;
-    if (operandType.isa<UnrankedTensorType>())
+    if (llvm::isa<UnrankedTensorType>(operandType))
       return op->emitError("copying of unranked tensors is not implemented");
 
     AliasingOpResultList aliasingOpResults =
@@ -209,9 +209,8 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
         !state.bufferizesToMemoryWrite(opOperand) &&
         state.getAliasingOpOperands(aliasingOpResults.getAliases()[0].opResult)
                 .getNumAliases() == 1 &&
-        !aliasingOpResults.getAliases()[0]
-             .opResult.getType()
-             .isa<UnrankedTensorType>()) {
+        !llvm::isa<UnrankedTensorType>(
+            aliasingOpResults.getAliases()[0].opResult.getType())) {
       // The op itself does not write but may create exactly one alias. Instead
       // of copying the OpOperand, copy the OpResult. The OpResult can sometimes
       // be smaller than the OpOperand (e.g., in the case of an extract_slice,
@@ -281,9 +280,9 @@ bool bufferization::shouldDeallocateOpResult(
   AnalysisState analysisState(options);
   if (op->hasAttr(BufferizationDialect::kEscapeAttrName)) {
     // AllocTensorOp has one result.
-    ArrayAttr escapeAttr =
-        op->getAttr(BufferizationDialect::kEscapeAttrName).cast<ArrayAttr>();
-    return !escapeAttr[0].cast<BoolAttr>().getValue();
+    ArrayAttr escapeAttr = llvm::cast<ArrayAttr>(
+        op->getAttr(BufferizationDialect::kEscapeAttrName));
+    return !llvm::cast<BoolAttr>(escapeAttr[0]).getValue();
   }
 
   // No "escape" annotation found.
@@ -335,8 +334,8 @@ defaultFunctionArgTypeConverter(TensorType type, Attribute memorySpace,
 BaseMemRefType
 defaultUnknownTypeConverter(Value value, Attribute memorySpace,
                             const BufferizationOptions &options) {
-  return getMemRefTypeWithFullyDynamicLayout(value.getType().cast<TensorType>(),
-                                             memorySpace);
+  return getMemRefTypeWithFullyDynamicLayout(
+      llvm::cast<TensorType>(value.getType()), memorySpace);
 }
 
 } // namespace
@@ -394,7 +393,7 @@ void BufferizationOptions::setFunctionBoundaryTypeConversion(
 //===----------------------------------------------------------------------===//
 
 static void setInsertionPointAfter(OpBuilder &b, Value value) {
-  if (auto bbArg = value.dyn_cast<BlockArgument>()) {
+  if (auto bbArg = llvm::dyn_cast<BlockArgument>(value)) {
     b.setInsertionPointToStart(bbArg.getOwner());
   } else {
     b.setInsertionPointAfter(value.getDefiningOp());
@@ -463,7 +462,7 @@ bool AnalysisState::bufferizesToAliasOnly(OpOperand &opOperand) const {
 }
 
 bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
-  auto opResult = value.dyn_cast<OpResult>();
+  auto opResult = llvm::dyn_cast<OpResult>(value);
   if (!opResult)
     return true;
   auto bufferizableOp = getOptions().dynCastBufferizableOp(value);
@@ -476,7 +475,7 @@ bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
 /// read. Also takes into account ops that create an alias but do not read by
 /// themselves (e.g., ExtractSliceOp).
 bool AnalysisState::isValueRead(Value value) const {
-  assert(value.getType().isa<TensorType>() && "expected TensorType");
+  assert(llvm::isa<TensorType>(value.getType()) && "expected TensorType");
   SmallVector<OpOperand *> workingSet;
   for (OpOperand &use : value.getUses())
     workingSet.push_back(&use);
@@ -512,13 +511,13 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
       continue;
     }
 
-    if (value.isa<BlockArgument>()) {
+    if (llvm::isa<BlockArgument>(value)) {
       if (alwaysIncludeLeaves)
         result.insert(value);
       continue;
     }
 
-    OpResult opResult = value.cast<OpResult>();
+    OpResult opResult = llvm::cast<OpResult>(value);
     BufferizableOpInterface bufferizableOp =
         options.dynCastBufferizableOp(opResult.getDefiningOp());
     AliasingOpOperandList aliases = getAliasingOpOperands(opResult);
@@ -658,8 +657,8 @@ bool AnalysisState::isTensorYielded(Value tensor) const {
 // bufferization.to_memref is not allowed to change the rank.
 static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #ifndef NDEBUG
-  auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>();
-  assert((!rankedTensorType || memrefType.cast<MemRefType>().getRank() ==
+  auto rankedTensorType = llvm::dyn_cast<RankedTensorType>(tensor.getType());
+  assert((!rankedTensorType || llvm::cast<MemRefType>(memrefType).getRank() ==
                                    rankedTensorType.getRank()) &&
          "to_memref would be invalid: mismatching ranks");
 #endif
@@ -668,7 +667,7 @@ static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
                                           const BufferizationOptions &options) {
 #ifndef NDEBUG
-  auto tensorType = value.getType().dyn_cast<TensorType>();
+  auto tensorType = llvm::dyn_cast<TensorType>(value.getType());
   assert(tensorType && "unexpected non-tensor type");
 #endif // NDEBUG
 
@@ -699,7 +698,8 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options) {
 FailureOr<BaseMemRefType> bufferization::getBufferType(
     Value value, const BufferizationOptions &options,
     const DenseMap<Value, BaseMemRefType> &fixedTypes) {
-  assert(value.getType().isa<TensorType>() && "unexpected non-tensor type");
+  assert(llvm::isa<TensorType>(value.getType()) &&
+         "unexpected non-tensor type");
 
   // If the `value` is in `fixedTypes`, return the mapped type.
   const auto &it = fixedTypes.find(value);
@@ -731,11 +731,11 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
   SmallVector<Value> replacements;
   for (OpResult opResult : op->getOpResults()) {
     Value replacement = values[opResult.getResultNumber()];
-    if (opResult.getType().isa<TensorType>()) {
+    if (llvm::isa<TensorType>(opResult.getType())) {
       // The OpResult is a tensor. Such values are replaced with memrefs during
       // bufferization.
-      assert((replacement.getType().isa<MemRefType>() ||
-              replacement.getType().isa<UnrankedMemRefType>()) &&
+      assert((llvm::isa<MemRefType>(replacement.getType()) ||
+              llvm::isa<UnrankedMemRefType>(replacement.getType())) &&
              "tensor op result should be replaced with a memref value");
       // The existing uses of the OpResult still expect a tensor. Insert a
       // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
@@ -797,7 +797,7 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 //===----------------------------------------------------------------------===//
 
 bool bufferization::isFunctionArgument(Value value) {
-  auto bbArg = value.dyn_cast<BlockArgument>();
+  auto bbArg = llvm::dyn_cast<BlockArgument>(value);
   if (!bbArg)
     return false;
   return isa<func::FuncOp>(bbArg.getOwner()->getParentOp());
@@ -807,17 +807,18 @@ BaseMemRefType bufferization::getMemRefType(Value value,
                                             const BufferizationOptions &options,
                                             MemRefLayoutAttrInterface layout,
                                             Attribute memorySpace) {
-  auto tensorType = value.getType().cast<TensorType>();
+  auto tensorType = llvm::cast<TensorType>(value.getType());
 
   // Case 1: Unranked memref type.
-  if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
+  if (auto unrankedTensorType =
+          llvm::dyn_cast<UnrankedTensorType>(tensorType)) {
     assert(!layout && "UnrankedTensorType cannot have a layout map");
     return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
                                    memorySpace);
   }
 
   // Case 2: Ranked memref type with specified layout.
-  auto rankedTensorType = tensorType.cast<RankedTensorType>();
+  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
   if (layout) {
     return MemRefType::get(rankedTensorType.getShape(),
                            rankedTensorType.getElementType(), layout,
@@ -831,13 +832,14 @@ BaseMemRefType
 bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
                                                    Attribute memorySpace) {
   // Case 1: Unranked memref type.
-  if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
+  if (auto unrankedTensorType =
+          llvm::dyn_cast<UnrankedTensorType>(tensorType)) {
     return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
                                    memorySpace);
   }
 
   // Case 2: Ranked memref type.
-  auto rankedTensorType = tensorType.cast<RankedTensorType>();
+  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
   int64_t dynamicOffset = ShapedType::kDynamic;
   SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
                                       ShapedType::kDynamic);
@@ -854,13 +856,14 @@ BaseMemRefType
 bufferization::getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                                      Attribute memorySpace) {
   // Case 1: Unranked memref type.
-  if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
+  if (auto unrankedTensorType =
+          llvm::dyn_cast<UnrankedTensorType>(tensorType)) {
     return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
                                    memorySpace);
   }
 
   // Case 2: Ranked memref type.
-  auto rankedTensorType = tensorType.cast<RankedTensorType>();
+  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
   MemRefLayoutAttrInterface layout = {};
   return MemRefType::get(rankedTensorType.getShape(),
                          rankedTensorType.getElementType(), layout,
@@ -943,7 +946,7 @@ AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
   Operation *op = opResult.getDefiningOp();
   SmallVector<AliasingOpOperand> result;
   for (OpOperand &opOperand : op->getOpOperands()) {
-    if (!opOperand.get().getType().isa<TensorType>())
+    if (!llvm::isa<TensorType>(opOperand.get().getType()))
       continue;
     AliasingOpResultList aliasingOpResults =
         state.getAliasingOpResults(opOperand);
@@ -957,15 +960,15 @@ AliasingOpOperandList bufferization::detail::defaultGetAliasingOpOperands(
 FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     Value value, const BufferizationOptions &options,
     const DenseMap<Value, BaseMemRefType> &fixedTypes) {
-  assert(value.getType().isa<TensorType>() && "expected tensor type");
+  assert(llvm::isa<TensorType>(value.getType()) && "expected tensor type");
 
   // No further analysis is possible for a block argument.
-  if (value.isa<BlockArgument>())
+  if (llvm::isa<BlockArgument>(value))
     return bufferization::getMemRefType(value, options);
 
   // Value is an OpResult.
   Operation *op = getOwnerOfValue(value);
-  auto opResult = value.cast<OpResult>();
+  auto opResult = llvm::cast<OpResult>(value);
   AnalysisState state(options);
   AliasingOpOperandList aliases = state.getAliasingOpOperands(opResult);
   if (aliases.getNumAliases() > 0 &&
@@ -1000,7 +1003,7 @@ bufferization::detail::unknownGetAliasingOpOperands(OpResult opResult) {
   // Conservatively assume that everything may be aliasing.
   AliasingOpOperandList r;
   for (OpOperand &operand : opResult.getDefiningOp()->getOpOperands())
-    if (operand.get().getType().isa<TensorType>())
+    if (llvm::isa<TensorType>(operand.get().getType()))
       r.addAlias({&operand, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
 }
@@ -1010,7 +1013,7 @@ bufferization::detail::unknownGetAliasingOpResults(OpOperand &opOperand) {
   // Conservatively assume that everything may be aliasing.
   AliasingOpResultList r;
   for (OpResult result : opOperand.getOwner()->getOpResults())
-    if (result.getType().isa<TensorType>())
+    if (llvm::isa<TensorType>(result.getType()))
       r.addAlias({result, BufferRelation::Unknown, /*isDefinite=*/false});
   return r;
 }

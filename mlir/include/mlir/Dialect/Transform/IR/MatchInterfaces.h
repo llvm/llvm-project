@@ -42,7 +42,7 @@ public:
            "SingleOpMatchOpTrait is only available on operations with "
            "MatchOpInterface");
     Value operandHandle = cast<OpTy>(op).getOperandHandle();
-    if (!operandHandle.getType().isa<TransformHandleTypeInterface>()) {
+    if (!isa<TransformHandleTypeInterface>(operandHandle.getType())) {
       return op->emitError() << "SingleOpMatchOpTrait requires the op handle "
                                 "to be of TransformHandleTypeInterface";
     }
@@ -82,7 +82,7 @@ public:
            "MatchOpInterface");
 
     Value operandHandle = cast<OpTy>(op).getOperandHandle();
-    if (!operandHandle.getType().isa<TransformValueHandleTypeInterface>()) {
+    if (!isa<TransformValueHandleTypeInterface>(operandHandle.getType())) {
       return op->emitError() << "SingleValueMatchOpTrait requires an operand "
                                 "of TransformValueHandleTypeInterface";
     }

@@ -286,16 +286,6 @@ def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "::mlir::func::FuncOp">
   ];
 }
 
-def OpenACCDataOperandConversion : Pass<"fir-openacc-data-operand-conversion", "::mlir::func::FuncOp"> {
-  let summary = "Convert the FIR operands in OpenACC ops to LLVM dialect";
-  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-           /*default=*/"true", "Generate LLVM IR using opaque pointers "
-           "instead of typed pointers">,
-  ];
-}
-
 def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let summary = "Loop Versioning";
   let description = [{

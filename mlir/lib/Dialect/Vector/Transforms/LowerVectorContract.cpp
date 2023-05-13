@@ -96,9 +96,9 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
     return rewriter.create<vector::ExtractOp>(loc, lowType, val, posAttr);
   }
   // Unroll leading dimensions.
-  VectorType vType = lowType.cast<VectorType>();
+  VectorType vType = cast<VectorType>(lowType);
   Type resType = VectorType::Builder(type).dropDim(index);
-  auto resVectorType = resType.cast<VectorType>();
+  auto resVectorType = cast<VectorType>(resType);
   Value result = rewriter.create<arith::ConstantOp>(
       loc, resVectorType, rewriter.getZeroAttr(resVectorType));
   for (int64_t d = 0, e = resVectorType.getDimSize(0); d < e; d++) {
@@ -126,7 +126,7 @@ static Value reshapeStore(Location loc, Value val, Value result,
   }
   // Unroll leading dimensions.
   Type lowType = VectorType::Builder(type).dropDim(0);
-  VectorType vType = lowType.cast<VectorType>();
+  VectorType vType = cast<VectorType>(lowType);
   Type insType = VectorType::Builder(vType).dropDim(0);
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
     auto posAttr = rewriter.getI64ArrayAttr(d);
@@ -160,7 +160,7 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
       // Only valid for integer types.
       return std::nullopt;
     // Special case for fused multiply-add.
-    if (acc && acc.getType().isa<VectorType>() && kind == CombiningKind::ADD) {
+    if (acc && isa<VectorType>(acc.getType()) && kind == CombiningKind::ADD) {
       Value fma = rewriter.create<vector::FMAOp>(loc, x, y, acc);
       if (mask)
         // The fma op doesn't need explicit masking. However, fma ops used in
@@ -418,7 +418,7 @@ struct UnrolledOuterProductGenerator
 
   Value promote(Value v, Type dstElementType) {
     Type elementType = v.getType();
-    auto vecType = elementType.dyn_cast<VectorType>();
+    auto vecType = dyn_cast<VectorType>(elementType);
     if (vecType)
       elementType = vecType.getElementType();
     if (elementType == dstElementType)
@@ -426,7 +426,7 @@ struct UnrolledOuterProductGenerator
     Type promotedType = dstElementType;
     if (vecType)
       promotedType = VectorType::get(vecType.getShape(), promotedType);
-    if (dstElementType.isa<FloatType>())
+    if (isa<FloatType>(dstElementType))
       return rewriter.create<arith::ExtFOp>(loc, promotedType, v);
     return rewriter.create<arith::ExtSIOp>(loc, promotedType, v);
   }
@@ -438,7 +438,7 @@ struct UnrolledOuterProductGenerator
     if (mask && !maybeMask.has_value())
       return failure();
 
-    Type resElementType = res.getType().cast<VectorType>().getElementType();
+    Type resElementType = cast<VectorType>(res.getType()).getElementType();
     for (int64_t k = 0; k < reductionSize; ++k) {
       Value extractA = rewriter.create<vector::ExtractOp>(loc, lhs, k);
       Value extractB = rewriter.create<vector::ExtractOp>(loc, rhs, k);
@@ -684,7 +684,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
     return failure();
   }
 
-  VectorType dstType = op.getResultType().cast<VectorType>();
+  VectorType dstType = cast<VectorType>(op.getResultType());
   assert(dstType.getRank() >= 1 && dstType.getRank() <= 2 &&
          "Expected dst type of rank 1 or 2");
 
@@ -695,7 +695,7 @@ ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
   // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
   Value res = rewriter.create<arith::ConstantOp>(loc, dstType,
                                                  rewriter.getZeroAttr(dstType));
-  bool isInt = dstType.getElementType().isa<IntegerType>();
+  bool isInt = isa<IntegerType>(dstType.getElementType());
   for (unsigned r = 0; r < dstRows; ++r) {
     Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
@@ -789,7 +789,7 @@ struct ContractOpToElementwise
       } else {
         // If the parallel dimension doesn't exist we will have to broadcast it.
         lhsDims.push_back(
-            contractOp.getResultType().cast<VectorType>().getDimSize(i));
+            cast<VectorType>(contractOp.getResultType()).getDimSize(i));
         lhsTranspose.push_back(lhsDims.size() - 1);
       }
       std::optional<unsigned> rhsDim =
@@ -799,7 +799,7 @@ struct ContractOpToElementwise
       } else {
         // If the parallel dimension doesn't exist we will have to broadcast it.
         rhsDims.push_back(
-            contractOp.getResultType().cast<VectorType>().getDimSize(i));
+            cast<VectorType>(contractOp.getResultType()).getDimSize(i));
         rhsTranspose.push_back(rhsDims.size() - 1);
       }
     }
@@ -969,7 +969,7 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                                       Value mask) const {
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
-  VectorType resType = op.getResultType().cast<VectorType>();
+  VectorType resType = cast<VectorType>(op.getResultType());
   // Find the iterator type index and result index.
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
   int64_t iterIndex = -1;
@@ -1044,10 +1044,10 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  if (resType.isa<VectorType>())
+  if (isa<VectorType>(resType))
     return rewriter.notifyMatchFailure(op,
                                        "did not expect a VectorType result");
-  bool isInt = resType.isa<IntegerType>();
+  bool isInt = isa<IntegerType>(resType);
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
@@ -1133,10 +1133,10 @@ public:
     auto loc = op.getLoc();
 
     VectorType lhsType = op.getOperandVectorTypeLHS();
-    VectorType rhsType = op.getOperandTypeRHS().dyn_cast<VectorType>();
+    VectorType rhsType = dyn_cast<VectorType>(op.getOperandTypeRHS());
     VectorType resType = op.getResultVectorType();
     Type eltType = resType.getElementType();
-    bool isInt = eltType.isa<IntegerType, IndexType>();
+    bool isInt = isa<IntegerType, IndexType>(eltType);
     Value acc = (op.getAcc().empty()) ? nullptr : op.getAcc()[0];
     vector::CombiningKind kind = op.getKind();
 
@@ -1231,7 +1231,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
     return failure();
 
   Type dstElementType = op.getType();
-  if (auto vecType = dstElementType.dyn_cast<VectorType>())
+  if (auto vecType = dyn_cast<VectorType>(dstElementType))
     dstElementType = vecType.getElementType();
   if (elementType != dstElementType)
     return failure();
@@ -1259,8 +1259,8 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
     return failure();
 
   // At this point lhs and rhs are in row-major.
-  VectorType lhsType = lhs.getType().cast<VectorType>();
-  VectorType rhsType = rhs.getType().cast<VectorType>();
+  VectorType lhsType = cast<VectorType>(lhs.getType());
+  VectorType rhsType = cast<VectorType>(rhs.getType());
   int64_t lhsRows = lhsType.getDimSize(0);
   int64_t lhsColumns = lhsType.getDimSize(1);
   int64_t rhsColumns = rhsType.getDimSize(1);
@@ -1289,7 +1289,7 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
     llvm_unreachable("invalid contraction semantics");
 
   Value res =
-      elementType.isa<IntegerType>()
+      isa<IntegerType>(elementType)
           ? static_cast<Value>(rew.create<arith::AddIOp>(loc, op.getAcc(), mul))
           : static_cast<Value>(
                 rew.create<arith::AddFOp>(loc, op.getAcc(), mul));
