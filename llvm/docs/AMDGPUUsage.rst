@@ -816,7 +816,7 @@ supported for the ``amdgcn`` target.
   ``getelementptr`` operations, on buffer resources. They may be passed to
   AMDGPU buffer intrinsics, and they may be converted to and from ``i128``.
 
-  Casting a buffer resource to a bufer fat pointer is permitted and adds an offset
+  Casting a buffer resource to a buffer fat pointer is permitted and adds an offset
   of 0.
 
 **Streamout Registers**
@@ -1256,14 +1256,14 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_FEATURE_XNACK_V4``               0x300 XNACK selection mask for
                                                         ``EF_AMDGPU_FEATURE_XNACK_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK unsuppored.
+     ``EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4``   0x000 XNACK unsupported.
      ``EF_AMDGPU_FEATURE_XNACK_ANY_V4``           0x100 XNACK can have any value.
      ``EF_AMDGPU_FEATURE_XNACK_OFF_V4``           0x200 XNACK disabled.
      ``EF_AMDGPU_FEATURE_XNACK_ON_V4``            0x300 XNACK enabled.
      ``EF_AMDGPU_FEATURE_SRAMECC_V4``             0xc00 SRAMECC selection mask for
                                                         ``EF_AMDGPU_FEATURE_SRAMECC_*_V4``
                                                         values.
-     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsuppored.
+     ``EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4`` 0x000 SRAMECC unsupported.
      ``EF_AMDGPU_FEATURE_SRAMECC_ANY_V4``         0x400 SRAMECC can have any value.
      ``EF_AMDGPU_FEATURE_SRAMECC_OFF_V4``         0x800 SRAMECC disabled,
      ``EF_AMDGPU_FEATURE_SRAMECC_ON_V4``          0xc00 SRAMECC enabled.
