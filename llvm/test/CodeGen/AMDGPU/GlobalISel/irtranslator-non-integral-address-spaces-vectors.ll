@@ -1,4 +1,5 @@
 ; RUN: not --crash llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -o - -stop-after=irtranslator < %s
+; REQUIRES: asserts
 
 ; Confirm that no one's gotten vectors of addrspace(7) pointers to go through the
 ; IR translater incidentally.
