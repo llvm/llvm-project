@@ -5064,7 +5064,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     break;
   }
 
-  return false;
+  return computeKnownBits(Op, Depth).isNonZero();
 }
 
 bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
