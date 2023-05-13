@@ -480,20 +480,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.serial wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
-  acc.serial copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.serial copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.serial copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.serial copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
-  }
-  acc.serial copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
-  }
-  acc.serial no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.serial deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
   acc.serial private(%a, %c : memref<10xf32>, memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
   }
   acc.serial {
@@ -529,20 +515,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:      acc.serial wait([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.serial attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.serial firstprivate([[ARGB]] : memref<10xf32>) private([[ARGA]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
 // CHECK-NEXT: }
@@ -581,20 +553,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   }
   acc.kernels wait(%i64value, %i32value, %idxValue : i64, i32, index) {
   }
-  acc.kernels copyin(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.kernels copyin_readonly(%a, %b : memref<10xf32>, memref<10xf32>) {
-  }
-  acc.kernels copyin(%a: memref<10xf32>) copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.kernels copyout(%b, %c : memref<10xf32>, memref<10x10xf32>) create(%a: memref<10xf32>) {
-  }
-  acc.kernels copyout_zero(%b, %c : memref<10xf32>, memref<10x10xf32>) create_zero(%a: memref<10xf32>) {
-  }
-  acc.kernels no_create(%a: memref<10xf32>) present(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
-  acc.kernels deviceptr(%a: memref<10xf32>) attach(%b, %c : memref<10xf32>, memref<10x10xf32>) {
-  }
   acc.kernels {
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.kernels {
@@ -628,20 +586,6 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK:      acc.kernels wait([[IDXVALUE]] : index) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels wait([[I64VALUE]], [[I32VALUE]], [[IDXVALUE]] : i64, i32, index) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyin([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyin_readonly([[ARGA]], [[ARGB]] : memref<10xf32>, memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyin([[ARGA]] : memref<10xf32>) copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyout([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels copyout_zero([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) create_zero([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels no_create([[ARGA]] : memref<10xf32>) present([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) {
-// CHECK-NEXT: }
-// CHECK:      acc.kernels attach([[ARGB]], [[ARGC]] : memref<10xf32>, memref<10x10xf32>) deviceptr([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
@@ -1305,12 +1249,41 @@ func.func @testunstructuredclauseops(%a: memref<10xf32>) -> () {
 
 // -----
 
-func.func @host_device_ops(%a: memref<10xf32>) -> () {
-  %devptr = acc.getdeviceptr varPtr(%a : memref<10xf32>) -> memref<10xf32> {dataClause = 16}
-  acc.update_host accPtr(%devptr : memref<10xf32>) to varPtr(%a : memref<10xf32>) {structured = false}
-  acc.update dataOperands(%devptr : memref<10xf32>)
+func.func @host_device_ops(%a: memref<f32>) -> () {
+  %devptr = acc.getdeviceptr varPtr(%a : memref<f32>) -> memref<f32> {dataClause = 16}
+  acc.update_host accPtr(%devptr : memref<f32>) to varPtr(%a : memref<f32>) {structured = false}
+  acc.update dataOperands(%devptr : memref<f32>)
 
-  %accPtr = acc.update_device varPtr(%a : memref<10xf32>) -> memref<10xf32>
-  acc.update dataOperands(%accPtr : memref<10xf32>)
+  %accPtr = acc.update_device varPtr(%a : memref<f32>) -> memref<f32>
+  acc.update dataOperands(%accPtr : memref<f32>)
   return
 }
+
+// CHECK-LABEL: func.func @host_device_ops(
+// CHECK-SAME:    %[[A:.*]]: memref<f32>)
+// CHECK: %[[DEVPTR_A:.*]] = acc.getdeviceptr varPtr(%[[A]] : memref<f32>)   -> memref<f32>
+// CHECK: acc.update_host accPtr(%[[DEVPTR_A]] : memref<f32>) to varPtr(%[[A]] : memref<f32>) {structured = false}
+// CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
+// CHECK: %[[DEVPTR_A:.*]] = acc.update_device varPtr(%[[A]] : memref<f32>)   -> memref<f32>
+// CHECK: acc.update dataOperands(%[[DEVPTR_A]] : memref<f32>)
+
+// -----
+
+func.func @host_data_ops(%a: !llvm.ptr<f32>, %ifCond: i1) -> () {
+  %0 = acc.use_device varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+  acc.host_data dataOperands(%0: !llvm.ptr<f32>) {
+  }
+  acc.host_data dataOperands(%0: !llvm.ptr<f32>) {
+  } attributes {if_present}
+  acc.host_data if(%ifCond) dataOperands(%0: !llvm.ptr<f32>) {
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @host_data_ops(
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<f32>, %[[IFCOND:.*]]: i1)
+// CHECK: %[[PTR:.*]] = acc.use_device varPtr(%[[A]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>)
+// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>) {
+// CHECK: } attributes {if_present}
+// CHECK: acc.host_data if(%[[IFCOND]]) dataOperands(%[[PTR]] : !llvm.ptr<f32>)

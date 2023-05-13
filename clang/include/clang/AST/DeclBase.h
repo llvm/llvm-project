@@ -2540,10 +2540,8 @@ public:
                  D == LastDecl);
   }
 
-  bool setUseQualifiedLookup(bool use = true) const {
-    bool old_value = DeclContextBits.UseQualifiedLookup;
+  void setUseQualifiedLookup(bool use = true) const {
     DeclContextBits.UseQualifiedLookup = use;
-    return old_value;
   }
 
   bool shouldUseQualifiedLookup() const {

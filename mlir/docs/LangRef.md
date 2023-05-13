@@ -662,8 +662,8 @@ function-type ::= (type | type-list-parens) `->` (type | type-list-parens)
 ### Type Aliases
 
 ```
-type-alias-def ::= '!' alias-name '=' type
-type-alias ::= '!' alias-name
+type-alias-def ::= `!` alias-name `=` type
+type-alias ::= `!` alias-name
 ```
 
 MLIR supports defining named aliases for types. A type alias is an identifier
@@ -691,18 +691,18 @@ system.
 ```
 dialect-namespace ::= bare-id
 
-dialect-type ::= '!' (opaque-dialect-type | pretty-dialect-type)
+dialect-type ::= `!` (opaque-dialect-type | pretty-dialect-type)
 opaque-dialect-type ::= dialect-namespace dialect-type-body
-pretty-dialect-type ::= dialect-namespace '.' pretty-dialect-type-lead-ident
+pretty-dialect-type ::= dialect-namespace `.` pretty-dialect-type-lead-ident
                                               dialect-type-body?
-pretty-dialect-type-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
+pretty-dialect-type-lead-ident ::= `[A-Za-z][A-Za-z0-9._]*`
 
-dialect-type-body ::= '<' dialect-type-contents+ '>'
+dialect-type-body ::= `<` dialect-type-contents+ `>`
 dialect-type-contents ::= dialect-type-body
-                            | '(' dialect-type-contents+ ')'
-                            | '[' dialect-type-contents+ ']'
-                            | '{' dialect-type-contents+ '}'
-                            | '[^\[<({\]>)}\0]+'
+                            | `(` dialect-type-contents+ `)`
+                            | `[` dialect-type-contents+ `]`
+                            | `{` dialect-type-contents+ `}`
+                            | [^\[<({\]>)}\0]+
 ```
 
 Dialect types are generally specified in an opaque form, where the contents
@@ -794,8 +794,8 @@ storage.
 ### Attribute Value Aliases
 
 ```
-attribute-alias-def ::= '#' alias-name '=' attribute-value
-attribute-alias ::= '#' alias-name
+attribute-alias-def ::= `#` alias-name `=` attribute-value
+attribute-alias ::= `#` alias-name
 ```
 
 MLIR supports defining named aliases for attribute values. An attribute alias is
@@ -823,18 +823,18 @@ Similarly to operations, dialects may define custom attribute values.
 ```
 dialect-namespace ::= bare-id
 
-dialect-attribute ::= '#' (opaque-dialect-attribute | pretty-dialect-attribute)
+dialect-attribute ::= `#` (opaque-dialect-attribute | pretty-dialect-attribute)
 opaque-dialect-attribute ::= dialect-namespace dialect-attribute-body
-pretty-dialect-attribute ::= dialect-namespace '.' pretty-dialect-attribute-lead-ident
+pretty-dialect-attribute ::= dialect-namespace `.` pretty-dialect-attribute-lead-ident
                                               dialect-attribute-body?
-pretty-dialect-attribute-lead-ident ::= '[A-Za-z][A-Za-z0-9._]*'
+pretty-dialect-attribute-lead-ident ::= `[A-Za-z][A-Za-z0-9._]*`
 
-dialect-attribute-body ::= '<' dialect-attribute-contents+ '>'
+dialect-attribute-body ::= `<` dialect-attribute-contents+ `>`
 dialect-attribute-contents ::= dialect-attribute-body
-                            | '(' dialect-attribute-contents+ ')'
-                            | '[' dialect-attribute-contents+ ']'
-                            | '{' dialect-attribute-contents+ '}'
-                            | '[^\[<({\]>)}\0]+'
+                            | `(` dialect-attribute-contents+ `)`
+                            | `[` dialect-attribute-contents+ `]`
+                            | `{` dialect-attribute-contents+ `}`
+                            | [^\[<({\]>)}\0]+
 ```
 
 Dialect attributes are generally specified in an opaque form, where the contents

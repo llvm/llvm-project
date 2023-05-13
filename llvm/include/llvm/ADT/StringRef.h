@@ -630,7 +630,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given prefix, ignoring case,
     /// and removes that prefix.
     bool consume_front_insensitive(StringRef Prefix) {
-      if (!startswith_insensitive(Prefix))
+      if (!starts_with_insensitive(Prefix))
         return false;
 
       *this = substr(Prefix.size());
@@ -650,7 +650,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given suffix, ignoring case,
     /// and removes that suffix.
     bool consume_back_insensitive(StringRef Suffix) {
-      if (!endswith_insensitive(Suffix))
+      if (!ends_with_insensitive(Suffix))
         return false;
 
       *this = substr(0, size() - Suffix.size());

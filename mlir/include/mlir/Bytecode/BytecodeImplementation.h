@@ -83,7 +83,7 @@ public:
     Attribute baseResult;
     if (failed(readAttribute(baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return emitError() << "expected " << llvm::getTypeName<T>()
                        << ", but got: " << baseResult;
@@ -100,7 +100,7 @@ public:
     Type baseResult;
     if (failed(readType(baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return emitError() << "expected " << llvm::getTypeName<T>()
                        << ", but got: " << baseResult;

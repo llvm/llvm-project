@@ -271,6 +271,8 @@ public:
     return parseBytes(static_cast<size_t>(length), sectionData);
   }
 
+  Location getLoc() const { return fileLoc; }
+
 private:
   /// Parse a variable length encoded integer from the byte stream. This method
   /// is a fallback when the number of bytes used to encode the value is greater
@@ -783,7 +785,7 @@ public:
     Attribute baseResult;
     if (failed(parseAttribute(reader, baseResult)))
       return failure();
-    if ((result = baseResult.dyn_cast<T>()))
+    if ((result = dyn_cast<T>(baseResult)))
       return success();
     return reader.emitError("expected attribute of type: ",
                             llvm::getTypeName<T>(), ", but got: ", baseResult);
@@ -834,6 +836,13 @@ public:
   InFlightDiagnostic emitError(const Twine &msg) override {
     return reader.emitError(msg);
   }
+
+  DialectReader withEncodingReader(EncodingReader &encReader) {
+    return DialectReader(attrTypeReader, stringReader, resourceReader,
+                         encReader);
+  }
+
+  Location getLoc() const { return reader.getLoc(); }
 
   //===--------------------------------------------------------------------===//
   // IR
@@ -1054,7 +1063,6 @@ LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
   DialectReader dialectReader(*this, stringReader, resourceReader, reader);
   if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
     return failure();
-
   // Ensure that the dialect implements the bytecode interface.
   if (!entry.dialect->interface) {
     return reader.emitError("dialect '", entry.dialect->name,
@@ -1378,7 +1386,9 @@ LogicalResult BytecodeDialect::load(DialectReader &reader, MLIRContext *ctx) {
              << name
              << "' does not implement the bytecode interface, "
                 "but found a version entry";
-    loadedVersion = interface->readVersion(reader);
+    EncodingReader encReader(versionBuffer, reader.getLoc());
+    DialectReader versionReader = reader.withEncodingReader(encReader);
+    loadedVersion = interface->readVersion(versionReader);
     if (!loadedVersion)
       return failure();
   }
@@ -1448,9 +1458,8 @@ FailureOr<OperationName> BytecodeReader::parseOpName(EncodingReader &reader) {
   // haven't, load the dialect and build the operation name.
   if (!opName->opName) {
     // Load the dialect and its version.
-    EncodingReader versionReader(opName->dialect->versionBuffer, fileLoc);
     DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                versionReader);
+                                reader);
     if (failed(opName->dialect->load(dialectReader, getContext())))
       return failure();
     opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),

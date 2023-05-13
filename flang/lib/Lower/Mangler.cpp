@@ -236,8 +236,7 @@ static std::string typeToString(Fortran::common::TypeCategory cat, int kind,
 }
 
 std::string Fortran::lower::mangle::mangleArrayLiteral(
-    const uint8_t *addr, size_t size,
-    const Fortran::evaluate::ConstantSubscripts &shape,
+    size_t size, const Fortran::evaluate::ConstantSubscripts &shape,
     Fortran::common::TypeCategory cat, int kind,
     Fortran::common::ConstantSubscript charLen, llvm::StringRef derivedName) {
   std::string typeId;
@@ -249,14 +248,8 @@ std::string Fortran::lower::mangle::mangleArrayLiteral(
   std::string name =
       fir::NameUniquer::doGenerated("ro."s.append(typeId).append("."));
   if (!size)
-    return name += "null";
-  llvm::MD5 hashValue{};
-  hashValue.update(llvm::ArrayRef<uint8_t>{addr, size});
-  llvm::MD5::MD5Result hashResult;
-  hashValue.final(hashResult);
-  llvm::SmallString<32> hashString;
-  llvm::MD5::stringifyResult(hashResult, hashString);
-  return name += hashString.c_str();
+    name += "null.";
+  return name;
 }
 
 std::string Fortran::lower::mangle::globalNamelistDescriptorName(

@@ -149,7 +149,7 @@ void memref::populateMemRefWideIntEmulationConversions(
     arith::WideIntEmulationConverter &typeConverter) {
   typeConverter.addConversion(
       [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        auto intTy = ty.getElementType().dyn_cast<IntegerType>();
+        auto intTy = dyn_cast<IntegerType>(ty.getElementType());
         if (!intTy)
           return ty;
 

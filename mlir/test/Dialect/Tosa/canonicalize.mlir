@@ -515,3 +515,13 @@ func.func @fold_log_exp(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   %1 = "tosa.log"(%0) : (tensor<?x1xf32>) -> tensor<?x1xf32>
   return %1 : tensor<?x1xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_exp_log
+func.func @fold_exp_log(%arg0: tensor<?x1xf32>) -> tensor<?x1xf32> {
+  // CHECK: return %arg{{.*}} : tensor<?x1xf32>
+  %0 = "tosa.log"(%arg0) : (tensor<?x1xf32>) -> tensor<?x1xf32>
+  %1 = "tosa.exp"(%0) : (tensor<?x1xf32>) -> tensor<?x1xf32>
+  return %1 : tensor<?x1xf32>
+}

@@ -39,11 +39,11 @@ reifyResultShapes(OpBuilder &b, Operation *op,
 class ShapeAdaptor {
 public:
   ShapeAdaptor(Type t) {
-    if (auto st = t.dyn_cast<ShapedType>())
+    if (auto st = dyn_cast<ShapedType>(t))
       val = st;
   }
   ShapeAdaptor(Attribute t) {
-    if (auto da = t.dyn_cast<DenseIntElementsAttr>())
+    if (auto da = dyn_cast<DenseIntElementsAttr>(t))
       val = da;
   }
   ShapeAdaptor(ShapedTypeComponents *components) : val(components) {}

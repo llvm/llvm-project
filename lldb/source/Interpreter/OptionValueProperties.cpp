@@ -51,25 +51,6 @@ void OptionValueProperties::AppendProperty(ConstString name,
   m_name_to_index.Sort();
 }
 
-// bool
-// OptionValueProperties::GetQualifiedName (Stream &strm)
-//{
-//    bool dumped_something = false;
-////    lldb::OptionValuePropertiesSP parent_sp(GetParent ());
-////    if (parent_sp)
-////    {
-////        parent_sp->GetQualifiedName (strm);
-////        strm.PutChar('.');
-////        dumped_something = true;
-////    }
-//    if (m_name)
-//    {
-//        strm << m_name;
-//        dumped_something = true;
-//    }
-//    return dumped_something;
-//}
-//
 lldb::OptionValueSP
 OptionValueProperties::GetValueForKey(const ExecutionContext *exe_ctx,
                                       ConstString key) const {

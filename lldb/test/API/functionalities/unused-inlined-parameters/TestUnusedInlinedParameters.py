@@ -14,6 +14,6 @@ class TestUnusedInlinedParameters(TestBase):
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
 
         # For the unused parameters, only check the types.
-        self.assertIn("(void *) unused1 = <no location, value may have been optimized out>",
+        self.assertIn("(void *) unused1",
                       lldbutil.get_description(self.frame().FindVariable("unused1")))
         self.assertEqual(42, self.frame().FindVariable("used").GetValueAsUnsigned())

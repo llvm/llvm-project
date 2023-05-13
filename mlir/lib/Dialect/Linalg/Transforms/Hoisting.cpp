@@ -71,6 +71,8 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
       continue;
+    if (!loop->isAncestor(user))
+      continue;
     return false;
   }
   return true;
@@ -86,7 +88,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
         [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
 
     func.walk([&](vector::TransferReadOp transferRead) {
-      if (!transferRead.getShapedType().isa<MemRefType>())
+      if (!isa<MemRefType>(transferRead.getShapedType()))
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "

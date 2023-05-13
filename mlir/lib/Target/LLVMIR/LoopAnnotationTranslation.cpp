@@ -190,7 +190,7 @@ void LoopAnnotationConversion::convertLoopOptions(LoopUnswitchAttr options) {
 
 void LoopAnnotationConversion::convertLocation(FusedLoc location) {
   auto localScopeAttr =
-      location.getMetadata().dyn_cast_or_null<DILocalScopeAttr>();
+      dyn_cast_or_null<DILocalScopeAttr>(location.getMetadata());
   if (!localScopeAttr)
     return;
   auto *localScope = dyn_cast<llvm::DILocalScope>(

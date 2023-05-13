@@ -912,7 +912,7 @@ Error RISCVISAInfo::checkDependency() {
 
 static const char *ImpliedExtsD[] = {"f"};
 static const char *ImpliedExtsF[] = {"zicsr"};
-static const char *ImpliedExtsV[] = {"zvl128b", "zve64d", "f", "d"};
+static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
 static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXsfvcp[] = {"zve32x"};
 static const char *ImpliedExtsZcb[] = {"zca"};

@@ -14,11 +14,13 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCOBJECTFILEINFO_H
 
 #include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
 
 class RISCVMCObjectFileInfo : public MCObjectFileInfo {
 public:
+  static unsigned getTextSectionAlignment(const MCSubtargetInfo &STI);
   unsigned getTextSectionAlignment() const override;
 };
 

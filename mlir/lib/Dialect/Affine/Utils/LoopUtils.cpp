@@ -1852,7 +1852,7 @@ static void getMultiLevelStrides(const MemRefRegion &region,
   int64_t numEltPerStride = 1;
   int64_t stride = 1;
   for (int d = bufferShape.size() - 1; d >= 1; d--) {
-    int64_t dimSize = region.memref.getType().cast<MemRefType>().getDimSize(d);
+    int64_t dimSize = cast<MemRefType>(region.memref.getType()).getDimSize(d);
     stride *= dimSize;
     numEltPerStride *= bufferShape[d];
     // A stride is needed only if the region has a shorter extent than the
@@ -1891,7 +1891,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
     return ubMap.getNumInputs() == ubOperands.size();
   }));
 
-  unsigned rank = memref.getType().cast<MemRefType>().getRank();
+  unsigned rank = cast<MemRefType>(memref.getType()).getRank();
   assert(lbMaps.size() == rank && "wrong number of lb maps");
   assert(ubMaps.size() == rank && "wrong number of ub maps");
 
@@ -2003,7 +2003,7 @@ static LogicalResult generateCopy(
 
   auto loc = region.loc;
   auto memref = region.memref;
-  auto memRefType = memref.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(memref.getType());
 
   if (!memRefType.getLayout().isIdentity()) {
     LLVM_DEBUG(llvm::dbgs() << "Non-identity layout map not yet supported\n");
@@ -2276,7 +2276,7 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
     assert(false && "expected load or store op");
     return false;
   }
-  auto memRefType = region->memref.getType().cast<MemRefType>();
+  auto memRefType = cast<MemRefType>(region->memref.getType());
   if (!memRefType.hasStaticShape())
     return false;
 

@@ -356,7 +356,6 @@ libcxx/include/__format/format_error.h
 libcxx/include/__format/format_functions.h
 libcxx/include/__format/format_parse_context.h
 libcxx/include/__format/format_string.h
-libcxx/include/__format/formatter_bool.h
 libcxx/include/__format/formatter_char.h
 libcxx/include/__format/formatter_floating_point.h
 libcxx/include/__format/formatter.h
@@ -522,8 +521,6 @@ libcxx/include/__pstl/internal/parallel_backend.h
 libcxx/include/__pstl/internal/parallel_backend_serial.h
 libcxx/include/__pstl/internal/parallel_backend_tbb.h
 libcxx/include/__pstl/internal/parallel_backend_utils.h
-libcxx/include/__pstl/internal/parallel_impl.h
-libcxx/include/__pstl/internal/pstl_config.h
 libcxx/include/__pstl/internal/unseq_backend_simd.h
 libcxx/include/__pstl/internal/utils.h
 libcxx/include/queue

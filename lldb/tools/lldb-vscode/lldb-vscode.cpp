@@ -1963,11 +1963,13 @@ void request_restart(const llvm::json::Object &request) {
 
   // The optional `arguments` field in RestartRequest can contain an updated
   // version of the launch arguments. If there's one, use it.
-  auto request_arguments = request.getObject("arguments");
-  if (request_arguments) {
-    llvm::json::Object arguments = *request_arguments;
-    (*g_vsc.last_launch_or_attach_request)["arguments"] =
-        llvm::json::Value(std::move(arguments));
+  auto restart_arguments = request.getObject("arguments");
+  if (restart_arguments) {
+    auto launch_request_arguments = restart_arguments->getObject("arguments");
+    if (launch_request_arguments) {
+      (*g_vsc.last_launch_or_attach_request)["arguments"] =
+          llvm::json::Value(llvm::json::Object(*launch_request_arguments));
+    }
   }
 
   // Keep track of the old PID so when we get a "process exited" event from the

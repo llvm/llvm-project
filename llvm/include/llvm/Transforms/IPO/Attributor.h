@@ -5554,8 +5554,8 @@ struct AAPointerInfo : public AbstractAttribute {
     /// The instruction responsible for the access.
     Instruction *RemoteI;
 
-    /// The value written, if any. `llvm::none` means "not known yet", `nullptr`
-    /// cannot be determined.
+    /// The value written, if any. `std::nullopt` means "not known yet",
+    /// `nullptr` cannot be determined.
     std::optional<Value *> Content;
 
     /// Set of potential ranges accessed from the base pointer.

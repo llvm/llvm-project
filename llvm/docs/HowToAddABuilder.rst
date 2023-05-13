@@ -236,7 +236,7 @@ Use Ninja & LLD
   Ninja really does help build times over Make, particularly for highly
   parallel builds.  LLD helps to reduce both link times and memory usage
   during linking significantly.  With a build machine with sufficient
-  parallism, link times tend to dominate critical path of the build, and are
+  parallelism, link times tend to dominate critical path of the build, and are
   thus worth optimizing.
 
 Use CCache and NOT incremental builds

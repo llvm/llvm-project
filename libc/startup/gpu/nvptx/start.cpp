@@ -15,8 +15,6 @@ extern "C" int main(int argc, char **argv, char **envp);
 
 namespace __llvm_libc {
 
-static cpp::Atomic<uint32_t> lock[rpc::default_port_count] = {0};
-
 extern "C" {
 // Nvidia's 'nvlink' linker does not provide these symbols. We instead need
 // to manually create them and update the globals in the loader implememtation.
@@ -44,12 +42,12 @@ static void call_fini_array_callbacks() {
 } // namespace __llvm_libc
 
 extern "C" [[gnu::visibility("protected"), clang::nvptx_kernel]] void
-_begin(int argc, char **argv, char **env, void *in, void *out, void *buffer) {
+_begin(int argc, char **argv, char **env, void *rpc_shared_buffer) {
   // We need to set up the RPC client first in case any of the constructors
   // require it.
-  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::default_port_count,
+  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::DEFAULT_PORT_COUNT,
                                  __llvm_libc::gpu::get_lane_size(),
-                                 &__llvm_libc::lock, in, out, buffer);
+                                 rpc_shared_buffer);
 
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init

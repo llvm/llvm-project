@@ -1639,7 +1639,7 @@ and non-0 as true.
     ``(op a1-value:$name1, a2-value:$name2, ?:$name3)``.
 
 ``!div(``\ *a*\ ``,`` *b*\ ``)``
-    This operator preforms signed division of *a* by *b*, and produces the quotient.
+    This operator performs signed division of *a* by *b*, and produces the quotient.
     Division by 0 produces an error. Division of INT64_MIN by -1 produces an error.
 
 ``!empty(``\ *a*\ ``)``

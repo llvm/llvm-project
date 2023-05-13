@@ -180,18 +180,7 @@ transform::TrackingListener::findReplacementOp(Operation *op,
   if (op->getName() != defOp->getName())
     return nullptr;
 
-  // If the replacement op is not a new op, drop the mapping.
-  if (!isNewOp(defOp))
-    return nullptr;
-
   return defOp;
-}
-
-bool transform::TrackingListener::isNewOp(Operation *op) const {
-  auto it = newOps.find(op->getName());
-  if (it == newOps.end())
-    return false;
-  return it->second.contains(op);
 }
 
 LogicalResult transform::TrackingListener::notifyMatchFailure(
@@ -204,17 +193,9 @@ LogicalResult transform::TrackingListener::notifyMatchFailure(
   return failure();
 }
 
-void transform::TrackingListener::notifyOperationInserted(Operation *op) {
-  newOps[op->getName()].insert(op);
-}
-
 void transform::TrackingListener::notifyOperationRemoved(Operation *op) {
   // TODO: Walk can be removed when D144193 has landed.
   op->walk([&](Operation *op) {
-    // Keep set of new ops up-to-date.
-    auto it = newOps.find(op->getName());
-    if (it != newOps.end())
-      it->second.erase(op);
     // Remove mappings for result values.
     for (OpResult value : op->getResults())
       (void)replacePayloadValue(value, nullptr);
@@ -440,8 +421,8 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   return llvm::all_of(
       std::initializer_list<Type>{inputs.front(), outputs.front()},
       [](Type ty) {
-        return ty
-            .isa<pdl::OperationType, transform::TransformHandleTypeInterface>();
+        return llvm::isa<pdl::OperationType,
+                         transform::TransformHandleTypeInterface>(ty);
       });
 }
 
@@ -563,7 +544,8 @@ transform::ForeachMatchOp::apply(transform::TransformResults &results,
   // the payload to the result. Note that we need to consume the root handle to
   // make sure any handles to operations inside, that could have been affected
   // by actions, are invalidated.
-  results.set(getUpdated().cast<OpResult>(), state.getPayloadOps(getRoot()));
+  results.set(llvm::cast<OpResult>(getUpdated()),
+              state.getPayloadOps(getRoot()));
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -810,7 +792,7 @@ transform::ForeachOp::apply(transform::TransformResults &results,
   }
 
   for (unsigned i = 0; i < getNumResults(); ++i)
-    results.set(getResult(i).cast<OpResult>(), resultOps[i]);
+    results.set(llvm::cast<OpResult>(getResult(i)), resultOps[i]);
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -863,7 +845,7 @@ LogicalResult transform::ForeachOp::verify() {
     return emitOpError() << "expects the same number of results as the "
                             "terminator has operands";
   for (Value v : yieldOp.getOperands())
-    if (!v.getType().isa<TransformHandleTypeInterface>())
+    if (!llvm::isa<TransformHandleTypeInterface>(v.getType()))
       return yieldOp->emitOpError("expects operands to have types implementing "
                                   "TransformHandleTypeInterface");
   return success();
@@ -888,7 +870,7 @@ DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
     }
     parents.insert(parent);
   }
-  results.set(getResult().cast<OpResult>(), parents.getArrayRef());
+  results.set(llvm::cast<OpResult>(getResult()), parents.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -902,7 +884,7 @@ transform::GetConsumersOfResult::apply(transform::TransformResults &results,
   int64_t resultNumber = getResultNumber();
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
   if (payloadOps.empty()) {
-    results.set(getResult().cast<OpResult>(), {});
+    results.set(llvm::cast<OpResult>(getResult()), {});
     return DiagnosedSilenceableFailure::success();
   }
   if (payloadOps.size() != 1)
@@ -912,7 +894,7 @@ transform::GetConsumersOfResult::apply(transform::TransformResults &results,
   Operation *target = payloadOps.front();
   if (target->getNumResults() <= resultNumber)
     return emitDefiniteFailure() << "result number overflow";
-  results.set(getResult().cast<OpResult>(),
+  results.set(llvm::cast<OpResult>(getResult()),
               llvm::to_vector(target->getResult(resultNumber).getUsers()));
   return DiagnosedSilenceableFailure::success();
 }
@@ -926,7 +908,7 @@ transform::GetDefiningOp::apply(transform::TransformResults &results,
                                 transform::TransformState &state) {
   SmallVector<Operation *> definingOps;
   for (Value v : state.getPayloadValues(getTarget())) {
-    if (v.isa<BlockArgument>()) {
+    if (llvm::isa<BlockArgument>(v)) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError() << "cannot get defining op of block argument";
       diag.attachNote(v.getLoc()) << "target value";
@@ -934,7 +916,7 @@ transform::GetDefiningOp::apply(transform::TransformResults &results,
     }
     definingOps.push_back(v.getDefiningOp());
   }
-  results.set(getResult().cast<OpResult>(), definingOps);
+  results.set(llvm::cast<OpResult>(getResult()), definingOps);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -962,7 +944,7 @@ transform::GetProducerOfOperand::apply(transform::TransformResults &results,
     }
     producers.push_back(producer);
   }
-  results.set(getResult().cast<OpResult>(), producers);
+  results.set(llvm::cast<OpResult>(getResult()), producers);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -984,7 +966,7 @@ transform::GetResultOp::apply(transform::TransformResults &results,
     }
     opResults.push_back(target->getOpResult(resultNumber));
   }
-  results.setValues(getResult().cast<OpResult>(), opResults);
+  results.setValues(llvm::cast<OpResult>(getResult()), opResults);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1211,8 +1193,8 @@ transform::MatchParamCmpIOp::apply(transform::TransformResults &results,
   }
 
   for (auto &&[i, param, reference] : llvm::enumerate(params, references)) {
-    auto intAttr = param.dyn_cast<IntegerAttr>();
-    auto refAttr = reference.dyn_cast<IntegerAttr>();
+    auto intAttr = llvm::dyn_cast<IntegerAttr>(param);
+    auto refAttr = llvm::dyn_cast<IntegerAttr>(reference);
     if (!intAttr || !refAttr) {
       return emitDefiniteFailure()
              << "non-integer parameter value not expected";
@@ -1295,12 +1277,12 @@ transform::MergeHandlesOp::apply(transform::TransformResults &results,
   for (Value operand : getHandles())
     llvm::append_range(operations, state.getPayloadOps(operand));
   if (!getDeduplicate()) {
-    results.set(getResult().cast<OpResult>(), operations);
+    results.set(llvm::cast<OpResult>(getResult()), operations);
     return DiagnosedSilenceableFailure::success();
   }
 
   SetVector<Operation *> uniqued(operations.begin(), operations.end());
-  results.set(getResult().cast<OpResult>(), uniqued.getArrayRef());
+  results.set(llvm::cast<OpResult>(getResult()), uniqued.getArrayRef());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1535,7 +1517,7 @@ transform::SplitHandleOp::apply(transform::TransformResults &results,
 
   // Set transform op results.
   for (auto &&it : llvm::enumerate(resultHandles))
-    results.set(getResult(it.index()).cast<OpResult>(), it.value());
+    results.set(llvm::cast<OpResult>(getResult(it.index())), it.value());
 
   return DiagnosedSilenceableFailure::success();
 }
@@ -1573,7 +1555,7 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
           << "could not find pattern '" << getPatternName() << "'";
     }
   }
-  results.set(getResult().cast<OpResult>(), targets);
+  results.set(llvm::cast<OpResult>(getResult()), targets);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1594,22 +1576,23 @@ transform::ReplicateOp::apply(transform::TransformResults &results,
   unsigned numRepetitions = state.getPayloadOps(getPattern()).size();
   for (const auto &en : llvm::enumerate(getHandles())) {
     Value handle = en.value();
-    if (handle.getType().isa<TransformHandleTypeInterface>()) {
+    if (llvm::isa<TransformHandleTypeInterface>(handle.getType())) {
       ArrayRef<Operation *> current = state.getPayloadOps(handle);
       SmallVector<Operation *> payload;
       payload.reserve(numRepetitions * current.size());
       for (unsigned i = 0; i < numRepetitions; ++i)
         llvm::append_range(payload, current);
-      results.set(getReplicated()[en.index()].cast<OpResult>(), payload);
+      results.set(llvm::cast<OpResult>(getReplicated()[en.index()]), payload);
     } else {
-      assert(handle.getType().isa<TransformParamTypeInterface>() &&
+      assert(llvm::isa<TransformParamTypeInterface>(handle.getType()) &&
              "expected param type");
       ArrayRef<Attribute> current = state.getParams(handle);
       SmallVector<Attribute> params;
       params.reserve(numRepetitions * current.size());
       for (unsigned i = 0; i < numRepetitions; ++i)
         llvm::append_range(params, current);
-      results.setParams(getReplicated()[en.index()].cast<OpResult>(), params);
+      results.setParams(llvm::cast<OpResult>(getReplicated()[en.index()]),
+                        params);
     }
   }
   return DiagnosedSilenceableFailure::success();

@@ -33,12 +33,12 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
                                    Operation *insertionPoint,
                                    const SmallVector<Value> &neededValues) {
   for (Value val : neededValues) {
-    if (auto bbArg = val.dyn_cast<BlockArgument>()) {
+    if (auto bbArg = dyn_cast<BlockArgument>(val)) {
       Block *owner = bbArg.getOwner();
       if (!owner->findAncestorOpInBlock(*insertionPoint))
         return false;
     } else {
-      auto opResult = val.cast<OpResult>();
+      auto opResult = cast<OpResult>(val);
       if (!domInfo.dominates(opResult.getOwner(), insertionPoint))
         return false;
     }
@@ -75,7 +75,7 @@ findValidInsertionPoint(Operation *emptyTensorOp,
     // * in case of an OpResult: There must be at least one op right after the
     //                           defining op (the anchor op or one of its
     //                           parents).
-    if (auto bbArg = val.dyn_cast<BlockArgument>()) {
+    if (auto bbArg = dyn_cast<BlockArgument>(val)) {
       insertionPointCandidates.push_back(
           &bbArg.getOwner()->getOperations().front());
     } else {

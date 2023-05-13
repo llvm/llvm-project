@@ -28,7 +28,7 @@ using namespace mlir::sparse_tensor;
 static std::optional<std::pair<Value, Value>>
 genSplitSparseConstant(OpBuilder &builder, Location loc, Value tensor) {
   if (auto constOp = tensor.getDefiningOp<arith::ConstantOp>()) {
-    if (auto a = constOp.getValue().dyn_cast<SparseElementsAttr>()) {
+    if (auto a = dyn_cast<SparseElementsAttr>(constOp.getValue())) {
       auto coordinates = builder.create<arith::ConstantOp>(loc, a.getIndices());
       auto values = builder.create<arith::ConstantOp>(loc, a.getValues());
       return std::make_pair(coordinates, values);
@@ -94,7 +94,7 @@ OverheadType mlir::sparse_tensor::overheadTypeEncoding(unsigned width) {
 OverheadType mlir::sparse_tensor::overheadTypeEncoding(Type tp) {
   if (tp.isIndex())
     return OverheadType::kIndex;
-  if (auto intTp = tp.dyn_cast<IntegerType>())
+  if (auto intTp = dyn_cast<IntegerType>(tp))
     return overheadTypeEncoding(intTp.getWidth());
   llvm_unreachable("Unknown overhead type");
 }
@@ -169,7 +169,7 @@ PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
     return PrimaryType::kI16;
   if (elemTp.isInteger(8))
     return PrimaryType::kI8;
-  if (auto complexTp = elemTp.dyn_cast<ComplexType>()) {
+  if (auto complexTp = dyn_cast<ComplexType>(elemTp)) {
     auto complexEltTp = complexTp.getElementType();
     if (complexEltTp.isF64())
       return PrimaryType::kC64;
@@ -205,10 +205,10 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
     return value;
 
   // int <=> index
-  if (srcTp.isa<IndexType>() || dstTp.isa<IndexType>())
+  if (isa<IndexType>(srcTp) || isa<IndexType>(dstTp))
     return builder.create<arith::IndexCastOp>(loc, dstTp, value);
 
-  const auto srcIntTp = srcTp.dyn_cast_or_null<IntegerType>();
+  const auto srcIntTp = dyn_cast_or_null<IntegerType>(srcTp);
   const bool isUnsignedCast = srcIntTp ? srcIntTp.isUnsigned() : false;
   return mlir::convertScalarToDtype(builder, loc, value, dstTp, isUnsignedCast);
 }
@@ -216,7 +216,7 @@ Value sparse_tensor::genCast(OpBuilder &builder, Location loc, Value value,
 Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
                                   Value s) {
   Value load = builder.create<memref::LoadOp>(loc, mem, s);
-  if (!load.getType().isa<IndexType>()) {
+  if (!isa<IndexType>(load.getType())) {
     if (load.getType().getIntOrFloatBitWidth() < 64)
       load = builder.create<arith::ExtUIOp>(loc, builder.getI64Type(), load);
     load =
@@ -226,14 +226,14 @@ Value sparse_tensor::genIndexLoad(OpBuilder &builder, Location loc, Value mem,
 }
 
 mlir::TypedAttr mlir::sparse_tensor::getOneAttr(Builder &builder, Type tp) {
-  if (tp.isa<FloatType>())
+  if (isa<FloatType>(tp))
     return builder.getFloatAttr(tp, 1.0);
-  if (tp.isa<IndexType>())
+  if (isa<IndexType>(tp))
     return builder.getIndexAttr(1);
-  if (auto intTp = tp.dyn_cast<IntegerType>())
+  if (auto intTp = dyn_cast<IntegerType>(tp))
     return builder.getIntegerAttr(tp, APInt(intTp.getWidth(), 1));
-  if (tp.isa<RankedTensorType, VectorType>()) {
-    auto shapedTp = tp.cast<ShapedType>();
+  if (isa<RankedTensorType, VectorType>(tp)) {
+    auto shapedTp = cast<ShapedType>(tp);
     if (auto one = getOneAttr(builder, shapedTp.getElementType()))
       return DenseElementsAttr::get(shapedTp, one);
   }
@@ -244,13 +244,13 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
                                         Value v) {
   Type tp = v.getType();
   Value zero = constantZero(builder, loc, tp);
-  if (tp.isa<FloatType>())
+  if (isa<FloatType>(tp))
     return builder.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNE, v,
                                          zero);
   if (tp.isIntOrIndex())
     return builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, v,
                                          zero);
-  if (tp.dyn_cast<ComplexType>())
+  if (dyn_cast<ComplexType>(tp))
     return builder.create<complex::NotEqualOp>(loc, v, zero);
   llvm_unreachable("Non-numeric type");
 }
@@ -580,12 +580,12 @@ void sparse_tensor::foreachInSparseConstant(
     }
     // Remap value.
     Value val;
-    if (attr.getElementType().isa<ComplexType>()) {
-      auto valAttr = elems[i].second.cast<ArrayAttr>();
+    if (isa<ComplexType>(attr.getElementType())) {
+      auto valAttr = cast<ArrayAttr>(elems[i].second);
       val = builder.create<complex::ConstantOp>(loc, attr.getElementType(),
                                                 valAttr);
     } else {
-      auto valAttr = elems[i].second.cast<TypedAttr>();
+      auto valAttr = cast<TypedAttr>(elems[i].second);
       val = builder.create<arith::ConstantOp>(loc, valAttr);
     }
     assert(val);
@@ -597,7 +597,7 @@ SmallVector<Value> sparse_tensor::loadAll(OpBuilder &builder, Location loc,
                                           size_t size, Value mem,
                                           size_t offsetIdx, Value offsetVal) {
 #ifndef NDEBUG
-  const auto memTp = mem.getType().cast<MemRefType>();
+  const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
   const DynSize memSh = memTp.getDimSize(0);
   assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(size));
@@ -619,7 +619,7 @@ void sparse_tensor::storeAll(OpBuilder &builder, Location loc, Value mem,
                              ValueRange vs, size_t offsetIdx, Value offsetVal) {
 #ifndef NDEBUG
   const size_t vsize = vs.size();
-  const auto memTp = mem.getType().cast<MemRefType>();
+  const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
   const DynSize memSh = memTp.getDimSize(0);
   assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(vsize));
@@ -677,6 +677,14 @@ Value sparse_tensor::genToCoordinates(OpBuilder &builder, Location loc,
   const Type memTp = get1DMemRefType(crdTp, /*withLayout=*/lvl >= cooStart);
   return builder.create<ToCoordinatesOp>(loc, memTp, tensor,
                                          builder.getIndexAttr(lvl));
+}
+
+Value sparse_tensor::genToCoordinatesBuffer(OpBuilder &builder, Location loc,
+                                            Value tensor) {
+  const auto srcTp = getSparseTensorType(tensor);
+  const Type crdTp = srcTp.getEncoding().getCrdType();
+  const Type memTp = get1DMemRefType(crdTp, /*withLayout=*/false);
+  return builder.create<ToCoordinatesBufferOp>(loc, memTp, tensor);
 }
 
 Value sparse_tensor::genToValues(OpBuilder &builder, Location loc,

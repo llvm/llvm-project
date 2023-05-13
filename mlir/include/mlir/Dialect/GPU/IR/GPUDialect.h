@@ -163,6 +163,14 @@ public:
 // Adds a `gpu.async.token` to the front of the argument list.
 void addAsyncDependency(Operation *op, Value token);
 
+// Represents any sparse handle.
+class SparseHandleType
+    : public Type::TypeBase<SparseHandleType, Type, TypeStorage> {
+public:
+  // Used for generic hooks in TypeBase.
+  using Base::Base;
+};
+
 } // namespace gpu
 } // namespace mlir
 

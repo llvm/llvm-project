@@ -453,7 +453,7 @@ define i1 @extractelt_v1i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <1 x i8>, ptr %x
   %b = icmp eq <1 x i8> %a, zeroinitializer
@@ -468,7 +468,7 @@ define i1 @extractelt_v2i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, ptr %x
   %b = icmp eq <2 x i8> %a, zeroinitializer
@@ -483,7 +483,7 @@ define i1 @extractelt_v4i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <4 x i8>, ptr %x
   %b = icmp eq <4 x i8> %a, zeroinitializer
@@ -498,7 +498,7 @@ define i1 @extractelt_v8i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = icmp eq <8 x i8> %a, zeroinitializer
@@ -513,7 +513,7 @@ define i1 @extractelt_v16i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v8, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v8
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
   %b = icmp eq <16 x i8> %a, zeroinitializer
@@ -529,7 +529,7 @@ define i1 @extractelt_v32i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v10, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v10
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = icmp eq <32 x i8> %a, zeroinitializer
@@ -545,7 +545,7 @@ define i1 @extractelt_v64i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v12, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v12
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, ptr %x
   %b = icmp eq <64 x i8> %a, zeroinitializer
@@ -561,7 +561,7 @@ define i1 @extractelt_v128i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v16, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v16
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <128 x i8>, ptr %x
   %b = icmp eq <128 x i8> %a, zeroinitializer
@@ -577,7 +577,7 @@ define i1 @extractelt_v256i1_idx0(ptr %x) nounwind {
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v16, v8, 0
 ; CHECK-NEXT:    vfirst.m a0, v16
-; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
   %a = load <256 x i8>, ptr %x
   %b = icmp eq <256 x i8> %a, zeroinitializer

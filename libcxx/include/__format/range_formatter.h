@@ -54,15 +54,15 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
   _LIBCPP_HIDE_FROM_ABI constexpr const formatter<_Tp, _CharT>& underlying() const noexcept { return __underlying_; }
 
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __parse_ctx) {
-    auto __begin = __parser_.__parse(__parse_ctx, __format_spec::__fields_range);
-    auto __end   = __parse_ctx.end();
+  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+    auto __begin = __parser_.__parse(__ctx, __format_spec::__fields_range);
+    auto __end   = __ctx.end();
     // Note the cases where __begin == __end in this code only happens when the
     // replacement-field has no terminating }, or when the parse is manually
     // called with a format-spec. The former is an error and the latter means
     // using a formatter without the format functions or print.
     if (__begin == __end) [[unlikely]]
-      return __parse_empty_range_underlying_spec(__parse_ctx, __begin);
+      return __parse_empty_range_underlying_spec(__ctx, __begin);
 
     // The n field overrides a possible m type, therefore delay applying the
     // effect of n until the type has been procesed.
@@ -72,7 +72,7 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
       if (__begin == __end) [[unlikely]] {
         // Since there is no more data, clear the brackets before returning.
         set_brackets({}, {});
-        return __parse_empty_range_underlying_spec(__parse_ctx, __begin);
+        return __parse_empty_range_underlying_spec(__ctx, __begin);
       }
     }
 
@@ -80,7 +80,7 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
     if (__clear_brackets)
       set_brackets({}, {});
     if (__begin == __end) [[unlikely]]
-      return __parse_empty_range_underlying_spec(__parse_ctx, __begin);
+      return __parse_empty_range_underlying_spec(__ctx, __begin);
 
     bool __has_range_underlying_spec = *__begin == _CharT(':');
     if (__has_range_underlying_spec) {
@@ -95,8 +95,8 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
       // get -} as input which my be valid.
       std::__throw_format_error("The format-spec should consume the input or end with a '}'");
 
-    __parse_ctx.advance_to(__begin);
-    __begin = __underlying_.parse(__parse_ctx);
+    __ctx.advance_to(__begin);
+    __begin = __underlying_.parse(__ctx);
 
     // This test should not be required if __has_range_underlying_spec is false.
     // However this test makes sure the underlying formatter left the parser in
@@ -260,9 +260,9 @@ private:
 
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator
-  __parse_empty_range_underlying_spec(_ParseContext& __parse_ctx, typename _ParseContext::iterator __begin) {
-    __parse_ctx.advance_to(__begin);
-    [[maybe_unused]] typename _ParseContext::iterator __result = __underlying_.parse(__parse_ctx);
+  __parse_empty_range_underlying_spec(_ParseContext& __ctx, typename _ParseContext::iterator __begin) {
+    __ctx.advance_to(__begin);
+    [[maybe_unused]] typename _ParseContext::iterator __result = __underlying_.parse(__ctx);
     _LIBCPP_ASSERT(__result == __begin,
                    "the underlying's parse function should not advance the input beyond the end of the input");
     return __begin;

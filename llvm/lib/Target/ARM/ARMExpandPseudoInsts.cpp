@@ -2171,6 +2171,9 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Update call site info and delete the pseudo instruction TCRETURN.
       if (MI.isCandidateForCallSiteEntry())
         MI.getMF()->moveCallSiteInfo(&MI, &*NewMI);
+      // Copy nomerge flag over to new instruction.
+      if (MI.getFlag(MachineInstr::NoMerge))
+        NewMI->setFlag(MachineInstr::NoMerge);
       MBB.erase(MBBI);
 
       MBBI = NewMI;

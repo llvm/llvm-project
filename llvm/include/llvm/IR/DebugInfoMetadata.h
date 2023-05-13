@@ -2308,6 +2308,12 @@ DILocation::cloneWithBaseDiscriminator(unsigned D) const {
 std::optional<const DILocation *>
 DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
   assert(!EnableFSDiscriminator && "FSDiscriminator should not call this.");
+  // Do no interfere with pseudo probes. Pseudo probe doesn't need duplication
+  // factor support as samples collected on cloned probes will be aggregated.
+  // Also pseudo probe at a callsite uses the dwarf discriminator to store
+  // pseudo probe related information, such as the probe id.
+  if (isPseudoProbeDiscriminator(getDiscriminator()))
+    return this;
 
   DF *= getDuplicationFactor();
   if (DF <= 1)

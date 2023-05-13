@@ -43,7 +43,7 @@ static int getNumBits(Type type) {
   // TODO: This does not take into account any memory layout or widening
   // constraints. E.g., a vector<3xi57> may report to occupy 3x57=171 bit, even
   // though in practice it will likely be stored as in a 4xi64 vector register.
-  if (auto vectorType = type.dyn_cast<VectorType>())
+  if (auto vectorType = dyn_cast<VectorType>(type))
     return vectorType.getNumElements() * vectorType.getElementTypeBitWidth();
   return type.getIntOrFloatBitWidth();
 }
@@ -95,7 +95,7 @@ struct VectorBroadcastConvert final
     if (!resultType)
       return failure();
 
-    if (resultType.isa<spirv::ScalarType>()) {
+    if (isa<spirv::ScalarType>(resultType)) {
       rewriter.replaceOp(castOp, adaptor.getSource());
       return success();
     }
@@ -116,7 +116,7 @@ struct VectorExtractOpConvert final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Only support extracting a scalar value now.
-    VectorType resultVectorType = extractOp.getType().dyn_cast<VectorType>();
+    VectorType resultVectorType = dyn_cast<VectorType>(extractOp.getType());
     if (resultVectorType && resultVectorType.getNumElements() > 1)
       return failure();
 
@@ -124,7 +124,7 @@ struct VectorExtractOpConvert final
     if (!dstType)
       return failure();
 
-    if (adaptor.getVector().getType().isa<spirv::ScalarType>()) {
+    if (isa<spirv::ScalarType>(adaptor.getVector().getType())) {
       rewriter.replaceOp(extractOp, adaptor.getVector());
       return success();
     }
@@ -156,7 +156,7 @@ struct VectorExtractStridedSliceOpConvert final
     Value srcVector = adaptor.getOperands().front();
 
     // Extract vector<1xT> case.
-    if (dstType.isa<spirv::ScalarType>()) {
+    if (isa<spirv::ScalarType>(dstType)) {
       rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(extractOp,
                                                              srcVector, offset);
       return success();
@@ -203,7 +203,7 @@ struct VectorInsertOpConvert final
       return success();
     }
 
-    if (insertOp.getSourceType().isa<VectorType>() ||
+    if (isa<VectorType>(insertOp.getSourceType()) ||
         !spirv::CompositeType::isValid(insertOp.getDestVectorType()))
       return failure();
     int32_t id = getFirstIntValue(insertOp.getPosition());
@@ -224,7 +224,7 @@ struct VectorExtractElementOpConvert final
     if (!resultType)
       return failure();
 
-    if (adaptor.getVector().getType().isa<spirv::ScalarType>()) {
+    if (isa<spirv::ScalarType>(adaptor.getVector().getType())) {
       rewriter.replaceOp(extractOp, adaptor.getVector());
       return success();
     }
@@ -252,7 +252,7 @@ struct VectorInsertElementOpConvert final
     if (!vectorType)
       return failure();
 
-    if (vectorType.isa<spirv::ScalarType>()) {
+    if (isa<spirv::ScalarType>(vectorType)) {
       rewriter.replaceOp(insertOp, adaptor.getSource());
       return success();
     }
@@ -285,18 +285,17 @@ struct VectorInsertStridedSliceOpConvert final
       return failure();
     uint64_t offset = getFirstIntValue(insertOp.getOffsets());
 
-    if (srcVector.getType().isa<spirv::ScalarType>()) {
-      assert(!dstVector.getType().isa<spirv::ScalarType>());
+    if (isa<spirv::ScalarType>(srcVector.getType())) {
+      assert(!isa<spirv::ScalarType>(dstVector.getType()));
       rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
           insertOp, dstVector.getType(), srcVector, dstVector,
           rewriter.getI32ArrayAttr(offset));
       return success();
     }
 
-    uint64_t totalSize =
-        dstVector.getType().cast<VectorType>().getNumElements();
+    uint64_t totalSize = cast<VectorType>(dstVector.getType()).getNumElements();
     uint64_t insertSize =
-        srcVector.getType().cast<VectorType>().getNumElements();
+        cast<VectorType>(srcVector.getType()).getNumElements();
 
     SmallVector<int32_t, 2> indices(totalSize);
     std::iota(indices.begin(), indices.end(), 0);
@@ -324,7 +323,7 @@ struct VectorReductionPattern final
     if (!resultType)
       return failure();
 
-    auto srcVectorType = adaptor.getVector().getType().dyn_cast<VectorType>();
+    auto srcVectorType = dyn_cast<VectorType>(adaptor.getVector().getType());
     if (!srcVectorType || srcVectorType.getRank() != 1)
       return rewriter.notifyMatchFailure(reduceOp, "not 1-D vector source");
 
@@ -393,10 +392,10 @@ public:
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return failure();
-    if (dstType.isa<spirv::ScalarType>()) {
+    if (isa<spirv::ScalarType>(dstType)) {
       rewriter.replaceOp(op, adaptor.getInput());
     } else {
-      auto dstVecType = dstType.cast<VectorType>();
+      auto dstVecType = cast<VectorType>(dstType);
       SmallVector<Value, 4> source(dstVecType.getNumElements(),
                                    adaptor.getInput());
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstType,
@@ -422,7 +421,7 @@ struct VectorShuffleOpConvert final
     if (oldSourceType.getNumElements() > 1) {
       SmallVector<int32_t, 4> components = llvm::to_vector<4>(
           llvm::map_range(shuffleOp.getMask(), [](Attribute attr) -> int32_t {
-            return attr.cast<IntegerAttr>().getValue().getZExtValue();
+            return cast<IntegerAttr>(attr).getValue().getZExtValue();
           }));
       rewriter.replaceOpWithNewOp<spirv::VectorShuffleOp>(
           shuffleOp, newResultType, adaptor.getV1(), adaptor.getV2(),

@@ -54,6 +54,21 @@ template <typename V, typename A> LIBC_INLINE V align_up(V val, A align) {
   return ((val + V(align) - 1) / V(align)) * V(align);
 }
 
+/// Utility to provide a unified interface between the CPU and GPU's memory
+/// model. On the GPU stack variables are always private to a lane so we can
+/// simply use the variable passed in. On the CPU we need to allocate enough
+/// space for the whole lane and index into it.
+template <typename V> LIBC_INLINE V &lane_value(V *val, uint32_t id) {
+  if constexpr (is_process_gpu())
+    return *val;
+  return val[id];
+}
+
+/// Helper to get the maximum value.
+template <typename T> LIBC_INLINE const T &max(const T &x, const T &y) {
+  return x < y ? y : x;
+}
+
 } // namespace rpc
 } // namespace __llvm_libc
 

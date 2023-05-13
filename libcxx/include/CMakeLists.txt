@@ -70,9 +70,18 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
+  __algorithm/pstl_backend.h
+  __algorithm/pstl_backends/cpu_backend.h
+  __algorithm/pstl_backends/cpu_backends/any_of.h
+  __algorithm/pstl_backends/cpu_backends/backend.h
+  __algorithm/pstl_backends/cpu_backends/fill.h
+  __algorithm/pstl_backends/cpu_backends/find_if.h
+  __algorithm/pstl_backends/cpu_backends/for_each.h
+  __algorithm/pstl_backends/cpu_backends/serial.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
+  __algorithm/pstl_frontend_dispatch.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
@@ -532,8 +541,6 @@ set(files
   __pstl/internal/parallel_backend_serial.h
   __pstl/internal/parallel_backend_tbb.h
   __pstl/internal/parallel_backend_utils.h
-  __pstl/internal/parallel_impl.h
-  __pstl/internal/pstl_config.h
   __pstl/internal/unseq_backend_simd.h
   __pstl/internal/utils.h
   __pstl_algorithm

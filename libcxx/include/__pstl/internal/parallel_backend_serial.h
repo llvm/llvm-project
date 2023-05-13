@@ -10,11 +10,11 @@
 #ifndef _PSTL_PARALLEL_BACKEND_SERIAL_H
 #define _PSTL_PARALLEL_BACKEND_SERIAL_H
 
+#include <__config>
 #include <__memory/allocator.h>
 #include <__pstl/internal/execution_impl.h>
 #include <__utility/forward.h>
-
-#include "pstl_config.h"
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
@@ -45,18 +45,6 @@ class __buffer
     }
     _LIBCPP_HIDE_FROM_ABI ~__buffer() { __allocator_.deallocate(__ptr_, __buf_size_); }
 };
-
-_LIBCPP_HIDE_FROM_ABI inline void
-__cancel_execution()
-{
-}
-
-template <class _ExecutionPolicy, class _Index, class _Fp>
-_LIBCPP_HIDE_FROM_ABI void
-__parallel_for(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
-{
-    __f(__first, __last);
-}
 
 template <class _ExecutionPolicy, class _Value, class _Index, typename _RealBody, typename _Reduction>
 _LIBCPP_HIDE_FROM_ABI _Value

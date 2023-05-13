@@ -21,7 +21,7 @@ using namespace mlir::vector;
 // Helper that picks the proper sequence for inserting.
 static Value insertOne(PatternRewriter &rewriter, Location loc, Value from,
                        Value into, int64_t offset) {
-  auto vectorType = into.getType().cast<VectorType>();
+  auto vectorType = cast<VectorType>(into.getType());
   if (vectorType.getRank() > 1)
     return rewriter.create<InsertOp>(loc, from, into, offset);
   return rewriter.create<vector::InsertElementOp>(
@@ -32,7 +32,7 @@ static Value insertOne(PatternRewriter &rewriter, Location loc, Value from,
 // Helper that picks the proper sequence for extracting.
 static Value extractOne(PatternRewriter &rewriter, Location loc, Value vector,
                         int64_t offset) {
-  auto vectorType = vector.getType().cast<VectorType>();
+  auto vectorType = cast<VectorType>(vector.getType());
   if (vectorType.getRank() > 1)
     return rewriter.create<ExtractOp>(loc, vector, offset);
   return rewriter.create<vector::ExtractElementOp>(
@@ -134,10 +134,10 @@ public:
     }
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
     int64_t size = srcType.getShape().front();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     auto loc = op.getLoc();
     Value res = op.getDest();
@@ -174,7 +174,7 @@ public:
          off += stride, ++idx) {
       // 1. extract the proper subvector (or element) from source
       Value extractedSource = extractOne(rewriter, loc, op.getSource(), idx);
-      if (extractedSource.getType().isa<VectorType>()) {
+      if (isa<VectorType>(extractedSource.getType())) {
         // 2. If we have a vector, extract the proper subvector from destination
         // Otherwise we are at the element level and no need to recurse.
         Value extractedDest = extractOne(rewriter, loc, op.getDest(), off);
@@ -208,11 +208,10 @@ public:
     assert(!op.getOffsets().getValue().empty() && "Unexpected empty offsets");
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
-    int64_t size =
-        op.getSizes().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
+    int64_t size = cast<IntegerAttr>(op.getSizes().getValue().front()).getInt();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     assert(dstType.getElementType().isSignlessIntOrIndexOrFloat());
 
@@ -254,11 +253,10 @@ public:
       return failure();
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
-    int64_t size =
-        op.getSizes().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
+    int64_t size = cast<IntegerAttr>(op.getSizes().getValue().front()).getInt();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     Location loc = op.getLoc();
     SmallVector<Value> elements;
@@ -300,11 +298,10 @@ public:
     assert(!op.getOffsets().getValue().empty() && "Unexpected empty offsets");
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
-    int64_t size =
-        op.getSizes().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
+    int64_t size = cast<IntegerAttr>(op.getSizes().getValue().front()).getInt();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     auto loc = op.getLoc();
     auto elemType = dstType.getElementType();

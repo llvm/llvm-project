@@ -40,7 +40,7 @@ def AffineReadOpInterface : OpInterface<"AffineReadOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return $_op.getMemRef().getType().template cast<::mlir::MemRefType>();
+        return ::llvm::cast<::mlir::MemRefType>($_op.getMemRef().getType());
       }]
     >,
     InterfaceMethod<
@@ -103,7 +103,7 @@ def AffineWriteOpInterface : OpInterface<"AffineWriteOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{
-        return $_op.getMemRef().getType().template cast<::mlir::MemRefType>();
+        return ::llvm::cast<::mlir::MemRefType>($_op.getMemRef().getType());
       }]
     >,
     InterfaceMethod<

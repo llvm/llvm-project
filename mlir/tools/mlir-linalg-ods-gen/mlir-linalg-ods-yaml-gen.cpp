@@ -317,10 +317,10 @@ struct ScalarTraits<SerializedAffineMap> {
                          SerializedAffineMap &value) {
     assert(rawYamlContext);
     auto *yamlContext = static_cast<LinalgYAMLContext *>(rawYamlContext);
-    if (auto attr = mlir::parseAttribute(scalar, yamlContext->mlirContext)
-                        .dyn_cast_or_null<AffineMapAttr>())
+    if (auto attr = dyn_cast_or_null<AffineMapAttr>(
+            mlir::parseAttribute(scalar, yamlContext->mlirContext)))
       value.affineMapAttr = attr;
-    else if (!value.affineMapAttr || !value.affineMapAttr.isa<AffineMapAttr>())
+    else if (!value.affineMapAttr || !isa<AffineMapAttr>(value.affineMapAttr))
       return "could not parse as an affine map attribute";
     return StringRef();
   }

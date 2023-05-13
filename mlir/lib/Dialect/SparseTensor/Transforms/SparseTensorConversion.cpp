@@ -399,7 +399,7 @@ static void genAddEltCall(OpBuilder &builder, Location loc, Type eltType,
 /// (which can be either dim- or lvl-coords, depending on context).
 static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
                             Value coords, Value elemPtr) {
-  Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
+  Type elemTp = cast<ShapedType>(elemPtr.getType()).getElementType();
   SmallString<10> name{"getNext", primaryTypeFunctionSuffix(elemTp)};
   SmallVector<Value, 3> params{iter, coords, elemPtr};
   Type i1 = builder.getI1Type();
@@ -1045,7 +1045,7 @@ public:
   matchAndRewrite(ToPositionsOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type resTp = op.getType();
-    Type posTp = resTp.cast<ShapedType>().getElementType();
+    Type posTp = cast<ShapedType>(resTp).getElementType();
     SmallString<17> name{"sparsePositions", overheadTypeFunctionSuffix(posTp)};
     Value lvl = constantIndex(rewriter, op->getLoc(), op.getLevel());
     replaceOpWithFuncCall(rewriter, op, name, resTp, {adaptor.getTensor(), lvl},
@@ -1064,7 +1064,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // TODO: use `SparseTensorType::getCrdType` instead.
     Type resType = op.getType();
-    const Type crdTp = resType.cast<ShapedType>().getElementType();
+    const Type crdTp = cast<ShapedType>(resType).getElementType();
     SmallString<19> name{"sparseCoordinates",
                          overheadTypeFunctionSuffix(crdTp)};
     Location loc = op->getLoc();
@@ -1096,7 +1096,7 @@ public:
   LogicalResult
   matchAndRewrite(ToValuesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resType = op.getType().cast<ShapedType>();
+    auto resType = cast<ShapedType>(op.getType());
     rewriter.replaceOp(op, genValuesCall(rewriter, op.getLoc(), resType,
                                          adaptor.getOperands()));
     return success();
@@ -1113,7 +1113,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     // Query values array size for the actually stored values size.
-    Type eltType = op.getTensor().getType().cast<ShapedType>().getElementType();
+    Type eltType = cast<ShapedType>(op.getTensor().getType()).getElementType();
     auto resTp = MemRefType::get({ShapedType::kDynamic}, eltType);
     Value values = genValuesCall(rewriter, loc, resTp, adaptor.getOperands());
     rewriter.replaceOpWithNewOp<memref::DimOp>(op, values,

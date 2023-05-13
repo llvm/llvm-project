@@ -34,14 +34,14 @@ public:
 };
 
 Type matchContainerType(Type element, Type container) {
-  if (auto shapedTy = container.dyn_cast<ShapedType>())
+  if (auto shapedTy = dyn_cast<ShapedType>(container))
     return shapedTy.clone(element);
 
   return element;
 }
 
 TypedAttr getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
-  if (auto shapedTy = type.dyn_cast<ShapedType>()) {
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     Type eTy = shapedTy.getElementType();
     APInt valueInt(eTy.getIntOrFloatBitWidth(), value);
     return DenseIntElementsAttr::get(shapedTy, valueInt);

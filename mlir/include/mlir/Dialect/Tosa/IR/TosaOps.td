@@ -54,6 +54,12 @@ def Tosa_ArgMaxOp : Tosa_Op<"argmax", [
 }
 
 //===----------------------------------------------------------------------===//
+// Accumulator types.
+//===----------------------------------------------------------------------===//
+
+def Tosa_AccType : AnyTypeOf<[I<32>, SI<32>, F16, F32]>;
+
+//===----------------------------------------------------------------------===//
 // Operator: avg_pool2d
 //===----------------------------------------------------------------------===//
 def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
@@ -74,6 +80,7 @@ def Tosa_AvgPool2dOp : Tosa_Op<"avg_pool2d", [
     Tosa_IntArrayAttr2:$kernel,
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr4:$pad,
+    TypeAttrOf<Tosa_AccType>:$acc_type,
     OptionalAttr<Tosa_UnaryOpQuantizationAttr>:$quantization_info
   );
 
@@ -999,6 +1006,8 @@ def Tosa_ExpOp : Tosa_Op<"exp", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

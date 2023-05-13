@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_FILL_H
 #define _LIBCPP___ALGORITHM_PSTL_FILL_H
 
-#include <__algorithm/fill.h>
+#include <__algorithm/fill_n.h>
+#include <__algorithm/pstl_for_each.h>
+#include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
-#include <__pstl/internal/parallel_impl.h>
-#include <__pstl/internal/unseq_backend_simd.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/terminate_on_exception.h>
@@ -26,43 +26,50 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class>
+void __pstl_fill(); // declaration needed for the frontend dispatch below
+
 template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _Tp,
-          enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 fill(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
-  if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __is_cpp17_random_access_iterator<_ForwardIterator>::value) {
-    std::__terminate_on_exception([&] {
-      __pstl::__par_backend::__parallel_for(
-          __pstl::__internal::__par_backend_tag{},
-          __policy,
-          __first,
-          __last,
-          [&__policy, &__value](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-            std::fill(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __value);
-          });
-    });
-  } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __is_cpp17_random_access_iterator<_ForwardIterator>::value) {
-    __pstl::__unseq_backend::__simd_fill_n(__first, __last - __first, __value);
-  } else {
-    std::fill(__first, __last, __value);
-  }
+  std::__pstl_frontend_dispatch(
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill),
+      [&](_ForwardIterator __g_first, _ForwardIterator __g_last, const _Tp& __g_value) {
+        std::for_each(__policy, __g_first, __g_last, [&](__iter_reference<_ForwardIterator> __element) {
+          __element = __g_value;
+        });
+      },
+      std::move(__first),
+      std::move(__last),
+      __value);
 }
+
+template <class>
+void __pstl_fill_n(); // declaration needed for the frontend dispatch below
 
 template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _SizeT,
           class _Tp,
-          enable_if_t<is_execution_policy_v<__remove_cvref_t<_ExecutionPolicy>>, int> = 0>
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _SizeT __n, const _Tp& __value) {
-  if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value)
-    std::fill(__policy, __first, __first + __n, __value);
-  else
-    std::fill_n(__first, __n, __value);
+  std::__pstl_frontend_dispatch(
+      _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill_n),
+      [&](_ForwardIterator __g_first, _SizeT __g_n, const _Tp& __g_value) {
+        if constexpr (__is_cpp17_random_access_iterator<_ForwardIterator>::value)
+          std::fill(__policy, __g_first, __g_first + __g_n, __g_value);
+        else
+          std::fill_n(__g_first, __g_n, __g_value);
+      },
+      std::move(__first),
+      __n,
+      __value);
 }
 
 _LIBCPP_END_NAMESPACE_STD

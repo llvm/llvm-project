@@ -244,10 +244,10 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
 VectorType VectorType::scaleElementBitwidth(unsigned scale) {
   if (!scale)
     return VectorType();
-  if (auto et = getElementType().dyn_cast<IntegerType>())
+  if (auto et = llvm::dyn_cast<IntegerType>(getElementType()))
     if (auto scaledEt = et.scaleElementBitwidth(scale))
       return VectorType::get(getShape(), scaledEt, getNumScalableDims());
-  if (auto et = getElementType().dyn_cast<FloatType>())
+  if (auto et = llvm::dyn_cast<FloatType>(getElementType()))
     if (auto scaledEt = et.scaleElementBitwidth(scale))
       return VectorType::get(getShape(), scaledEt, getNumScalableDims());
   return VectorType();
@@ -305,8 +305,8 @@ bool TensorType::isValidElementType(Type type) {
   // Note: Non standard/builtin types are allowed to exist within tensor
   // types. Dialects are expected to verify that tensor types have a valid
   // element type within that dialect.
-  return type.isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                  IndexType>() ||
+  return llvm::isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
+                   IndexType>(type) ||
          !llvm::isa<BuiltinDialect>(type.getDialect());
 }
 
@@ -321,7 +321,7 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
   for (int64_t s : shape)
     if (s < 0 && !ShapedType::isDynamic(s))
       return emitError() << "invalid tensor dimension size";
-  if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>())
+  if (auto v = llvm::dyn_cast_or_null<VerifiableTensorEncoding>(encoding))
     if (failed(v.verifyEncoding(shape, elementType, emitError)))
       return failure();
   return checkTensorElementType(emitError, elementType);
@@ -426,9 +426,9 @@ mlir::isRankReducedType(ShapedType originalType,
   if (originalType == candidateReducedType)
     return SliceVerificationResult::Success;
 
-  ShapedType originalShapedType = originalType.cast<ShapedType>();
+  ShapedType originalShapedType = llvm::cast<ShapedType>(originalType);
   ShapedType candidateReducedShapedType =
-      candidateReducedType.cast<ShapedType>();
+      llvm::cast<ShapedType>(candidateReducedType);
 
   // Rank and size logic is valid for all ShapedTypes.
   ArrayRef<int64_t> originalShape = originalShapedType.getShape();
@@ -459,7 +459,7 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
     return true;
 
   // Supported built-in attributes.
-  if (memorySpace.isa<IntegerAttr, StringAttr, DictionaryAttr>())
+  if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
     return true;
 
   // Allow custom dialect attributes.
@@ -478,7 +478,7 @@ Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
 }
 
 Attribute mlir::detail::skipDefaultMemorySpace(Attribute memorySpace) {
-  IntegerAttr intMemorySpace = memorySpace.dyn_cast_or_null<IntegerAttr>();
+  IntegerAttr intMemorySpace = llvm::dyn_cast_or_null<IntegerAttr>(memorySpace);
   if (intMemorySpace && intMemorySpace.getValue() == 0)
     return nullptr;
 
@@ -489,10 +489,10 @@ unsigned mlir::detail::getMemorySpaceAsInt(Attribute memorySpace) {
   if (!memorySpace)
     return 0;
 
-  assert(memorySpace.isa<IntegerAttr>() &&
+  assert(llvm::isa<IntegerAttr>(memorySpace) &&
          "Using `getMemorySpaceInteger` with non-Integer attribute");
 
-  return static_cast<unsigned>(memorySpace.cast<IntegerAttr>().getInt());
+  return static_cast<unsigned>(llvm::cast<IntegerAttr>(memorySpace).getInt());
 }
 
 unsigned MemRefType::getMemorySpaceAsInt() const {
@@ -786,7 +786,7 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
                                         SmallVectorImpl<int64_t> &strides,
                                         int64_t &offset) {
   // Happy path: the type uses the strided layout directly.
-  if (auto strided = t.getLayout().dyn_cast<StridedLayoutAttr>()) {
+  if (auto strided = llvm::dyn_cast<StridedLayoutAttr>(t.getLayout())) {
     llvm::append_range(strides, strided.getStrides());
     offset = strided.getOffset();
     return success();
@@ -834,7 +834,7 @@ ArrayRef<Type> TupleType::getTypes() const { return getImpl()->getTypes(); }
 /// (i32, tensor<i32>, f32, i64)
 void TupleType::getFlattenedTypes(SmallVectorImpl<Type> &types) {
   for (Type type : getTypes()) {
-    if (auto nestedTuple = type.dyn_cast<TupleType>())
+    if (auto nestedTuple = llvm::dyn_cast<TupleType>(type))
       nestedTuple.getFlattenedTypes(types);
     else
       types.push_back(type);
