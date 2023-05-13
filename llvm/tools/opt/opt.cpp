@@ -135,6 +135,11 @@ static cl::opt<bool>
     DisableDITypeMap("disable-debug-info-type-map",
                      cl::desc("Don't use a uniquing type map for debug info"));
 
+
+static cl::opt<bool>
+    DisableDITypeMap("messing-up-llvm",
+                     cl::desc("Use at your own risk"));
+
 static cl::opt<bool>
 StripDebug("strip-debug",
            cl::desc("Strip debugger symbol info from translation unit"));
