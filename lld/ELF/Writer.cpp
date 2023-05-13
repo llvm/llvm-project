@@ -840,8 +840,6 @@ enum RankFlags {
   RF_NOT_RELRO = 1 << 9,
   RF_NOT_TLS = 1 << 8,
   RF_BSS = 1 << 7,
-  RF_PPC_NOT_TOCBSS = 1 << 6,
-  RF_PPC_TOCL = 1 << 5,
   RF_PPC_TOC = 1 << 4,
   RF_PPC_GOT = 1 << 3,
   RF_PPC_BRANCH_LT = 1 << 2,
@@ -943,16 +941,8 @@ static unsigned getSectionRank(const OutputSection &osec) {
     // PPC64 has a number of special SHT_PROGBITS+SHF_ALLOC+SHF_WRITE sections
     // that we would like to make sure appear is a specific order to maximize
     // their coverage by a single signed 16-bit offset from the TOC base
-    // pointer. Conversely, the special .tocbss section should be first among
-    // all SHT_NOBITS sections. This will put it next to the loaded special
-    // PPC64 sections (and, thus, within reach of the TOC base pointer).
+    // pointer.
     StringRef name = osec.name;
-    if (name != ".tocbss")
-      rank |= RF_PPC_NOT_TOCBSS;
-
-    if (name == ".toc1")
-      rank |= RF_PPC_TOCL;
-
     if (name == ".toc")
       rank |= RF_PPC_TOC;
 
