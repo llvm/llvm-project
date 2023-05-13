@@ -240,9 +240,8 @@ void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {
   const VarDecl &D = *emission.Variable;
 
   // Check the type for a cleanup.
-  // TODO: something like emitAutoVarTypeCleanup
   if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext()))
-    assert(0 && "not implemented");
+    buildAutoVarTypeCleanup(emission, dtorKind);
 
   // In GC mode, honor objc_precise_lifetime.
   if (getContext().getLangOpts().getGC() != LangOptions::NonGC &&
@@ -571,4 +570,74 @@ void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                  bool useEHCleanupForArray) {
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
                                      useEHCleanupForArray);
+}
+
+CIRGenFunction::Destroyer *
+CIRGenFunction::getDestroyer(QualType::DestructionKind kind) {
+  switch (kind) {
+  case QualType::DK_none:
+    llvm_unreachable("no destroyer for trivial dtor");
+  case QualType::DK_cxx_destructor:
+    return destroyCXXObject;
+  case QualType::DK_objc_strong_lifetime:
+  case QualType::DK_objc_weak_lifetime:
+  case QualType::DK_nontrivial_c_struct:
+    llvm_unreachable("NYI");
+  }
+  llvm_unreachable("Unknown DestructionKind");
+}
+
+/// Enter a destroy cleanup for the given local variable.
+void CIRGenFunction::buildAutoVarTypeCleanup(
+    const CIRGenFunction::AutoVarEmission &emission,
+    QualType::DestructionKind dtorKind) {
+  assert(dtorKind != QualType::DK_none);
+
+  // Note that for __block variables, we want to destroy the
+  // original stack object, not the possibly forwarded object.
+  Address addr = emission.getObjectAddress(*this);
+
+  const VarDecl *var = emission.Variable;
+  QualType type = var->getType();
+
+  CleanupKind cleanupKind = NormalAndEHCleanup;
+  CIRGenFunction::Destroyer *destroyer = nullptr;
+
+  switch (dtorKind) {
+  case QualType::DK_none:
+    llvm_unreachable("no cleanup for trivially-destructible variable");
+
+  case QualType::DK_cxx_destructor:
+    // If there's an NRVO flag on the emission, we need a different
+    // cleanup.
+    if (emission.NRVOFlag) {
+      assert(!type->isArrayType());
+      CXXDestructorDecl *dtor = type->getAsCXXRecordDecl()->getDestructor();
+      EHStack.pushCleanup<DestroyNRVOVariableCXX>(cleanupKind, addr, type, dtor,
+                                                  emission.NRVOFlag);
+      return;
+    }
+    break;
+
+  case QualType::DK_objc_strong_lifetime:
+    llvm_unreachable("NYI");
+    break;
+
+  case QualType::DK_objc_weak_lifetime:
+    break;
+
+  case QualType::DK_nontrivial_c_struct:
+    llvm_unreachable("NYI");
+  }
+
+  // If we haven't chosen a more specific destroyer, use the default.
+  if (!destroyer)
+    destroyer = getDestroyer(dtorKind);
+
+  // Use an EH cleanup in array destructors iff the destructor itself
+  // is being pushed as an EH cleanup.
+  bool useEHCleanup = (cleanupKind & EHCleanup);
+  EHStack.pushCleanup<DestroyObject>(cleanupKind, addr, type, destroyer,
+                                     useEHCleanup);
+  llvm_unreachable("NYI");
 }
