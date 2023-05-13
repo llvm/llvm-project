@@ -1653,10 +1653,6 @@ public:
     Scalars.clear();
   }
 
-  /// Convenience function that returns the value of vscale_range iff
-  /// vscale_range.min == vscale_range.max or otherwise returns the value
-  /// returned by the corresponding TLI method.
-  std::optional<unsigned> getVScaleForTuning() const;
 
 private:
   unsigned NumPredStores = 0;
@@ -5340,9 +5336,14 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   return MaxVF;
 }
 
-std::optional<unsigned> LoopVectorizationCostModel::getVScaleForTuning() const {
-  if (TheFunction->hasFnAttribute(Attribute::VScaleRange)) {
-    auto Attr = TheFunction->getFnAttribute(Attribute::VScaleRange);
+/// Convenience function that returns the value of vscale_range iff
+/// vscale_range.min == vscale_range.max or otherwise returns the value
+/// returned by the corresponding TTI method.
+static std::optional<unsigned>
+getVScaleForTuning(const Loop *L, const TargetTransformInfo &TTI) {
+  const Function *Fn = L->getHeader()->getParent();
+  if (Fn->hasFnAttribute(Attribute::VScaleRange)) {
+    auto Attr = Fn->getFnAttribute(Attribute::VScaleRange);
     auto Min = Attr.getVScaleRangeMin();
     auto Max = Attr.getVScaleRangeMax();
     if (Max && Min == Max)
@@ -5384,7 +5385,7 @@ bool LoopVectorizationCostModel::isMoreProfitable(
   // Improve estimate for the vector width if it is scalable.
   unsigned EstimatedWidthA = A.Width.getKnownMinValue();
   unsigned EstimatedWidthB = B.Width.getKnownMinValue();
-  if (std::optional<unsigned> VScale = getVScaleForTuning()) {
+  if (std::optional<unsigned> VScale = getVScaleForTuning(TheLoop, TTI)) {
     if (A.Width.isScalable())
       EstimatedWidthA *= *VScale;
     if (B.Width.isScalable())
@@ -5498,7 +5499,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
 
 #ifndef NDEBUG
     unsigned AssumedMinimumVscale = 1;
-    if (std::optional<unsigned> VScale = getVScaleForTuning())
+    if (std::optional<unsigned> VScale = getVScaleForTuning(TheLoop, TTI))
       AssumedMinimumVscale = *VScale;
     unsigned Width =
         Candidate.Width.isScalable()
@@ -5594,7 +5595,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
 
   unsigned Multiplier = 1;
   if (VF.isScalable())
-    Multiplier = getVScaleForTuning().value_or(1);
+    Multiplier = getVScaleForTuning(TheLoop, TTI).value_or(1);
   if ((Multiplier * VF.getKnownMinValue()) >= EpilogueVectorizationMinVF)
     return true;
   return false;
@@ -5654,7 +5655,7 @@ LoopVectorizationCostModel::selectEpilogueVectorizationFactor(
   ElementCount EstimatedRuntimeVF = MainLoopVF;
   if (MainLoopVF.isScalable()) {
     EstimatedRuntimeVF = ElementCount::getFixed(MainLoopVF.getKnownMinValue());
-    if (std::optional<unsigned> VScale = getVScaleForTuning())
+    if (std::optional<unsigned> VScale = getVScaleForTuning(TheLoop, TTI))
       EstimatedRuntimeVF *= *VScale;
   }
 
@@ -10268,7 +10269,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, CM.getVScaleForTuning(), L,
+        !areRuntimeChecksProfitable(Checks, VF, getVScaleForTuning(L, *TTI), L,
                                     *PSE.getSE())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
