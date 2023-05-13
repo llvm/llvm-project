@@ -4973,7 +4973,7 @@ A.7.32 Type Signature Computation
 
 .. note::
 
-  This augments (in alphebetical order) DWARF Version 5 section 7.32, Table
+  This augments (in alphabetical order) DWARF Version 5 section 7.32, Table
   7.32.
 
 .. table:: Attributes used in type signature computation
