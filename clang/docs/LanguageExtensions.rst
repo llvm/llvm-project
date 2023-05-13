@@ -2613,7 +2613,7 @@ In the format string, a suitable format specifier will be used for builtin
 types that Clang knows how to format. This includes standard builtin types, as
 well as aggregate structures, ``void*`` (printed with ``%p``), and ``const
 char*`` (printed with ``%s``). A ``*%p`` specifier will be used for a field
-that Clang doesn't know how to format, and the corresopnding argument will be a
+that Clang doesn't know how to format, and the corresponding argument will be a
 pointer to the field. This allows a C++ templated formatting function to detect
 this case and implement custom formatting. A ``*`` will otherwise not precede a
 format specifier.
@@ -2963,7 +2963,7 @@ data into the cache before it gets used.
 **Description**:
 
 The ``__builtin_prefetch(addr, rw, locality)`` builtin is expected to be used to
-avoid cache misses when the developper has a good understanding of which data
+avoid cache misses when the developer has a good understanding of which data
 are going to be used next. ``addr`` is the address that needs to be brought into
 the cache. ``rw`` indicates the expected access mode: ``0`` for *read* and ``1``
 for *write*. In case of *read write* access, ``1`` is to be used. ``locality``
@@ -3432,7 +3432,7 @@ longer usable unless re-initialized with a call to ``__builtin_va_start`` or
 
 A builtin function for the target-specific ``va_arg`` function-like macro. This
 function returns the value of the next variadic argument to the call. It is
-undefined behavior to call this builtin when there is no next varadic argument
+undefined behavior to call this builtin when there is no next variadic argument
 to retrieve or if the next variadic argument does not have a type compatible
 with the given ``type-name``. The return type of the function is the
 ``type-name`` given as the second argument. It is undefined behavior to call
