@@ -261,7 +261,7 @@ class LoopVectorizationPlanner {
   const TargetLibraryInfo *TLI;
 
   /// Target Transform Info.
-  const TargetTransformInfo *TTI;
+  const TargetTransformInfo &TTI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
@@ -285,7 +285,7 @@ class LoopVectorizationPlanner {
 
 public:
   LoopVectorizationPlanner(Loop *L, LoopInfo *LI, const TargetLibraryInfo *TLI,
-                           const TargetTransformInfo *TTI,
+                           const TargetTransformInfo &TTI,
                            LoopVectorizationLegality *Legal,
                            LoopVectorizationCostModel &CM,
                            InterleavedAccessInfo &IAI,
