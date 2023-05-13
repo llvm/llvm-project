@@ -50316,6 +50316,39 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // InstCombine converts:
+  //    `(-x << C0) & C1`
+  // to
+  //    `(x * (Pow2_Ceil(C1) - (1 << C0))) & C1`
+  // This saves an IR instruction but on x86 the neg/shift version is preferable
+  // so undo the transform.
+
+  if (N0.getOpcode() == ISD::MUL && N0.hasOneUse()) {
+    // TODO: We don't actually need a splat for this, we just need the checks to
+    // hold for each element.
+    ConstantSDNode *N1C = isConstOrConstSplat(N1, /*AllowUndefs*/ true,
+                                              /*AllowTruncation*/ false);
+    ConstantSDNode *N01C =
+        isConstOrConstSplat(N0.getOperand(1), /*AllowUndefs*/ true,
+                            /*AllowTruncation*/ false);
+    if (N1C && N01C) {
+      const APInt &MulC = N01C->getAPIntValue();
+      const APInt &AndC = N1C->getAPIntValue();
+      APInt MulCLowBit = MulC & (-MulC);
+      if (MulC.uge(AndC) && !MulC.isPowerOf2() &&
+          (MulCLowBit + MulC).isPowerOf2()) {
+        SDValue Neg = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT),
+                                  N0.getOperand(0));
+        int32_t MulCLowBitLog = MulCLowBit.exactLogBase2();
+        assert(MulCLowBitLog != -1 &&
+               "Isolated lowbit is somehow not a power of 2!");
+        SDValue Shift = DAG.getNode(ISD::SHL, dl, VT, Neg,
+                                    DAG.getConstant(MulCLowBitLog, dl, VT));
+        return DAG.getNode(ISD::AND, dl, VT, Shift, N1);
+      }
+    }
+  }
+
   if (SDValue V = combineScalarAndWithMaskSetcc(N, DAG, Subtarget))
     return V;
 

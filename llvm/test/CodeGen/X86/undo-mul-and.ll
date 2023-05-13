@@ -6,7 +6,9 @@
 define i32 @mul_and_to_neg_shl_and(i32 %x) {
 ; CHECK-LABEL: mul_and_to_neg_shl_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    imull $56, %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    leal (,%rdi,8), %eax
 ; CHECK-NEXT:    andl $56, %eax
 ; CHECK-NEXT:    retq
   %mul = mul i32 %x, 56
@@ -17,7 +19,9 @@ define i32 @mul_and_to_neg_shl_and(i32 %x) {
 define i32 @mul_and_to_neg_shl_and2(i32 %x) {
 ; CHECK-LABEL: mul_and_to_neg_shl_and2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    imull $56, %edi, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    leal (,%rdi,8), %eax
 ; CHECK-NEXT:    andl $48, %eax
 ; CHECK-NEXT:    retq
   %mul = mul i32 %x, 56
@@ -28,25 +32,26 @@ define i32 @mul_and_to_neg_shl_and2(i32 %x) {
 define <4 x i32> @mul_and_to_neg_shl_and_vec(<4 x i32> %x) {
 ; CHECK-SSE-LABEL: mul_and_to_neg_shl_and_vec:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [56,56,56,56]
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE-NEXT:    psubd %xmm0, %xmm1
+; CHECK-SSE-NEXT:    pslld $3, %xmm1
+; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX1-NEXT:    vpslld $3, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: mul_and_to_neg_shl_and_vec:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpslld $3, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 56, i32 56, i32 56, i32 56>
@@ -143,25 +148,26 @@ define <4 x i32> @mul_and_to_neg_shl_and_vec_todo_no_splat2(<4 x i32> %x) {
 define <4 x i32> @mul_and_to_neg_shl_and_vec_with_undef_mul(<4 x i32> %x) {
 ; CHECK-SSE-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm1 = <56,56,56,u>
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE-NEXT:    psubd %xmm0, %xmm1
+; CHECK-SSE-NEXT:    pslld $3, %xmm1
+; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX1-NEXT:    vpslld $3, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpslld $3, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 56, i32 56, i32 56, i32 undef>
@@ -172,25 +178,26 @@ define <4 x i32> @mul_and_to_neg_shl_and_vec_with_undef_mul(<4 x i32> %x) {
 define <4 x i32> @mul_and_to_neg_shl_and_vec_with_undef_and(<4 x i32> %x) {
 ; CHECK-SSE-LABEL: mul_and_to_neg_shl_and_vec_with_undef_and:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [56,56,56,56]
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm0
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; CHECK-SSE-NEXT:    pmuludq %xmm1, %xmm2
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
-; CHECK-SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE-NEXT:    psubd %xmm0, %xmm1
+; CHECK-SSE-NEXT:    pslld $3, %xmm1
+; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
 ; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec_with_undef_and:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX1-NEXT:    vpslld $3, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: mul_and_to_neg_shl_and_vec_with_undef_and:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpslld $3, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %mul = mul <4 x i32> %x, <i32 56, i32 56, i32 56, i32 56>
@@ -201,39 +208,20 @@ define <4 x i32> @mul_and_to_neg_shl_and_vec_with_undef_and(<4 x i32> %x) {
 define <16 x i8> @mul_and_to_neg_shl_and_vec_with_undef_mul_and(<16 x i8> %x) {
 ; CHECK-SSE-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul_and:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; CHECK-SSE-NEXT:    pand %xmm2, %xmm1
-; CHECK-SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; CHECK-SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    pand %xmm2, %xmm0
-; CHECK-SSE-NEXT:    packuswb %xmm1, %xmm0
-; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE-NEXT:    psubb %xmm0, %xmm1
+; CHECK-SSE-NEXT:    psllw $2, %xmm1
+; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul_and:
-; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpunpckhbw {{.*#+}} xmm1 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; CHECK-AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; CHECK-AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    retq
-;
-; CHECK-AVX512-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul_and:
-; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; CHECK-AVX512-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpmovwb %ymm0, %xmm0
-; CHECK-AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    vzeroupper
-; CHECK-AVX512-NEXT:    retq
+; CHECK-AVX-LABEL: mul_and_to_neg_shl_and_vec_with_undef_mul_and:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX-NEXT:    vpsubb %xmm0, %xmm1, %xmm0
+; CHECK-AVX-NEXT:    vpsllw $2, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    retq
   %mul = mul <16 x i8> %x, <i8 12, i8 12, i8 12, i8 12, i8 undef, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12, i8 12>
   %and = and <16 x i8> %mul, <i8 11, i8 undef, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11, i8 11>
   ret <16 x i8> %and
@@ -272,5 +260,3 @@ define i32 @mul_and_to_neg_shl_and_fail_mask_to_large(i32 %x) {
   %and = and i32 %mul, 120
   ret i32 %and
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-AVX: {{.*}}
