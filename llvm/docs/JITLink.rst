@@ -422,7 +422,7 @@ JITLink provides a generic link algorithm which can be extended / modified at
 certain points by the introduction of JITLink :ref:`passes`.
 
 At the end of each phase the linker packages its state into a *continuation*
-and calls the ``JITLinkContext`` object to perform a (potentialy high-latency)
+and calls the ``JITLinkContext`` object to perform a (potentially high-latency)
 asynchronous operation: allocating memory, resolving external symbols, and
 finally transferring linked memory to the executing process.
 
@@ -721,7 +721,7 @@ and pass it to the ``OnFinalized`` callback.
 Finalized allocations (represented by ``FinalizedAlloc`` objects) can be
 deallocated by calling the ``JITLinkMemoryManager::dealloc`` method. This method
 takes a vector of ``FinalizedAlloc`` objects, since it is common to deallocate
-multiple objects at the same time and this allows us to batch these requsets for
+multiple objects at the same time and this allows us to batch these requests for
 transmission to the executing process.
 
 JITLink provides a simple in-process implementation of this interface:

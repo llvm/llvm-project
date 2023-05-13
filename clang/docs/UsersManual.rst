@@ -810,7 +810,7 @@ compilations steps.
 
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
-  cleared, new data is appended to it, thus making posible to accumulate build
+  cleared, new data is appended to it, thus making possible to accumulate build
   statistics.
 
   You can also use environment variables to control the process statistics reporting.
@@ -3954,7 +3954,7 @@ mapping of default visibility to an explicit shared object export
 * ``-mdefault-visibility-export-mapping=none``: no additional export
   information is created for entities with default visibility.
 * ``-mdefault-visibility-export-mapping=explicit``: mark entities for export
-  if they have explict (e.g. via an attribute) default visibility from the
+  if they have explicit (e.g. via an attribute) default visibility from the
   source, including RTTI.
 * ``-mdefault-visibility-export-mapping=all``: set XCOFF exported visibility
   for all entities with default visibility from any source. This gives a
