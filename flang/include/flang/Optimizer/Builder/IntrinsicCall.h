@@ -98,6 +98,11 @@ mlir::Value genMax(fir::FirOpBuilder &, mlir::Location,
 mlir::Value genMin(fir::FirOpBuilder &, mlir::Location,
                    llvm::ArrayRef<mlir::Value> args);
 
+/// Generate Complex divide with the given expected
+/// result type.
+mlir::Value genDivC(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Type resultType, mlir::Value x, mlir::Value y);
+
 /// Generate power function x**y with the given expected
 /// result type.
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,

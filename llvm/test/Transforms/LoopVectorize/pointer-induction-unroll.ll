@@ -27,9 +27,8 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; STRIDED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[TMP2:%.*]] = sext i32 [[MUL]] to i64
-; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 4294967264, [[TMP2]]
-; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP3]]
+; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 4294967264, [[TMP1]]
+; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

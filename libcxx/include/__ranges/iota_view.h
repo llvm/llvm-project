@@ -336,7 +336,7 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, __sentinel __last)
-      requires(!same_as<_Start, _BoundSentinel> && !same_as<_Start, unreachable_sentinel_t>)
+      requires(!same_as<_Start, _BoundSentinel> && !same_as<_BoundSentinel, unreachable_sentinel_t>)
     : iota_view(std::move(__first.__value_), std::move(__last.__bound_sentinel_)) {}
 
     _LIBCPP_HIDE_FROM_ABI

@@ -10,11 +10,10 @@
 #ifndef _PSTL_EXECUTION_POLICY_DEFS_H
 #define _PSTL_EXECUTION_POLICY_DEFS_H
 
+#include <__config>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
-
-#include "pstl_config.h"
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 

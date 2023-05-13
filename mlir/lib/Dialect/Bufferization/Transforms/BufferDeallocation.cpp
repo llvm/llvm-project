@@ -280,7 +280,7 @@ private:
         // defined in a non-dominated block or it is defined in the same block
         // but the current value is not dominated by the source value.
         if (!dominators.dominates(definingBlock, parentBlock) ||
-            (definingBlock == parentBlock && value.isa<BlockArgument>())) {
+            (definingBlock == parentBlock && isa<BlockArgument>(value))) {
           toProcess.emplace_back(value, parentBlock);
           valuesToFree.insert(value);
         } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
@@ -307,8 +307,8 @@ private:
 
     // Add new allocs and additional clone operations.
     for (Value value : valuesToFree) {
-      if (failed(value.isa<BlockArgument>()
-                     ? introduceBlockArgCopy(value.cast<BlockArgument>())
+      if (failed(isa<BlockArgument>(value)
+                     ? introduceBlockArgCopy(cast<BlockArgument>(value))
                      : introduceValueCopyForRegionResult(value)))
         return failure();
 

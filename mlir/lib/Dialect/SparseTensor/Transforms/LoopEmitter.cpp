@@ -350,7 +350,7 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
   //     on positions.
   for (TensorId t = 0, numTensors = getNumTensors(); t < numTensors; t++) {
     const Value tensor = tensors[t];
-    const auto rtp = tensor.getType().dyn_cast<RankedTensorType>();
+    const auto rtp = dyn_cast<RankedTensorType>(tensor.getType());
     if (!rtp)
       // Skips only scalar, zero ranked tensor still need to be bufferized and
       // (probably) filled with zeros by users.
@@ -432,7 +432,7 @@ void LoopEmitter::initializeLoopEmit(OpBuilder &builder, Location loc,
   Type indexType = builder.getIndexType();
   Value c0 = constantZero(builder, loc, indexType);
   for (TensorId t = 0, e = tensors.size(); t < e; t++) {
-    auto rtp = tensors[t].getType().dyn_cast<RankedTensorType>();
+    auto rtp = dyn_cast<RankedTensorType>(tensors[t].getType());
     if (!rtp)
       continue;
 

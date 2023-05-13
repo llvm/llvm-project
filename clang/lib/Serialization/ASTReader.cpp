@@ -4507,18 +4507,16 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     }
   }
 
-  if (PP.getHeaderSearchInfo()
-          .getHeaderSearchOpts()
-          .ModulesValidateOncePerBuildSession) {
+  HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  if (HSOpts.ModulesValidateOncePerBuildSession) {
     // Now we are certain that the module and all modules it depends on are
-    // up to date.  Create or update timestamp files for modules that are
-    // located in the module cache (not for PCH files that could be anywhere
-    // in the filesystem).
+    // up-to-date. For implicitly-built module files, ensure the corresponding
+    // timestamp files are up-to-date in this build session.
     for (unsigned I = 0, N = Loaded.size(); I != N; ++I) {
       ImportedModule &M = Loaded[I];
-      if (M.Mod->Kind == MK_ImplicitModule) {
+      if (M.Mod->Kind == MK_ImplicitModule &&
+          M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
         updateModuleTimestamp(*M.Mod);
-      }
     }
   }
 
@@ -5091,7 +5089,8 @@ void ASTReader::InitializeContext() {
 }
 
 void ASTReader::finalizeForWriting() {
-  // Nothing to do for now.
+  assert(!NumCurrentElementsDeserializing && "deserializing when reading");
+  FinalizedForWriting = true;
 }
 
 /// Reads and return the signature record from \p PCH's control block, or
@@ -7330,6 +7329,12 @@ Decl *ASTReader::GetExternalDecl(uint32_t ID) {
 }
 
 void ASTReader::CompleteRedeclChain(const Decl *D) {
+  // We don't need to complete declaration chain after we start writing.
+  // We loses more chances to find ODR violation in the writing place and
+  // we get more efficient writing process.
+  if (FinalizedForWriting)
+    return;
+
   if (NumCurrentElementsDeserializing) {
     // We arrange to not care about the complete redeclaration chain while we're
     // deserializing. Just remember that the AST has marked this one as complete

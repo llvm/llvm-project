@@ -68,17 +68,18 @@ unsigned ArrayType::getArrayStride() const { return getImpl()->stride; }
 
 void ArrayType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                               std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
 }
 
 void ArrayType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  llvm::cast<SPIRVType>(getElementType())
+      .getCapabilities(capabilities, storage);
 }
 
 std::optional<int64_t> ArrayType::getSizeInBytes() {
-  auto elementType = getElementType().cast<SPIRVType>();
+  auto elementType = llvm::cast<SPIRVType>(getElementType());
   std::optional<int64_t> size = elementType.getSizeInBytes();
   if (!size)
     return std::nullopt;
@@ -90,11 +91,11 @@ std::optional<int64_t> ArrayType::getSizeInBytes() {
 //===----------------------------------------------------------------------===//
 
 bool CompositeType::classof(Type type) {
-  if (auto vectorType = type.dyn_cast<VectorType>())
+  if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return isValid(vectorType);
-  return type.isa<spirv::ArrayType, spirv::CooperativeMatrixNVType,
-                  spirv::JointMatrixINTELType, spirv::MatrixType,
-                  spirv::RuntimeArrayType, spirv::StructType>();
+  return llvm::isa<spirv::ArrayType, spirv::CooperativeMatrixNVType,
+                   spirv::JointMatrixINTELType, spirv::MatrixType,
+                   spirv::RuntimeArrayType, spirv::StructType>(type);
 }
 
 bool CompositeType::isValid(VectorType type) {
@@ -108,7 +109,7 @@ bool CompositeType::isValid(VectorType type) {
   default:
     return false;
   }
-  return type.getRank() == 1 && type.getElementType().isa<ScalarType>();
+  return type.getRank() == 1 && llvm::isa<ScalarType>(type.getElementType());
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -160,8 +161,8 @@ void CompositeType::getExtensions(
             MatrixType, RuntimeArrayType, StructType>(
           [&](auto type) { type.getExtensions(extensions, storage); })
       .Case<VectorType>([&](VectorType type) {
-        return type.getElementType().cast<ScalarType>().getExtensions(
-            extensions, storage);
+        return llvm::cast<ScalarType>(type.getElementType())
+            .getExtensions(extensions, storage);
       })
       .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
@@ -180,8 +181,8 @@ void CompositeType::getCapabilities(
           ArrayRef<Capability> ref(caps, std::size(caps));
           capabilities.push_back(ref);
         }
-        return type.getElementType().cast<ScalarType>().getCapabilities(
-            capabilities, storage);
+        return llvm::cast<ScalarType>(type.getElementType())
+            .getCapabilities(capabilities, storage);
       })
       .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
@@ -193,7 +194,7 @@ std::optional<int64_t> CompositeType::getSizeInBytes() {
     return structType.getSizeInBytes();
   if (auto vectorType = dyn_cast<VectorType>()) {
     std::optional<int64_t> elementSize =
-        vectorType.getElementType().cast<ScalarType>().getSizeInBytes();
+        llvm::cast<ScalarType>(vectorType.getElementType()).getSizeInBytes();
     if (!elementSize)
       return std::nullopt;
     return *elementSize * vectorType.getNumElements();
@@ -249,7 +250,7 @@ unsigned CooperativeMatrixNVType::getColumns() const {
 void CooperativeMatrixNVType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
   static const Extension exts[] = {Extension::SPV_NV_cooperative_matrix};
   ArrayRef<Extension> ref(exts, std::size(exts));
   extensions.push_back(ref);
@@ -258,7 +259,8 @@ void CooperativeMatrixNVType::getExtensions(
 void CooperativeMatrixNVType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  llvm::cast<SPIRVType>(getElementType())
+      .getCapabilities(capabilities, storage);
   static const Capability caps[] = {Capability::CooperativeMatrixNV};
   ArrayRef<Capability> ref(caps, std::size(caps));
   capabilities.push_back(ref);
@@ -317,7 +319,7 @@ MatrixLayout JointMatrixINTELType::getMatrixLayout() const {
 void JointMatrixINTELType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
   static const Extension exts[] = {Extension::SPV_INTEL_joint_matrix};
   ArrayRef<Extension> ref(exts, std::size(exts));
   extensions.push_back(ref);
@@ -326,7 +328,8 @@ void JointMatrixINTELType::getExtensions(
 void JointMatrixINTELType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  llvm::cast<SPIRVType>(getElementType())
+      .getCapabilities(capabilities, storage);
   static const Capability caps[] = {Capability::JointMatrixINTEL};
   ArrayRef<Capability> ref(caps, std::size(caps));
   capabilities.push_back(ref);
@@ -489,8 +492,8 @@ void PointerType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                 std::optional<StorageClass> storage) {
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
-  getPointeeType().cast<SPIRVType>().getExtensions(extensions,
-                                                   getStorageClass());
+  llvm::cast<SPIRVType>(getPointeeType())
+      .getExtensions(extensions, getStorageClass());
 
   if (auto scExts = spirv::getExtensions(getStorageClass()))
     extensions.push_back(*scExts);
@@ -501,8 +504,8 @@ void PointerType::getCapabilities(
     std::optional<StorageClass> storage) {
   // Use this pointer type's storage class because this pointer indicates we are
   // using the pointee type in that specific storage class.
-  getPointeeType().cast<SPIRVType>().getCapabilities(capabilities,
-                                                     getStorageClass());
+  llvm::cast<SPIRVType>(getPointeeType())
+      .getCapabilities(capabilities, getStorageClass());
 
   if (auto scCaps = spirv::getCapabilities(getStorageClass()))
     capabilities.push_back(*scCaps);
@@ -547,7 +550,7 @@ unsigned RuntimeArrayType::getArrayStride() const { return getImpl()->stride; }
 void RuntimeArrayType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     std::optional<StorageClass> storage) {
-  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+  llvm::cast<SPIRVType>(getElementType()).getExtensions(extensions, storage);
 }
 
 void RuntimeArrayType::getCapabilities(
@@ -558,7 +561,8 @@ void RuntimeArrayType::getCapabilities(
     ArrayRef<Capability> ref(caps, std::size(caps));
     capabilities.push_back(ref);
   }
-  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  llvm::cast<SPIRVType>(getElementType())
+      .getCapabilities(capabilities, storage);
 }
 
 //===----------------------------------------------------------------------===//
@@ -566,10 +570,10 @@ void RuntimeArrayType::getCapabilities(
 //===----------------------------------------------------------------------===//
 
 bool ScalarType::classof(Type type) {
-  if (auto floatType = type.dyn_cast<FloatType>()) {
+  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
     return isValid(floatType);
   }
-  if (auto intType = type.dyn_cast<IntegerType>()) {
+  if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
     return isValid(intType);
   }
   return false;
@@ -723,9 +727,9 @@ bool SPIRVType::classof(Type type) {
   // Allow SPIR-V dialect types
   if (llvm::isa<SPIRVDialect>(type.getDialect()))
     return true;
-  if (type.isa<ScalarType>())
+  if (llvm::isa<ScalarType>(type))
     return true;
-  if (auto vectorType = type.dyn_cast<VectorType>())
+  if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return CompositeType::isValid(vectorType);
   return false;
 }
@@ -815,7 +819,7 @@ Type SampledImageType::getImageType() const { return getImpl()->imageType; }
 LogicalResult
 SampledImageType::verify(function_ref<InFlightDiagnostic()> emitError,
                          Type imageType) {
-  if (!imageType.isa<ImageType>())
+  if (!llvm::isa<ImageType>(imageType))
     return emitError() << "expected image type";
 
   return success();
@@ -824,13 +828,13 @@ SampledImageType::verify(function_ref<InFlightDiagnostic()> emitError,
 void SampledImageType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     std::optional<StorageClass> storage) {
-  getImageType().cast<ImageType>().getExtensions(extensions, storage);
+  llvm::cast<ImageType>(getImageType()).getExtensions(extensions, storage);
 }
 
 void SampledImageType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
-  getImageType().cast<ImageType>().getCapabilities(capabilities, storage);
+  llvm::cast<ImageType>(getImageType()).getCapabilities(capabilities, storage);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1125,14 +1129,14 @@ StructType::trySetBody(ArrayRef<Type> memberTypes,
 void StructType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                std::optional<StorageClass> storage) {
   for (Type elementType : getElementTypes())
-    elementType.cast<SPIRVType>().getExtensions(extensions, storage);
+    llvm::cast<SPIRVType>(elementType).getExtensions(extensions, storage);
 }
 
 void StructType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     std::optional<StorageClass> storage) {
   for (Type elementType : getElementTypes())
-    elementType.cast<SPIRVType>().getCapabilities(capabilities, storage);
+    llvm::cast<SPIRVType>(elementType).getCapabilities(capabilities, storage);
 }
 
 llvm::hash_code spirv::hash_value(
@@ -1186,7 +1190,7 @@ LogicalResult MatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "matrix columns must be vectors of floats";
 
   /// The underlying vectors (columns) must be of size 2, 3, or 4
-  ArrayRef<int64_t> columnShape = columnType.cast<VectorType>().getShape();
+  ArrayRef<int64_t> columnShape = llvm::cast<VectorType>(columnType).getShape();
   if (columnShape.size() != 1)
     return emitError() << "matrix columns must be 1D vectors";
 
@@ -1198,8 +1202,8 @@ LogicalResult MatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 /// Returns true if the matrix elements are vectors of float elements
 bool MatrixType::isValidColumnType(Type columnType) {
-  if (auto vectorType = columnType.dyn_cast<VectorType>()) {
-    if (vectorType.getElementType().isa<FloatType>())
+  if (auto vectorType = llvm::dyn_cast<VectorType>(columnType)) {
+    if (llvm::isa<FloatType>(vectorType.getElementType()))
       return true;
   }
   return false;
@@ -1208,13 +1212,13 @@ bool MatrixType::isValidColumnType(Type columnType) {
 Type MatrixType::getColumnType() const { return getImpl()->columnType; }
 
 Type MatrixType::getElementType() const {
-  return getImpl()->columnType.cast<VectorType>().getElementType();
+  return llvm::cast<VectorType>(getImpl()->columnType).getElementType();
 }
 
 unsigned MatrixType::getNumColumns() const { return getImpl()->columnCount; }
 
 unsigned MatrixType::getNumRows() const {
-  return getImpl()->columnType.cast<VectorType>().getShape()[0];
+  return llvm::cast<VectorType>(getImpl()->columnType).getShape()[0];
 }
 
 unsigned MatrixType::getNumElements() const {
@@ -1223,7 +1227,7 @@ unsigned MatrixType::getNumElements() const {
 
 void MatrixType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                                std::optional<StorageClass> storage) {
-  getColumnType().cast<SPIRVType>().getExtensions(extensions, storage);
+  llvm::cast<SPIRVType>(getColumnType()).getExtensions(extensions, storage);
 }
 
 void MatrixType::getCapabilities(
@@ -1235,7 +1239,7 @@ void MatrixType::getCapabilities(
     capabilities.push_back(ref);
   }
   // Add any capabilities associated with the underlying vectors (i.e., columns)
-  getColumnType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  llvm::cast<SPIRVType>(getColumnType()).getCapabilities(capabilities, storage);
 }
 
 //===----------------------------------------------------------------------===//

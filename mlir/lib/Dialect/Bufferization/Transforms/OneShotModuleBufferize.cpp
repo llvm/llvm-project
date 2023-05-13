@@ -109,9 +109,9 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
 
   SmallVector<int64_t> equivBbArgs;
   if (op->hasAttr(kEquivalentArgsAttr)) {
-    auto attr = op->getAttr(kEquivalentArgsAttr).cast<ArrayAttr>();
+    auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
     equivBbArgs = llvm::to_vector<4>(llvm::map_range(attr, [](Attribute a) {
-      return a.cast<IntegerAttr>().getValue().getSExtValue();
+      return cast<IntegerAttr>(a).getValue().getSExtValue();
     }));
   } else {
     equivBbArgs.append(op->getNumOperands(), -1);
@@ -132,10 +132,10 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
     // return value may alias with any tensor bbArg.
     FunctionType type = funcOp.getFunctionType();
     for (const auto &inputIt : llvm::enumerate(type.getInputs())) {
-      if (!inputIt.value().isa<TensorType>())
+      if (!isa<TensorType>(inputIt.value()))
         continue;
       for (const auto &resultIt : llvm::enumerate(type.getResults())) {
-        if (!resultIt.value().isa<TensorType>())
+        if (!isa<TensorType>(resultIt.value()))
           continue;
         int64_t returnIdx = resultIt.index();
         int64_t bbArgIdx = inputIt.index();
@@ -150,9 +150,9 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
   assert(returnOp && "expected func with single return op");
 
   for (OpOperand &returnVal : returnOp->getOpOperands())
-    if (returnVal.get().getType().isa<RankedTensorType>())
+    if (isa<RankedTensorType>(returnVal.get().getType()))
       for (BlockArgument bbArg : funcOp.getArguments())
-        if (bbArg.getType().isa<RankedTensorType>()) {
+        if (isa<RankedTensorType>(bbArg.getType())) {
           int64_t returnIdx = returnVal.getOperandNumber();
           int64_t bbArgIdx = bbArg.getArgNumber();
           if (state.areEquivalentBufferizedValues(returnVal.get(), bbArg)) {
@@ -193,7 +193,7 @@ funcOpBbArgReadWriteAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
   for (int64_t idx = 0, e = funcOp.getFunctionType().getNumInputs(); idx < e;
        ++idx) {
     // Skip non-tensor arguments.
-    if (!funcOp.getFunctionType().getInput(idx).isa<TensorType>())
+    if (!isa<TensorType>(funcOp.getFunctionType().getInput(idx)))
       continue;
     bool isRead;
     bool isWritten;

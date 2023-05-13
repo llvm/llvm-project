@@ -302,7 +302,7 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
   }
   // Block argument case.
   Block *block1 = op.getBlock();
-  Block *block2 = operand.cast<BlockArgument>().getOwner();
+  Block *block2 = llvm::cast<BlockArgument>(operand).getOwner();
   Region *region1 = block1->getParent();
   Region *region2 = block2->getParent();
   Location loc = UnknownLoc::get(op.getContext());

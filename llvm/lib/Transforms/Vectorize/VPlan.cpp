@@ -277,7 +277,7 @@ void VPTransformState::setDebugLocFromInst(const Value *V) {
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
   if (DIL && Inst->getFunction()->shouldEmitDebugInfoForProfiling() &&
-      !isa<DbgInfoIntrinsic>(Inst) && !EnableFSDiscriminator) {
+      !Inst->isDebugOrPseudoInst() && !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());

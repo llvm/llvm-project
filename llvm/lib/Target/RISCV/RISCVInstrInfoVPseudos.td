@@ -472,10 +472,12 @@ def RISCVVIntrinsicsTable : GenericTable {
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }
 
-class RISCVMaskedPseudo<bits<4> MaskIdx, bit HasTU = true> {
+class RISCVMaskedPseudo<bits<4> MaskIdx, bit HasTU = true, bit IsTernary = false> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
-  Pseudo UnmaskedTUPseudo = !if(HasTU, !cast<Pseudo>(!subst("_MASK", "", NAME # "_TU")), MaskedPseudo);
+  Pseudo UnmaskedTUPseudo = !cond(HasTU : !cast<Pseudo>(!subst("_MASK", "", NAME # "_TU")),
+                                  IsTernary : UnmaskedPseudo,
+                                  true  :  MaskedPseudo);
   bits<4> MaskOpIdx = MaskIdx;
 }
 
@@ -3192,7 +3194,8 @@ multiclass VPseudoTernaryWithPolicy<VReg RetClass,
   let VLMul = MInfo.value in {
     let isCommutable = Commutable in
     def "_" # MInfo.MX : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU*/ false, /*IsTernary*/true>;
   }
 }
 
@@ -4407,16 +4410,6 @@ multiclass VPatUnaryS_M<string intrinsic_name,
                       (mti.Mask VR:$rs1), (mti.Mask V0), VLOpFrag)),
                       (!cast<Instruction>(inst#"_M_"#mti.BX#"_MASK") $rs1,
                       (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
-  }
-}
-
-multiclass VPatUnaryV_V_AnyMask<string intrinsic, string instruction,
-                                list<VTypeInfo> vtilist> {
-  foreach vti = vtilist in {
-    def : VPatUnaryAnyMask<intrinsic, instruction, "VM",
-                           vti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, vti.RegClass,
-                           vti.RegClass>;
   }
 }
 

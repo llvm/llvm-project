@@ -259,7 +259,7 @@ void DiagnosticEngineImpl::emit(Diagnostic &&diag) {
     return;
 
   auto &os = llvm::errs();
-  if (!diag.getLocation().isa<UnknownLoc>())
+  if (!llvm::isa<UnknownLoc>(diag.getLocation()))
     os << diag.getLocation() << ": ";
   os << "error: ";
 
@@ -448,7 +448,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   if (!fileLoc) {
     std::string str;
     llvm::raw_string_ostream strOS(str);
-    if (!loc.isa<UnknownLoc>())
+    if (!llvm::isa<UnknownLoc>(loc))
       strOS << loc << ": ";
     strOS << message;
     return mgr.PrintMessage(os, SMLoc(), getDiagKind(kind), strOS.str());
@@ -983,7 +983,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
       // Print each diagnostic with the format:
       //   "<location>: <kind>: <msg>"
-      if (!diag.getLocation().isa<UnknownLoc>())
+      if (!llvm::isa<UnknownLoc>(diag.getLocation()))
         os << diag.getLocation() << ": ";
       switch (diag.getSeverity()) {
       case DiagnosticSeverity::Error:

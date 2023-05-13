@@ -554,12 +554,12 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
 
   uint64_t Units = 1024;
 
-  if (SizeString.endswith_insensitive("kb"))
+  if (SizeString.ends_with_insensitive("kb"))
     SizeString = SizeString.drop_back(2).rtrim();
-  else if (SizeString.endswith_insensitive("mb")) {
+  else if (SizeString.ends_with_insensitive("mb")) {
     Units = 1024 * 1024;
     SizeString = SizeString.drop_back(2).rtrim();
-  } else if (SizeString.endswith_insensitive("gb")) {
+  } else if (SizeString.ends_with_insensitive("gb")) {
     Units = 1024 * 1024 * 1024;
     SizeString = SizeString.drop_back(2).rtrim();
   }
@@ -1008,7 +1008,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     }
   } else if (TT.isOSBinFormatCOFF() && !OrcRuntime.empty()) {
     auto LoadDynLibrary = [&, this](JITDylib &JD, StringRef DLLName) -> Error {
-      if (!DLLName.endswith_insensitive(".dll"))
+      if (!DLLName.ends_with_insensitive(".dll"))
         return make_error<StringError>("DLLName not ending with .dll",
                                        inconvertibleErrorCode());
       return loadAndLinkDynamicLibrary(JD, DLLName);
@@ -1648,7 +1648,7 @@ static Error addLibraries(Session &S,
     for (auto FileName : (*G)->getImportedDynamicLibraries()) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
-      if (!FileNameRef.endswith_insensitive(".dll"))
+      if (!FileNameRef.ends_with_insensitive(".dll"))
         return make_error<StringError>(
             "COFF Imported library not ending with dll extension?",
             inconvertibleErrorCode());

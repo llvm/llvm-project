@@ -316,7 +316,7 @@ struct UnrollContractionPattern
     auto targetShape = getTargetShape(options, contractOp);
     if (!targetShape)
       return failure();
-    auto dstVecType = contractOp.getResultType().cast<VectorType>();
+    auto dstVecType = cast<VectorType>(contractOp.getResultType());
     SmallVector<int64_t> originalSize = *contractOp.getShapeForUnroll();
 
     Location loc = contractOp.getLoc();
@@ -491,7 +491,7 @@ struct UnrollElementwisePattern : public RewritePattern {
     auto targetShape = getTargetShape(options, op);
     if (!targetShape)
       return failure();
-    auto dstVecType = op->getResult(0).getType().cast<VectorType>();
+    auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
     SmallVector<int64_t> ratio = *computeShapeRatio(originalSize, *targetShape);
@@ -512,7 +512,7 @@ struct UnrollElementwisePattern : public RewritePattern {
           getVectorOffset(ratioStrides, i, *targetShape);
       SmallVector<Value> extractOperands;
       for (OpOperand &operand : op->getOpOperands()) {
-        auto vecType = operand.get().getType().template dyn_cast<VectorType>();
+        auto vecType = dyn_cast<VectorType>(operand.get().getType());
         if (!vecType) {
           extractOperands.push_back(operand.get());
           continue;

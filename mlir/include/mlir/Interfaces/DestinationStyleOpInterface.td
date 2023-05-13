@@ -201,7 +201,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == $_op.getOperation());
-        return !opOperand->get().getType().template isa<ShapedType>();
+        return !::llvm::isa<ShapedType>(opOperand->get().getType());
       }]
     >,
     InterfaceMethod<
@@ -245,7 +245,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
           ::llvm::all_of($_op->getOpOperands(),
             [&](::mlir::OpOperand &opOperand) {
               return isScalar(&opOperand) ||
-                     opOperand.get().getType().template isa<::mlir::MemRefType>();
+                     ::llvm::isa<::mlir::MemRefType>(opOperand.get().getType());
             });
       }]
     >,
@@ -259,7 +259,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
         return ::llvm::all_of($_op->getOpOperands(),
           [&](::mlir::OpOperand &opOperand) {
             return isScalar(&opOperand) ||
-                   opOperand.get().getType().template isa<::mlir::RankedTensorType>();
+                   ::llvm::isa<::mlir::RankedTensorType>(opOperand.get().getType());
           });
       }]
     >

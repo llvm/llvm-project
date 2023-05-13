@@ -5234,6 +5234,37 @@ InputInfoList Driver::BuildJobsForAction(
   return Result;
 }
 
+static void handleTimeTrace(Compilation &C, const ArgList &Args,
+                            const JobAction *JA, const char *BaseInput,
+                            const InputInfo &Result) {
+  Arg *A =
+      Args.getLastArg(options::OPT_ftime_trace, options::OPT_ftime_trace_EQ);
+  if (!A)
+    return;
+  SmallString<128> Path;
+  if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
+    Path = A->getValue();
+    if (llvm::sys::fs::is_directory(Path)) {
+      SmallString<128> Tmp(Result.getFilename());
+      llvm::sys::path::replace_extension(Tmp, "json");
+      llvm::sys::path::append(Path, llvm::sys::path::filename(Tmp));
+    }
+  } else {
+    if (Arg *DumpDir = Args.getLastArgNoClaim(options::OPT_dumpdir)) {
+      // The trace file is ${dumpdir}${basename}.json. Note that dumpdir may not
+      // end with a path separator.
+      Path = DumpDir->getValue();
+      Path += llvm::sys::path::filename(BaseInput);
+    } else {
+      Path = Result.getFilename();
+    }
+    llvm::sys::path::replace_extension(Path, "json");
+  }
+  const char *ResultFile = C.getArgs().MakeArgString(Path);
+  C.addTimeTraceFile(ResultFile, JA);
+  C.addResultFile(ResultFile, JA);
+}
+
 InputInfoList Driver::BuildJobsForActionNoCache(
     Compilation &C, const Action *A, const ToolChain *TC, StringRef BoundArch,
     bool AtTopLevel, bool MultipleArchs, const char *LinkingOutput,
@@ -5483,6 +5514,8 @@ InputInfoList Driver::BuildJobsForActionNoCache(
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
                        BaseInput);
+    if (T->canEmitIR() && OffloadingPrefix.empty())
+      handleTimeTrace(C, Args, JA, BaseInput, Result);
   }
 
   if (CCCPrintBindings && !CCGenDiagnostics) {

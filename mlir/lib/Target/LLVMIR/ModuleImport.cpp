@@ -135,7 +135,7 @@ static SetVector<llvm::BasicBlock *>
 getTopologicallySortedBlocks(llvm::Function *func) {
   SetVector<llvm::BasicBlock *> blocks;
   for (llvm::BasicBlock &bb : *func) {
-    if (blocks.count(&bb) == 0) {
+    if (!blocks.contains(&bb)) {
       llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(&bb);
       blocks.insert(traversal.begin(), traversal.end());
     }
@@ -174,7 +174,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   workList.push_back(node);
   while (!workList.empty()) {
     const llvm::MDNode *current = workList.pop_back_val();
-    if (tbaaMapping.count(current))
+    if (tbaaMapping.contains(current))
       continue;
     // Allow cycles in TBAA metadata. Just import it as-is,
     // and diagnose the problem during LLVMIR dialect verification.
@@ -458,7 +458,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
         return emitError(loc) << "unsupported alias domain node: "
                               << diagMD(domain, llvmModule.get());
 
-      if (aliasScopeMapping.count(scope))
+      if (aliasScopeMapping.contains(scope))
         continue;
 
       // Set the insertion point to the end of the global metadata operation.
@@ -621,144 +621,193 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
   iface->setAttr(iface.getFastmathAttrName(), attr);
 }
 
-// We only need integers, floats, doubles, and vectors and tensors thereof for
-// attributes. Scalar and vector types are converted to the standard
-// equivalents. Array types are converted to ranked tensors; nested array types
-// are converted to multi-dimensional tensors or vectors, depending on the
-// innermost type being a scalar or a vector.
-Type ModuleImport::getStdTypeForAttr(Type type) {
-  if (!type)
-    return nullptr;
-
-  if (type.isa<IntegerType, FloatType>())
-    return type;
-
-  // LLVM vectors can only contain scalars.
-  if (LLVM::isCompatibleVectorType(type)) {
-    llvm::ElementCount numElements = LLVM::getVectorNumElements(type);
-    if (numElements.isScalable()) {
-      emitError(UnknownLoc::get(context)) << "scalable vectors not supported";
-      return nullptr;
-    }
-    Type elementType = getStdTypeForAttr(LLVM::getVectorElementType(type));
-    if (!elementType)
-      return nullptr;
-    return VectorType::get(numElements.getKnownMinValue(), elementType);
-  }
-
-  // LLVM arrays can contain other arrays or vectors.
-  if (auto arrayType = type.dyn_cast<LLVMArrayType>()) {
-    // Recover the nested array shape.
-    SmallVector<int64_t, 4> shape;
-    shape.push_back(arrayType.getNumElements());
-    while (arrayType.getElementType().isa<LLVMArrayType>()) {
-      arrayType = arrayType.getElementType().cast<LLVMArrayType>();
-      shape.push_back(arrayType.getNumElements());
-    }
-
-    // If the innermost type is a vector, use the multi-dimensional vector as
-    // attribute type.
-    if (LLVM::isCompatibleVectorType(arrayType.getElementType())) {
-      llvm::ElementCount numElements =
-          LLVM::getVectorNumElements(arrayType.getElementType());
-      if (numElements.isScalable()) {
-        emitError(UnknownLoc::get(context)) << "scalable vectors not supported";
-        return nullptr;
-      }
-      shape.push_back(numElements.getKnownMinValue());
-
-      Type elementType = getStdTypeForAttr(
-          LLVM::getVectorElementType(arrayType.getElementType()));
-      if (!elementType)
-        return nullptr;
-      return VectorType::get(shape, elementType);
-    }
-
-    // Otherwise use a tensor.
-    Type elementType = getStdTypeForAttr(arrayType.getElementType());
-    if (!elementType)
-      return nullptr;
-    return RankedTensorType::get(shape, elementType);
-  }
-
-  return nullptr;
+/// Returns if `type` is a scalar integer or floating-point type.
+static bool isScalarType(Type type) {
+  return isa<IntegerType, FloatType>(type);
 }
 
-// Get the given constant as an attribute. Not all constants can be represented
-// as attributes.
-Attribute ModuleImport::getConstantAsAttr(llvm::Constant *value) {
-  if (auto *ci = dyn_cast<llvm::ConstantInt>(value))
+/// Returns `type` if it is a builtin integer or floating-point vector type that
+/// can be used to create an attribute or nullptr otherwise. If provided,
+/// `arrayShape` is added to the shape of the vector to create an attribute that
+/// matches an array of vectors.
+static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
+  if (!LLVM::isCompatibleVectorType(type))
+    return {};
+
+  llvm::ElementCount numElements = LLVM::getVectorNumElements(type);
+  if (numElements.isScalable()) {
+    emitError(UnknownLoc::get(type.getContext()))
+        << "scalable vectors not supported";
+    return {};
+  }
+
+  // An LLVM dialect vector can only contain scalars.
+  Type elementType = LLVM::getVectorElementType(type);
+  if (!isScalarType(elementType))
+    return {};
+
+  SmallVector<int64_t> shape(arrayShape.begin(), arrayShape.end());
+  shape.push_back(numElements.getKnownMinValue());
+  return VectorType::get(shape, elementType);
+}
+
+Type ModuleImport::getBuiltinTypeForAttr(Type type) {
+  if (!type)
+    return {};
+
+  // Return builtin integer and floating-point types as is.
+  if (isScalarType(type))
+    return type;
+
+  // Return builtin vectors of integer and floating-point types as is.
+  if (Type vectorType = getVectorTypeForAttr(type))
+    return vectorType;
+
+  // Multi-dimensional array types are converted to tensors or vectors,
+  // depending on the innermost type being a scalar or a vector.
+  SmallVector<int64_t> arrayShape;
+  while (auto arrayType = dyn_cast<LLVMArrayType>(type)) {
+    arrayShape.push_back(arrayType.getNumElements());
+    type = arrayType.getElementType();
+  }
+  if (isScalarType(type))
+    return RankedTensorType::get(arrayShape, type);
+  return getVectorTypeForAttr(type, arrayShape);
+}
+
+/// Returns an integer or float attribute for the provided scalar constant
+/// `constScalar` or nullptr if the conversion fails.
+static Attribute getScalarConstantAsAttr(OpBuilder &builder,
+                                         llvm::Constant *constScalar) {
+  MLIRContext *context = builder.getContext();
+
+  // Convert scalar intergers.
+  if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
-        IntegerType::get(context, ci->getType()->getBitWidth()),
-        ci->getValue());
-  if (auto *c = dyn_cast<llvm::ConstantDataArray>(value))
-    if (c->isString())
-      return builder.getStringAttr(c->getAsString());
-  if (auto *c = dyn_cast<llvm::ConstantFP>(value)) {
-    llvm::Type *type = c->getType();
-    FloatType floatTy;
-    if (type->isBFloatTy())
-      floatTy = FloatType::getBF16(context);
-    else
-      floatTy = detail::getFloatType(context, type->getScalarSizeInBits());
-    assert(floatTy && "unsupported floating point type");
-    return builder.getFloatAttr(floatTy, c->getValueAPF());
-  }
-  if (auto *f = dyn_cast<llvm::Function>(value))
-    return SymbolRefAttr::get(builder.getContext(), f->getName());
-
-  // Convert constant data to a dense elements attribute.
-  if (auto *cd = dyn_cast<llvm::ConstantDataSequential>(value)) {
-    Type type = convertType(cd->getElementType());
-    auto attrType = getStdTypeForAttr(convertType(cd->getType()))
-                        .dyn_cast_or_null<ShapedType>();
-    if (!attrType)
-      return nullptr;
-
-    if (type.isa<IntegerType>()) {
-      SmallVector<APInt, 8> values;
-      values.reserve(cd->getNumElements());
-      for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)
-        values.push_back(cd->getElementAsAPInt(i));
-      return DenseElementsAttr::get(attrType, values);
-    }
-
-    if (type.isa<Float32Type, Float64Type>()) {
-      SmallVector<APFloat, 8> values;
-      values.reserve(cd->getNumElements());
-      for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)
-        values.push_back(cd->getElementAsAPFloat(i));
-      return DenseElementsAttr::get(attrType, values);
-    }
-
-    return nullptr;
+        IntegerType::get(context, constInt->getType()->getBitWidth()),
+        constInt->getValue());
   }
 
-  // Unpack constant aggregates to create dense elements attribute whenever
-  // possible. Return nullptr (failure) otherwise.
-  if (isa<llvm::ConstantAggregate>(value)) {
-    auto outerType = getStdTypeForAttr(convertType(value->getType()))
-                         .dyn_cast_or_null<ShapedType>();
-    if (!outerType)
-      return nullptr;
-
-    SmallVector<Attribute, 8> values;
-    SmallVector<int64_t, 8> shape;
-
-    for (unsigned i = 0, e = value->getNumOperands(); i < e; ++i) {
-      auto nested = getConstantAsAttr(value->getAggregateElement(i))
-                        .dyn_cast_or_null<DenseElementsAttr>();
-      if (!nested)
-        return nullptr;
-
-      values.append(nested.value_begin<Attribute>(),
-                    nested.value_end<Attribute>());
+  // Convert scalar floats.
+  if (auto *constFloat = dyn_cast<llvm::ConstantFP>(constScalar)) {
+    llvm::Type *type = constFloat->getType();
+    FloatType floatType =
+        type->isBFloatTy()
+            ? FloatType::getBF16(context)
+            : LLVM::detail::getFloatType(context, type->getScalarSizeInBits());
+    if (!floatType) {
+      emitError(UnknownLoc::get(builder.getContext()))
+          << "unexpected floating-point type";
+      return {};
     }
+    return builder.getFloatAttr(floatType, constFloat->getValueAPF());
+  }
+  return {};
+}
 
-    return DenseElementsAttr::get(outerType, values);
+/// Returns an integer or float attribute array for the provided constant
+/// sequence `constSequence` or nullptr if the conversion fails.
+static SmallVector<Attribute>
+getSequenceConstantAsAttrs(OpBuilder &builder,
+                           llvm::ConstantDataSequential *constSequence) {
+  SmallVector<Attribute> elementAttrs;
+  elementAttrs.reserve(constSequence->getNumElements());
+  for (auto idx : llvm::seq<int64_t>(0, constSequence->getNumElements())) {
+    llvm::Constant *constElement = constSequence->getElementAsConstant(idx);
+    elementAttrs.push_back(getScalarConstantAsAttr(builder, constElement));
+  }
+  return elementAttrs;
+}
+
+Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
+  // Convert scalar constants.
+  if (Attribute scalarAttr = getScalarConstantAsAttr(builder, constant))
+    return scalarAttr;
+
+  // Convert function references.
+  if (auto *func = dyn_cast<llvm::Function>(constant))
+    return SymbolRefAttr::get(builder.getContext(), func->getName());
+
+  // Returns the static shape of the provided type if possible.
+  auto getConstantShape = [&](llvm::Type *type) {
+    return getBuiltinTypeForAttr(convertType(type))
+        .dyn_cast_or_null<ShapedType>();
+  };
+
+  // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
+  // integer or half/bfloat/float/double values.
+  if (auto *constArray = dyn_cast<llvm::ConstantDataSequential>(constant)) {
+    if (constArray->isString())
+      return builder.getStringAttr(constArray->getAsString());
+    auto shape = getConstantShape(constArray->getType());
+    if (!shape)
+      return {};
+    // Convert splat constants to splat elements attributes.
+    auto *constVector = dyn_cast<llvm::ConstantDataVector>(constant);
+    if (constVector && constVector->isSplat()) {
+      // A vector is guaranteed to have at least size one.
+      Attribute splatAttr = getScalarConstantAsAttr(
+          builder, constVector->getElementAsConstant(0));
+      return SplatElementsAttr::get(shape, splatAttr);
+    }
+    // Convert non-splat constants to dense elements attributes.
+    SmallVector<Attribute> elementAttrs =
+        getSequenceConstantAsAttrs(builder, constArray);
+    return DenseElementsAttr::get(shape, elementAttrs);
   }
 
-  return nullptr;
+  // Convert multi-dimensional constant aggregates that store all kinds of
+  // integer and floating-point types.
+  if (auto *constAggregate = dyn_cast<llvm::ConstantAggregate>(constant)) {
+    auto shape = getConstantShape(constAggregate->getType());
+    if (!shape)
+      return {};
+    // Collect the aggregate elements in depths first order.
+    SmallVector<Attribute> elementAttrs;
+    SmallVector<llvm::Constant *> workList = {constAggregate};
+    while (!workList.empty()) {
+      llvm::Constant *current = workList.pop_back_val();
+      // Append any nested aggregates in reverse order to ensure the head
+      // element of the nested aggregates is at the back of the work list.
+      if (auto *constAggregate = dyn_cast<llvm::ConstantAggregate>(current)) {
+        for (auto idx :
+             reverse(llvm::seq<int64_t>(0, constAggregate->getNumOperands())))
+          workList.push_back(constAggregate->getAggregateElement(idx));
+        continue;
+      }
+      // Append the elements of nested constant arrays or vectors that store
+      // 1/2/4/8-byte integer or half/bfloat/float/double values.
+      if (auto *constArray = dyn_cast<llvm::ConstantDataSequential>(current)) {
+        SmallVector<Attribute> attrs =
+            getSequenceConstantAsAttrs(builder, constArray);
+        elementAttrs.append(attrs.begin(), attrs.end());
+        continue;
+      }
+      // Append nested scalar constants that store all kinds of integer and
+      // floating-point types.
+      if (Attribute scalarAttr = getScalarConstantAsAttr(builder, current)) {
+        elementAttrs.push_back(scalarAttr);
+        continue;
+      }
+      // Bail if the aggregate contains a unsupported constant type such as a
+      // constant expression.
+      return {};
+    }
+    return DenseElementsAttr::get(shape, elementAttrs);
+  }
+
+  // Convert zero aggregates.
+  if (auto *constZero = dyn_cast<llvm::ConstantAggregateZero>(constant)) {
+    auto shape = getBuiltinTypeForAttr(convertType(constZero->getType()))
+                     .dyn_cast_or_null<ShapedType>();
+    if (!shape)
+      return {};
+    // Convert zero aggregates with a static shape to splat elements attributes.
+    Attribute splatAttr = builder.getZeroAttr(shape.getElementType());
+    assert(splatAttr && "expected non-null zero attribute for scalar types");
+    return SplatElementsAttr::get(shape, splatAttr);
+  }
+  return {};
 }
 
 LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
@@ -862,7 +911,7 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
 SetVector<llvm::Constant *>
 ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
   // Return the empty set if the constant has been translated before.
-  if (valueMapping.count(constant))
+  if (valueMapping.contains(constant))
     return {};
 
   // Traverse the constants in post-order and stop the traversal if a constant
@@ -906,8 +955,8 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
     // `valueMapping` from an earlier translation and if it has not been
     // enqueued before.
     llvm::Constant *dependency = adjacencyIt->getSecond().pop_back_val();
-    if (valueMapping.count(dependency) || workList.count(dependency) ||
-        orderedSet.count(dependency))
+    if (valueMapping.contains(dependency) || workList.contains(dependency) ||
+        orderedSet.contains(dependency))
       continue;
     workList.insert(dependency);
   }
@@ -921,7 +970,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   // Convert constants that can be represented as attributes.
   if (Attribute attr = getConstantAsAttr(constant)) {
     Type type = convertType(constant->getType());
-    if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>()) {
+    if (auto symbolRef = dyn_cast<FlatSymbolRefAttr>(attr)) {
       return builder.create<AddressOfOp>(loc, type, symbolRef.getValue())
           .getResult();
     }
@@ -970,7 +1019,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // Note: `processInstruction` does not call `convertConstant` recursively
     // since all constant dependencies have been converted before.
     assert(llvm::all_of(inst->operands(), [&](llvm::Value *value) {
-      return valueMapping.count(value);
+      return valueMapping.contains(value);
     }));
     if (failed(processInstruction(inst)))
       return failure();
@@ -998,7 +1047,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
 
     // Generate an UndefOp as root value and insert the aggregate elements.
     Type rootType = convertType(constant->getType());
-    bool isArrayOrStruct = rootType.isa<LLVMArrayType, LLVMStructType>();
+    bool isArrayOrStruct = isa<LLVMArrayType, LLVMStructType>(rootType);
     assert((isArrayOrStruct || LLVM::isCompatibleVectorType(rootType)) &&
            "unrecognized aggregate type");
     Value root = builder.create<UndefOp>(loc, rootType);
@@ -1060,8 +1109,9 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
          "expected value to not be metadata");
 
   // Return the mapped value if it has been converted before.
-  if (valueMapping.count(value))
-    return lookupValue(value);
+  auto it = valueMapping.find(value);
+  if (it != valueMapping.end())
+    return it->getSecond();
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
@@ -1085,8 +1135,9 @@ FailureOr<Value> ModuleImport::convertMetadataValue(llvm::Value *value) {
   value = node->getValue();
 
   // Return the mapped value if it has been converted before.
-  if (valueMapping.count(value))
-    return lookupValue(value);
+  auto it = valueMapping.find(value);
+  if (it != valueMapping.end())
+    return it->getSecond();
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
@@ -1558,7 +1609,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   clearBlockAndValueMapping();
 
   auto functionType =
-      convertType(func->getFunctionType()).dyn_cast<LLVMFunctionType>();
+      dyn_cast<LLVMFunctionType>(convertType(func->getFunctionType()));
   if (func->isIntrinsic() &&
       iface.isConvertibleIntrinsic(func->getIntrinsicID()))
     return success();

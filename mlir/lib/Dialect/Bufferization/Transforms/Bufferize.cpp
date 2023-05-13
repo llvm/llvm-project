@@ -44,7 +44,7 @@ using namespace mlir::bufferization;
 static Value materializeToTensor(OpBuilder &builder, TensorType type,
                                  ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
-  assert(inputs[0].getType().isa<BaseMemRefType>());
+  assert(isa<BaseMemRefType>(inputs[0].getType()));
   return builder.create<bufferization::ToTensorOp>(loc, type, inputs[0]);
 }
 
@@ -66,11 +66,11 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
                               ValueRange inputs, Location loc) -> Value {
     assert(inputs.size() == 1 && "expected exactly one input");
 
-    if (auto inputType = inputs[0].getType().dyn_cast<MemRefType>()) {
+    if (auto inputType = dyn_cast<MemRefType>(inputs[0].getType())) {
       // MemRef to MemRef cast.
       assert(inputType != type && "expected different types");
       // Unranked to ranked and ranked to unranked casts must be explicit.
-      auto rankedDestType = type.dyn_cast<MemRefType>();
+      auto rankedDestType = dyn_cast<MemRefType>(type);
       if (!rankedDestType)
         return nullptr;
       FailureOr<Value> replacement =
@@ -80,7 +80,7 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
       return *replacement;
     }
 
-    if (inputs[0].getType().isa<TensorType>()) {
+    if (isa<TensorType>(inputs[0].getType())) {
       // Tensor to MemRef cast.
       return builder.create<bufferization::ToMemrefOp>(loc, type, inputs[0]);
     }
@@ -222,7 +222,7 @@ struct OneShotBufferizePass
           parseLayoutMapOption(unknownTypeConversion);
       opt.unknownTypeConverterFn = [=](Value value, Attribute memorySpace,
                                        const BufferizationOptions &options) {
-        auto tensorType = value.getType().cast<TensorType>();
+        auto tensorType = cast<TensorType>(value.getType());
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
           return bufferization::getMemRefTypeWithStaticIdentityLayout(
               tensorType, memorySpace);
@@ -325,7 +325,7 @@ mlir::bufferization::createFinalizingBufferizePass() {
 // BufferizableOpInterface-based Bufferization
 //===----------------------------------------------------------------------===//
 
-static bool isaTensor(Type t) { return t.isa<TensorType>(); }
+static bool isaTensor(Type t) { return isa<TensorType>(t); }
 
 /// Return true if the given op has a tensor result or a tensor operand.
 static bool hasTensorSemantics(Operation *op) {
@@ -549,7 +549,7 @@ BufferizationOptions bufferization::getPartialBufferizationOptions() {
   options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {
     return getMemRefTypeWithStaticIdentityLayout(
-        value.getType().cast<TensorType>(), memorySpace);
+        cast<TensorType>(value.getType()), memorySpace);
   };
   options.opFilter.allowDialect<BufferizationDialect>();
   return options;

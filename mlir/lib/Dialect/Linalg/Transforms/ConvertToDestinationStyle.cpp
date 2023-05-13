@@ -66,12 +66,12 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   Attribute constYieldedValue;
   // Is the yielded value a bbArg defined outside of the PadOp?
   bool outsideBbArg =
-      yieldedValue.isa<BlockArgument>() &&
-      yieldedValue.cast<BlockArgument>().getOwner()->getParentOp() !=
+      isa<BlockArgument>(yieldedValue) &&
+      cast<BlockArgument>(yieldedValue).getOwner()->getParentOp() !=
           padOp.getOperation();
   // Is the yielded value an OpResult defined outside of the PadOp?
   bool outsideOpResult =
-      yieldedValue.isa<OpResult>() &&
+      isa<OpResult>(yieldedValue) &&
       yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
   bool invariantYieldedValue = outsideBbArg || outsideOpResult;
   if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
@@ -120,19 +120,19 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
 
 static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
                                                      Value value) {
-  auto tensorType = value.getType().cast<RankedTensorType>();
+  auto tensorType = cast<RankedTensorType>(value.getType());
   if (tensorType.hasStaticShape())
     return {};
 
   // Try to reify dynamic sizes.
   ReifiedRankedShapedTypeDims reifiedShape;
-  if (value.isa<OpResult>() &&
+  if (isa<OpResult>(value) &&
       succeeded(reifyResultShapes(b, value.getDefiningOp(), reifiedShape))) {
     SmallVector<Value> dynSizes;
     for (int64_t i = 0; i < tensorType.getRank(); ++i) {
       if (tensorType.isDynamicDim(i))
         dynSizes.push_back(
-            reifiedShape[value.cast<OpResult>().getResultNumber()][i]
+            reifiedShape[cast<OpResult>(value).getResultNumber()][i]
                 .get<Value>());
     }
     return dynSizes;
@@ -153,12 +153,12 @@ static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
                                        Value value,
                                        Attribute memorySpace = {}) {
   OpBuilder::InsertionGuard g(rewriter);
-  auto tensorType = value.getType().cast<RankedTensorType>();
+  auto tensorType = cast<RankedTensorType>(value.getType());
 
   // Create buffer allocation.
-  auto memrefType = bufferization::getMemRefTypeWithStaticIdentityLayout(
-                        tensorType, memorySpace)
-                        .cast<MemRefType>();
+  auto memrefType =
+      cast<MemRefType>(bufferization::getMemRefTypeWithStaticIdentityLayout(
+          tensorType, memorySpace));
   SmallVector<Value> dynamicSizes = reifyOrComputeDynamicSizes(rewriter, value);
   Value alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
 
@@ -206,7 +206,7 @@ FailureOr<Operation *> mlir::linalg::rewriteInDestinationPassingStyle(
     RewriterBase &rewriter, tensor::FromElementsOp fromElementsOp) {
   Location loc = fromElementsOp.getLoc();
   RankedTensorType tensorType =
-      fromElementsOp.getType().cast<RankedTensorType>();
+      cast<RankedTensorType>(fromElementsOp.getType());
   auto shape = tensorType.getShape();
 
   // Create tensor.empty.
@@ -247,7 +247,7 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
     return failure();
 
   Location loc = generateOp.getLoc();
-  RankedTensorType tensorType = generateOp.getType().cast<RankedTensorType>();
+  RankedTensorType tensorType = cast<RankedTensorType>(generateOp.getType());
 
   // Create tensor.empty.
   auto emptyOp =
@@ -339,7 +339,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
       llvm::map_range(value.getUses(), [](OpOperand &use) { return &use; }));
 
   OpBuilder::InsertionGuard g(rewriter);
-  if (auto bbArg = value.dyn_cast<BlockArgument>()) {
+  if (auto bbArg = dyn_cast<BlockArgument>(value)) {
     rewriter.setInsertionPointToStart(bbArg.getOwner());
   } else {
     rewriter.setInsertionPointAfter(value.getDefiningOp());

@@ -14,6 +14,13 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
 
+namespace lldb_private {
+class CommandPluginInterfaceImplementation;
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 #ifndef SWIG
@@ -44,10 +51,6 @@ public:
   SBDebugger();
 
   SBDebugger(const lldb::SBDebugger &rhs);
-
-#ifndef SWIG
-  SBDebugger(const lldb::DebuggerSP &debugger_sp);
-#endif
 
   ~SBDebugger();
 
@@ -463,6 +466,12 @@ public:
   ///   The file containing the necessary information to load the trace.
   SBTrace LoadTraceFromFile(SBError &error,
                             const SBFileSpec &trace_description_file);
+
+protected:
+  friend class lldb_private::CommandPluginInterfaceImplementation;
+  friend class lldb_private::python::SWIGBridge;
+
+  SBDebugger(const lldb::DebuggerSP &debugger_sp);
 
 private:
   friend class SBCommandInterpreter;

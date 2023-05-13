@@ -130,8 +130,9 @@ generatedTypePrinter(Type def, AsmPrinter &printer);
 //===----------------------------------------------------------------------===//
 
 bool LLVMArrayType::isValidElementType(Type type) {
-  return !type.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                   LLVMFunctionType, LLVMTokenType, LLVMScalableVectorType>();
+  return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
+                    LLVMFunctionType, LLVMTokenType, LLVMScalableVectorType>(
+      type);
 }
 
 LLVMArrayType LLVMArrayType::get(Type elementType, unsigned numElements) {
@@ -186,11 +187,11 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 bool LLVMFunctionType::isValidArgumentType(Type type) {
-  return !type.isa<LLVMVoidType, LLVMFunctionType>();
+  return !llvm::isa<LLVMVoidType, LLVMFunctionType>(type);
 }
 
 bool LLVMFunctionType::isValidResultType(Type type) {
-  return !type.isa<LLVMFunctionType, LLVMMetadataType, LLVMLabelType>();
+  return !llvm::isa<LLVMFunctionType, LLVMMetadataType, LLVMLabelType>(type);
 }
 
 LLVMFunctionType LLVMFunctionType::get(Type result, ArrayRef<Type> arguments,
@@ -239,9 +240,9 @@ bool LLVMPointerType::isValidElementType(Type type) {
   if (!type)
     return true;
   return isCompatibleOuterType(type)
-             ? !type.isa<LLVMVoidType, LLVMTokenType, LLVMMetadataType,
-                         LLVMLabelType>()
-             : type.isa<PointerElementTypeInterface>();
+             ? !llvm::isa<LLVMVoidType, LLVMTokenType, LLVMMetadataType,
+                          LLVMLabelType>(type)
+             : llvm::isa<PointerElementTypeInterface>(type);
 }
 
 LLVMPointerType LLVMPointerType::get(Type pointee, unsigned addressSpace) {
@@ -266,7 +267,7 @@ constexpr const static unsigned kDefaultPointerAlignment = 8;
 
 std::optional<unsigned> mlir::LLVM::extractPointerSpecValue(Attribute attr,
                                                             PtrDLEntryPos pos) {
-  auto spec = attr.cast<DenseIntElementsAttr>();
+  auto spec = llvm::cast<DenseIntElementsAttr>(attr);
   auto idx = static_cast<unsigned>(pos);
   if (idx >= spec.size())
     return std::nullopt;
@@ -285,8 +286,8 @@ getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
   for (DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
-    if (entry.getKey().get<Type>().cast<LLVMPointerType>().getAddressSpace() ==
-        type.getAddressSpace()) {
+    if (llvm::cast<LLVMPointerType>(entry.getKey().get<Type>())
+            .getAddressSpace() == type.getAddressSpace()) {
       currentEntry = entry.getValue();
       break;
     }
@@ -350,11 +351,11 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
       continue;
     unsigned size = kDefaultPointerSizeBits;
     unsigned abi = kDefaultPointerAlignment;
-    auto newType = newEntry.getKey().get<Type>().cast<LLVMPointerType>();
+    auto newType = llvm::cast<LLVMPointerType>(newEntry.getKey().get<Type>());
     const auto *it =
         llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
           if (auto type = entry.getKey().dyn_cast<Type>()) {
-            return type.cast<LLVMPointerType>().getAddressSpace() ==
+            return llvm::cast<LLVMPointerType>(type).getAddressSpace() ==
                    newType.getAddressSpace();
           }
           return false;
@@ -362,7 +363,7 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
     if (it == oldLayout.end()) {
       llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
         if (auto type = entry.getKey().dyn_cast<Type>()) {
-          return type.cast<LLVMPointerType>().getAddressSpace() == 0;
+          return llvm::cast<LLVMPointerType>(type).getAddressSpace() == 0;
         }
         return false;
       });
@@ -372,7 +373,7 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
       abi = *extractPointerSpecValue(*it, PtrDLEntryPos::Abi);
     }
 
-    Attribute newSpec = newEntry.getValue().cast<DenseIntElementsAttr>();
+    Attribute newSpec = llvm::cast<DenseIntElementsAttr>(newEntry.getValue());
     unsigned newSize = *extractPointerSpecValue(newSpec, PtrDLEntryPos::Size);
     unsigned newAbi = *extractPointerSpecValue(newSpec, PtrDLEntryPos::Abi);
     if (size != newSize || abi < newAbi || abi % newAbi != 0)
@@ -386,8 +387,8 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
   for (DataLayoutEntryInterface entry : entries) {
     if (!entry.isTypeEntry())
       continue;
-    auto key = entry.getKey().get<Type>().cast<LLVMPointerType>();
-    auto values = entry.getValue().dyn_cast<DenseIntElementsAttr>();
+    auto key = llvm::cast<LLVMPointerType>(entry.getKey().get<Type>());
+    auto values = llvm::dyn_cast<DenseIntElementsAttr>(entry.getValue());
     if (!values || (values.size() != 3 && values.size() != 4)) {
       return emitError(loc)
              << "expected layout attribute for " << entry.getKey().get<Type>()
@@ -412,8 +413,9 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
 //===----------------------------------------------------------------------===//
 
 bool LLVMStructType::isValidElementType(Type type) {
-  return !type.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                   LLVMFunctionType, LLVMTokenType, LLVMScalableVectorType>();
+  return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
+                    LLVMFunctionType, LLVMTokenType, LLVMScalableVectorType>(
+      type);
 }
 
 LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
@@ -538,7 +540,7 @@ getStructDataLayoutEntry(DataLayoutEntryListRef params, LLVMStructType type,
   if (currentEntry == params.end())
     return std::nullopt;
 
-  auto attr = currentEntry->getValue().cast<DenseIntElementsAttr>();
+  auto attr = llvm::cast<DenseIntElementsAttr>(currentEntry->getValue());
   if (pos == StructDLEntryPos::Preferred &&
       attr.size() <= static_cast<unsigned>(StructDLEntryPos::Preferred))
     // If no preferred was specified, fall back to abi alignment
@@ -586,7 +588,7 @@ LLVMStructType::getPreferredAlignment(const DataLayout &dataLayout,
 }
 
 static unsigned extractStructSpecValue(Attribute attr, StructDLEntryPos pos) {
-  return attr.cast<DenseIntElementsAttr>()
+  return llvm::cast<DenseIntElementsAttr>(attr)
       .getValues<unsigned>()[static_cast<unsigned>(pos)];
 }
 
@@ -619,8 +621,8 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
     if (!entry.isTypeEntry())
       continue;
 
-    auto key = entry.getKey().get<Type>().cast<LLVMStructType>();
-    auto values = entry.getValue().dyn_cast<DenseIntElementsAttr>();
+    auto key = llvm::cast<LLVMStructType>(entry.getKey().get<Type>());
+    auto values = llvm::dyn_cast<DenseIntElementsAttr>(entry.getValue());
     if (!values || (values.size() != 2 && values.size() != 1)) {
       return emitError(loc)
              << "expected layout attribute for " << entry.getKey().get<Type>()
@@ -676,7 +678,7 @@ LLVMFixedVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 }
 
 bool LLVMFixedVectorType::isValidElementType(Type type) {
-  return type.isa<LLVMPointerType, LLVMPPCFP128Type>();
+  return llvm::isa<LLVMPointerType, LLVMPPCFP128Type>(type);
 }
 
 LogicalResult
@@ -705,10 +707,11 @@ LLVMScalableVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 }
 
 bool LLVMScalableVectorType::isValidElementType(Type type) {
-  if (auto intType = type.dyn_cast<IntegerType>())
+  if (auto intType = llvm::dyn_cast<IntegerType>(type))
     return intType.isSignless();
 
-  return isCompatibleFloatingPointType(type) || type.isa<LLVMPointerType>();
+  return isCompatibleFloatingPointType(type) ||
+         llvm::isa<LLVMPointerType>(type);
 }
 
 LogicalResult
@@ -724,7 +727,7 @@ LLVMScalableVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 bool mlir::LLVM::isCompatibleOuterType(Type type) {
   // clang-format off
-  if (type.isa<
+  if (llvm::isa<
       BFloat16Type,
       Float16Type,
       Float32Type,
@@ -745,17 +748,17 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMScalableVectorType,
       LLVMVoidType,
       LLVMX86MMXType
-    >()) {
+    >(type)) {
     // clang-format on
     return true;
   }
 
   // Only signless integers are compatible.
-  if (auto intType = type.dyn_cast<IntegerType>())
+  if (auto intType = llvm::dyn_cast<IntegerType>(type))
     return intType.isSignless();
 
   // 1D vector types are compatible.
-  if (auto vecType = type.dyn_cast<VectorType>())
+  if (auto vecType = llvm::dyn_cast<VectorType>(type))
     return vecType.getRank() == 1;
 
   return false;
@@ -835,22 +838,22 @@ bool mlir::LLVM::isCompatibleType(Type type) {
 }
 
 bool mlir::LLVM::isCompatibleFloatingPointType(Type type) {
-  return type.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                  Float80Type, Float128Type, LLVMPPCFP128Type>();
+  return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
+                   Float80Type, Float128Type, LLVMPPCFP128Type>(type);
 }
 
 bool mlir::LLVM::isCompatibleVectorType(Type type) {
-  if (type.isa<LLVMFixedVectorType, LLVMScalableVectorType>())
+  if (llvm::isa<LLVMFixedVectorType, LLVMScalableVectorType>(type))
     return true;
 
-  if (auto vecType = type.dyn_cast<VectorType>()) {
+  if (auto vecType = llvm::dyn_cast<VectorType>(type)) {
     if (vecType.getRank() != 1)
       return false;
     Type elementType = vecType.getElementType();
-    if (auto intType = elementType.dyn_cast<IntegerType>())
+    if (auto intType = llvm::dyn_cast<IntegerType>(elementType))
       return intType.isSignless();
-    return elementType.isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                           Float80Type, Float128Type>();
+    return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
+                     Float80Type, Float128Type>(elementType);
   }
   return false;
 }
@@ -883,13 +886,12 @@ llvm::ElementCount mlir::LLVM::getVectorNumElements(Type type) {
 }
 
 bool mlir::LLVM::isScalableVectorType(Type vectorType) {
-  assert(
-      (vectorType
-           .isa<LLVMFixedVectorType, LLVMScalableVectorType, VectorType>()) &&
-      "expected LLVM-compatible vector type");
-  return !vectorType.isa<LLVMFixedVectorType>() &&
-         (vectorType.isa<LLVMScalableVectorType>() ||
-          vectorType.cast<VectorType>().isScalable());
+  assert((llvm::isa<LLVMFixedVectorType, LLVMScalableVectorType, VectorType>(
+             vectorType)) &&
+         "expected LLVM-compatible vector type");
+  return !llvm::isa<LLVMFixedVectorType>(vectorType) &&
+         (llvm::isa<LLVMScalableVectorType>(vectorType) ||
+          llvm::cast<VectorType>(vectorType).isScalable());
 }
 
 Type mlir::LLVM::getVectorType(Type elementType, unsigned numElements,
@@ -970,9 +972,9 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
                               elementSize.isScalable());
       })
       .Default([](Type ty) {
-        assert((ty.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                       LLVMTokenType, LLVMStructType, LLVMArrayType,
-                       LLVMPointerType, LLVMFunctionType>()) &&
+        assert((llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
+                          LLVMTokenType, LLVMStructType, LLVMArrayType,
+                          LLVMPointerType, LLVMFunctionType>(ty)) &&
                "unexpected missing support for primitive type");
         return llvm::TypeSize::Fixed(0);
       });

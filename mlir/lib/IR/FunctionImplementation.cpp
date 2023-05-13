@@ -250,14 +250,14 @@ static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
          "Invalid number of attributes.");
 
   auto &os = p.getStream();
-  bool needsParens = types.size() > 1 || types[0].isa<FunctionType>() ||
-                     (attrs && !attrs[0].cast<DictionaryAttr>().empty());
+  bool needsParens = types.size() > 1 || llvm::isa<FunctionType>(types[0]) ||
+                     (attrs && !llvm::cast<DictionaryAttr>(attrs[0]).empty());
   if (needsParens)
     os << '(';
   llvm::interleaveComma(llvm::seq<size_t>(0, types.size()), os, [&](size_t i) {
     p.printType(types[i]);
     if (attrs)
-      p.printOptionalAttrDict(attrs[i].cast<DictionaryAttr>().getValue());
+      p.printOptionalAttrDict(llvm::cast<DictionaryAttr>(attrs[i]).getValue());
   });
   if (needsParens)
     os << ')';
@@ -278,12 +278,13 @@ void function_interface_impl::printFunctionSignature(
     if (!isExternal) {
       ArrayRef<NamedAttribute> attrs;
       if (argAttrs)
-        attrs = argAttrs[i].cast<DictionaryAttr>().getValue();
+        attrs = llvm::cast<DictionaryAttr>(argAttrs[i]).getValue();
       p.printRegionArgument(body.getArgument(i), attrs);
     } else {
       p.printType(argTypes[i]);
       if (argAttrs)
-        p.printOptionalAttrDict(argAttrs[i].cast<DictionaryAttr>().getValue());
+        p.printOptionalAttrDict(
+            llvm::cast<DictionaryAttr>(argAttrs[i]).getValue());
     }
   }
 

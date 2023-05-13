@@ -190,7 +190,7 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
   Location loc = xferOp.getLoc();
   int64_t memrefRank = xferOp.getShapedType().getRank();
   // TODO: relax this precondition, will require rank-reducing subviews.
-  assert(memrefRank == alloc.getType().cast<MemRefType>().getRank() &&
+  assert(memrefRank == cast<MemRefType>(alloc.getType()).getRank() &&
          "Expected memref rank to match the alloc rank");
   ValueRange leadingIndices =
       xferOp.indices().take_front(xferOp.getLeadingShapedRank());
@@ -571,8 +571,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   }
 
   MemRefType compatibleMemRefType =
-      getCastCompatibleMemRefType(xferOp.getShapedType().cast<MemRefType>(),
-                                  alloc.getType().cast<MemRefType>());
+      getCastCompatibleMemRefType(cast<MemRefType>(xferOp.getShapedType()),
+                                  cast<MemRefType>(alloc.getType()));
   if (!compatibleMemRefType)
     return failure();
 

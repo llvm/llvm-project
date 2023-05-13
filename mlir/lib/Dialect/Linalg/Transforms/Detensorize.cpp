@@ -32,7 +32,7 @@ static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
                                            ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
   auto inputType = inputs[0].getType();
-  if (inputType.isa<TensorType>())
+  if (isa<TensorType>(inputType))
     return nullptr;
 
   // A detensored value is converted back by creating a new tensor from its
@@ -320,9 +320,9 @@ struct LinalgDetensorize
         //       * Add the argument to blockArgsToDetensor.
         //       * Walk the use-def chain backwards to add each predecessor's
         //       terminator-operands corresponding to currentItem to workList.
-        if (currentItem.dyn_cast<BlockArgument>()) {
+        if (dyn_cast<BlockArgument>(currentItem)) {
           BlockArgument currentItemBlockArgument =
-              currentItem.cast<BlockArgument>();
+              cast<BlockArgument>(currentItem);
           Block *ownerBlock = currentItemBlockArgument.getOwner();
 
           // Function arguments are not detensored/converted.

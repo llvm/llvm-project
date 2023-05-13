@@ -261,7 +261,7 @@ static MemRefType dropUnitDims(MemRefType inputType, ArrayRef<int64_t> offsets,
       llvm::make_filter_range(sizes, [](int64_t sz) { return sz != 1; }));
   Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
       targetShape, inputType, offsets, sizes, strides);
-  return canonicalizeStridedLayout(rankReducedType.cast<MemRefType>());
+  return canonicalizeStridedLayout(cast<MemRefType>(rankReducedType));
 }
 
 /// Creates a rank-reducing memref.subview op that drops unit dims from its
@@ -269,7 +269,7 @@ static MemRefType dropUnitDims(MemRefType inputType, ArrayRef<int64_t> offsets,
 static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
                                                  mlir::Location loc,
                                                  Value input) {
-  MemRefType inputType = input.getType().cast<MemRefType>();
+  MemRefType inputType = cast<MemRefType>(input.getType());
   assert(inputType.hasStaticShape());
   SmallVector<int64_t> subViewOffsets(inputType.getRank(), 0);
   SmallVector<int64_t> subViewStrides(inputType.getRank(), 1);
@@ -304,9 +304,9 @@ class TransferReadDropUnitDimsPattern
                                 PatternRewriter &rewriter) const override {
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
-    VectorType vectorType = vector.getType().cast<VectorType>();
+    VectorType vectorType = cast<VectorType>(vector.getType());
     Value source = transferReadOp.getSource();
-    MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
+    MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor types.
     if (!sourceType || !sourceType.hasStaticShape())
       return failure();
@@ -347,9 +347,9 @@ class TransferWriteDropUnitDimsPattern
                                 PatternRewriter &rewriter) const override {
     auto loc = transferWriteOp.getLoc();
     Value vector = transferWriteOp.getVector();
-    VectorType vectorType = vector.getType().cast<VectorType>();
+    VectorType vectorType = cast<VectorType>(vector.getType());
     Value source = transferWriteOp.getSource();
-    MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
+    MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // TODO: support tensor type.
     if (!sourceType || !sourceType.hasStaticShape())
       return failure();
@@ -406,7 +406,7 @@ static int64_t hasMatchingInnerContigousShape(MemRefType memrefType,
 /// input starting at `firstDimToCollapse`.
 static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
                                Value input, int64_t firstDimToCollapse) {
-  ShapedType inputType = input.getType().cast<ShapedType>();
+  ShapedType inputType = cast<ShapedType>(input.getType());
   if (inputType.getRank() == 1)
     return input;
   SmallVector<ReassociationIndices> reassociation;
@@ -451,9 +451,9 @@ class FlattenContiguousRowMajorTransferReadPattern
                                 PatternRewriter &rewriter) const override {
     auto loc = transferReadOp.getLoc();
     Value vector = transferReadOp.getVector();
-    VectorType vectorType = vector.getType().cast<VectorType>();
+    VectorType vectorType = cast<VectorType>(vector.getType());
     Value source = transferReadOp.getSource();
-    MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
+    MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // Contiguity check is valid on tensors only.
     if (!sourceType)
       return failure();
@@ -481,7 +481,7 @@ class FlattenContiguousRowMajorTransferReadPattern
     Value collapsedSource =
         collapseInnerDims(rewriter, loc, source, firstContiguousInnerDim);
     MemRefType collapsedSourceType =
-        collapsedSource.getType().dyn_cast<MemRefType>();
+        dyn_cast<MemRefType>(collapsedSource.getType());
     int64_t collapsedRank = collapsedSourceType.getRank();
     assert(collapsedRank == firstContiguousInnerDim + 1);
     SmallVector<AffineExpr, 1> dimExprs{
@@ -494,7 +494,7 @@ class FlattenContiguousRowMajorTransferReadPattern
         loc, flatVectorType, collapsedSource, collapsedIndices, collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-        transferReadOp, vector.getType().cast<VectorType>(), flatRead);
+        transferReadOp, cast<VectorType>(vector.getType()), flatRead);
     return success();
   }
 };
@@ -511,9 +511,9 @@ class FlattenContiguousRowMajorTransferWritePattern
                                 PatternRewriter &rewriter) const override {
     auto loc = transferWriteOp.getLoc();
     Value vector = transferWriteOp.getVector();
-    VectorType vectorType = vector.getType().cast<VectorType>();
+    VectorType vectorType = cast<VectorType>(vector.getType());
     Value source = transferWriteOp.getSource();
-    MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
+    MemRefType sourceType = dyn_cast<MemRefType>(source.getType());
     // Contiguity check is valid on tensors only.
     if (!sourceType)
       return failure();
@@ -541,7 +541,7 @@ class FlattenContiguousRowMajorTransferWritePattern
     Value collapsedSource =
         collapseInnerDims(rewriter, loc, source, firstContiguousInnerDim);
     MemRefType collapsedSourceType =
-        collapsedSource.getType().cast<MemRefType>();
+        cast<MemRefType>(collapsedSource.getType());
     int64_t collapsedRank = collapsedSourceType.getRank();
     assert(collapsedRank == firstContiguousInnerDim + 1);
     SmallVector<AffineExpr, 1> dimExprs{
@@ -610,7 +610,7 @@ class RewriteScalarExtractElementOfTransferRead
                                                     *getConstantIntValue(ofr));
       }
     }
-    if (xferOp.getSource().getType().isa<MemRefType>()) {
+    if (isa<MemRefType>(xferOp.getSource().getType())) {
       rewriter.replaceOpWithNewOp<memref::LoadOp>(extractOp, xferOp.getSource(),
                                                   newIndices);
     } else {
@@ -637,7 +637,7 @@ class RewriteScalarExtractOfTransferRead
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     // Only match scalar extracts.
-    if (extractOp.getType().isa<VectorType>())
+    if (isa<VectorType>(extractOp.getType()))
       return failure();
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
@@ -660,7 +660,7 @@ class RewriteScalarExtractOfTransferRead
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
                                   xferOp.getIndices().end());
     for (const auto &it : llvm::enumerate(extractOp.getPosition())) {
-      int64_t offset = it.value().cast<IntegerAttr>().getInt();
+      int64_t offset = cast<IntegerAttr>(it.value()).getInt();
       int64_t idx =
           newIndices.size() - extractOp.getPosition().size() + it.index();
       OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
@@ -673,7 +673,7 @@ class RewriteScalarExtractOfTransferRead
             extractOp.getLoc(), *getConstantIntValue(ofr));
       }
     }
-    if (xferOp.getSource().getType().isa<MemRefType>()) {
+    if (isa<MemRefType>(xferOp.getSource().getType())) {
       rewriter.replaceOpWithNewOp<memref::LoadOp>(extractOp, xferOp.getSource(),
                                                   newIndices);
     } else {
@@ -714,7 +714,7 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
                                                   xferOp.getVector(), pos);
     }
     // Construct a scalar store.
-    if (xferOp.getSource().getType().isa<MemRefType>()) {
+    if (isa<MemRefType>(xferOp.getSource().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(
           xferOp, scalar, xferOp.getSource(), xferOp.getIndices());
     } else {
@@ -732,12 +732,12 @@ void mlir::vector::transferOpflowOpt(RewriterBase &rewriter,
   // Run store to load forwarding first since it can expose more dead store
   // opportunity.
   rootOp->walk([&](vector::TransferReadOp read) {
-    if (read.getShapedType().isa<MemRefType>())
+    if (isa<MemRefType>(read.getShapedType()))
       opt.storeToLoadForwarding(read);
   });
   opt.removeDeadOp();
   rootOp->walk([&](vector::TransferWriteOp write) {
-    if (write.getShapedType().isa<MemRefType>())
+    if (isa<MemRefType>(write.getShapedType()))
       opt.deadStoreOp(write);
   });
   opt.removeDeadOp();

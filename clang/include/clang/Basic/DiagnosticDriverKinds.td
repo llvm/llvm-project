@@ -118,6 +118,9 @@ def warn_drv_unsupported_option_for_flang : Warning<
 def warn_drv_unsupported_diag_option_for_flang : Warning<
   "The warning option '-%0' is not supported">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_processor : Warning<
+  "ignoring '%0' option as it is not currently supported for processor '%1'">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;

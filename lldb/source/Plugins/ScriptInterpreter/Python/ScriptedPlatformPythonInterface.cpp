@@ -44,7 +44,7 @@ StructuredData::GenericSP ScriptedPlatformPythonInterface::CreatePluginObject(
   lldb::ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
 
-  PythonObject ret_val = LLDBSwigPythonCreateScriptedObject(
+  PythonObject ret_val = SWIGBridge::LLDBSwigPythonCreateScriptedObject(
       class_name.str().c_str(), m_interpreter.GetDictionaryName(),
       exe_ctx_ref_sp, args_impl, error_string);
 

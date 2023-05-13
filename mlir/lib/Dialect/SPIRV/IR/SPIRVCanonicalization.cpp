@@ -33,9 +33,9 @@ static std::optional<bool> getScalarOrSplatBoolAttr(Attribute attr) {
   if (!attr)
     return std::nullopt;
 
-  if (auto boolAttr = attr.dyn_cast<BoolAttr>())
+  if (auto boolAttr = llvm::dyn_cast<BoolAttr>(attr))
     return boolAttr.getValue();
-  if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>())
+  if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr))
     if (splatAttr.getElementType().isInteger(1))
       return splatAttr.getSplatValue<bool>();
   return std::nullopt;
@@ -52,12 +52,12 @@ static Attribute extractCompositeElement(Attribute composite,
   if (indices.empty())
     return composite;
 
-  if (auto vector = composite.dyn_cast<ElementsAttr>()) {
+  if (auto vector = llvm::dyn_cast<ElementsAttr>(composite)) {
     assert(indices.size() == 1 && "must have exactly one index for a vector");
     return vector.getValues<Attribute>()[indices[0]];
   }
 
-  if (auto array = composite.dyn_cast<ArrayAttr>()) {
+  if (auto array = llvm::dyn_cast<ArrayAttr>(composite)) {
     assert(!indices.empty() && "must have at least one index for an array");
     return extractCompositeElement(array.getValue()[indices[0]],
                                    indices.drop_front());
@@ -149,7 +149,7 @@ OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
 
   if (auto constructOp =
           getComposite().getDefiningOp<spirv::CompositeConstructOp>()) {
-    auto type = constructOp.getType().cast<spirv::CompositeType>();
+    auto type = llvm::cast<spirv::CompositeType>(constructOp.getType());
     if (getIndices().size() == 1 &&
         constructOp.getConstituents().size() == type.getNumElements()) {
       auto i = getIndices().begin()->cast<IntegerAttr>();
@@ -159,7 +159,7 @@ OpFoldResult spirv::CompositeExtractOp::fold(FoldAdaptor adaptor) {
 
   auto indexVector =
       llvm::to_vector<8>(llvm::map_range(getIndices(), [](Attribute attr) {
-        return static_cast<unsigned>(attr.cast<IntegerAttr>().getInt());
+        return static_cast<unsigned>(llvm::cast<IntegerAttr>(attr).getInt());
       }));
   return extractCompositeElement(adaptor.getComposite(), indexVector);
 }
@@ -434,10 +434,9 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
   // "Before version 1.4, Result Type must be a pointer, scalar, or vector.
   // Starting with version 1.4, Result Type can additionally be a composite type
   // other than a vector."
-  bool isScalarOrVector = trueBrStoreOp.getValue()
-                              .getType()
-                              .cast<spirv::SPIRVType>()
-                              .isScalarOrVector();
+  bool isScalarOrVector =
+      llvm::cast<spirv::SPIRVType>(trueBrStoreOp.getValue().getType())
+          .isScalarOrVector();
 
   // Check that each `spirv.Store` uses the same pointer, memory access
   // attributes and a valid type of the value.

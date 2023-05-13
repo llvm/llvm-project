@@ -287,18 +287,18 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
   for (DataLayoutEntryInterface entry : params) {
     // This is for testing purposes only, so assert well-formedness.
     assert(entry.isTypeEntry() && "unexpected identifier entry");
-    assert(entry.getKey().get<Type>().isa<TestTypeWithLayoutType>() &&
+    assert(llvm::isa<TestTypeWithLayoutType>(entry.getKey().get<Type>()) &&
            "wrong type passed in");
-    auto array = entry.getValue().dyn_cast<ArrayAttr>();
+    auto array = llvm::dyn_cast<ArrayAttr>(entry.getValue());
     assert(array && array.getValue().size() == 2 &&
            "expected array of two elements");
-    auto kind = array.getValue().front().dyn_cast<StringAttr>();
+    auto kind = llvm::dyn_cast<StringAttr>(array.getValue().front());
     (void)kind;
     assert(kind &&
            (kind.getValue() == "size" || kind.getValue() == "alignment" ||
             kind.getValue() == "preferred") &&
            "unexpected kind");
-    assert(array.getValue().back().isa<IntegerAttr>());
+    assert(llvm::isa<IntegerAttr>(array.getValue().back()));
   }
   return success();
 }
@@ -306,10 +306,11 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
 unsigned TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
                                              StringRef expectedKind) const {
   for (DataLayoutEntryInterface entry : params) {
-    ArrayRef<Attribute> pair = entry.getValue().cast<ArrayAttr>().getValue();
-    StringRef kind = pair.front().cast<StringAttr>().getValue();
+    ArrayRef<Attribute> pair =
+        llvm::cast<ArrayAttr>(entry.getValue()).getValue();
+    StringRef kind = llvm::cast<StringAttr>(pair.front()).getValue();
     if (kind == expectedKind)
-      return pair.back().cast<IntegerAttr>().getValue().getZExtValue();
+      return llvm::cast<IntegerAttr>(pair.back()).getValue().getZExtValue();
   }
   return 1;
 }
@@ -466,7 +467,7 @@ void TestDialect::printTestType(Type type, AsmPrinter &printer,
   if (succeeded(printIfDynamicType(type, printer)))
     return;
 
-  auto rec = type.cast<TestRecursiveType>();
+  auto rec = llvm::cast<TestRecursiveType>(type);
   printer << "test_rec<" << rec.getName();
   if (!stack.contains(rec)) {
     printer << ", ";
