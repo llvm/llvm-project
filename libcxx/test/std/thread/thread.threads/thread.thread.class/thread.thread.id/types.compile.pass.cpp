@@ -7,11 +7,11 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: no-threads
 
-// <vector>
+// <thread>
 
-// template<class T, class charT> requires is-vector-bool-reference<T>
-//  struct formatter<T, charT>;
+// template<class charT> struct formatter<thread::id, charT>;
 
 // [format.formatter.spec]/4
 //   If the library provides an explicit or partial specialization of
@@ -31,11 +31,11 @@
 // Note this should be discussed in LEWG.
 
 #include <concepts>
-#include <vector>
+#include <thread>
 
 #include "test_macros.h"
 
-static_assert(std::semiregular<std::formatter<std::vector<bool>::reference, char>>);
+static_assert(std::semiregular<std::formatter<std::thread::id, char>>);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::semiregular<std::formatter<std::vector<bool>::reference, wchar_t>>);
+static_assert(std::semiregular<std::formatter<std::thread::id, wchar_t>>);
 #endif
