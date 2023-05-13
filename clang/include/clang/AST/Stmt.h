@@ -3587,8 +3587,11 @@ public:
     llvm::PointerIntPair<VarDecl *, 2, VariableCaptureKind> VarAndKind;
     SourceLocation Loc;
 
+    Capture() = default;
+
   public:
     friend class ASTStmtReader;
+    friend class CapturedStmt;
 
     /// Create a new capture.
     ///
