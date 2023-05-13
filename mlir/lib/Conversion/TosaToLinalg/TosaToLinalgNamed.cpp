@@ -751,8 +751,7 @@ public:
     ShapedType resultTy = cast<ShapedType>(op.getType());
     Type resultETy = cast<ShapedType>(op.getType()).getElementType();
 
-    Type accETy =
-        isa<IntegerType>(inElementTy) ? rewriter.getI32Type() : inElementTy;
+    Type accETy = op.getAccType();
     ShapedType accTy = resultTy.clone(accETy);
 
     auto dynamicDimsOr =

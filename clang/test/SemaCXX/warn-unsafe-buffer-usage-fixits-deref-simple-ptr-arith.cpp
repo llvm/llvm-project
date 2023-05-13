@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++20 -Wunsafe-buffer-usage -fdiagnostics-parseable-fixits -fsyntax-only %s 2>&1 | FileCheck %s
 
 // need to enable unsafe buffer patches
-// XFAIL:*   
+// XFAIL:*
 
 // TODO test we don't mess up vertical whitespace
 // TODO test different whitespaces

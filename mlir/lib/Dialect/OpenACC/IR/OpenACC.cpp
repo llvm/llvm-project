@@ -292,6 +292,46 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
     return success();
   }
 };
+
+/// Replaces the given op with the contents of the given single-block region,
+/// using the operands of the block terminator to replace operation results.
+static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
+                                Region &region, ValueRange blockArgs = {}) {
+  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  Block *block = &region.front();
+  Operation *terminator = block->getTerminator();
+  ValueRange results = terminator->getOperands();
+  rewriter.inlineBlockBefore(block, op, blockArgs);
+  rewriter.replaceOp(op, results);
+  rewriter.eraseOp(terminator);
+}
+
+/// Pattern to remove operation with region that have constant false `ifCond`
+/// and remove the condition from the operation if the `ifCond` is constant
+/// true.
+template <typename OpTy>
+struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Early return if there is no condition.
+    Value ifCond = op.getIfCond();
+    if (!ifCond)
+      return failure();
+
+    IntegerAttr constAttr;
+    if (!matchPattern(ifCond, m_Constant(&constAttr)))
+      return failure();
+    if (constAttr.getInt())
+      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
+    else
+      replaceOpWithRegion(rewriter, op, op.getRegion());
+
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -384,6 +424,11 @@ LogicalResult acc::HostDataOp::verify() {
     if (!mlir::isa<acc::UseDeviceOp>(operand.getDefiningOp()))
       return emitError("expect data entry operation as defining op");
   return success();
+}
+
+void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<RemoveConstantIfConditionWithRegion<HostDataOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

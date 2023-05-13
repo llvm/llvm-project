@@ -679,7 +679,7 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start) {
 std::error_code SampleProfileReaderBinary::readImpl() {
   ProfileIsFS = ProfileIsFSDisciminator;
   FunctionSamples::ProfileIsFS = ProfileIsFS;
-  while (!at_eof()) {
+  while (Data < End) {
     if (std::error_code EC = readFuncProfile(Data))
       return EC;
   }
@@ -727,9 +727,17 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       return EC;
     break;
   case SecFuncOffsetTable:
-    FuncOffsetsOrdered = hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered);
-    if (std::error_code EC = readFuncOffsetTable())
-      return EC;
+    // If module is absent, we are using LLVM tools, and need to read all
+    // profiles, so skip reading the function offset table.
+    if (!M) {
+      Data = End;
+    } else {
+      assert((!ProfileIsCS ||
+              hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)) &&
+             "func offset table should always be sorted in CS profile");
+      if (std::error_code EC = readFuncOffsetTable())
+        return EC;
+    }
     break;
   case SecFuncMetadata: {
     ProfileIsProbeBased =
@@ -753,6 +761,35 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
   return sampleprof_error::success;
 }
 
+bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
+  // If profile is CS, the function offset section is expected to consist of
+  // sequences of contexts in pre-order layout
+  // (e.g. [A, A:1 @ B, A:1 @ B:2.3 @ C] [D, D:1 @ E]), so that when a matched
+  // context in the module is found, the profiles of all its callees are
+  // recursively loaded. A list is needed since the order of profiles matters.
+  if (ProfileIsCS)
+    return true;
+
+  // If the profile is MD5, use the map container to lookup functions in
+  // the module. A remapper has no use on MD5 names.
+  if (useMD5())
+    return false;
+
+  // Profile is not MD5 and if a remapper is present, the remapped name of
+  // every function needed to be matched against the module, so use the list
+  // container since each entry is accessed.
+  if (Remapper)
+    return true;
+
+  // Otherwise use the map container for faster lookup.
+  // TODO: If the cardinality of the function offset section is much smaller
+  // than the number of functions in the module, using the list container can
+  // be always faster, but we need to figure out the constant factor to
+  // determine the cutoff.
+  return false;
+}
+
+
 bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
   if (!M)
     return false;
@@ -763,22 +800,20 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
-  // If there are more than one FuncOffsetTable, the profile read associated
-  // with previous FuncOffsetTable has to be done before next FuncOffsetTable
-  // is read.
+  // If there are more than one function offset section, the profile associated
+  // with the previous section has to be done reading before next one is read.
   FuncOffsetTable.clear();
+  FuncOffsetList.clear();
 
   auto Size = readNumber<uint64_t>();
   if (std::error_code EC = Size.getError())
     return EC;
 
-  FuncOffsetTable.reserve(*Size);
-
-  if (FuncOffsetsOrdered) {
-    OrderedFuncOffsets =
-        std::make_unique<std::vector<std::pair<SampleContext, uint64_t>>>();
-    OrderedFuncOffsets->reserve(*Size);
-  }
+  bool UseFuncOffsetList = useFuncOffsetList();
+  if (UseFuncOffsetList)
+    FuncOffsetList.reserve(*Size);
+  else
+    FuncOffsetTable.reserve(*Size);
 
   for (uint64_t I = 0; I < *Size; ++I) {
     auto FContext(readSampleContextFromTable());
@@ -789,12 +824,13 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     if (std::error_code EC = Offset.getError())
       return EC;
 
-    FuncOffsetTable[*FContext] = *Offset;
-    if (FuncOffsetsOrdered)
-      OrderedFuncOffsets->emplace_back(*FContext, *Offset);
-  }
+    if (UseFuncOffsetList)
+      FuncOffsetList.emplace_back(*FContext, *Offset);
+    else
+      FuncOffsetTable[*FContext] = *Offset;
+ }
 
-  return sampleprof_error::success;
+ return sampleprof_error::success;
 }
 
 std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
@@ -806,7 +842,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   // NameTable section is read.
   bool LoadFuncsToBeUsed = collectFuncsFromModule();
 
-  // When LoadFuncsToBeUsed is false, load all the function profiles.
+  // When LoadFuncsToBeUsed is false, we are using LLVM tool, need to read all
+  // profiles.
   const uint8_t *Start = Data;
   if (!LoadFuncsToBeUsed) {
     while (Data < End) {
@@ -823,6 +860,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
     }
 
     if (ProfileIsCS) {
+      assert(useFuncOffsetList());
       DenseSet<uint64_t> FuncGuidsToUse;
       if (useMD5()) {
         for (auto Name : FuncsToUse)
@@ -836,10 +874,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
       // as if they were walked in preorder of a context trie. While
       // traversing the trie, a link to the highest common ancestor node is
       // kept so that all of its decendants will be loaded.
-      assert(OrderedFuncOffsets.get() &&
-             "func offset table should always be sorted in CS profile");
       const SampleContext *CommonContext = nullptr;
-      for (const auto &NameOffset : *OrderedFuncOffsets) {
+      for (const auto &NameOffset : FuncOffsetList) {
         const auto &FContext = NameOffset.first;
         auto FName = FContext.getName();
         // For function in the current module, keep its farthest ancestor
@@ -857,35 +893,41 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
           // Load profile for the current context which originated from
           // the common ancestor.
           const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-          assert(FuncProfileAddr < End && "out of LBRProfile section");
           if (std::error_code EC = readFuncProfile(FuncProfileAddr))
             return EC;
         }
       }
+    } else if (useMD5()) {
+      assert(!useFuncOffsetList());
+      for (auto Name : FuncsToUse) {
+        auto GUID = std::to_string(MD5Hash(Name));
+        auto iter = FuncOffsetTable.find(StringRef(GUID));
+        if (iter == FuncOffsetTable.end())
+          continue;
+        const uint8_t *FuncProfileAddr = Start + iter->second;
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+          return EC;
+      }
+    } else if (Remapper) {
+      assert(useFuncOffsetList());
+      for (auto NameOffset : FuncOffsetList) {
+        SampleContext FContext(NameOffset.first);
+        auto FuncName = FContext.getName();
+        if (!FuncsToUse.count(FuncName) && !Remapper->exist(FuncName))
+          continue;
+        const uint8_t *FuncProfileAddr = Start + NameOffset.second;
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+          return EC;
+      }
     } else {
-      if (useMD5()) {
-        for (auto Name : FuncsToUse) {
-          auto GUID = std::to_string(MD5Hash(Name));
-          auto iter = FuncOffsetTable.find(StringRef(GUID));
-          if (iter == FuncOffsetTable.end())
-            continue;
-          const uint8_t *FuncProfileAddr = Start + iter->second;
-          assert(FuncProfileAddr < End && "out of LBRProfile section");
-          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-            return EC;
-        }
-      } else {
-        for (auto NameOffset : FuncOffsetTable) {
-          SampleContext FContext(NameOffset.first);
-          auto FuncName = FContext.getName();
-          if (!FuncsToUse.count(FuncName) &&
-              (!Remapper || !Remapper->exist(FuncName)))
-            continue;
-          const uint8_t *FuncProfileAddr = Start + NameOffset.second;
-          assert(FuncProfileAddr < End && "out of LBRProfile section");
-          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
-            return EC;
-        }
+      assert(!useFuncOffsetList());
+      for (auto Name : FuncsToUse) {
+        auto iter = FuncOffsetTable.find(Name);
+        if (iter == FuncOffsetTable.end())
+          continue;
+        const uint8_t *FuncProfileAddr = Start + iter->second;
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+          return EC;
       }
     }
     Data = End;

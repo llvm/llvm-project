@@ -595,8 +595,8 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
     Features.push_back("-sramecc");
   }
 
-  handleTargetFeaturesGroup(
-    Args, Features, options::OPT_m_amdgpu_Features_Group);
+  handleTargetFeaturesGroup(D, Triple, Args, Features,
+                            options::OPT_m_amdgpu_Features_Group);
 }
 
 /// AMDGPU Toolchain

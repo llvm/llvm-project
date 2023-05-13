@@ -29,6 +29,9 @@ A PSTL parallel backend is a tag type to which the following functions are assoc
   template <class _ExecutionPolicy, class _Iterator, class _Func>
   void __pstl_for_each(_Backend, _ExecutionPolicy&&, _Iterator __first, _Iterator __last, _Func __f);
 
+  template <class _ExecutionPolicy, class _Iterator, class _Predicate>
+  _Iterator __pstl_find_if(_Backend, _Iterator __first, _Iterator __last, _Predicate __pred);
+
 // TODO: Complete this list
 
 The following functions are optional but can be provided. If provided, they are used by the corresponding
@@ -37,6 +40,21 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
 
   template <class _ExecutionPolicy, class _Iterator, class _Size, class _Func>
   void __pstl_for_each_n(_Backend, _ExecutionPolicy&&, _Iterator __first, _Size __n, _Func __f);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Predicate>
+  bool __pstl_any_of(_Backend, _Iterator __first, _iterator __last, _Predicate __pred);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Predicate>
+  bool __pstl_all_of(_Backend, _Iterator __first, _iterator __last, _Predicate __pred);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Predicate>
+  bool __pstl_none_of(_Backend, _Iterator __first, _iterator __last, _Predicate __pred);
+
+  template <class _ExecutionPolicy, class _Iterator, class _Tp>
+  void __pstl_fill(_Iterator __first, _Iterator __last, const _Tp& __value);
+
+  template <class _ExecutionPolicy, class _Iterator, class _SizeT, class _Tp>
+  void __pstl_fill_n(_Iterator __first, _SizeT __n, const _Tp& __value);
 
 // TODO: Complete this list
 

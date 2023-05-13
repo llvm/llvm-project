@@ -10,7 +10,7 @@
 #pragma clang system_header
 
 // Xfail buffer warns until MIOPEN GTEST compiles ok
-// XFAIL: * 
+// XFAIL: *
 
 // no spanification warnings for system headers
 void foo(...);  // let arguments of `foo` to hold testing expressions

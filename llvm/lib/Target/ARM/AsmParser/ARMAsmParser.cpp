@@ -12775,7 +12775,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_XSCALE, {}, {}},
   };
   bool EnableFeature = true;
-  if (Name.startswith_insensitive("no")) {
+  if (Name.starts_with_insensitive("no")) {
     EnableFeature = false;
     Name = Name.substr(2);
   }

@@ -31,10 +31,6 @@ public:
     form = m_form;
     val = m_value;
   }
-  typedef std::vector<DWARFAttribute> collection;
-  typedef collection::iterator iterator;
-  typedef collection::const_iterator const_iterator;
-
 protected:
   dw_attr_t m_attr;
   dw_form_t m_form;

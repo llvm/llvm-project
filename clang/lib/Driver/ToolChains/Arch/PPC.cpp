@@ -116,7 +116,8 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
     Features.push_back("+spe");
 
-  handleTargetFeaturesGroup(Args, Features, options::OPT_m_ppc_Features_Group);
+  handleTargetFeaturesGroup(D, Triple, Args, Features,
+                            options::OPT_m_ppc_Features_Group);
 
   ppc::FloatABI FloatABI = ppc::getPPCFloatABI(D, Args);
   if (FloatABI == ppc::FloatABI::Soft)

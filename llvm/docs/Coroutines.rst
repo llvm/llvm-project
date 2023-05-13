@@ -1705,7 +1705,7 @@ and `coro.promise`_ intrinsics.
 
 CoroSplit
 ---------
-The pass CoroSplit buides coroutine frame and outlines resume and destroy parts
+The pass CoroSplit builds coroutine frame and outlines resume and destroy parts
 into separate functions.
 
 CoroElide
