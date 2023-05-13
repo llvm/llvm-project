@@ -14,8 +14,8 @@ struct String {
 // CHECK:     %3 = "cir.struct_element_addr"(%2) <{member_name = "size"}>
 // CHECK:     %4 = cir.load %1
 // CHECK:     %5 = "cir.struct_element_addr"(%4) <{member_name = "size"}>
-// CHECK:     %6 = cir.load %5 : cir.ptr <i64>, i64
-// CHECK:     cir.store %6, %3 : i64, cir.ptr <i64>
+// CHECK:     %6 = cir.load %5 : cir.ptr <!s64i>, !s64i
+// CHECK:     cir.store %6, %3 : !s64i, cir.ptr <!s64i>
 // CHECK:     cir.return
 // CHECK:   }
 

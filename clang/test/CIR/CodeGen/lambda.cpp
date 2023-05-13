@@ -23,16 +23,17 @@ void l0() {
 
 // CHECK: cir.func lambda internal private @_ZZ2l0vENK3$_0clEv(
 
-// CHECK: %0 = cir.alloca !cir.ptr<!ty_22class2Eanon221>, cir.ptr <!cir.ptr<!ty_22class2Eanon221>>, ["this", init]
-// CHECK: %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2Eanon221>>, !cir.ptr<!ty_22class2Eanon221>
-// CHECK: %2 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<!cir.ptr<i32>>
-// CHECK: %3 = cir.load %2 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK: %4 = cir.load %3 : cir.ptr <i32>, i32
-// CHECK: %5 = cir.const(1 : i32) : i32
-// CHECK: %6 = cir.binop(add, %4, %5) : i32
-// CHECK: %7 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<!cir.ptr<i32>>
-// CHECK: %8 = cir.load %7 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK: cir.store %6, %8 : i32, cir.ptr <i32>
+// CHECK: %0 = cir.alloca !cir.ptr<!ty_22class2Eanon222>, cir.ptr <!cir.ptr<!ty_22class2Eanon222>>, ["this", init] {alignment = 8 : i64}
+// CHECK: cir.store %arg0, %0 : !cir.ptr<!ty_22class2Eanon222>, cir.ptr <!cir.ptr<!ty_22class2Eanon222>>
+// CHECK: %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2Eanon222>>, !cir.ptr<!ty_22class2Eanon222>
+// CHECK: %2 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: %3 = cir.load %2 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK: %4 = cir.load %3 : cir.ptr <!s32i>, !s32i
+// CHECK: %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK: %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK: %7 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: %8 = cir.load %7 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK: cir.store %6, %8 : !s32i, cir.ptr <!s32i>
 
 // CHECK: cir.func @_Z2l0v() {
 
@@ -44,15 +45,15 @@ auto g() {
   };
 }
 
-// CHECK: cir.func @_Z1gv() -> !ty_22class2Eanon222 {
-// CHECK: %0 = cir.alloca !ty_22class2Eanon222, cir.ptr <!ty_22class2Eanon222>, ["__retval"] {alignment = 8 : i64}
-// CHECK: %1 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-// CHECK: %2 = cir.const(12 : i32) : i32
-// CHECK: cir.store %2, %1 : i32, cir.ptr <i32>
-// CHECK: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<i32>>
-// CHECK: cir.store %1, %3 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon222>, !ty_22class2Eanon222
-// CHECK: cir.return %4 : !ty_22class2Eanon222
+// CHECK: cir.func @_Z1gv() -> !ty_22class2Eanon223 {
+// CHECK: %0 = cir.alloca !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>, ["__retval"] {alignment = 8 : i64}
+// CHECK: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+// CHECK: %2 = cir.const(#cir.int<12> : !s32i) : !s32i
+// CHECK: cir.store %2, %1 : !s32i, cir.ptr <!s32i>
+// CHECK: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon223>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: cir.store %1, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+// CHECK: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon223>, !ty_22class2Eanon223
+// CHECK: cir.return %4 : !ty_22class2Eanon223
 
 auto g2() {
   int i = 12;
@@ -64,31 +65,31 @@ auto g2() {
 }
 
 // Should be same as above because of NRVO
-// CHECK: cir.func @_Z2g2v() -> !ty_22class2Eanon223 {
-// CHECK-NEXT: %0 = cir.alloca !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>, ["__retval", init] {alignment = 8 : i64}
-// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
-// CHECK-NEXT: %2 = cir.const(12 : i32) : i32
-// CHECK-NEXT: cir.store %2, %1 : i32, cir.ptr <i32>
-// CHECK-NEXT: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon223>) -> !cir.ptr<!cir.ptr<i32>>
-// CHECK-NEXT: cir.store %1, %3 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK-NEXT: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon223>, !ty_22class2Eanon223
-// CHECK-NEXT: cir.return %4 : !ty_22class2Eanon223
+// CHECK: cir.func @_Z2g2v() -> !ty_22class2Eanon224 {
+// CHECK-NEXT: %0 = cir.alloca !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>, ["__retval", init] {alignment = 8 : i64}
+// CHECK-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+// CHECK-NEXT: %2 = cir.const(#cir.int<12> : !s32i) : !s32i
+// CHECK-NEXT: cir.store %2, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon224>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: cir.store %1, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+// CHECK-NEXT: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon224>, !ty_22class2Eanon224
+// CHECK-NEXT: cir.return %4 : !ty_22class2Eanon224
 
 int f() {
   return g2()();
 }
 
-// CHECK: cir.func @_Z1fv() -> i32 {
-// CHECK-NEXT:   %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
+//      CHECK: cir.func @_Z1fv() -> !s32i {
+// CHECK-NEXT:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:   cir.scope {
-// CHECK-NEXT:     %2 = cir.alloca !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>, ["ref.tmp0"] {alignment = 8 : i64}
-// CHECK-NEXT:     %3 = cir.call @_Z2g2v() : () -> !ty_22class2Eanon223
-// CHECK-NEXT:     cir.store %3, %2 : !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>
-// CHECK-NEXT:     %4 = cir.call @_ZZ2g2vENK3$_0clEv(%2) : (!cir.ptr<!ty_22class2Eanon223>) -> i32
-// CHECK-NEXT:     cir.store %4, %0 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %2 = cir.alloca !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>, ["ref.tmp0"] {alignment = 8 : i64}
+// CHECK-NEXT:     %3 = cir.call @_Z2g2v() : () -> !ty_22class2Eanon224
+// CHECK-NEXT:     cir.store %3, %2 : !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>
+// CHECK-NEXT:     %4 = cir.call @_ZZ2g2vENK3$_0clEv(%2) : (!cir.ptr<!ty_22class2Eanon224>) -> !s32i
+// CHECK-NEXT:     cir.store %4, %0 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:   }
-// CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK-NEXT:   cir.return %1 : i32
+// CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:   cir.return %1 : !s32i
 // CHECK-NEXT: }
 
 int g3() {
@@ -106,30 +107,30 @@ int g3() {
 // lambda operator int (*)(int const&)()
 // CHECK:   cir.func internal private @_ZZ2g3vENK3$_0cvPFiRKiEEv
 
-// CHECK: cir.func @_Z2g3v() -> i32 {
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-// CHECK:     %1 = cir.alloca !cir.ptr<(!cir.ptr<i32>) -> i32>, cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> i32>>, ["fn", init] {alignment = 8 : i64}
-// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["task", init] {alignment = 4 : i64}
+// CHECK: cir.func @_Z2g3v() -> !s32i {
+// CHECK:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:     %1 = cir.alloca !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>, cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !s32i>>, ["fn", init] {alignment = 8 : i64}
+// CHECK:     %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["task", init] {alignment = 4 : i64}
 
 // 1. Use `operator int (*)(int const&)()` to retrieve the fnptr to `__invoke()`.
 // CHECK:     %3 = cir.scope {
-// CHECK:       %7 = cir.alloca !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>, ["ref.tmp0"] {alignment = 1 : i64}
-// CHECK:       %8 = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%7) : (!cir.ptr<!ty_22class2Eanon224>) -> !cir.ptr<(!cir.ptr<i32>) -> i32>
-// CHECK:       %9 = cir.unary(plus, %8) : !cir.ptr<(!cir.ptr<i32>) -> i32>, !cir.ptr<(!cir.ptr<i32>) -> i32>
-// CHECK:       cir.yield %9 : !cir.ptr<(!cir.ptr<i32>) -> i32>
+// CHECK:       %7 = cir.alloca !ty_22class2Eanon221, cir.ptr <!ty_22class2Eanon221>, ["ref.tmp0"] {alignment = 1 : i64}
+// CHECK:       %8 = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%7) : (!cir.ptr<!ty_22class2Eanon221>) -> !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>
+// CHECK:       %9 = cir.unary(plus, %8) : !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>, !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>
+// CHECK:       cir.yield %9 : !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>
 // CHECK:     }
 
 // 2. Load ptr to `__invoke()`.
-// CHECK:     cir.store %3, %1 : !cir.ptr<(!cir.ptr<i32>) -> i32>, cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> i32>>
+// CHECK:     cir.store %3, %1 : !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>, cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !s32i>>
 // CHECK:     %4 = cir.scope {
-// CHECK:       %7 = cir.alloca i32, cir.ptr <i32>, ["ref.tmp1", init] {alignment = 4 : i64}
-// CHECK:       %8 = cir.load %1 : cir.ptr <!cir.ptr<(!cir.ptr<i32>) -> i32>>, !cir.ptr<(!cir.ptr<i32>) -> i32>
-// CHECK:       %9 = cir.const(3 : i32) : i32
-// CHECK:       cir.store %9, %7 : i32, cir.ptr <i32>
+// CHECK:       %7 = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
+// CHECK:       %8 = cir.load %1 : cir.ptr <!cir.ptr<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<(!cir.ptr<!s32i>) -> !s32i>
+// CHECK:       %9 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:       cir.store %9, %7 : !s32i, cir.ptr <!s32i>
 
 // 3. Call `__invoke()`, which effectively executes `operator()`.
-// CHECK:       %10 = cir.call %8(%7) : (!cir.ptr<(!cir.ptr<i32>) -> i32>, !cir.ptr<i32>) -> i32
-// CHECK:       cir.yield %10 : i32
+// CHECK:       %10 = cir.call %8(%7) : (!cir.ptr<(!cir.ptr<!s32i>) -> !s32i>, !cir.ptr<!s32i>) -> !s32i
+// CHECK:       cir.yield %10 : !s32i
 // CHECK:     }
 
 // CHECK:   }

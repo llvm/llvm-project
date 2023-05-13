@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -132,6 +133,74 @@ LogicalResult ConstStructAttr::verify(
       return failure();
     }
     attrIdx++;
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// IntAttr definitions
+//===----------------------------------------------------------------------===//
+
+Attribute IntAttr::parse(AsmParser &parser, Type odsType) {
+  mlir::APInt APValue;
+
+  if (!odsType.isa<IntType>())
+    return {};
+  auto type = odsType.cast<IntType>();
+
+  // Consume the '<' symbol.
+  if (parser.parseLess())
+    return {};
+
+  // Fetch arbitrary precision integer value.
+  if (type.isSigned()) {
+    int64_t value;
+    if (parser.parseInteger(value))
+      parser.emitError(parser.getCurrentLocation(), "expected integer value");
+    APValue = mlir::APInt(type.getWidth(), value, type.isSigned());
+    if (APValue.getSExtValue() != value)
+      parser.emitError(parser.getCurrentLocation(),
+                       "integer value too large for the given type");
+  } else {
+    uint64_t value;
+    if (parser.parseInteger(value))
+      parser.emitError(parser.getCurrentLocation(), "expected integer value");
+    APValue = mlir::APInt(type.getWidth(), value, type.isSigned());
+    if (APValue.getZExtValue() != value)
+      parser.emitError(parser.getCurrentLocation(),
+                       "integer value too large for the given type");
+  }
+
+  // Consume the '>' symbol.
+  if (parser.parseGreater())
+    return {};
+
+  return IntAttr::get(type, APValue);
+}
+
+void IntAttr::print(AsmPrinter &printer) const {
+  auto type = getType().cast<IntType>();
+  printer << '<';
+  if (type.isSigned())
+    printer << getSInt();
+  else
+    printer << getUInt();
+  printer << '>';
+}
+
+LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type type, APInt value) {
+  if (!type.isa<IntType>()) {
+    emitError() << "expected 'simple.int' type";
+    return failure();
+  }
+
+  auto intType = type.cast<IntType>();
+  if (value.getBitWidth() != intType.getWidth()) {
+    emitError() << "type and value bitwidth mismatch: " << intType.getWidth()
+                << " != " << value.getBitWidth();
+    return failure();
   }
 
   return success();

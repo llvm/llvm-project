@@ -111,11 +111,11 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     ```
   }];
 
-  let arguments = (ins AnyType:$base, AnyInteger:$stride);
+  let arguments = (ins AnyType:$base, CIR_IntType:$stride);
   let results = (outs AnyType:$result);
 
   let assemblyFormat = [{
-    `(` $base `:` type($base) `,` $stride `:` type($stride) `)`
+    `(` $base `:` type($base) `,` $stride `:` qualified(type($stride)) `)`
     `,` type($result) attr-dict
   }];
 
@@ -875,7 +875,7 @@ def SwitchOp : CIR_Op<"switch",
     ```
   }];
 
-  let arguments = (ins AnyInteger:$condition,
+  let arguments = (ins CIR_IntType:$condition,
                        OptionalAttr<CaseArrayAttr>:$cases);
 
   let regions = (region VariadicRegion<AnyRegion>:$regions);

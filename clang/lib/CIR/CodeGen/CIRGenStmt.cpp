@@ -607,7 +607,7 @@ mlir::LogicalResult CIRGenFunction::buildCaseStmt(const CaseStmt &S,
   // Fold cascading cases whenever possible to simplify codegen a bit.
   while (true) {
     auto intVal = caseStmt->getLHS()->EvaluateKnownConstInt(getContext());
-    caseEltValueListAttr.push_back(mlir::IntegerAttr::get(condType, intVal));
+    caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(condType, intVal));
     if (isa<CaseStmt>(caseStmt->getSubStmt()))
       caseStmt = dyn_cast_or_null<CaseStmt>(caseStmt->getSubStmt());
     else

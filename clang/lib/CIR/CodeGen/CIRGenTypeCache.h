@@ -31,6 +31,10 @@ struct CIRGenTypeCache {
 
   /// i8, i16, i32, and i64
   mlir::Type Int8Ty, Int16Ty, Int32Ty, Int64Ty;
+  // char, int, short, long
+  mlir::Type SInt8Ty, SInt16Ty, SInt32Ty, SInt64Ty;
+  // usigned char, unsigned, unsigned short, unsigned long
+  mlir::Type UInt8Ty, UInt16Ty, UInt32Ty, UInt64Ty;
   /// half, bfloat, float, double
   // mlir::Type HalfTy, BFloatTy;
   mlir::Type FloatTy, DoubleTy;

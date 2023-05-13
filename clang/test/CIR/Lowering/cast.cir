@@ -1,10 +1,16 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!s8i = !cir.int<s, 8>
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
 
 module {
-  cir.func @foo(%arg0: i32) -> i32 {
-    %4 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
-    cir.return %arg0 : i32
+  cir.func @foo(%arg0: !s32i) -> !s32i {
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    cir.return %arg0 : !s32i
   }
 
 //      MLIR:  llvm.func @foo(%arg0: i32) -> i32 {
@@ -21,42 +27,41 @@ module {
 // LLVM-NEXT:   ret i32 %0
 // LLVM-NEXT: }
 
-  cir.func @cStyleCasts(%arg0: i32, %arg1: i32) -> i32 {
+  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i) -> !s32i {
     // MLIR: llvm.func @cStyleCasts(%arg0: i32, %arg1: i32) -> i32 {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["x1", init] {alignment = 4 : i64}
-    %1 = cir.alloca i32, cir.ptr <i32>, ["x2", init] {alignment = 4 : i64}
-    %2 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-    %3 = cir.alloca i8, cir.ptr <i8>, ["a", init] {alignment = 1 : i64}
-    %4 = cir.alloca i16, cir.ptr <i16>, ["b", init] {alignment = 2 : i64}
-    %5 = cir.alloca i64, cir.ptr <i64>, ["c", init] {alignment = 8 : i64}
-    %6 = cir.alloca i64, cir.ptr <i64>, ["d", init] {alignment = 8 : i64}
-    %17 = cir.alloca !cir.array<i32 x 3>, cir.ptr <!cir.array<i32 x 3>>, ["arr"] {alignment = 4 : i64}
-    %18 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["e", init] {alignment = 8 : i64}
-    cir.store %arg0, %0 : i32, cir.ptr <i32>
-    cir.store %arg1, %1 : i32, cir.ptr <i32>
-    %7 = cir.load %0 : cir.ptr <i32>, i32
-    %8 = cir.cast(integral, %7 : i32), i8
+    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x1", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["x2", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    %3 = cir.alloca !s8i, cir.ptr <!s8i>, ["a", init] {alignment = 1 : i64}
+    %4 = cir.alloca !s16i, cir.ptr <!s16i>, ["b", init] {alignment = 2 : i64}
+    %5 = cir.alloca !s64i, cir.ptr <!s64i>, ["c", init] {alignment = 8 : i64}
+    %6 = cir.alloca !s64i, cir.ptr <!s64i>, ["d", init] {alignment = 8 : i64}
+    %7 = cir.alloca !cir.array<!s32i x 3>, cir.ptr <!cir.array<!s32i x 3>>, ["arr"] {alignment = 4 : i64}
+    %8 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["e", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
+    cir.store %arg1, %1 : !s32i, cir.ptr <!s32i>
+    %9 = cir.load %0 : cir.ptr <!u32i>, !u32i
+    %10 = cir.cast(integral, %9 : !u32i), !s8i
     // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i8
-    cir.store %8, %3 : i8, cir.ptr <i8>
-    %9 = cir.load %1 : cir.ptr <i32>, i32
-    %10 = cir.cast(integral, %9 : i32), i16
+    cir.store %10, %3 : !s8i, cir.ptr <!s8i>
+    %11 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %12 = cir.cast(integral, %11 : !s32i), !s16i
     // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i16
-    cir.store %10, %4 : i16, cir.ptr <i16>
-    %11 = cir.load %0 : cir.ptr <i32>, i32
-    %12 = cir.cast(integral, %11 : i32), i64
-    // FIXME: this should be a zext, but we don't distinguish signed/unsigned
+    cir.store %12, %4 : !s16i, cir.ptr <!s16i>
+    %13 = cir.load %0 : cir.ptr <!u32i>, !u32i
+    %14 = cir.cast(integral, %13 : !u32i), !s64i
+    // MLIR: %{{[0-9]+}} = llvm.zext %{{[0-9]+}} : i32 to i64
+    cir.store %14, %5 : !s64i, cir.ptr <!s64i>
+    %15 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %16 = cir.cast(integral, %15 : !s32i), !s64i
     // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
-    cir.store %12, %5 : i64, cir.ptr <i64>
-    %13 = cir.load %1 : cir.ptr <i32>, i32
-    %14 = cir.cast(integral, %13 : i32), i64
-    // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
-    cir.store %14, %6 : i64, cir.ptr <i64>
-    %19 = cir.cast(array_to_ptrdecay, %17 : !cir.ptr<!cir.array<i32 x 3>>), !cir.ptr<i32>
+    cir.store %16, %6 : !s64i, cir.ptr <!s64i>
+    %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
-    cir.store %19, %18 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-    %15 = cir.const(0 : i32) : i32
-    cir.store %15, %2 : i32, cir.ptr <i32>
-    %16 = cir.load %2 : cir.ptr <i32>, i32
-    cir.return %16 : i32
+    cir.store %17, %8 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+    %18 = cir.const(#cir.int<0> : !s32i) : !s32i
+    cir.store %18, %2 : !s32i, cir.ptr <!s32i>
+    %19 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    cir.return %19 : !s32i
   }
 }

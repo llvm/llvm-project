@@ -6,10 +6,10 @@ int *p0() {
   return p;
 }
 
-// CHECK: cir.func @_Z2p0v() -> !cir.ptr<i32> {
-// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", init]
-// CHECK: %2 = cir.const(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: cir.func @_Z2p0v() -> !cir.ptr<!s32i> {
+// CHECK: %1 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["p", init]
+// CHECK: %2 = cir.const(#cir.null : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
+// CHECK: cir.store %2, %1 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
 
 int *p1() {
   int *p;
@@ -17,10 +17,10 @@ int *p1() {
   return p;
 }
 
-// CHECK: cir.func @_Z2p1v() -> !cir.ptr<i32> {
-// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p"]
-// CHECK: %2 = cir.const(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: cir.func @_Z2p1v() -> !cir.ptr<!s32i> {
+// CHECK: %1 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["p"]
+// CHECK: %2 = cir.const(#cir.null : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
+// CHECK: cir.store %2, %1 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
 
 int *p2() {
   int *p = nullptr;
@@ -33,27 +33,27 @@ int *p2() {
   return p;
 }
 
-// CHECK: cir.func @_Z2p2v() -> !cir.ptr<i32> {
-// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval"] {alignment = 8 : i64}
-// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", init] {alignment = 8 : i64}
-// CHECK-NEXT:  %2 = cir.const(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
-// CHECK-NEXT:  cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
+// CHECK: cir.func @_Z2p2v() -> !cir.ptr<!s32i> {
+// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
+// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["p", init] {alignment = 8 : i64}
+// CHECK-NEXT:  %2 = cir.const(#cir.null : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
+// CHECK-NEXT:  cir.store %2, %1 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
 // CHECK-NEXT:  cir.scope {
-// CHECK-NEXT:    %7 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
-// CHECK-NEXT:    %8 = cir.const(0 : i32) : i32
-// CHECK-NEXT:    cir.store %8, %7 : i32, cir.ptr <i32>
-// CHECK-NEXT:    cir.store %7, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK-NEXT:    %9 = cir.const(42 : i32) : i32
-// CHECK-NEXT:    %10 = cir.load deref %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:    cir.store %9, %10 : i32, cir.ptr <i32>
+// CHECK-NEXT:    %7 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK-NEXT:    %8 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:    cir.store %8, %7 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:    cir.store %7, %1 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+// CHECK-NEXT:    %9 = cir.const(#cir.int<42> : !s32i) : !s32i
+// CHECK-NEXT:    %10 = cir.load deref %1 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:    cir.store %9, %10 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:  } loc(#[[locScope:loc[0-9]+]])
-// CHECK-NEXT:  %3 = cir.const(42 : i32) : i32
-// CHECK-NEXT:  %4 = cir.load deref %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:  cir.store %3, %4 : i32, cir.ptr <i32>
-// CHECK-NEXT:  %5 = cir.load %1 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:  cir.store %5, %0 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
-// CHECK-NEXT:  %6 = cir.load %0 : cir.ptr <!cir.ptr<i32>>, !cir.ptr<i32>
-// CHECK-NEXT:  cir.return %6 : !cir.ptr<i32>
+// CHECK-NEXT:  %3 = cir.const(#cir.int<42> : !s32i) : !s32i
+// CHECK-NEXT:  %4 = cir.load deref %1 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:  cir.store %3, %4 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:  %5 = cir.load %1 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:  cir.store %5, %0 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+// CHECK-NEXT:  %6 = cir.load %0 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:  cir.return %6 : !cir.ptr<!s32i>
 
 void b0() { bool x = true, y = false; }
 
@@ -63,9 +63,9 @@ void b0() { bool x = true, y = false; }
 
 void b1(int a) { bool b = a; }
 
-// CHECK: cir.func @_Z2b1i(%arg0: i32 loc({{.*}})) {
-// CHECK: %2 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK: %3 = cir.cast(int_to_bool, %2 : i32), !cir.bool
+// CHECK: cir.func @_Z2b1i(%arg0: !s32i loc({{.*}})) {
+// CHECK: %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK: %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
 // CHECK: cir.store %3, %1 : !cir.bool, cir.ptr <!cir.bool>
 
 void if0(int a) {
@@ -77,16 +77,16 @@ void if0(int a) {
   }
 }
 
-// CHECK: cir.func @_Z3if0i(%arg0: i32 loc({{.*}}))
+// CHECK: cir.func @_Z3if0i(%arg0: !s32i loc({{.*}}))
 // CHECK: cir.scope {
-// CHECK:   %3 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:   %4 = cir.cast(int_to_bool, %3 : i32), !cir.bool
+// CHECK:   %3 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK:   %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
 // CHECK-NEXT:   cir.if %4 {
-// CHECK-NEXT:     %5 = cir.const(3 : i32) : i32
-// CHECK-NEXT:     cir.store %5, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %5 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK-NEXT:     cir.store %5, %1 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:   } else {
-// CHECK-NEXT:     %5 = cir.const(4 : i32) : i32
-// CHECK-NEXT:     cir.store %5, %1 : i32, cir.ptr <i32>
+// CHECK-NEXT:     %5 = cir.const(#cir.int<4> : !s32i) : !s32i
+// CHECK-NEXT:     cir.store %5, %1 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:   }
 // CHECK: }
 
@@ -105,30 +105,30 @@ void if1(int a, bool b, bool c) {
   }
 }
 
-// CHECK: cir.func @_Z3if1ibb(%arg0: i32 loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
+// CHECK: cir.func @_Z3if1ibb(%arg0: !s32i loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
 // CHECK: cir.scope {
-// CHECK:   %5 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:   %6 = cir.cast(int_to_bool, %5 : i32), !cir.bool
+// CHECK:   %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK:   %6 = cir.cast(int_to_bool, %5 : !s32i), !cir.bool
 // CHECK:   cir.if %6 {
-// CHECK:     %7 = cir.const(3 : i32) : i32
-// CHECK:     cir.store %7, %3 : i32, cir.ptr <i32>
+// CHECK:     %7 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:     cir.store %7, %3 : !s32i, cir.ptr <!s32i>
 // CHECK:     cir.scope {
 // CHECK:       %8 = cir.load %1 : cir.ptr <!cir.bool>, !cir.bool
 // CHECK-NEXT:       cir.if %8 {
-// CHECK-NEXT:         %9 = cir.const(8 : i32) : i32
-// CHECK-NEXT:         cir.store %9, %3 : i32, cir.ptr <i32>
+// CHECK-NEXT:         %9 = cir.const(#cir.int<8> : !s32i) : !s32i
+// CHECK-NEXT:         cir.store %9, %3 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:       }
 // CHECK:     }
 // CHECK:   } else {
 // CHECK:     cir.scope {
 // CHECK:       %8 = cir.load %2 : cir.ptr <!cir.bool>, !cir.bool
 // CHECK-NEXT:       cir.if %8 {
-// CHECK-NEXT:         %9 = cir.const(14 : i32) : i32
-// CHECK-NEXT:         cir.store %9, %3 : i32, cir.ptr <i32>
+// CHECK-NEXT:         %9 = cir.const(#cir.int<14> : !s32i) : !s32i
+// CHECK-NEXT:         cir.store %9, %3 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:       }
 // CHECK:     }
-// CHECK:     %7 = cir.const(4 : i32) : i32
-// CHECK:     cir.store %7, %3 : i32, cir.ptr <i32>
+// CHECK:     %7 = cir.const(#cir.int<4> : !s32i) : !s32i
+// CHECK:     cir.store %7, %3 : !s32i, cir.ptr <!s32i>
 // CHECK:   }
 // CHECK: }
 

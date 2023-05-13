@@ -15,8 +15,10 @@
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include <cstdint>
 
 #include "mlir/IR/Value.h"
 
@@ -98,7 +100,7 @@ public:
     mlir::Type Ty = CGF.getCIRType(E->getType());
     return Builder.create<mlir::cir::ConstantOp>(
         CGF.getLoc(E->getExprLoc()), Ty,
-        Builder.getIntegerAttr(Ty, E->getValue()));
+        Builder.getAttr<mlir::cir::IntAttr>(Ty, E->getValue()));
   }
 
   mlir::Value VisitFixedPointLiteral(const FixedPointLiteral *E) {
@@ -112,10 +114,9 @@ public:
   }
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *E) {
     mlir::Type Ty = CGF.getCIRType(E->getType());
-    auto newOp = Builder.create<mlir::cir::ConstantOp>(
-        CGF.getLoc(E->getExprLoc()), Ty,
-        Builder.getIntegerAttr(Ty, E->getValue()));
-    return newOp;
+    auto loc = CGF.getLoc(E->getExprLoc());
+    auto init = mlir::cir::IntAttr::get(Ty, E->getValue());
+    return Builder.create<mlir::cir::ConstantOp>(loc, Ty, init);
   }
   mlir::Value VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     llvm_unreachable("NYI");
@@ -325,7 +326,7 @@ public:
         // For everything else, we can just do a simple increment.
         auto loc = CGF.getLoc(E->getSourceRange());
         auto &builder = CGF.getBuilder();
-        auto amt = builder.getInt32(amount, loc);
+        auto amt = builder.getSInt32(amount, loc);
         if (CGF.getLangOpts().isSignedOverflowDefined()) {
           llvm_unreachable("NYI");
         } else {
@@ -1263,6 +1264,13 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     if (InputSigned)
       llvm_unreachable("NYI");
 
+    llvm_unreachable("NYI");
+  }
+
+  if (SrcElementTy.isa<mlir::cir::IntType>()) {
+    if (DstElementTy.isa<mlir::cir::IntType>())
+      return Builder.create<mlir::cir::CastOp>(
+          Src.getLoc(), DstTy, mlir::cir::CastKind::integral, Src);
     llvm_unreachable("NYI");
   }
 

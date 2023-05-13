@@ -1,17 +1,18 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+!s32i = !cir.int<s, 32>
 
 module {
-  cir.func @foo(%arg0: i32) -> i32 {
-    %4 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
+  cir.func @foo(%arg0: !s32i) -> !s32i {
+    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
     cir.if %4 {
-      %5 = cir.const(1 : i32) : i32
-      cir.return %5 : i32
+      %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+      cir.return %5 : !s32i
     } else {
-      %5 = cir.const(0 : i32) : i32
-      cir.return %5 : i32
+      %5 = cir.const(#cir.int<0> : !s32i) : !s32i
+      cir.return %5 : !s32i
     }
-    cir.return %arg0 : i32
+    cir.return %arg0 : !s32i
   }
 }
 

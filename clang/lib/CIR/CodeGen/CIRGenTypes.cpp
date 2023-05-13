@@ -406,6 +406,10 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     case BuiltinType::SatLongFract:
     case BuiltinType::SatShortAccum:
     case BuiltinType::SatShortFract:
+      ResultType =
+          mlir::cir::IntType::get(Builder.getContext(), Context.getTypeSize(T),
+                                  /*isSigned=*/true);
+      break;
     // Unsigned types.
     case BuiltinType::Char16:
     case BuiltinType::Char32:
@@ -430,9 +434,9 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     case BuiltinType::SatULongFract:
     case BuiltinType::SatUShortAccum:
     case BuiltinType::SatUShortFract:
-      // FIXME: break this in s/u and also pass signed param.
       ResultType =
-          Builder.getIntegerType(static_cast<unsigned>(Context.getTypeSize(T)));
+          mlir::cir::IntType::get(Builder.getContext(), Context.getTypeSize(T),
+                                  /*isSigned=*/false);
       break;
 
     case BuiltinType::Float16:
@@ -606,7 +610,8 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
     auto isSized = [&](mlir::Type ty) {
       if (ty.isIntOrFloat() ||
           ty.isa<mlir::cir::PointerType, mlir::cir::StructType,
-                 mlir::cir::ArrayType, mlir::cir::BoolType>())
+                 mlir::cir::ArrayType, mlir::cir::BoolType,
+                 mlir::cir::IntType>())
         return true;
       assert(0 && "not implemented");
       return false;

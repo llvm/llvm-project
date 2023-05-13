@@ -1,35 +1,36 @@
 // RUN: cir-tool %s | FileCheck %s
+!s32i = !cir.int<s, 32>
 
 cir.func @s0() {
-  %1 = cir.const(2 : i32) : i32
-  cir.switch (%1 : i32) [
+  %1 = cir.const(#cir.int<2> : !s32i) : !s32i
+  cir.switch (%1 : !s32i) [
     case (default) {
       cir.return
     },
     case (equal, 3) {
       cir.yield fallthrough
     },
-    case (anyof, [6, 7, 8] : i32) {
+    case (anyof, [6, 7, 8] : !s32i) {
       cir.yield break
     },
-    case (equal, 5 : i32) {
+    case (equal, 5 : !s32i) {
       cir.yield
     }
   ]
   cir.return
 }
 
-// CHECK: cir.switch (%0 : i32) [
+// CHECK: cir.switch (%0 : !s32i) [
 // CHECK-NEXT: case (default)  {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: },
-// CHECK-NEXT: case (equal, 3 : i32)  {
+// CHECK-NEXT: case (equal, #cir.int<3> : !s32i)  {
 // CHECK-NEXT:   cir.yield fallthrough
 // CHECK-NEXT: },
-// CHECK-NEXT: case (anyof, [6, 7, 8] : i32) {
+// CHECK-NEXT: case (anyof, [#cir.int<6>, #cir.int<7>, #cir.int<8>] : !s32i) {
 // CHECK-NEXT:   cir.yield break
 // CHECK-NEXT: },
-// CHECK-NEXT: case (equal, 5 : i32)  {
+// CHECK-NEXT: case (equal, #cir.int<5> : !s32i)  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: ]

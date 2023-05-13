@@ -6,22 +6,22 @@ int x(int y) {
 }
 
 // CHECK: cir.func @_Z1xi
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["y", init] {alignment = 4 : i64}
-// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
-// CHECK:     cir.store %arg0, %0 : i32, cir.ptr <i32>
-// CHECK:     %2 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:     %3 = cir.const(0 : i32) : i32
-// CHECK:     %4 = cir.cmp(gt, %2, %3) : i32, !cir.bool
+// CHECK:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init] {alignment = 4 : i64}
+// CHECK:     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:     cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+// CHECK:     %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK:     %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:     %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
 // CHECK:     %5 = cir.ternary(%4, true {
-// CHECK:       %7 = cir.const(3 : i32) : i32
-// CHECK:       cir.yield %7 : i32
+// CHECK:       %7 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:       cir.yield %7 : !s32i
 // CHECK:     }, false {
-// CHECK:       %7 = cir.const(5 : i32) : i32
-// CHECK:       cir.yield %7 : i32
-// CHECK:     }) : i32
-// CHECK:     cir.store %5, %1 : i32, cir.ptr <i32>
-// CHECK:     %6 = cir.load %1 : cir.ptr <i32>, i32
-// CHECK:     cir.return %6 : i32
+// CHECK:       %7 = cir.const(#cir.int<5> : !s32i) : !s32i
+// CHECK:       cir.yield %7 : !s32i
+// CHECK:     }) : !s32i
+// CHECK:     cir.store %5, %1 : !s32i, cir.ptr <!s32i>
+// CHECK:     %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK:     cir.return %6 : !s32i
 // CHECK:   }
 
 typedef enum {
@@ -35,22 +35,24 @@ void m(APIType api) {
   ((api == API_A) ? (static_cast<void>(0)) : oba("yo.cpp"));
 }
 
-// CHECK: cir.func @_Z1m7APIType
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["api", init] {alignment = 4 : i64}
-// CHECK:     cir.store %arg0, %0 : i32, cir.ptr <i32>
-// CHECK:     %1 = cir.load %0 : cir.ptr <i32>, i32
-// CHECK:     %2 = cir.const(0 : i32) : i32
-// CHECK:     %3 = cir.cmp(eq, %1, %2) : i32, !cir.bool
-// CHECK:     %4 = cir.ternary(%3, true {
-// CHECK:       %5 = cir.const(0 : i32) : i32
-// CHECK:       %6 = cir.const(0 : i8) : i8
-// CHECK:       cir.yield %6 : i8
-// CHECK:     }, false {
-// CHECK:       %5 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 7>>
-// CHECK:       %6 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<i8 x 7>>), !cir.ptr<i8>
-// CHECK:       cir.call @_Z3obaPKc(%6) : (!cir.ptr<i8>) -> ()
-// CHECK:       %7 = cir.const(0 : i8) : i8
-// CHECK:       cir.yield %7 : i8
-// CHECK:     }) : i8
-// CHECK:     cir.return
-// CHECK:   }
+// CHECK:  cir.func @_Z1m7APIType
+// CHECK:    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["api", init] {alignment = 4 : i64}
+// CHECK:    cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
+// CHECK:    %1 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK:    %2 = cir.cast(integral, %1 : !u32i), !s32i
+// CHECK:    %3 = cir.const(#cir.int<0> : !u32i) : !u32i
+// CHECK:    %4 = cir.cast(integral, %3 : !u32i), !s32i
+// CHECK:    %5 = cir.cmp(eq, %2, %4) : !s32i, !cir.bool
+// CHECK:    %6 = cir.ternary(%5, true {
+// CHECK:      %7 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:      %8 = cir.const(0 : i8) : i8
+// CHECK:      cir.yield %8 : i8
+// CHECK:    }, false {
+// CHECK:      %7 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 7>>
+// CHECK:      %8 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s8i x 7>>), !cir.ptr<!s8i>
+// CHECK:      cir.call @_Z3obaPKc(%8) : (!cir.ptr<!s8i>) -> ()
+// CHECK:      %9 = cir.const(0 : i8) : i8
+// CHECK:      cir.yield %9 : i8
+// CHECK:    }) : i8
+// CHECK:    cir.return
+// CHECK:  }

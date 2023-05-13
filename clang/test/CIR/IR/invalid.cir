@@ -82,11 +82,12 @@ cir.func @yieldcontinue() {
 
 // -----
 
+!s32i = !cir.int<s, 32>
 cir.func @s0() {
-  %1 = cir.const(2 : i32) : i32
-  cir.switch (%1 : i32) [
+  %1 = cir.const(#cir.int<2> : !s32i) : !s32i
+  cir.switch (%1 : !s32i) [
     case (equal, 5) {
-      %2 = cir.const(3 : i32) : i32
+      %2 = cir.const(#cir.int<3> : !s32i) : !s32i
     }
   ] // expected-error {{blocks are expected to be explicitly terminated}}
   cir.return
@@ -94,9 +95,10 @@ cir.func @s0() {
 
 // -----
 
+!s32i = !cir.int<s, 32>
 cir.func @s1() {
-  %1 = cir.const(2 : i32) : i32
-  cir.switch (%1 : i32) [
+  %1 = cir.const(#cir.int<2> : !s32i) : !s32i
+  cir.switch (%1 : !s32i) [
     case (equal, 5) {
     }
   ] // expected-error {{case region shall not be empty}}
@@ -105,9 +107,9 @@ cir.func @s1() {
 
 // -----
 
-cir.func @badstride(%x: !cir.ptr<i32>) {
-  %idx = cir.const(2 : i32) : i32
-  %4 = cir.ptr_stride(%x : !cir.ptr<i32>, %idx : i32), !cir.ptr<f32> // expected-error {{requires the same type for first operand and result}}
+cir.func @badstride(%x: !cir.ptr<!cir.int<s, 32>>) {
+  %idx = cir.const(#cir.int<2> : !cir.int<s, 32>) : !cir.int<s, 32>
+  %4 = cir.ptr_stride(%x : !cir.ptr<!cir.int<s, 32>>, %idx : !cir.int<s, 32>), !cir.ptr<f32> // expected-error {{requires the same type for first operand and result}}
   cir.return
 }
 
@@ -300,4 +302,40 @@ module {
   cir.func @l1() alias(@l0) { // expected-error {{function alias shall not have a body}}
     cir.return
   }
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected 's' or 'u'}}
+  cir.func @l0(%arg0: !cir.int<x, 32>) -> () {
+    cir.return
+  }
+}
+
+// // -----
+
+module {
+  // expected-error@below {{expected integer width to be from 8 up to 64}}
+  cir.func @l0(%arg0: !cir.int<s, 128>) -> () {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected integer width to be a multiple of 8}}
+  cir.func @l0(%arg0: !cir.int<s, 13>) -> () {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@below {{integer value too large for the given type}}
+  cir.global external @a = #cir.int<256> : !cir.int<u, 8>
+  // expected-error@below {{integer value too large for the given type}}
+  cir.global external @b = #cir.int<-129> : !cir.int<s, 8>
 }

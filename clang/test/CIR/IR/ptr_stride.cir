@@ -1,21 +1,22 @@
 // RUN: cir-tool %s | cir-tool | FileCheck %s
+!s32i = !cir.int<s, 32>
 
 module  {
-  cir.func @arraysubscript(%arg0: i32) {
-    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
-    %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
-    %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
-    %3 = cir.const(0 : i32) : i32
-    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+  cir.func @arraysubscript(%arg0: !s32i) {
+    %0 = cir.alloca !cir.array<!s32i x 10>, cir.ptr <!cir.array<!s32i x 10>>, ["x", init]
+    %1 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
+    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %4 = cir.ptr_stride(%2 : !cir.ptr<!s32i>, %3 : !s32i), !cir.ptr<!s32i>
     cir.return
   }
 }
 
-// CHECK: cir.func @arraysubscript(%arg0: i32) {
-// CHECK-NEXT:    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
-// CHECK-NEXT:    %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
-// CHECK-NEXT:    %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
-// CHECK-NEXT:    %3 = cir.const(0 : i32) : i32
-// CHECK-NEXT:    %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
+// CHECK: cir.func @arraysubscript(%arg0: !s32i) {
+// CHECK-NEXT:    %0 = cir.alloca !cir.array<!s32i x 10>, cir.ptr <!cir.array<!s32i x 10>>, ["x", init]
+// CHECK-NEXT:    %1 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+// CHECK-NEXT:    %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
+// CHECK-NEXT:    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:    %4 = cir.ptr_stride(%2 : !cir.ptr<!s32i>, %3 : !s32i), !cir.ptr<!s32i>
 // CHECK-NEXT:    cir.return
 // CHECK-NEXT:  }

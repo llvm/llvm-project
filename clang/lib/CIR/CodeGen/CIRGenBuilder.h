@@ -13,10 +13,15 @@
 #include "CIRGenTypeCache.h"
 #include "UnimplementedFeatureGuarding.h"
 
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/FloatingPointMode.h"
 
 namespace cir {
@@ -145,6 +150,17 @@ public:
   mlir::Type getInt8Ty() { return typeCache.Int8Ty; }
   mlir::Type getInt32Ty() { return typeCache.Int32Ty; }
   mlir::Type getInt64Ty() { return typeCache.Int64Ty; }
+
+  mlir::Type getSInt8Ty() { return typeCache.SInt8Ty; }
+  mlir::Type getSInt16Ty() { return typeCache.SInt16Ty; }
+  mlir::Type getSInt32Ty() { return typeCache.SInt32Ty; }
+  mlir::Type getSInt64Ty() { return typeCache.SInt64Ty; }
+
+  mlir::Type getUInt8Ty() { return typeCache.UInt8Ty; }
+  mlir::Type getUInt16Ty() { return typeCache.UInt16Ty; }
+  mlir::Type getUInt32Ty() { return typeCache.UInt32Ty; }
+  mlir::Type getUInt64Ty() { return typeCache.UInt64Ty; }
+
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }
@@ -173,6 +189,11 @@ public:
   // Constant creation helpers
   // -------------------------
   //
+  mlir::cir::ConstantOp getSInt32(uint32_t C, mlir::Location loc) {
+    auto SInt32Ty = getSInt32Ty();
+    return create<mlir::cir::ConstantOp>(loc, SInt32Ty,
+                                         mlir::cir::IntAttr::get(SInt32Ty, C));
+  }
   mlir::cir::ConstantOp getInt32(uint32_t C, mlir::Location loc) {
     auto int32Ty = getInt32Ty();
     return create<mlir::cir::ConstantOp>(loc, int32Ty,
@@ -197,9 +218,16 @@ public:
   mlir::cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     if (ty.isa<mlir::cir::PointerType>())
       return getNullPtr(ty, loc);
-    assert(ty.isa<mlir::IntegerType>() && "NYI");
-    return create<mlir::cir::ConstantOp>(loc, ty,
-                                         mlir::IntegerAttr::get(ty, 0));
+
+    mlir::TypedAttr attr;
+    if (ty.isa<mlir::IntegerType>())
+      attr = mlir::IntegerAttr::get(ty, 0);
+    else if (ty.isa<mlir::cir::IntType>())
+      attr = mlir::cir::IntAttr::get(ty, 0);
+    else
+      llvm_unreachable("NYI");
+
+    return create<mlir::cir::ConstantOp>(loc, ty, attr);
   }
 
   mlir::cir::ConstantOp getZero(mlir::Location loc, mlir::Type ty) {

@@ -2,7 +2,7 @@
 
 int literals() {
     char a = 'a'; // char literals have char type in C++
-    // CHECK:  %{{[0-9]+}} = cir.const(97 : i8) : i8
+    // CHECK:  %{{[0-9]+}} = cir.const(#cir.int<97> : !s8i) : !s8i
 
     return 0;
 }
