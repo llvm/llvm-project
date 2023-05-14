@@ -320,13 +320,25 @@ module std [system] {
       module partition_point                 { private header "__algorithm/partition_point.h" }
       module pop_heap                        { private header "__algorithm/pop_heap.h" }
       module prev_permutation                { private header "__algorithm/prev_permutation.h" }
-      module pstl {
+      module pstl_backends_cpu_backend       {
         private header "__algorithm/pstl_backends/cpu_backend.h"
+        export *
+      }
+      module pstl_backends_cpu_backends_any_of {
         private header "__algorithm/pstl_backends/cpu_backends/any_of.h"
+      }
+      module pstl_backends_cpu_backends_backend {
         private header "__algorithm/pstl_backends/cpu_backends/backend.h"
-        private header "__algorithm/pstl_backends/cpu_backends/fill.h"
+        export *
+      }
+      module pstl_backends_cpu_backends_fill { private header "__algorithm/pstl_backends/cpu_backends/fill.h" }
+      module pstl_backends_cpu_backends_find_if {
         private header "__algorithm/pstl_backends/cpu_backends/find_if.h"
+      }
+      module pstl_backends_cpu_backends_for_each {
         private header "__algorithm/pstl_backends/cpu_backends/for_each.h"
+      }
+      module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
       module push_heap                       { private header "__algorithm/push_heap.h" }

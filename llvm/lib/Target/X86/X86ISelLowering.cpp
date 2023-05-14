@@ -1117,8 +1117,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64 }) {
       setOperationAction(ISD::SETCC,              VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCC,      VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCCS,     VT, Custom);
       setOperationAction(ISD::CTPOP,              VT, Custom);
       setOperationAction(ISD::ABS,                VT, Custom);
 
@@ -1127,6 +1125,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETLT, VT, Custom);
       setCondCodeAction(ISD::SETLE, VT, Custom);
     }
+
+    setOperationAction(ISD::SETCC,          MVT::v2f64, Custom);
+    setOperationAction(ISD::SETCC,          MVT::v4f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::v2f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::v4f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::v2f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::v4f32, Custom);
 
     for (auto VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
       setOperationAction(ISD::SCALAR_TO_VECTOR,   VT, Custom);
@@ -1477,8 +1482,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
       setOperationAction(ISD::SETCC,           VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCC,   VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCCS,  VT, Custom);
       setOperationAction(ISD::CTPOP,           VT, Custom);
       setOperationAction(ISD::CTLZ,            VT, Custom);
 
@@ -1487,6 +1490,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETLT, VT, Custom);
       setCondCodeAction(ISD::SETLE, VT, Custom);
     }
+
+    setOperationAction(ISD::SETCC,          MVT::v4f64, Custom);
+    setOperationAction(ISD::SETCC,          MVT::v8f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::v4f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::v8f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::v4f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::v8f32, Custom);
 
     if (Subtarget.hasAnyFMA()) {
       for (auto VT : { MVT::f32, MVT::f64, MVT::v4f32, MVT::v8f32,
@@ -1683,8 +1693,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v2i1, MVT::v4i1, MVT::v8i1, MVT::v16i1 }) {
       setOperationAction(ISD::SETCC,            VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
       setOperationAction(ISD::SELECT,           VT, Custom);
       setOperationAction(ISD::TRUNCATE,         VT, Custom);
 
@@ -1868,6 +1876,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setCondCodeAction(ISD::SETLT, VT, Custom);
       setCondCodeAction(ISD::SETLE, VT, Custom);
     }
+
+    setOperationAction(ISD::SETCC,          MVT::v8f64, Custom);
+    setOperationAction(ISD::SETCC,          MVT::v16f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::v8f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCC,  MVT::v16f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::v8f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::v16f32, Custom);
+
     for (auto VT : { MVT::v16i32, MVT::v8i64 }) {
       setOperationAction(ISD::SMAX,             VT, Legal);
       setOperationAction(ISD::UMAX,             VT, Legal);
@@ -1875,8 +1891,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::UMIN,             VT, Legal);
       setOperationAction(ISD::ABS,              VT, Legal);
       setOperationAction(ISD::CTPOP,            VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCC,    VT, Custom);
-      setOperationAction(ISD::STRICT_FSETCCS,   VT, Custom);
     }
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {
@@ -2130,6 +2144,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FCOPYSIGN,          VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE,     VT, Custom);
+
+      setOperationAction(ISD::SETCC,              VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCC,      VT, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS,     VT, Custom);
     };
 
     // AVX512_FP16 scalar operations
@@ -2138,9 +2156,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
     setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
-    setOperationAction(ISD::SETCC,                MVT::f16, Custom);
-    setOperationAction(ISD::STRICT_FSETCC,        MVT::f16, Custom);
-    setOperationAction(ISD::STRICT_FSETCCS,       MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FROUND,        MVT::f16, Promote);
     setOperationAction(ISD::FROUNDEVEN,           MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FROUNDEVEN,    MVT::f16, Legal);
@@ -2192,9 +2207,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
       setLoadExtAction(ISD::EXTLOAD, MVT::v8f64,  MVT::v8f16,  Legal);
       setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Legal);
-
-      setOperationAction(ISD::STRICT_FSETCC,      MVT::v32i1, Custom);
-      setOperationAction(ISD::STRICT_FSETCCS,     MVT::v32i1, Custom);
     }
 
     if (Subtarget.hasVLX()) {
