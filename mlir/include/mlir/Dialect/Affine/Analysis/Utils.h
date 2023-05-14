@@ -312,7 +312,7 @@ struct ComputationSliceState {
   /// return false as it implies that the effective fusion results in at least
   /// one iteration of the slice that was not originally in the source's domain.
   /// If the validity cannot be determined, returns std::nullopt.
-  std::optional<bool> isSliceValid();
+  std::optional<bool> isSliceValid() const;
 
   void dump() const;
 
