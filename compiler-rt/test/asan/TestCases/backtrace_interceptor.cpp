@@ -4,10 +4,6 @@
 // restrict the test to glibc.
 // REQUIRES: glibc-2.27
 
-// Interceptor can cause use-after-free
-// (https://github.com/google/sanitizers/issues/321)
-// XFAIL: *
-
 // Test the backtrace() interceptor.
 
 #include <assert.h>
@@ -23,6 +19,8 @@ int main() {
   assert(buffer != NULL);
   free(buffer);
 
+  // Deliberate use-after-free of 'buffer'. We expect ASan to
+  // catch this, without triggering internal sanitizer errors.
   int numEntries = backtrace(buffer, MAX_BT);
   printf("backtrace returned %d entries\n", numEntries);
 

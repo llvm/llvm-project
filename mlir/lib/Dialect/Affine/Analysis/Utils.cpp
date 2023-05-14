@@ -533,8 +533,8 @@ void mlir::affine::getEnclosingAffineOps(Operation &op,
 
 // Populates 'cst' with FlatAffineValueConstraints which represent original
 // domain of the loop bounds that define 'ivs'.
-LogicalResult
-ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
+LogicalResult ComputationSliceState::getSourceAsConstraints(
+    FlatAffineValueConstraints &cst) const {
   assert(!ivs.empty() && "Cannot have a slice without its IVs");
   cst = FlatAffineValueConstraints(/*numDims=*/ivs.size(), /*numSymbols=*/0,
                                    /*numLocals=*/0, ivs);
@@ -549,7 +549,7 @@ ComputationSliceState::getSourceAsConstraints(FlatAffineValueConstraints &cst) {
 
 // Populates 'cst' with FlatAffineValueConstraints which represent slice bounds.
 LogicalResult
-ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) {
+ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) const {
   assert(!lbOperands.empty());
   // Adds src 'ivs' as dimension variables in 'cst'.
   unsigned numDims = ivs.size();
@@ -687,7 +687,7 @@ std::optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
 /// Returns true if it is deterministically verified that the original iteration
 /// space of the slice is contained within the new iteration space that is
 /// created after fusing 'this' slice into its destination.
-std::optional<bool> ComputationSliceState::isSliceValid() {
+std::optional<bool> ComputationSliceState::isSliceValid() const {
   // Fast check to determine if the slice is valid. If the following conditions
   // are verified to be true, slice is declared valid by the fast check:
   // 1. Each slice loop is a single iteration loop bound in terms of a single
