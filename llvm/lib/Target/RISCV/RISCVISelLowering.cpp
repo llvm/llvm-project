@@ -644,8 +644,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
 
-      setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT, Custom);
-
       setOperationPromotedToType(
           ISD::VECTOR_SPLICE, VT,
           MVT::getVectorVT(MVT::i8, VT.getVectorElementCount()));
@@ -905,10 +903,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::SETCC, VT, Custom);
 
-        if (VT.getVectorElementType() == MVT::i1)
-          setOperationAction({ISD::STRICT_FSETCC, ISD::STRICT_FSETCCS}, VT,
-                             Custom);
-
         setOperationAction(ISD::SELECT, VT, Custom);
 
         setOperationAction(ISD::TRUNCATE, VT, Custom);
@@ -1055,6 +1049,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setCondCodeAction(VFPCCToExpand, VT, Expand);
 
+        setOperationAction(ISD::SETCC, VT, Custom);
         setOperationAction({ISD::VSELECT, ISD::SELECT}, VT, Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
 

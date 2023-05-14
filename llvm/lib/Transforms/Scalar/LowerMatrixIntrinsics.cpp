@@ -72,6 +72,11 @@ static cl::opt<bool> AllowContractEnabled(
     cl::desc("Allow the use of FMAs if available and profitable. This may "
              "result in different results, due to less rounding error."));
 
+static cl::opt<bool>
+    VerifyShapeInfo("verify-matrix-shapes", cl::Hidden,
+                    cl::desc("Enable/disable matrix shape verification."),
+                    cl::init(false));
+
 enum class MatrixLayoutTy { ColumnMajor, RowMajor };
 
 static cl::opt<MatrixLayoutTy> MatrixLayout(
@@ -535,6 +540,15 @@ public:
 
     auto SIter = ShapeMap.find(V);
     if (SIter != ShapeMap.end()) {
+      if (VerifyShapeInfo && (SIter->second.NumRows != Shape.NumRows ||
+                              SIter->second.NumColumns != Shape.NumColumns)) {
+        errs() << "Conflicting shapes (" << SIter->second.NumRows << "x"
+               << SIter->second.NumColumns << " vs " << Shape.NumRows << "x"
+               << Shape.NumColumns << ") for " << *V << "\n";
+        report_fatal_error(
+            "Matrix shape verification failed, compilation aborted!");
+      }
+
       LLVM_DEBUG(dbgs() << "  not overriding existing shape: "
                         << SIter->second.NumRows << " "
                         << SIter->second.NumColumns << " for " << *V << "\n");
