@@ -1,13 +1,7 @@
-#include <cassert>
-#include <cstdint>
-#include <cstdio>
-#include <fstream>
-#include <map>
-#include <string>
-#include <system_error>
 #include <unordered_map>
-#include <unordered_set>
-#include <utility>
+#include <iostream>
+#include <cassert>
+#include <fstream>
 
 /// Class for implementing Parsing and Changing dot file with graph
 /// Singleton implementation
@@ -36,19 +30,14 @@ public:
     return Object;
   }
 
-  void setCall(int64_t Caller, int64_t Callee);
+  void addCall(int64_t Caller, int64_t Callee);
 
   // We will change the dot file in the destructor, because we want to do it
   // only one time
   ~GraphEditor() { writeGraph(); }
 };
 
-void Logger(int64_t caller_ptr, int64_t callee_ptr) {
-  GraphEditor &Graph = GraphEditor::getInstance();
-  Graph.setCall(caller_ptr, callee_ptr);
-}
-
-void GraphEditor::setCall(int64_t Caller, int64_t Callee) {
+void GraphEditor::addCall(int64_t Caller, int64_t Callee) {
   Graph[Caller][Callee]++;
 }
 
@@ -115,4 +104,12 @@ void GraphEditor::fillNameMap(
     while (fscanf(SrcFile, " %ld -> %ld ", &Addr, &Addr))
       continue;
   }
+}
+
+void Logger()
+{
+    uint64_t callee_addr, caller_arrd;  // Dummies. Replace them with return values
+                                        // of llvm.returnaddress intrinsic.
+    auto graph = GraphEditor::getInstance();
+    graph.addCall(caller_arrd, callee_addr);
 }
