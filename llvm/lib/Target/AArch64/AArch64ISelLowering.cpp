@@ -716,7 +716,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND,      MVT::v4f16, Expand);
     setOperationAction(ISD::FROUNDEVEN,  MVT::v4f16, Expand);
     setOperationAction(ISD::FMA,         MVT::v4f16, Expand);
-    setOperationAction(ISD::SETCC,       MVT::v4f16, Expand);
+    setOperationAction(ISD::SETCC,       MVT::v4f16, Custom);
     setOperationAction(ISD::BR_CC,       MVT::v4f16, Expand);
     setOperationAction(ISD::SELECT,      MVT::v4f16, Expand);
     setOperationAction(ISD::SELECT_CC,   MVT::v4f16, Expand);
@@ -1053,7 +1053,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
     // silliness like this:
     for (auto Op :
-         {ISD::SELECT,         ISD::SELECT_CC,      ISD::SETCC,
+         {ISD::SELECT,         ISD::SELECT_CC,
           ISD::BR_CC,          ISD::FADD,           ISD::FSUB,
           ISD::FMUL,           ISD::FDIV,           ISD::FMA,
           ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
@@ -1415,6 +1415,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setOperationAction(ISD::SELECT, VT, Custom);
+      setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::FADD, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FDIV, VT, Custom);
