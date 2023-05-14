@@ -23,41 +23,55 @@ struct CallGraph : ModulePass {
   static char ID;
   CallGraph() : ModulePass(ID) {}
 
-  StringRef LoggerFuncName = "_Z6Loggerll";
+  StringRef LoggerFuncName = "_Z6Logger";
 
+  FunctionType *getLoggerFuncType(Module &M) const;
   FunctionCallee getCallLogFunc(Module &M) const;
+  void createDummyLogger(Module &M, IRBuilder<> &Builder) const;
 
   bool runOnModule(Module &M) override {
     // Prepare builder for IR modification
     LLVMContext &Ctx = M.getContext();
     IRBuilder<> Builder(Ctx);
+
+    createDummyLogger(M, Builder);
     FunctionCallee CallLogFunc = getCallLogFunc(M);
 
     // Traverse all Functions
     for (Function &F : M.functions()) {
       if (F.empty())
         continue;
+      if (F.getName() == LoggerFuncName)
+        continue;
 
       Builder.SetInsertPointPastAllocas(&F);
       Builder.CreateCall(CallLogFunc);
     }
 
-    // TODO:
-    // Need to define void function Logger for properly working in release mode
-    // (without linking with our real Logger)
-    // Also need make "linkonce" linkage type
-
     return true;
   }
 };
 
-FunctionCallee CallGraph::getCallLogFunc(Module &M) const {
+FunctionType *CallGraph::getLoggerFuncType(Module &M) const {
   Type *RetType = Type::getVoidTy(M.getContext());
-  FunctionType *CallLogFuncType = FunctionType::get(RetType, false);
-  FunctionCallee CallLogFunc =
-      M.getOrInsertFunction(LoggerFuncName, CallLogFuncType);
+  return FunctionType::get(RetType, false);
+}
 
-  return CallLogFunc;
+FunctionCallee CallGraph::getCallLogFunc(Module &M) const {
+  return (M.getOrInsertFunction(LoggerFuncName, getLoggerFuncType(M)));
+}
+
+void CallGraph::createDummyLogger(Module &M, IRBuilder<> &Builder) const {
+  // Use LinkOnceAnyLinkage linkage typem because we need to merge dummyLogger
+  // with the actual one, when profiling. LinkOnce is better than weak in case
+  // of profiing .cxx file with only global variables, because optimizer
+  // can just cut off our dummy definition.
+  Function *DummyLogger = Function::Create(
+      getLoggerFuncType(M), Function::LinkOnceAnyLinkage, LoggerFuncName, M);
+
+  BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", DummyLogger);
+  Builder.SetInsertPoint(BB);
+  Builder.CreateRetVoid();
 }
 
 } // namespace
