@@ -85,6 +85,10 @@ char &llvm::SISimplifyPredicatedCopiesID = SISimplifyPredicatedCopies::ID;
 // recursively skipping the intermediate copies if it maps to any
 // whole-wave operation.
 bool SISimplifyPredicatedCopies::isWWMCopy(const MachineInstr &MI) {
+  // Skip if it is a subreg copy.
+  if (!MI.isFullCopy())
+    return false;
+
   Register SrcReg = MI.getOperand(1).getReg();
 
   if (MFI->checkFlag(SrcReg, AMDGPU::VirtRegFlag::WWM_REG))
