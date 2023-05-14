@@ -277,13 +277,13 @@ struct ComputationSliceState {
   // Constraints are added for all loop IV bounds (dim or symbol), and
   // constraints are added for slice bounds in 'lbs'/'ubs'.
   // Returns failure if we cannot add loop bounds because of unsupported cases.
-  LogicalResult getAsConstraints(FlatAffineValueConstraints *cst);
+  LogicalResult getAsConstraints(FlatAffineValueConstraints *cst) const;
 
   /// Adds to 'cst' constraints which represent the original loop bounds on
   /// 'ivs' in 'this'. This corresponds to the original domain of the loop nest
   /// from which the slice is being computed. Returns failure if we cannot add
   /// loop bounds because of unsupported cases.
-  LogicalResult getSourceAsConstraints(FlatAffineValueConstraints &cst);
+  LogicalResult getSourceAsConstraints(FlatAffineValueConstraints &cst) const;
 
   // Clears all bounds and operands in slice state.
   void clearBounds();
