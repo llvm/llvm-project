@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
+#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,10 +37,12 @@ struct Session {
   orc::JITDylib *MainJD = nullptr;
   orc::ObjectLinkingLayer ObjLayer;
   orc::JITDylibSearchOrder JDSearchOrder;
+  SubtargetFeatures Features;
 
   ~Session();
 
-  static Expected<std::unique_ptr<Session>> Create(Triple TT);
+  static Expected<std::unique_ptr<Session>> Create(Triple TT,
+                                                   SubtargetFeatures Features);
   void dumpSessionInfo(raw_ostream &OS);
   void modifyPassConfig(const Triple &FTT,
                         jitlink::PassConfiguration &PassConfig);

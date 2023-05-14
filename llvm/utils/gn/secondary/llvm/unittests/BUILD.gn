@@ -80,10 +80,7 @@ group("unittests") {
     ]
   }
   if (llvm_build_ARM) {
-    deps += [
-      "Target/ARM:ARMTests",
-      "tools/llvm-exegesis/ARM:LLVMExegesisARMTests",
-    ]
+    deps += [ "Target/ARM:ARMTests" ]
   }
   if (llvm_build_LoongArch) {
     deps += [ "Target/LoongArch:LoongArchTests" ]
