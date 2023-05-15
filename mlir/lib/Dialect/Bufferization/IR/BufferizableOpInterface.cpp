@@ -367,10 +367,7 @@ BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
 
 BufferizableOpInterface
 BufferizationOptions::dynCastBufferizableOp(Value value) const {
-  if (auto bufferizableOp = value.getDefiningOp<BufferizableOpInterface>())
-    if (isOpAllowed(bufferizableOp.getOperation()))
-      return bufferizableOp;
-  return nullptr;
+  return dynCastBufferizableOp(getOwnerOfValue(value));
 }
 
 void BufferizationOptions::setFunctionBoundaryTypeConversion(
@@ -500,7 +497,7 @@ bool AnalysisState::isValueRead(Value value) const {
 // further.
 llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     Value value, llvm::function_ref<bool(Value)> condition,
-    bool followEquivalentOnly, bool alwaysIncludeLeaves) const {
+    TraversalConfig config) const {
   llvm::SetVector<Value> result, workingSet;
   workingSet.insert(value);
 
@@ -512,7 +509,7 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     }
 
     if (llvm::isa<BlockArgument>(value)) {
-      if (alwaysIncludeLeaves)
+      if (config.alwaysIncludeLeaves)
         result.insert(value);
       continue;
     }
@@ -520,26 +517,43 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
     OpResult opResult = llvm::cast<OpResult>(value);
     BufferizableOpInterface bufferizableOp =
         options.dynCastBufferizableOp(opResult.getDefiningOp());
-    AliasingOpOperandList aliases = getAliasingOpOperands(opResult);
+    if (!config.followUnknownOps && !bufferizableOp) {
+      // Stop iterating if `followUnknownOps` is unset and the op is either
+      // not bufferizable or excluded in the OpFilter.
+      if (config.alwaysIncludeLeaves)
+        result.insert(value);
+      continue;
+    }
 
-    // Stop iterating in either one of these cases:
-    // * The current op is not bufferizable or excluded in the filter.
-    // * There are no OpOperands to follow.
-    if (!bufferizableOp || aliases.getNumAliases() == 0) {
-      if (alwaysIncludeLeaves)
+    AliasingOpOperandList aliases = getAliasingOpOperands(opResult);
+    if (aliases.getNumAliases() == 0) {
+      // The traversal ends naturally if there are no more OpOperands that
+      // could be followed.
+      if (config.alwaysIncludeLeaves)
         result.insert(value);
       continue;
     }
 
     for (AliasingOpOperand a : aliases) {
-      if (followEquivalentOnly && a.relation != BufferRelation::Equivalent) {
+      if (config.followEquivalentOnly &&
+          a.relation != BufferRelation::Equivalent) {
         // Stop iterating if `followEquivalentOnly` is set but the alias is not
         // equivalent.
-        if (alwaysIncludeLeaves)
+        if (config.alwaysIncludeLeaves)
           result.insert(value);
       } else {
         workingSet.insert(a.opOperand->get());
       }
+
+      if (config.followInPlaceOnly && !isInPlace(*a.opOperand)) {
+        // Stop iterating if `followInPlaceOnly` is set but the alias is
+        // out-of-place.
+        if (config.alwaysIncludeLeaves)
+          result.insert(value);
+        continue;
+      }
+
+      workingSet.insert(a.opOperand->get());
     }
   }
 
@@ -548,9 +562,10 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
 
 // Find the values that define the contents of the given value.
 llvm::SetVector<Value> AnalysisState::findDefinitions(Value value) const {
+  TraversalConfig config;
+  config.alwaysIncludeLeaves = false;
   return findValueInReverseUseDefChain(
-      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
-      /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
+      value, [&](Value v) { return this->bufferizesToMemoryWrite(v); }, config);
 }
 
 AnalysisState::AnalysisState(const BufferizationOptions &options)
@@ -927,12 +942,12 @@ bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
       return false;
     return state.bufferizesToMemoryWrite(v);
   };
+  TraversalConfig config;
+  config.alwaysIncludeLeaves = false;
   for (AliasingOpOperand alias : opOperands) {
     if (!state
              .findValueInReverseUseDefChain(alias.opOperand->get(),
-                                            isMemoryWriteInsideOp,
-                                            /*followEquivalentOnly=*/false,
-                                            /*alwaysIncludeLeaves=*/false)
+                                            isMemoryWriteInsideOp, config)
              .empty())
       return true;
   }

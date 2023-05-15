@@ -775,11 +775,8 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &operand,
 // Find the values that define the contents of the given value.
 const llvm::SetVector<Value> &
 OneShotAnalysisState::findDefinitionsCached(Value value) {
-  if (!cachedDefinitions.count(value)) {
-    cachedDefinitions[value] = findValueInReverseUseDefChain(
-        value, [&](Value v) { return this->bufferizesToMemoryWrite(v); },
-        /*followEquivalentOnly=*/false, /*alwaysIncludeLeaves=*/false);
-  }
+  if (!cachedDefinitions.count(value))
+    cachedDefinitions[value] = findDefinitions(value);
   return cachedDefinitions[value];
 }
 

@@ -132,10 +132,13 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
       // Find tensor.empty ops on the reverse SSA use-def chain. Only follow
       // equivalent tensors. I.e., stop when there are ops such as extract_slice
       // on the path.
+      TraversalConfig config;
+      config.followEquivalentOnly = true;
+      config.alwaysIncludeLeaves = false;
       SetVector<Value> emptyTensors = state.findValueInReverseUseDefChain(
           operand.get(), /*condition=*/
           [&](Value val) { return val.getDefiningOp<tensor::EmptyOp>(); },
-          /*followEquivalentOnly=*/true, /*alwaysIncludeLeaves=*/false);
+          config);
 
       for (Value v : emptyTensors) {
         Operation *emptyTensorOp = v.getDefiningOp();
