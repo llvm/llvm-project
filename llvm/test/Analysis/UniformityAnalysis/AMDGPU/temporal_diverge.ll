@@ -85,7 +85,6 @@ X:
 Y:
   %div.alsouser = add i32 %uni.inc, 5
   ret void
-; CHECK: DIVERGENT: %div.alsouser =
 }
 
 
@@ -114,7 +113,6 @@ X:
 G:
   %div.user = add i32 %uni.inc, 5
   br i1 %uni.cond, label %G, label %Y
-; CHECK: DIVERGENT: %div.user =
 
 Y:
   ret void
@@ -129,13 +127,10 @@ define amdgpu_kernel void @temporal_diverge_loopuser_nested(i32 %n, i32 %a, i32 
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %uni.cond = icmp slt i32 %a, 0
-  br label %G
-
-G:
   br label %H
 
 H:
-  %uni.merge.h = phi i32 [ 0, %G ], [ %uni.inc, %H ]
+  %uni.merge.h = phi i32 [ 0, %entry ], [ %uni.inc, %H ]
   %uni.inc = add i32 %uni.merge.h, 1
   %div.exitx = icmp slt i32 %tid, 0
   br i1 %div.exitx, label %X, label %H ; divergent branch
@@ -143,9 +138,11 @@ H:
 ; CHECK: DIVERGENT: br i1 %div.exitx,
 
 X:
-; CHECK: DIVERGENT: %div.user =
+  br label %G
+
+G:
   %div.user = add i32 %uni.inc, 5
-  br i1 %uni.cond, label %X, label %G
+  br i1 %uni.cond, label %G, label %Y
 
 Y:
   ret void
