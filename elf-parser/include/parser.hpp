@@ -23,3 +23,5 @@ int symbolComp (const void *symbol1, const void *symbol2);
 void printSymbolsValues (Elf64_Sym_Arr *symArr);
 
 Elf64_Sym_W_Name *findSymbolByAddress (Elf64_Sym_Arr *symArr, size_t address);
+
+bool isPIC(const char *inputFileName);

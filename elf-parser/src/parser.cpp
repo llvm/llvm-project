@@ -135,3 +135,32 @@ Elf64_Sym_W_Name *findSymbolByAddress (Elf64_Sym_Arr *symArr, size_t address) {
     return &symArr->symbols[leftIndex];
 }
 
+bool isPIC(const char *inputFileName) {
+    assert (inputFileName);
+
+    FILE *elfFile = fopen(inputFileName, "r");
+    if (!elfFile) {
+        std::cout << "Error: cannot open " << inputFileName << "\n";
+        return false;
+    }
+
+    size_t fileSize = getFileSize (elfFile);
+
+    uint8_t *binary = (uint8_t *)calloc (fileSize + 1, sizeof (uint8_t));
+    if (!binary) {
+        std::cout << "Unable to allocate memory!\n";
+        return false;
+    }
+
+    size_t numberOfReadBytes = fread (binary, sizeof (uint8_t), fileSize, elfFile);
+    if (numberOfReadBytes != fileSize) {
+        std::cout << "Incorrect file reading occured!\n";
+        return false;
+    }
+
+    auto *elfHeader = reinterpret_cast<Elf64_Ehdr*>(binary);
+    if (!elfHeader)
+        return false;
+
+    return elfHeader->e_type == ET_DYN;
+}

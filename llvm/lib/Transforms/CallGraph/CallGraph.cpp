@@ -41,7 +41,8 @@ struct CallGraph : ModulePass {
     for (Function &F : M.functions()) {
       if (F.empty())
         continue;
-      if (F.getName() == LoggerFuncName)
+      StringRef FuncName = F.getName();
+      if (FuncName == LoggerFuncName || FuncName == "main")
         continue;
 
       Builder.SetInsertPointPastAllocas(&F);

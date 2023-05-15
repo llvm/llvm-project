@@ -1,4 +1,4 @@
-clang++ -emit-llvm -S Logger.cpp
+clang++ -emit-llvm -S Logger.cpp -std=c++20
 
 sleep 1
 
