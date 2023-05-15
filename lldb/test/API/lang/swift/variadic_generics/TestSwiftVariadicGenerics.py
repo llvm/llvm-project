@@ -38,10 +38,9 @@ class TestSwiftVariadicGenerics(TestBase):
                              "Pack{(a.A, a.B)}", "more_ts", "i = 23", "d = 2.71"])
 
         # f4(uvs: (a, b), (a, b))
-        #process.Continue()
-        # FIXME: Crashes the demangler.
-        #self.expect("frame variable",
-        #            substrs=[""])
+        process.Continue()
+        self.expect("frame variable",
+                    substrs=[""])
 
         # f5(ts: (a, b), (42, b))
         process.Continue()
