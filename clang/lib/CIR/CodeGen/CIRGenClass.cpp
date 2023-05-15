@@ -1194,7 +1194,13 @@ CIRGenFunction::getAddressOfBaseClass(Address Value,
   // If the static offset is zero and we don't have a virtual step,
   // just do a bitcast; null checks are unnecessary.
   if (NonVirtualOffset.isZero() && !VBase) {
-    llvm_unreachable("NYI");
+    if (sanitizePerformTypeCheck()) {
+      llvm_unreachable("NYI");
+    }
+    return builder.createBaseClassAddr(getLoc(Loc), Value, BaseValueTy);
+    // return builder.createElementBitCast(Value, BaseValueTy);
+    // return builder.create<mlir::cir::BaseClassAddrOp>(getLoc(Loc),
+    // BaseValueTy, Value);
   }
 
   // Skip over the offset (and the vtable load) if we're supposed to

@@ -181,11 +181,7 @@ private:
     assert((!Alignment.isZero() || Type->isIncompleteType()) &&
            "initializing l-value with zero alignment!");
     if (isGlobalReg())
-      assert(ElementType == nullptr && "Glboal reg does not store elem type");
-    else
-      assert(V.getType().cast<mlir::cir::PointerType>().getPointee() ==
-                 ElementType &&
-             "Pointer element type mismatch");
+      assert(ElementType == nullptr && "Global reg does not store elem type");
 
     this->Type = Type;
     this->Quals = Quals;

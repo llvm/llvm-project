@@ -718,16 +718,14 @@ public:
       if (BOInfo.isFixedPointOp()) {
         assert(0 && "not implemented");
       } else {
-        // TODO: when we add proper basic types to CIR we
-        // probably won't need to handle
+        // FIXME(cir): handle another if above for CIR equivalent on
         // LHSTy->hasSignedIntegerRepresentation()
 
         // Unsigned integers and pointers.
-        if (LHS.getType().isa<mlir::cir::PointerType>() ||
+        if (CGF.CGM.getCodeGenOpts().StrictVTablePointers &&
+            LHS.getType().isa<mlir::cir::PointerType>() &&
             RHS.getType().isa<mlir::cir::PointerType>()) {
-          // TODO: Handle StrictVTablePointers and
-          // mayBeDynamicClass/invariant group.
-          assert(0 && "not implemented");
+          llvm_unreachable("NYI");
         }
 
         mlir::cir::CmpOpKind Kind;
