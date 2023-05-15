@@ -21,11 +21,11 @@ with open(testfile) as testfh:
             prefix_pos = line.index(prefix)
         except ValueError:
             continue
-        check_expr = line[prefix_pos + len(prefix):]
+        check_expr = line[prefix_pos + len(prefix) :]
 
         try:
             exception = None
-            result = eval(check_expr, {"data":data})
+            result = eval(check_expr, {"data": data})
         except Exception:
             result = False
             exception = traceback.format_exc().splitlines()[-1]
@@ -34,13 +34,16 @@ with open(testfile) as testfh:
             sys.stderr.write(
                 "{file}:{line:d}: check threw exception: {expr}\n"
                 "{file}:{line:d}: exception was: {exception}\n".format(
-                    file=testfile, line=lineno,
-                    expr=check_expr, exception=exception))
+                    file=testfile, line=lineno, expr=check_expr, exception=exception
+                )
+            )
             fails += 1
         elif not result:
             sys.stderr.write(
                 "{file}:{line:d}: check returned False: {expr}\n".format(
-                    file=testfile, line=lineno, expr=check_expr))
+                    file=testfile, line=lineno, expr=check_expr
+                )
+            )
             fails += 1
         else:
             passes += 1
