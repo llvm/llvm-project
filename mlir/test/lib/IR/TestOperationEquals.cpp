@@ -31,7 +31,7 @@ struct TestOperationEqualPass
 
     Operation *first = &module.getBody()->front();
     llvm::outs() << first->getName().getStringRef() << " with attr "
-                 << first->getAttrDictionary();
+                 << first->getDiscardableAttrDictionary();
     OperationEquivalence::Flags flags{};
     if (!first->hasAttr("strict_loc_check"))
       flags |= OperationEquivalence::IgnoreLocations;

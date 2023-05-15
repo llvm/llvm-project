@@ -21,10 +21,10 @@ SECTIONS {
 # RUN: llvm-readelf --sections -l %t | FileCheck %s
 
 # CHECK: Section Headers:
-# CHECK: Name       Type     Address          Off    Size
-# CHECK: .out.big   PROGBITS 0000000000001000 001000 000008
-# CHECK: .out.small PROGBITS 0000000000001000 002000 000004
-# CHECK: .text      PROGBITS 0000000000001008 002008 000001
+# CHECK:      Name       Type     Address          Off    Size
+# CHECK:      .out.big   PROGBITS 0000000000001000 001000 000008
+# CHECK-NEXT: .out.small PROGBITS 0000000000001000 002000 000004
+# CHECK-NEXT: .text      PROGBITS 0000000000001008 002008 000001
 
 
 # CHECK:      Program Headers:

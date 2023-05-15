@@ -934,3 +934,13 @@ void fir::factory::syncMutableBoxFromIRBox(fir::FirOpBuilder &builder,
                                            const fir::MutableBoxValue &box) {
   MutablePropertyWriter{builder, loc, box}.syncMutablePropertiesFromIRBox();
 }
+
+mlir::Value fir::factory::genNullBoxStorage(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Type boxTy) {
+  mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
+  mlir::Value nullBox = fir::factory::createUnallocatedBox(
+      builder, loc, boxTy, /*nonDeferredParams=*/{});
+  builder.create<fir::StoreOp>(loc, nullBox, boxStorage);
+  return boxStorage;
+}

@@ -383,7 +383,8 @@ LogicalResult tosa::ArgMaxOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
-  IntegerAttr axis = llvm::cast<IntegerAttr>(attributes.get("axis"));
+  auto *prop = properties.as<Properties *>();
+  IntegerAttr axis = prop->axis;
   int32_t axisVal = axis.getValue().getSExtValue();
 
   if (!inputShape.hasRank()) {
@@ -446,8 +447,8 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Infer all dimension sizes by reducing based on inputs.
-  int32_t axis =
-      llvm::cast<IntegerAttr>(attributes.get("axis")).getValue().getSExtValue();
+  auto *prop = properties.as<Properties *>();
+  int32_t axis = prop->axis.getValue().getSExtValue();
   llvm::SmallVector<int64_t> outputShape;
   bool hasRankedInput = false;
   for (auto operand : operands) {
@@ -985,7 +986,7 @@ static LogicalResult ReduceInferReturnTypes(
     Type inputType =                                                           \
         operands.getType()[0].cast<TensorType>().getElementType();             \
     return ReduceInferReturnTypes(operands.getShape(0), inputType,             \
-                                  attributes.get("axis").cast<IntegerAttr>(),  \
+                                  properties.as<Properties *>()->axis,         \
                                   inferredReturnShapes);                       \
   }                                                                            \
   COMPATIBLE_RETURN_TYPES(OP)
@@ -1062,6 +1063,7 @@ NARY_SHAPE_INFER(tosa::SigmoidOp)
 
 static LogicalResult poolingInferReturnTypes(
     const ValueShapeRange &operands, DictionaryAttr attributes,
+    ArrayRef<int64_t> kernel, ArrayRef<int64_t> stride, ArrayRef<int64_t> pad,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   llvm::SmallVector<int64_t> outputShape;
@@ -1079,12 +1081,6 @@ static LogicalResult poolingInferReturnTypes(
 
   int64_t height = inputShape.getDimSize(1);
   int64_t width = inputShape.getDimSize(2);
-
-  ArrayRef<int64_t> kernel =
-      llvm::cast<DenseI64ArrayAttr>(attributes.get("kernel"));
-  ArrayRef<int64_t> stride =
-      llvm::cast<DenseI64ArrayAttr>(attributes.get("stride"));
-  ArrayRef<int64_t> pad = llvm::cast<DenseI64ArrayAttr>(attributes.get("pad"));
 
   if (!ShapedType::isDynamic(height)) {
     int64_t padded = height + pad[0] + pad[1] - kernel[0];
@@ -1245,7 +1241,9 @@ LogicalResult AvgPool2dOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+  Properties &prop = *properties.as<Properties *>();
+  return poolingInferReturnTypes(operands, attributes, prop.kernel, prop.stride,
+                                 prop.pad, inferredReturnShapes);
 }
 
 LogicalResult MaxPool2dOp::inferReturnTypeComponents(
@@ -1253,7 +1251,9 @@ LogicalResult MaxPool2dOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  return poolingInferReturnTypes(operands, attributes, inferredReturnShapes);
+  Properties &prop = *properties.as<Properties *>();
+  return poolingInferReturnTypes(operands, attributes, prop.kernel, prop.stride,
+                                 prop.pad, inferredReturnShapes);
 }
 
 LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(

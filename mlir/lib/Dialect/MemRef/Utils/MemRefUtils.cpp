@@ -42,7 +42,7 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
 
   // All dims are unit-strided or size-1.
   return curDim < 0;
-};
+}
 
 } // namespace memref
 } // namespace mlir

@@ -15,7 +15,7 @@
 // CXX26:#define __GXX_EXPERIMENTAL_CXX0X__ 1
 // CXX26:#define __GXX_RTTI 1
 // CXX26:#define __GXX_WEAK__ 1
-// CXX26:#define __cplusplus 202402L
+// CXX26:#define __cplusplus 202400L
 // CXX26:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2B %s
@@ -148,7 +148,7 @@
 //
 // GXX26:#define __GNUG__ 4
 // GXX26:#define __GXX_WEAK__ 1
-// GXX26:#define __cplusplus 202402L
+// GXX26:#define __cplusplus 202400L
 // GXX26:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2B %s

@@ -20,6 +20,7 @@
 #include <iterator>
 #include <ranges>
 #include <utility>
+#include "test_macros.h"
 
 // (in1, in2, ...)
 template <class Func, std::ranges::range Input1, std::ranges::range Input2, class ...Args>
@@ -74,8 +75,10 @@ constexpr bool test_all() {
   test(std::ranges::set_symmetric_difference, in, in2, out2, less, proj1, proj2);
   test(std::ranges::set_union, in, in2, out, less, proj1, proj2);
   test(std::ranges::set_union, in, in2, out2, less, proj1, proj2);
-  //test(std::ranges::starts_with, in, in2, eq, proj1, proj2);
-  //test(std::ranges::ends_with, in, in2, eq, proj1, proj2);
+#if TEST_STD_VER > 20
+  test(std::ranges::starts_with, in, in2, eq, proj1, proj2);
+  // test(std::ranges::ends_with, in, in2, eq, proj1, proj2);
+#endif
 
   return true;
 }
