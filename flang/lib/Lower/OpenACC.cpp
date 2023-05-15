@@ -1154,6 +1154,64 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
 }
 
 static void
+genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
+                 mlir::Location currentLocation,
+                 Fortran::semantics::SemanticsContext &semanticsContext,
+                 Fortran::lower::StatementContext &stmtCtx,
+                 const Fortran::parser::AccClauseList &accClauseList) {
+  mlir::Value ifCond;
+  llvm::SmallVector<mlir::Value> dataOperands;
+  bool addIfPresentAttr = false;
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
+    if (const auto *ifClause =
+            std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
+      genIfClause(converter, clauseLocation, ifClause, ifCond, stmtCtx);
+    } else if (const auto *useDevice =
+                   std::get_if<Fortran::parser::AccClause::UseDevice>(
+                       &clause.u)) {
+      genDataOperandOperations<mlir::acc::UseDeviceOp>(
+          useDevice->v, converter, semanticsContext, stmtCtx, dataOperands,
+          mlir::acc::DataClause::acc_use_device,
+          /*structured=*/true);
+    } else if (std::get_if<Fortran::parser::AccClause::IfPresent>(&clause.u)) {
+      addIfPresentAttr = true;
+    }
+  }
+
+  if (ifCond) {
+    if (auto cst =
+            mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
+      if (auto boolAttr = cst.getValue().dyn_cast<mlir::BoolAttr>()) {
+        if (boolAttr.getValue()) {
+          // get rid of the if condition if it is always true.
+          ifCond = mlir::Value();
+        } else {
+          // Do not generate the acc.host_data op if the if condition is always
+          // false.
+          return;
+        }
+      }
+  }
+
+  // Prepare the operand segment size attribute and the operands value range.
+  llvm::SmallVector<mlir::Value> operands;
+  llvm::SmallVector<int32_t> operandSegments;
+  addOperand(operands, operandSegments, ifCond);
+  addOperands(operands, operandSegments, dataOperands);
+
+  auto hostDataOp =
+      createRegionOp<mlir::acc::HostDataOp, mlir::acc::TerminatorOp>(
+          builder, currentLocation, operands, operandSegments);
+
+  if (addIfPresentAttr)
+    hostDataOp.setIfPresentAttr(builder.getUnitAttr());
+}
+
+static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
        Fortran::lower::pft::Evaluation &eval,
@@ -1181,7 +1239,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
     createComputeOp<mlir::acc::KernelsOp>(
         converter, currentLocation, semanticsContext, stmtCtx, accClauseList);
   } else if (blockDirective.v == llvm::acc::ACCD_host_data) {
-    TODO(currentLocation, "host_data construct lowering");
+    genACCHostDataOp(converter, currentLocation, semanticsContext, stmtCtx,
+                     accClauseList);
   }
 }
 

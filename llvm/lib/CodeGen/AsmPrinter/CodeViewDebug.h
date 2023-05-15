@@ -191,8 +191,6 @@ private:
     bool HasStackRealignment = false;
 
     bool HaveLineInfo = false;
-
-    bool HasFramePointer = false;
   };
   FunctionInfo *CurFn = nullptr;
 

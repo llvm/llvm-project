@@ -121,6 +121,7 @@ END-SCRIPT
 #include <__algorithm/pstl_backends/cpu_backends/find_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/find_if.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/for_each.h'}}
 #include <__algorithm/pstl_backends/cpu_backends/serial.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/serial.h'}}
+#include <__algorithm/pstl_backends/cpu_backends/transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/pstl_backends/cpu_backends/transform.h'}}
 #include <__algorithm/push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/push_heap.h'}}
 #include <__algorithm/ranges_adjacent_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_adjacent_find.h'}}
 #include <__algorithm/ranges_all_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_all_of.h'}}
@@ -203,6 +204,7 @@ END-SCRIPT
 #include <__algorithm/ranges_sort_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sort_heap.h'}}
 #include <__algorithm/ranges_stable_partition.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_stable_partition.h'}}
 #include <__algorithm/ranges_stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_stable_sort.h'}}
+#include <__algorithm/ranges_starts_with.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_starts_with.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
 #include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
 #include <__algorithm/ranges_unique.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_unique.h'}}

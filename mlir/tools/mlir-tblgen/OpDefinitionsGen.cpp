@@ -3433,6 +3433,10 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     assert(!attrOrProperties.empty());
     std::string declarations = "  struct Properties {\n";
     llvm::raw_string_ostream os(declarations);
+    std::string comparator =
+        "    bool operator==(const Properties &rhs) const {\n"
+        "      return \n";
+    llvm::raw_string_ostream comparatorOs(comparator);
     for (const auto &attrOrProp : attrOrProperties) {
       if (const auto *namedProperty =
               attrOrProp.dyn_cast<const NamedProperty *>()) {
@@ -3447,7 +3451,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
            << "    " << name << "Ty " << name;
         if (prop.hasDefaultValue())
           os << " = " << prop.getDefaultValue();
-
+        comparatorOs << "        rhs." << name << " == this->" << name
+                     << " &&\n";
         // Emit accessors using the interface type.
         const char *accessorFmt = R"decl(;
     {0} get{1}() {
@@ -3490,6 +3495,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       }
       os << "    using " << name << "Ty = " << storageType << ";\n"
          << "    " << name << "Ty " << name << ";\n";
+      comparatorOs << "        rhs." << name << " == this->" << name << " &&\n";
 
       // Emit accessors using the interface type.
       if (attr) {
@@ -3509,8 +3515,15 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
                       storageType);
       }
     }
+    comparatorOs << "        true;\n    }\n"
+                    "    bool operator!=(const Properties &rhs) const {\n"
+                    "      return !(*this == rhs);\n"
+                    "    }\n";
+    comparatorOs.flush();
+    os << comparator;
     os << "  };\n";
     os.flush();
+
     genericAdaptorBase.declare<ExtraClassDeclaration>(std::move(declarations));
   }
   genericAdaptorBase.declare<VisibilityDeclaration>(Visibility::Protected);

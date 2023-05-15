@@ -720,11 +720,8 @@ public:
     mlir::Type noneTy = mlir::NoneType::get(builder.getContext());
     mlir::Type polyRefTy = fir::PointerType::get(noneTy);
     mlir::Type boxType = fir::BoxType::get(polyRefTy);
-    mlir::Value nullConst = builder.createNullConstant(loc, polyRefTy);
     mlir::Value tempBox =
-        builder.createTemporary(loc, boxType, /*shape=*/mlir::ValueRange{});
-    mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, boxType, nullConst);
-    builder.create<fir::StoreOp>(loc, nullBox, tempBox);
+        fir::factory::genNullBoxStorage(builder, loc, boxType);
     return fir::MutableBoxValue(tempBox,
                                 /*lenParameters=*/mlir::ValueRange{},
                                 /*mutableProperties=*/{});
