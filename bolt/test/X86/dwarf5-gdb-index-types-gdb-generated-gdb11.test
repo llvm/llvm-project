@@ -11,11 +11,11 @@
 
 # POSTCHECK:          Version = 8
 # POSTCHECK:          CU list offset = 0x18, has 2 entries
-# POSTCHECK-NEXT:         0: Offset = 0x40, Length = 0x52
+# POSTCHECK-NEXT:         0: Offset = 0x80, Length = 0x52
 # POSTCHECK-NEXT:         1: Offset = 0xd2, Length = 0x53
 # POSTCHECK:          Types CU list offset = 0x38, has 2 entries
 # POSTCHECK-NEXT:       0: offset = 0x00000000, type_offset = 0x00000023, type_signature = 0x418503b8111e9a7b
-# POSTCHECK-NEXT:       1: offset = 0x00000092, type_offset = 0x00000023, type_signature = 0x00f6cca4e3a15118
+# POSTCHECK-NEXT:       1: offset = 0x00000040, type_offset = 0x00000023, type_signature = 0x00f6cca4e3a15118
 # POSTCHECK:          Address area offset = 0x68, has 2 entries
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR:]],
 # POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 1

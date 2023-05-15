@@ -22,6 +22,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -315,17 +316,12 @@ public:
   /// Adds {\p Address, \p Index} to \p CU.
   void addIndexAddress(uint64_t Address, uint32_t Index, DWARFUnit &CU);
 
-  /// Creates consolidated .debug_addr section, and builds DWOID to offset map.
-  virtual AddressSectionBuffer finalize();
+  /// Write out entries in to .debug_addr section for CUs.
+  virtual void update(DIEBuilder &DIEBlder, DWARFUnit &CUs);
 
-  /// Given DWARFUnit \p Unit returns offset of this CU in to .debug_addr
-  /// section.
-  virtual uint64_t getOffset(DWARFUnit &Unit);
-
-  /// Returns True if CU exists in the DebugAddrWriter.
-  bool doesCUExist(DWARFUnit &Unit) {
-    return DWOIdToOffsetMap.count(getCUID(Unit)) > 0;
-  }
+  /// Return buffer with all the entries in .debug_addr already writen out using
+  /// update(...).
+  virtual AddressSectionBuffer &finalize() { return *Buffer; }
 
   /// Returns False if .debug_addr section was created..
   bool isInitialized() const { return !AddressMaps.empty(); }
@@ -387,10 +383,12 @@ protected:
   BinaryContext *BC;
   /// Maps DWOID to AddressForDWOCU.
   std::unordered_map<uint64_t, AddressForDWOCU> AddressMaps;
-  /// Maps DWOID to offset within .debug_addr section.
-  std::unordered_map<uint64_t, uint64_t> DWOIdToOffsetMap;
   /// Mutex used for parallel processing of debug info.
   std::mutex WriterMutex;
+  std::unique_ptr<AddressSectionBuffer> Buffer;
+  std::unique_ptr<raw_svector_ostream> AddressStream;
+  /// Used to track sections that were not modified so that they can be re-used.
+  DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
 };
 
 class DebugAddrWriterDwarf5 : public DebugAddrWriter {
@@ -398,11 +396,8 @@ public:
   DebugAddrWriterDwarf5() = delete;
   DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
 
-  /// Creates consolidated .debug_addr section, and builds DWOID to offset map.
-  AddressSectionBuffer finalize() override;
-  /// Given DWARFUnit \p Unit returns offset of this CU in to .debug_addr
-  /// section.
-  uint64_t getOffset(DWARFUnit &Unit) override;
+  /// Write out entries in to .debug_addr section for CUs.
+  virtual void update(DIEBuilder &DIEBlder, DWARFUnit &CUs) override;
 
 protected:
   /// Given DWARFUnit \p Unit returns either DWO ID or it's offset within
@@ -433,7 +428,7 @@ public:
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
   /// Writes out current sections entry into .debug_str_offsets.
-  void finalizeSection(DWARFUnit &Unit);
+  void finalizeSection(DWARFUnit &Unit, DIEBuilder &DIEBldr);
 
   /// Returns False if no strings were added to .debug_str.
   bool isFinalized() const { return !StrOffsetsBuffer->empty(); }
@@ -447,7 +442,7 @@ private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
-  DenseSet<uint64_t> ProcessedBaseOffsets;
+  std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
   // Section size not including header.
   uint32_t CurrentSectionSize{0};
   bool StrOffsetSectionWasModified = false;
