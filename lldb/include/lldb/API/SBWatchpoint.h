@@ -13,7 +13,10 @@
 #include "lldb/API/SBType.h"
 
 namespace lldb_private {
-namespace ptyhon {
+namespace python {
+class SWIGBridge;
+}
+namespace lua {
 class SWIGBridge;
 }
 } // namespace lldb_private
@@ -86,6 +89,7 @@ public:
 
 protected:
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
 
   SBWatchpoint(const lldb::WatchpointSP &wp_sp);
 
