@@ -819,17 +819,7 @@ private:
 
     Type *getValueType() const {
       // TODO: handle target-specific intrinsics.
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::masked_load:
-          return II->getType();
-        case Intrinsic::masked_store:
-          return II->getArgOperand(0)->getType();
-        default:
-          return nullptr;
-        }
-      }
-      return getLoadStoreType(Inst);
+      return Inst->getAccessType();
     }
 
     bool mayReadFromMemory() const {

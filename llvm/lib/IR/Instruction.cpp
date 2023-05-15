@@ -743,6 +743,42 @@ bool Instruction::isVolatile() const {
   }
 }
 
+Type *Instruction::getAccessType() const {
+  switch (getOpcode()) {
+  case Instruction::Store:
+    return cast<StoreInst>(this)->getValueOperand()->getType();
+  case Instruction::Load:
+  case Instruction::AtomicRMW:
+    return getType();
+  case Instruction::AtomicCmpXchg:
+    return cast<AtomicCmpXchgInst>(this)->getNewValOperand()->getType();
+  case Instruction::Call:
+  case Instruction::Invoke:
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::masked_load:
+      case Intrinsic::masked_gather:
+      case Intrinsic::masked_expandload:
+      case Intrinsic::vp_load:
+      case Intrinsic::vp_gather:
+      case Intrinsic::experimental_vp_strided_load:
+        return II->getType();
+      case Intrinsic::masked_store:
+      case Intrinsic::masked_scatter:
+      case Intrinsic::masked_compressstore:
+      case Intrinsic::vp_store:
+      case Intrinsic::vp_scatter:
+      case Intrinsic::experimental_vp_strided_store:
+        return II->getOperand(0)->getType();
+      default:
+        break;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
 static bool canUnwindPastLandingPad(const LandingPadInst *LP,
                                     bool IncludePhaseOneUnwind) {
   // Because phase one unwinding skips cleanup landingpads, we effectively
