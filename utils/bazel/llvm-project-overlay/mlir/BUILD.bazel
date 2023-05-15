@@ -7758,6 +7758,7 @@ cc_library(
         ":LLVMSupportHeaders",
         ":mlir_c_runner_utils",
         "@cuda//:cuda_headers",
+        "@cuda//:cusparse_static",
         "@cuda//:libcuda",
     ],
 )
