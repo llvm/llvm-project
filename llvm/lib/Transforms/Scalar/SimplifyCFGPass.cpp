@@ -121,7 +121,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  const DILocation *CommonDebugLoc = nullptr;
+  DILocation *CommonDebugLoc = nullptr;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
