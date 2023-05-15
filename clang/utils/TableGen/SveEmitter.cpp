@@ -299,6 +299,7 @@ public:
     if (It != FlagTypes.end()) {
       uint64_t Mask = It->getValue();
       unsigned Shift = llvm::countr_zero(Mask);
+      assert(Shift < 64 && "Mask value produced an invalid shift value");
       return (V << Shift) & Mask;
     }
     llvm_unreachable("Unsupported flag");
