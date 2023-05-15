@@ -37,29 +37,8 @@ using FrontEndSymbol = const semantics::Symbol *;
 
 class AbstractConverter;
 
-unsigned getHashValue(FrontEndExpr x);
-bool isEqual(FrontEndExpr x, FrontEndExpr y);
 } // namespace lower
 } // namespace Fortran
-
-namespace llvm {
-template <>
-struct DenseMapInfo<Fortran::lower::FrontEndExpr> {
-  static inline Fortran::lower::FrontEndExpr getEmptyKey() {
-    return reinterpret_cast<Fortran::lower::FrontEndExpr>(~0);
-  }
-  static inline Fortran::lower::FrontEndExpr getTombstoneKey() {
-    return reinterpret_cast<Fortran::lower::FrontEndExpr>(~0 - 1);
-  }
-  static unsigned getHashValue(Fortran::lower::FrontEndExpr v) {
-    return Fortran::lower::getHashValue(v);
-  }
-  static bool isEqual(Fortran::lower::FrontEndExpr lhs,
-                      Fortran::lower::FrontEndExpr rhs) {
-    return Fortran::lower::isEqual(lhs, rhs);
-  }
-};
-} // namespace llvm
 
 namespace Fortran::lower {
 
