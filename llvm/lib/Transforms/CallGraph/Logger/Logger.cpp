@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <string>
+#include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -18,7 +20,13 @@ private:
 
   void writeGraph() const;
 
-  GraphEditor() = default;
+  // Ctor will dump /proc/self/maps to the maps.txt files
+  // It is necessary, because we support -fPIC flag
+  GraphEditor() {
+    auto pid = getpid();
+    std::string system_text = "cat /proc/" + std::to_string(pid) + "/maps > maps.txt";
+    system(system_text.c_str());
+  };
 
 public:
   static GraphEditor &getInstance() {
