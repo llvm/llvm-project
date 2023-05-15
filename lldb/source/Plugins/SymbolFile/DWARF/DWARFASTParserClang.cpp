@@ -2894,8 +2894,10 @@ void DWARFASTParserClang::ParseSingleMember(
   // artificial member with (unnamed bitfield) padding.
   // FIXME: This check should verify that this is indeed an artificial member
   // we are supposed to ignore.
-  if (attrs.is_artificial)
+  if (attrs.is_artificial) {
+    last_field_info.SetIsArtificial(true);
     return;
+  }
 
   if (!member_clang_type.IsCompleteType())
     member_clang_type.GetCompleteType();
@@ -3658,17 +3660,23 @@ bool DWARFASTParserClang::ShouldCreateUnnamedBitfield(
     return false;
 
   // If we have a base class, we assume there is no unnamed
-  // bit-field if this is the first field since the gap can be
-  // attributed to the members from the base class. This assumption
-  // is not correct if the first field of the derived class is
-  // indeed an unnamed bit-field. We currently do not have the
-  // machinary to track the offset of the last field of classes we
-  // have seen before, so we are not handling this case.
+  // bit-field if either of the following is true:
+  // (a) this is the first field since the gap can be
+  // attributed to the members from the base class.
+  // FIXME: This assumption is not correct if the first field of
+  // the derived class is indeed an unnamed bit-field. We currently
+  // do not have the machinary to track the offset of the last field
+  // of classes we have seen before, so we are not handling this case.
+  // (b) Or, the first member of the derived class was a vtable pointer.
+  // In this case we don't want to create an unnamed bitfield either
+  // since those will be inserted by clang later.
   const bool have_base = layout_info.base_offsets.size() != 0;
   const bool this_is_first_field =
       last_field_info.bit_offset == 0 && last_field_info.bit_size == 0;
+  const bool first_field_is_vptr =
+      last_field_info.bit_offset == 0 && last_field_info.IsArtificial();
 
-  if (have_base && this_is_first_field)
+  if (have_base && (this_is_first_field || first_field_is_vptr))
     return false;
 
   return true;
