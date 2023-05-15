@@ -193,9 +193,9 @@ def TestReversePayloadOpsOp
   : Op<Transform_Dialect, "test_reverse_payload_ops",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins PDL_Operation:$target);
-  let results = (outs PDL_Operation:$result);
-  let assemblyFormat = "$target attr-dict";
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$result);
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -315,8 +315,8 @@ def TestPrintNumberOfAssociatedPayloadIROps
   : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_ops",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins PDL_Operation:$handle);
-  let assemblyFormat = "$handle attr-dict";
+  let arguments = (ins TransformHandleTypeInterface:$handle);
+  let assemblyFormat = "$handle attr-dict `:` type($handle)";
   let cppNamespace = "::mlir::test";
 }
 

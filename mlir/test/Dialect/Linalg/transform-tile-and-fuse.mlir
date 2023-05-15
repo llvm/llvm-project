@@ -103,8 +103,8 @@ module {
   ^bb1(%arg1: !transform.any_op):
     // Find the root and all producers.
     %root = transform.structured.match attributes{"__root__"} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %producers = transform.structured.match attributes{"__producer__"} in %arg1 : (!transform.any_op) -> !pdl.operation
-    %reversed_producers = transform.test_reverse_payload_ops %producers
+    %producers = transform.structured.match attributes{"__producer__"} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %reversed_producers = transform.test_reverse_payload_ops %producers : (!transform.any_op) -> !transform.any_op
 
     // Tile the root.
     %forall_op, %tiled_op = transform.structured.tile_to_forall_op %root num_threads [10, 20]
@@ -112,6 +112,6 @@ module {
 
     // Fuse all producers.
     transform.structured.fuse_into_containing_op %reversed_producers into %forall_op
-      : (!pdl.operation, !transform.any_op) -> !transform.any_op
+      : (!transform.any_op, !transform.any_op) -> !transform.any_op
   }
 }

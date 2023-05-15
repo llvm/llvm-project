@@ -10,14 +10,14 @@ func.func @bar() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
-  transform.test_consume_operand %match_name : !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+  transform.test_consume_operand %match_name : !transform.any_op
 
-  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.test_print_remark_at_operand %match_attr, "matched attr name" : !pdl.operation
-  transform.test_consume_operand %match_attr : !pdl.operation
+  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_attr, "matched attr name" : !transform.any_op
+  transform.test_consume_operand %match_attr : !transform.any_op
 }
 
 // -----
@@ -30,11 +30,11 @@ func.func @by_type() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %match_name = transform.structured.match
-    ops{["arith.constant"]} filter_result_type = f32 in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
-  transform.test_consume_operand %match_name : !pdl.operation
+    ops{["arith.constant"]} filter_result_type = f32 in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+  transform.test_consume_operand %match_name : !transform.any_op
 }
 
 // -----
@@ -56,23 +56,23 @@ func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %match_attr = transform.structured.match
       ops{["linalg.generic"]}
       attributes{iterator_types = [
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>]}
-      in %arg1 : (!pdl.operation) -> !pdl.operation
-  transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !pdl.operation
-  transform.test_consume_operand %match_attr : !pdl.operation
+      in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !transform.any_op
+  transform.test_consume_operand %match_attr : !transform.any_op
 
   %no_match = transform.structured.match
       attributes{iterator_types = [
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<reduction>]}
-      in %arg1 : (!pdl.operation) -> !pdl.operation
+      in %arg1 : (!transform.any_op) -> !transform.any_op
 // expected-remark @below {{0}}
-  transform.test_print_number_of_associated_payload_ir_ops %no_match
+  transform.test_print_number_of_associated_payload_ir_ops %no_match : !transform.any_op
 }
