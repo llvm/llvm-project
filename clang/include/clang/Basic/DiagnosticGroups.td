@@ -1116,6 +1116,7 @@ def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
 def : DiagGroup<"c++1z-extensions", [CXX17]>;
 def : DiagGroup<"c++2a-extensions", [CXX20]>;
+def : DiagGroup<"c++2b-extensions", [CXX23]>;
 
 def DelegatingCtorCycles :
   DiagGroup<"delegating-ctor-cycles">;
