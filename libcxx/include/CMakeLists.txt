@@ -79,6 +79,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/for_each.h
   __algorithm/pstl_backends/cpu_backends/serial.h
   __algorithm/pstl_backends/cpu_backends/transform.h
+  __algorithm/pstl_copy.h
   __algorithm/pstl_fill.h
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
