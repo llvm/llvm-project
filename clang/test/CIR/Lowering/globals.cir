@@ -6,7 +6,7 @@ module {
   cir.global external @y = 3.400000e+00 : f32
   cir.global external @w = 4.300000e+00 : f64
   cir.global external @x = 51 : i8
-  cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8] : !cir.array<i8 x 3>> : !cir.array<i8 x 3>
+  cir.global external @rgb = #cir.const_array<[0 : i8, -23 : i8, 33 : i8]> : !cir.array<i8 x 3> // Implicit array type
   cir.global external @alpha = #cir.const_array<[97 : i8, 98 : i8, 99 : i8, 0 : i8] : !cir.array<i8 x 4>> : !cir.array<i8 x 4>
   cir.global "private" constant internal @".str" = #cir.const_array<"example\00" : !cir.array<i8 x 8>> : !cir.array<i8 x 8> {alignment = 1 : i64}
   cir.global external @s = @".str": !cir.ptr<i8>

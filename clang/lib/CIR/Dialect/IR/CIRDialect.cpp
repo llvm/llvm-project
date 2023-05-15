@@ -1816,18 +1816,18 @@ LogicalResult mlir::cir::ConstArrayAttr::verify(
 
   // ArrayAttrrs have per-element type, not the type of the array...
   if (resultVal->dyn_cast<ArrayAttr>()) {
-    // Parse literal ':'
-    if (parser.parseColon())
-      return {};
-
-    // Parse variable 'type'
-    resultTy = ::mlir::FieldParser<::mlir::Type>::parse(parser);
-    if (failed(resultTy)) {
-      parser.emitError(
-          parser.getCurrentLocation(),
-          "failed to parse ConstArrayAttr parameter 'type' which is "
-          "to be a `::mlir::Type`");
-      return {};
+    // Array has implicit type: infer from const array type.
+    if (parser.parseOptionalColon().failed()) {
+      resultTy = type;
+    } else { // Array has explicit type: parse it.
+      resultTy = ::mlir::FieldParser<::mlir::Type>::parse(parser);
+      if (failed(resultTy)) {
+        parser.emitError(
+            parser.getCurrentLocation(),
+            "failed to parse ConstArrayAttr parameter 'type' which is "
+            "to be a `::mlir::Type`");
+        return {};
+      }
     }
   } else {
     assert(resultVal->isa<TypedAttr>() && "IDK");
