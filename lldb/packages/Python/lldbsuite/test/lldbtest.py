@@ -1252,6 +1252,13 @@ class Base(unittest2.TestCase):
             return True
         return self.isAArch64() and "paca" in self.getCPUInfo()
 
+    def isAArch64Windows(self):
+        """Returns true if the architecture is AArch64 and platform windows."""
+        if self.getPlatform() == 'windows':
+            arch = self.getArchitecture().lower()
+            return arch in ["aarch64", "arm64", "arm64e"]
+        return False
+
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
         module = builder_module()
