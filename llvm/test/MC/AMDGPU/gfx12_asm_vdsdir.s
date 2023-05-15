@@ -84,23 +84,20 @@ ds_param_load v10, attr11.x wait_va_vdst:6
 ds_param_load v11, attr22.y wait_va_vdst:5
 // GFX12: ds_param_load v11, attr22.y wait_va_vdst:5  ; encoding: [0x0b,0x59,0x05,0xce]
 
-ds_param_load v12, attr33.z wait_va_vdst:4
-// GFX12: ds_param_load v12, attr33.z wait_va_vdst:4  ; encoding: [0x0c,0x86,0x04,0xce]
+ds_param_load v13, attr32.x wait_va_vdst:3
+// GFX12: ds_param_load v13, attr32.x wait_va_vdst:3  ; encoding: [0x0d,0x80,0x03,0xce]
 
-ds_param_load v13, attr63.x wait_va_vdst:3
-// GFX12: ds_param_load v13, attr63.x wait_va_vdst:3  ; encoding: [0x0d,0xfc,0x03,0xce]
+ds_param_load v14, attr32.y wait_va_vdst:2
+// GFX12: ds_param_load v14, attr32.y wait_va_vdst:2  ; encoding: [0x0e,0x81,0x02,0xce]
 
-ds_param_load v14, attr63.y wait_va_vdst:2
-// GFX12: ds_param_load v14, attr63.y wait_va_vdst:2  ; encoding: [0x0e,0xfd,0x02,0xce]
+ds_param_load v15, attr32.z wait_va_vdst:1
+// GFX12: ds_param_load v15, attr32.z wait_va_vdst:1  ; encoding: [0x0f,0x82,0x01,0xce]
 
-ds_param_load v15, attr63.z wait_va_vdst:1
-// GFX12: ds_param_load v15, attr63.z wait_va_vdst:1  ; encoding: [0x0f,0xfe,0x01,0xce]
+ds_param_load v16, attr32.w wait_va_vdst:0
+// GFX12: ds_param_load v16, attr32.w  ; encoding: [0x10,0x83,0x00,0xce]
 
-ds_param_load v16, attr63.w wait_va_vdst:0
-// GFX12: ds_param_load v16, attr63.w  ; encoding: [0x10,0xff,0x00,0xce]
-
-ds_param_load v17, attr63.w
-// GFX12: ds_param_load v17, attr63.w  ; encoding: [0x11,0xff,0x00,0xce]
+ds_param_load v17, attr32.w
+// GFX12: ds_param_load v17, attr32.w  ; encoding: [0x11,0x83,0x00,0xce]
 
 ds_direct_load v1 wait_va_vdst:15 wait_vm_vsrc:1
 // GFX12: ds_direct_load v1 wait_va_vdst:15 wait_vm_vsrc:1  ; encoding: [0x01,0x00,0x9f,0xce]
@@ -186,20 +183,17 @@ ds_param_load v10, attr11.x wait_va_vdst:6 wait_vm_vsrc:1
 ds_param_load v11, attr22.y wait_va_vdst:5 wait_vm_vsrc:1
 // GFX12: ds_param_load v11, attr22.y wait_va_vdst:5 wait_vm_vsrc:1  ; encoding: [0x0b,0x59,0x85,0xce]
 
-ds_param_load v12, attr33.z wait_va_vdst:4 wait_vm_vsrc:1
-// GFX12: ds_param_load v12, attr33.z wait_va_vdst:4 wait_vm_vsrc:1  ; encoding: [0x0c,0x86,0x84,0xce]
+ds_param_load v13, attr32.x wait_va_vdst:3 wait_vm_vsrc:1
+// GFX12: ds_param_load v13, attr32.x wait_va_vdst:3 wait_vm_vsrc:1  ; encoding: [0x0d,0x80,0x83,0xce]
 
-ds_param_load v13, attr63.x wait_va_vdst:3 wait_vm_vsrc:1
-// GFX12: ds_param_load v13, attr63.x wait_va_vdst:3 wait_vm_vsrc:1  ; encoding: [0x0d,0xfc,0x83,0xce]
+ds_param_load v14, attr32.y wait_va_vdst:2 wait_vm_vsrc:1
+// GFX12: ds_param_load v14, attr32.y wait_va_vdst:2 wait_vm_vsrc:1  ; encoding: [0x0e,0x81,0x82,0xce]
 
-ds_param_load v14, attr63.y wait_va_vdst:2 wait_vm_vsrc:1
-// GFX12: ds_param_load v14, attr63.y wait_va_vdst:2 wait_vm_vsrc:1  ; encoding: [0x0e,0xfd,0x82,0xce]
+ds_param_load v15, attr32.z wait_va_vdst:1 wait_vm_vsrc:1
+// GFX12: ds_param_load v15, attr32.z wait_va_vdst:1 wait_vm_vsrc:1  ; encoding: [0x0f,0x82,0x81,0xce]
 
-ds_param_load v15, attr63.z wait_va_vdst:1 wait_vm_vsrc:1
-// GFX12: ds_param_load v15, attr63.z wait_va_vdst:1 wait_vm_vsrc:1  ; encoding: [0x0f,0xfe,0x81,0xce]
+ds_param_load v16, attr32.w wait_va_vdst:0 wait_vm_vsrc:1
+// GFX12: ds_param_load v16, attr32.w wait_vm_vsrc:1  ; encoding: [0x10,0x83,0x80,0xce]
 
-ds_param_load v16, attr63.w wait_va_vdst:0 wait_vm_vsrc:1
-// GFX12: ds_param_load v16, attr63.w wait_vm_vsrc:1  ; encoding: [0x10,0xff,0x80,0xce]
-
-ds_param_load v17, attr63.w wait_vm_vsrc:1
-// GFX12: ds_param_load v17, attr63.w wait_vm_vsrc:1  ; encoding: [0x11,0xff,0x80,0xce]
+ds_param_load v17, attr32.w wait_vm_vsrc:1
+// GFX12: ds_param_load v17, attr32.w wait_vm_vsrc:1  ; encoding: [0x11,0x83,0x80,0xce]
