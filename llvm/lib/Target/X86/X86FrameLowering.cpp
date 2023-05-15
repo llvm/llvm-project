@@ -3831,6 +3831,32 @@ X86FrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
   return TRI->getDwarfRegNum(StackPtr, true);
 }
 
+TargetFrameLowering::DwarfFrameBase
+X86FrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
+  if (needsDwarfCFI(MF)) {
+    // TODO(khuey): Eventually we should emit the variable expressions in
+    // terms of the CFA, rather than adjusting the CFA to mimic the frame
+    // or stack pointers.
+    DwarfFrameBase FrameBase;
+    FrameBase.Kind = DwarfFrameBase::CFA;
+    FrameBase.Location.Offset = -getInitialCFAOffset(MF);
+    if (hasFP(MF)) {
+      // Adjust for one additional stack slot (for the saved frame pointer
+      // register), so that the frame base expression is equivalent to the
+      // value of the frame pointer.
+      FrameBase.Location.Offset -= TRI->getSlotSize();
+    } else {
+      // Adjust for the entire stack size, so that the frame base expression
+      // is equivalent to the value of the stack pointer once the stack
+      // frame is completely set up.
+      FrameBase.Location.Offset -= MF.getFrameInfo().getStackSize();
+    }
+    return FrameBase;
+  }
+
+  return TargetFrameLowering::getDwarfFrameBase(MF);
+}
+
 namespace {
 // Struct used by orderFrameObjects to help sort the stack objects.
 struct X86FrameSortingObject {
