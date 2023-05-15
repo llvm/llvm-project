@@ -10,6 +10,7 @@ licenses(["notice"])
 
 cc_library(
     name = "mpfr_impl",
+    hdrs = ["mpfr_inc.h"],
     target_compatible_with = select({
         "//conditions:default": [],
         "//libc:mpfr_disable": ["@platforms//:incompatible"],
