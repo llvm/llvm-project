@@ -6379,6 +6379,13 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
                  BinaryOperatorKind BO, llvm::AtomicOrdering AO,
                  bool IsXLHSInRHSPart, const Expr *Hint) {
   ASTContext &Context = CGF.getContext();
+
+  if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(CGF, X, Update, BO)) {
+    auto Ret = CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(CGF, X, Update, BO);
+    if (Ret.first)
+      return Ret;
+  }
+
   bool useFPAtomics = canUseAMDGPUFastFPAtomics(CGF, X, Update, BO, Hint);
   if (useFPAtomics) {
     auto Ret = CGF.CGM.getOpenMPRuntime().emitFastFPAtomicCall(
@@ -6738,6 +6745,14 @@ static void emitOMPAtomicCompareExpr(CodeGenFunction &CGF,
   };
 
   llvm::Value *EVal = EmitRValueWithCastIfNeeded(X, E);
+
+  if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(
+          CGF, XLVal, RValue::get(EVal),
+          cast<BinaryOperator>(CE)->getOpcode())) {
+    auto Ret = CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(
+        CGF, XLVal, RValue::get(EVal), cast<BinaryOperator>(CE)->getOpcode());
+    return;
+  }
 
   // Check if fast AMDGPU FP atomics can be used for the current operation:
   bool canUseFastAtomics =

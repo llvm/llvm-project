@@ -126,6 +126,14 @@ ATOMIC_FP_OP(double)
 #undef ATOMIC_INT_OP
 #undef ATOMIC_FP_OP
 
+//#define ATOMIC_CAS_LOOP_ADD(TY)		\
+//  void atomicCASLoopAdd(TY *addr, TY val);
+
+// ATOMIC_CAS_LOOP_ADD(float);
+// ATOMIC_CAS_LOOP_ADD(double);
+
+//#undef ATOMIC_CAS_LOOP_ADD
+
 ///}
 
 } // namespace atomic

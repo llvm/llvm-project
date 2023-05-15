@@ -1,3 +1,4 @@
+
 //===----- CGOpenMPRuntime.h - Interface to OpenMP Runtimes -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -1662,11 +1663,26 @@ public:
   virtual bool supportFastFPAtomics() { return false; }
 
   /// Used for AMDGPU architectures where certain fast FP atomics are defined as
-  /// instrinsic functions
+  /// instrinsic functions.
   virtual std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF,
                                                        LValue X, RValue Update,
                                                        BinaryOperatorKind BO,
                                                        bool IsXBinopExpr) {
+    return std::make_pair(false, RValue::get(nullptr));
+  }
+
+  /// Return whether the current architecture must emit CAS loop runtime call
+  /// for given type and atomic operation
+  virtual bool mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X, RValue Update,
+                                  BinaryOperatorKind BO) {
+    return false;
+  }
+
+  /// Used for AMDGPU architectures where certain atomics must be lowered
+  /// to a CAS loop.
+  virtual std::pair<bool, RValue> emitAtomicCASLoop(CodeGenFunction &CGF,
+                                                    LValue X, RValue Update,
+                                                    BinaryOperatorKind BO) {
     return std::make_pair(false, RValue::get(nullptr));
   }
 };

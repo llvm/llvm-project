@@ -133,12 +133,73 @@ uint32_t atomicCAS(uint32_t *Address, uint32_t Compare, uint32_t Val,
   return Compare;
 }
 
+unsigned long long atomicCAS(unsigned long long *Address,
+                             unsigned long long Compare, unsigned long long Val,
+                             atomic::OrderingTy Ordering) {
+  (void)__atomic_compare_exchange(Address, &Compare, &Val, false, Ordering,
+                                  Ordering);
+  return Compare;
+}
+
 uint64_t atomicAdd(uint64_t *Address, uint64_t Val,
                    atomic::OrderingTy Ordering) {
   return __atomic_fetch_add(Address, Val, Ordering);
 }
 
 float unsafeAtomicAdd(float *addr, float value);
+
+#define ATOMIC_CAS_LOOP_ADD(TY) void atomicCASLoopAdd(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_ADD(float);
+ATOMIC_CAS_LOOP_ADD(double);
+
+#undef ATOMIC_CAS_LOOP_ADD
+
+#define ATOMIC_CAS_LOOP_SUB(TY) void atomicCASLoopSub(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_SUB(int32_t);
+ATOMIC_CAS_LOOP_SUB(int64_t);
+
+#undef ATOMIC_CAS_LOOP_SUB
+
+#define ATOMIC_CAS_LOOP_MIN(TY) void atomicCASLoopMin(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_MIN(int32_t)
+ATOMIC_CAS_LOOP_MIN(int64_t)
+ATOMIC_CAS_LOOP_MIN(float);
+ATOMIC_CAS_LOOP_MIN(double);
+
+#undef ATOMIC_CAS_LOOP_MIN
+
+#define ATOMIC_CAS_LOOP_MAX(TY) void atomicCASLoopMax(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_MAX(int32_t)
+ATOMIC_CAS_LOOP_MAX(int64_t)
+ATOMIC_CAS_LOOP_MAX(float);
+ATOMIC_CAS_LOOP_MAX(double);
+
+#undef ATOMIC_CAS_LOOP_MAX
+
+#define ATOMIC_CAS_LOOP_AND(TY) void atomicCASLoopAnd(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_AND(int32_t);
+ATOMIC_CAS_LOOP_AND(int64_t);
+
+#undef ATOMIC_CAS_LOOP_AND
+
+#define ATOMIC_CAS_LOOP_OR(TY) void atomicCASLoopOr(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_OR(int32_t);
+ATOMIC_CAS_LOOP_OR(int64_t);
+
+#undef ATOMIC_CAS_LOOP_OR
+
+#define ATOMIC_CAS_LOOP_XOR(TY) void atomicCASLoopXor(TY *addr, TY val);
+
+ATOMIC_CAS_LOOP_XOR(int32_t);
+ATOMIC_CAS_LOOP_XOR(int64_t);
+
+#undef ATOMIC_CAS_LOOP_XOR
 
 constexpr uint32_t UNSET = 0;
 constexpr uint32_t SET = 1;
@@ -377,6 +438,198 @@ void setCriticalLock(omp_lock_t *Lock) {
     fenceKernel(atomic::aquire);
   }
 }
+
+// atomicCAS-based implementation for certain atomic operations on gfx941
+//#if defined(__gfx941__)
+template <typename T> void atomicCASLoopAdd(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    updated_val = val + (*reinterpret_cast<T *>(&assumed));
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_ADD(TY)                                                \
+  void atomicCASLoopAdd(TY *addr, TY val) { atomicCASLoopAdd<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_ADD(float);
+ATOMIC_CAS_LOOP_ADD(double);
+
+#undef ATOMIC_CAS_LOOP_ADD
+
+template <typename T> void atomicCASLoopSub(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    updated_val = (*reinterpret_cast<T *>(&assumed)) - val;
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_SUB(TY)                                                \
+  void atomicCASLoopSub(TY *addr, TY val) { atomicCASLoopSub<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_SUB(int32_t);
+ATOMIC_CAS_LOOP_SUB(int64_t);
+
+#undef ATOMIC_CAS_LOOP_SUB
+
+template <typename T> void atomicCASLoopMin(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    T t_assumed = (*reinterpret_cast<T *>(&assumed));
+    updated_val = val < t_assumed ? val : t_assumed;
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_MIN(TY)                                                \
+  void atomicCASLoopMin(TY *addr, TY val) { atomicCASLoopMin<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_MIN(int32_t)
+ATOMIC_CAS_LOOP_MIN(int64_t)
+ATOMIC_CAS_LOOP_MIN(float);
+ATOMIC_CAS_LOOP_MIN(double);
+
+#undef ATOMIC_CAS_LOOP_MIN
+
+template <typename T> void atomicCASLoopMax(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    T t_assumed = (*reinterpret_cast<T *>(&assumed));
+    updated_val = val > t_assumed ? val : t_assumed;
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_MAX(TY)                                                \
+  void atomicCASLoopMax(TY *addr, TY val) { atomicCASLoopMax<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_MAX(int32_t)
+ATOMIC_CAS_LOOP_MAX(int64_t)
+ATOMIC_CAS_LOOP_MAX(float);
+ATOMIC_CAS_LOOP_MAX(double);
+
+#undef ATOMIC_CAS_LOOP_MAX
+
+template <typename T> void atomicCASLoopAnd(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    updated_val = (*reinterpret_cast<T *>(&assumed)) & val;
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_AND(TY)                                                \
+  void atomicCASLoopAnd(TY *addr, TY val) { atomicCASLoopAnd<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_AND(int32_t);
+ATOMIC_CAS_LOOP_AND(int64_t);
+
+#undef ATOMIC_CAS_LOOP_AND
+
+template <typename T> void atomicCASLoopOr(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    updated_val = (*reinterpret_cast<T *>(&assumed)) | val;
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_OR(TY)                                                 \
+  void atomicCASLoopOr(TY *addr, TY val) { atomicCASLoopOr<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_OR(int32_t);
+ATOMIC_CAS_LOOP_OR(int64_t);
+
+#undef ATOMIC_CAS_LOOP_OR
+
+template <typename T> void atomicCASLoopXor(T *addr, T val) {
+  unsigned long long assumed;
+  unsigned long long *addr_as_ull = (unsigned long long *)addr;
+  unsigned long long old;
+  T typed_old;
+  __atomic_load(addr, &typed_old, atomic::relaxed);
+  old = (*reinterpret_cast<unsigned long long *>(&typed_old));
+  T updated_val = val;
+  do {
+    assumed = old;
+    updated_val = (*reinterpret_cast<T *>(&assumed)) ^ val;
+    // TODO: use intrinsic directly with release (success) and acquire (failure)
+    old = atomicCAS(addr_as_ull, assumed,
+                    (*reinterpret_cast<unsigned long long *>(&updated_val)),
+                    atomic::acq_rel);
+  } while (assumed != old);
+}
+
+#define ATOMIC_CAS_LOOP_XOR(TY)                                                \
+  void atomicCASLoopXor(TY *addr, TY val) { atomicCASLoopXor<TY>(addr, val); }
+
+ATOMIC_CAS_LOOP_XOR(int32_t);
+ATOMIC_CAS_LOOP_XOR(int64_t);
+
+#undef ATOMIC_CAS_LOOP_XOR
+
+//#endif
 
 #pragma omp end declare variant
 ///}
@@ -688,6 +941,81 @@ int omp_test_lock(omp_lock_t *Lock) { return impl::testLock(Lock); }
 float __kmpc_unsafeAtomicAdd(float *addr, float value) {
   return impl::unsafeAtomicAdd(addr, value);
 }
+
+#define KMPC_ATOMIC_CAS_LOOP_ADD(TY)                                           \
+  void __kmpc_atomicCASLoopAdd_##TY(TY *addr, TY val) {                        \
+    return impl::atomicCASLoopAdd(addr, val);                                  \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_ADD(float);
+KMPC_ATOMIC_CAS_LOOP_ADD(double);
+
+#undef KMPC_ATOMIC_CAS_LOOP_ADD
+
+#define KMPC_ATOMIC_CAS_LOOP_SUB(TY)                                           \
+  void __kmpc_atomicCASLoopSub_##TY(TY *addr, TY val) {                        \
+    return impl::atomicCASLoopSub(addr, val);                                  \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_SUB(int32_t);
+KMPC_ATOMIC_CAS_LOOP_SUB(int64_t);
+
+#undef KMPC_ATOMIC_CAS_LOOP_SUB
+
+#define KMPC_ATOMIC_CAS_LOOP_MIN(TY)                                           \
+  void __kmpc_atomicCASLoopMin_##TY(TY *addr, TY val) {                        \
+    return impl::atomicCASLoopMin(addr, val);                                  \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_MIN(int32_t)
+KMPC_ATOMIC_CAS_LOOP_MIN(int64_t)
+KMPC_ATOMIC_CAS_LOOP_MIN(float);
+KMPC_ATOMIC_CAS_LOOP_MIN(double);
+
+#undef KMPC_ATOMIC_CAS_LOOP_MIN
+
+#define KMPC_ATOMIC_CAS_LOOP_MAX(TY)                                           \
+  void __kmpc_atomicCASLoopMax_##TY(TY *addr, TY val) {                        \
+    return impl::atomicCASLoopMax(addr, val);                                  \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_MAX(int32_t)
+KMPC_ATOMIC_CAS_LOOP_MAX(int64_t)
+KMPC_ATOMIC_CAS_LOOP_MAX(float);
+KMPC_ATOMIC_CAS_LOOP_MAX(double);
+
+#undef KMPC_ATOMIC_CAS_LOOP_MAX
+
+#define KMPC_ATOMIC_CAS_LOOP_AND(TY)                                           \
+  void __kmpc_atomicCASLoopAnd_##TY(TY *addr, TY val) {                        \
+    return impl::atomicCASLoopAnd(addr, val);                                  \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_AND(int32_t);
+KMPC_ATOMIC_CAS_LOOP_AND(int64_t);
+
+#undef KMPC_ATOMIC_CAS_LOOP_AND
+
+#define KMPC_ATOMIC_CAS_LOOP_OR(TY)                                            \
+  void __kmpc_atomicCASLoopOr_##TY(TY *addr, TY val) {                         \
+    return impl::atomicCASLoopOr(addr, val);                                   \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_OR(int32_t);
+KMPC_ATOMIC_CAS_LOOP_OR(int64_t);
+
+#undef KMPC_ATOMIC_CAS_LOOP_OR
+
+#define KMPC_ATOMIC_CAS_LOOP_XOR(TY)                                           \
+  void __kmpc_atomicCASLoopXor_##TY(TY *addr, TY val) {                        \
+    return impl::atomicCASLoopXor(addr, val);                                  \
+  }
+
+KMPC_ATOMIC_CAS_LOOP_XOR(int32_t);
+KMPC_ATOMIC_CAS_LOOP_XOR(int64_t);
+
+#undef KMPC_ATOMIC_CAS_LOOP_XOR
+
 } // extern "C"
 
 #pragma omp end declare target

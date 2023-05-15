@@ -196,6 +196,16 @@ public:
                                                BinaryOperatorKind BO,
                                                bool IsXBinopExpr) override;
 
+  /// Return whether the current architecture must emit CAS loop runtime call
+  /// for given type and atomic operation
+  bool mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X, RValue Update,
+                          BinaryOperatorKind BO) override;
+
+  // Emit call to CAS loop
+  std::pair<bool, RValue> emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,
+                                            RValue Update,
+                                            BinaryOperatorKind BO) override;
+
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
   void emitProcBindClause(CodeGenFunction &CGF,

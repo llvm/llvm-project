@@ -505,6 +505,42 @@ __OMP_RTL(__kmpc_is_generic_main_thread_id, false, Int8, Int32)
 
 __OMP_RTL(__kmpc_unsafeAtomicAdd, false, Float, FloatPtr, Float)
 
+__OMP_RTL(__kmpc_atomicCASLoopAdd_float, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_atomicCASLoopAdd_double, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_atomicCASLoopSub_int32_t, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_atomicCASLoopSub_int64_t, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_atomicCASLoopMin_int32_t, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_atomicCASLoopMin_int64_t, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_atomicCASLoopMin_float, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_atomicCASLoopMin_double, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_atomicCASLoopMax_int32_t, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_atomicCASLoopMax_int64_t, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_atomicCASLoopMax_float, false, Void, FloatPtr, Float)
+
+__OMP_RTL(__kmpc_atomicCASLoopMax_double, false, Void, DoublePtr, Double)
+
+__OMP_RTL(__kmpc_atomicCASLoopAnd_int32_t, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_atomicCASLoopAnd_int64_t, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_atomicCASLoopOr_int32_t, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_atomicCASLoopOr_int64_t, false, Void, Int64Ptr, Int64)
+
+__OMP_RTL(__kmpc_atomicCASLoopXor_int32_t, false, Void, Int32Ptr, Int32)
+
+__OMP_RTL(__kmpc_atomicCASLoopXor_int64_t, false, Void, Int64Ptr, Int64)
+
 __OMP_RTL(__kmpc_xteam_sum_f, false, Void, Float, FloatPtr)
 
 __OMP_RTL(__kmpc_xteam_sum_d, false, Void, Double, DoublePtr)
