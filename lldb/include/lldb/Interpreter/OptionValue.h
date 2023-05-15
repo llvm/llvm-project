@@ -114,7 +114,8 @@ public:
   virtual lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                           llvm::StringRef name,
                                           Status &error) const {
-    error.SetErrorStringWithFormat("'%s' is not a value subvalue", name.str().c_str());
+    error.SetErrorStringWithFormat("'%s' is not a value subvalue",
+                                   name.str().c_str());
     return lldb::OptionValueSP();
   }
 
@@ -187,79 +188,60 @@ public:
                                     Status &error);
 
   OptionValueArch *GetAsArch();
-
   const OptionValueArch *GetAsArch() const;
 
   OptionValueArray *GetAsArray();
-
   const OptionValueArray *GetAsArray() const;
 
   OptionValueArgs *GetAsArgs();
-
   const OptionValueArgs *GetAsArgs() const;
 
   OptionValueBoolean *GetAsBoolean();
-
-  OptionValueChar *GetAsChar();
-
   const OptionValueBoolean *GetAsBoolean() const;
 
+  OptionValueChar *GetAsChar();
   const OptionValueChar *GetAsChar() const;
 
   OptionValueDictionary *GetAsDictionary();
-
   const OptionValueDictionary *GetAsDictionary() const;
 
   OptionValueEnumeration *GetAsEnumeration();
-
   const OptionValueEnumeration *GetAsEnumeration() const;
 
   OptionValueFileSpec *GetAsFileSpec();
-
   const OptionValueFileSpec *GetAsFileSpec() const;
 
   OptionValueFileSpecList *GetAsFileSpecList();
-
   const OptionValueFileSpecList *GetAsFileSpecList() const;
 
   OptionValueFormat *GetAsFormat();
-
   const OptionValueFormat *GetAsFormat() const;
 
   OptionValueLanguage *GetAsLanguage();
-
   const OptionValueLanguage *GetAsLanguage() const;
 
   OptionValuePathMappings *GetAsPathMappings();
-
   const OptionValuePathMappings *GetAsPathMappings() const;
 
   OptionValueProperties *GetAsProperties();
-
   const OptionValueProperties *GetAsProperties() const;
 
   OptionValueRegex *GetAsRegex();
-
   const OptionValueRegex *GetAsRegex() const;
 
   OptionValueSInt64 *GetAsSInt64();
-
   const OptionValueSInt64 *GetAsSInt64() const;
 
   OptionValueString *GetAsString();
-
   const OptionValueString *GetAsString() const;
 
   OptionValueUInt64 *GetAsUInt64();
-
   const OptionValueUInt64 *GetAsUInt64() const;
 
   OptionValueUUID *GetAsUUID();
-
   const OptionValueUUID *GetAsUUID() const;
 
   OptionValueFormatEntity *GetAsFormatEntity();
-
   const OptionValueFormatEntity *GetAsFormatEntity() const;
 
   bool AppendFileSpecValue(FileSpec file_spec);
