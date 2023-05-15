@@ -54,6 +54,7 @@ SuffixTreeNode *SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent,
   auto *N = new (LeafNodeAllocator.Allocate())
       SuffixTreeLeafNode(StartIdx, &LeafEndIdx);
   Parent.Children[Edge] = N;
+  ++NumLeafNodesAllocated;
   return N;
 }
 
@@ -68,6 +69,7 @@ SuffixTree::insertInternalNode(SuffixTreeInternalNode *Parent,
       SuffixTreeInternalNode(StartIdx, EndIdx, Root);
   if (Parent)
     Parent->Children[Edge] = N;
+  ++NumInternalNodesAllocated;
   return N;
 }
 
