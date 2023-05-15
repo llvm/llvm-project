@@ -82,7 +82,6 @@ set(files
   __algorithm/pstl_find.h
   __algorithm/pstl_for_each.h
   __algorithm/pstl_frontend_dispatch.h
-  __algorithm/pstl_transform.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h

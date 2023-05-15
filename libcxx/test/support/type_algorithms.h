@@ -52,13 +52,6 @@ TEST_CONSTEXPR_CXX14 void for_each(type_list<Types...>, Functor f) {
   swallow((f.template operator()<Types>(), 0)...);
 }
 
-
-template <template <class...> class T, class... Args>
-struct partial_instantiation {
-  template <class Other>
-  using apply = T<Args..., Other>;
-};
-
 // type categories defined in [basic.fundamental] plus extensions (without CV-qualifiers)
 
 using character_types =
