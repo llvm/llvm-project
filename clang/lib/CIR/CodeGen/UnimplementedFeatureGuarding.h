@@ -77,6 +77,7 @@ struct UnimplementedFeature {
   static bool setNonGC() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool setCommonAttributes() { return false; }
+  static bool insertBuiltinUnpredictable() { return false; }
 };
 } // namespace cir
 
