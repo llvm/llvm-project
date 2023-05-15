@@ -111,10 +111,10 @@ private:
     resultTypes.reserve(1 + op->getNumResults());
     copy(op->getResultTypes(), std::back_inserter(resultTypes));
     resultTypes.push_back(tokenType);
-    auto *newOp = Operation::create(op->getLoc(), op->getName(), resultTypes,
-                                    op->getOperands(), op->getAttrDictionary(),
-                                    op->getPropertiesStorage(),
-                                    op->getSuccessors(), op->getNumRegions());
+    auto *newOp = Operation::create(
+        op->getLoc(), op->getName(), resultTypes, op->getOperands(),
+        op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+        op->getSuccessors(), op->getNumRegions());
 
     // Clone regions into new op.
     IRMapping mapping;
