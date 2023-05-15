@@ -300,7 +300,7 @@ template <bool T> struct Port {
   LIBC_INLINE Port(Process<T> &process, uint64_t lane_mask, uint64_t index,
                    uint32_t out)
       : process(process), lane_mask(lane_mask), index(index), out(out),
-        receive(false) {}
+        receive(false), owns_buffer(true) {}
   LIBC_INLINE ~Port() = default;
 
 private:
@@ -329,9 +329,9 @@ public:
   }
 
   LIBC_INLINE void close() {
-    // If the server last did a receive it needs to exchange ownership before
-    // closing the port.
-    if (receive && T)
+    // The server is passive, if it own the buffer when it closes we need to
+    // give ownership back to the client.
+    if (owns_buffer && T)
       out = process.invert_outbox(index, out);
     process.unlock(lane_mask, index);
   }
@@ -342,6 +342,7 @@ private:
   uint64_t index;
   uint32_t out;
   bool receive;
+  bool owns_buffer;
 };
 
 /// The RPC client used to make requests to the server.
@@ -370,7 +371,7 @@ struct Server : public Process<true> {
 
 /// Applies \p fill to the shared buffer and initiates a send operation.
 template <bool T> template <typename F> LIBC_INLINE void Port<T>::send(F fill) {
-  uint32_t in = process.load_inbox(index);
+  uint32_t in = owns_buffer ? out ^ T : process.load_inbox(index);
 
   // We need to wait until we own the buffer before sending.
   while (Process<T>::buffer_unavailable(in, out)) {
@@ -382,6 +383,7 @@ template <bool T> template <typename F> LIBC_INLINE void Port<T>::send(F fill) {
   process.invoke_rpc(fill, process.get_packet(index));
   atomic_thread_fence(cpp::MemoryOrder::RELEASE);
   out = process.invert_outbox(index, out);
+  owns_buffer = false;
   receive = false;
 }
 
@@ -389,10 +391,12 @@ template <bool T> template <typename F> LIBC_INLINE void Port<T>::send(F fill) {
 template <bool T> template <typename U> LIBC_INLINE void Port<T>::recv(U use) {
   // We only exchange ownership of the buffer during a receive if we are waiting
   // for a previous receive to finish.
-  if (receive)
+  if (receive) {
     out = process.invert_outbox(index, out);
+    owns_buffer = false;
+  }
 
-  uint32_t in = process.load_inbox(index);
+  uint32_t in = owns_buffer ? out ^ T : process.load_inbox(index);
 
   // We need to wait until we own the buffer before receiving.
   while (Process<T>::buffer_unavailable(in, out)) {
@@ -404,6 +408,7 @@ template <bool T> template <typename U> LIBC_INLINE void Port<T>::recv(U use) {
   // Apply the \p use function to read the memory out of the buffer.
   process.invoke_rpc(use, process.get_packet(index));
   receive = true;
+  owns_buffer = true;
 }
 
 /// Combines a send and receive into a single function.
