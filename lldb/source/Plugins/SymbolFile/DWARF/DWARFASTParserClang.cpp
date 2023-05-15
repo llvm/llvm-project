@@ -2839,10 +2839,9 @@ void DWARFASTParserClang::ParseSingleMember(
           die.GetCU()->Supports_unnamed_objc_bitfields();
 
     if (detect_unnamed_bitfields) {
-      llvm::Optional<FieldInfo> unnamed_field_info;
-      uint64_t last_field_end = 0;
-
-      last_field_end = last_field_info.bit_offset + last_field_info.bit_size;
+      std::optional<FieldInfo> unnamed_field_info;
+      uint64_t last_field_end =
+          last_field_info.bit_offset + last_field_info.bit_size;
 
       if (!last_field_info.IsBitfield()) {
         // The last field was not a bit-field...
@@ -2862,10 +2861,8 @@ void DWARFASTParserClang::ParseSingleMember(
       // indeed an unnamed bit-field. We currently do not have the
       // machinary to track the offset of the last field of classes we
       // have seen before, so we are not handling this case.
-      if (this_field_info.bit_offset != last_field_end &&
-          this_field_info.bit_offset > last_field_end &&
-          !(last_field_info.bit_offset == 0 &&
-            last_field_info.bit_size == 0 &&
+      if (this_field_info.bit_offset > last_field_end &&
+          !(last_field_info.bit_offset == 0 && last_field_info.bit_size == 0 &&
             layout_info.base_offsets.size() != 0)) {
         unnamed_field_info = FieldInfo{};
         unnamed_field_info->bit_size =
