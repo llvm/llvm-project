@@ -83,7 +83,7 @@ struct ItaniumPartialDemangler {
   bool partialDemangle(const char *MangledName);
 
   /// Just print the entire mangled name into Buf. Buf and N behave like the
-  /// second and third parameters to itaniumDemangle.
+  /// second and third parameters to __cxa_demangle.
   char *finishDemangle(char *Buf, size_t *N) const;
 
   /// Get the base name of a function. This doesn't include trailing template
