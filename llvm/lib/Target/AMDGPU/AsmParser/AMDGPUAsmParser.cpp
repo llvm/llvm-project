@@ -7073,7 +7073,7 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
-  if (Attr > 63) {
+  if (Attr > 32) {
     Error(S, "out of bounds interpolation attribute number");
     return MatchOperand_ParseFail;
   }

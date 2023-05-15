@@ -542,10 +542,7 @@ public:
       }
     }
 
-    // The receiver can be either a value or a pointer to a value. Skip past the
-    // indirection to handle both cases.
-    auto *BaseLoc = cast_or_null<AggregateStorageLocation>(
-        Env.getStorageLocation(*S->getBase(), SkipPast::ReferenceThenPointer));
+    AggregateStorageLocation *BaseLoc = getBaseObjectLocation(*S, Env);
     if (BaseLoc == nullptr)
       return;
 
