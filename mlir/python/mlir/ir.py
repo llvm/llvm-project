@@ -27,49 +27,68 @@ def _indexAttr(x, context):
 
 
 @register_attribute_builder("I16Attr")
-def _i32Attr(x, context):
+def _i16Attr(x, context):
   return IntegerAttr.get(IntegerType.get_signless(16, context=context), x)
-
 
 @register_attribute_builder("I32Attr")
 def _i32Attr(x, context):
   return IntegerAttr.get(IntegerType.get_signless(32, context=context), x)
 
-
 @register_attribute_builder("I64Attr")
 def _i64Attr(x, context):
   return IntegerAttr.get(IntegerType.get_signless(64, context=context), x)
 
+@register_attribute_builder("SI16Attr")
+def _si16Attr(x, context):
+  return IntegerAttr.get(IntegerType.get_signed(16, context=context), x)
+
+@register_attribute_builder("SI32Attr")
+def _si32Attr(x, context):
+  return IntegerAttr.get(IntegerType.get_signed(32, context=context), x)
+
+@register_attribute_builder("F32Attr")
+def _f32Attr(x, context):
+  return FloatAttr.get_f32(x, context=context)
+
+@register_attribute_builder("F64Attr")
+def _f64Attr(x, context):
+  return FloatAttr.get_f64(x, context=context)
 
 @register_attribute_builder("StrAttr")
 def _stringAttr(x, context):
   return StringAttr.get(x, context=context)
 
-
-@register_attribute_builder("SymbolNameAttr")
-def _symbolNameAttr(x, context):
-  return StringAttr.get(x, context=context)
-
-
-@register_attribute_builder("SymbolRefAttr")
-def _symbolRefAttr(x, context):
-  return FlatSymbolRefAttr.get(x, context=context)
-
-
 @register_attribute_builder("ArrayAttr")
 def _arrayAttr(x, context):
   return ArrayAttr.get(x, context=context)
 
+@register_attribute_builder("I32ArrayAttr")
+def _i32ArrayAttr(x, context):
+  return ArrayAttr.get([_i32Attr(v, context) for v in x])
 
 @register_attribute_builder("I64ArrayAttr")
 def _i64ArrayAttr(x, context):
   return ArrayAttr.get([_i64Attr(v, context) for v in x])
 
+@register_attribute_builder("F32ArrayAttr")
+def _f32ArrayAttr(x, context):
+  return ArrayAttr.get([_f32Attr(v, context) for v in x])
+
+@register_attribute_builder("F64ArrayAttr")
+def _f64ArrayAttr(x, context):
+  return ArrayAttr.get([_f64Attr(v, context) for v in x])
 
 @register_attribute_builder("DenseI64ArrayAttr")
 def _denseI64ArrayAttr(x, context):
   return DenseI64ArrayAttr.get(x, context=context)
 
+@register_attribute_builder("SymbolNameAttr")
+def _symbolNameAttr(x, context):
+  return StringAttr.get(x, context=context)
+
+@register_attribute_builder("SymbolRefAttr")
+def _symbolRefAttr(x, context):
+  return FlatSymbolRefAttr.get(x, context=context)
 
 @register_attribute_builder("TypeAttr")
 def _typeAttr(x, context):
