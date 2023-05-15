@@ -431,7 +431,6 @@ END-SCRIPT
 #include <__functional/reference_wrapper.h> // expected-error@*:* {{use of private header from outside its module: '__functional/reference_wrapper.h'}}
 #include <__functional/unary_function.h> // expected-error@*:* {{use of private header from outside its module: '__functional/unary_function.h'}}
 #include <__functional/unary_negate.h> // expected-error@*:* {{use of private header from outside its module: '__functional/unary_negate.h'}}
-#include <__functional/unwrap_ref.h> // expected-error@*:* {{use of private header from outside its module: '__functional/unwrap_ref.h'}}
 #include <__functional/weak_result_type.h> // expected-error@*:* {{use of private header from outside its module: '__functional/weak_result_type.h'}}
 #include <__fwd/array.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/array.h'}}
 #include <__fwd/fstream.h> // expected-error@*:* {{use of private header from outside its module: '__fwd/fstream.h'}}
@@ -776,6 +775,7 @@ END-SCRIPT
 #include <__type_traits/type_identity.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/type_identity.h'}}
 #include <__type_traits/type_list.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/type_list.h'}}
 #include <__type_traits/underlying_type.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/underlying_type.h'}}
+#include <__type_traits/unwrap_ref.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/unwrap_ref.h'}}
 #include <__type_traits/void_t.h> // expected-error@*:* {{use of private header from outside its module: '__type_traits/void_t.h'}}
 #include <__utility/as_const.h> // expected-error@*:* {{use of private header from outside its module: '__utility/as_const.h'}}
 #include <__utility/auto_cast.h> // expected-error@*:* {{use of private header from outside its module: '__utility/auto_cast.h'}}
