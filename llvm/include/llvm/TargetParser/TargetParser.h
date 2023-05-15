@@ -137,6 +137,9 @@ enum ArchFeatureKind : uint32_t {
 
   // Sram-ecc is available.
   FEATURE_SRAMECC = 1 << 8,
+
+  // WGP mode is supported.
+  FEATURE_WGP = 1 << 9,
 };
 
 StringRef getArchNameAMDGCN(GPUKind AK);
