@@ -30080,10 +30080,12 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc DL(Op);
   uint64_t SizeInBits = VT.getScalarSizeInBits();
   APInt PreferredZero = APInt::getZero(SizeInBits);
+  APInt OppositeZero = PreferredZero;
   EVT IVT = VT.changeTypeToInteger();
   X86ISD::NodeType MinMaxOp;
   if (Op.getOpcode() == ISD::FMAXIMUM) {
     MinMaxOp = X86ISD::FMAX;
+    OppositeZero.setSignBit();
   } else {
     PreferredZero.setSignBit();
     MinMaxOp = X86ISD::FMIN;
@@ -30108,12 +30110,12 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   // We check if any of operands is NaN and return NaN. Then we check if any of
   // operands is zero or negative zero (for fmaximum and fminimum respectively)
   // to ensure the correct zero is returned.
-  auto IsPreferredZero = [PreferredZero](SDValue Op) {
+  auto MatchesZero = [](SDValue Op, APInt Zero) {
     Op = peekThroughBitcasts(Op);
     if (auto *CstOp = dyn_cast<ConstantFPSDNode>(Op))
-      return CstOp->getValueAPF().bitcastToAPInt() == PreferredZero;
+      return CstOp->getValueAPF().bitcastToAPInt() == Zero;
     if (auto *CstOp = dyn_cast<ConstantSDNode>(Op))
-      return CstOp->getAPIntValue() == PreferredZero;
+      return CstOp->getAPIntValue() == Zero;
     if (Op->getOpcode() == ISD::BUILD_VECTOR ||
         Op->getOpcode() == ISD::SPLAT_VECTOR) {
       for (const SDValue &OpVal : Op->op_values()) {
@@ -30122,7 +30124,9 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
         auto *CstOp = dyn_cast<ConstantFPSDNode>(OpVal);
         if (!CstOp)
           return false;
-        if (CstOp->getValueAPF().bitcastToAPInt() != PreferredZero)
+        if (!CstOp->getValueAPF().isZero())
+          continue;
+        if (CstOp->getValueAPF().bitcastToAPInt() != Zero)
           return false;
       }
       return true;
@@ -30137,11 +30141,12 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                           DAG.isKnownNeverZeroFloat(X) ||
                           DAG.isKnownNeverZeroFloat(Y);
   SDValue NewX, NewY;
-  if (IgnoreSignedZero || IsPreferredZero(Y)) {
+  if (IgnoreSignedZero || MatchesZero(Y, PreferredZero) ||
+      MatchesZero(X, OppositeZero)) {
     // Operands are already in right order or order does not matter.
     NewX = X;
     NewY = Y;
-  } else if (IsPreferredZero(X)) {
+  } else if (MatchesZero(X, PreferredZero) || MatchesZero(Y, OppositeZero)) {
     NewX = Y;
     NewY = X;
   } else if (!VT.isVector() && (VT == MVT::f16 || Subtarget.hasDQI()) &&
@@ -31938,14 +31943,31 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     }
   }
 
+  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
+  unsigned ShiftOpc = IsROTL ? ISD::SHL : ISD::SRL;
+
+  // Attempt to fold as unpack(x,x) << zext(y):
+  // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
+  // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
+  // Const vXi16/vXi32 are excluded in favor of MUL-based lowering.
+  if (!(ConstantAmt && EltSizeInBits != 8) &&
+      !supportedVectorVarShift(VT, Subtarget, ShiftOpc) &&
+      (ConstantAmt || supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc))) {
+    SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
+    SDValue RHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
+    SDValue ALo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, AmtMod, Z));
+    SDValue AHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, AmtMod, Z));
+    SDValue Lo = DAG.getNode(ShiftOpc, DL, ExtVT, RLo, ALo);
+    SDValue Hi = DAG.getNode(ShiftOpc, DL, ExtVT, RHi, AHi);
+    return getPack(DAG, Subtarget, DL, VT, Lo, Hi, IsROTL);
+  }
+
   // v16i8/v32i8/v64i8: Split rotation into rot4/rot2/rot1 stages and select by
   // the amount bit.
   // TODO: We're doing nothing here that we couldn't do for funnel shifts.
   if (EltSizeInBits == 8) {
-    bool IsConstAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
     MVT WideVT =
         MVT::getVectorVT(Subtarget.hasBWI() ? MVT::i16 : MVT::i32, NumElts);
-    unsigned ShiftOpc = IsROTL ? ISD::SHL : ISD::SRL;
 
     // Attempt to fold as:
     // rotl(x,y) -> (((aext(x) << bw) | zext(x)) << (y & (bw-1))) >> bw.
@@ -31953,7 +31975,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     if (supportedVectorVarShift(WideVT, Subtarget, ShiftOpc) &&
         supportedVectorShiftWithImm(WideVT, Subtarget, ShiftOpc)) {
       // If we're rotating by constant, just use default promotion.
-      if (IsConstAmt)
+      if (ConstantAmt)
         return SDValue();
       // See if we can perform this by widening to vXi16 or vXi32.
       R = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, R);
@@ -31966,21 +31988,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
         R = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, WideVT, R, 8, DAG);
       return DAG.getNode(ISD::TRUNCATE, DL, VT, R);
     }
-
-    // Attempt to fold as unpack(x,x) << zext(y):
-    // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
-    // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
-    if (IsConstAmt || supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
-      // See if we can perform this by unpacking to lo/hi vXi16.
-      SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
-      SDValue RHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, R, R));
-      SDValue ALo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, AmtMod, Z));
-      SDValue AHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, AmtMod, Z));
-      SDValue Lo = DAG.getNode(ShiftOpc, DL, ExtVT, RLo, ALo);
-      SDValue Hi = DAG.getNode(ShiftOpc, DL, ExtVT, RHi, AHi);
-      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, IsROTL);
-    }
-    assert((VT == MVT::v16i8 || VT == MVT::v32i8) && "Unsupported vXi8 type");
 
     // We don't need ModuloAmt here as we just peek at individual bits.
     auto SignBitSelect = [&](MVT SelVT, SDValue Sel, SDValue V0, SDValue V1) {
@@ -32047,7 +32054,6 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   bool IsSplatAmt = DAG.isSplatValue(Amt);
-  bool ConstantAmt = ISD::isBuildVectorOfConstantSDNodes(Amt.getNode());
   bool LegalVarShifts = supportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
                         supportedVectorVarShift(VT, Subtarget, ISD::SRL);
 

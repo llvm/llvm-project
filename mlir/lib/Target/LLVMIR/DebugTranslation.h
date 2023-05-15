@@ -35,7 +35,7 @@ public:
   void finalize();
 
   /// Translate the given location to an llvm debug location.
-  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
+  llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
   /// Translate the debug information for the given function.
   void translate(LLVMFuncOp func, llvm::Function &llvmFunc);
@@ -54,8 +54,8 @@ public:
 private:
   /// Translate the given location to an llvm debug location with the given
   /// scope and inlinedAt parameters.
-  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope,
-                                       const llvm::DILocation *inlinedAt);
+  llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope,
+                                 llvm::DILocation *inlinedAt);
 
   /// Create an llvm debug file for the given file path.
   llvm::DIFile *translateFile(StringRef fileName);
@@ -85,7 +85,7 @@ private:
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.
   DenseMap<std::tuple<Location, llvm::DILocalScope *, const llvm::DILocation *>,
-           const llvm::DILocation *>
+           llvm::DILocation *>
       locationToLoc;
 
   /// A mapping between debug attribute and the corresponding llvm debug

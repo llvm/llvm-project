@@ -46,9 +46,6 @@ enum class SkipPast {
   None,
   /// An optional reference should be skipped past.
   Reference,
-  /// An optional reference should be skipped past, then an optional pointer
-  /// should be skipped past.
-  ReferenceThenPointer,
 };
 
 /// Indicates the result of a tentative comparison.
@@ -476,6 +473,19 @@ private:
 
   AtomicBoolValue *FlowConditionToken;
 };
+
+/// Returns the storage location for the implicit object of a
+/// `CXXMemberCallExpr`, or null if none is defined in the environment.
+/// Dereferences the pointer if the member call expression was written using
+/// `->`.
+AggregateStorageLocation *
+getImplicitObjectLocation(const CXXMemberCallExpr &MCE, const Environment &Env);
+
+/// Returns the storage location for the base object of a `MemberExpr`, or null
+/// if none is defined in the environment. Dereferences the pointer if the
+/// member expression was written using `->`.
+AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+                                                const Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

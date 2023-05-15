@@ -13,7 +13,6 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/different_from.h>
 #include <__config>
-#include <__functional/unwrap_ref.h>
 #include <__fwd/array.h>
 #include <__fwd/get.h>
 #include <__fwd/subrange.h>
@@ -45,6 +44,7 @@
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_cvref.h>
+#include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>

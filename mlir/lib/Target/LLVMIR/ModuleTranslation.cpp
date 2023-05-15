@@ -1275,8 +1275,8 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   return ompBuilder.get();
 }
 
-const llvm::DILocation *
-ModuleTranslation::translateLoc(Location loc, llvm::DILocalScope *scope) {
+llvm::DILocation *ModuleTranslation::translateLoc(Location loc,
+                                                  llvm::DILocalScope *scope) {
   return debugTranslation->translateLoc(loc, scope);
 }
 

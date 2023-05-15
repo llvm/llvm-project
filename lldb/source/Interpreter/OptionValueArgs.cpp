@@ -16,6 +16,6 @@ using namespace lldb_private;
 size_t OptionValueArgs::GetArgs(Args &args) const {
   args.Clear();
   for (const auto &value : m_values)
-    args.AppendArgument(value->GetStringValue().value_or(""));
+    args.AppendArgument(value->GetValueAs<llvm::StringRef>().value_or(""));
   return args.GetArgumentCount();
 }

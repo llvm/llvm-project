@@ -892,8 +892,7 @@ bool llvm::isHeterogeneousDebug(const Module &M) {
          DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF;
 }
 
-void Instruction::applyMergedLocation(const DILocation *LocA,
-                                      const DILocation *LocB) {
+void Instruction::applyMergedLocation(DILocation *LocA, DILocation *LocB) {
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
 }
 

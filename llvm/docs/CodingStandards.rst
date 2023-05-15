@@ -50,6 +50,9 @@ code imported into the tree. Generally, our preference is for standards
 conforming, modern, and portable C++ code as the implementation language of
 choice.
 
+For automation, build-systems and utility scripts Python is preferred and
+is widely used in the LLVM repository already.
+
 C++ Standard Versions
 ---------------------
 
@@ -101,6 +104,21 @@ subjects is available in the :doc:`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult `that section of the programmer's manual
 <https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_.
+
+Python version and Source Code Formatting
+-----------------------------------------
+
+The current minimum version of Python required is documented in the :doc:`GettingStarted`
+section. Python code in the LLVM repository should only use language features
+available in this version of Python.
+
+The Python code within the LLVM repository should adhere to the formatting guidelines
+outlined in `PEP-8 <https://peps.python.org/pep-0008/>`_.
+
+For consistency and to limit churn, code should be automatically formatted with the
+`black <https://github.com/psf/black>`_ utility. Black allows changing the formatting
+rules based on major version. In order to avoid unecessary churn in the formatting rules
+we currently use black version 23.x in LLVM.
 
 Mechanical Source Issues
 ========================
