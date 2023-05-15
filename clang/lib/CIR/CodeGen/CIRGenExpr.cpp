@@ -73,6 +73,25 @@ static Address buildAddrOfFieldStorage(CIRGenFunction &CGF, Address Base,
   return addr;
 }
 
+static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
+  const auto *RD = Type.getTypePtr()->getAsCXXRecordDecl();
+  if (!RD)
+    return false;
+
+  if (RD->isDynamicClass())
+    return true;
+
+  for (const auto &Base : RD->bases())
+    if (hasAnyVptr(Base.getType(), Context))
+      return true;
+
+  for (const FieldDecl *Field : RD->fields())
+    if (hasAnyVptr(Field->getType(), Context))
+      return true;
+
+  return false;
+}
+
 LValue CIRGenFunction::buildLValueForField(LValue base,
                                            const FieldDecl *field) {
   LValueBaseInfo BaseInfo = base.getBaseInfo();
@@ -89,10 +108,9 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
   LValueBaseInfo FieldBaseInfo(getFieldAlignmentSource(BaseAlignSource));
   if (UnimplementedFeature::tbaa() || rec->hasAttr<MayAliasAttr>() ||
       FieldType->isVectorType()) {
-    // TODO(CIR): TBAAAccessInfo FieldTBAAInfo
-    llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::tbaa() && "NYI");
   } else if (rec->isUnion()) {
-    llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::tbaa() && "NYI");
   } else {
     // If no base type been assigned for the base access, then try to generate
     // one for this base lvalue.
@@ -109,7 +127,20 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
 
   unsigned RecordCVR = base.getVRQualifiers();
   if (rec->isUnion()) {
-    llvm_unreachable("NYI");
+    // For unions, there is no pointer adjustment.
+    if (CGM.getCodeGenOpts().StrictVTablePointers &&
+        hasAnyVptr(FieldType, getContext()))
+      // Because unions can easily skip invariant.barriers, we need to add
+      // a barrier every time CXXRecord field with vptr is referenced.
+      assert(!UnimplementedFeature::createLaunderInvariantGroup());
+
+    if (IsInPreservedAIRegion ||
+        (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
+      assert(!UnimplementedFeature::generateDebugInfo());
+    }
+
+    if (FieldType->isReferenceType())
+      llvm_unreachable("NYI");
   } else {
     if (!IsInPreservedAIRegion &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
