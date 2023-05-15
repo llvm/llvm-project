@@ -1,6 +1,6 @@
 #include "parser.hpp"
 
-uint8_t *createBuffer (const char *inputFileName, size_t *numberOfSymbols) {
+uint8_t *createBuffer (const char *inputFileName, size_t *numberOfStrings) {
     assert (inputFileName);
 
     FILE *elfFile = fopen(inputFileName, "r");
@@ -10,6 +10,10 @@ uint8_t *createBuffer (const char *inputFileName, size_t *numberOfSymbols) {
     }
 
     size_t fileSize = getFileSize (elfFile);
+
+    if (numberOfStrings != nullptr) {
+        *numberOfStrings = getNumberOfStrings(elfFile);
+    }
 
     uint8_t *binary = (uint8_t *)calloc (fileSize + 1, sizeof (uint8_t));
     if (!binary) {
@@ -82,7 +86,7 @@ Elf64_Sym_Arr *getSymbols (Elf64_Ehdr *elfHeader) {
     Elf64_Shdr *strTabSect = &sections[strTabIndex];
     char *strTabPtr = (char *)(binary + strTabSect->sh_offset);
 
-    for (int i = 0; i < numberOfSymbols; i++) {
+    for (size_t i = 0; i < numberOfSymbols; i++) {
         // std::cout << symbols[i].st_value << "       " << strTabPtr + symbols[i].st_name << '\n';
         symArray->symbols[i].symbol = &symbols[i];
         symArray->symbols[i].symName = strTabPtr + symbols[i].st_name;
@@ -115,24 +119,31 @@ void printSymbolsValues (Elf64_Sym_Arr *symArr) {
 Elf64_Sym_W_Name *findSymbolByAddress (Elf64_Sym_Arr *symArr, size_t address) {
     assert (symArr);
 
-    size_t leftIndex = 0;
-    size_t rightIndex = symArr->size - 1;
+    // size_t leftIndex = 0;
+    // size_t rightIndex = symArr->size - 1;
 
-    while (leftIndex < rightIndex) {
-        size_t midIndex = leftIndex + (rightIndex - leftIndex) / 2;
+    // while (leftIndex < rightIndex) {
+    //     size_t midIndex = leftIndex + (rightIndex - leftIndex) / 2;
 
-        if (address == symArr->symbols[midIndex].symbol->st_value) {
-            return &symArr->symbols[midIndex];
-        }
-        else if (address < symArr->symbols[midIndex].symbol->st_value) {
-            rightIndex = midIndex;
-        }
-        else {
-            leftIndex = midIndex;
+    //     if (address == symArr->symbols[midIndex].symbol->st_value) {
+    //         return &symArr->symbols[midIndex];
+    //     }
+    //     else if (address < symArr->symbols[midIndex].symbol->st_value) {
+    //         rightIndex = midIndex;
+    //     }
+    //     else {
+    //         leftIndex = midIndex;
+    //     }
+    // }
+
+    size_t index = 1;
+    for (; index < symArr->size; index++) {
+        if (address >= symArr->symbols[index - 1].symbol->st_value && address < symArr->symbols[index].symbol->st_value) {
+            return &symArr->symbols[index - 1];
         }
     }
 
-    return &symArr->symbols[leftIndex];
+    return nullptr;
 }
 
 void fillHashMap (std::map <std::pair<uint64_t, uint64_t>, int> &funcHashTable, char **strArray, size_t numberOfStrings, Elf64_Sym_Arr *symArray) {
@@ -144,12 +155,19 @@ void fillHashMap (std::map <std::pair<uint64_t, uint64_t>, int> &funcHashTable, 
         size_t addr2 = 0;
         size_t numberOfCalls = 0;
 
-        sscanf (strArray[index], "%lu %lu %lu", &addr1, &addr2, &numberOfCalls);
+        int res = sscanf (strArray[index], "%lx %lx %lu", &addr1, &addr2, &numberOfCalls);
+        if (res < 3) {
+            std::cout << "Line number " << index << "is incorrect, skipping it.\n";
+        }
 
-        addr1 = findSymbolByAddress (symArray, addr1)->symbol->st_value;
-        addr2 = findSymbolByAddress (symArray, addr2)->symbol->st_value;
+        std::cout << addr1 << " " << addr2 << '\n';
 
-        std::pair<uint64_t, uint64_t> funcPair{addr1, addr2};
+        Elf64_Sym_W_Name *sym1 = findSymbolByAddress (symArray, addr1);
+        Elf64_Sym_W_Name *sym2 = findSymbolByAddress (symArray, addr2);
+
+        std::cout << sym1->symName << " " << sym2->symName << '\n';
+
+        std::pair<uint64_t, uint64_t> funcPair{sym1->symbol->st_value, sym2->symbol->st_value};
 
         auto isFound = funcHashTable.find(funcPair);
         if (isFound == funcHashTable.end()) {
