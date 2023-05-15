@@ -22,5 +22,19 @@ int main (int argc, char *argv[]) {
     qsort ((void *)symbolArr->symbols, symbolArr->size, sizeof (Elf64_Sym_W_Name), symbolComp);
     printSymbolsValues (symbolArr);
 
+    size_t numberOfStrings = 0;
+    char *addrs = (char *)createBuffer (argv[2], &numberOfStrings);
+    if (!addrs) {
+        return -1;
+    }
+
+    std::map <std::pair<u_int64_t, u_int64_t>, int> funcHashTable; 
+    char **strArray = new char *[numberOfStrings];
+    initializeArrOfPointers (strArray, numberOfStrings, addrs);
+    fillHashMap (funcHashTable, strArray, numberOfStrings, symbolArr);
+    dumpMapToFile (funcHashTable, symbolArr);
+
+    
+
     return 0;
 }

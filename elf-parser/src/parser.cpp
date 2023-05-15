@@ -1,6 +1,6 @@
 #include "parser.hpp"
 
-uint8_t *createBuffer (const char *inputFileName) {
+uint8_t *createBuffer (const char *inputFileName, size_t *numberOfSymbols) {
     assert (inputFileName);
 
     FILE *elfFile = fopen(inputFileName, "r");
@@ -135,6 +135,71 @@ Elf64_Sym_W_Name *findSymbolByAddress (Elf64_Sym_Arr *symArr, size_t address) {
     return &symArr->symbols[leftIndex];
 }
 
+void fillHashMap (std::map <std::pair<uint64_t, uint64_t>, int> &funcHashTable, char **strArray, size_t numberOfStrings, Elf64_Sym_Arr *symArray) {
+    assert (strArray);
+
+    for (size_t index = 0; index < numberOfStrings; index++) {
+
+        size_t addr1 = 0;
+        size_t addr2 = 0;
+        size_t numberOfCalls = 0;
+
+        sscanf (strArray[index], "%lu %lu %lu", &addr1, &addr2, &numberOfCalls);
+
+        addr1 = findSymbolByAddress (symArray, addr1)->symbol->st_value;
+        addr2 = findSymbolByAddress (symArray, addr2)->symbol->st_value;
+
+        std::pair<uint64_t, uint64_t> funcPair{addr1, addr2};
+
+        auto isFound = funcHashTable.find(funcPair);
+        if (isFound == funcHashTable.end()) {
+            funcHashTable[funcPair] = numberOfCalls;
+        }
+        else {
+            funcHashTable[funcPair] += numberOfCalls;
+        }
+    }
+}
+
+void dumpMapToFile (std::map <std::pair<uint64_t, uint64_t>, int> &funcHashTable, Elf64_Sym_Arr *symArr) {
+    assert (symArr);
+
+    std::ofstream output;
+    output.open("dump_dot.txt");
+
+    std::unordered_set<Elf64_Sym_W_Name *> uniqueSyms;
+
+    output << "digraph D {\n";
+
+    for (auto &MO : funcHashTable) {
+        uint64_t addr1 = MO.first.first;
+        uint64_t addr2 = MO.first.second;
+        int numberOfCalls = MO.second;
+
+        Elf64_Sym_W_Name *symName1 = findSymbolByAddress (symArr, addr1);
+        Elf64_Sym_W_Name *symName2 = findSymbolByAddress (symArr, addr2);
+
+        if (uniqueSyms.find(symName1) == uniqueSyms.end()) {
+            uniqueSyms.insert (symName1);
+        }
+
+        if (uniqueSyms.find(symName2) == uniqueSyms.end()) {
+            uniqueSyms.insert (symName2);
+        }
+
+        output << symName1->symbol->st_value << " -> " << symName2->symbol->st_value << "[label = \"" << numberOfCalls << "\"];\n";
+    }
+
+    for (auto &SO : uniqueSyms) {
+        output << SO->symbol->st_value << "[fillcolor=cyan, style=\"filled\", label=\" " << SO->symName << "\"];\n";
+    }
+
+    // 6702740936326542911 [fillcolor=cyan, style="filled", label=" free " ];
+
+    output << "}\n";
+    
+    output.close();
+}
 bool isPIC(const char *inputFileName) {
     assert (inputFileName);
 
