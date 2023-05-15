@@ -9,6 +9,7 @@ from ..core import Enums
 from ..core import OpCode
 from ..bit_reader import parse_bitcode
 
+
 class TestCore(TestBase):
     def test_enumerations(self):
         for enum_cls, enum_spec in Enums:
@@ -77,8 +78,7 @@ class TestCore(TestBase):
     def test_module_function_iteration(self):
         m = parse_bitcode(MemoryBuffer(filename=self.get_test_bc()))
         i = 0
-        functions = ["f", "f2", "f3", "f4", "f5", "f6", "g1", "g2", "h1", "h2",
-                     "h3"]
+        functions = ["f", "f2", "f3", "f4", "f5", "f6", "g1", "g2", "h1", "h2", "h3"]
         # Forward
         for f in m:
             self.assertEqual(f.name, functions[i])
@@ -94,7 +94,7 @@ class TestCore(TestBase):
         m = parse_bitcode(MemoryBuffer(filename=self.get_test_bc()))
         i = 0
 
-        bb_list = ['b1', 'b2', 'end']
+        bb_list = ["b1", "b2", "end"]
 
         f = m.first
         while f.name != "f6":
@@ -116,10 +116,12 @@ class TestCore(TestBase):
         m = parse_bitcode(MemoryBuffer(filename=self.get_test_bc()))
         i = 0
 
-        inst_list = [('arg1', OpCode.ExtractValue),
-                     ('arg2', OpCode.ExtractValue),
-                     ('', OpCode.Call),
-                     ('', OpCode.Ret)]
+        inst_list = [
+            ("arg1", OpCode.ExtractValue),
+            ("arg2", OpCode.ExtractValue),
+            ("", OpCode.Call),
+            ("", OpCode.Ret),
+        ]
 
         bb = m.first.first
 

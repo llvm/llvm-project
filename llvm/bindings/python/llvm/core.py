@@ -1,10 +1,10 @@
-#===- core.py - Python LLVM Bindings -------------------------*- python -*--===#
+# ===- core.py - Python LLVM Bindings -------------------------*- python -*--===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===------------------------------------------------------------------------===#
+# ===------------------------------------------------------------------------===#
 from __future__ import print_function
 
 from .common import LLVMObject
@@ -36,6 +36,7 @@ __all__ = [
 lib = get_library()
 Enums = []
 
+
 class LLVMEnumeration(object):
     """Represents an individual LLVM enumeration."""
 
@@ -44,8 +45,7 @@ class LLVMEnumeration(object):
         self.value = value
 
     def __repr__(self):
-        return '%s.%s' % (self.__class__.__name__,
-                          self.name)
+        return "%s.%s" % (self.__class__.__name__, self.name)
 
     @classmethod
     def from_value(cls, value):
@@ -53,8 +53,7 @@ class LLVMEnumeration(object):
         result = cls._value_map.get(value, None)
 
         if result is None:
-            raise ValueError('Unknown %s: %d' % (cls.__name__,
-                                                 value))
+            raise ValueError("Unknown %s: %d" % (cls.__name__, value))
 
         return result
 
@@ -66,11 +65,11 @@ class LLVMEnumeration(object):
         enumerations. You should not need to call this outside this module.
         """
         if value in cls._value_map:
-            raise ValueError('%s value already registered: %d' % (cls.__name__,
-                                                                  value))
+            raise ValueError("%s value already registered: %d" % (cls.__name__, value))
         enum = cls(name, value)
         cls._value_map[value] = enum
         setattr(cls, name, enum)
+
 
 class Attribute(LLVMEnumeration):
     """Represents an individual Attribute enumeration."""
@@ -80,6 +79,7 @@ class Attribute(LLVMEnumeration):
     def __init__(self, name, value):
         super(Attribute, self).__init__(name, value)
 
+
 class OpCode(LLVMEnumeration):
     """Represents an individual OpCode enumeration."""
 
@@ -87,6 +87,7 @@ class OpCode(LLVMEnumeration):
 
     def __init__(self, name, value):
         super(OpCode, self).__init__(name, value)
+
 
 class TypeKind(LLVMEnumeration):
     """Represents an individual TypeKind enumeration."""
@@ -96,6 +97,7 @@ class TypeKind(LLVMEnumeration):
     def __init__(self, name, value):
         super(TypeKind, self).__init__(name, value)
 
+
 class Linkage(LLVMEnumeration):
     """Represents an individual Linkage enumeration."""
 
@@ -103,6 +105,7 @@ class Linkage(LLVMEnumeration):
 
     def __init__(self, name, value):
         super(Linkage, self).__init__(name, value)
+
 
 class Visibility(LLVMEnumeration):
     """Represents an individual visibility enumeration."""
@@ -112,6 +115,7 @@ class Visibility(LLVMEnumeration):
     def __init__(self, name, value):
         super(Visibility, self).__init__(name, value)
 
+
 class CallConv(LLVMEnumeration):
     """Represents an individual calling convention enumeration."""
 
@@ -119,6 +123,7 @@ class CallConv(LLVMEnumeration):
 
     def __init__(self, name, value):
         super(CallConv, self).__init__(name, value)
+
 
 class IntPredicate(LLVMEnumeration):
     """Represents an individual IntPredicate enumeration."""
@@ -128,6 +133,7 @@ class IntPredicate(LLVMEnumeration):
     def __init__(self, name, value):
         super(IntPredicate, self).__init__(name, value)
 
+
 class RealPredicate(LLVMEnumeration):
     """Represents an individual RealPredicate enumeration."""
 
@@ -136,6 +142,7 @@ class RealPredicate(LLVMEnumeration):
     def __init__(self, name, value):
         super(RealPredicate, self).__init__(name, value)
 
+
 class LandingPadClauseTy(LLVMEnumeration):
     """Represents an individual LandingPadClauseTy enumeration."""
 
@@ -143,6 +150,7 @@ class LandingPadClauseTy(LLVMEnumeration):
 
     def __init__(self, name, value):
         super(LandingPadClauseTy, self).__init__(name, value)
+
 
 class MemoryBuffer(LLVMObject):
     """Represents an opaque memory buffer."""
@@ -159,8 +167,9 @@ class MemoryBuffer(LLVMObject):
         memory = c_object_p()
         out = c_char_p(None)
 
-        result = lib.LLVMCreateMemoryBufferWithContentsOfFile(filename,
-                byref(memory), byref(out))
+        result = lib.LLVMCreateMemoryBufferWithContentsOfFile(
+            filename, byref(memory), byref(out)
+        )
 
         if result:
             raise Exception("Could not create memory buffer: %s" % out.value)
@@ -170,8 +179,8 @@ class MemoryBuffer(LLVMObject):
     def __len__(self):
         return lib.LLVMGetBufferSize(self)
 
+
 class Value(LLVMObject):
-    
     def __init__(self, value):
         LLVMObject.__init__(self, value)
 
@@ -181,15 +190,16 @@ class Value(LLVMObject):
 
     def dump(self):
         lib.LLVMDumpValue(self)
-    
+
     def get_operand(self, i):
         return Value(lib.LLVMGetOperand(self, i))
-    
+
     def set_operand(self, i, v):
         return lib.LLVMSetOperand(self, i, v)
-    
+
     def __len__(self):
         return lib.LLVMGetNumOperands(self)
+
 
 class Module(LLVMObject):
     """Represents the top-level structure of an llvm program in an opaque object."""
@@ -232,10 +242,10 @@ class Module(LLVMObject):
                 self.function = self.module.last
             else:
                 self.function = self.module.first
-        
+
         def __iter__(self):
             return self
-        
+
         def __next__(self):
             if not isinstance(self.function, Function):
                 raise StopIteration("")
@@ -266,25 +276,25 @@ class Module(LLVMObject):
     def print_module_to_file(self, filename):
         out = c_char_p(None)
         # Result is inverted so 0 means everything was ok.
-        result = lib.LLVMPrintModuleToFile(self, filename, byref(out))        
+        result = lib.LLVMPrintModuleToFile(self, filename, byref(out))
         if result:
             raise RuntimeError("LLVM Error: %s" % out.value)
 
-class Function(Value):
 
+class Function(Value):
     def __init__(self, value):
         Value.__init__(self, value)
-    
+
     @property
     def next(self):
         f = lib.LLVMGetNextFunction(self)
         return f and Function(f)
-    
+
     @property
     def prev(self):
         f = lib.LLVMGetPreviousFunction(self)
         return f and Function(f)
-    
+
     @property
     def first(self):
         b = lib.LLVMGetFirstBasicBlock(self)
@@ -303,10 +313,10 @@ class Function(Value):
                 self.bb = function.last
             else:
                 self.bb = function.first
-        
+
         def __iter__(self):
             return self
-        
+
         def __next__(self):
             if not isinstance(self.bb, BasicBlock):
                 raise StopIteration("")
@@ -319,18 +329,18 @@ class Function(Value):
 
         if sys.version_info.major == 2:
             next = __next__
-    
+
     def __iter__(self):
         return Function.__bb_iterator(self)
 
     def __reversed__(self):
         return Function.__bb_iterator(self, reverse=True)
-    
+
     def __len__(self):
         return lib.LLVMCountBasicBlocks(self)
 
+
 class BasicBlock(LLVMObject):
-    
     def __init__(self, value):
         LLVMObject.__init__(self, value)
 
@@ -343,7 +353,7 @@ class BasicBlock(LLVMObject):
     def prev(self):
         b = lib.LLVMGetPreviousBasicBlock(self)
         return b and BasicBlock(b)
-    
+
     @property
     def first(self):
         i = lib.LLVMGetFirstInstruction(self)
@@ -356,7 +366,7 @@ class BasicBlock(LLVMObject):
 
     def __as_value(self):
         return Value(lib.LLVMBasicBlockAsValue(self))
-    
+
     @property
     def name(self):
         return lib.LLVMGetValueName(self.__as_value())
@@ -365,28 +375,26 @@ class BasicBlock(LLVMObject):
         lib.LLVMDumpValue(self.__as_value())
 
     def get_operand(self, i):
-        return Value(lib.LLVMGetOperand(self.__as_value(),
-                                        i))
-    
+        return Value(lib.LLVMGetOperand(self.__as_value(), i))
+
     def set_operand(self, i, v):
-        return lib.LLVMSetOperand(self.__as_value(),
-                                  i, v)
-    
+        return lib.LLVMSetOperand(self.__as_value(), i, v)
+
     def __len__(self):
         return lib.LLVMGetNumOperands(self.__as_value())
 
     class __inst_iterator(object):
-        def __init__(self, bb, reverse=False):            
+        def __init__(self, bb, reverse=False):
             self.bb = bb
             self.reverse = reverse
             if self.reverse:
                 self.inst = self.bb.last
             else:
                 self.inst = self.bb.first
-        
+
         def __iter__(self):
             return self
-        
+
         def __next__(self):
             if not isinstance(self.inst, Instruction):
                 raise StopIteration("")
@@ -408,7 +416,6 @@ class BasicBlock(LLVMObject):
 
 
 class Instruction(Value):
-
     def __init__(self, value):
         Value.__init__(self, value)
 
@@ -426,8 +433,8 @@ class Instruction(Value):
     def opcode(self):
         return OpCode.from_value(lib.LLVMGetInstructionOpcode(self))
 
-class Context(LLVMObject):
 
+class Context(LLVMObject):
     def __init__(self, context=None):
         if context is None:
             context = lib.LLVMContextCreate()
@@ -438,6 +445,7 @@ class Context(LLVMObject):
     @classmethod
     def GetGlobalContext(cls):
         return Context(lib.LLVMGetGlobalContext())
+
 
 def register_library(library):
     # Initialization/Shutdown declarations.
@@ -455,8 +463,11 @@ def register_library(library):
     library.LLVMGetGlobalContext.restype = c_object_p
 
     # Memory buffer declarations
-    library.LLVMCreateMemoryBufferWithContentsOfFile.argtypes = [c_char_p,
-            POINTER(c_object_p), POINTER(c_char_p)]
+    library.LLVMCreateMemoryBufferWithContentsOfFile.argtypes = [
+        c_char_p,
+        POINTER(c_object_p),
+        POINTER(c_char_p),
+    ]
     library.LLVMCreateMemoryBufferWithContentsOfFile.restype = bool
 
     library.LLVMGetBufferSize.argtypes = [MemoryBuffer]
@@ -485,8 +496,7 @@ def register_library(library):
     library.LLVMDumpModule.argtypes = [Module]
     library.LLVMDumpModule.restype = None
 
-    library.LLVMPrintModuleToFile.argtypes = [Module, c_char_p,
-                                              POINTER(c_char_p)]
+    library.LLVMPrintModuleToFile.argtypes = [Module, c_char_p, POINTER(c_char_p)]
     library.LLVMPrintModuleToFile.restype = bool
 
     library.LLVMGetFirstFunction.argtypes = [Module]
@@ -552,6 +562,7 @@ def register_library(library):
     library.LLVMGetInstructionOpcode.argtypes = [Instruction]
     library.LLVMGetInstructionOpcode.restype = c_uint
 
+
 def register_enumerations():
     if Enums:
         return None
@@ -572,8 +583,10 @@ def register_enumerations():
             enum_class.register(name, value)
     return enums
 
+
 def initialize_llvm():
     Context.GetGlobalContext()
+
 
 register_library(lib)
 Enums = register_enumerations()
