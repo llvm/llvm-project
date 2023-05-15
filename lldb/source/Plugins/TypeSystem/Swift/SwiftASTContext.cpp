@@ -2760,7 +2760,6 @@ public:
       bool use_fixits = false;
       llvm::SourceMgr::DiagKind source_mgr_kind;
       switch (info.Kind) {
-      default:
       case swift::DiagnosticKind::Error:
         source_mgr_kind = llvm::SourceMgr::DK_Error;
         use_fixits = true;
@@ -2768,9 +2767,11 @@ public:
       case swift::DiagnosticKind::Warning:
         source_mgr_kind = llvm::SourceMgr::DK_Warning;
         break;
-
       case swift::DiagnosticKind::Note:
         source_mgr_kind = llvm::SourceMgr::DK_Note;
+        break;
+      case swift::DiagnosticKind::Remark:
+        source_mgr_kind = llvm::SourceMgr::DK_Remark;
         break;
       }
 
