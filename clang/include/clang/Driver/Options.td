@@ -3907,6 +3907,9 @@ def maix_struct_return : Flag<["-"], "maix-struct-return">,
 def msvr4_struct_return : Flag<["-"], "msvr4-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Return small structs in registers (PPC32 only)">;
+def mxcoff_roptr : Flag<["-"], "mxcoff-roptr">, Group<m_Group>, Flags<[CC1Option]>,
+  HelpText<"Place constant objects with relocatable address values in the RO data section and add -bforceimprw to the linker flags (AIX only)">;
+def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>;
 
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;

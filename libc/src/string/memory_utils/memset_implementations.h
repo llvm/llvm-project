@@ -23,10 +23,37 @@
 namespace __llvm_libc {
 
 [[maybe_unused]] LIBC_INLINE static void
-inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
+inline_memset_byte_per_byte(Ptr dst, size_t offset, uint8_t value,
+                            size_t count) {
   LIBC_LOOP_NOUNROLL
-  for (size_t offset = 0; offset < count; ++offset)
+  for (; offset < count; ++offset)
     generic::Memset<uint8_t>::block(dst + offset, value);
+}
+
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_aligned_access_32bit(Ptr dst, uint8_t value, size_t count) {
+  constexpr size_t kAlign = sizeof(uint32_t);
+  if (count <= 2 * kAlign)
+    return inline_memset_byte_per_byte(dst, 0, value, count);
+  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
+  inline_memset_byte_per_byte(dst, 0, value, bytes_to_dst_align);
+  size_t offset = bytes_to_dst_align;
+  for (; offset < count - kAlign; offset += kAlign)
+    store32_aligned<uint32_t>(generic::splat<uint32_t>(value), dst, offset);
+  inline_memset_byte_per_byte(dst, offset, value, count);
+}
+
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_aligned_access_64bit(Ptr dst, uint8_t value, size_t count) {
+  constexpr size_t kAlign = sizeof(uint64_t);
+  if (count <= 2 * kAlign)
+    return inline_memset_byte_per_byte(dst, 0, value, count);
+  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
+  inline_memset_byte_per_byte(dst, 0, value, bytes_to_dst_align);
+  size_t offset = bytes_to_dst_align;
+  for (; offset < count - kAlign; offset += kAlign)
+    store64_aligned<uint64_t>(generic::splat<uint64_t>(value), dst, offset);
+  inline_memset_byte_per_byte(dst, offset, value, count);
 }
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
@@ -121,8 +148,12 @@ LIBC_INLINE static void inline_memset(Ptr dst, uint8_t value, size_t count) {
   return inline_memset_x86(dst, value, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   return inline_memset_aarch64(dst, value, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  return inline_memset_aligned_access_64bit(dst, value, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
+  return inline_memset_aligned_access_32bit(dst, value, count);
 #else
-  return inline_memset_embedded_tiny(dst, value, count);
+  return inline_memset_byte_per_byte(dst, 0, value, count);
 #endif
 }
 

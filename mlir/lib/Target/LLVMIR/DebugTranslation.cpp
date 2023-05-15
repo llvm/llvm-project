@@ -261,17 +261,17 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
 //===----------------------------------------------------------------------===//
 
 /// Translate the given location to an llvm debug location.
-const llvm::DILocation *
-DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope) {
+llvm::DILocation *DebugTranslation::translateLoc(Location loc,
+                                                 llvm::DILocalScope *scope) {
   if (!debugEmissionIsEnabled)
     return nullptr;
   return translateLoc(loc, scope, /*inlinedAt=*/nullptr);
 }
 
 /// Translate the given location to an llvm DebugLoc.
-const llvm::DILocation *
-DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
-                               const llvm::DILocation *inlinedAt) {
+llvm::DILocation *DebugTranslation::translateLoc(Location loc,
+                                                 llvm::DILocalScope *scope,
+                                                 llvm::DILocation *inlinedAt) {
   // LLVM doesn't have a representation for unknown.
   if (!scope || isa<UnknownLoc>(loc))
     return nullptr;
@@ -281,10 +281,10 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
   if (existingIt != locationToLoc.end())
     return existingIt->second;
 
-  const llvm::DILocation *llvmLoc = nullptr;
+  llvm::DILocation *llvmLoc = nullptr;
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc)) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
-    const auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
+    auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
     llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {

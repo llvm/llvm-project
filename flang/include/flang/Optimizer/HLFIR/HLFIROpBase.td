@@ -133,4 +133,9 @@ def IsMaskArgumentPred
 def AnyFortranLogicalOrI1ArrayObject : Type<IsMaskArgumentPred,
     "A scalar i1 or logical or an array-like object containing logicals">;
 
+def IsFortranLogicalArrayPred
+        : CPred<"::hlfir::isFortranLogicalArrayObject($_self)">;
+def AnyFortranLogicalArrayObject : Type<IsFortranLogicalArrayPred,
+    "any array-like object containing logicals">;
+
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

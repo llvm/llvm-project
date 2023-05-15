@@ -44,9 +44,7 @@ bool GlobalValue::isMaterializable() const {
     return F->isMaterializable();
   return false;
 }
-Error GlobalValue::materialize() {
-  return getParent()->materialize(this);
-}
+Error GlobalValue::materialize() { return getParent()->materialize(this); }
 
 /// Override destroyConstantImpl to make sure it doesn't get called on
 /// GlobalValue's because they shouldn't be treated like other constants.
@@ -438,23 +436,11 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                                ThreadLocalMode TLMode,
                                std::optional<unsigned> AddressSpace,
                                bool isExternallyInitialized)
-    : GlobalObject(Ty, Value::GlobalVariableVal,
-                   OperandTraits<GlobalVariable>::op_begin(this),
-                   InitVal != nullptr, Link, Name,
-                   AddressSpace
-                       ? *AddressSpace
-                       : M.getDataLayout().getDefaultGlobalsAddressSpace()),
-      isConstantGlobal(constant),
-      isExternallyInitializedConstant(isExternallyInitialized) {
-  assert(!Ty->isFunctionTy() && PointerType::isValidElementType(Ty) &&
-         "invalid type for global variable");
-  setThreadLocalMode(TLMode);
-  if (InitVal) {
-    assert(InitVal->getType() == Ty &&
-           "Initializer should be the same type as the GlobalVariable!");
-    Op<0>() = InitVal;
-  }
-
+    : GlobalVariable(Ty, constant, Link, InitVal, Name, TLMode,
+                     AddressSpace
+                         ? *AddressSpace
+                         : M.getDataLayout().getDefaultGlobalsAddressSpace(),
+                     isExternallyInitialized) {
   if (Before)
     Before->getParent()->insertGlobalVariable(Before->getIterator(), this);
   else
@@ -545,13 +531,9 @@ GlobalAlias *GlobalAlias::create(const Twine &Name, GlobalValue *Aliasee) {
   return create(Aliasee->getLinkage(), Name, Aliasee);
 }
 
-void GlobalAlias::removeFromParent() {
-  getParent()->removeAlias(this);
-}
+void GlobalAlias::removeFromParent() { getParent()->removeAlias(this); }
 
-void GlobalAlias::eraseFromParent() {
-  getParent()->eraseAlias(this);
-}
+void GlobalAlias::eraseFromParent() { getParent()->eraseAlias(this); }
 
 void GlobalAlias::setAliasee(Constant *Aliasee) {
   assert((!Aliasee || Aliasee->getType() == getType()) &&
