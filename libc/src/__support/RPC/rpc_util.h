@@ -69,6 +69,11 @@ template <typename T> LIBC_INLINE const T &max(const T &x, const T &y) {
   return x < y ? y : x;
 }
 
+/// Advance the \p ptr by \p bytes.
+template <typename T, typename U> LIBC_INLINE T *advance(T ptr, U bytes) {
+  return reinterpret_cast<T *>(reinterpret_cast<uint8_t *>(ptr) + bytes);
+}
+
 } // namespace rpc
 } // namespace __llvm_libc
 

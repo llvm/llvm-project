@@ -208,6 +208,7 @@ struct OneShotBufferizePass
       opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
       opt.copyBeforeWrite = copyBeforeWrite;
       opt.createDeallocs = createDeallocs;
+      opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
       if (mustInferMemorySpace)

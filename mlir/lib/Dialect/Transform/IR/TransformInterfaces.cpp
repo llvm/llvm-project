@@ -724,6 +724,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
         FULL_LDBG("--handle not consumed -> SKIP\n");
         continue;
       }
+      if (transform.allowsRepeatedHandleOperands()) {
+        FULL_LDBG("--op allows repeated handles -> SKIP\n");
+        continue;
+      }
       FULL_LDBG("--handle is consumed\n");
 
       Type operandType = operand.get().getType();

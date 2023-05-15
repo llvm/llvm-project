@@ -435,6 +435,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.ObjectFilenameForDebug = CodeGenOpts.ObjectFilenameForDebug;
   Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
+  Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
 
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:

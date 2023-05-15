@@ -517,7 +517,7 @@ private:
     }
 
     // eat a potential "import X, " prefix.
-    if (Current->is(tok::identifier)) {
+    if (!Reference.IsExport && Current->is(tok::identifier)) {
       Reference.DefaultImport = Current->TokenText;
       nextToken();
       if (Current->is(Keywords.kw_from))
