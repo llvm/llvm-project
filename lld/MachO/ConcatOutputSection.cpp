@@ -335,15 +335,14 @@ void TextOutputSection::finalize() {
         r.referent = thunkInfo.sym = symtab->addDefined(
             thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
             /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-            /*isThumb=*/false, /*isReferencedDynamically=*/false,
-            /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
+            /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+            /*isWeakDefCanBeHidden=*/false);
       } else {
         r.referent = thunkInfo.sym = make<Defined>(
             thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
             /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
-            /*includeInSymtab=*/true, /*isThumb=*/false,
-            /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
-            /*isWeakDefCanBeHidden=*/false);
+            /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
+            /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
       }
       thunkInfo.sym->used = true;
       target->populateThunk(thunkInfo.isec, funcSym);
