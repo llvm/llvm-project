@@ -436,7 +436,7 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
       std::array<Value, 2> values = {{fop.getArgument(i), fop.getArgument(j)}};
       SmallVector<Type, 2> inferredReturnTypes;
       if (succeeded(OpTy::inferReturnTypes(
-              context, std::nullopt, values, op->getAttrDictionary(),
+              context, std::nullopt, values, op->getDiscardableAttrDictionary(),
               op->getPropertiesStorage(), op->getRegions(),
               inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());

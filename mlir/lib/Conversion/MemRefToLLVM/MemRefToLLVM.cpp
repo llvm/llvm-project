@@ -132,8 +132,11 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    return matchAndRewrite(cast<memref::ReallocOp>(op),
-                           OpAdaptor(operands, op->getAttrDictionary()),
+    auto reallocOp = cast<memref::ReallocOp>(op);
+    return matchAndRewrite(reallocOp,
+                           OpAdaptor(operands,
+                                     op->getDiscardableAttrDictionary(),
+                                     reallocOp.getProperties()),
                            rewriter);
   }
 
