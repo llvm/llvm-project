@@ -218,9 +218,10 @@ void propagateShapesInRegion(Region &region) {
 
       ValueShapeRange range(op.getOperands(), operandShape);
       if (shapeInterface
-              .inferReturnTypeComponents(
-                  op.getContext(), op.getLoc(), range, op.getAttrDictionary(),
-                  op.getPropertiesStorage(), op.getRegions(), returnedShapes)
+              .inferReturnTypeComponents(op.getContext(), op.getLoc(), range,
+                                         op.getDiscardableAttrDictionary(),
+                                         op.getPropertiesStorage(),
+                                         op.getRegions(), returnedShapes)
               .succeeded()) {
         for (auto it : llvm::zip(op.getResults(), returnedShapes)) {
           Value result = std::get<0>(it);

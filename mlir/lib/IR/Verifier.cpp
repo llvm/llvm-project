@@ -174,7 +174,7 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
       return op.emitError("null operand found");
 
   /// Verify that all of the attributes are okay.
-  for (auto attr : op.getAttrs()) {
+  for (auto attr : op.getDiscardableAttrDictionary()) {
     // Check for any optional dialect specific attributes.
     if (auto *dialect = attr.getNameDialect())
       if (failed(dialect->verifyOperationAttribute(&op, attr)))
