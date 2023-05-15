@@ -239,6 +239,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         dw_attr_t attr = attributes.AttributeAtIndex(i);
         DWARFFormValue form_value;
         switch (attr) {
+        default:
+          break;
         case DW_AT_name:
           if (attributes.ExtractFormValueAtIndex(i, form_value))
             name = form_value.AsCString();
