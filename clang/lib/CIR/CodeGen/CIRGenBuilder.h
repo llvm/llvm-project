@@ -227,6 +227,18 @@ public:
                                      mlir::cir::CastKind::floating, v);
   }
 
+  cir::Address createBaseClassAddr(mlir::Location loc, cir::Address addr,
+                                   mlir::Type destType) {
+    if (destType == addr.getElementType())
+      return addr;
+
+    auto ptrTy = getPointerTo(destType);
+    auto baseAddr =
+        create<mlir::cir::BaseClassAddrOp>(loc, ptrTy, addr.getPointer());
+
+    return Address(baseAddr, ptrTy, addr.getAlignment());
+  }
+
   /// Cast the element type of the given address to a different type,
   /// preserving information like the alignment.
   cir::Address createElementBitCast(mlir::Location loc, cir::Address addr,

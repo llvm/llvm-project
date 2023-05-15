@@ -626,12 +626,15 @@ Address CIRGenFunction::buildPointerWithAlignment(const Expr *E,
       assert(0 && "not implemented");
 
     switch (CE->getCastKind()) {
-    default:
+    default: {
+      llvm::errs() << CE->getCastKindName() << "\n";
       assert(0 && "not implemented");
+    }
     // Nothing to do here...
     case CK_LValueToRValue:
       break;
 
+    case CK_UncheckedDerivedToBase:
     case CK_DerivedToBase: {
       // TODO: Support accesses to members of base classes in TBAA. For now, we
       // conservatively pretend that the complete object is of the base class

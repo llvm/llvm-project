@@ -1322,6 +1322,40 @@ def StructElementAddr : CIR_Op<"struct_element_addr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseClassAddr
+//===----------------------------------------------------------------------===//
+
+def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
+  let summary = "Get the base class address for a class/struct";
+  let description = [{
+    The `cir.base_class_addr` operaration gets the address of a particular
+    base class given a derived class pointer.
+
+    Example:
+    ```mlir
+    TBD
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "derived class pointer", [MemRead]>:$derived_addr);
+
+  let results = (outs Res<CIR_PointerType, "">:$base_addr);
+
+  // FIXME: we should not be printing `cir.ptr` below, that should come
+  // from the pointer type directly.
+  let assemblyFormat = [{
+    `(`
+      $derived_addr `:` `cir.ptr` type($derived_addr)
+    `)` `->` `cir.ptr` type($base_addr) attr-dict
+  }];
+
+  // FIXME: add verifier.
+  // Check whether both src/dst pointee's are compatible.
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
