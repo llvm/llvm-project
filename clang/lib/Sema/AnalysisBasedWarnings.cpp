@@ -2340,7 +2340,7 @@ public:
 };
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
-    const TranslationUnitDecl *TU) {
+     TranslationUnitDecl *TU) {
   if (!TU)
     return; // This is unexpected, give up quietly.
 
@@ -2370,9 +2370,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // reasoning. Check if any of them is enabled at all before scanning the AST:
   if (!Diags.isIgnored(diag::warn_unsafe_buffer_operation, SourceLocation()) ||
       !Diags.isIgnored(diag::warn_unsafe_buffer_variable, SourceLocation())) {
-    CallableVisitor(CallAnalyzers)
-        .TraverseTranslationUnitDecl(
-            std::remove_const_t<TranslationUnitDecl *>(TU));
+    CallableVisitor(CallAnalyzers).TraverseTranslationUnitDecl(TU);
   }
 }
 
