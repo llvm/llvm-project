@@ -988,9 +988,6 @@ private:
   ///Whether we are currently processing update records.
   bool ProcessingUpdateRecords = false;
 
-  /// Whether we are going to write modules.
-  bool FinalizedForWriting = false;
-
   using SwitchCaseMapTy = llvm::DenseMap<unsigned, SwitchCase *>;
 
   /// Mapping from switch-case IDs in the chain to switch-case statements
