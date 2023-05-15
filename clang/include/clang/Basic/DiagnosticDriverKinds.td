@@ -649,6 +649,8 @@ def err_drv_invalid_object_mode : Error<
   "OBJECT_MODE setting %0 is not recognized and is not a valid setting">;
 
 def err_aix_unsupported_tls_model : Error<"TLS model '%0' is not yet supported on AIX">;
+def err_roptr_requires_data_sections: Error<"-mxcoff-roptr is supported only with -fdata-sections">;
+def err_roptr_cannot_build_shared: Error<"-mxcoff-roptr is not supported with -shared">;
 
 def err_invalid_cxx_abi : Error<"invalid C++ ABI name '%0'">;
 def err_unsupported_cxx_abi : Error<"C++ ABI '%0' is not supported on target triple '%1'">;

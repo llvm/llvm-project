@@ -5241,6 +5241,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << RawTriple.str();
   }
 
+  if (Args.hasArg(options::OPT_mxcoff_roptr) ||
+      Args.hasArg(options::OPT_mno_xcoff_roptr)) {
+    bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
+                                 options::OPT_mno_xcoff_roptr, false);
+    StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
+    if (!Triple.isOSAIX())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << OptStr << RawTriple.str();
+
+    if (HasRoptr)
+      CmdArgs.push_back("-mxcoff-roptr");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {
     StringRef V = A->getValue(), V1 = V;
     unsigned Size;
