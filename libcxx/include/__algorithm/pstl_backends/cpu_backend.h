@@ -27,5 +27,6 @@
 #include <__algorithm/pstl_backends/cpu_backends/fill.h>
 #include <__algorithm/pstl_backends/cpu_backends/find_if.h>
 #include <__algorithm/pstl_backends/cpu_backends/for_each.h>
+#include <__algorithm/pstl_backends/cpu_backends/transform.h>
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_H

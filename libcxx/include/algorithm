@@ -1792,6 +1792,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/pstl_fill.h>
 #include <__algorithm/pstl_find.h>
 #include <__algorithm/pstl_for_each.h>
+#include <__algorithm/pstl_transform.h>
 #include <__algorithm/push_heap.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_all_of.h>
