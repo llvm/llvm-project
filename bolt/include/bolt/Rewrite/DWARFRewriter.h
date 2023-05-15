@@ -105,6 +105,9 @@ private:
   /// DWARFLegacy is all DWARF versions before DWARF 5.
   enum class DWARFVersion { DWARFLegacy, DWARF5 };
 
+  /// Used to track last CU offset for GDB Index.
+  uint32_t CUOffset{0};
+
   /// Update debug info for all DIEs in \p Unit.
   void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
@@ -128,8 +131,17 @@ private:
   std::unique_ptr<DebugBufferVector>
   makeFinalLocListsSection(DWARFVersion Version);
 
+  /// Finalize type sections in the main binary.
+  CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer);
+
+  /// Process and write out CUs that are passsed in.
+  void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
+                            CUOffsetMap &CUMap,
+                            const std::list<DWARFUnit *> &CUs);
+
   /// Finalize debug sections in the main binary.
-  CUOffsetMap finalizeDebugSections(DIEBuilder &DIEBlder);
+  void finalizeDebugSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
+                             raw_svector_ostream &ObjOS, CUOffsetMap &CUMap);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
