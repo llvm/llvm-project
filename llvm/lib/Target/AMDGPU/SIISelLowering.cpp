@@ -8470,6 +8470,31 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
   }
+  case Intrinsic::amdgcn_s_get_barrier_state: {
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    unsigned Opc;
+    bool IsInlinableBarID = false;
+    int64_t BarID;
+
+    if (isa<ConstantSDNode>(Op->getOperand(2))) {
+      BarID = cast<ConstantSDNode>(Op->getOperand(2))->getSExtValue();
+      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarID);
+    }
+
+    if (IsInlinableBarID) {
+      Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
+      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      Ops.push_back(K);
+    } else {
+      Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
+      SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
+      Ops.push_back(M0Val.getValue(0));
+    }
+
+    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
   default:
 
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

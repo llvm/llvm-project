@@ -261,6 +261,10 @@ def int_amdgcn_s_barrier_wait : ClangBuiltin<"__builtin_amdgcn_s_barrier_wait">,
 def int_amdgcn_s_barrier_leave : ClangBuiltin<"__builtin_amdgcn_s_barrier_leave">,
   Intrinsic<[llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+def int_amdgcn_s_get_barrier_state : ClangBuiltin<"__builtin_amdgcn_s_get_barrier_state">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+                                IntrNoCallback, IntrNoFree]>;
+
 def int_amdgcn_wave_barrier : ClangBuiltin<"__builtin_amdgcn_wave_barrier">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 

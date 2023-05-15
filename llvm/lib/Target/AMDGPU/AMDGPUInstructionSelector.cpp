@@ -2140,6 +2140,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_wakeup_barrier:
+  case Intrinsic::amdgcn_s_get_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_signal_isfirst:
   case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
@@ -5362,6 +5363,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       return AMDGPU::S_BARRIER_JOIN_IMM;
     case Intrinsic::amdgcn_s_wakeup_barrier:
       return AMDGPU::S_WAKEUP_BARRIER_IMM;
+    case Intrinsic::amdgcn_s_get_barrier_state:
+      return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
   } else {
     switch (IntrID) {
@@ -5373,6 +5376,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       return AMDGPU::S_BARRIER_JOIN_M0;
     case Intrinsic::amdgcn_s_wakeup_barrier:
       return AMDGPU::S_WAKEUP_BARRIER_M0;
+    case Intrinsic::amdgcn_s_get_barrier_state:
+      return AMDGPU::S_GET_BARRIER_STATE_M0;
     };
   }
 }
@@ -5381,7 +5386,9 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
     MachineInstr &I, Intrinsic::ID IntrID) const {
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
-  MachineOperand BarOp = I.getOperand(1);
+  MachineOperand BarOp = IntrID == Intrinsic::amdgcn_s_get_barrier_state
+                             ? I.getOperand(2)
+                             : I.getOperand(1);
   std::optional<int64_t> BarValImm =
       getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
   Register M0Val;
@@ -5422,8 +5429,12 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
     constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
   }
 
+  MachineInstrBuilder MIB;
   unsigned Opc = getNamedBarrierOp(BarValImm.has_value(), IntrID);
-  MachineInstrBuilder MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+
+  if (IntrID == Intrinsic::amdgcn_s_get_barrier_state)
+    MIB.addDef(I.getOperand(0).getReg());
 
   if (BarValImm)
     MIB.addImm(*BarValImm);

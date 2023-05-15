@@ -216,3 +216,20 @@ void test_s_barrier_leave(int* a, int* b, int *c)
   else
     a = c;
 }
+
+// CHECK-LABEL: @test_s_get_barrier_state(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[STATE:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store i32 [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.s.get.barrier.state(i32 [[TMP0]])
+// CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[STATE]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[STATE]], align 4
+// CHECK-NEXT:    ret i32 [[TMP2]]
+//
+unsigned test_s_get_barrier_state(int a)
+{
+  unsigned State = __builtin_amdgcn_s_get_barrier_state(a);
+  return State;
+}

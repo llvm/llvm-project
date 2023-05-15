@@ -163,3 +163,6 @@ s_barrier_join 0x12345678
 
 s_barrier_signal 0x12345678
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_get_barrier_state s3, 0x12345678
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

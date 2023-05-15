@@ -3390,6 +3390,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 1);
       constrainOpWithReadfirstlane(MI, MRI, 2);
       return;
+    case Intrinsic::amdgcn_s_get_barrier_state: {
+      constrainOpWithReadfirstlane(MI, MRI, 2);
+      return;
+    }
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -5195,6 +5199,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_s_barrier_leave: {
       const unsigned ResultSize = 1;
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, ResultSize);
+      break;
+    }
+    case Intrinsic::amdgcn_s_get_barrier_state: {
+      OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
     default:
