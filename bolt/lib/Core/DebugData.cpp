@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -385,7 +386,10 @@ void DebugARangesSectionWriter::writeARangesSection(
   }
 }
 
-DebugAddrWriter::DebugAddrWriter(BinaryContext *Bc) { BC = Bc; }
+DebugAddrWriter::DebugAddrWriter(BinaryContext *BC) : BC(BC) {
+  Buffer = std::make_unique<AddressSectionBuffer>();
+  AddressStream = std::make_unique<raw_svector_ostream>(*Buffer);
+}
 
 void DebugAddrWriter::AddressForDWOCU::dump() {
   std::vector<IndexAddressPair> SortedMap(indexToAddressBegin(),
@@ -429,61 +433,84 @@ void DebugAddrWriter::addIndexAddress(uint64_t Address, uint32_t Index,
   }
 }
 
-AddressSectionBuffer DebugAddrWriter::finalize() {
-  // Need to layout all sections within .debug_addr
-  // Within each section sort Address by index.
-  AddressSectionBuffer Buffer;
-  raw_svector_ostream AddressStream(Buffer);
-  for (std::unique_ptr<DWARFUnit> &CU : BC->DwCtx->compile_units()) {
-    // Handling the case wehre debug information is a mix of Debug fission and
-    // monolitic.
-    if (!CU->getDWOId())
-      continue;
-    const uint64_t CUID = getCUID(*CU.get());
-    auto AM = AddressMaps.find(CUID);
-    // Adding to map even if it did not contribute to .debug_addr.
-    // The Skeleton CU might still have DW_AT_GNU_addr_base.
-    DWOIdToOffsetMap[CUID] = Buffer.size();
-    // If does not exist this CUs DWO section didn't contribute to .debug_addr.
-    if (AM == AddressMaps.end())
-      continue;
-    std::vector<IndexAddressPair> SortedMap(AM->second.indexToAddressBegin(),
-                                            AM->second.indexToAdddessEnd());
-    // Sorting address in increasing order of indices.
-    llvm::sort(SortedMap, llvm::less_first());
+static void updateAddressBase(DIEBuilder &DIEBlder, DebugAddrWriter &AddrWriter,
+                              DWARFUnit &CU, const uint64_t Offset) {
+  DIE *Die = DIEBlder.getUnitDIEbyUnit(CU);
+  DIEValue GnuAddrBaseAttrInfo = Die->findAttribute(dwarf::DW_AT_GNU_addr_base);
+  DIEValue AddrBaseAttrInfo = Die->findAttribute(dwarf::DW_AT_addr_base);
+  dwarf::Form BaseAttrForm;
+  dwarf::Attribute BaseAttr;
+  // For cases where Skeleton CU does not have DW_AT_GNU_addr_base
+  if (!GnuAddrBaseAttrInfo && CU.getVersion() < 5)
+    return;
 
-    uint8_t AddrSize = CU->getAddressByteSize();
-    uint32_t Counter = 0;
-    auto WriteAddress = [&](uint64_t Address) -> void {
-      ++Counter;
-      switch (AddrSize) {
-      default:
-        assert(false && "Address Size is invalid.");
-        break;
-      case 4:
-        support::endian::write(AddressStream, static_cast<uint32_t>(Address),
-                               support::little);
-        break;
-      case 8:
-        support::endian::write(AddressStream, Address, support::little);
-        break;
-      }
-    };
-
-    for (const IndexAddressPair &Val : SortedMap) {
-      while (Val.first > Counter)
-        WriteAddress(0);
-      WriteAddress(Val.second);
-    }
+  if (GnuAddrBaseAttrInfo) {
+    BaseAttrForm = GnuAddrBaseAttrInfo.getForm();
+    BaseAttr = GnuAddrBaseAttrInfo.getAttribute();
   }
 
-  return Buffer;
+  if (AddrBaseAttrInfo) {
+    BaseAttrForm = AddrBaseAttrInfo.getForm();
+    BaseAttr = AddrBaseAttrInfo.getAttribute();
+  }
+
+  if (GnuAddrBaseAttrInfo || AddrBaseAttrInfo) {
+    DIEBlder.replaceValue(Die, BaseAttr, BaseAttrForm, DIEInteger(Offset));
+  } else if (CU.getVersion() >= 5) {
+    // A case where we were not using .debug_addr section, but after update
+    // now using it.
+    DIEBlder.addValue(Die, dwarf::DW_AT_addr_base, dwarf::DW_FORM_sec_offset,
+                      DIEInteger(Offset));
+  }
 }
-AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
+
+void DebugAddrWriter::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
+  // Handling the case wehre debug information is a mix of Debug fission and
+  // monolitic.
+  if (!CU.getDWOId())
+    return;
+  const uint64_t CUID = getCUID(CU);
+  auto AM = AddressMaps.find(CUID);
+  // Adding to map even if it did not contribute to .debug_addr.
+  // The Skeleton CU might still have DW_AT_GNU_addr_base.
+  uint64_t Offset = Buffer->size();
+  // If does not exist this CUs DWO section didn't contribute to .debug_addr.
+  if (AM == AddressMaps.end())
+    return;
+  std::vector<IndexAddressPair> SortedMap(AM->second.indexToAddressBegin(),
+                                          AM->second.indexToAdddessEnd());
+  // Sorting address in increasing order of indices.
+  llvm::sort(SortedMap, llvm::less_first());
+
+  uint8_t AddrSize = CU.getAddressByteSize();
+  uint32_t Counter = 0;
+  auto WriteAddress = [&](uint64_t Address) -> void {
+    ++Counter;
+    switch (AddrSize) {
+    default:
+      assert(false && "Address Size is invalid.");
+      break;
+    case 4:
+      support::endian::write(*AddressStream, static_cast<uint32_t>(Address),
+                             support::little);
+      break;
+    case 8:
+      support::endian::write(*AddressStream, Address, support::little);
+      break;
+    }
+  };
+
+  for (const IndexAddressPair &Val : SortedMap) {
+    while (Val.first > Counter)
+      WriteAddress(0);
+    WriteAddress(Val.second);
+  }
+  updateAddressBase(DIEBlder, *this, CU, Offset);
+}
+
+void DebugAddrWriterDwarf5::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
   // Need to layout all sections within .debug_addr
   // Within each section sort Address by index.
-  AddressSectionBuffer Buffer;
-  raw_svector_ostream AddressStream(Buffer);
   const endianness Endian =
       BC->DwCtx->isLittleEndian() ? support::little : support::big;
   const DWARFSection &AddrSec = BC->DwCtx->getDWARFObj().getAddrSection();
@@ -491,94 +518,72 @@ AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
   DWARFDebugAddrTable AddrTable;
   DIDumpOptions DumpOpts;
   constexpr uint32_t HeaderSize = 8;
-  DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
-  for (std::unique_ptr<DWARFUnit> &CU : BC->DwCtx->compile_units()) {
-    const uint64_t CUID = getCUID(*CU.get());
-    const uint8_t AddrSize = CU->getAddressByteSize();
-    auto AMIter = AddressMaps.find(CUID);
-    // A case where CU has entry in .debug_addr, but we don't modify addresses
-    // for it.
-    if (AMIter == AddressMaps.end()) {
-      AMIter = AddressMaps.insert({CUID, AddressForDWOCU()}).first;
-      std::optional<uint64_t> BaseOffset = CU->getAddrOffsetSectionBase();
-      if (!BaseOffset)
-        continue;
-      // Address base offset is to the first entry.
-      // The size of header is 8 bytes.
-      uint64_t Offset = *BaseOffset - HeaderSize;
-      auto Iter = UnmodifiedAddressOffsets.find(Offset);
-      if (Iter != UnmodifiedAddressOffsets.end()) {
-        DWOIdToOffsetMap[CUID] = Iter->getSecond();
-        continue;
-      }
-      UnmodifiedAddressOffsets[Offset] = Buffer.size() + HeaderSize;
-      if (Error Err = AddrTable.extract(AddrData, &Offset, 5, AddrSize,
-                                        DumpOpts.WarningHandler)) {
-        DumpOpts.RecoverableErrorHandler(std::move(Err));
-        continue;
-      }
-
-      uint32_t Index = 0;
-      for (uint64_t Addr : AddrTable.getAddressEntries())
-        AMIter->second.insert(Addr, Index++);
+  const uint64_t CUID = getCUID(CU);
+  const uint8_t AddrSize = CU.getAddressByteSize();
+  auto AMIter = AddressMaps.find(CUID);
+  // A case where CU has entry in .debug_addr, but we don't modify addresses
+  // for it.
+  if (AMIter == AddressMaps.end()) {
+    AMIter = AddressMaps.insert({CUID, AddressForDWOCU()}).first;
+    std::optional<uint64_t> BaseOffset = CU.getAddrOffsetSectionBase();
+    if (!BaseOffset)
+      return;
+    // Address base offset is to the first entry.
+    // The size of header is 8 bytes.
+    uint64_t Offset = *BaseOffset - HeaderSize;
+    auto Iter = UnmodifiedAddressOffsets.find(Offset);
+    if (Iter != UnmodifiedAddressOffsets.end()) {
+      updateAddressBase(DIEBlder, *this, CU, Iter->getSecond());
+      return;
+    }
+    UnmodifiedAddressOffsets[Offset] = Buffer->size() + HeaderSize;
+    if (Error Err = AddrTable.extract(AddrData, &Offset, 5, AddrSize,
+                                      DumpOpts.WarningHandler)) {
+      DumpOpts.RecoverableErrorHandler(std::move(Err));
+      return;
     }
 
-    DWOIdToOffsetMap[CUID] = Buffer.size() + HeaderSize;
-
-    std::vector<IndexAddressPair> SortedMap(
-        AMIter->second.indexToAddressBegin(),
-        AMIter->second.indexToAdddessEnd());
-    // Sorting address in increasing order of indices.
-    llvm::sort(SortedMap, llvm::less_first());
-    // Writing out Header
-    const uint32_t Length = SortedMap.size() * AddrSize + 4;
-    support::endian::write(AddressStream, Length, Endian);
-    support::endian::write(AddressStream, static_cast<uint16_t>(5), Endian);
-    support::endian::write(AddressStream, static_cast<uint8_t>(AddrSize),
-                           Endian);
-    support::endian::write(AddressStream, static_cast<uint8_t>(0), Endian);
-
-    uint32_t Counter = 0;
-    auto writeAddress = [&](uint64_t Address) -> void {
-      ++Counter;
-      switch (AddrSize) {
-      default:
-        llvm_unreachable("Address Size is invalid.");
-        break;
-      case 4:
-        support::endian::write(AddressStream, static_cast<uint32_t>(Address),
-                               Endian);
-        break;
-      case 8:
-        support::endian::write(AddressStream, Address, Endian);
-        break;
-      }
-    };
-
-    for (const IndexAddressPair &Val : SortedMap) {
-      while (Val.first > Counter)
-        writeAddress(0);
-      writeAddress(Val.second);
-    }
+    uint32_t Index = 0;
+    for (uint64_t Addr : AddrTable.getAddressEntries())
+      AMIter->second.insert(Addr, Index++);
   }
 
-  return Buffer;
-}
+  updateAddressBase(DIEBlder, *this, CU, Buffer->size() + HeaderSize);
 
-uint64_t DebugAddrWriter::getOffset(DWARFUnit &Unit) {
-  const uint64_t CUID = getCUID(Unit);
-  assert(CUID && "Can't get offset, not a skeleton CU.");
-  auto Iter = DWOIdToOffsetMap.find(CUID);
-  assert(Iter != DWOIdToOffsetMap.end() &&
-         "Offset in to.debug_addr was not found for DWO ID.");
-  return Iter->second;
-}
+  std::vector<IndexAddressPair> SortedMap(AMIter->second.indexToAddressBegin(),
+                                          AMIter->second.indexToAdddessEnd());
+  // Sorting address in increasing order of indices.
+  llvm::sort(SortedMap, llvm::less_first());
+  // Writing out Header
+  const uint32_t Length = SortedMap.size() * AddrSize + 4;
+  support::endian::write(*AddressStream, Length, Endian);
+  support::endian::write(*AddressStream, static_cast<uint16_t>(5), Endian);
+  support::endian::write(*AddressStream, static_cast<uint8_t>(AddrSize),
+                         Endian);
+  support::endian::write(*AddressStream, static_cast<uint8_t>(0), Endian);
 
-uint64_t DebugAddrWriterDwarf5::getOffset(DWARFUnit &Unit) {
-  auto Iter = DWOIdToOffsetMap.find(getCUID(Unit));
-  assert(Iter != DWOIdToOffsetMap.end() &&
-         "Offset in to.debug_addr was not found for CU ID.");
-  return Iter->second;
+  uint32_t Counter = 0;
+  auto writeAddress = [&](uint64_t Address) -> void {
+    ++Counter;
+    switch (AddrSize) {
+    default:
+      llvm_unreachable("Address Size is invalid.");
+      break;
+    case 4:
+      support::endian::write(*AddressStream, static_cast<uint32_t>(Address),
+                             Endian);
+      break;
+    case 8:
+      support::endian::write(*AddressStream, Address, Endian);
+      break;
+    }
+  };
+
+  for (const IndexAddressPair &Val : SortedMap) {
+    while (Val.first > Counter)
+      writeAddress(0);
+    writeAddress(Val.second);
+  }
 }
 
 void DebugLocWriter::init() {
@@ -879,7 +884,8 @@ void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address) {
   StrOffsetSectionWasModified = true;
 }
 
-void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit) {
+void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
+                                            DIEBuilder &DIEBldr) {
   if (IndexToAddressMap.empty())
     return;
 
@@ -888,8 +894,12 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit) {
   assert(AttrVal && "DW_AT_str_offsets_base not present.");
   std::optional<uint64_t> Val = AttrVal->V.getAsSectionOffset();
   assert(Val && "DW_AT_str_offsets_base Value not present.");
-  auto RetVal = ProcessedBaseOffsets.insert(*Val);
-  if (RetVal.second) {
+  DIE &Die = *DIEBldr.getUnitDIEbyUnit(Unit);
+  DIEValue StrListBaseAttrInfo =
+      Die.findAttribute(dwarf::DW_AT_str_offsets_base);
+  auto RetVal = ProcessedBaseOffsets.find(*Val);
+  // Handling re-use of str-offsets section.
+  if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
     // Writing out the header for each section.
     support::endian::write(*StrOffsetsStream, CurrentSectionSize + 4,
                            support::little);
@@ -897,14 +907,20 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit) {
                            support::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(0),
                            support::little);
+
+    uint64_t BaseOffset = StrOffsetsBuffer->size();
+    ProcessedBaseOffsets[*Val] = BaseOffset;
+    if (StrListBaseAttrInfo.getType())
+      DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
+                           StrListBaseAttrInfo.getForm(),
+                           DIEInteger(BaseOffset));
     for (const auto &Entry : IndexToAddressMap)
       support::endian::write(*StrOffsetsStream, Entry.second, support::little);
+  } else {
+    DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
+                         StrListBaseAttrInfo.getForm(),
+                         DIEInteger(RetVal->second));
   }
-  // Will print error if we already processed this contribution, and now
-  // skipping it, but it was modified.
-  if (!RetVal.second && StrOffsetSectionWasModified)
-    errs() << "BOLT-WARNING: skipping string offsets section for CU at offset "
-           << Twine::utohexstr(Unit.getOffset()) << ", but it was modified\n";
 
   StrOffsetSectionWasModified = false;
   IndexToAddressMap.clear();
