@@ -341,6 +341,9 @@ module std [system] {
       module pstl_backends_cpu_backends_serial {
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
+      module pstl_backends_cpu_backends_transform {
+        private header "__algorithm/pstl_backends/cpu_backends/transform.h"
+      }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
       module ranges_all_of                   { private header "__algorithm/ranges_all_of.h" }
@@ -575,6 +578,7 @@ module std [system] {
         private header "__algorithm/ranges_stable_sort.h"
         export functional.__functional.ranges_operations
       }
+      module ranges_starts_with         { private header "__algorithm/ranges_starts_with.h" }
       module ranges_swap_ranges {
         private header "__algorithm/ranges_swap_ranges.h"
         export algorithm.__algorithm.in_in_result
