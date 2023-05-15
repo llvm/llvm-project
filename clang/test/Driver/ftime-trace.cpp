@@ -36,7 +36,8 @@
 
 // RUN: mkdir d e f && cp %s d/a.cpp && touch d/b.c
 
-// RUN: %clang -### -c -ftime-trace -ftime-trace-granularity=0 d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPILE1
+/// TODO: Support -fno-integrated-as.
+// RUN: %clang -### -c -ftime-trace -ftime-trace-granularity=0 -fintegrated-as d/a.cpp -o e/a.o 2>&1 | FileCheck %s --check-prefix=COMPILE1
 // COMPILE1: -cc1{{.*}} "-ftime-trace=e/a.json" "-ftime-trace-granularity=0"
 
 // RUN: %clang -### -c -ftime-trace -ftime-trace-granularity=0 d/a.cpp d/b.c -dumpdir f/ 2>&1 | FileCheck %s --check-prefix=COMPILE2
