@@ -26,12 +26,11 @@ public func f3<each T>(ts: repeat each T, more_ts: repeat each T) {
  
 f3(ts: a, b, more_ts: a, b)
 
-// FIXME: Crashes the demangler.
-//public func f4<each U, each V>(uvs: repeat (each U, each V)) {
-//  print("break here")
-//}
-// 
-//f4(uvs: (a, b), (a, b))
+public func f4<each U, each V>(uvs: repeat (each U, each V)) {
+  print("break here")
+}
+ 
+f4(uvs: (a, b), (a, b))
  
 public func f5<each T, U>(ts: repeat (each T, U)) {
   print("break here")
