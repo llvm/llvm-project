@@ -1318,11 +1318,13 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa--gfx" +
         isa_name.substr(index + 3);
 
-      // Write data to file system so that Offload Bundler can process
+      // Write data to file system so that Offload Bundler can process, assuming
+      // we didn't already write due to save-temps above
       // TODO: Switch write to VFS
-      if (auto Status = outputToFile(Input,
-                        StringRef(std::string("./") + Input->Name))) {
-        return Status;
+      if (!env::shouldSaveTemps()) {
+        if (auto Status = outputToFile(Input, getFilePath(Input, InputDir))) {
+          return Status;
+        }
       }
 
       // Configure Offload Bundler
