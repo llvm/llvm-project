@@ -103,7 +103,7 @@ int main(int Argc, char *Argv[]) {
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataBitcode2, SizeBitcode2, BufBitcode2);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataBitcode2, "double");
+  Status = amd_comgr_set_data_name(DataBitcode2, ""); // test blank name
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_data_set_add(DataSetBundled, DataBitcode2);
   checkError(Status, "amd_comgr_data_set_add");

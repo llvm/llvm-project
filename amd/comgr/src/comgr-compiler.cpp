@@ -83,6 +83,8 @@
 
 #include "time-stat/ts-interface.h"
 
+#include <csignal>
+
 using namespace llvm;
 using namespace llvm::opt;
 using namespace llvm::sys;
@@ -1168,12 +1170,15 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   for (auto *Input : InSet->DataObjects) {
 
     if (!strcmp(Input->Name, "")) {
-      if (env::shouldEmitVerboseLogs()) {
-        LogS << "[Comgr Error] Input DataObject->Name not set for "
-          "AMD_COMGR_LINK_BC_TO_BC action.\n";
-        LogS.flush();
-      }
-      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+      // If the calling API doesn't provide a DataObject name, generate a random
+      // string to assign. This string is used when the DataObject is written
+      // to the file system via SAVE_TEMPS, or if the object is a bundle which
+      // also needs a file system write for unpacking
+
+      char *buf = (char *) malloc(sizeof(char) * 30);
+      sprintf(buf,"comgr-anon-bitcode-%d.bc", std::rand() % 10000);
+
+      Input->Name = buf;
     }
 
     if (env::shouldSaveTemps()) {
