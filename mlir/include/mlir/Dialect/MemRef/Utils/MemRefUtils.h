@@ -16,4 +16,17 @@
 #ifndef MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
 #define MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H
 
+namespace mlir {
+
+class MemRefType;
+
+namespace memref {
+
+/// Returns true, if the memref type has static shapes and represents a
+/// contiguous chunk of memory.
+bool isStaticShapeAndContiguousRowMajor(MemRefType type);
+
+} // namespace memref
+} // namespace mlir
+
 #endif // MLIR_DIALECT_MEMREF_UTILS_MEMREFUTILS_H

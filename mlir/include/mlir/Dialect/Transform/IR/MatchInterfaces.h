@@ -53,15 +53,15 @@ public:
   DiagnosedSilenceableFailure apply(TransformResults &results,
                                     TransformState &state) {
     Value operandHandle = cast<OpTy>(this->getOperation()).getOperandHandle();
-    ArrayRef<Operation *> payload = state.getPayloadOps(operandHandle);
-    if (payload.size() != 1) {
+    auto payload = state.getPayloadOps(operandHandle);
+    if (!llvm::hasSingleElement(payload)) {
       return emitDefiniteFailure(this->getOperation()->getLoc())
              << "SingleOpMatchOpTrait requires the operand handle to point to "
                 "a single payload op";
     }
 
     return cast<OpTy>(this->getOperation())
-        .matchOperation(payload[0], results, state);
+        .matchOperation(*payload.begin(), results, state);
   }
 
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {

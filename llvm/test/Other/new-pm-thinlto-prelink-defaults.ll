@@ -163,6 +163,7 @@
 ; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
+; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-EXT: Running pass: {{.*}}::Bye
 ; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass

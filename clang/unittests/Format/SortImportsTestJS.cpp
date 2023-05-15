@@ -503,6 +503,15 @@ TEST_F(SortImportsTestJS, ImportExportType) {
   verifySort("export {A, type B} from 'foo';\n",
              "export {A} from 'foo';\n"
              "export   {type B} from 'foo';");
+
+  // `export type X = Y;` should terminate import sorting. The following export
+  // statements should therefore not merge.
+  verifySort("export type A = B;\n"
+             "export {X};\n"
+             "export {Y};\n",
+             "export type A = B;\n"
+             "export {X};\n"
+             "export {Y};\n");
 }
 
 } // end namespace

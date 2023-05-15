@@ -604,7 +604,7 @@
 // STDCXX20: -std=c++20
 
 // RUN: %clang_cl -fmsc-version=1900 -TP -std:c++latest -### -- %s 2>&1 | FileCheck -check-prefix=STDCXXLATEST %s
-// STDCXXLATEST: -std=c++23
+// STDCXXLATEST: -std=c++26
 
 // RUN: env CL="/Gy" %clang_cl -### -- %s 2>&1 | FileCheck -check-prefix=ENV-CL %s
 // ENV-CL: "-ffunction-sections"

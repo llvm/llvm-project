@@ -198,10 +198,10 @@ void LoopAnnotationConversion::convertLocation(FusedLoc location) {
           localScopeAttr));
   if (!localScope)
     return;
-  const llvm::Metadata *loc =
+  llvm::Metadata *loc =
       loopAnnotationTranslation.moduleTranslation.translateLoc(location,
                                                                localScope);
-  metadataNodes.push_back(const_cast<llvm::Metadata *>(loc));
+  metadataNodes.push_back(loc);
 }
 
 llvm::MDNode *LoopAnnotationConversion::convert() {

@@ -68,7 +68,7 @@ runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
   assert(Body != nullptr);
 
   auto CFCtx = llvm::cantFail(
-      ControlFlowContext::build(nullptr, *Body, AST->getASTContext()));
+      ControlFlowContext::build(*Func, *Body, AST->getASTContext()));
 
   AnalysisT Analysis = MakeAnalysis(AST->getASTContext());
   DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
@@ -372,8 +372,7 @@ public:
       auto *Object = E->getImplicitObjectArgument();
       assert(Object != nullptr);
 
-      auto *ObjectLoc =
-          Env.getStorageLocation(*Object, SkipPast::ReferenceThenPointer);
+      auto *ObjectLoc = getImplicitObjectLocation(*E, Env);
       assert(ObjectLoc != nullptr);
 
       auto &ConstructorVal = *Env.createValue(Object->getType());
@@ -532,8 +531,7 @@ public:
       auto *Object = E->getArg(0);
       assert(Object != nullptr);
 
-      auto *ObjectLoc =
-          Env.getStorageLocation(*Object, SkipPast::ReferenceThenPointer);
+      auto *ObjectLoc = Env.getStorageLocation(*Object, SkipPast::Reference);
       assert(ObjectLoc != nullptr);
 
       auto &ConstructorVal = *Env.createValue(Object->getType());

@@ -53,7 +53,7 @@ transform::TransformState::TransformState(
 Operation *transform::TransformState::getTopLevel() const { return topLevel; }
 
 ArrayRef<Operation *>
-transform::TransformState::getPayloadOps(Value value) const {
+transform::TransformState::getPayloadOpsView(Value value) const {
   const TransformOpMapping &operationMapping = getMapping(value).direct;
   auto iter = operationMapping.find(value);
   assert(
@@ -357,18 +357,8 @@ transform::TransformState::replacePayloadOp(Operation *op,
 
   // TODO: consider invalidating the handles to nested objects here.
 
-  // If replacing with null, that is erasing the mapping, drop the mapping
-  // between the handles and the IR objects and return.
-  if (!replacement) {
-    for (Value handle : opHandles) {
-      Mappings &mappings = getMapping(handle);
-      dropMappingEntry(mappings.direct, handle, op);
-    }
-    return success();
-  }
-
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (options.getExpensiveChecksEnabled()) {
+  if (replacement && options.getExpensiveChecksEnabled()) {
     auto insertion = cachedNames.insert({replacement, replacement->getName()});
     if (!insertion.second) {
       assert(insertion.first->second == replacement->getName() &&
@@ -377,8 +367,15 @@ transform::TransformState::replacePayloadOp(Operation *op,
   }
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
-  // Otherwise, replace the pointed-to object of all handles while preserving
-  // their relative order. First, replace the mapped operation if present.
+  // Replace the pointed-to object of all handles with the replacement object.
+  // In case a payload op was erased (replacement object is nullptr), a nullptr
+  // is stored in the mapping. These nullptrs are removed after each transform.
+  // Furthermore, nullptrs are not enumerated by payload op iterators. The
+  // relative order of ops is preserved.
+  //
+  // Removing an op from the mapping would be problematic because removing an
+  // element from an array invalidates iterators; merely changing the value of
+  // elements does not.
   for (Value handle : opHandles) {
     Mappings &mappings = getMapping(handle);
     auto it = mappings.direct.find(handle);
@@ -391,7 +388,12 @@ transform::TransformState::replacePayloadOp(Operation *op,
       if (mapped == op)
         mapped = replacement;
     }
-    mappings.reverse[replacement].push_back(handle);
+
+    if (replacement) {
+      mappings.reverse[replacement].push_back(handle);
+    } else {
+      opHandlesToCompact.insert(handle);
+    }
   }
 
   return success();
@@ -645,7 +647,7 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
       FULL_LDBG("----found consume effect -> SKIP\n");
       if (llvm::isa<TransformHandleTypeInterface>(target.get().getType())) {
         FULL_LDBG("----recordOpHandleInvalidation\n");
-        ArrayRef<Operation *> payloadOps = getPayloadOps(target.get());
+        ArrayRef<Operation *> payloadOps = getPayloadOpsView(target.get());
         recordOpHandleInvalidation(target, payloadOps);
       } else if (llvm::isa<TransformValueHandleTypeInterface>(
                      target.get().getType())) {
@@ -686,6 +688,14 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
   return DiagnosedSilenceableFailure::success();
 }
 
+void transform::TransformState::compactOpHandles() {
+  for (Value handle : opHandlesToCompact) {
+    Mappings &mappings = getMapping(handle);
+    llvm::erase_value(mappings.direct[handle], nullptr);
+  }
+  opHandlesToCompact.clear();
+}
+
 DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG({
@@ -714,6 +724,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
         FULL_LDBG("--handle not consumed -> SKIP\n");
         continue;
       }
+      if (transform.allowsRepeatedHandleOperands()) {
+        FULL_LDBG("--op allows repeated handles -> SKIP\n");
+        continue;
+      }
       FULL_LDBG("--handle is consumed\n");
 
       Type operandType = operand.get().getType();
@@ -721,7 +735,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
         FULL_LDBG("--checkRepeatedConsumptionInOperand for Operation*\n");
         DiagnosedSilenceableFailure check =
             checkRepeatedConsumptionInOperand<Operation *>(
-                getPayloadOps(operand.get()), transform,
+                getPayloadOpsView(operand.get()), transform,
                 operand.getOperandNumber());
         if (!check.succeeded()) {
           FULL_LDBG("----FAILED\n");
@@ -835,6 +849,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   // proceed on a best effort basis.
   transform::TransformResults results(transform->getNumResults());
   DiagnosedSilenceableFailure result(transform.apply(results, *this));
+  compactOpHandles();
   if (result.isDefiniteFailure())
     return result;
 
@@ -986,19 +1001,6 @@ transform::TransformResults::TransformResults(unsigned numSegments) {
   operations.appendEmptyRows(numSegments);
   params.appendEmptyRows(numSegments);
   values.appendEmptyRows(numSegments);
-}
-
-void transform::TransformResults::set(OpResult value,
-                                      ArrayRef<Operation *> ops) {
-  int64_t position = value.getResultNumber();
-  assert(position < static_cast<int64_t>(operations.size()) &&
-         "setting results for a non-existent handle");
-  assert(operations[position].data() == nullptr && "results already set");
-  assert(params[position].data() == nullptr &&
-         "another kind of results already set");
-  assert(values[position].data() == nullptr &&
-         "another kind of results already set");
-  operations.replace(position, ops);
 }
 
 void transform::TransformResults::setParams(

@@ -39,12 +39,16 @@ using ::testing::UnorderedElementsAre;
 using BuiltinOptions = DataflowAnalysisContext::Options;
 
 template <typename Matcher>
-void runDataflow(llvm::StringRef Code, Matcher Match,
-                 DataflowAnalysisOptions Options,
-                 LangStandard::Kind Std = LangStandard::lang_cxx17,
-                 llvm::StringRef TargetFun = "target") {
+llvm::Error
+runDataflowReturnError(llvm::StringRef Code, Matcher Match,
+                       DataflowAnalysisOptions Options,
+                       LangStandard::Kind Std = LangStandard::lang_cxx17,
+                       llvm::StringRef TargetFun = "target") {
   using ast_matchers::hasName;
   llvm::SmallVector<std::string, 3> ASTBuildArgs = {
+      // -fnodelayed-template-parsing is the default everywhere but on Windows.
+      // Set it explicitly so that tests behave the same on Windows as on other
+      // platforms.
       "-fsyntax-only", "-fno-delayed-template-parsing",
       "-std=" +
           std::string(LangStandard::getLangStandardForKind(Std).getName())};
@@ -61,13 +65,21 @@ void runDataflow(llvm::StringRef Code, Matcher Match,
   AI.ASTBuildArgs = ASTBuildArgs;
   if (Options.BuiltinOpts)
     AI.BuiltinOptions = *Options.BuiltinOpts;
+  return checkDataflow<NoopAnalysis>(
+      std::move(AI),
+      /*VerifyResults=*/
+      [&Match](
+          const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+          const AnalysisOutputs &AO) { Match(Results, AO.ASTCtx); });
+}
+
+template <typename Matcher>
+void runDataflow(llvm::StringRef Code, Matcher Match,
+                 DataflowAnalysisOptions Options,
+                 LangStandard::Kind Std = LangStandard::lang_cxx17,
+                 llvm::StringRef TargetFun = "target") {
   ASSERT_THAT_ERROR(
-      checkDataflow<NoopAnalysis>(
-          std::move(AI),
-          /*VerifyResults=*/
-          [&Match](const llvm::StringMap<DataflowAnalysisState<NoopLattice>>
-                       &Results,
-                   const AnalysisOutputs &AO) { Match(Results, AO.ASTCtx); }),
+      runDataflowReturnError(Code, Match, Options, Std, TargetFun),
       llvm::Succeeded());
 }
 
@@ -2534,31 +2546,34 @@ TEST(TransferTest, AddrOfReference) {
       });
 }
 
-TEST(TransferTest, DerefDependentPtr) {
+TEST(TransferTest, CannotAnalyzeFunctionTemplate) {
   std::string Code = R"(
     template <typename T>
-    void target(T *Foo) {
-      T &Bar = *Foo;
-      /*[[p]]*/
-    }
+    void target() {}
   )";
-  runDataflow(
-      Code,
-      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-         ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
-        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+  ASSERT_THAT_ERROR(
+      runDataflowReturnError(
+          Code,
+          [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+             ASTContext &ASTCtx) {},
+          {BuiltinOptions()}),
+      llvm::FailedWithMessage("Cannot analyze templated declarations"));
+}
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooVal = cast<PointerValue>(Env.getValue(*FooDecl));
-        const auto *BarLoc = Env.getStorageLocation(*BarDecl);
-        EXPECT_EQ(BarLoc, &FooVal->getPointeeLoc());
-      });
+TEST(TransferTest, CannotAnalyzeMethodOfClassTemplate) {
+  std::string Code = R"(
+    template <typename T>
+    struct A {
+      void target() {}
+    };
+  )";
+  ASSERT_THAT_ERROR(
+      runDataflowReturnError(
+          Code,
+          [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+             ASTContext &ASTCtx) {},
+          {BuiltinOptions()}),
+      llvm::FailedWithMessage("Cannot analyze templated declarations"));
 }
 
 TEST(TransferTest, VarDeclInitAssignConditionalOperator) {

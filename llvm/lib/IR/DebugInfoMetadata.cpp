@@ -95,14 +95,13 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
-const DILocation *
-DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
+DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
   if (Locs.empty())
     return nullptr;
   if (Locs.size() == 1)
     return Locs[0];
   auto *Merged = Locs[0];
-  for (const DILocation *L : llvm::drop_begin(Locs)) {
+  for (DILocation *L : llvm::drop_begin(Locs)) {
     Merged = getMergedLocation(Merged, L);
     if (Merged == nullptr)
       break;
@@ -110,8 +109,7 @@ DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
   return Merged;
 }
 
-const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
-                                                const DILocation *LocB) {
+DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (!LocA || !LocB)
     return nullptr;
 

@@ -29,7 +29,8 @@ namespace {
 // requires. Hence, as a work around for this problem, we use a simple allocator
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
-static uint8_t memory[16384];
+static constexpr uint64_t MEMORY_SIZE = 16384;
+static uint8_t memory[MEMORY_SIZE];
 static uint8_t *ptr = memory;
 
 } // anonymous namespace
@@ -68,7 +69,7 @@ void *malloc(size_t s) {
   s = ((s + ALIGNMENT - 1) / ALIGNMENT) * ALIGNMENT;
   void *mem = ptr;
   ptr += s;
-  return mem;
+  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
 }
 
 void free(void *) {}

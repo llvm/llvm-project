@@ -1926,43 +1926,20 @@ define dso_local void @cmp_v8i64_zext(<8 x i64>* %xptr, <8 x i64>* %yptr, <8 x i
 }
 
 define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind "min-legal-vector-width"="256" {
-; CHECK-SKX-VBMI-LABEL: var_rotate_v16i8:
-; CHECK-SKX-VBMI:       # %bb.0:
-; CHECK-SKX-VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-SKX-VBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-SKX-VBMI-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-SKX-VBMI-NEXT:    vpermb %ymm0, %ymm2, %ymm0
-; CHECK-SKX-VBMI-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; CHECK-SKX-VBMI-NEXT:    vpsllvw %ymm1, %ymm0, %ymm0
-; CHECK-SKX-VBMI-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; CHECK-SKX-VBMI-NEXT:    vpmovwb %ymm0, %xmm0
-; CHECK-SKX-VBMI-NEXT:    vzeroupper
-; CHECK-SKX-VBMI-NEXT:    retq
-;
-; CHECK-AVX512-LABEL: var_rotate_v16i8:
-; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; CHECK-AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; CHECK-AVX512-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14,16,16,18,18,20,20,22,22,24,24,26,26,28,28,30,30]
-; CHECK-AVX512-NEXT:    vpsllvw %ymm1, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpmovwb %ymm0, %xmm0
-; CHECK-AVX512-NEXT:    vzeroupper
-; CHECK-AVX512-NEXT:    retq
-;
-; CHECK-VBMI-LABEL: var_rotate_v16i8:
-; CHECK-VBMI:       # %bb.0:
-; CHECK-VBMI-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-VBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; CHECK-VBMI-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-VBMI-NEXT:    vpermb %ymm0, %ymm2, %ymm0
-; CHECK-VBMI-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; CHECK-VBMI-NEXT:    vpsllvw %ymm1, %ymm0, %ymm0
-; CHECK-VBMI-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; CHECK-VBMI-NEXT:    vpmovwb %ymm0, %xmm0
-; CHECK-VBMI-NEXT:    vzeroupper
-; CHECK-VBMI-NEXT:    retq
+; CHECK-LABEL: var_rotate_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} xmm2 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
+; CHECK-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; CHECK-NEXT:    vpsllvw %xmm2, %xmm3, %xmm2
+; CHECK-NEXT:    vpsrlw $8, %xmm2, %xmm2
+; CHECK-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    vpsllvw %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; CHECK-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    retq
   %b8 = sub <16 x i8> <i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8, i8 8>, %b
   %shl = shl <16 x i8> %a, %b
   %lshr = lshr <16 x i8> %a, %b8
