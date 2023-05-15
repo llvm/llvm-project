@@ -2750,12 +2750,16 @@ public:
       line_col = source_mgr.getPresumedLineAndColumnForLoc(source_loc);
     }
 
-    if (line_col.first != 0) {
+    bool use_fixits = false;
+    std::string formatted_text;
+    if (!line_col.first) {
+      formatted_text = text.str();
+      use_fixits = false;
+    } else {
       ANSIColorStringStream os(m_colorize);
 
       // Determine what kind of diagnostic we're emitting, and whether
       // we want to use its fixits:
-      bool use_fixits = false;
       llvm::SourceMgr::DiagKind source_mgr_kind;
       switch (info.Kind) {
       case swift::DiagnosticKind::Error:
@@ -2808,28 +2812,15 @@ public:
                                            ranges, fix_its);
       source_mgr.getLLVMSourceMgr().PrintMessage(os, message);
 
-      // Use the llvm::raw_string_ostream::str() accessor as it will
-      // flush the stream into our "message" and return us a reference
-      // to "message".
-      std::string &message_ref = os.str();
-
-      if (message_ref.empty())
-        m_raw_diagnostics.push_back(RawDiagnostic(
-            std::string(text), info.Kind, bufferName, bufferID, line_col.first,
-            line_col.second,
-            use_fixits ? info.FixIts
-                       : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
-      else
-        m_raw_diagnostics.push_back(RawDiagnostic(
-            message_ref, info.Kind, bufferName, bufferID, line_col.first,
-            line_col.second,
-            use_fixits ? info.FixIts
-                       : llvm::ArrayRef<swift::Diagnostic::FixIt>()));
-    } else {
-      m_raw_diagnostics.push_back(RawDiagnostic(
-          std::string(text), info.Kind, bufferName, bufferID, line_col.first,
-          line_col.second, llvm::ArrayRef<swift::Diagnostic::FixIt>()));
+      // str() implicitly flushes the stram.
+      std::string &s = os.str();
+      formatted_text = !s.empty() ? std::move(s) : std::string(text);
     }
+    m_raw_diagnostics.push_back(
+        {formatted_text, info.Kind, bufferName, bufferID, line_col.first,
+         line_col.second,
+         use_fixits ? info.FixIts
+                    : llvm::ArrayRef<swift::Diagnostic::FixIt>()});
 
     if (info.Kind == swift::DiagnosticKind::Error)
       m_num_errors++;
