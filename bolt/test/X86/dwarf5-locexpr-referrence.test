@@ -9,13 +9,13 @@
 # This test checks that we update relative DIE references with DW_OP_convert that are in locexpr.
 
 # CHECK: version = 0x0005
+# CHECK: DW_TAG_variable
+# CHECK-NEXT: DW_AT_location
+# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x00000028)
+# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x0000002c)
 # CHECK: version = 0x0005
 # CHECK: DW_TAG_variable
 # CHECK-NEXT: DW_AT_location
-# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x0000005d)
-# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x00000061)
+# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x0000008f)
+# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x00000093)
 # CHECK: version = 0x0005
-# CHECK: DW_TAG_variable
-# CHECK-NEXT: DW_AT_location
-# CHECK-SAME: DW_OP_convert (0x00000028 -> 0x000000c4)
-# CHECK-SAME: DW_OP_convert (0x0000002c -> 0x000000c8)

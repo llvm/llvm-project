@@ -60,6 +60,8 @@ public:
     std::unordered_map<uint64_t, uint32_t> DIEIDMap;
   };
 
+  enum class ProcessingType { DWARF4TUs, DWARF5TUs, CUs };
+
 private:
   /// Contains information so that we we can update references in locexpr after
   /// we calculated all the final DIE offsets.
@@ -83,41 +85,54 @@ private:
     DWARFAbbreviationDeclaration::AttributeSpec AttrSpec;
   };
 
-  /// A map of Units to Unit Index.
-  std::unordered_map<uint64_t, uint32_t> UnitIDMap;
-  /// A map of Type Units to Type DIEs.
-  std::unordered_map<DWARFUnit *, DIE *> TypeDIEMap;
-  std::vector<DWARFUnit *> DUList;
-  std::vector<DWARFUnitInfo> CloneUnitCtxMap;
-  std::vector<std::pair<DIEInfo *, AddrReferenceInfo>> AddrReferences;
+  struct State {
+    /// A map of Units to Unit Index.
+    std::unordered_map<uint64_t, uint32_t> UnitIDMap;
+    /// A map of Type Units to Type DIEs.
+    std::unordered_map<DWARFUnit *, DIE *> TypeDIEMap;
+    std::list<DWARFUnit *> DUList;
+    std::vector<DWARFUnitInfo> CloneUnitCtxMap;
+    std::vector<std::pair<DIEInfo *, AddrReferenceInfo>> AddrReferences;
+    std::vector<DWARFUnit *> DWARF4TUVector;
+    std::vector<DWARFUnit *> DWARF5TUVector;
+    std::vector<DWARFUnit *> DWARFCUVector;
+    std::vector<LocWithReference> LocWithReferencesToProcess;
+    BumpPtrAllocator DIEAlloc;
+    ProcessingType Type;
+  };
+
+  std::unique_ptr<State> BuilderState;
   FoldingSet<DIEAbbrev> AbbreviationsSet;
   std::vector<std::unique_ptr<DIEAbbrev>> Abbreviations;
-  std::vector<DWARFUnit *> DWARF4TUVector;
-  std::vector<LocWithReference> LocWithReferencesToProcess;
-  BumpPtrAllocator DIEAlloc;
+  DWARFContext *DwarfContext{nullptr};
+  bool IsDWO{false};
+  uint64_t UnitSize{0};
+  llvm::DenseSet<uint64_t> AllProcessed;
+
+  /// Returns current state of the DIEBuilder
+  State &getState() { return *BuilderState.get(); }
+  /// Resolve the reference in DIE, if target is not loaded into IR,
+  /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
+  /// RefValue.
+  DWARFDie resolveDIEReference(
+      const DWARFFormValue &RefValue,
+      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
+      DWARFUnit *&RefCU, DWARFDebugInfoEntry &DwarfDebugInfoEntry);
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
   /// RefValue.
-  DWARFDie resolveDIEReference(const DWARFFormValue &RefValue,
-                               DWARFUnit *&RefCU,
-                               DWARFDebugInfoEntry &DwarfDebugInfoEntry,
-                               const std::vector<DWARFUnit *> &DUOffsetList);
-
-  /// Resolve the reference in DIE, if target is not loaded into IR,
-  /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
-  /// RefValue.
-  DWARFDie resolveDIEReference(const uint64_t ReffOffset, DWARFUnit *&RefCU,
-                               DWARFDebugInfoEntry &DwarfDebugInfoEntry,
-                               const std::vector<DWARFUnit *> &DUOffsetList);
+  DWARFDie resolveDIEReference(
+      const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
+      const uint64_t ReffOffset, DWARFUnit *&RefCU,
+      DWARFDebugInfoEntry &DwarfDebugInfoEntry);
 
   /// Clone one attribute according to the format. \return the size of this
   /// attribute.
   void
   cloneAttribute(DIE &Die, const DWARFDie &InputDIE, DWARFUnit &U,
                  const DWARFFormValue &Val,
-                 const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-                 const std::vector<DWARFUnit *> &DUOffsetList);
+                 const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec);
 
   /// Clone an attribute in string format.
   void cloneStringAttribute(
@@ -129,7 +144,7 @@ private:
   void cloneDieReferenceAttribute(
       DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
       const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-      const DWARFFormValue &Val, const std::vector<DWARFUnit *> &DUOffsetList);
+      const DWARFFormValue &Val);
 
   /// Clone an attribute in block format.
   void cloneBlockAttribute(
@@ -175,23 +190,23 @@ private:
   /// Update the Offset and Size of DIE.
   uint32_t computeDIEOffset(const DWARFUnit &CU, DIE &Die, uint32_t &CurOffset);
 
-  void registerUnit(DWARFUnit &DU);
+  void registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);
 
   DWARFUnitInfo &getUnitInfo(uint32_t UnitId) {
-    return CloneUnitCtxMap[UnitId];
+    return getState().CloneUnitCtxMap[UnitId];
   }
 
   DIEInfo &getDIEInfo(uint32_t UnitId, uint32_t DIEId) {
-    if (CloneUnitCtxMap[UnitId].DieInfoVector.size() > DIEId)
-      return *CloneUnitCtxMap[UnitId].DieInfoVector[DIEId].get();
+    if (getState().CloneUnitCtxMap[UnitId].DieInfoVector.size() > DIEId)
+      return *getState().CloneUnitCtxMap[UnitId].DieInfoVector[DIEId].get();
 
     errs() << "BOLT-WARNING: [internal-dwarf-error]: The DIE is not allocated "
               "before looking up, some"
            << "unexpected corner cases happened.\n";
-    return *CloneUnitCtxMap[UnitId].DieInfoVector.front().get();
+    return *getState().CloneUnitCtxMap[UnitId].DieInfoVector.front().get();
   }
 
   std::optional<uint32_t> getAllocDIEId(const DWARFUnit &DU,
@@ -223,15 +238,27 @@ private:
 
   /// Construct IR for \p DU. \p DUOffsetList specific the Unit in current
   /// Section.
-  void constructFromUnit(DWARFUnit &DU, std::vector<DWARFUnit *> &DUOffsetList);
+  void constructFromUnit(DWARFUnit &DU);
 
   /// Construct a DIE for \p DDie in \p U. \p DUOffsetList specific the Unit in
   /// current Section.
-  DIE *constructDIEFast(DWARFDie &DDie, DWARFUnit &U, uint32_t UnitId,
-                        std::vector<DWARFUnit *> &DUOffsetList);
+  DIE *constructDIEFast(DWARFDie &DDie, DWARFUnit &U, uint32_t UnitId);
 
 public:
   DIEBuilder(DWARFContext *DwarfContext, bool IsDWO = false);
+
+  /// Returns enum to what we are currently processing.
+  ProcessingType getCurrentProcessingState() { return getState().Type; }
+
+  /// Constructs IR for Type Units.
+  void buildTypeUnits(const bool Init = true);
+  /// Constructs IR for all the CUs.
+  void buildCompileUnits(const bool Init = true);
+  /// Constructs IR for CUs in a vector.
+  void buildCompileUnits(const std::vector<DWARFUnit *> &CUs);
+  /// Preventing implicit conversions.
+  template <class T> void buildCompileUnits(T) = delete;
+  void buildBoth();
 
   /// Returns DWARFUnitInfo for DWARFUnit
   DWARFUnitInfo &getUnitInfoByDwarfUnit(const DWARFUnit &DwarfUnit) {
@@ -247,16 +274,26 @@ public:
     return Abbreviations;
   }
   DIE *getTypeDIE(DWARFUnit &DU) {
-    if (TypeDIEMap.count(&DU))
-      return TypeDIEMap[&DU];
+    if (getState().TypeDIEMap.count(&DU))
+      return getState().TypeDIEMap[&DU];
 
     errs() << "BOLT-ERROR: unable to find TypeUnit for Type Unit at offset 0x"
            << DU.getOffset() << "\n";
     return nullptr;
   }
 
-  std::vector<DWARFUnit *> getDWARF4TUVector() { return DWARF4TUVector; }
-  bool isEmpty() { return CloneUnitCtxMap.empty(); }
+  std::vector<DWARFUnit *> &getDWARF4TUVector() {
+    return getState().DWARF4TUVector;
+  }
+  std::vector<DWARFUnit *> &getDWARF5TUVector() {
+    return getState().DWARF5TUVector;
+  }
+  std::vector<DWARFUnit *> &getDWARFCUVector() {
+    return getState().DWARFCUVector;
+  }
+  /// Returns list of CUs for which IR was build.
+  std::list<DWARFUnit *> &getProcessedCUs() { return getState().DUList; }
+  bool isEmpty() { return getState().CloneUnitCtxMap.empty(); }
 
   DIE *getUnitDIEbyUnit(const DWARFUnit &DU) {
     const DWARFUnitInfo &U = getUnitInfoByDwarfUnit(DU);
@@ -272,23 +309,26 @@ public:
   void finish();
 
   // Interface to edit DIE
-  template <class T> T *allocateDIEValue() { return new (DIEAlloc) T; }
+  template <class T> T *allocateDIEValue() {
+    return new (getState().DIEAlloc) T;
+  }
 
   DIEValueList::value_iterator addValue(DIEValueList *Die, const DIEValue &V) {
-    return Die->addValue(DIEAlloc, V);
+    return Die->addValue(getState().DIEAlloc, V);
   }
 
   template <class T>
   DIEValueList::value_iterator addValue(DIEValueList *Die,
                                         dwarf::Attribute Attribute,
                                         dwarf::Form Form, T &&Value) {
-    return Die->addValue(DIEAlloc, Attribute, Form, std::forward<T>(Value));
+    return Die->addValue(getState().DIEAlloc, Attribute, Form,
+                         std::forward<T>(Value));
   }
 
   template <class T>
   bool replaceValue(DIEValueList *Die, dwarf::Attribute Attribute,
                     dwarf::Form Form, T &&NewValue) {
-    return Die->replaceValue(DIEAlloc, Attribute, Form,
+    return Die->replaceValue(getState().DIEAlloc, Attribute, Form,
                              std::forward<T>(NewValue));
   }
 
@@ -296,13 +336,13 @@ public:
   bool replaceValue(DIEValueList *Die, dwarf::Attribute Attribute,
                     dwarf::Attribute NewAttribute, dwarf::Form Form,
                     T &&NewValue) {
-    return Die->replaceValue(DIEAlloc, Attribute, NewAttribute, Form,
+    return Die->replaceValue(getState().DIEAlloc, Attribute, NewAttribute, Form,
                              std::forward<T>(NewValue));
   }
 
   bool replaceValue(DIEValueList *Die, dwarf::Attribute Attribute,
                     dwarf::Form Form, DIEValue &NewValue) {
-    return Die->replaceValue(DIEAlloc, Attribute, Form, NewValue);
+    return Die->replaceValue(getState().DIEAlloc, Attribute, Form, NewValue);
   }
 
   template <class T>
