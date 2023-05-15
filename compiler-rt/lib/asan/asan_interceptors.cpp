@@ -264,9 +264,7 @@ INTERCEPTOR(int, pthread_detach, void *thread) {
 }
 
 INTERCEPTOR(int, pthread_exit, void *retval) {
-  AsanThread *t = GetCurrentThread();
-  if (t && t->tid() != kMainTid)
-    asanThreadArgRetval().Finish(GetThreadSelf(), retval);
+  asanThreadArgRetval().Finish(GetThreadSelf(), retval);
   return REAL(pthread_exit)(retval);
 }
 
