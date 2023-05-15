@@ -72,6 +72,15 @@ clang_tablegen(arm_sve_typeflags.inc -gen-arm-sve-typeflags
 clang_tablegen(arm_sve_sema_rangechecks.inc -gen-arm-sve-sema-rangechecks
   SOURCE arm_sve.td
   TARGET ClangARMSveSemaRangeChecks)
+clang_tablegen(arm_sme_builtins.inc -gen-arm-sme-builtins
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltins)
+clang_tablegen(arm_sme_builtin_cg.inc -gen-arm-sme-builtin-codegen
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeBuiltinCG)
+clang_tablegen(arm_sme_sema_rangechecks.inc -gen-arm-sme-sema-rangechecks
+  SOURCE arm_sme.td
+  TARGET ClangARMSmeSemaRangeChecks)
 clang_tablegen(arm_cde_builtins.inc -gen-arm-cde-builtin-def
   SOURCE arm_cde.td
   TARGET ClangARMCdeBuiltinsDef)
