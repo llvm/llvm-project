@@ -3674,6 +3674,7 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
       IsCXX && Std &&
       (Std->containsValue("c++2a") || Std->containsValue("c++20") ||
        Std->containsValue("c++2b") || Std->containsValue("c++23") ||
+       Std->containsValue("c++2c") || Std->containsValue("c++26") ||
        Std->containsValue("c++latest"));
   bool HaveModules = HaveStdCXXModules;
 
@@ -5241,6 +5242,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getSpelling() << RawTriple.str();
   }
 
+  if (Args.hasArg(options::OPT_mxcoff_roptr) ||
+      Args.hasArg(options::OPT_mno_xcoff_roptr)) {
+    bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
+                                 options::OPT_mno_xcoff_roptr, false);
+    StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
+    if (!Triple.isOSAIX())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << OptStr << RawTriple.str();
+
+    if (HasRoptr)
+      CmdArgs.push_back("-mxcoff-roptr");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_Wframe_larger_than_EQ)) {
     StringRef V = A->getValue(), V1 = V;
     unsigned Size;
@@ -6647,8 +6661,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
-                             // TODO add c++23 when MSVC supports it.
-                             .Case("c++latest", "-std=c++23")
+                             // TODO add c++23 and c++26 when MSVC supports it.
+                             .Case("c++latest", "-std=c++26")
                              .Default("");
       if (LanguageStandard.empty())
         D.Diag(clang::diag::warn_drv_unused_argument)

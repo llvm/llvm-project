@@ -652,7 +652,18 @@ KnownBits KnownBits::blsmsk() const {
 }
 
 void KnownBits::print(raw_ostream &OS) const {
-  OS << "{Zero=" << Zero << ", One=" << One << "}";
+  unsigned BitWidth = getBitWidth();
+  for (unsigned I = 0; I < BitWidth; ++I) {
+    unsigned N = BitWidth - I - 1;
+    if (Zero[N] && One[N])
+      OS << "!";
+    else if (Zero[N])
+      OS << "0";
+    else if (One[N])
+      OS << "1";
+    else
+      OS << "?";
+  }
 }
 void KnownBits::dump() const {
   print(dbgs());

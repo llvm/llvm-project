@@ -2048,15 +2048,13 @@ public:
   /// use the scope of any location.
   ///
   /// \p LocA \p LocB: The locations to be merged.
-  static const DILocation *getMergedLocation(const DILocation *LocA,
-                                             const DILocation *LocB);
+  static DILocation *getMergedLocation(DILocation *LocA, DILocation *LocB);
 
   /// Try to combine the vector of locations passed as input in a single one.
   /// This function applies getMergedLocation() repeatedly left-to-right.
   ///
   /// \p Locs: The locations to be merged.
-  static const DILocation *
-  getMergedLocations(ArrayRef<const DILocation *> Locs);
+  static DILocation *getMergedLocations(ArrayRef<DILocation *> Locs);
 
   /// Return the masked discriminator value for an input discrimnator value D
   /// (i.e. zero out the (B+1)-th and above bits for D (B is 0-base).

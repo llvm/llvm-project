@@ -79,6 +79,21 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
 }
 
 template <>
+void llvm::GenericUniformityAnalysisImpl<
+    SSAContext>::propagateTemporalDivergence(const Instruction &I,
+                                             const Cycle &DefCycle) {
+  if (isDivergent(I))
+    return;
+  for (auto *User : I.users()) {
+    auto *UserInstr = cast<Instruction>(User);
+    if (DefCycle.contains(UserInstr->getParent()))
+      continue;
+    if (markDivergent(*UserInstr))
+      Worklist.push_back(UserInstr);
+  }
+}
+
+template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::isDivergentUse(
     const Use &U) const {
   const auto *V = U.get();

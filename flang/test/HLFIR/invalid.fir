@@ -297,6 +297,25 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
 }
 
 // -----
+func.func @bad_any1(%arg0: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.any' op result must have the same element type as MASK argument}}
+  %0 = hlfir.any %arg0 : (!hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<!fir.logical<8>>
+}
+
+// -----
+func.func @bad_any2(%arg0: !hlfir.expr<?x?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.any' op result must have the same element type as MASK argument}}
+  %0 = hlfir.any %arg0 : (!hlfir.expr<?x?x!fir.logical<4>>) -> !hlfir.expr<?x!fir.logical<8>>
+}
+
+// -----
+func.func @bad_any3(%arg0: !hlfir.expr<?x?x!fir.logical<4>>, %arg1: i32){
+  // expected-error@+1 {{'hlfir.any' op result rank must be one less than MASK}}
+  %0 = hlfir.any %arg0 dim %arg1 : (!hlfir.expr<?x?x!fir.logical<4>>, i32) -> !hlfir.expr<?x?x!fir.logical<4>>
+}
+
+
+// -----
 func.func @bad_product1(%arg0: !hlfir.expr<?xi32>, %arg1: i32, %arg2: !fir.box<!fir.logical<4>>) {
   // expected-error@+1 {{'hlfir.product' op result must have the same element type as ARRAY argument}}
   %0 = hlfir.product %arg0 dim %arg1 mask %arg2 : (!hlfir.expr<?xi32>, i32, !fir.box<!fir.logical<4>>) -> !hlfir.expr<f32>

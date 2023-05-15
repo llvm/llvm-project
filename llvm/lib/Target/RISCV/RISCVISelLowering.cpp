@@ -11196,7 +11196,7 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
   return Opcode;
 }
 
-static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineVFMADD_VLWithVFNEG_VL(SDNode *N, SelectionDAG &DAG) {
   // Fold FNEG_VL into FMA opcodes.
   // The first operand of strict-fp is chain.
   unsigned Offset = N->isTargetStrictFPOpcode();
@@ -11231,6 +11231,59 @@ static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG) {
                        {N->getOperand(0), A, B, C, Mask, VL});
   return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
                      VL);
+}
+
+static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG) {
+  if (SDValue V = combineVFMADD_VLWithVFNEG_VL(N, DAG))
+    return V;
+
+  // FIXME: Ignore strict opcodes for now.
+  if (N->isTargetStrictFPOpcode())
+    return SDValue();
+
+  // Try to form widening FMA.
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
+
+  if (Op0.getOpcode() != RISCVISD::FP_EXTEND_VL ||
+      Op1.getOpcode() != RISCVISD::FP_EXTEND_VL)
+    return SDValue();
+
+  // TODO: Refactor to handle more complex cases similar to
+  // combineBinOp_VLToVWBinOp_VL.
+  if (!Op0.hasOneUse() || !Op1.hasOneUse())
+    return SDValue();
+
+  // Check the mask and VL are the same.
+  if (Op0.getOperand(1) != Mask || Op0.getOperand(2) != VL ||
+      Op1.getOperand(1) != Mask || Op1.getOperand(2) != VL)
+    return SDValue();
+
+  unsigned NewOpc;
+  switch (N->getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case RISCVISD::VFMADD_VL:
+    NewOpc = RISCVISD::VFWMADD_VL;
+    break;
+  case RISCVISD::VFNMSUB_VL:
+    NewOpc = RISCVISD::VFWNMSUB_VL;
+    break;
+  case RISCVISD::VFNMADD_VL:
+    NewOpc = RISCVISD::VFWNMADD_VL;
+    break;
+  case RISCVISD::VFMSUB_VL:
+    NewOpc = RISCVISD::VFWMSUB_VL;
+    break;
+  }
+
+  Op0 = Op0.getOperand(0);
+  Op1 = Op1.getOperand(0);
+
+  return DAG.getNode(NewOpc, SDLoc(N), N->getValueType(0), Op0, Op1,
+                     N->getOperand(2), Mask, VL);
 }
 
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
@@ -15074,6 +15127,10 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VFNMADD_VL)
   NODE_NAME_CASE(VFMSUB_VL)
   NODE_NAME_CASE(VFNMSUB_VL)
+  NODE_NAME_CASE(VFWMADD_VL)
+  NODE_NAME_CASE(VFWNMADD_VL)
+  NODE_NAME_CASE(VFWMSUB_VL)
+  NODE_NAME_CASE(VFWNMSUB_VL)
   NODE_NAME_CASE(FCOPYSIGN_VL)
   NODE_NAME_CASE(SMIN_VL)
   NODE_NAME_CASE(SMAX_VL)

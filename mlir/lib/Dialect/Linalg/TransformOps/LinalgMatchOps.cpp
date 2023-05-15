@@ -618,7 +618,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredResultOp::matchOperation(
   }
   Operation *firstUser = *result.getUsers().begin();
   if (getAny()) {
-    results.set(cast<OpResult>(getResult()), firstUser);
+    results.set(cast<OpResult>(getResult()), {firstUser});
     return DiagnosedSilenceableFailure::success();
   }
   if (getSingle()) {
@@ -626,7 +626,7 @@ DiagnosedSilenceableFailure transform::MatchStructuredResultOp::matchOperation(
       return emitSilenceableError()
              << "more than one result user with single user requested";
     }
-    results.set(cast<OpResult>(getResult()), firstUser);
+    results.set(cast<OpResult>(getResult()), {firstUser});
     return DiagnosedSilenceableFailure::success();
   }
 

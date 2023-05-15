@@ -4801,7 +4801,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
         // If the parent function flushes denormals, the canonical output cannot
         // be a denormal.
-        const fltSemantics &FPType = II->getType()->getFltSemantics();
+        const fltSemantics &FPType =
+            II->getType()->getScalarType()->getFltSemantics();
         DenormalMode DenormMode = II->getFunction()->getDenormalMode(FPType);
         if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
           Known.knownNot(fcSubnormal);

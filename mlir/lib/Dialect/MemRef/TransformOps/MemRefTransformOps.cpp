@@ -35,9 +35,8 @@ DiagnosedSilenceableFailure transform::MemRefMultiBufferOp::apply(
     transform::TransformResults &transformResults,
     transform::TransformState &state) {
   SmallVector<Operation *> results;
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
   IRRewriter rewriter(getContext());
-  for (auto *op : payloadOps) {
+  for (Operation *op : state.getPayloadOps(getTarget())) {
     bool canApplyMultiBuffer = true;
     auto target = cast<memref::AllocOp>(op);
     LLVM_DEBUG(DBGS() << "Start multibuffer transform op: " << target << "\n";);

@@ -95,6 +95,10 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   bool HasUnsafeFPMath = false;
   bool HasFP32Denormals = false;
 
+  DenseMap<const PHINode *, bool> BreakPhiNodesCache;
+
+  bool canBreakPHINode(const PHINode &I);
+
   /// Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
   ///
@@ -1398,48 +1402,105 @@ bool AMDGPUCodeGenPrepare::visitSelectInst(SelectInst &I) {
   return Changed;
 }
 
+static bool areInSameBB(const Value *A, const Value *B) {
+  const auto *IA = dyn_cast<Instruction>(A);
+  const auto *IB = dyn_cast<Instruction>(B);
+  return IA && IB && IA->getParent() == IB->getParent();
+}
+
 // Helper for breaking large PHIs that returns true when an extractelement on V
 // is likely to be folded away by the DAG combiner.
-static bool isInterestingPHIIncomingValue(Value *V, FixedVectorType *FVT) {
-  InsertElementInst *IE = dyn_cast<InsertElementInst>(V);
+static bool isInterestingPHIIncomingValue(const Value *V) {
+  const auto *FVT = dyn_cast<FixedVectorType>(V->getType());
+  if (!FVT)
+    return false;
 
-  // Constants & InsertElements chains are interesting.
-  if (!IE)
-    return isa<Constant>(V);
+  const Value *CurVal = V;
 
-  // Check if this is a simple chain of insertelement that fills the vector. If
-  // that's the case, we can break up this PHI node profitably because the
-  // extractelement we will insert will get folded out.
-  BasicBlock *BB = IE->getParent();
+  // Check for insertelements, keeping track of the elements covered.
   BitVector EltsCovered(FVT->getNumElements());
-  InsertElementInst *Next = IE;
-  while (Next && !EltsCovered.all()) {
-    ConstantInt *Idx = dyn_cast<ConstantInt>(Next->getOperand(2));
+  while (const auto *IE = dyn_cast<InsertElementInst>(CurVal)) {
+    const auto *Idx = dyn_cast<ConstantInt>(IE->getOperand(2));
 
     // Non constant index/out of bounds index -> folding is unlikely.
-    // Note that this is more of a sanity check - canonical IR should
-    // already have replaced those with poison.
+    // The latter is more of a sanity check because canonical IR should just
+    // have replaced those with poison.
     if (!Idx || Idx->getSExtValue() >= FVT->getNumElements())
       return false;
 
+    const auto *VecSrc = IE->getOperand(0);
+
+    // If the vector source is another instruction, it must be in the same basic
+    // block. Otherwise, the DAGCombiner won't see the whole thing and is
+    // unlikely to be able to do anything interesting here.
+    if (isa<Instruction>(VecSrc) && !areInSameBB(VecSrc, IE))
+      return false;
+
+    CurVal = VecSrc;
     EltsCovered.set(Idx->getSExtValue());
 
-    // If the insertelement chain ends with a constant, it's fine.
-    if (isa<Constant>(Next->getOperand(0)))
+    // All elements covered.
+    if (EltsCovered.all())
       return true;
-
-    Next = dyn_cast<InsertElementInst>(Next->getOperand(0));
-
-    // If the chain is spread across basic blocks, the DAG combiner
-    // won't see it in its entirety and is unlikely to be able to fold
-    // evevrything away.
-    if (Next && Next->getParent() != BB)
-      return false;
   }
 
-  // All elements covered, all of the extract elements will likely be
-  // combined.
-  return EltsCovered.all();
+  // We either didn't find a single insertelement, or the insertelement chain
+  // ended before all elements were covered. Check for other interesting values.
+
+  // Constants are always interesting because we can just constant fold the
+  // extractelements.
+  if (isa<Constant>(CurVal))
+    return true;
+
+  // shufflevector is likely to be profitable if either operand is a constant,
+  // or if either source is in the same block.
+  // This is because shufflevector is most often lowered as a series of
+  // insert/extract elements anyway.
+  if (const auto *SV = dyn_cast<ShuffleVectorInst>(CurVal)) {
+    return isa<Constant>(SV->getOperand(1)) ||
+           areInSameBB(SV, SV->getOperand(0)) ||
+           areInSameBB(SV, SV->getOperand(1));
+  }
+
+  return false;
+}
+
+bool AMDGPUCodeGenPrepare::canBreakPHINode(const PHINode &I) {
+  // Check in the cache, or add an entry for this node.
+  //
+  // We init with false because we consider all PHI nodes unbreakable until we
+  // reach a conclusion. Doing the opposite - assuming they're break-able until
+  // proven otherwise - can be harmful in some pathological cases so we're
+  // conservative for now.
+  const auto [It, DidInsert] = BreakPhiNodesCache.insert({&I, false});
+  if (!DidInsert)
+    return It->second;
+
+  // This function may recurse, so to guard against infinite looping, this PHI
+  // is conservatively considered unbreakable until we reach a conclusion.
+
+  // Don't break PHIs that have no interesting incoming values. That is, where
+  // there is no clear opportunity to fold the "extractelement" instructions we
+  // would add.
+  //
+  // Note: IC does not run after this pass, so we're only interested in the
+  // foldings that the DAG combiner can do.
+  if (none_of(I.incoming_values(),
+              [&](Value *V) { return isInterestingPHIIncomingValue(V); }))
+    return false;
+
+  // Now, check users for unbreakable PHI nodes. If we have an unbreakable PHI
+  // node as user, we don't want to break this PHI either because it's unlikely
+  // to be beneficial. We would just explode the vector and reassemble it
+  // directly, wasting instructions.
+  for (const Value *U : I.users()) {
+    if (const auto *PU = dyn_cast<PHINode>(U)) {
+      if (!canBreakPHINode(*PU))
+        return false;
+    }
+  }
+
+  return BreakPhiNodesCache[&I] = true;
 }
 
 bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
@@ -1460,23 +1521,8 @@ bool AMDGPUCodeGenPrepare::visitPHINode(PHINode &I) {
   if (!FVT || DL->getTypeSizeInBits(FVT) <= ScalarizeLargePHIsThreshold)
     return false;
 
-  // Try to avoid unprofitable cases:
-  // - Don't break PHIs that have no interesting incoming values. That is, where
-  // there is no clear opportunity to fold the "extractelement" instructions we
-  // would add.
-  //   - Note: IC does not run after this pass, so we're only interested in the
-  //     folding that the DAG combiner can do.
-  // - For simplicity, don't break PHIs that are used by other PHIs because it'd
-  // require us to determine if the whole "chain" can be converted or not. e.g.
-  // if we broke this PHI but not its user, we would actually make things worse.
-  if (!ForceScalarizeLargePHIs) {
-    if (none_of(
-            I.incoming_values(),
-            [&](Value *V) { return isInterestingPHIIncomingValue(V, FVT); }) ||
-        any_of(I.users(), [&](User *U) { return isa<PHINode>(U); })) {
-      return false;
-    }
-  }
+  if (!ForceScalarizeLargePHIs && !canBreakPHINode(I))
+    return false;
 
   struct VectorSlice {
     Type *Ty = nullptr;

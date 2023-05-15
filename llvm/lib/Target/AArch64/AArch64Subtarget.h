@@ -386,6 +386,13 @@ public:
     return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
   }
 
+  bool useSVEForFixedLengthVectors(EVT VT) const {
+    if (!useSVEForFixedLengthVectors() || !VT.isFixedLengthVector())
+      return false;
+    return VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock ||
+           forceStreamingCompatibleSVE();
+  }
+
   bool forceStreamingCompatibleSVE() const;
 
   unsigned getVScaleForTuning() const { return VScaleForTuning; }
