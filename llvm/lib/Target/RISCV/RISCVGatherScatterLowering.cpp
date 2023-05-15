@@ -236,9 +236,6 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
   case Instruction::Add:
     break;
   case Instruction::Shl:
-    // Only support shift by constant.
-    if (!isa<Constant>(BO->getOperand(1)))
-      return false;
     break;
   case Instruction::Mul:
     break;
@@ -251,7 +248,8 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     Index = cast<Instruction>(BO->getOperand(0));
     OtherOp = BO->getOperand(1);
   } else if (isa<Instruction>(BO->getOperand(1)) &&
-             L->contains(cast<Instruction>(BO->getOperand(1)))) {
+             L->contains(cast<Instruction>(BO->getOperand(1))) &&
+             Instruction::isCommutative(BO->getOpcode())) {
     Index = cast<Instruction>(BO->getOperand(1));
     OtherOp = BO->getOperand(0);
   } else {
