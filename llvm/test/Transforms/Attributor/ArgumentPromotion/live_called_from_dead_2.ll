@@ -13,7 +13,7 @@ define internal void @dead() {
 }
 
 define internal i32 @test(ptr %X, ptr %Y) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@test
 ; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
@@ -22,7 +22,7 @@ define internal i32 @test(ptr %X, ptr %Y) {
 ; TUNIT:       dead:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@test
 ; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
@@ -43,14 +43,14 @@ dead:
 }
 
 define internal i32 @caller(ptr %B) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[C:%.*]] = call i32 @test(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 undef
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
@@ -64,14 +64,14 @@ define internal i32 @caller(ptr %B) {
 }
 
 define i32 @callercaller() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@callercaller
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[X:%.*]] = call i32 @caller(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[B]]) #[[ATTR2]]
 ; TUNIT-NEXT:    ret i32 0
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callercaller
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -86,12 +86,12 @@ define i32 @callercaller() {
 }
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR3]] = { nounwind willreturn }
 ;.

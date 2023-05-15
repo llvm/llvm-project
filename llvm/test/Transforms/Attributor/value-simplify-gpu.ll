@@ -90,7 +90,7 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 define internal void @level2Kernelall_early() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@level2Kernelall_early
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -163,7 +163,7 @@ entry:
 }
 
 define internal void @level2Kernelall_late() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@level2Kernelall_late
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -255,14 +255,14 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 define internal void @level2all_early(ptr %addr) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2all_early
 ; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store i32 1, ptr addrspacecast (ptr addrspace(3) @ReachableNonKernel to ptr), align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@level2all_early
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
@@ -333,14 +333,14 @@ entry:
 }
 
 define internal void @level2all_late(ptr %addr) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2all_late
 ; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store i32 1, ptr addrspacecast (ptr addrspace(3) @UnreachableNonKernel to ptr), align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@level2all_late
 ; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
@@ -359,14 +359,14 @@ declare dso_local void @use(i32, i32, i32) nosync norecurse nounwind
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { norecurse nosync nounwind "kernel" }
 ; TUNIT: attributes #[[ATTR1]] = { norecurse nosync nounwind }
-; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR4]] = { nosync nounwind }
 ; TUNIT: attributes #[[ATTR5]] = { nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { norecurse nosync nounwind "kernel" }
 ; CGSCC: attributes #[[ATTR1]] = { norecurse nosync nounwind }
-; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR3]] = { nosync nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind }
 ; CGSCC: attributes #[[ATTR5]] = { nounwind willreturn }

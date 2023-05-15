@@ -68,7 +68,7 @@ entry:
 declare !callback !0 dso_local i32 @pthread_create(ptr, ptr, ptr, ptr)
 
 define internal ptr @foo(ptr %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -79,7 +79,7 @@ entry:
 }
 
 define internal ptr @bar(ptr %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (ptr noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -90,7 +90,7 @@ entry:
 }
 
 define internal ptr @baz(ptr %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@baz
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -101,7 +101,7 @@ entry:
 }
 
 define internal ptr @buz(ptr %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@buz
 ; CHECK-SAME: (ptr noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -114,7 +114,7 @@ entry:
 !1 = !{i64 2, i64 3, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}
