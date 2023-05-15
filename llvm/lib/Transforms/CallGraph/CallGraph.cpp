@@ -23,7 +23,7 @@ struct CallGraph : ModulePass {
   static char ID;
   CallGraph() : ModulePass(ID) {}
 
-  StringRef LoggerFuncName = "_Z6Logger";
+  StringRef LoggerFuncName = "_Z6Loggerv";
 
   FunctionType *getLoggerFuncType(Module &M) const;
   FunctionCallee getCallLogFunc(Module &M) const;

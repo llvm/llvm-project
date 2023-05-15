@@ -1,7 +1,11 @@
 #include <unordered_map>
+#include <unordered_set>
 #include <iostream>
 #include <cassert>
 #include <fstream>
+#include <map>
+
+#define PRINT_LINE fprintf(stderr, "[%s:%s:%d]\n", __FILE__, __func__, __LINE__)
 
 /// Class for implementing Parsing and Changing dot file with graph
 /// Singleton implementation
@@ -30,15 +34,16 @@ public:
     return Object;
   }
 
-  void addCall(int64_t Caller, int64_t Callee);
+  void addCall(int64_t *Caller, int64_t *Callee);
 
   // We will change the dot file in the destructor, because we want to do it
   // only one time
   ~GraphEditor() { writeGraph(); }
 };
 
-void GraphEditor::addCall(int64_t Caller, int64_t Callee) {
-  Graph[Caller][Callee]++;
+void GraphEditor::addCall(int64_t *Caller, int64_t *Callee) {
+    std::cout << "Caller = " << (uint64_t) Caller << ", Callee = " << (uint64_t) Callee << '\n';
+  Graph[(uint64_t) Caller][(uint64_t) Callee]++;
 }
 
 void GraphEditor::writeGraph() const {
@@ -56,28 +61,8 @@ void GraphEditor::writeGraph() const {
       // Edge.second - map Children (<callee, calls_amnt>)
       // Child - pair <callee_addr, calls_amnt>
 
-      int64_t CallerAddr = Edges.first;
-      int64_t CalleeAddr = Child.first;
-
-      if (Nodes.find(CallerAddr) == Nodes.end()) {
-        if (NameMap[CallerAddr].empty())
-          continue;
-
-        OutFile << CallerAddr << " [label = \"" << NameMap[CallerAddr]
-                << "\" ]\n";
-        Nodes.insert(CallerAddr);
-      }
-      if (Nodes.find(CalleeAddr) == Nodes.end()) {
-        if (NameMap[CalleeAddr].empty())
-          continue;
-
-        OutFile << CalleeAddr << " [label = \"" << NameMap[CalleeAddr]
-                << "\" ]\n";
-        Nodes.insert(CalleeAddr);
-      }
-
-      OutFile << CallerAddr << " -> " << CalleeAddr
-              << " [label = " << Child.second << "];\n";
+      //OutFile << Child.first << " --> " << Edges.first << '\n';
+        printf("%lx --> %lx\n", Child.first, Edges.first);
     }
   }
 
@@ -106,10 +91,13 @@ void GraphEditor::fillNameMap(
   }
 }
 
+
+
 void Logger()
 {
-    uint64_t callee_addr, caller_arrd;  // Dummies. Replace them with return values
+    PRINT_LINE;
+    int64_t *callee_addr, *caller_arrd;  // Dummies. Replace them with return values
                                         // of llvm.returnaddress intrinsic.
-    auto graph = GraphEditor::getInstance();
+    GraphEditor &graph = GraphEditor::getInstance();
     graph.addCall(caller_arrd, callee_addr);
 }

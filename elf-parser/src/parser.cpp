@@ -134,3 +134,4 @@ Elf64_Sym_W_Name *findSymbolByAddress (Elf64_Sym_Arr *symArr, size_t address) {
 
     return &symArr->symbols[leftIndex];
 }
+
