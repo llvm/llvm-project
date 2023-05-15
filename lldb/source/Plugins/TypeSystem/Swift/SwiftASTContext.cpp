@@ -2721,8 +2721,7 @@ protected:
 class StoringDiagnosticConsumer : public swift::DiagnosticConsumer {
 public:
   StoringDiagnosticConsumer(SwiftASTContext &ast_context)
-      : m_ast_context(ast_context), m_raw_diagnostics(), m_diagnostics(),
-        m_num_errors(0), m_colorize(false) {
+      : m_ast_context(ast_context) {
     m_ast_context.GetDiagnosticEngine().resetHadAnyError();
     m_ast_context.GetDiagnosticEngine().addConsumer(*this);
   }
@@ -2980,11 +2979,8 @@ private:
                   uint32_t in_line, uint32_t in_column,
                   llvm::ArrayRef<swift::Diagnostic::FixIt> in_fixits)
         : description(in_desc), kind(in_kind), bufferName(in_bufferName),
-          bufferID(in_bufferID), line(in_line), column(in_column) {
-      for (auto fixit : in_fixits) {
-        fixits.push_back(fixit);
-      }
-    }
+          bufferID(in_bufferID), line(in_line), column(in_column),
+          fixits(in_fixits) {}
     std::string description;
     swift::DiagnosticKind kind;
     const llvm::StringRef bufferName;
@@ -3001,7 +2997,7 @@ private:
   DiagnosticList m_diagnostics;
 
   unsigned m_num_errors = 0;
-  bool m_colorize;
+  bool m_colorize = false;
 };
 
 } // namespace lldb_private
