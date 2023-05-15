@@ -32,7 +32,13 @@ namespace dataflow {
 class ControlFlowContext {
 public:
   /// Builds a ControlFlowContext from an AST node. `D` is the function in which
-  /// `S` resides and must not be null.
+  /// `S` resides. `D.isTemplated()` must be false.
+  static llvm::Expected<ControlFlowContext> build(const Decl &D, Stmt &S,
+                                                  ASTContext &C);
+
+  /// Builds a ControlFlowContext from an AST node. `D` is the function in which
+  /// `S` resides. `D` must not be null and `D->isTemplated()` must be false.
+  LLVM_DEPRECATED("Use the version that takes a const Decl & instead", "")
   static llvm::Expected<ControlFlowContext> build(const Decl *D, Stmt &S,
                                                   ASTContext &C);
 

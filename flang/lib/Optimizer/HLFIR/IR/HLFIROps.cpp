@@ -442,6 +442,44 @@ mlir::LogicalResult hlfir::ParentComponentOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AnyOp
+//===----------------------------------------------------------------------===//
+mlir::LogicalResult hlfir::AnyOp::verify() {
+  mlir::Operation *op = getOperation();
+
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+
+  mlir::Value mask = getMask();
+  fir::SequenceType maskTy =
+      hlfir::getFortranElementOrSequenceType(mask.getType())
+          .cast<fir::SequenceType>();
+  mlir::Type logicalTy = maskTy.getEleTy();
+  llvm::ArrayRef<int64_t> maskShape = maskTy.getShape();
+  hlfir::ExprType resultTy = results[0].cast<hlfir::ExprType>();
+
+  // Result is of the same type as MASK
+  if (resultTy.getElementType() != logicalTy)
+    return emitOpError(
+        "result must have the same element type as MASK argument");
+
+  if (resultTy.isArray()) {
+    // Result is of the same type as MASK
+    if (resultTy.getEleTy() != logicalTy)
+      return emitOpError(
+          "result must have the same element type as MASK argument");
+
+    llvm::ArrayRef<int64_t> resultShape = resultTy.getShape();
+
+    // Result has rank n-1
+    if (resultShape.size() != (maskShape.size() - 1))
+      return emitOpError("result rank must be one less than MASK");
+  }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConcatOp
 //===----------------------------------------------------------------------===//
 
