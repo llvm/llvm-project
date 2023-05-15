@@ -129,9 +129,9 @@ static void MaximalByteOffsetRange(
     if (extent > 0) {
       auto sm{dim.ByteStride()};
       if (sm < 0) {
-        least += extent * sm;
+        least += (extent - 1) * sm;
       } else {
-        most += extent * sm;
+        most += (extent - 1) * sm;
       }
     }
   }
