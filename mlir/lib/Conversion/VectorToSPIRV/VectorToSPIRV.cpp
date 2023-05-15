@@ -196,6 +196,12 @@ struct VectorInsertOpConvert final
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (isa<VectorType>(insertOp.getSourceType()))
+      return rewriter.notifyMatchFailure(insertOp, "unsupported vector source");
+    if (!getTypeConverter()->convertType(insertOp.getDestVectorType()))
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "unsupported dest vector type");
+
     // Special case for inserting scalar values into size-1 vectors.
     if (insertOp.getSourceType().isIntOrFloat() &&
         insertOp.getDestVectorType().getNumElements() == 1) {
@@ -203,9 +209,6 @@ struct VectorInsertOpConvert final
       return success();
     }
 
-    if (isa<VectorType>(insertOp.getSourceType()) ||
-        !spirv::CompositeType::isValid(insertOp.getDestVectorType()))
-      return failure();
     int32_t id = getFirstIntValue(insertOp.getPosition());
     rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
         insertOp, adaptor.getSource(), adaptor.getDest(), id);
@@ -413,9 +416,10 @@ struct VectorShuffleOpConvert final
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto oldResultType = shuffleOp.getResultVectorType();
-    if (!spirv::CompositeType::isValid(oldResultType))
-      return failure();
     Type newResultType = getTypeConverter()->convertType(oldResultType);
+    if (!newResultType)
+      return rewriter.notifyMatchFailure(shuffleOp,
+                                         "unsupported result vector type");
 
     auto oldSourceType = shuffleOp.getV1VectorType();
     if (oldSourceType.getNumElements() > 1) {
