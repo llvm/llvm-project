@@ -1788,20 +1788,23 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
   // }
 
   if (const UnaryOperator *CondUOp = dyn_cast<UnaryOperator>(cond)) {
-    llvm_unreachable("unaryoperator ifstmt NYI");
+    llvm_unreachable("NYI");
   }
 
   if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
-    llvm_unreachable("conditionaloperator ifstmt NYI");
+    llvm_unreachable("NYI");
   }
 
   if (const CXXThrowExpr *Throw = dyn_cast<CXXThrowExpr>(cond)) {
-    llvm_unreachable("throw expr ifstmt nyi");
+    llvm_unreachable("NYI");
   }
 
+  // If the branch has a condition wrapped by __builtin_unpredictable,
+  // create metadata that specifies that the branch is unpredictable.
+  // Don't bother if not optimizing because that metadata would not be used.
   auto *Call = dyn_cast<CallExpr>(cond->IgnoreImpCasts());
   if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::insertBuiltinUnpredictable());
   }
 
   // Emit the code with the fully general case.
