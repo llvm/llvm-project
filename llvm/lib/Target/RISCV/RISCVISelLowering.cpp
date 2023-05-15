@@ -11201,6 +11201,43 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc) {
   return Opcode;
 }
 
+static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG) {
+  // Fold FNEG_VL into FMA opcodes.
+  // The first operand of strict-fp is chain.
+  unsigned Offset = N->isTargetStrictFPOpcode();
+  SDValue A = N->getOperand(0 + Offset);
+  SDValue B = N->getOperand(1 + Offset);
+  SDValue C = N->getOperand(2 + Offset);
+  SDValue Mask = N->getOperand(3 + Offset);
+  SDValue VL = N->getOperand(4 + Offset);
+
+  auto invertIfNegative = [&Mask, &VL](SDValue &V) {
+    if (V.getOpcode() == RISCVISD::FNEG_VL && V.getOperand(1) == Mask &&
+        V.getOperand(2) == VL) {
+      // Return the negated input.
+      V = V.getOperand(0);
+      return true;
+    }
+
+    return false;
+  };
+
+  bool NegA = invertIfNegative(A);
+  bool NegB = invertIfNegative(B);
+  bool NegC = invertIfNegative(C);
+
+  // If no operands are negated, we're done.
+  if (!NegA && !NegB && !NegC)
+    return SDValue();
+
+  unsigned NewOpcode = negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC);
+  if (N->isTargetStrictFPOpcode())
+    return DAG.getNode(NewOpcode, SDLoc(N), N->getVTList(),
+                       {N->getOperand(0), A, B, C, Mask, VL});
+  return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
+                     VL);
+}
+
 static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   assert(N->getOpcode() == ISD::SRA && "Unexpected opcode");
@@ -12073,42 +12110,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::STRICT_VFMADD_VL:
   case RISCVISD::STRICT_VFNMADD_VL:
   case RISCVISD::STRICT_VFMSUB_VL:
-  case RISCVISD::STRICT_VFNMSUB_VL: {
-    // Fold FNEG_VL into FMA opcodes.
-    // The first operand of strict-fp is chain.
-    unsigned Offset = N->isTargetStrictFPOpcode();
-    SDValue A = N->getOperand(0 + Offset);
-    SDValue B = N->getOperand(1 + Offset);
-    SDValue C = N->getOperand(2 + Offset);
-    SDValue Mask = N->getOperand(3 + Offset);
-    SDValue VL = N->getOperand(4 + Offset);
-
-    auto invertIfNegative = [&Mask, &VL](SDValue &V) {
-      if (V.getOpcode() == RISCVISD::FNEG_VL && V.getOperand(1) == Mask &&
-          V.getOperand(2) == VL) {
-        // Return the negated input.
-        V = V.getOperand(0);
-        return true;
-      }
-
-      return false;
-    };
-
-    bool NegA = invertIfNegative(A);
-    bool NegB = invertIfNegative(B);
-    bool NegC = invertIfNegative(C);
-
-    // If no operands are negated, we're done.
-    if (!NegA && !NegB && !NegC)
-      return SDValue();
-
-    unsigned NewOpcode = negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC);
-    if (Offset > 0)
-      return DAG.getNode(NewOpcode, SDLoc(N), N->getVTList(),
-                         {N->getOperand(0), A, B, C, Mask, VL});
-    return DAG.getNode(NewOpcode, SDLoc(N), N->getValueType(0), A, B, C, Mask,
-                       VL);
-  }
+  case RISCVISD::STRICT_VFNMSUB_VL:
+    return performVFMADD_VLCombine(N, DAG);
   case ISD::LOAD:
   case ISD::STORE: {
     if (DCI.isAfterLegalizeDAG())
