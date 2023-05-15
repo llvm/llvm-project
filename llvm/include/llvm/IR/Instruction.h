@@ -647,6 +647,9 @@ public:
   /// Return true if this instruction has a volatile memory access.
   bool isVolatile() const LLVM_READONLY;
 
+  /// Return the type this instruction accesses in memory, if any.
+  Type *getAccessType() const LLVM_READONLY;
+
   /// Return true if this instruction may throw an exception.
   ///
   /// If IncludePhaseOneUnwind is set, this will also include cases where
