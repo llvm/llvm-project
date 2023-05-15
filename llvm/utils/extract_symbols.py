@@ -23,30 +23,20 @@ import subprocess
 import multiprocessing
 import argparse
 
-# Define functions which extract a list of pairs of (symbols, is_def) from a
-# library using several different tools. We use subprocess.Popen and yield a
-# symbol at a time instead of using subprocess.check_output and returning a list
-# as, especially on Windows, waiting for the entire output to be ready can take
-# a significant amount of time.
-
-def dumpbin_get_symbols(lib):
-    process = subprocess.Popen(['dumpbin','/symbols',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                               universal_newlines=True)
-    process.stdin.close()
-    for line in process.stdout:
-        # Look for external symbols
-        match = re.match("^.+(SECT|UNDEF).+External\s+\|\s+(\S+).*$", line)
-        if match:
-            yield (match.group(2), match.group(1) != "UNDEF")
-    process.wait()
-
-def nm_get_symbols(lib):
-    # -P means the output is in portable format, and -g means we only get global
-    # symbols.
-    cmd = ['nm','-P','-g']
-    if sys.platform.startswith('aix'):
-        cmd += ['-Xany','-C','-p']
+# Define a function which extracts a list of pairs of (symbols, is_def) from a
+# library using llvm-nm becuase it can work both with regular and bitcode files.
+# We use subprocess.Popen and yield a symbol at a time instead of using
+# subprocess.check_output and returning a list as, especially on Windows, waiting
+# for the entire output to be ready can take a significant amount of time.
+def nm_get_symbols(tool, lib):
+    # '-P' means the output is in portable format,
+    # '-g' means we only get global symbols,
+    # '-Xany' enforce handling both 32- and 64-bit objects on AIX,
+    # '--no-demangle' ensure that C++ symbol names are not demangled; note
+    #   that llvm-nm do not demangle by default, but the system nm on AIX does
+    #   that, so the behavior may change in the future,
+    # '-p' do not waste time sorting the symbols.
+    cmd = [tool,'-P','-g','-Xany','--no-demangle','-p']
     process = subprocess.Popen(cmd+[lib], bufsize=1,
                                stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                universal_newlines=True)
@@ -68,71 +58,15 @@ def nm_get_symbols(lib):
             yield (match.group(1), False)
     process.wait()
 
-def readobj_get_symbols(lib):
-    process = subprocess.Popen(['llvm-readobj','--symbols',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                               universal_newlines=True)
-    process.stdin.close()
-    for line in process.stdout:
-        # When looking through the output of llvm-readobj we expect to see Name,
-        # Section, then StorageClass, so record Name and Section when we see
-        # them and decide if this is an external symbol when we see
-        # StorageClass.
-        match = re.search('Name: (\S+)', line)
-        if match:
-            name = match.group(1)
-        match = re.search('Section: (\S+)', line)
-        if match:
-            section = match.group(1)
-        match = re.search('StorageClass: (\S+)', line)
-        if match:
-            storageclass = match.group(1)
-            if section != 'IMAGE_SYM_ABSOLUTE' and \
-               storageclass == 'External':
-                yield (name, section != 'IMAGE_SYM_UNDEFINED')
-    process.wait()
-
-# Define functions which determine if the target is 32-bit Windows (as that's
+# Define a function which determines if the target is 32-bit Windows (as that's
 # where calling convention name decoration happens).
-
-def dumpbin_is_32bit_windows(lib):
-    # dumpbin /headers can output a huge amount of data (>100MB in a debug
-    # build) so we read only up to the 'machine' line then close the output.
-    process = subprocess.Popen(['dumpbin','/headers',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                               universal_newlines=True)
-    process.stdin.close()
-    retval = False
-    for line in process.stdout:
-        match = re.match('.+machine \((\S+)\)', line)
-        if match:
-            retval = (match.group(1) == 'x86')
-            break
-    process.stdout.close()
-    process.wait()
-    return retval
-
-def objdump_is_32bit_windows(lib):
-    output = subprocess.check_output(['objdump','-f',lib],
-                                     universal_newlines=True)
-    for line in output.splitlines():
-        match = re.match('.+file format (\S+)', line)
-        if match:
-            return (match.group(1) == 'pe-i386')
-    return False
-
-def readobj_is_32bit_windows(lib):
-    output = subprocess.check_output(['llvm-readobj','--file-header',lib],
+def readobj_is_32bit_windows(tool, lib):
+    output = subprocess.check_output([tool,'--file-header',lib],
                                      universal_newlines=True)
     for line in output.splitlines():
         match = re.match('Format: (\S+)', line)
         if match:
             return (match.group(1) == 'COFF-i386')
-    return False
-
-# On AIX, there isn't an easy way to detect 32-bit windows objects with the system toolchain,
-# so just assume false.
-def aix_is_32bit_windows(lib):
     return False
 
 # MSVC mangles names to ?<identifier_mangling>@<type_mangling>. By examining the
@@ -355,10 +289,10 @@ def parse_microsoft_mangling(arg):
     return components
 
 def extract_symbols(arg):
-    get_symbols, should_keep_symbol, calling_convention_decoration, lib = arg
+    llvm_nm_path, should_keep_symbol, calling_convention_decoration, lib = arg
     symbol_defs = dict()
     symbol_refs = set()
-    for (symbol, is_def) in get_symbols(lib):
+    for (symbol, is_def) in nm_get_symbols(llvm_nm_path, lib):
         symbol = should_keep_symbol(symbol, calling_convention_decoration)
         if symbol:
             if is_def:
@@ -392,62 +326,37 @@ def get_template_name(sym, mangling):
     # Not a template
     return None
 
+def parse_tool_path(parser, tool, val):
+    try:
+        # Close std streams as we don't want any output and we don't
+        # want the process to wait for something on stdin.
+        p = subprocess.Popen([val], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                stdin=subprocess.PIPE,
+                                universal_newlines=True)
+        p.stdout.close()
+        p.stderr.close()
+        p.stdin.close()
+        p.wait()
+        return val
+    except Exception:
+        parser.error(f'Invalid path for {tool}')
+
 if __name__ == '__main__':
-    tool_exes = ['dumpbin','nm','objdump','llvm-readobj']
     parser = argparse.ArgumentParser(
         description='Extract symbols to export from libraries')
     parser.add_argument('--mangling', choices=['itanium','microsoft'],
                         required=True, help='expected symbol mangling scheme')
-    parser.add_argument('--tools', choices=tool_exes, nargs='*',
-                        help='tools to use to extract symbols and determine the'
-                        ' target')
+    parser.add_argument('--nm', metavar='path',
+                        type=lambda x: parse_tool_path(parser, 'nm', x),
+                        help='path to the llvm-nm executable')
+    parser.add_argument('--readobj', metavar='path',
+                        type=lambda x: parse_tool_path(parser, 'readobj', x),
+                        help='path to the llvm-readobj executable')
     parser.add_argument('libs', metavar='lib', type=str, nargs='+',
                         help='libraries to extract symbols from')
     parser.add_argument('-o', metavar='file', type=str, help='output to file')
     args = parser.parse_args()
-
-    # Determine the function to use to get the list of symbols from the inputs,
-    # and the function to use to determine if the target is 32-bit windows.
-    tools = { 'dumpbin' : (dumpbin_get_symbols, dumpbin_is_32bit_windows),
-              'nm' : (nm_get_symbols, None),
-              'objdump' : (None, objdump_is_32bit_windows),
-              'llvm-readobj' : (readobj_get_symbols, readobj_is_32bit_windows) }
-    get_symbols = None
-    is_32bit_windows = aix_is_32bit_windows if sys.platform.startswith('aix') else None
-    # If we have a tools argument then use that for the list of tools to check
-    if args.tools:
-        tool_exes = args.tools
-    # Find a tool to use by trying each in turn until we find one that exists
-    # (subprocess.call will throw OSError when the program does not exist)
-    get_symbols = None
-    for exe in tool_exes:
-        try:
-            # Close std streams as we don't want any output and we don't
-            # want the process to wait for something on stdin.
-            p = subprocess.Popen([exe], stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE,
-                                 stdin=subprocess.PIPE,
-                                 universal_newlines=True)
-            p.stdout.close()
-            p.stderr.close()
-            p.stdin.close()
-            p.wait()
-            # Keep going until we have a tool to use for both get_symbols and
-            # is_32bit_windows
-            if not get_symbols:
-                get_symbols = tools[exe][0]
-            if not is_32bit_windows:
-                is_32bit_windows = tools[exe][1]
-            if get_symbols and is_32bit_windows:
-                break
-        except OSError:
-            continue
-    if not get_symbols:
-        print("Couldn't find a program to read symbols with", file=sys.stderr)
-        exit(1)
-    if not is_32bit_windows:
-        print("Couldn't find a program to determining the target", file=sys.stderr)
-        exit(1)
 
     # How we determine which symbols to keep and which to discard depends on
     # the mangling scheme
@@ -478,7 +387,7 @@ if __name__ == '__main__':
 
     # Check if calling convention decoration is used by inspecting the first
     # library in the list
-    calling_convention_decoration = is_32bit_windows(libs[0])
+    calling_convention_decoration = readobj_is_32bit_windows(args.readobj, libs[0])
 
     # Extract symbols from libraries in parallel. This is a huge time saver when
     # doing a debug build, as there are hundreds of thousands of symbols in each
@@ -489,7 +398,7 @@ if __name__ == '__main__':
         # use a lambda or local function definition as that doesn't work on
         # windows, so create a list of tuples which duplicates the arguments
         # that are the same in all calls.
-        vals = [(get_symbols, should_keep_symbol, calling_convention_decoration, x) for x in libs]
+        vals = [(args.nm, should_keep_symbol, calling_convention_decoration, x) for x in libs]
         # Do an async map then wait for the result to make sure that
         # KeyboardInterrupt gets caught correctly (see
         # http://bugs.python.org/issue8296)
