@@ -762,7 +762,9 @@ private:
 public:
   Strategy() = default;
   Strategy(const Strategy &) = delete; // Let's avoid copies.
+  Strategy &operator=(const Strategy &) = delete;
   Strategy(Strategy &&) = default;
+  Strategy &operator=(Strategy &&) = default;
 
   void set(const VarDecl *VD, Kind K) { Map[VD] = K; }
 
