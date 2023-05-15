@@ -186,6 +186,10 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
   while (cuStreamQuery(stream) == CUDA_ERROR_NOT_READY)
     handle_server();
 
+  // Handle the server one more time in case the kernel exited with a pending
+  // send still in flight.
+  handle_server();
+
   return CUDA_SUCCESS;
 }
 
