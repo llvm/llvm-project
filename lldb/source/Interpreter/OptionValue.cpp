@@ -272,7 +272,7 @@ std::optional<char> OptionValue::GetCharValue() const {
   return {};
 }
 
-char OptionValue::SetCharValue(char new_value) {
+bool OptionValue::SetCharValue(char new_value) {
   OptionValueChar *option_value = GetAsChar();
   if (option_value) {
     option_value->SetCurrentValue(new_value);
@@ -415,11 +415,10 @@ bool OptionValue::SetUInt64Value(uint64_t new_value) {
   return false;
 }
 
-UUID OptionValue::GetUUIDValue() const {
-  const OptionValueUUID *option_value = GetAsUUID();
-  if (option_value)
+std::optional<UUID> OptionValue::GetUUIDValue() const {
+  if (const OptionValueUUID *option_value = GetAsUUID())
     return option_value->GetCurrentValue();
-  return UUID();
+  return {};
 }
 
 bool OptionValue::SetUUIDValue(const UUID &uuid) {

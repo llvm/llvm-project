@@ -17,6 +17,8 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/StringList.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
@@ -260,57 +262,7 @@ public:
 
   const OptionValueFormatEntity *GetAsFormatEntity() const;
 
-  std::optional<bool> GetBooleanValue() const;
-
-  bool SetBooleanValue(bool new_value);
-
-  std::optional<char> GetCharValue() const;
-
-  char SetCharValue(char new_value);
-
-  std::optional<int64_t> GetEnumerationValue() const;
-
-  bool SetEnumerationValue(int64_t value);
-
-  std::optional<FileSpec> GetFileSpecValue() const;
-
-  bool SetFileSpecValue(FileSpec file_spec);
-
   bool AppendFileSpecValue(FileSpec file_spec);
-
-  std::optional<FileSpecList> GetFileSpecListValue() const;
-
-  std::optional<lldb::Format> GetFormatValue() const;
-
-  bool SetFormatValue(lldb::Format new_value);
-
-  std::optional<lldb::LanguageType> GetLanguageValue() const;
-
-  bool SetLanguageValue(lldb::LanguageType new_language);
-
-  const FormatEntity::Entry *GetFormatEntity() const;
-
-  const RegularExpression *GetRegexValue() const;
-
-  std::optional<int64_t> GetSInt64Value() const;
-
-  bool SetSInt64Value(int64_t new_value);
-
-  std::optional<llvm::StringRef> GetStringValue() const;
-
-  bool SetStringValue(llvm::StringRef new_value);
-
-  std::optional<uint64_t> GetUInt64Value() const;
-
-  bool SetUInt64Value(uint64_t new_value);
-
-  UUID GetUUIDValue() const;
-
-  bool SetUUIDValue(const UUID &uuid);
-
-  std::optional<ArchSpec> GetArchSpecValue() const;
-
-  bool SetArchSpecValue(ArchSpec arch_spec);
 
   bool OptionWasSet() const { return m_value_was_set; }
 
@@ -373,9 +325,19 @@ public:
 
   bool SetValueAs(bool v) { return SetBooleanValue(v); }
 
+  bool SetValueAs(char v) { return SetCharValue(v); }
+
+  bool SetValueAs(uint64_t v) { return SetUInt64Value(v); }
+
+  bool SetValueAs(int64_t v) { return SetSInt64Value(v); }
+
+  bool SetValueAs(UUID v) { return SetUUIDValue(v); }
+
   bool SetValueAs(llvm::StringRef v) { return SetStringValue(v); }
 
   bool SetValueAs(lldb::LanguageType v) { return SetLanguageValue(v); }
+
+  bool SetValueAs(lldb::Format v) { return SetFormatValue(v); }
 
   bool SetValueAs(FileSpec v) { return SetFileSpecValue(v); }
 
@@ -401,6 +363,44 @@ protected:
                                 // set from the command line or as a setting,
                                 // versus if we just have the default value that
                                 // was already populated in the option value.
+private:
+  std::optional<ArchSpec> GetArchSpecValue() const;
+  bool SetArchSpecValue(ArchSpec arch_spec);
+
+  std::optional<bool> GetBooleanValue() const;
+  bool SetBooleanValue(bool new_value);
+
+  std::optional<char> GetCharValue() const;
+  bool SetCharValue(char new_value);
+
+  std::optional<int64_t> GetEnumerationValue() const;
+  bool SetEnumerationValue(int64_t value);
+
+  std::optional<FileSpec> GetFileSpecValue() const;
+  bool SetFileSpecValue(FileSpec file_spec);
+
+  std::optional<FileSpecList> GetFileSpecListValue() const;
+
+  std::optional<int64_t> GetSInt64Value() const;
+  bool SetSInt64Value(int64_t new_value);
+
+  std::optional<uint64_t> GetUInt64Value() const;
+  bool SetUInt64Value(uint64_t new_value);
+
+  std::optional<lldb::Format> GetFormatValue() const;
+  bool SetFormatValue(lldb::Format new_value);
+
+  std::optional<lldb::LanguageType> GetLanguageValue() const;
+  bool SetLanguageValue(lldb::LanguageType new_language);
+
+  std::optional<llvm::StringRef> GetStringValue() const;
+  bool SetStringValue(llvm::StringRef new_value);
+
+  std::optional<UUID> GetUUIDValue() const;
+  bool SetUUIDValue(const UUID &uuid);
+
+  const FormatEntity::Entry *GetFormatEntity() const;
+  const RegularExpression *GetRegexValue() const;
 };
 
 } // namespace lldb_private
