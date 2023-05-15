@@ -106,16 +106,17 @@ void GraphEditor::parseMapsFile() {
   char *Permissions = new char[32];
   char *FileName = new char[256];
 
-  while (strcmp(FileName, "[heap]")) {
-    if (!isPIC)
-      *isPIC = ::isPIC(FileName);
-
-    fscanf(MapFile, "%lu-%lu %s %lu %*d:%*d %*lu %s ", &Range[0], &Range[1],
+  do {
+    fscanf(MapFile, "%lx-%lx %s %lx %*x:%*x %*lx %s ", &Range[0], &Range[1],
            Permissions, &Range[2], FileName);
+    if (!isPIC)
+      isPIC = ::isPIC(FileName);
 
-    if (!strcmp(Permissions, "[r-xp]"))
+    fprintf(stderr, "isPIC = %d\n", *isPIC);
+
+    if (!strcmp(Permissions, "r-xp"))
       Ranges.push_back(Range);
-  }
+  } while (strcmp(FileName, "[heap]"));
 
   delete[] Permissions;
   delete[] FileName;

@@ -163,7 +163,15 @@ void fillHashMap (std::map <std::pair<uint64_t, uint64_t>, int> &funcHashTable, 
         std::cout << addr1 << " " << addr2 << '\n';
 
         Elf64_Sym_W_Name *sym1 = findSymbolByAddress (symArray, addr1);
+        if (!sym1) {
+            std::cout << "Address " << addr1 <<" is out of range!\n";
+            continue;
+        }
         Elf64_Sym_W_Name *sym2 = findSymbolByAddress (symArray, addr2);
+        if (!sym2) {
+            std::cout << "Address "<< addr2 <<" is out of range!\n";
+            continue;
+        }
 
         std::cout << sym1->symName << " " << sym2->symName << '\n';
 
@@ -220,6 +228,11 @@ void dumpMapToFile (std::map <std::pair<uint64_t, uint64_t>, int> &funcHashTable
 }
 bool isPIC(const char *inputFileName) {
     assert (inputFileName);
+
+    // It is necessary for opening file itself, while executing 
+    // It leads to losing all printing informations to stdout in 
+    // user programm
+    std::fclose(stdout);
 
     FILE *elfFile = fopen(inputFileName, "r");
     if (!elfFile) {
