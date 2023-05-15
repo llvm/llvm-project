@@ -1294,7 +1294,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   AAMDNodes AAInfo = LI.getAAMetadata();
 
   const Value *Ptr = LI.getPointerOperand();
-  Type *OffsetIRTy = DL->getIntPtrType(Ptr->getType());
+  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(Ptr)) {
@@ -1342,7 +1342,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
   Register Base = getOrCreateVReg(*SI.getPointerOperand());
 
-  Type *OffsetIRTy = DL->getIntPtrType(SI.getPointerOperandType());
+  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(SI.getPointerOperand())) {
@@ -1488,7 +1488,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   Register BaseReg = getOrCreateVReg(Op0);
   Type *PtrIRTy = Op0.getType();
   LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
-  Type *OffsetIRTy = DL->getIntPtrType(PtrIRTy);
+  Type *OffsetIRTy = DL->getIndexType(PtrIRTy);
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   // Normalize Vector GEP - all scalar operands should be converted to the
@@ -1513,7 +1513,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
             .getReg(0);
     PtrIRTy = FixedVectorType::get(PtrIRTy, VectorWidth);
     PtrTy = getLLTForType(*PtrIRTy, *DL);
-    OffsetIRTy = DL->getIntPtrType(PtrIRTy);
+    OffsetIRTy = DL->getIndexType(PtrIRTy);
     OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   }
 
