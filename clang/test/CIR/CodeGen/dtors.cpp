@@ -2,6 +2,25 @@
 // RUN: FileCheck --input-file=%t.cir %s
 // XFAIL: *
 
+
+enum class EFMode { Always, Verbose };
+
+class PSEvent {
+ public:
+  PSEvent(
+      EFMode m,
+      const char* n);
+  ~PSEvent();
+
+ private:
+  const char* n;
+  EFMode m;
+};
+
+void blue() {
+  PSEvent p(EFMode::Verbose, __FUNCTION__);
+}
+
 class A
 {
 public:
@@ -23,6 +42,15 @@ public:
 
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>
+
+// CHECK: cir.func @_Z4bluev() {
+// CHECK:   %0 = cir.alloca !ty_22class2EPSEvent22, cir.ptr <!ty_22class2EPSEvent22>, ["p", init] {alignment = 8 : i64}
+// CHECK:   %1 = cir.const(1 : i32) : i32
+// CHECK:   %2 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 5>>
+// CHECK:   %3 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<i8 x 5>>), !cir.ptr<i8>
+// CHECK:   cir.call @_ZN7PSEventC1E6EFModePKc(%0, %1, %3) : (!cir.ptr<!ty_22class2EPSEvent22>, i32, !cir.ptr<i8>) -> ()
+// CHECK:   cir.return
+// CHECK: }
 
 // @B::~B() #1 declaration
 // CHECK:   cir.func private @_ZN1BD2Ev(!cir.ptr<![[ClassB]]>)
