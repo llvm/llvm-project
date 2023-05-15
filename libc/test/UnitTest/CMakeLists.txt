@@ -160,3 +160,9 @@ add_unittest_framework_library(
     libc.src.stdio.scanf_core.core_structs
     libc.test.UnitTest.string_utils
 )
+
+add_header_library(
+  ErrnoSetterMatcher
+  HDRS
+    ErrnoSetterMatcher
+)
