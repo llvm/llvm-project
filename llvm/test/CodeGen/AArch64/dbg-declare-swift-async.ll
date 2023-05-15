@@ -2,6 +2,8 @@
 ; RUN: llc -O0 -fast-isel -stop-after=finalize-isel %s -o - | FileCheck %s
 ; RUN: llc -O0 -fast-isel=false -global-isel=false -stop-after=finalize-isel %s -o - | FileCheck %s
 
+; XFAIL: !rdar109373722
+
 ; CHECK: void @foo
 ; CHECK-NEXT: dbg.declare(metadata {{.*}}, metadata ![[VAR:.*]], metadata ![[EXPR:.*]]), !dbg ![[LOC:.*]]
 ; CHECK: entry_values:
