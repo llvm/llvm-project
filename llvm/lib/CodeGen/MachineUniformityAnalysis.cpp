@@ -114,6 +114,28 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
 }
 
 template <>
+void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
+    propagateTemporalDivergence(const MachineInstr &I,
+                                const MachineCycle &DefCycle) {
+  const auto &RegInfo = F.getRegInfo();
+  for (auto &Op : I.operands()) {
+    if (!Op.isReg() || !Op.isDef())
+      continue;
+    if (!Op.getReg().isVirtual())
+      continue;
+    auto Reg = Op.getReg();
+    if (isDivergent(Reg))
+      continue;
+    for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
+      if (DefCycle.contains(UserInstr.getParent()))
+        continue;
+      if (markDivergent(UserInstr))
+        Worklist.push_back(&UserInstr);
+    }
+  }
+}
+
+template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isDivergentUse(
     const MachineOperand &U) const {
   if (!U.isReg())
