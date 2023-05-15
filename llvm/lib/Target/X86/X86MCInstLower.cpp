@@ -13,7 +13,6 @@
 
 #include "MCTargetDesc/X86ATTInstPrinter.h"
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86InstComments.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
@@ -502,9 +501,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (auto MaybeMCOp = LowerMachineOperand(MI, MO))
       OutMI.addOperand(*MaybeMCOp);
 
-  if (X86::optimizeInstFromVEX3ToVEX2(OutMI, MI->getDesc()))
-    return;
-
   // Handle a few special cases to eliminate operand modifiers.
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
@@ -535,6 +531,59 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     // Duplicate the destination.
     unsigned DestReg = OutMI.getOperand(0).getReg();
     OutMI.insert(OutMI.begin(), MCOperand::createReg(DestReg));
+    break;
+  }
+
+  // Commute operands to get a smaller encoding by using VEX.R instead of VEX.B
+  // if one of the registers is extended, but other isn't.
+  case X86::VMOVZPQILo2PQIrr:
+  case X86::VMOVAPDrr:
+  case X86::VMOVAPDYrr:
+  case X86::VMOVAPSrr:
+  case X86::VMOVAPSYrr:
+  case X86::VMOVDQArr:
+  case X86::VMOVDQAYrr:
+  case X86::VMOVDQUrr:
+  case X86::VMOVDQUYrr:
+  case X86::VMOVUPDrr:
+  case X86::VMOVUPDYrr:
+  case X86::VMOVUPSrr:
+  case X86::VMOVUPSYrr: {
+    if (!X86II::isX86_64ExtendedReg(OutMI.getOperand(0).getReg()) &&
+        X86II::isX86_64ExtendedReg(OutMI.getOperand(1).getReg())) {
+      unsigned NewOpc;
+      switch (OutMI.getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
+      case X86::VMOVZPQILo2PQIrr: NewOpc = X86::VMOVPQI2QIrr;   break;
+      case X86::VMOVAPDrr:        NewOpc = X86::VMOVAPDrr_REV;  break;
+      case X86::VMOVAPDYrr:       NewOpc = X86::VMOVAPDYrr_REV; break;
+      case X86::VMOVAPSrr:        NewOpc = X86::VMOVAPSrr_REV;  break;
+      case X86::VMOVAPSYrr:       NewOpc = X86::VMOVAPSYrr_REV; break;
+      case X86::VMOVDQArr:        NewOpc = X86::VMOVDQArr_REV;  break;
+      case X86::VMOVDQAYrr:       NewOpc = X86::VMOVDQAYrr_REV; break;
+      case X86::VMOVDQUrr:        NewOpc = X86::VMOVDQUrr_REV;  break;
+      case X86::VMOVDQUYrr:       NewOpc = X86::VMOVDQUYrr_REV; break;
+      case X86::VMOVUPDrr:        NewOpc = X86::VMOVUPDrr_REV;  break;
+      case X86::VMOVUPDYrr:       NewOpc = X86::VMOVUPDYrr_REV; break;
+      case X86::VMOVUPSrr:        NewOpc = X86::VMOVUPSrr_REV;  break;
+      case X86::VMOVUPSYrr:       NewOpc = X86::VMOVUPSYrr_REV; break;
+      }
+      OutMI.setOpcode(NewOpc);
+    }
+    break;
+  }
+  case X86::VMOVSDrr:
+  case X86::VMOVSSrr: {
+    if (!X86II::isX86_64ExtendedReg(OutMI.getOperand(0).getReg()) &&
+        X86II::isX86_64ExtendedReg(OutMI.getOperand(2).getReg())) {
+      unsigned NewOpc;
+      switch (OutMI.getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
+      case X86::VMOVSDrr: NewOpc = X86::VMOVSDrr_REV; break;
+      case X86::VMOVSSrr: NewOpc = X86::VMOVSSrr_REV; break;
+      }
+      OutMI.setOpcode(NewOpc);
+    }
     break;
   }
 
@@ -905,6 +954,12 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     }
     break;
   }
+
+  case X86::VMOVHLPSrr:
+  case X86::VUNPCKHPDrr:
+    // These are not truly commutable so hide them from the default case.
+    break;
+
   case X86::MASKMOVDQU:
   case X86::VMASKMOVDQU:
     if (AsmPrinter.getSubtarget().is64Bit())
@@ -912,6 +967,19 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     break;
 
   default: {
+    // If the instruction is a commutable arithmetic instruction we might be
+    // able to commute the operands to get a 2 byte VEX prefix.
+    uint64_t TSFlags = MI->getDesc().TSFlags;
+    if (MI->getDesc().isCommutable() &&
+        (TSFlags & X86II::EncodingMask) == X86II::VEX &&
+        (TSFlags & X86II::OpMapMask) == X86II::TB &&
+        (TSFlags & X86II::FormMask) == X86II::MRMSrcReg &&
+        !(TSFlags & X86II::REX_W) && (TSFlags & X86II::VEX_4V) &&
+        OutMI.getNumOperands() == 3) {
+      if (!X86II::isX86_64ExtendedReg(OutMI.getOperand(1).getReg()) &&
+          X86II::isX86_64ExtendedReg(OutMI.getOperand(2).getReg()))
+        std::swap(OutMI.getOperand(1), OutMI.getOperand(2));
+    }
     // Add an REP prefix to BSF instructions so that new processors can
     // recognize as TZCNT, which has better performance than BSF.
     if (X86::isBSF(OutMI.getOpcode()) && !MF.getFunction().hasOptSize()) {
