@@ -5,6 +5,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-ctor-dtor,amdgpu-lower-ctor-dtor < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=VISIBILITY
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -S - 2>&1 | FileCheck %s -check-prefix=SECTION
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -amdgpu-lower-global-ctor-dtor=0 -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf -s - 2>&1 | FileCheck %s -check-prefix=DISABLED
 
 @llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo, ptr null }]
 @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @bar, ptr null }]
@@ -49,6 +50,10 @@
 ; VISIBILITY: OBJECT   WEAK DEFAULT {{.*}} amdgcn.device.fini.kd
 ; SECTION: .init_array.1     INIT_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
 ; SECTION: .fini_array.1     FINI_ARRAY      {{.*}} {{.*}} 000008 00  WA  0   0  8
+; DISABLED-NOT: FUNC   GLOBAL PROTECTED {{.*}} amdgcn.device.init
+; DISABLED-NOT: OBJECT GLOBAL DEFAULT {{.*}} amdgcn.device.init.kd
+; DISABLED-NOT: FUNC   GLOBAL PROTECTED {{.*}} amdgcn.device.fini
+; DISABLED-NOT: OBJECT   GLOBAL DEFAULT {{.*}} amdgcn.device.fini.kd
 
 define internal void @foo() {
   ret void
