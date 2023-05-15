@@ -322,7 +322,10 @@ module std [system] {
       module prev_permutation                { private header "__algorithm/prev_permutation.h" }
       module pstl {
         private header "__algorithm/pstl_backends/cpu_backend.h"
+        private header "__algorithm/pstl_backends/cpu_backends/any_of.h"
         private header "__algorithm/pstl_backends/cpu_backends/backend.h"
+        private header "__algorithm/pstl_backends/cpu_backends/fill.h"
+        private header "__algorithm/pstl_backends/cpu_backends/find_if.h"
         private header "__algorithm/pstl_backends/cpu_backends/for_each.h"
         private header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }

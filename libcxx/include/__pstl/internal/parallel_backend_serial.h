@@ -46,18 +46,6 @@ class __buffer
     _LIBCPP_HIDE_FROM_ABI ~__buffer() { __allocator_.deallocate(__ptr_, __buf_size_); }
 };
 
-_LIBCPP_HIDE_FROM_ABI inline void
-__cancel_execution()
-{
-}
-
-template <class _ExecutionPolicy, class _Index, class _Fp>
-_LIBCPP_HIDE_FROM_ABI void
-__parallel_for(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
-{
-    __f(__first, __last);
-}
-
 template <class _ExecutionPolicy, class _Value, class _Index, typename _RealBody, typename _Reduction>
 _LIBCPP_HIDE_FROM_ABI _Value
 __parallel_reduce(__pstl::__internal::__serial_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last,
