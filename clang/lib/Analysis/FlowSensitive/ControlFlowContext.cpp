@@ -68,7 +68,12 @@ static llvm::BitVector findReachableBlocks(const CFG &Cfg) {
 }
 
 llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
+ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
+  if (D.isTemplated())
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot analyze templated declarations");
+
   CFG::BuildOptions Options;
   Options.PruneTriviallyFalseEdges = true;
   Options.AddImplicitDtors = true;
@@ -79,7 +84,7 @@ ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();
 
-  auto Cfg = CFG::buildCFG(D, &S, &C, Options);
+  auto Cfg = CFG::buildCFG(&D, &S, &C, Options);
   if (Cfg == nullptr)
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -90,8 +95,18 @@ ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
 
   llvm::BitVector BlockReachable = findReachableBlocks(*Cfg);
 
-  return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
+  return ControlFlowContext(&D, std::move(Cfg), std::move(StmtToBlock),
                             std::move(BlockReachable));
+}
+
+llvm::Expected<ControlFlowContext>
+ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
+  if (D == nullptr)
+    return llvm::createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Declaration must not be null");
+
+  return build(*D, S, C);
 }
 
 } // namespace dataflow
