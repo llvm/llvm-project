@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRNVGPUDialect
   MLIRNVGPUIncGen
 
   LINK_LIBS PUBLIC
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRSideEffectInterfaces
   )

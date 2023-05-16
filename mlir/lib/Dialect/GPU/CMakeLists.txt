@@ -20,7 +20,7 @@ if (MLIR_ENABLE_ROCM_CONVERSIONS)
   )
 endif()
 
-add_mlir_dialect_library(MLIRGPUOps
+add_mlir_dialect_library(MLIRGPUDialect
   IR/GPUDialect.cpp
   IR/InferIntRangeInterfaceImpls.cpp
 
@@ -73,7 +73,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRBuiltinToLLVMIRTranslation
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRLLVMDialect
   MLIRGPUToLLVMIRTranslation
