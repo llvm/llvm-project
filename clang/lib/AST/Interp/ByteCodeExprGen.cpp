@@ -222,7 +222,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitNE(PtrT, CE);
   }
 
-  case CK_IntegralComplexToBoolean: {
+  case CK_IntegralComplexToBoolean:
+  case CK_FloatingComplexToBoolean: {
     std::optional<PrimType> ElemT =
         classifyComplexElementType(SubExpr->getType());
     if (!ElemT)
@@ -237,8 +238,14 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     if (!this->emitLoadPop(*ElemT, CE))
       return false;
-    if (!this->emitCast(*ElemT, PT_Bool, CE))
-      return false;
+    if (*ElemT == PT_Float) {
+      if (!this->emitCastFloatingIntegral(PT_Bool, CE))
+        return false;
+    } else {
+      if (!this->emitCast(*ElemT, PT_Bool, CE))
+        return false;
+    }
+
     // We now have the bool value of E[0] on the stack.
     LabelTy LabelTrue = this->getLabel();
     if (!this->jumpTrue(LabelTrue))
@@ -250,8 +257,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     if (!this->emitLoadPop(*ElemT, CE))
       return false;
-    if (!this->emitCast(*ElemT, PT_Bool, CE))
-      return false;
+    if (*ElemT == PT_Float) {
+      if (!this->emitCastFloatingIntegral(PT_Bool, CE))
+        return false;
+    } else {
+      if (!this->emitCast(*ElemT, PT_Bool, CE))
+        return false;
+    }
     // Leave the boolean value of E[1] on the stack.
     LabelTy EndLabel = this->getLabel();
     this->jump(EndLabel);
