@@ -41,7 +41,6 @@ private:
   void setLegalizerInfoSSE1();
   void setLegalizerInfoSSE2();
   void setLegalizerInfoSSE41();
-  void setLegalizerInfoSSE42();
   void setLegalizerInfoAVX();
   void setLegalizerInfoAVX2();
   void setLegalizerInfoAVX512();
