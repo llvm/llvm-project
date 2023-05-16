@@ -86,8 +86,7 @@ body:             |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: MachineUniformityInfo for function: asm_sgpr
-    ; FIXME: This is backwards
-    ; CHECK: DIVERGENT: %1
+    ; CHECK-NOT: DIVERGENT: %1
 
     %0:_(s32) = COPY $vgpr0
     %2:vgpr_32 = COPY %0(s32)
