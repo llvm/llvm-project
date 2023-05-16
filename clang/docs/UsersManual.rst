@@ -596,7 +596,7 @@ output format of the diagnostics that it generates.
             | int
 
 
-   With :option:`-fno-diagnostics-show-line-numbers`:
+   With -fno-diagnostics-show-line-numbers:
 
     ::
 
