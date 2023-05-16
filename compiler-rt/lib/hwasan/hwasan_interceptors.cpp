@@ -16,6 +16,7 @@
 
 #include "hwasan.h"
 #include "hwasan_checks.h"
+#include "hwasan_platform_interceptors.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 #include "interception/interception.h"
@@ -43,6 +44,68 @@ using namespace __hwasan;
       } while (false)
 #    include "sanitizer_common/sanitizer_common_syscalls.inc"
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
+
+#define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
+  do {                                                \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
+  do {                                                \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+  do {                                           \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
+  do {                                           \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) \
+  do {                                         \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
+  do {                                         \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
+  do {                                                      \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
+  do {                                                \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
+  do {                                                         \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_BLOCK_REAL(name) \
+  do {                                      \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
+  do {                                                       \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
+  do {                                                      \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
+  do {                                                      \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_STRERROR() \
+  do {                                \
+  } while (false)
+
+#define COMMON_INTERCEPT_FUNCTION(name) \
+  do {                                  \
+  } while (false)
+
+#include "sanitizer_common/sanitizer_common_interceptors.inc"
 
 struct ThreadStartArg {
   __sanitizer_sigset_t starting_sigset_;
