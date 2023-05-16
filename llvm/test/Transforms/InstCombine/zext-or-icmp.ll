@@ -100,10 +100,7 @@ define i1 @knownbits_out_of_range_shift(i32 %x) {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 63, [[ENTRY:%.*]] ], [ 31, [[BLOCK1:%.*]] ]
-; CHECK-NEXT:    [[L:%.*]] = lshr i32 [[X:%.*]], [[P]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[L]], 2
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %block2
