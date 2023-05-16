@@ -293,6 +293,9 @@ struct KnownFPClass {
   /// floating-point mode for the function interprets denormals as zero.
   bool isKnownNeverLogicalZero(const Function &F, Type *Ty) const;
 
+  /// Return true if it's know this can never be interpreted as a negative zero.
+  bool isKnownNeverLogicalNegZero(const Function &F, Type *Ty) const;
+
   static constexpr FPClassTest OrderedLessThanZeroMask =
       fcNegSubnormal | fcNegNormal | fcNegInf;
   static constexpr FPClassTest OrderedGreaterThanZeroMask =

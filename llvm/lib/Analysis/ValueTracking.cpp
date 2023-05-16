@@ -4293,9 +4293,22 @@ static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
   return F.getDenormalMode(Ty->getFltSemantics()).Input == DenormalMode::IEEE;
 }
 
+static bool inputDenormalIsIEEEOrPosZero(const Function &F, const Type *Ty) {
+  Ty = Ty->getScalarType();
+  DenormalMode Mode = F.getDenormalMode(Ty->getFltSemantics());
+  return Mode.Input == DenormalMode::IEEE ||
+         Mode.Input == DenormalMode::PositiveZero;
+}
+
 bool KnownFPClass::isKnownNeverLogicalZero(const Function &F, Type *Ty) const {
   return isKnownNeverZero() &&
          (isKnownNeverSubnormal() || inputDenormalIsIEEE(F, Ty));
+}
+
+bool KnownFPClass::isKnownNeverLogicalNegZero(const Function &F,
+                                              Type *Ty) const {
+  return isKnownNeverNegZero() &&
+         (isKnownNeverNegSubnormal() || inputDenormalIsIEEEOrPosZero(F, Ty));
 }
 
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
@@ -4709,6 +4722,39 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // TODO: Known sign bit with no nans
         if (KnownAddend.cannotBeOrderedLessThanZero())
           Known.knownNot(fcNegative);
+        break;
+      }
+      case Intrinsic::sqrt: {
+        KnownFPClass KnownSrc;
+        FPClassTest InterestedSrcs = InterestedClasses;
+        if (InterestedClasses & fcNan)
+          InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedSrcs, KnownSrc, Depth + 1, Q, TLI);
+
+        if (KnownSrc.isKnownNeverPosInfinity())
+          Known.knownNot(fcPosInf);
+        if (KnownSrc.isKnownNever(fcSNan))
+          Known.knownNot(fcSNan);
+
+        // Any negative value besides -0 returns a nan.
+        if (KnownSrc.isKnownNeverNaN() &&
+            KnownSrc.cannotBeOrderedLessThanZero())
+          Known.knownNot(fcNan);
+
+        // The only negative value that can be returned is -0 for -0 inputs.
+        Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
+
+        // If the input denormal mode could be PreserveSign, a negative
+        // subnormal input could produce a negative zero output.
+        if (KnownSrc.isKnownNeverLogicalNegZero(*II->getFunction(),
+                                                II->getType())) {
+          Known.knownNot(fcNegZero);
+          if (KnownSrc.isKnownNeverNaN())
+            Known.SignBit = false;
+        }
+
         break;
       }
       case Intrinsic::sin:
