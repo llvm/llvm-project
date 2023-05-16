@@ -72,17 +72,27 @@ void printDynamicIndexList(
 ///   1. `result` is filled with the i64 ArrayAttr "[`kDynamic`, 7, 42,
 ///   `kDynamic`]"
 ///   2. `ssa` is filled with "[%arg0, %arg1]".
+///
+/// Trailing indices can be scalable. For example, "42" in "[7, [42]]" is
+/// scalable. This notation is similar to how scalable dims are marked when
+/// defining Vectors. If /p isTrailingIdxScalable is null, scalable indices are
+/// not allowed/expected. When it's not null, this hook will set the
+/// corresponding value to:
+///   * true if the trailing idx is scalable,
+///   * false otherwise.
 ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
+    DenseI64ArrayAttr &integers, bool *isTrailingIdxScalable = nullptr,
+    SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 inline ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-  return parseDynamicIndexList(parser, values, integers, &valueTypes,
+  return parseDynamicIndexList(parser, values, integers,
+                               /*isTrailingIdxScalable=*/nullptr, &valueTypes,
                                delimiter);
 }
 

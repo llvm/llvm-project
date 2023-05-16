@@ -2391,6 +2391,7 @@ transform::TileOp::apply(TransformResults &transformResults,
   SmallVector<Operation *> tiled;
   SmallVector<SmallVector<Operation *, 4>, 4> loops;
   loops.resize(getLoops().size());
+  bool scalable = getLastTileSizeScalable();
   for (auto [i, op] : llvm::enumerate(targets)) {
     auto tilingInterface = dyn_cast<TilingInterface>(op);
     auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(op);
@@ -2409,10 +2410,21 @@ transform::TileOp::apply(TransformResults &transformResults,
         SmallVector<Value, 4> sizes;
         sizes.reserve(tileSizes.size());
         unsigned dynamicIdx = 0;
-        for (OpFoldResult ofr : getMixedSizes()) {
+        unsigned trailingIdx = getMixedSizes().size() - 1;
+
+        for (auto [ofrIdx, ofr] : llvm::enumerate(getMixedSizes())) {
           if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
-            sizes.push_back(b.create<arith::ConstantIndexOp>(
-                getLoc(), cast<IntegerAttr>(attr).getInt()));
+            // Only the trailing tile size is allowed to be scalable atm.
+            if (scalable && (ofrIdx == trailingIdx)) {
+              auto val = b.create<arith::ConstantIndexOp>(
+                  getLoc(), attr.cast<IntegerAttr>().getInt());
+              Value vscale =
+                  b.create<vector::VectorScaleOp>(getLoc(), b.getIndexType());
+              sizes.push_back(b.create<arith::MulIOp>(getLoc(), val, vscale));
+            } else {
+              sizes.push_back(b.create<arith::ConstantIndexOp>(
+                  getLoc(), cast<IntegerAttr>(attr).getInt()));
+            }
             continue;
           }
           ArrayRef<Operation *> dynamicSizes = dynamicSizeProducers[dynamicIdx];
@@ -2507,8 +2519,9 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
   DenseI64ArrayAttr staticSizes;
   FunctionType functionalType;
   llvm::SMLoc operandLoc;
+  bool scalable = false;
   if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
-      parseDynamicIndexList(parser, dynamicSizes, staticSizes) ||
+      parseDynamicIndexList(parser, dynamicSizes, staticSizes, &scalable) ||
       parseOptionalInterchange(parser, result) ||
       parser.parseColonType(functionalType))
     return ParseResult::failure();
@@ -2530,6 +2543,10 @@ ParseResult transform::TileOp::parse(OpAsmParser &parser,
                              operandLoc, result.operands)) {
     return failure();
   }
+
+  auto scalableAttr = parser.getBuilder().getBoolAttr(scalable);
+  result.addAttribute(getLastTileSizeScalableAttrName(result.name),
+                      scalableAttr);
 
   result.addAttribute(getStaticSizesAttrName(result.name), staticSizes);
   result.addTypes(functionalType.getResults());
