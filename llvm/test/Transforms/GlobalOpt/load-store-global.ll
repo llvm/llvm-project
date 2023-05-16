@@ -35,3 +35,14 @@ define void @qux() nounwind {
 ; CHECK-NOT: load
 }
 
+@addrspacecast_a = internal global ptr null
+
+define void @addrspacecast_user() {
+; CHECK-LABEL: @addrspacecast_user
+; CHECK-NOT: store
+; CHECK-NOT: load
+  %g = addrspacecast ptr @addrspacecast_a to ptr addrspace(1)
+  store ptr inttoptr (i64 1 to ptr), ptr @addrspacecast_a, align 8
+  %l = load ptr, ptr @addrspacecast_a, align 8
+  ret void
+}
