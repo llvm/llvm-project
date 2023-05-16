@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-transform-dialect-interpreter | FileCheck %s
 
 func.func @outerproduct_matmul(%A: memref<3x3xf32>, %B: memref<3x3xf32>, %C: memref<3x3xf32>) {
   linalg.matmul ins(%A, %B: memref<3x3xf32>, memref<3x3xf32>)
