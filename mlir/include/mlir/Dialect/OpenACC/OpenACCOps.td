@@ -13,6 +13,7 @@
 #ifndef OPENACC_OPS
 #define OPENACC_OPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/EnumAttr.td"
@@ -859,7 +860,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.
-def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
+def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["ParallelOp, LoopOp, SerialOp"]>]> {
   let summary = "Acc yield and termination operation";
 
