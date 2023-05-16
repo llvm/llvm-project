@@ -883,12 +883,12 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // with priority emitted above.  Module implementation units behave the same
   // way as a non-modular TU with imports.
   llvm::Function *Fn;
-  if (CXX20ModuleInits && getContext().getNamedModuleForCodeGen() &&
-      !getContext().getNamedModuleForCodeGen()->isModuleImplementation()) {
+  if (CXX20ModuleInits && getContext().getCurrentNamedModule() &&
+      !getContext().getCurrentNamedModule()->isModuleImplementation()) {
     SmallString<256> InitFnName;
     llvm::raw_svector_ostream Out(InitFnName);
     cast<ItaniumMangleContext>(getCXXABI().getMangleContext())
-        .mangleModuleInitializer(getContext().getNamedModuleForCodeGen(), Out);
+        .mangleModuleInitializer(getContext().getCurrentNamedModule(), Out);
     Fn = CreateGlobalInitOrCleanUpFunction(
         FTy, llvm::Twine(InitFnName), FI, SourceLocation(), false,
         llvm::GlobalVariable::ExternalLinkage);
