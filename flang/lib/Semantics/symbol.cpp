@@ -518,6 +518,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
+            if (x.numPrivatesNotOverridden() > 0) {
+              os << " numPrivatesNotOverridden: "
+                 << x.numPrivatesNotOverridden();
+            }
           },
           [&](const NamelistDetails &x) {
             os << ':';

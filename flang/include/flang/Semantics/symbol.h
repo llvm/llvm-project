@@ -347,9 +347,13 @@ public:
   explicit ProcBindingDetails(const Symbol &symbol) : symbol_{symbol} {}
   const Symbol &symbol() const { return symbol_; }
   void ReplaceSymbol(const Symbol &symbol) { symbol_ = symbol; }
+  int numPrivatesNotOverridden() const { return numPrivatesNotOverridden_; }
+  void set_numPrivatesNotOverridden(int n) { numPrivatesNotOverridden_ = n; }
 
 private:
   SymbolRef symbol_; // procedure bound to; may be forward
+  // Homonymous private bindings in ancestor types from other modules
+  int numPrivatesNotOverridden_{0};
 };
 
 class NamelistDetails {
