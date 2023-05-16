@@ -283,11 +283,6 @@ Improvements to Clang's diagnostics
 - Clang constexpr evaluator now prints subobject's name instead of its type in notes
   when a constexpr variable has uninitialized subobjects after its constructor call.
   (`#58601 <https://github.com/llvm/llvm-project/issues/58601>`_)
-- Clang will now show a margin with line numbers to the left of each line
-  of code it prints for diagnostics. This can be disabled using
-  ``-fno-diagnostics-show-line-numbers``. At the same time, the maximum
-  number of code lines it prints has been increased from 1 to 16. This
-  can be controlled using ``-fcaret-diagnostics-max-lines=``.
 
 Bug Fixes in This Version
 -------------------------
