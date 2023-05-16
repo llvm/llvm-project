@@ -195,8 +195,8 @@ KnownBits KnownBits::shl(const KnownBits &LHS, const KnownBits &RHS) {
   // possible shifts.
   APInt MaxShiftAmount = RHS.getMaxValue();
   if (!LHS.isUnknown()) {
-    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
-    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).zextOrTrunc(64).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.zextOrTrunc(64).getZExtValue();
     assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -251,8 +251,8 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS) {
   // possible shifts.
   APInt MaxShiftAmount = RHS.getMaxValue();
   if (!LHS.isUnknown()) {
-    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
-    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).zextOrTrunc(64).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.zextOrTrunc(64).getZExtValue();
     assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
     Known.Zero.setAllBits();
     Known.One.setAllBits();
@@ -312,8 +312,8 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS) {
   // possible shifts.
   APInt MaxShiftAmount = RHS.getMaxValue();
   if (!LHS.isUnknown()) {
-    uint64_t ShiftAmtZeroMask = (~RHS.Zero).getZExtValue();
-    uint64_t ShiftAmtOneMask = RHS.One.getZExtValue();
+    uint64_t ShiftAmtZeroMask = (~RHS.Zero).zextOrTrunc(64).getZExtValue();
+    uint64_t ShiftAmtOneMask = RHS.One.zextOrTrunc(64).getZExtValue();
     assert(MinShiftAmount.ult(MaxShiftAmount) && "Illegal shift range");
     Known.Zero.setAllBits();
     Known.One.setAllBits();
