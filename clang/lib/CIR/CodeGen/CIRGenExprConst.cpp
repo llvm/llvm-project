@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRDataLayout.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
@@ -46,23 +47,22 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
 
 struct ConstantAggregateBuilderUtils {
   CIRGenModule &CGM;
+  CIRDataLayout dataLayout;
 
-  ConstantAggregateBuilderUtils(CIRGenModule &CGM) : CGM(CGM) {}
+  ConstantAggregateBuilderUtils(CIRGenModule &CGM)
+      : CGM(CGM), dataLayout{CGM.getModule()} {}
 
-  CharUnits getAlignment(const mlir::Attribute C) const {
-    llvm_unreachable("NYI");
-    // return CharUnits::fromQuantity(
-    //     CGM.getDataLayout().getABITypeAlignment(C->getType()));
+  CharUnits getAlignment(const mlir::TypedAttr C) const {
+    return CharUnits::fromQuantity(
+        dataLayout.getAlignment(C.getType(), /*useABI=*/true));
   }
 
   CharUnits getSize(mlir::Type Ty) const {
-    llvm_unreachable("NYI");
-    // return CharUnits::fromQuantity(CGM.getDataLayout().getTypeAllocSize(Ty));
+    return CharUnits::fromQuantity(dataLayout.getTypeAllocSize(Ty));
   }
 
-  CharUnits getSize(const mlir::Attribute C) const {
-    llvm_unreachable("NYI");
-    // return getSize(C.getType());
+  CharUnits getSize(const mlir::TypedAttr C) const {
+    return getSize(C.getType());
   }
 
   mlir::Attribute getPadding(CharUnits PadSize) const {
@@ -74,7 +74,7 @@ struct ConstantAggregateBuilderUtils {
   }
 };
 
-/// Incremental builder for an llvm::Constant* holding a struct or array
+/// Incremental builder for an mlir::TypedAttr holding a struct or array
 /// constant.
 class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
   /// The elements of the constant. These two arrays must have the same size;
@@ -141,8 +141,11 @@ static void replace(Container &C, size_t BeginOff, size_t EndOff, Range Vals) {
   llvm::replace(C, C.begin() + BeginOff, C.begin() + EndOff, Vals);
 }
 
-bool ConstantAggregateBuilder::add(mlir::Attribute C, CharUnits Offset,
+bool ConstantAggregateBuilder::add(mlir::Attribute A, CharUnits Offset,
                                    bool AllowOverwrite) {
+  // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
+  mlir::TypedAttr C = A.dyn_cast<mlir::TypedAttr>();
+  assert(C && "expected typed attribute");
   // Common case: appending to a layout.
   if (Offset >= Size) {
     CharUnits Align = getAlignment(C);
@@ -203,9 +206,11 @@ std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
       return LastAtOrBeforePosIndex;
 
     // We found an element starting before Pos. Check for overlap.
-    if (Offsets[LastAtOrBeforePosIndex] +
-            getSize(Elems[LastAtOrBeforePosIndex]) <=
-        Pos)
+    // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
+    mlir::TypedAttr C =
+        Elems[LastAtOrBeforePosIndex].dyn_cast<mlir::TypedAttr>();
+    assert(C && "expected typed attribute");
+    if (Offsets[LastAtOrBeforePosIndex] + getSize(C) <= Pos)
       return LastAtOrBeforePosIndex + 1;
 
     // Try to decompose it into smaller constants.
@@ -230,7 +235,53 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
   if (Elems.empty())
     return {};
 
-  llvm_unreachable("NYI");
+  // If we want an array type, see if all the elements are the same type and
+  // appropriately spaced.
+  if (auto aty = DesiredTy.dyn_cast<mlir::cir::ArrayType>()) {
+    llvm_unreachable("NYI");
+  }
+
+  // The size of the constant we plan to generate. This is usually just the size
+  // of the initialized type, but in AllowOversized mode (i.e. flexible array
+  // init), it can be larger.
+  CharUnits DesiredSize = Utils.getSize(DesiredTy);
+  if (Size > DesiredSize) {
+    assert(AllowOversized && "Elems are oversized");
+    DesiredSize = Size;
+  }
+
+  // The natural alignment of an unpacked CIR struct with the given elements.
+  CharUnits Align = CharUnits::One();
+  for (auto e : Elems) {
+    // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
+    auto C = e.dyn_cast<mlir::TypedAttr>();
+    assert(C && "expected typed attribute");
+    Align = std::max(Align, Utils.getAlignment(C));
+  }
+
+  // The natural size of an unpacked LLVM struct with the given elements.
+  CharUnits AlignedSize = Size.alignTo(Align);
+
+  bool Packed = false;
+  ArrayRef<mlir::Attribute> UnpackedElems = Elems;
+  llvm::SmallVector<mlir::Attribute, 32> UnpackedElemStorage;
+  if (DesiredSize < AlignedSize || DesiredSize.alignTo(Align) != DesiredSize) {
+    llvm_unreachable("NYI");
+  }
+
+  // If we don't have a natural layout, insert padding as necessary.
+  // As we go, double-check to see if we can actually just emit Elems
+  // as a non-packed struct and do so opportunistically if possible.
+  llvm::SmallVector<mlir::Attribute, 32> PackedElems;
+  if (!NaturalLayout) {
+    llvm_unreachable("NYI");
+  }
+
+  auto &builder = CGM.getBuilder();
+  return builder.getAnonConstStruct(
+      mlir::ArrayAttr::get(builder.getContext(),
+                           Packed ? PackedElems : UnpackedElems),
+      Packed, DesiredTy);
 }
 
 void ConstantAggregateBuilder::condense(CharUnits Offset,
@@ -251,8 +302,10 @@ void ConstantAggregateBuilder::condense(CharUnits Offset,
   if (Length == 0)
     return;
 
-  if (Length == 1 && Offsets[First] == Offset &&
-      getSize(Elems[First]) == Size) {
+  // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
+  mlir::TypedAttr C = Elems[First].dyn_cast<mlir::TypedAttr>();
+  assert(C && "expected typed attribute");
+  if (Length == 1 && Offsets[First] == Offset && getSize(C) == Size) {
     // Re-wrap single element structs if necessary. Otherwise, leave any single
     // element constant of the right size alone even if it has the wrong type.
     llvm_unreachable("NYI");
@@ -1032,7 +1085,7 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   // If there's no base at all, this is a null or absolute pointer,
   // possibly cast back to an integer type.
   if (!base) {
-    assert(0 && "NYI");
+    return tryEmitAbsolute(destTy);
   }
 
   // Otherwise, try to emit the base.
@@ -1062,8 +1115,14 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
 /// Try to emit an absolute l-value, such as a null pointer or an integer
 /// bitcast to pointer type.
 mlir::Attribute ConstantLValueEmitter::tryEmitAbsolute(mlir::Type destTy) {
-  assert(0 && "NYI");
-  return {};
+  // If we're producing a pointer, this is easy.
+  auto destPtrTy = destTy.dyn_cast<mlir::cir::PointerType>();
+  assert(destPtrTy && "expected !cir.ptr type");
+  if (Value.isNullPointer()) {
+    // FIXME: integer offsets from non-zero null pointers.
+    return CGM.getBuilder().getNullPtrAttr(destPtrTy);
+  }
+  llvm_unreachable("NYI");
 }
 
 ConstantLValue

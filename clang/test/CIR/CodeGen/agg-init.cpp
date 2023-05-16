@@ -43,3 +43,28 @@ void use() { yop{}; }
 // CHECK:   cir.store %4, %3 : i32, cir.ptr <i32>
 // CHECK:   cir.return
 // CHECK: }
+
+typedef unsigned long long Flags;
+
+typedef enum XType {
+    A = 0,
+    Y = 1000066001,
+    X = 1000070000
+} XType;
+
+typedef struct Yo {
+    XType type;
+    const void* __attribute__((__may_alias__)) next;
+    Flags createFlags;
+} Yo;
+
+void yo() {
+  Yo ext = {X};
+}
+
+// CHECK: cir.func @_Z2yov() {
+// CHECK:     %0 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext"] {alignment = 8 : i64}
+// CHECK:     %1 = cir.const(#cir.const_struct<{1000070000 : i32,#cir.null : !cir.ptr<i8>,0 : i64}> : !ty_22struct2EYo22) : !ty_22struct2EYo22
+// CHECK:     cir.store %1, %0 : !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>
+// CHECK:     cir.return
+// CHECK:   }
