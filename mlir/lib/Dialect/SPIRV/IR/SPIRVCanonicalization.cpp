@@ -395,7 +395,7 @@ private:
   bool isSameAttrList(spirv::StoreOp lhs, spirv::StoreOp rhs) const {
     return lhs->getDiscardableAttrDictionary() ==
                rhs->getDiscardableAttrDictionary() &&
-           lhs->hashProperties() == rhs->hashProperties();
+           lhs.getProperties() == rhs.getProperties();
   }
 
   // Returns a source value for the given block.
