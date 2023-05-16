@@ -1,19 +1,11 @@
-// UNSUPPORTED: target={{.*-windows-gnu}}
-
-// Make sure that ASan works with SEH in both Clang and MSVC. MSVC uses a
-// different EH personality depending on the -GS setting, so test both -GS+ and
-// -GS-.
+// RUN: %clang_cl_asan -Od %p/../dll_host.cpp -Fe%t
 //
-// RUN: cl -c %s -Fo%t.obj -DCOMPILE_SEH
-// RUN: %clangxx_asan -o %t.exe %s %t.obj
-// RUN: %run %t.exe
+// Check both -GS and -GS- builds:
+// RUN: %clang_cl_asan -GS  -LD -Od %s -Fe%t.dll
+// RUN: %run %t %t.dll
 //
-// RUN: cl -GS- -c %s -Fo%t.obj -DCOMPILE_SEH
-// RUN: %clangxx_asan -o %t.exe %s %t.obj
-// RUN: %run %t.exe
-//
-// RUN: %clang_cl_asan %s -DCOMPILE_SEH -Fe%t.exe
-// RUN: %run %t.exe
+// RUN: %clang_cl_asan -GS- -LD -Od %s -Fe%t.dll
+// RUN: %run %t %t.dll
 
 #include <windows.h>
 #include <assert.h>
@@ -25,7 +17,6 @@ extern "C" bool __asan_address_is_poisoned(void *p);
 
 void ThrowAndCatch();
 
-#if defined(COMPILE_SEH)
 __declspec(noinline)
 void Throw() {
   int local, zero = 0;
@@ -42,10 +33,9 @@ void ThrowAndCatch() {
     fprintf(stderr, "__except:  %p\n", &local);
   }
 }
-#endif
 
-#if defined(__clang__)
-int main() {
+extern "C" __declspec(dllexport)
+int test_function() {
   char x[32];
   fprintf(stderr, "Before: %p poisoned: %d\n", &x,
           __asan_address_is_poisoned(x + 32));
@@ -56,5 +46,5 @@ int main() {
   // FIXME: Invert this assertion once we fix
   // https://code.google.com/p/address-sanitizer/issues/detail?id=258
   assert(!__asan_address_is_poisoned(x + 32));
+  return 0;
 }
-#endif
