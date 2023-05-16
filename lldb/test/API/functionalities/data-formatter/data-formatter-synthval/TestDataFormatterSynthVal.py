@@ -96,7 +96,7 @@ class DataFormatterSynthValueTestCase(TestBase):
 
         # check that an aptly defined synthetic provider does not affect
         # one-lining
-        if self.isAArch64Windows():
+        if not self.isAArch64Windows():
             self.expect(
                 "expression struct Struct { myInt theInt{12}; }; Struct()",
                 substrs=['(theInt = 12)'])
