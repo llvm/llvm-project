@@ -4256,6 +4256,13 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
           NewOps[0] == NewOps[1])
         return NewOps[0];
 
+      // x - x -> 0. This is non-refining, because x is non-poison by assumption
+      // and this case never wraps, so nowrap flags can be ignored.
+      if (Opcode == Instruction::Sub && NewOps[0] == NewOps[1]) {
+        assert(NewOps[0] == RepOp && "Precondition for non-poison assumption");
+        return Constant::getNullValue(I->getType());
+      }
+
       // If we are substituting an absorber constant into a binop and extra
       // poison can't leak if we remove the select -- because both operands of
       // the binop are based on the same value -- then it may be safe to replace
