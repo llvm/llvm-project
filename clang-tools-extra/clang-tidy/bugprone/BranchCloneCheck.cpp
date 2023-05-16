@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BranchCloneCheck.h"
+#include "../utils/ASTUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CloneDetection.h"
@@ -15,26 +16,6 @@
 
 using namespace clang;
 using namespace clang::ast_matchers;
-
-/// Returns true when the statements are Type I clones of each other.
-static bool areStatementsIdentical(const Stmt *LHS, const Stmt *RHS,
-                                   const ASTContext &Context) {
-  if (isa<Expr>(LHS) && isa<Expr>(RHS)) {
-    // If we have errors in expressions, we will be unable
-    // to accurately profile and compute hashes for each
-    // of the left and right statements.
-    const auto *LHSExpr = llvm::cast<Expr>(LHS);
-    const auto *RHSExpr = llvm::cast<Expr>(RHS);
-    if (LHSExpr->containsErrors() && RHSExpr->containsErrors()) {
-      return false;
-    }
-  }
-
-  llvm::FoldingSetNodeID DataLHS, DataRHS;
-  LHS->Profile(DataLHS, Context, false);
-  RHS->Profile(DataRHS, Context, false);
-  return (DataLHS == DataRHS);
-}
 
 namespace {
 /// A branch in a switch may consist of several statements; while a branch in
@@ -55,8 +36,9 @@ static bool areSwitchBranchesIdentical(const SwitchBranch LHS,
     // NOTE: We strip goto labels and annotations in addition to stripping
     // the `case X:` or `default:` labels, but it is very unlikely that this
     // would cause false positives in real-world code.
-    if (!areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
-                                RHS[I]->stripLabelLikeStatements(), Context)) {
+    if (!tidy::utils::areStatementsIdentical(LHS[I]->stripLabelLikeStatements(),
+                                             RHS[I]->stripLabelLikeStatements(),
+                                             Context)) {
       return false;
     }
   }
@@ -89,8 +71,8 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (!isa<IfStmt>(Else)) {
       // Just a simple if with no `else if` branch.
-      if (areStatementsIdentical(Then->IgnoreContainers(),
-                                 Else->IgnoreContainers(), Context)) {
+      if (utils::areStatementsIdentical(Then->IgnoreContainers(),
+                                        Else->IgnoreContainers(), Context)) {
         diag(IS->getBeginLoc(), "if with identical then and else branches");
         diag(IS->getElseLoc(), "else branch starts here", DiagnosticIDs::Note);
       }
@@ -130,9 +112,9 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
       int NumCopies = 1;
 
       for (size_t J = I + 1; J < N; J++) {
-        if (KnownAsClone[J] ||
-            !areStatementsIdentical(Branches[I]->IgnoreContainers(),
-                                    Branches[J]->IgnoreContainers(), Context))
+        if (KnownAsClone[J] || !utils::areStatementsIdentical(
+                                   Branches[I]->IgnoreContainers(),
+                                   Branches[J]->IgnoreContainers(), Context))
           continue;
 
         NumCopies++;
@@ -160,7 +142,8 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (const auto *CO = Result.Nodes.getNodeAs<ConditionalOperator>("condOp")) {
     // We do not try to detect chains of ?: operators.
-    if (areStatementsIdentical(CO->getTrueExpr(), CO->getFalseExpr(), Context))
+    if (utils::areStatementsIdentical(CO->getTrueExpr(), CO->getFalseExpr(),
+                                      Context))
       diag(CO->getQuestionLoc(),
            "conditional operator with identical true and false expressions");
 
