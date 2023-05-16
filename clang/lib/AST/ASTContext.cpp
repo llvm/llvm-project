@@ -11927,7 +11927,9 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->isInAnotherModuleUnit())
+  auto *VM = VD->getOwningModule();
+  if (VM && VM->getTopLevelModule()->isModulePurview() &&
+      VM->getTopLevelModule() != getCurrentNamedModule())
     return false;
 
   // Variables that can be needed in other TUs are required.
