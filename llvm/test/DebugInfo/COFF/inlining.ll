@@ -160,7 +160,8 @@
 ; OBJ:     FunctionType: baz (0x1004)
 ; OBJ:     CodeOffset: ?baz@@YAXXZ+0x0
 ; OBJ:     Segment: 0x0
-; OBJ:     Flags [ (0x0)
+; OBJ:     Flags [ (0x80)
+; OBJ:       HasOptimizedDebugInfo (0x80)
 ; OBJ:     ]
 ; OBJ:     DisplayName: baz
 ; OBJ:     LinkageName: ?baz@@YAXXZ
