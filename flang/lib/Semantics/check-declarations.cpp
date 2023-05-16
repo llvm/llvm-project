@@ -261,19 +261,6 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckExplicitSave(symbol);
   }
   const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (symbol.attrs().test(Attr::CONTIGUOUS)) {
-    if ((!object && !symbol.has<UseDetails>()) ||
-        !((IsPointer(symbol) && symbol.Rank() > 0) || IsAssumedShape(symbol) ||
-            evaluate::IsAssumedRank(symbol))) {
-      if (symbol.owner().IsDerivedType()) { // C752
-        messages_.Say(
-            "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
-      } else { // C830
-        messages_.Say(
-            "CONTIGUOUS entity must be an array pointer, assumed-shape, or assumed-rank"_err_en_US);
-      }
-    }
-  }
   CheckGlobalName(symbol);
   if (isDone) {
     return; // following checks do not apply
@@ -847,6 +834,17 @@ void CheckHelper::CheckObjectEntity(
     SayWithDeclaration(symbol,
         "'%s' is a data object and may not be EXTERNAL"_err_en_US,
         symbol.name());
+  }
+  if (symbol.attrs().test(Attr::CONTIGUOUS)) {
+    if ((IsPointer(symbol) && symbol.Rank() > 0) || IsAssumedShape(symbol) ||
+        evaluate::IsAssumedRank(symbol)) {
+    } else if (symbol.owner().IsDerivedType()) { // C752
+      messages_.Say(
+          "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
+    } else { // C830
+      messages_.Say(
+          "CONTIGUOUS entity must be an array pointer, assumed-shape, or assumed-rank"_err_en_US);
+    }
   }
 }
 
