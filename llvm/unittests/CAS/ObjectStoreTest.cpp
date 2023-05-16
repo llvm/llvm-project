@@ -303,7 +303,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
     EXPECT_THAT_ERROR(CAS->createProxy({}, Blobs[I]).moveInto(Node),
                       Succeeded());
     {
-      std::lock_guard L(NodesMtx);
+      std::lock_guard<std::mutex> L(NodesMtx);
       CreatedNodes[I] = Node ? Node->getID() : CASID::getDenseMapTombstoneKey();
     }
   };
@@ -312,7 +312,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
     std::optional<CASID> ID;
     while (!ID) {
       // Busy wait.
-      std::lock_guard L(NodesMtx);
+      std::lock_guard<std::mutex> L(NodesMtx);
       ID = CreatedNodes[I];
     }
     if (ID == CASID::getDenseMapTombstoneKey())
