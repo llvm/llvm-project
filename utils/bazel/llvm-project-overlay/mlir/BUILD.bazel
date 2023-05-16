@@ -8573,7 +8573,6 @@ td_library(
     ]),
     includes = ["include"],
     deps = [
-        ":PDLDialectTdFiles",
         ":SCFTdFiles",
         ":TransformDialectTdFiles",
     ],
@@ -8951,7 +8950,6 @@ cc_library(
         ":LinalgTransformOpsIncGen",
         ":LinalgTransforms",
         ":LinalgUtils",
-        ":PDLDialect",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",

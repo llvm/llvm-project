@@ -75,11 +75,11 @@ func.func @hoist_vector_transfer_pairs(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -164,11 +164,11 @@ func.func @hoist_vector_transfer_pairs_disjoint(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -209,11 +209,11 @@ func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi3
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -298,11 +298,11 @@ func.func @hoist_vector_transfer_pairs_tensor(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> ()
+    : (!transform.any_op) -> ()
 }
 
 // -----
@@ -393,11 +393,11 @@ func.func @hoist_vector_transfer_pairs_disjoint_tensor(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> ()
+    : (!transform.any_op) -> ()
 }
 
 // -----
@@ -510,11 +510,11 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> ()
+    : (!transform.any_op) -> ()
 }
 
 // -----
@@ -557,11 +557,11 @@ func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> ()
+    : (!transform.any_op) -> ()
 }
 
 // -----
@@ -670,11 +670,11 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices_static_large_tensor(
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_tensor_subsets %0
-    : (!pdl.operation) -> ()
+    : (!transform.any_op) -> ()
 }
 
 // -----
@@ -716,9 +716,9 @@ func.func @hoist_vector_transfer_read() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
   transform.structured.hoist_redundant_vector_transfers %0
-    : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> !transform.any_op
 }

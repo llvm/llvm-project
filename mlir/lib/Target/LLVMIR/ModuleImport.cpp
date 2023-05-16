@@ -1163,9 +1163,19 @@ IntegerAttr ModuleImport::matchIntegerAttr(llvm::Value *value) {
   FailureOr<Value> converted = convertValue(value);
   bool success = succeeded(converted) &&
                  matchPattern(*converted, m_Constant(&integerAttr));
-  assert(success && "expected a constant value");
+  assert(success && "expected a constant integer value");
   (void)success;
   return integerAttr;
+}
+
+FloatAttr ModuleImport::matchFloatAttr(llvm::Value *value) {
+  FloatAttr floatAttr;
+  FailureOr<Value> converted = convertValue(value);
+  bool success =
+      succeeded(converted) && matchPattern(*converted, m_Constant(&floatAttr));
+  assert(success && "expected a constant float value");
+  (void)success;
+  return floatAttr;
 }
 
 DILocalVariableAttr ModuleImport::matchLocalVariableAttr(llvm::Value *value) {

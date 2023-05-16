@@ -26,7 +26,7 @@ func.func @map_no_inputs(%input: tensor<16x32x64xf32>,
   func.return %reduce : tensor<16x64xf32>
 }
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = transform.structured.generalize %0
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.generalize %0 : (!transform.any_op) -> !transform.any_op
 }

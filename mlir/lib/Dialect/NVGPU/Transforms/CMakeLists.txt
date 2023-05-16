@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRNVGPUTransforms
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRMemRefDialect
   MLIRNVGPUDialect

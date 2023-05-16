@@ -12,15 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/ScopedNoAliasAA.h"
-#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Transforms/Scalar/GVN.h"
-#include "llvm/Transforms/Scalar/Scalarizer.h"
-#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 
 using namespace llvm;
 

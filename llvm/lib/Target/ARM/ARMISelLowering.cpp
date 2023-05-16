@@ -20010,7 +20010,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       return;
 
     KnownBits KnownRHS = DAG.computeKnownBits(Op.getOperand(1), Depth+1);
-    Known = KnownBits::commonBits(Known, KnownRHS);
+    Known = Known.intersectWith(KnownRHS);
     return;
   }
   case ISD::INTRINSIC_W_CHAIN: {
@@ -20092,7 +20092,7 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       KnownOp1 = KnownBits::mul(
           KnownOp1, KnownBits::makeConstant(APInt(32, -1)));
 
-    Known = KnownBits::commonBits(KnownOp0, KnownOp1);
+    Known = KnownOp0.intersectWith(KnownOp1);
     break;
   }
   }
