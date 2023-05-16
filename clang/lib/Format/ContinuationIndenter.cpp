@@ -748,7 +748,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
       !(Current.MacroParent && Previous.MacroParent) &&
-      (Current.isNot(TT_LineComment) || Previous.is(BK_BracedInit))) {
+      (Current.isNot(TT_LineComment) ||
+       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }

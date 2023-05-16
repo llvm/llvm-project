@@ -156,6 +156,9 @@ namespace format {
   /* list of port connections or parameters in a module instantiation */       \
   TYPE(VerilogInstancePortComma)                                               \
   TYPE(VerilogInstancePortLParen)                                              \
+  /* A parenthesized list within which line breaks are inserted by the         \
+   * formatter, for example the list of ports in a module header. */           \
+  TYPE(VerilogMultiLineListLParen)                                             \
   /* for the base in a number literal, not including the quote */              \
   TYPE(VerilogNumberBase)                                                      \
   /* like `(strong1, pull0)` */                                                \
