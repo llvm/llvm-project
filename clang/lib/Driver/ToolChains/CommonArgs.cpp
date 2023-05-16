@@ -749,6 +749,26 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-data-sections=0"));
 
+  if (Args.hasArg(options::OPT_mxcoff_roptr) ||
+      Args.hasArg(options::OPT_mno_xcoff_roptr)) {
+    bool HasRoptr = Args.hasFlag(options::OPT_mxcoff_roptr,
+                                 options::OPT_mno_xcoff_roptr, false);
+    StringRef OptStr = HasRoptr ? "-mxcoff-roptr" : "-mno-xcoff-roptr";
+
+    if (!IsOSAIX)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << OptStr << ToolChain.getTriple().str();
+
+    if (HasRoptr) {
+      if (!Args.hasFlag(options::OPT_fdata_sections,
+                        options::OPT_fno_data_sections, UseSeparateSections))
+        D.Diag(diag::err_roptr_requires_data_sections);
+
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-mxcoff-roptr"));
+    }
+  }
+
   // Pass an option to enable split machine functions.
   if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
                                 options::OPT_fno_split_machine_functions)) {
