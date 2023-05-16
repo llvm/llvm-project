@@ -1392,6 +1392,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   SValBuilder &SVB = C.getSValBuilder();
   BasicValueFactory &BVF = SVB.getBasicValueFactory();
   const ASTContext &ACtx = BVF.getContext();
+  Preprocessor &PP = C.getPreprocessor();
 
   // Helper class to lookup a type by its name.
   class LookupType {
@@ -1527,14 +1528,11 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   const RangeInt UCharRangeMax =
       std::min(BVF.getMaxValue(ACtx.UnsignedCharTy).getLimitedValue(), IntMax);
 
-  // The platform dependent value of EOF.
-  // Try our best to parse this from the Preprocessor, otherwise fallback to -1.
-  const auto EOFv = [&C]() -> RangeInt {
-    if (const std::optional<int> OptInt =
-            tryExpandAsInteger("EOF", C.getPreprocessor()))
-      return *OptInt;
-    return -1;
-  }();
+  // Get platform dependent values of some macros.
+  // Try our best to parse this from the Preprocessor, otherwise fallback to a
+  // default value (what is found in a library header).
+  const auto EOFv = tryExpandAsInteger("EOF", PP).value_or(-1);
+  const auto AT_FDCWDv = tryExpandAsInteger("AT_FDCWD", PP).value_or(-100);
 
   // Auxiliary class to aid adding summaries to the summary map.
   struct AddToFunctionSummaryMap {
@@ -1979,6 +1977,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, IntMax))};
     const auto &ReturnsValidFileDescriptor = ReturnsNonnegative;
 
+    auto ValidFileDescriptorOrAtFdcwd = [&](ArgNo ArgN) {
+      return std::make_shared<RangeConstraint>(
+          ArgN, WithinRange, Range({AT_FDCWDv, AT_FDCWDv}, {0, IntMax}),
+          "a valid file descriptor or AT_FDCWD");
+    };
+
     // FILE *fopen(const char *restrict pathname, const char *restrict mode);
     addToFunctionSummaryMap(
         "fopen",
@@ -2130,6 +2134,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int dup(int fildes);
@@ -2207,7 +2212,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0)))
-            .ArgConstraint(ArgumentCondition(1, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
     // int lockf(int fd, int cmd, off_t len);
@@ -2318,6 +2323,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> Dev_tTy = lookupTy("dev_t");
@@ -2339,6 +2345,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int chmod(const char *path, mode_t mode);
@@ -2357,7 +2364,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int fchmod(int fildes, mode_t mode);
@@ -2381,7 +2388,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     // int chown(const char *path, uid_t owner, gid_t group);
@@ -2446,9 +2453,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
-            .ArgConstraint(ArgumentCondition(2, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(2)))
             .ArgConstraint(NotNull(ArgNo(3))));
 
     // int unlink(const char *pathname);
@@ -2466,7 +2473,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1))));
 
     std::optional<QualType> StructStatTy = lookupTy("stat");
@@ -2515,7 +2522,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2))));
 
@@ -2690,7 +2697,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                    ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
                   ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
-            .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
             .ArgConstraint(NotNull(ArgNo(2)))
             .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(2),
@@ -2707,7 +2714,9 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Summary(NoEvalCall)
             .Case(ReturnsZero, ErrnoMustNotBeChecked)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant)
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(0)))
             .ArgConstraint(NotNull(ArgNo(1)))
+            .ArgConstraint(ValidFileDescriptorOrAtFdcwd(ArgNo(2)))
             .ArgConstraint(NotNull(ArgNo(3))));
 
     // char *realpath(const char *restrict file_name,

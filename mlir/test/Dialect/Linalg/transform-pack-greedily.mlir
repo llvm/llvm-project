@@ -21,9 +21,9 @@ func.func @matmul_mk_kn_mn(%A : !A_mk, %B : !B_kn, %C : !C_mn) -> !C_mn {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %module_op 
-    : (!pdl.operation) -> !transform.op<"linalg.matmul">
+    : (!transform.any_op) -> !transform.op<"linalg.matmul">
   transform.structured.pack_greedily %matmul 
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.matmul">) -> !transform.op<"linalg.generic">
@@ -67,8 +67,8 @@ func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
@@ -112,8 +112,8 @@ func.func @matmul_mk_nk_nm_transposed(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
@@ -157,8 +157,8 @@ func.func @contraction_bmkm2_nkb_nbm(%A : !A_bmkm2, %B : !B_nkb, %C : !C_nbm) ->
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
@@ -191,9 +191,9 @@ func.func @conv_2d_nchw_fchw(%arg0: tensor<?x47x16x16xf32>, %arg2: tensor<?x16x1
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
+^bb1(%module_op: !transform.any_op):
   %conv = transform.structured.match ops{["linalg.conv_2d_nchw_fchw"]} in %module_op 
-    : (!pdl.operation) -> !transform.op<"linalg.conv_2d_nchw_fchw">
+    : (!transform.any_op) -> !transform.op<"linalg.conv_2d_nchw_fchw">
   transform.structured.pack_greedily %conv
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.conv_2d_nchw_fchw">) -> !transform.op<"linalg.generic">
@@ -220,8 +220,8 @@ func.func @reduce_and_map(%arg0: tensor<10x100xf32>,
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
       matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
@@ -265,8 +265,8 @@ func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
       // In this spec, the "k" dimension is not packed but rather padded to the
       // next multiple of 10 (i.e. 130).
@@ -315,8 +315,8 @@ func.func @matmul_mk_nk_nm(%A : !A_mk, %B : !B_nk, %C : !C_nm) -> !C_nm {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%module_op: !pdl.operation):
-  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!pdl.operation) -> !transform.op<"linalg.generic">
+^bb1(%module_op: !transform.any_op):
+  %generic = transform.structured.match ops{["linalg.generic"]} in %module_op : (!transform.any_op) -> !transform.op<"linalg.generic">
   transform.structured.pack_greedily %generic
       // In this spec, the "n" dimension is neither packed not unpacked.
       // We don't end up with an innermost matmul after packing but only with an

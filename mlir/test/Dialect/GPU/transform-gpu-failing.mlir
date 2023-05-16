@@ -133,10 +133,11 @@ func.func @map_nested_forall_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: te
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg0: !transform.any_op):
+  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
   %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
-  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!pdl.operation) -> !pdl.operation
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !pdl.operation
   // expected-error @below {{only bufferized scf.forall can be mapped}}
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1]
 }
@@ -298,8 +299,9 @@ func.func @tiling_buffer_semantic_op(%x: memref<32x32xf32>, %y: memref<32x32xf32
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
-  %matmul = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!pdl.operation) -> !pdl.operation
+^bb1(%arg0: !transform.any_op):
+  %matmul = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{transform.structured.tile_to_forall_op failed to apply}}
   %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 }

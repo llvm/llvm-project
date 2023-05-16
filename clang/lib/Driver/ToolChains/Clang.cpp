@@ -4144,9 +4144,9 @@ static void renderDwarfFormat(const Driver &D, const llvm::Triple &T,
     else if (!T.isArch64Bit())
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << DwarfFormatArg->getAsString(Args) << "64 bit architecture";
-    else if (!T.isOSBinFormatELF())
+    else if (!(T.isOSBinFormatELF() || T.isOSBinFormatXCOFF()))
       D.Diag(diag::err_drv_argument_only_allowed_with)
-          << DwarfFormatArg->getAsString(Args) << "ELF platforms";
+          << DwarfFormatArg->getAsString(Args) << "ELF/XCOFF platforms";
   }
 
   DwarfFormatArg->render(Args, CmdArgs);
@@ -7945,6 +7945,14 @@ void ClangAs::AddX86TargetArgs(const ArgList &Args,
   }
 }
 
+void ClangAs::AddLoongArchTargetArgs(const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  CmdArgs.push_back("-target-abi");
+  CmdArgs.push_back(loongarch::getLoongArchABI(getToolChain().getDriver(), Args,
+                                               getToolChain().getTriple())
+                        .data());
+}
+
 void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
   const llvm::Triple &Triple = getToolChain().getTriple();
@@ -8141,6 +8149,11 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-aarch64-mark-bti-property");
     }
+    break;
+
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    AddLoongArchTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::riscv32:

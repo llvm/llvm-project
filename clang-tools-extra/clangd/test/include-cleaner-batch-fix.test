@@ -44,7 +44,7 @@
 # CHECK-NEXT:             "line": 2
 # CHECK-NEXT:           }
 # CHECK-NEXT:         },
-# CHECK-NEXT:         "severity": 2,
+# CHECK-NEXT:         "severity": 3,
 # CHECK-NEXT:         "source": "clangd"
 # CHECK-NEXT:       },
 # CHECK-NEXT:       {
@@ -60,7 +60,7 @@
 # CHECK-NEXT:             "line": 2
 # CHECK-NEXT:           }
 # CHECK-NEXT:         },
-# CHECK-NEXT:         "severity": 2,
+# CHECK-NEXT:         "severity": 3,
 # CHECK-NEXT:         "source": "clangd"
 # CHECK-NEXT:       },
 # CHECK-NEXT:       {
@@ -112,7 +112,7 @@
 # CHECK-NEXT:     "version": 0
 # CHECK-NEXT:   }
 ---
-{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///simple.cpp"},"range":{"start":{"line":2,"character":1},"end":{"line":2,"character":4}},"context":{"diagnostics":[{"range":{"start": {"line": 2, "character": 1}, "end": {"line": 2, "character": 4}},"severity":2,"message":"No header providing \"Foo\" is directly included (fixes available)", "code": "missing-includes", "source": "clangd"}]}}}
+{"jsonrpc":"2.0","id":2,"method":"textDocument/codeAction","params":{"textDocument":{"uri":"test:///simple.cpp"},"range":{"start":{"line":2,"character":1},"end":{"line":2,"character":4}},"context":{"diagnostics":[{"range":{"start": {"line": 2, "character": 1}, "end": {"line": 2, "character": 4}},"severity":3,"message":"No header providing \"Foo\" is directly included (fixes available)", "code": "missing-includes", "source": "clangd"}]}}}
 #      CHECK:  "id": 2,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [

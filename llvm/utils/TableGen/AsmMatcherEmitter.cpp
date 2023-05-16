@@ -630,6 +630,17 @@ struct MatchableInfo {
         return false;
     }
 
+    // For X86 AVX/AVX512 instructions, we prefer vex encoding because the
+    // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
+    // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
+    // We use the ID to sort AVX instruction before AVX512 instruction in
+    // matching table.
+    if (TheDef->isSubClassOf("Instruction") &&
+        TheDef->getValueAsBit("HasPositionOrder") &&
+        RHS.TheDef->isSubClassOf("Instruction") &&
+        RHS.TheDef->getValueAsBit("HasPositionOrder"))
+      return TheDef->getID() < RHS.TheDef->getID();
+
     // Give matches that require more features higher precedence. This is useful
     // because we cannot define AssemblerPredicates with the negation of
     // processor features. For example, ARM v6 "nop" may be either a HINT or
@@ -638,15 +649,6 @@ struct MatchableInfo {
     // requires V6 while MOV does not.
     if (RequiredFeatures.size() != RHS.RequiredFeatures.size())
       return RequiredFeatures.size() > RHS.RequiredFeatures.size();
-
-    // For X86 AVX/AVX512 instructions, we prefer vex encoding because the
-    // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
-    // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
-    // We use the ID to sort AVX instruction before AVX512 instruction in
-    // matching table.
-    if (TheDef->isSubClassOf("Instruction") &&
-        TheDef->getValueAsBit("HasPositionOrder"))
-      return TheDef->getID() < RHS.TheDef->getID();
 
     return false;
   }

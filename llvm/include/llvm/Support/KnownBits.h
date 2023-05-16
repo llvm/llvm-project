@@ -293,9 +293,30 @@ public:
     return KnownBits(~C, C);
   }
 
+  /// Returns KnownBits information that is known to be true for both this and
+  /// RHS.
+  ///
+  /// When an operation is known to return one of its operands, this can be used
+  /// to combine information about the known bits of the operands to get the
+  /// information that must be true about the result.
+  KnownBits intersectWith(const KnownBits &RHS) const {
+    return KnownBits(Zero & RHS.Zero, One & RHS.One);
+  }
+
+  /// Returns KnownBits information that is known to be true for either this or
+  /// RHS or both.
+  ///
+  /// This can be used to combine different sources of information about the
+  /// known bits of a single value, e.g. information about the low bits and the
+  /// high bits of the result of a multiplication.
+  KnownBits unionWith(const KnownBits &RHS) const {
+    return KnownBits(Zero | RHS.Zero, One | RHS.One);
+  }
+
   /// Compute known bits common to LHS and RHS.
+  LLVM_DEPRECATED("use intersectWith instead", "intersectWith")
   static KnownBits commonBits(const KnownBits &LHS, const KnownBits &RHS) {
-    return KnownBits(LHS.Zero & RHS.Zero, LHS.One & RHS.One);
+    return LHS.intersectWith(RHS);
   }
 
   /// Return true if LHS and RHS have no common bits set.

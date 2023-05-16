@@ -1478,7 +1478,7 @@ multiclass VPatFPMulAddVL_VV_VF<SDPatternOperator vop, string instruction_name> 
                              VLOpFrag)),
             (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
                  vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
 
   def : Pat<(vti.Vector (vop (SplatFPOp vti.ScalarRegClass:$rs1),
                              vti.RegClass:$rd, vti.RegClass:$rs2,
@@ -1486,7 +1486,7 @@ multiclass VPatFPMulAddVL_VV_VF<SDPatternOperator vop, string instruction_name> 
                              VLOpFrag)),
             (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
                  vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -1530,18 +1530,18 @@ multiclass VPatWidenFPMulAccVL_VV_VF<SDNode vop, string instruction_name> {
     defvar wti = vtiToWti.Wti;
     def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
                    (vti.Vector vti.RegClass:$rs2),
-                   (wti.Vector wti.RegClass:$rd), (vti.Mask true_mask),
+                   (wti.Vector wti.RegClass:$rd), (vti.Mask V0),
                    VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX #"_MASK")
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
     def : Pat<(vop (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
                    (vti.Vector vti.RegClass:$rs2),
-                   (wti.Vector wti.RegClass:$rd), (vti.Mask true_mask),
+                   (wti.Vector wti.RegClass:$rd), (vti.Mask V0),
                    VLOpFrag),
-              (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+              (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX #"_MASK")
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                 GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TA_MA)>;
   }
 }
 

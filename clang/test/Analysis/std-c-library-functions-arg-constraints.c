@@ -3,6 +3,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -13,6 +14,7 @@
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctionArgs \
+// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:   -analyzer-checker=debug.StdCLibraryFunctionsTester \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
@@ -308,4 +310,27 @@ void test_min_buf_size(void) {
   // report-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10}} \
   // bugpath-warning{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10}} \
   // bugpath-note{{The 1st argument to '__buf_size_arg_constraint_concrete' is out of the accepted range; It should be a buffer with size equal to or greater than 10}}
+}
+
+void test_file_fd_at_functions() {
+  (void)linkat(-22, "from", AT_FDCWD, "to", 0); // \
+  // report-warning{{The 1st argument to 'linkat' is -22 but should be a valid file descriptor or AT_FDCWD}} \
+  // bugpath-warning{{The 1st argument to 'linkat' is -22 but should be a valid file descriptor or AT_FDCWD}} \
+  // bugpath-note{{The 1st argument to 'linkat' is -22 but should be a valid file descriptor or AT_FDCWD}}
+
+  // no warning for these functions if the AT_FDCWD value is used
+  (void)linkat(AT_FDCWD, "from", AT_FDCWD, "to", 0);
+  (void)faccessat(AT_FDCWD, "path", 0, 0);
+  (void)symlinkat("oldpath", AT_FDCWD, "newpath");
+  (void)mkdirat(AT_FDCWD, "path", 0);
+  (void)mknodat(AT_FDCWD, "path", 0, 0);
+  (void)fchmodat(AT_FDCWD, "path", 0, 0);
+  (void)fchownat(AT_FDCWD, "path", 0, 0, 0);
+  (void)linkat(AT_FDCWD, "oldpath", AT_FDCWD, "newpath", 0);
+  (void)unlinkat(AT_FDCWD, "newpath", 0);
+  struct stat St;
+  (void)fstatat(AT_FDCWD, "newpath", &St, 0);
+  char Buf[10];
+  (void)readlinkat(AT_FDCWD, "newpath", Buf, 10);
+  (void)renameat(AT_FDCWD, "oldpath", AT_FDCWD, "newpath");
 }

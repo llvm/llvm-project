@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
+^bb1(%arg0: !transform.any_op):
   // CHECK %{{.*}}, %{{.*}}:2 = transform.structured.tile
-  %0, %1:2 = transform.structured.tile %arg0 [2, 0, 3] : (!pdl.operation) -> (!pdl.operation, !pdl.operation, !pdl.operation)
+  %0, %1:2 = transform.structured.tile %arg0 [2, 0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 transform.sequence failures(propagate) {
@@ -19,19 +19,19 @@ transform.sequence failures(propagate) {
 //===----------------------------------------------------------------------===//
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
+^bb1(%arg0: !transform.any_op):
   // CHECK: transform.structured.pad
-  %0 = transform.structured.pad %arg0
+  %0 = transform.structured.pad %arg0 : (!transform.any_op) -> !transform.any_op
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
+^bb1(%arg0: !transform.any_op):
   // CHECK: transform.structured.interchange
-  %0 = transform.structured.interchange %arg0
+  %0 = transform.structured.interchange %arg0 : (!transform.any_op) -> !transform.any_op
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg0: !pdl.operation):
+^bb1(%arg0: !transform.any_op):
   // CHECK: transform.structured.scalarize
-  %0 = transform.structured.scalarize %arg0
+  %0 = transform.structured.scalarize %arg0 : (!transform.any_op) -> !transform.any_op
 }

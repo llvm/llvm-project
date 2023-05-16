@@ -7279,7 +7279,7 @@ static void computeKnownBitsBinOp(const SDValue Op, KnownBits &Known,
       DAG.computeKnownBits(Op.getOperand(OpNo), Src0DemE, Depth + 1);
   KnownBits RHSKnown =
       DAG.computeKnownBits(Op.getOperand(OpNo + 1), Src1DemE, Depth + 1);
-  Known = KnownBits::commonBits(LHSKnown, RHSKnown);
+  Known = LHSKnown.intersectWith(RHSKnown);
 }
 
 void

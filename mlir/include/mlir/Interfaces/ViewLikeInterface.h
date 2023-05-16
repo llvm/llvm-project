@@ -42,35 +42,49 @@ namespace mlir {
 /// Printer hook for custom directive in assemblyFormat.
 ///
 ///   custom<DynamicIndexList>($values, $integers)
+///   custom<DynamicIndexList>($values, $integers, type($values))
 ///
-/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
+/// where `values` is of ODS type `Variadic<*>` and `integers` is of ODS
 /// type `I64ArrayAttr`. Prints a list with either (1) the static integer value
-/// in `integers` is `dynVal` or (2) the next value otherwise. This allows
-/// idiomatic printing of mixed value and integer attributes in a list. E.g.
-/// `[%arg0, 7, 42, %arg42]`.
+/// in `integers` is `kDynamic` or (2) the next value otherwise. If `valueTypes`
+/// is non-empty, it is expected to contain as many elements as `values`
+/// indicating their types. This allows idiomatic printing of mixed value and
+/// integer attributes in a list. E.g.
+/// `[%arg0 : index, 7, 42, %arg42 : i32]`.
 void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
-    ArrayRef<int64_t> integers,
+    ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 
-/// Pasrer hook for custom directive in assemblyFormat.
+/// Parser hook for custom directive in assemblyFormat.
 ///
 ///   custom<DynamicIndexList>($values, $integers)
+///   custom<DynamicIndexList>($values, $integers, type($values))
 ///
-/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
+/// where `values` is of ODS type `Variadic<*>` and `integers` is of ODS
 /// type `I64ArrayAttr`. Parse a mixed list with either (1) static integer
 /// values or (2) SSA values. Fill `integers` with the integer ArrayAttr, where
-/// `dynVal` encodes the position of SSA values. Add the parsed SSA values
-/// to `values` in-order.
-//
-/// E.g. after parsing "[%arg0, 7, 42, %arg42]":
-///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
+/// `kDynamic` encodes the position of SSA values. Add the parsed SSA values
+/// to `values` in-order. If `valueTypes` is non-null, fill it with types
+/// corresponding to values; otherwise the caller must handle the types.
+///
+/// E.g. after parsing "[%arg0 : index, 7, 42, %arg42 : i32]":
+///   1. `result` is filled with the i64 ArrayAttr "[`kDynamic`, 7, 42,
+///   `kDynamic`]"
 ///   2. `ssa` is filled with "[%arg0, %arg1]".
 ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
+inline ParseResult parseDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+  return parseDynamicIndexList(parser, values, integers, &valueTypes,
+                               delimiter);
+}
 
 /// Verify that a the `values` has as many elements as the number of entries in
 /// `attr` for which `isDynamic` evaluates to true.

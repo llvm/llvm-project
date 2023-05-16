@@ -372,6 +372,7 @@ public:
                             bool IsIntr = false);
   void SelectDestructiveMultiIntrinsic(SDNode *N, unsigned NumVecs,
                                        bool IsZmMulti, unsigned Opcode);
+  void SelectPExtPair(SDNode *N, unsigned Opc);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
@@ -1650,6 +1651,28 @@ static unsigned SelectOpcodeFromVT(EVT VT, ArrayRef<unsigned> Opcodes) {
   }
 
   return (Opcodes.size() <= Offset) ? 0 : Opcodes[Offset];
+}
+
+// This function is almost identical to SelectWhilePair, but has an
+// extra check on the range of the immediate operand.
+// TODO: Merge these two functions together at some point?
+void AArch64DAGToDAGISel::SelectPExtPair(SDNode *N, unsigned Opc) {
+  // Immediate can be either 0 or 1.
+  if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(N->getOperand(2)))
+    if (Imm->getZExtValue() > 1)
+      return;
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Ops[] = {N->getOperand(1), N->getOperand(2)};
+  SDNode *WhilePair = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(WhilePair, 0);
+
+  for (unsigned I = 0; I < 2; ++I)
+    ReplaceUses(SDValue(N, I), CurDAG->getTargetExtractSubreg(
+                                   AArch64::psub0 + I, DL, VT, SuperReg));
+
+  CurDAG->RemoveDeadNode(N);
 }
 
 void AArch64DAGToDAGISel::SelectWhilePair(SDNode *N, unsigned Opc) {
@@ -5359,6 +5382,14 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::UUNPK_VG4_4Z2Z_D}))
         SelectUnaryMultiIntrinsic(Node, 4, /*IsTupleInput=*/true, Op);
       return;
+    case Intrinsic::aarch64_sve_pext_x2: {
+      if (auto Op = SelectOpcodeFromVT<SelectTypeKind::AnyType>(
+              Node->getValueType(0),
+              {AArch64::PEXT_2PCI_B, AArch64::PEXT_2PCI_H, AArch64::PEXT_2PCI_S,
+               AArch64::PEXT_2PCI_D}))
+        SelectPExtPair(Node, Op);
+      return;
+    }
     }
     break;
   }

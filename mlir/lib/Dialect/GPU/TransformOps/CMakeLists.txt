@@ -17,5 +17,5 @@ add_mlir_dialect_library(MLIRGPUTransformOps
   MLIRPDLDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect
-  MLIRGPUOps
+  MLIRGPUDialect
   )  
