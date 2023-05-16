@@ -359,8 +359,7 @@ public:
   /// \returns Whether the tracked divergence state of \p DivVal changed.
   bool markDivergent(const InstructionT &I);
   bool markDivergent(ConstValueRefT DivVal);
-  bool markDefsDivergent(const InstructionT &Instr,
-                         bool AllDefsDivergent = true);
+  bool markDefsDivergent(const InstructionT &Instr);
 
   /// \brief Propagate divergence to all instructions in the region.
   /// Divergence is seeded by calls to \p markDivergent.

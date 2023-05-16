@@ -2030,6 +2030,46 @@ let HasMasked = false,
 let HasMasked = false, HasVL = false, IRName = "" in {
   let Name = "vreinterpret_v", MaskedPolicyScheme = NonePolicy,
       ManualCodegen = [{
+        if (ResultType->isIntOrIntVectorTy(1) ||
+            Ops[0]->getType()->isIntOrIntVectorTy(1)) {
+          assert(isa<ScalableVectorType>(ResultType) &&
+                 isa<ScalableVectorType>(Ops[0]->getType()));
+
+          LLVMContext &Context = CGM.getLLVMContext();
+          ScalableVectorType *Boolean64Ty =
+              ScalableVectorType::get(llvm::Type::getInt1Ty(Context), 64);
+
+          if (ResultType->isIntOrIntVectorTy(1)) {
+            // Casting from m1 vector integer -> vector boolean
+            // Ex: <vscale x 8 x i8>
+            //     --(bitcast)--------> <vscale x 64 x i1>
+            //     --(vector_extract)-> <vscale x  8 x i1>
+            llvm::Value *BitCast = Builder.CreateBitCast(Ops[0], Boolean64Ty);
+
+            ID = Intrinsic::vector_extract;
+            llvm::Value *Operands[2];
+            Operands[0] = BitCast;
+            Operands[1] = ConstantInt::get(Int64Ty, 0);
+            IntrinsicTypes = {ResultType, Boolean64Ty};
+
+            return Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Operands, "");
+          } else {
+            // Casting from vector boolean -> m1 vector integer
+            // Ex: <vscale x  1 x i1>
+            //       --(vector_insert)-> <vscale x 64 x i1>
+            //       --(bitcast)-------> <vscale x  8 x i8>
+            ID = Intrinsic::vector_insert;
+            llvm::Value *Operands[3];
+            Operands[0] = llvm::PoisonValue::get(Boolean64Ty);
+            Operands[1] = Ops[0];
+            Operands[2] = ConstantInt::get(Int64Ty, 0);
+            IntrinsicTypes = {Boolean64Ty, Ops[0]->getType()};
+            llvm::Value *Boolean64Val =
+              Builder.CreateCall(CGM.getIntrinsic(ID, IntrinsicTypes), Operands, "");
+
+            return Builder.CreateBitCast(Boolean64Val, ResultType);
+          }
+        }
         return Builder.CreateBitCast(Ops[0], ResultType);
       }] in {
     // Reinterpret between different type under the same SEW and LMUL
@@ -2047,6 +2087,53 @@ let HasMasked = false, HasVL = false, IRName = "" in {
                                                  dst_sew # "vv", "csil", dst_sew # "v">;
       def vreinterpret_u_ # dst_sew : RVVBuiltin<"Uv" # dst_sew # "Uv",
                                                  dst_sew # "UvUv", "csil", dst_sew # "Uv">;
+    }
+
+    // Existing users of FixedSEW - the reinterpretation between different SEW
+    // and same LMUL has the implicit assumption that if FixedSEW is set to the
+    // given element width, then the type will be identified as invalid, thus
+    // skipping definition of reinterpret of SEW=8 to SEW=8. However this blocks
+    // our usage here of defining all possible combinations of a fixed SEW to
+    // any boolean. So we need to separately define SEW=8 here.
+    // Reinterpret from LMUL=1 integer type to vector boolean type
+    def vreintrepret_m1_b8_signed :
+        RVVBuiltin<"Svm",
+                    "mSv",
+                    "c", "m">;
+    def vreintrepret_m1_b8_usigned :
+        RVVBuiltin<"USvm",
+                    "mUSv",
+                    "c", "m">;
+
+    // Reinterpret from vector boolean type to LMUL=1 integer type
+    def vreintrepret_b8_m1_signed :
+        RVVBuiltin<"mSv",
+                    "Svm",
+                    "c", "Sv">;
+    def vreintrepret_b8_m1_usigned :
+        RVVBuiltin<"mUSv",
+                    "USvm",
+                    "c", "USv">;
+
+    foreach dst_sew = ["16", "32", "64"] in {
+      // Reinterpret from LMUL=1 integer type to vector boolean type
+      def vreinterpret_m1_b # dst_sew # _signed:
+        RVVBuiltin<"(FixedSEW:" # dst_sew # ")Svm",
+                    "m(FixedSEW:" # dst_sew # ")Sv",
+                    "c", "m">;
+      def vreinterpret_m1_b # dst_sew # _unsigned:
+        RVVBuiltin<"(FixedSEW:" # dst_sew # ")USvm",
+                    "m(FixedSEW:" # dst_sew # ")USv",
+                    "c", "m">;
+      // Reinterpret from vector boolean type to LMUL=1 integer type
+      def vreinterpret_b # dst_sew # _m1_signed:
+        RVVBuiltin<"m(FixedSEW:" # dst_sew # ")Sv",
+                    "(FixedSEW:" # dst_sew # ")Svm",
+                    "c", "(FixedSEW:" # dst_sew # ")Sv">;
+      def vreinterpret_b # dst_sew # _m1_unsigned:
+        RVVBuiltin<"m(FixedSEW:" # dst_sew # ")USv",
+                    "(FixedSEW:" # dst_sew # ")USvm",
+                    "c", "(FixedSEW:" # dst_sew # ")USv">;
     }
   }
 

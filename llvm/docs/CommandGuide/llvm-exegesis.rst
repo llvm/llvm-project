@@ -34,8 +34,10 @@ SUPPORTED PLATFORMS
 -------------------
 
 :program:`llvm-exegesis` currently only supports X86 (64-bit only), ARM (AArch64
-only), MIPS, and PowerPC (PowerPC64LE only) on Linux. Not all functionality is
-guaranteed to work on every platform.
+only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
+benchmarking functionality is guaranteed to work on every platform.
+:program:`llvm-exegesis` also has a separate analysis mode that is supported
+on every platform on which LLVM is.
 
 SNIPPET ANNOTATIONS
 -------------------

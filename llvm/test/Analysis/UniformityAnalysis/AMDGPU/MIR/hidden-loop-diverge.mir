@@ -49,7 +49,7 @@ body:             |
 
         %4:_(s32) = G_PHI %1(s32), %bb.0, %7(s32), %bb.2
         %5:_(s1) = G_ICMP intpred(slt), %1(s32), %2(s32)
-        G_BRCOND %5(s1), %bb.3
+        G_BRCOND %5(s1), %bb.3                            ; Divergent exit
         G_BR %bb.2
     bb.2:
         successors: %bb.4, %bb.1
@@ -57,7 +57,7 @@ body:             |
         %6:_(s32) = G_CONSTANT i32 1
         %7:_(s32) = G_ADD %6(s32), %4(s32)
         %8:_(s1) = G_ICMP intpred(sgt), %2(s32), %1(s32)
-        G_BRCOND %8(s1), %bb.4
+        G_BRCOND %8(s1), %bb.4                            ; Divergent exit
         G_BR %bb.1
     bb.3:
         successors: %bb.4, %bb.5
@@ -69,7 +69,7 @@ body:             |
     bb.4:
         successors: %bb.5
 
-        %10:_(s32) = G_PHI %21(s32), %bb.3, %22(s32), %bb.2
+        %10:_(s32) = G_PHI %21(s32), %bb.3, %22(s32), %bb.2  ; Temporal divergent phi
         G_BR %bb.5
     bb.5:
         %11:_(s32) = G_PHI %20(s32), %bb.3, %22(s32), %bb.4

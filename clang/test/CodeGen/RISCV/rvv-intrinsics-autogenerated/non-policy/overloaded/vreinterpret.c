@@ -2123,3 +2123,971 @@ vuint32m8_t test_vreinterpret_v_u64m8_u32m8(vuint64m8_t src) {
   return __riscv_vreinterpret_u32m8(src);
 }
 
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_i8m1_b64
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_i8m1_b64(vint8m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b64_i8m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b64_i8m1(vbool64_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_i8m1_b32
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_i8m1_b32(vint8m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b32_i8m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b32_i8m1(vbool32_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_i8m1_b16
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_i8m1_b16(vint8m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b16_i8m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b16_i8m1(vbool16_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_i8m1_b8
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_i8m1_b8(vint8m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b8_i8m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b8_i8m1(vbool8_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vreinterpret_v_i8m1_b4
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+vbool4_t test_vreinterpret_v_i8m1_b4(vint8m1_t src) {
+  return __riscv_vreinterpret_b4(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b4_i8m1
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b4_i8m1(vbool4_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 32 x i1> @test_vreinterpret_v_i8m1_b2
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i1> @llvm.vector.extract.nxv32i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP1]]
+//
+vbool2_t test_vreinterpret_v_i8m1_b2(vint8m1_t src) {
+  return __riscv_vreinterpret_b2(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b2_i8m1
+// CHECK-RV64-SAME: (<vscale x 32 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv32i1(<vscale x 64 x i1> poison, <vscale x 32 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b2_i8m1(vbool2_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 64 x i1> @test_vreinterpret_v_i8m1_b1
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 64 x i1> @llvm.vector.extract.nxv64i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+//
+vbool1_t test_vreinterpret_v_i8m1_b1(vint8m1_t src) {
+  return __riscv_vreinterpret_b1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b1_i8m1
+// CHECK-RV64-SAME: (<vscale x 64 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv64i1(<vscale x 64 x i1> poison, <vscale x 64 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vint8m1_t test_vreinterpret_v_b1_i8m1(vbool1_t src) {
+  return __riscv_vreinterpret_i8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_u8m1_b64
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_u8m1_b64(vuint8m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b64_u8m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b64_u8m1(vbool64_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_u8m1_b32
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_u8m1_b32(vuint8m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b32_u8m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b32_u8m1(vbool32_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_u8m1_b16
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_u8m1_b16(vuint8m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b16_u8m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b16_u8m1(vbool16_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_u8m1_b8
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_u8m1_b8(vuint8m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b8_u8m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b8_u8m1(vbool8_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vreinterpret_v_u8m1_b4
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+vbool4_t test_vreinterpret_v_u8m1_b4(vuint8m1_t src) {
+  return __riscv_vreinterpret_b4(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b4_u8m1
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b4_u8m1(vbool4_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 32 x i1> @test_vreinterpret_v_u8m1_b2
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i1> @llvm.vector.extract.nxv32i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP1]]
+//
+vbool2_t test_vreinterpret_v_u8m1_b2(vuint8m1_t src) {
+  return __riscv_vreinterpret_b2(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b2_u8m1
+// CHECK-RV64-SAME: (<vscale x 32 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv32i1(<vscale x 64 x i1> poison, <vscale x 32 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b2_u8m1(vbool2_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 64 x i1> @test_vreinterpret_v_u8m1_b1
+// CHECK-RV64-SAME: (<vscale x 8 x i8> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i8> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 64 x i1> @llvm.vector.extract.nxv64i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
+//
+vbool1_t test_vreinterpret_v_u8m1_b1(vuint8m1_t src) {
+  return __riscv_vreinterpret_b1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i8> @test_vreinterpret_v_b1_u8m1
+// CHECK-RV64-SAME: (<vscale x 64 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv64i1(<vscale x 64 x i1> poison, <vscale x 64 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 8 x i8>
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i8> [[TMP1]]
+//
+vuint8m1_t test_vreinterpret_v_b1_u8m1(vbool1_t src) {
+  return __riscv_vreinterpret_u8m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_i16m1_b64
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_i16m1_b64(vint16m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b64_i16m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vint16m1_t test_vreinterpret_v_b64_i16m1(vbool64_t src) {
+  return __riscv_vreinterpret_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_i16m1_b32
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_i16m1_b32(vint16m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b32_i16m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vint16m1_t test_vreinterpret_v_b32_i16m1(vbool32_t src) {
+  return __riscv_vreinterpret_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_i16m1_b16
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_i16m1_b16(vint16m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b16_i16m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vint16m1_t test_vreinterpret_v_b16_i16m1(vbool16_t src) {
+  return __riscv_vreinterpret_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_i16m1_b8
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_i16m1_b8(vint16m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b8_i16m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vint16m1_t test_vreinterpret_v_b8_i16m1(vbool8_t src) {
+  return __riscv_vreinterpret_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vreinterpret_v_i16m1_b4
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+vbool4_t test_vreinterpret_v_i16m1_b4(vint16m1_t src) {
+  return __riscv_vreinterpret_b4(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b4_i16m1
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vint16m1_t test_vreinterpret_v_b4_i16m1(vbool4_t src) {
+  return __riscv_vreinterpret_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 32 x i1> @test_vreinterpret_v_i16m1_b2
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i1> @llvm.vector.extract.nxv32i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP1]]
+//
+vbool2_t test_vreinterpret_v_i16m1_b2(vint16m1_t src) {
+  return __riscv_vreinterpret_b2(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b2_i16m1
+// CHECK-RV64-SAME: (<vscale x 32 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv32i1(<vscale x 64 x i1> poison, <vscale x 32 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vint16m1_t test_vreinterpret_v_b2_i16m1(vbool2_t src) {
+  return __riscv_vreinterpret_i16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_u16m1_b64
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_u16m1_b64(vuint16m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b64_u16m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vuint16m1_t test_vreinterpret_v_b64_u16m1(vbool64_t src) {
+  return __riscv_vreinterpret_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_u16m1_b32
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_u16m1_b32(vuint16m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b32_u16m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vuint16m1_t test_vreinterpret_v_b32_u16m1(vbool32_t src) {
+  return __riscv_vreinterpret_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_u16m1_b16
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_u16m1_b16(vuint16m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b16_u16m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vuint16m1_t test_vreinterpret_v_b16_u16m1(vbool16_t src) {
+  return __riscv_vreinterpret_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_u16m1_b8
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_u16m1_b8(vuint16m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b8_u16m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vuint16m1_t test_vreinterpret_v_b8_u16m1(vbool8_t src) {
+  return __riscv_vreinterpret_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vreinterpret_v_u16m1_b4
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+vbool4_t test_vreinterpret_v_u16m1_b4(vuint16m1_t src) {
+  return __riscv_vreinterpret_b4(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b4_u16m1
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vuint16m1_t test_vreinterpret_v_b4_u16m1(vbool4_t src) {
+  return __riscv_vreinterpret_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 32 x i1> @test_vreinterpret_v_u16m1_b2
+// CHECK-RV64-SAME: (<vscale x 4 x i16> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 4 x i16> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 32 x i1> @llvm.vector.extract.nxv32i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 32 x i1> [[TMP1]]
+//
+vbool2_t test_vreinterpret_v_u16m1_b2(vuint16m1_t src) {
+  return __riscv_vreinterpret_b2(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i16> @test_vreinterpret_v_b2_u16m1
+// CHECK-RV64-SAME: (<vscale x 32 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv32i1(<vscale x 64 x i1> poison, <vscale x 32 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 4 x i16>
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+//
+vuint16m1_t test_vreinterpret_v_b2_u16m1(vbool2_t src) {
+  return __riscv_vreinterpret_u16m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_i32m1_b64
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_i32m1_b64(vint32m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b64_i32m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vint32m1_t test_vreinterpret_v_b64_i32m1(vbool64_t src) {
+  return __riscv_vreinterpret_i32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_i32m1_b32
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_i32m1_b32(vint32m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b32_i32m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vint32m1_t test_vreinterpret_v_b32_i32m1(vbool32_t src) {
+  return __riscv_vreinterpret_i32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_i32m1_b16
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_i32m1_b16(vint32m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b16_i32m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vint32m1_t test_vreinterpret_v_b16_i32m1(vbool16_t src) {
+  return __riscv_vreinterpret_i32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_i32m1_b8
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_i32m1_b8(vint32m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b8_i32m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vint32m1_t test_vreinterpret_v_b8_i32m1(vbool8_t src) {
+  return __riscv_vreinterpret_i32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vreinterpret_v_i32m1_b4
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+vbool4_t test_vreinterpret_v_i32m1_b4(vint32m1_t src) {
+  return __riscv_vreinterpret_b4(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b4_i32m1
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vint32m1_t test_vreinterpret_v_b4_i32m1(vbool4_t src) {
+  return __riscv_vreinterpret_i32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_u32m1_b64
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_u32m1_b64(vuint32m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b64_u32m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vuint32m1_t test_vreinterpret_v_b64_u32m1(vbool64_t src) {
+  return __riscv_vreinterpret_u32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_u32m1_b32
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_u32m1_b32(vuint32m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b32_u32m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vuint32m1_t test_vreinterpret_v_b32_u32m1(vbool32_t src) {
+  return __riscv_vreinterpret_u32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_u32m1_b16
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_u32m1_b16(vuint32m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b16_u32m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vuint32m1_t test_vreinterpret_v_b16_u32m1(vbool16_t src) {
+  return __riscv_vreinterpret_u32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_u32m1_b8
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_u32m1_b8(vuint32m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b8_u32m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vuint32m1_t test_vreinterpret_v_b8_u32m1(vbool8_t src) {
+  return __riscv_vreinterpret_u32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i1> @test_vreinterpret_v_u32m1_b4
+// CHECK-RV64-SAME: (<vscale x 2 x i32> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i32> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
+//
+vbool4_t test_vreinterpret_v_u32m1_b4(vuint32m1_t src) {
+  return __riscv_vreinterpret_b4(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i32> @test_vreinterpret_v_b4_u32m1
+// CHECK-RV64-SAME: (<vscale x 16 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv16i1(<vscale x 64 x i1> poison, <vscale x 16 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 2 x i32>
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+//
+vuint32m1_t test_vreinterpret_v_b4_u32m1(vbool4_t src) {
+  return __riscv_vreinterpret_u32m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_i64m1_b64
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_i64m1_b64(vint64m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b64_i64m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vint64m1_t test_vreinterpret_v_b64_i64m1(vbool64_t src) {
+  return __riscv_vreinterpret_i64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_i64m1_b32
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_i64m1_b32(vint64m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b32_i64m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vint64m1_t test_vreinterpret_v_b32_i64m1(vbool32_t src) {
+  return __riscv_vreinterpret_i64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_i64m1_b16
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_i64m1_b16(vint64m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b16_i64m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vint64m1_t test_vreinterpret_v_b16_i64m1(vbool16_t src) {
+  return __riscv_vreinterpret_i64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_i64m1_b8
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_i64m1_b8(vint64m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b8_i64m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vint64m1_t test_vreinterpret_v_b8_i64m1(vbool8_t src) {
+  return __riscv_vreinterpret_i64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i1> @test_vreinterpret_v_u64m1_b64
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i1> [[TMP1]]
+//
+vbool64_t test_vreinterpret_v_u64m1_b64(vuint64m1_t src) {
+  return __riscv_vreinterpret_b64(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b64_u64m1
+// CHECK-RV64-SAME: (<vscale x 1 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv1i1(<vscale x 64 x i1> poison, <vscale x 1 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vuint64m1_t test_vreinterpret_v_b64_u64m1(vbool64_t src) {
+  return __riscv_vreinterpret_u64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 2 x i1> @test_vreinterpret_v_u64m1_b32
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i1> [[TMP1]]
+//
+vbool32_t test_vreinterpret_v_u64m1_b32(vuint64m1_t src) {
+  return __riscv_vreinterpret_b32(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b32_u64m1
+// CHECK-RV64-SAME: (<vscale x 2 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv2i1(<vscale x 64 x i1> poison, <vscale x 2 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vuint64m1_t test_vreinterpret_v_b32_u64m1(vbool32_t src) {
+  return __riscv_vreinterpret_u64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 4 x i1> @test_vreinterpret_v_u64m1_b16
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 4 x i1> [[TMP1]]
+//
+vbool16_t test_vreinterpret_v_u64m1_b16(vuint64m1_t src) {
+  return __riscv_vreinterpret_b16(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b16_u64m1
+// CHECK-RV64-SAME: (<vscale x 4 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv4i1(<vscale x 64 x i1> poison, <vscale x 4 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vuint64m1_t test_vreinterpret_v_b16_u64m1(vbool16_t src) {
+  return __riscv_vreinterpret_u64m1(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 8 x i1> @test_vreinterpret_v_u64m1_b8
+// CHECK-RV64-SAME: (<vscale x 1 x i64> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 1 x i64> [[SRC]] to <vscale x 64 x i1>
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv64i1(<vscale x 64 x i1> [[TMP0]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 8 x i1> [[TMP1]]
+//
+vbool8_t test_vreinterpret_v_u64m1_b8(vuint64m1_t src) {
+  return __riscv_vreinterpret_b8(src);
+}
+
+// CHECK-RV64-LABEL: define dso_local <vscale x 1 x i64> @test_vreinterpret_v_b8_u64m1
+// CHECK-RV64-SAME: (<vscale x 8 x i1> [[SRC:%.*]]) #[[ATTR0]] {
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 64 x i1> @llvm.vector.insert.nxv64i1.nxv8i1(<vscale x 64 x i1> poison, <vscale x 8 x i1> [[SRC]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 64 x i1> [[TMP0]] to <vscale x 1 x i64>
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i64> [[TMP1]]
+//
+vuint64m1_t test_vreinterpret_v_b8_u64m1(vbool8_t src) {
+  return __riscv_vreinterpret_u64m1(src);
+}
+

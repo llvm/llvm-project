@@ -2872,7 +2872,7 @@ static bool collectUnswitchCandidates(
 
     for (auto &I : *BB) {
       if (auto *SI = dyn_cast<SelectInst>(&I)) {
-        auto *Cond = SI->getCondition();
+        auto *Cond = skipTrivialSelect(SI->getCondition());
         // restrict to simple boolean selects
         if (!isa<Constant>(Cond) && L.isLoopInvariant(Cond) && Cond->getType()->isIntegerTy(1))
           UnswitchCandidates.push_back({&I, {Cond}});

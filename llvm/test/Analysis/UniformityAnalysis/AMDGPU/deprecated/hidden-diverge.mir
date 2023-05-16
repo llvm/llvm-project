@@ -1,23 +1,18 @@
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
 
+# This test was generated using SelectionDAG, where the compilation flow does
+# not match the assumptions made in MachineUA. For now, this test mostly serves
+# the purpose of catching in any crash when invoking MachineUA. The test should
+# be deleted when it is clear that it is not actually testing anything useful.
+
 ---
 # CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
 # CHECK-LABEL: BLOCK bb.0
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vgpr_32(s32) = COPY $vgpr0
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:sreg_64 = V_CMP_GT_I32_e64
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:sreg_64 = V_CMP_LT_I32_e64
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vreg_1 = COPY
-# CHECK: DIVERGENT: %{{[0-9]*}}:sreg_64 = SI_IF
-# CHECK: DIVERGENT: S_BRANCH %bb.1
 # CHECK-LABEL: BLOCK bb.2
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:sreg_32 = PHI %{{[0-9]*}}:sreg_32, %bb.0, %{{[0-9]*}}:sreg_32, %bb.1
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vreg_1 = PHI %{{[0-9]*}}:vreg_1, %bb.0, %{{[0-9]*}}:sreg_64, %bb.1
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:sreg_64 = COPY %{{[0-9]*}}:vreg_1
-# CHECK: DIVERGENT: %{{[0-9]*}}:sreg_64 = SI_IF %{{[0-9]*}}:sreg_64, %bb.4
-# CHECK: DIVERGENT: S_BRANCH %bb.3
 # CHECK-LABEL: BLOCK bb.3
 # CHECK-LABEL: BLOCK bb.4
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vgpr_32 = PHI %{{[0-9]*}}:sreg_32, %bb.2, %{{[0-9]*}}:sreg_32, %bb.3
 
 name:            hidden_diverge
 tracksRegLiveness: true

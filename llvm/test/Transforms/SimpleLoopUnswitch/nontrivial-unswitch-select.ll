@@ -759,3 +759,62 @@ for.cond1.for.cond.cleanup3_crit_edge.us:         ; preds = %for.body4.us
 for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.cleanup3_crit_edge.us, %entry
   ret void
 }
+
+; Unswitch %val should look through the trivial select and unswitch on %cond
+define dso_local i32 @trivial_select_cond(i32 noundef %n, i32 noundef %a, i32 noundef %b, i1 noundef %cond) {
+; CHECK-LABEL: define dso_local i32 @trivial_select_cond
+; CHECK-SAME: (i32 noundef [[N:%.*]], i32 noundef [[A:%.*]], i32 noundef [[B:%.*]], i1 noundef [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    [[TRIVIAL_COND:%.*]] = select i1 [[COND]], i1 true, i1 false
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY_PREHEADER_SPLIT_US:%.*]], label [[FOR_BODY_PREHEADER_SPLIT:%.*]]
+; CHECK:       for.body.preheader.split.us:
+; CHECK-NEXT:    br label [[FOR_BODY_US:%.*]]
+; CHECK:       for.body.us:
+; CHECK-NEXT:    [[I_03_US:%.*]] = phi i32 [ [[INC_US:%.*]], [[TMP1:%.*]] ], [ 0, [[FOR_BODY_PREHEADER_SPLIT_US]] ]
+; CHECK-NEXT:    br label [[TMP0:%.*]]
+; CHECK:       0:
+; CHECK-NEXT:    br label [[TMP1]]
+; CHECK:       1:
+; CHECK-NEXT:    [[UNSWITCHED_SELECT_US:%.*]] = phi i32 [ [[A]], [[TMP0]] ]
+; CHECK-NEXT:    tail call void @bar(i32 noundef [[UNSWITCHED_SELECT_US]])
+; CHECK-NEXT:    [[INC_US]] = add nuw nsw i32 [[I_03_US]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT_US:%.*]] = icmp eq i32 [[INC_US]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_US:%.*]], label [[FOR_BODY_US]]
+; CHECK:       for.cond.cleanup.loopexit.split.us:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK:       for.body.preheader.split:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.split:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret i32 undef
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ [[INC:%.*]], [[TMP2:%.*]] ], [ 0, [[FOR_BODY_PREHEADER_SPLIT]] ]
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:       2:
+; CHECK-NEXT:    tail call void @bar(i32 noundef [[B]])
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_03]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %cmp2 = icmp sgt i32 %n, 0
+  %trivial_cond = select i1 %cond, i1 true, i1 false
+  br i1 %cmp2, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret i32 undef
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.03 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %val = select i1 %trivial_cond, i32 %a, i32 %b
+  tail call void @bar(i32 noundef %val)
+  %inc = add nuw nsw i32 %i.03, 1
+  %exitcond.not = icmp eq i32 %inc, %n
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
