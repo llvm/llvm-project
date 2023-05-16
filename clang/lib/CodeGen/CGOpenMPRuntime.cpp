@@ -1059,10 +1059,10 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
   llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, false,
                                      hasRequiresUnifiedSharedMemory(),
                                      CGM.getLangOpts().OpenMPOffloadMandatory);
-  // Initialize Types used in OpenMPIRBuilder from OMPKinds.def
-  OMPBuilder.initialize();
+  OMPBuilder.initialize(CGM.getLangOpts().OpenMPIsDevice
+                            ? CGM.getLangOpts().OMPHostIRFile
+                            : StringRef{});
   OMPBuilder.setConfig(Config);
-  loadOffloadInfoMetadata();
 }
 
 void CGOpenMPRuntime::clear() {
@@ -3004,40 +3004,6 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
   };
 
   OMPBuilder.createOffloadEntriesAndInfoMetadata(ErrorReportFn);
-}
-
-/// Loads all the offload entries information from the host IR
-/// metadata.
-void CGOpenMPRuntime::loadOffloadInfoMetadata() {
-  // If we are in target mode, load the metadata from the host IR. This code has
-  // to match the metadaata creation in createOffloadEntriesAndInfoMetadata().
-
-  if (!CGM.getLangOpts().OpenMPIsDevice)
-    return;
-
-  if (CGM.getLangOpts().OMPHostIRFile.empty())
-    return;
-
-  auto Buf = llvm::MemoryBuffer::getFile(CGM.getLangOpts().OMPHostIRFile);
-  if (auto EC = Buf.getError()) {
-    CGM.getDiags().Report(diag::err_cannot_open_file)
-        << CGM.getLangOpts().OMPHostIRFile << EC.message();
-    return;
-  }
-
-  llvm::LLVMContext C;
-  auto ME = expectedToErrorOrAndEmitErrors(
-      C, llvm::parseBitcodeFile(Buf.get()->getMemBufferRef(), C));
-
-  if (auto EC = ME.getError()) {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Error, "Unable to parse host IR file '%0':'%1'");
-    CGM.getDiags().Report(DiagID)
-        << CGM.getLangOpts().OMPHostIRFile << EC.message();
-    return;
-  }
-
-  OMPBuilder.loadOffloadInfoMetadata(*ME.get());
 }
 
 void CGOpenMPRuntime::emitKmpRoutineEntryT(QualType KmpInt32Ty) {
