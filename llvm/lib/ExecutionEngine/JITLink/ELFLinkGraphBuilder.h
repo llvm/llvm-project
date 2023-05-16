@@ -540,6 +540,21 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
       auto &GSym = G->addExternalSymbol(*Name, Sym.st_size,
                                         Sym.getBinding() == ELF::STB_WEAK);
       setGraphSymbol(SymIndex, GSym);
+    } else if (Sym.isUndefined() && Sym.st_value == 0 && Sym.st_size == 0 &&
+               Sym.getType() == ELF::STT_NOTYPE &&
+               Sym.getBinding() == ELF::STB_LOCAL && Name->empty()) {
+      // Some relocations (e.g., R_RISCV_ALIGN) don't have a target symbol and
+      // use this kind of null symbol as a placeholder.
+      LLVM_DEBUG({
+        dbgs() << "      " << SymIndex << ": Creating null graph symbol\n";
+      });
+
+      auto SymName =
+          G->allocateContent("__jitlink_ELF_SYM_UND_" + Twine(SymIndex));
+      auto SymNameRef = StringRef(SymName.data(), SymName.size());
+      auto &GSym = G->addAbsoluteSymbol(SymNameRef, orc::ExecutorAddr(0), 0,
+                                        Linkage::Strong, Scope::Local, false);
+      setGraphSymbol(SymIndex, GSym);
     } else {
       LLVM_DEBUG({
         dbgs() << "      " << SymIndex
