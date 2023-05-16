@@ -35,11 +35,11 @@ option(LLDB_ENABLE_SWIFT_SUPPORT "Enable swift support" ${DEFAULT_LLDB_SWIFT_SUP
 # END SWIFT MOD
 
 if(LLDB_BUILT_STANDALONE)
-  include(LLDBStandalone)
-
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
   set(CMAKE_CXX_EXTENSIONS NO)
+
+  include(LLDBStandalone)
 else()
   set(SWIFT_BINARY_DIR ${CMAKE_BINARY_DIR})
   set(SWIFT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
