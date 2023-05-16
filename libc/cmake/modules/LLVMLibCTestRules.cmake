@@ -179,7 +179,7 @@ function(create_libc_unittest fq_target_name)
   )
 
   # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcUnitTestMain LibcUnitTest)
+  list(APPEND link_libraries LibcUnitTest)
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -669,7 +669,7 @@ function(add_libc_hermetic_test test_name)
     PRIVATE
       ${HERMETIC_TEST_LINK_LIBRARIES}
       libc.startup.${LIBC_TARGET_OS}.crt1
-      LibcHermeticTestMain LibcHermeticTest
+      LibcHermeticTest
       # The NVIDIA 'nvlink' linker does not currently support static libraries.
       $<$<NOT:$<BOOL:${LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX}>>:${fq_target_name}.__libc__>)
   add_dependencies(${fq_build_target_name}
