@@ -238,7 +238,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
         Known = KnownBits::commonBits(Known, Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.
-        if (Known.One == 0 && Known.Zero == 0)
+        if (Known.isUnknown())
           break;
       } else {
         // We know nothing.
