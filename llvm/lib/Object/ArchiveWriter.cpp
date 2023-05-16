@@ -252,8 +252,8 @@ static void
 printBigArchiveMemberHeader(raw_ostream &Out, StringRef Name,
                             const sys::TimePoint<std::chrono::seconds> &ModTime,
                             unsigned UID, unsigned GID, unsigned Perms,
-                            uint64_t Size, unsigned PrevOffset,
-                            unsigned NextOffset) {
+                            uint64_t Size, uint64_t PrevOffset,
+                            uint64_t NextOffset) {
   unsigned NameLen = Name.size();
 
   printWithSpacePadding(Out, Size, 20);           // File member size
@@ -704,7 +704,8 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
   // The big archive format needs to know the offset of the previous member
   // header.
-  unsigned PrevOffset = 0, Index = 0;
+  uint64_t PrevOffset = 0;
+  uint16_t Index = 0;
   for (const NewArchiveMember &M : NewMembers) {
     std::string Header;
     raw_string_ostream Out(Header);
@@ -740,7 +741,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     }
 
     if (isAIXBigArchive(Kind)) {
-      unsigned NextOffset = Pos + sizeof(object::BigArMemHdrType) +
+      uint64_t NextOffset = Pos + sizeof(object::BigArMemHdrType) +
                             alignTo(M.MemberName.size(), 2) + alignTo(Size, 2);
       printBigArchiveMemberHeader(Out, M.MemberName, ModTime, M.UID, M.GID,
                                   M.Perms, Size, PrevOffset, NextOffset);
@@ -948,11 +949,11 @@ static Error writeArchiveToStream(raw_ostream &Out,
     }
 
     // AIX member table size.
-    unsigned MemberTableSize = 20 + // Number of members field
+    uint64_t MemberTableSize = 20 + // Number of members field
                                20 * MemberOffsets.size() +
                                MemberTableNameStrTblSize;
 
-    unsigned GlobalSymbolOffset =
+    uint64_t GlobalSymbolOffset =
         (WriteSymtab && NumSyms > 0)
             ? LastMemberEndOffset +
                   alignTo(sizeof(object::BigArMemHdrType) + MemberTableSize, 2)
@@ -963,7 +964,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
                           20); // Offset to member table
     // If there are no file members in the archive, there will be no global
     // symbol table.
-    printWithSpacePadding(Out, NewMembers.size() ? GlobalSymbolOffset : 0, 20);
+    printWithSpacePadding(Out, GlobalSymbolOffset, 20);
     printWithSpacePadding(
         Out, 0,
         20); // Offset to 64 bits global symbol table - Not supported yet
