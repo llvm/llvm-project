@@ -54,13 +54,8 @@ add_lld_library(lldMachO
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
-  ${XAR_LIB}
 
   DEPENDS
   MachOOptionsTableGen
   ${tablegen_deps}
   )
-
-if(LLVM_HAVE_LIBXAR)
-  target_link_libraries(lldMachO PRIVATE ${XAR_LIB})
-endif()
