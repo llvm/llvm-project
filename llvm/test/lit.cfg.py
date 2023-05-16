@@ -365,6 +365,10 @@ if config.target_triple:
     if not config.target_triple.startswith(("nvptx", "xcore")):
         config.available_features.add('object-emission')
 
+# Allow checking for specific details in the host triple
+if config.host_triple:
+    config.available_features.add('host=%s' % config.host_triple)
+
 if lit.util.isMacOSTriple(config.target_triple):
    config.available_features.add('darwin')
 
