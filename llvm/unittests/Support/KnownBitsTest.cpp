@@ -46,7 +46,7 @@ static testing::AssertionResult isCorrect(const KnownBits &Exact,
     Result << Input << ", ";
   Result << "Computed = " << Computed << ", Exact = " << Exact;
   return Result;
-};
+}
 
 static testing::AssertionResult isOptimal(const KnownBits &Exact,
                                           const KnownBits &Computed,
@@ -60,7 +60,7 @@ static testing::AssertionResult isOptimal(const KnownBits &Exact,
     Result << Input << ", ";
   Result << "Computed = " << Computed << ", Exact = " << Exact;
   return Result;
-};
+}
 
 static void testUnaryOpExhaustive(
     UnaryBitsFn BitsFn, UnaryIntFn IntFn,
