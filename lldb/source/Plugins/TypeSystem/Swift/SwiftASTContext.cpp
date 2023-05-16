@@ -1052,8 +1052,8 @@ static void printASTValidationError(
 }
 
 void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
-  for (const std::string &message : m_module_import_warnings)
-    process.PrintWarningCantLoadSwiftModule(module, message);
+  if (HasErrors() || HasClangImporterErrors())
+    process.PrintWarningCantLoadSwiftModule(module, GetAllErrors().AsCString());
 }
 
 /// Locate the swift-plugin-server for a plugin library,
@@ -1690,7 +1690,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
                                     m_description, errs, got_serialized_options,
                                     found_swift_modules)) {
       // Validation errors are not fatal for the context.
-      swift_ast_sp->m_module_import_warnings.push_back(std::string(error));
+      swift_ast_sp->AddDiagnostic(eDiagnosticSeverityWarning, errs.str());
     }
 
     llvm::StringRef serialized_triple =
@@ -2973,7 +2973,6 @@ public:
     return old;
   }
 
-  /// This is only used by ReconstructTypes.
   void AddDiagnostic(std::unique_ptr<Diagnostic> diagnostic) {
     if (diagnostic)
       m_diagnostics.push_back(std::move(diagnostic));
@@ -3062,19 +3061,16 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
       // Handle any errors.
       if (!clang_importer_ap || HasErrors()) {
-        std::string message;
-        if (!HasErrors()) {
-          message = "failed to create ClangImporter.";
-          m_module_import_warnings.push_back(message);
-        } else {
+        AddDiagnostic(eDiagnosticSeverityWarning,
+                        "failed to create ClangImporter");
+        if (GetLog(LLDBLog::Types)) {
           DiagnosticManager diagnostic_manager;
           PrintDiagnostics(diagnostic_manager, true);
           std::string underlying_error = diagnostic_manager.GetString();
-          message = "failed to initialize ClangImporter: ";
-          message += underlying_error;
-          m_module_import_warnings.push_back(underlying_error);
+          LOG_PRINTF(GetLog(LLDBLog::Types),
+                     "failed to initialize ClangImporter: %s",
+                     underlying_error.c_str());
         }
-        LOG_PRINTF(GetLog(LLDBLog::Types), "%s", message.c_str());
       }
       if (clang_importer_ap)
         moduleCachePath = swift::getModuleCachePathFromClang(
@@ -4127,10 +4123,9 @@ swift::TypeBase *
 SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   Status error;
 
-  auto reconstructed_type = this->ReconstructType(mangled_typename, error);
-  if (!error.Success()) {
-    this->AddErrorStatusAsGenericDiagnostic(error);
-  }
+  auto reconstructed_type = ReconstructType(mangled_typename, error);
+  if (!error.Success())
+    AddDiagnostic(eDiagnosticSeverityWarning, error.AsCString());
   return reconstructed_type;
 }
 
@@ -4761,19 +4756,32 @@ uint32_t SwiftASTContext::GetPointerByteSize() {
   return m_pointer_byte_size;
 }
 
-bool SwiftASTContext::HasErrors() {
-  if (m_diagnostic_consumer_ap.get())
-    return (
-        static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-            ->NumErrors() != 0);
-  return false;
+bool SwiftASTContext::HasErrors() const {
+  if (!m_diagnostic_consumer_ap)
+    return false;
+  return (
+      static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+          ->NumErrors() != 0);
 }
-bool SwiftASTContext::HasClangImporterErrors() {
-  if (m_diagnostic_consumer_ap.get())
-    return (
-        static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-            ->NumClangErrors() != 0);
-  return false;
+bool SwiftASTContext::HasClangImporterErrors() const {
+  if (!m_diagnostic_consumer_ap)
+    return false;
+  return (
+      static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+          ->NumClangErrors() != 0);
+}
+
+void SwiftASTContext::AddDiagnostic(DiagnosticSeverity severity,
+                                    llvm::StringRef message) {
+  assert(m_diagnostic_consumer_ap.get());
+  HEALTH_LOG_PRINTF("%s", message.str().c_str());
+  if (!m_diagnostic_consumer_ap.get())
+    return;
+
+  auto diagnostic = std::make_unique<Diagnostic>(
+      message, severity, eDiagnosticOriginLLDB, LLDB_INVALID_COMPILER_ID);
+  static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+      ->AddDiagnostic(std::move(diagnostic));
 }
 
 bool SwiftASTContext::HasFatalErrors(swift::ASTContext *ast_context) {
@@ -4793,17 +4801,6 @@ bool SwiftASTContext::SetColorizeDiagnostics(bool b) {
                m_diagnostic_consumer_ap.get())
         ->SetColorize(b);
   return false;
-}
-
-void SwiftASTContext::AddErrorStatusAsGenericDiagnostic(Status error) {
-  assert(!error.Success() && "status should be in an error state");
-
-  auto diagnostic = std::make_unique<Diagnostic>(
-      error.AsCString(), eDiagnosticSeverityError, eDiagnosticOriginLLDB,
-      LLDB_INVALID_COMPILER_ID);
-  if (m_diagnostic_consumer_ap.get())
-    static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
-        ->AddDiagnostic(std::move(diagnostic));
 }
 
 void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
