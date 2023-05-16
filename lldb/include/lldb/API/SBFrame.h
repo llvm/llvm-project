@@ -16,6 +16,9 @@ namespace lldb_private {
 namespace python {
 class SWIGBridge;
 }
+namespace lua {
+class SWIGBridge;
+}
 } // namespace lldb_private
 
 namespace lldb {
@@ -202,6 +205,7 @@ protected:
   friend class SBValue;
 
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
 
   SBFrame(const lldb::StackFrameSP &lldb_object_sp);
 

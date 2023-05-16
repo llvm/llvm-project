@@ -16,6 +16,9 @@ namespace lldb_private {
 namespace python {
 class SWIGBridge;
 }
+namespace lua {
+class SWIGBridge;
+}
 } // namespace lldb_private
 
 namespace lldb {
@@ -105,6 +108,7 @@ protected:
   friend class SBBreakpointName;
   friend class SBTrace;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::lua::SWIGBridge;
 
   SBStructuredData(const lldb_private::StructuredDataImpl &impl);
 
