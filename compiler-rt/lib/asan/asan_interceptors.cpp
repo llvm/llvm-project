@@ -785,6 +785,28 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_async_copy_on_engine, void* dst,
 }
 #endif
 
+INTERCEPTOR(hsa_status_t, hsa_amd_ipc_memory_create, void* ptr, size_t len,
+  hsa_amd_ipc_memory_t* handle) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  return asan_hsa_amd_ipc_memory_create(ptr, len, handle);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_ipc_memory_attach,
+  const hsa_amd_ipc_memory_t* handle, size_t len, uint32_t num_agents,
+  const hsa_agent_t* mapping_agents, void** mapped_ptr) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  return asan_hsa_amd_ipc_memory_attach(handle, len, num_agents, mapping_agents,
+    mapped_ptr);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_ipc_memory_detach, void* mapped_ptr) {
+  ENSURE_ASAN_INITED();
+  ENSURE_HSA_INITED();
+  return asan_hsa_amd_ipc_memory_detach(mapped_ptr);
+}
+
 void InitializeAmdgpuInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_memory_copy);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
@@ -794,6 +816,9 @@ void InitializeAmdgpuInterceptors() {
 #if HSA_AMD_INTERFACE_VERSION_MINOR>=1
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_async_copy_on_engine);
 #endif
+  ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_create);
+  ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_attach);
+  ASAN_INTERCEPT_FUNC(hsa_amd_ipc_memory_detach);
 }
 
 void ENSURE_HSA_INITED() {

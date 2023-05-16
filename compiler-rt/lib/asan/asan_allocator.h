@@ -244,6 +244,13 @@ hsa_status_t asan_hsa_amd_agents_allow_access(
   uint32_t num_agents, const hsa_agent_t *agents, const uint32_t *flags,
   const void *ptr,
   BufferedStackTrace *stack);
+hsa_status_t asan_hsa_amd_ipc_memory_create(
+  void* ptr, size_t len, hsa_amd_ipc_memory_t* handle);
+hsa_status_t asan_hsa_amd_ipc_memory_attach(
+  const hsa_amd_ipc_memory_t* handle, size_t len, uint32_t num_agents,
+  const hsa_agent_t* mapping_agents, void** mapped_ptr);
+hsa_status_t asan_hsa_amd_ipc_memory_detach(
+  void* mapped_ptr);
 } // namespace __asan
 #endif
 
