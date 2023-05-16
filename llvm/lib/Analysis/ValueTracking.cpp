@@ -984,79 +984,16 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 static void computeKnownBitsFromShiftOperator(
     const Operator *I, const APInt &DemandedElts, KnownBits &Known,
     KnownBits &Known2, unsigned Depth, const Query &Q,
-    function_ref<KnownBits(const KnownBits &, const KnownBits &)> KF) {
-  unsigned BitWidth = Known.getBitWidth();
+    function_ref<KnownBits(const KnownBits &, const KnownBits &, bool)> KF) {
   computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
   computeKnownBits(I->getOperand(1), DemandedElts, Known, Depth + 1, Q);
-
-  // Note: We cannot use Known.Zero.getLimitedValue() here, because if
-  // BitWidth > 64 and any upper bits are known, we'll end up returning the
-  // limit value (which implies all bits are known).
-  uint64_t ShiftAmtKZ = Known.Zero.zextOrTrunc(64).getZExtValue();
-  uint64_t ShiftAmtKO = Known.One.zextOrTrunc(64).getZExtValue();
-  bool ShiftAmtIsConstant = Known.isConstant();
-  bool MaxShiftAmtIsOutOfRange = Known.getMaxValue().uge(BitWidth);
-
-  if (ShiftAmtIsConstant) {
-    Known = KF(Known2, Known);
-    return;
-  }
-
-  // If the shift amount could be greater than or equal to the bit-width of the
-  // LHS, the value could be poison, but bail out because the check below is
-  // expensive.
-  // TODO: Should we just carry on?
-  if (MaxShiftAmtIsOutOfRange) {
-    Known.resetAll();
-    return;
-  }
-
-  // It would be more-clearly correct to use the two temporaries for this
-  // calculation. Reusing the APInts here to prevent unnecessary allocations.
-  Known.resetAll();
-
-  // If we know the shifter operand is nonzero, we can sometimes infer more
-  // known bits. However this is expensive to compute, so be lazy about it and
-  // only compute it when absolutely necessary.
-  std::optional<bool> ShifterOperandIsNonZero;
-
-  // Early exit if we can't constrain any well-defined shift amount.
-  if (!(ShiftAmtKZ & (PowerOf2Ceil(BitWidth) - 1)) &&
-      !(ShiftAmtKO & (PowerOf2Ceil(BitWidth) - 1))) {
-    ShifterOperandIsNonZero =
-        isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
-    if (!*ShifterOperandIsNonZero)
-      return;
-  }
-
-  Known.Zero.setAllBits();
-  Known.One.setAllBits();
-  for (unsigned ShiftAmt = 0; ShiftAmt < BitWidth; ++ShiftAmt) {
-    // Combine the shifted known input bits only for those shift amounts
-    // compatible with its known constraints.
-    if ((ShiftAmt & ~ShiftAmtKZ) != ShiftAmt)
-      continue;
-    if ((ShiftAmt | ShiftAmtKO) != ShiftAmt)
-      continue;
-    // If we know the shifter is nonzero, we may be able to infer more known
-    // bits. This check is sunk down as far as possible to avoid the expensive
-    // call to isKnownNonZero if the cheaper checks above fail.
-    if (ShiftAmt == 0) {
-      if (!ShifterOperandIsNonZero)
-        ShifterOperandIsNonZero =
-            isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q);
-      if (*ShifterOperandIsNonZero)
-        continue;
-    }
-
-    Known = Known.intersectWith(
-        KF(Known2, KnownBits::makeConstant(APInt(32, ShiftAmt))));
-  }
-
-  // If the known bits conflict, the result is poison. Return a 0 and hope the
-  // caller can further optimize that.
-  if (Known.hasConflict())
-    Known.setAllZero();
+  // To limit compile-time impact, only query isKnownNonZero() if we know at
+  // least something about the shift amount.
+  bool ShAmtNonZero =
+      Known.isNonZero() ||
+      (Known.getMaxValue().ult(Known.getBitWidth()) &&
+       isKnownNonZero(I->getOperand(1), DemandedElts, Depth + 1, Q));
+  Known = KF(Known2, Known, ShAmtNonZero);
 }
 
 static KnownBits getKnownBitsFromAndXorOr(const Operator *I,
@@ -1355,8 +1292,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::Shl: {
     bool NUW = Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(I));
     bool NSW = Q.IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(I));
-    auto KF = [NUW, NSW](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
-      return KnownBits::shl(KnownVal, KnownAmt, NUW, NSW);
+    auto KF = [NUW, NSW](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                         bool ShAmtNonZero) {
+      return KnownBits::shl(KnownVal, KnownAmt, NUW, NSW, ShAmtNonZero);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1367,8 +1305,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::LShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
-      return KnownBits::lshr(KnownVal, KnownAmt);
+    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                 bool ShAmtNonZero) {
+      return KnownBits::lshr(KnownVal, KnownAmt, ShAmtNonZero);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
@@ -1379,8 +1318,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
     break;
   }
   case Instruction::AShr: {
-    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt) {
-      return KnownBits::ashr(KnownVal, KnownAmt);
+    auto KF = [](const KnownBits &KnownVal, const KnownBits &KnownAmt,
+                 bool ShAmtNonZero) {
+      return KnownBits::ashr(KnownVal, KnownAmt, ShAmtNonZero);
     };
     computeKnownBitsFromShiftOperator(I, DemandedElts, Known, Known2, Depth, Q,
                                       KF);
