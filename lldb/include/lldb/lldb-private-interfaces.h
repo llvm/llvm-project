@@ -30,8 +30,8 @@ typedef lldb::ABISP (*ABICreateInstance)(lldb::ProcessSP process_sp,
                                          const ArchSpec &arch);
 typedef std::unique_ptr<Architecture> (*ArchitectureCreateInstance)(
     const ArchSpec &arch);
-typedef Disassembler *(*DisassemblerCreateInstance)(const ArchSpec &arch,
-                                                    const char *flavor);
+typedef lldb::DisassemblerSP (*DisassemblerCreateInstance)(const ArchSpec &arch,
+                                                           const char *flavor);
 typedef DynamicLoader *(*DynamicLoaderCreateInstance)(Process *process,
                                                       bool force);
 typedef lldb::JITLoaderSP (*JITLoaderCreateInstance)(Process *process,
