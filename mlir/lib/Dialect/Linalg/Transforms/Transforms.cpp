@@ -527,15 +527,20 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                   rewriter.getIndexAttr(0));
   for (auto [pos, innerSize] :
        llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getMixedTiles())) {
+    int outerPos =
+        packedToStripMinedShapePerm[packingMetadata.outerPositions[pos]];
     OpFoldResult origSize = rewriter.createOrFold<tensor::DimOp>(
         loc, packOp.getSource(),
         rewriter.create<arith::ConstantIndexOp>(loc, pos));
-    AffineExpr s0, d0;
-    bindDims(rewriter.getContext(), d0);
+    OpFoldResult outerSize = rewriter.createOrFold<tensor::DimOp>(
+        loc, packOp.getDest(),
+        rewriter.create<arith::ConstantIndexOp>(loc, outerPos));
+    AffineExpr s0, d0, d1;
+    bindDims(rewriter.getContext(), d0, d1);
     bindSymbols(rewriter.getContext(), s0);
-    auto map = AffineMap::get(1, 1, d0.ceilDiv(s0) * s0 - d0);
-    highs[pos] = affine::makeComposedFoldedAffineApply(rewriter, loc, map,
-                                                       {origSize, innerSize});
+    auto map = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/1, d0 * s0 - d1);
+    highs[pos] = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, map, {outerSize, origSize, innerSize});
   }
   RankedTensorType collapsed = tensor::CollapseShapeOp::inferCollapsedType(
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
