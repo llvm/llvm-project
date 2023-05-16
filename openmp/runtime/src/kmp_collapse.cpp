@@ -18,6 +18,8 @@
 #include "kmp_str.h"
 #include "kmp_collapse.h"
 
+#include <cmath>
+
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
