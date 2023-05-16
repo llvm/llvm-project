@@ -3,8 +3,8 @@
 ; Exception auxilliary entries are present in the 64-bit tests because 64-bit && debug enabled are the requirements.
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -filetype=obj -o %t_32.o < %s
 ; RUN: llvm-readobj --syms %t_32.o | FileCheck %s --check-prefix=SYMS32
-; RUN: llc -mtriple=powerpc64-unknown-aix -filetype=obj -o %t_32.o < %s
-; RUN: llvm-readobj --syms %t_32.o | FileCheck %s --check-prefix=SYMS64
+; RUN: llc -mtriple=powerpc64-unknown-aix -filetype=obj -o %t_64.o < %s
+; RUN: llvm-readobj --syms %t_64.o | FileCheck %s --check-prefix=SYMS64
 
 ; If any debug information is included in a module and is XCOFF64, exception auxilliary entries are emitted
 
@@ -93,7 +93,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      NumberOfAuxEntries: 3
 ; SYMS64-NEXT:      Exception Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+1]]
-; SYMS64-NEXT:        OffsetToExceptionTable: 0x398
+; SYMS64-NEXT:        OffsetToExceptionTable: 0x38C
 ; SYMS64-NEXT:        SizeOfFunction: 0x18
 ; SYMS64-NEXT:        SymbolIndexOfNextBeyond: [[#IND+4]]
 ; SYMS64-NEXT:        Auxiliary Type: AUX_EXCEPT (0xFF)
@@ -126,7 +126,7 @@ define dso_local void @test__trap_annotation_debug(i32 %a) !dbg !4 {
 ; SYMS64-NEXT:      NumberOfAuxEntries: 3
 ; SYMS64-NEXT:      Exception Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+5]]
-; SYMS64-NEXT:        OffsetToExceptionTable: 0x3AC
+; SYMS64-NEXT:        OffsetToExceptionTable: 0x3A0
 ; SYMS64-NEXT:        SizeOfFunction: 0x68
 ; SYMS64-NEXT:        SymbolIndexOfNextBeyond: [[#IND+8]]
 ; SYMS64-NEXT:        Auxiliary Type: AUX_EXCEPT (0xFF)

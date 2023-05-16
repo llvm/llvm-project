@@ -65,7 +65,7 @@ entry:
 ; SEC32-NEXT:    RelocationPointer: 0x1F4
 ; SEC64-NEXT:    Size: 0x18
 ; SEC64-NEXT:    RawDataOffset: 0x1A8
-; SEC64-NEXT:    RelocationPointer: 0x2C8
+; SEC64-NEXT:    RelocationPointer: 0x29C
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 2
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -93,9 +93,9 @@ entry:
 ; SEC32-NEXT:    Size: 0x57
 ; SEC32-NEXT:    RawDataOffset: 0x15C
 ; SEC32-NEXT:    RelocationPointer: 0x208
-; SEC64-NEXT:    Size: 0x6F
+; SEC64-NEXT:    Size: 0x5F
 ; SEC64-NEXT:    RawDataOffset: 0x200
-; SEC64-NEXT:    RelocationPointer: 0x2E4
+; SEC64-NEXT:    RelocationPointer: 0x2B8
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 4
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -109,9 +109,9 @@ entry:
 ; SEC32-NEXT:    Size: 0x36
 ; SEC32-NEXT:    RawDataOffset: 0x1BC
 ; SEC32-NEXT:    RelocationPointer: 0x230
-; SEC64-NEXT:    Size: 0x46
-; SEC64-NEXT:    RawDataOffset: 0x280
-; SEC64-NEXT:    RelocationPointer: 0x31C
+; SEC64-NEXT:    Size: 0x3A
+; SEC64-NEXT:    RawDataOffset: 0x260
+; SEC64-NEXT:    RelocationPointer: 0x2F0
 ; SEC-NEXT:      LineNumberPointer: 0x0
 ; SEC-NEXT:      NumberOfRelocations: 1
 ; SEC-NEXT:      NumberOfLineNumbers: 0
@@ -131,10 +131,10 @@ entry:
 
 ; RELO64:      RELOCATION RECORDS FOR [.dwinfo]:
 ; RELO64-NEXT: OFFSET           TYPE                     VALUE
-; RELO64-NEXT: 000000000000000e R_POS                    .dwabrev
-; RELO64-NEXT: 000000000000000b R_POS                    .dwline
-; RELO64-NEXT: 0000000000000041 R_POS                    .text
-; RELO64-NEXT: 000000000000004e R_POS                    .text
+; RELO64-NEXT: 0000000000000006 R_POS                    .dwabrev
+; RELO64-NEXT: 0000000000000027 R_POS                    .dwline
+; RELO64-NEXT: 0000000000000009 R_POS                    .text
+; RELO64-NEXT: 0000000000000016 R_POS                    .text
 ; RELO64:      RELOCATION RECORDS FOR [.dwline]:
 ; RELO64-NEXT: OFFSET           TYPE                     VALUE
-; RELO64-NEXT: 000000000000000c R_POS                    .text
+; RELO64-NEXT: 0000000000000000 R_POS                    .text
