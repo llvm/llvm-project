@@ -389,7 +389,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // statements, so imports are allowed.
   ImportState = ModuleImportState::ImportAllowed;
 
-  getASTContext().setNamedModuleForCodeGen(Mod);
+  getASTContext().setCurrentNamedModule(Mod);
 
   // We already potentially made an implicit import (in the case of a module
   // implementation unit importing its interface).  Make this module visible
