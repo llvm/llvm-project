@@ -143,7 +143,8 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
 
 def FuseIntoContainingOp :
     Op<Transform_Dialect, "structured.fuse_into_containing_op",
-      [DeclareOpInterfaceMethods<TransformOpInterface>,
+      [DeclareOpInterfaceMethods<TransformOpInterface,
+          ["allowsRepeatedHandleOperands"]>,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Fuse a producer into a containing operation.";
 
@@ -160,7 +161,7 @@ def FuseIntoContainingOp :
     producer op handle may be associated with multiple payload ops. This
     transform fuses producers one-by-one, always picking an unspecified producer
     that has at least one use inside the containing op among the
-    producers.
+    producers. A producer can be listed multiple times in the handle.
 
     Note: If a producer has multiple uses inside the containing op, it is
     currently tiled and/or cloned multiple times into the containing op.
@@ -176,8 +177,8 @@ def FuseIntoContainingOp :
     containing op. I.e., "producers" that are not consumed within the containing
     op are rejected by this operation.
 
-    This operation reads and frees the producer handle.
-    This operation reads the containing op handle.
+    This operation consumes the producer handle.
+    This operation only reads the containing op handle.
   }];
 
   let arguments = (ins PDL_Operation:$producer_op,
