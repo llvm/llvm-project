@@ -1949,7 +1949,8 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   return nullptr;
 }
 
-static Value *simplifyAndOrOfFCmps(const TargetLibraryInfo *TLI, FCmpInst *LHS,
+static Value *simplifyAndOrOfFCmps(const DataLayout &DL,
+                                   const TargetLibraryInfo *TLI, FCmpInst *LHS,
                                    FCmpInst *RHS, bool IsAnd) {
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
   Value *RHS0 = RHS->getOperand(0), *RHS1 = RHS->getOperand(1);
@@ -1967,8 +1968,8 @@ static Value *simplifyAndOrOfFCmps(const TargetLibraryInfo *TLI, FCmpInst *LHS,
     // (fcmp uno NNAN, X) | (fcmp uno Y, X) --> fcmp uno Y, X
     // (fcmp uno X, NNAN) | (fcmp uno X, Y) --> fcmp uno X, Y
     // (fcmp uno X, NNAN) | (fcmp uno Y, X) --> fcmp uno Y, X
-    if (((LHS1 == RHS0 || LHS1 == RHS1) && isKnownNeverNaN(LHS0, TLI)) ||
-        ((LHS0 == RHS0 || LHS0 == RHS1) && isKnownNeverNaN(LHS1, TLI)))
+    if (((LHS1 == RHS0 || LHS1 == RHS1) && isKnownNeverNaN(LHS0, DL, TLI)) ||
+        ((LHS0 == RHS0 || LHS0 == RHS1) && isKnownNeverNaN(LHS1, DL, TLI)))
       return RHS;
 
     // (fcmp ord X, Y) & (fcmp ord NNAN, X) --> fcmp ord X, Y
@@ -1979,8 +1980,8 @@ static Value *simplifyAndOrOfFCmps(const TargetLibraryInfo *TLI, FCmpInst *LHS,
     // (fcmp uno Y, X) | (fcmp uno NNAN, X) --> fcmp uno Y, X
     // (fcmp uno X, Y) | (fcmp uno X, NNAN) --> fcmp uno X, Y
     // (fcmp uno Y, X) | (fcmp uno X, NNAN) --> fcmp uno Y, X
-    if (((RHS1 == LHS0 || RHS1 == LHS1) && isKnownNeverNaN(RHS0, TLI)) ||
-        ((RHS0 == LHS0 || RHS0 == LHS1) && isKnownNeverNaN(RHS1, TLI)))
+    if (((RHS1 == LHS0 || RHS1 == LHS1) && isKnownNeverNaN(RHS0, DL, TLI)) ||
+        ((RHS0 == LHS0 || RHS0 == LHS1) && isKnownNeverNaN(RHS1, DL, TLI)))
       return LHS;
   }
 
@@ -2008,7 +2009,7 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q, Value *Op0,
   auto *FCmp0 = dyn_cast<FCmpInst>(Op0);
   auto *FCmp1 = dyn_cast<FCmpInst>(Op1);
   if (FCmp0 && FCmp1)
-    V = simplifyAndOrOfFCmps(Q.TLI, FCmp0, FCmp1, IsAnd);
+    V = simplifyAndOrOfFCmps(Q.DL, Q.TLI, FCmp0, FCmp1, IsAnd);
 
   if (!V)
     return nullptr;
@@ -4014,8 +4015,8 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
   // Fold (un)ordered comparison if we can determine there are no NaNs.
   if (Pred == FCmpInst::FCMP_UNO || Pred == FCmpInst::FCMP_ORD)
-    if (FMF.noNaNs() ||
-        (isKnownNeverNaN(LHS, Q.TLI) && isKnownNeverNaN(RHS, Q.TLI)))
+    if (FMF.noNaNs() || (isKnownNeverNaN(LHS, Q.DL, Q.TLI) &&
+                         isKnownNeverNaN(RHS, Q.DL, Q.TLI)))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
 
   // NaN is unordered; NaN is not ordered.
@@ -4077,18 +4078,20 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       }
 
       // LHS == Inf
-      if (Pred == FCmpInst::FCMP_OEQ && isKnownNeverInfinity(LHS, Q.TLI))
+      if (Pred == FCmpInst::FCMP_OEQ && isKnownNeverInfinity(LHS, Q.DL, Q.TLI))
         return getFalse(RetTy);
       // LHS != Inf
-      if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.TLI))
+      if (Pred == FCmpInst::FCMP_UNE && isKnownNeverInfinity(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
       // LHS == Inf || LHS == NaN
-      if (Pred == FCmpInst::FCMP_UEQ && isKnownNeverInfinity(LHS, Q.TLI) &&
-          isKnownNeverNaN(LHS, Q.TLI))
+      if (Pred == FCmpInst::FCMP_UEQ &&
+          isKnownNeverInfinity(LHS, Q.DL, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.DL, Q.TLI))
         return getFalse(RetTy);
       // LHS != Inf && LHS != NaN
-      if (Pred == FCmpInst::FCMP_ONE && isKnownNeverInfinity(LHS, Q.TLI) &&
-          isKnownNeverNaN(LHS, Q.TLI))
+      if (Pred == FCmpInst::FCMP_ONE &&
+          isKnownNeverInfinity(LHS, Q.DL, Q.TLI) &&
+          isKnownNeverNaN(LHS, Q.DL, Q.TLI))
         return getTrue(RetTy);
     }
     if (C->isNegative() && !C->isNegZero()) {
@@ -4100,14 +4103,14 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       case FCmpInst::FCMP_UGT:
       case FCmpInst::FCMP_UNE:
         // (X >= 0) implies (X > C) when (C < 0)
-        if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
+        if (CannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI))
           return getTrue(RetTy);
         break;
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_OLE:
       case FCmpInst::FCMP_OLT:
         // (X >= 0) implies !(X < C) when (C < 0)
-        if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
+        if (CannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI))
           return getFalse(RetTy);
         break;
       default:
@@ -4167,15 +4170,15 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     case FCmpInst::FCMP_ULT:
       // Positive or zero X >= 0.0 --> true
       // Positive or zero X <  0.0 --> false
-      if ((FMF.noNaNs() || isKnownNeverNaN(LHS, Q.TLI)) &&
-          CannotBeOrderedLessThanZero(LHS, Q.TLI))
+      if ((FMF.noNaNs() || isKnownNeverNaN(LHS, Q.DL, Q.TLI)) &&
+          CannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI))
         return Pred == FCmpInst::FCMP_OGE ? getTrue(RetTy) : getFalse(RetTy);
       break;
     case FCmpInst::FCMP_UGE:
     case FCmpInst::FCMP_OLT:
       // Positive or zero or nan X >= 0.0 --> true
       // Positive or zero or nan X <  0.0 --> false
-      if (CannotBeOrderedLessThanZero(LHS, Q.TLI))
+      if (CannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI))
         return Pred == FCmpInst::FCMP_UGE ? getTrue(RetTy) : getFalse(RetTy);
       break;
     default:
@@ -5629,8 +5632,10 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       return ConstantFP::getZero(Op0->getType());
 
     // +normal number * (-)0.0 --> (-)0.0
-    if (isKnownNeverInfinity(Op0, Q.TLI) && isKnownNeverNaN(Op0, Q.TLI) &&
-        SignBitMustBeZero(Op0, Q.TLI))
+    // TODO: Use computeKnownFPClass
+    if (isKnownNeverInfinity(Op0, Q.DL, Q.TLI) &&
+        isKnownNeverNaN(Op0, Q.DL, Q.TLI) &&
+        SignBitMustBeZero(Op0, Q.DL, Q.TLI))
       return Op1;
   }
 
@@ -6037,7 +6042,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
-    if (SignBitMustBeZero(Op0, Q.TLI))
+    if (SignBitMustBeZero(Op0, Q.DL, Q.TLI))
       return Op0;
     break;
   case Intrinsic::bswap:

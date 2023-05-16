@@ -7152,10 +7152,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // If we're just checking for a NaN (ORD/UNO) and have a non-NaN operand,
   // then canonicalize the operand to 0.0.
   if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
-    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, &TLI))
+    if (!match(Op0, m_PosZeroFP()) && isKnownNeverNaN(Op0, DL, &TLI))
       return replaceOperand(I, 0, ConstantFP::getZero(OpType));
 
-    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1, &TLI))
+    if (!match(Op1, m_PosZeroFP()) && isKnownNeverNaN(Op1, DL, &TLI))
       return replaceOperand(I, 1, ConstantFP::getZero(OpType));
   }
 
