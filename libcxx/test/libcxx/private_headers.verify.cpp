@@ -204,6 +204,7 @@ END-SCRIPT
 #include <__algorithm/ranges_sort_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sort_heap.h'}}
 #include <__algorithm/ranges_stable_partition.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_stable_partition.h'}}
 #include <__algorithm/ranges_stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_stable_sort.h'}}
+#include <__algorithm/ranges_starts_with.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_starts_with.h'}}
 #include <__algorithm/ranges_swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_swap_ranges.h'}}
 #include <__algorithm/ranges_transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_transform.h'}}
 #include <__algorithm/ranges_unique.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_unique.h'}}
