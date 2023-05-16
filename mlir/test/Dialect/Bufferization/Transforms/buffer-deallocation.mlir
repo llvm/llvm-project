@@ -1317,6 +1317,27 @@ func.func @select_aliases(%arg0: index, %arg1: memref<?xi8>, %arg2: i1) {
 
 // -----
 
+func.func @f(%arg0: memref<f64>) -> memref<f64> {
+  return %arg0 : memref<f64>
+}
+
+// CHECK-LABEL: func @function_call
+//       CHECK:   memref.alloc
+//       CHECK:   memref.alloc
+//       CHECK:   call
+//       CHECK:   test.copy
+//       CHECK:   memref.dealloc
+//       CHECK:   memref.dealloc
+func.func @function_call() {
+  %alloc = memref.alloc() : memref<f64>
+  %alloc2 = memref.alloc() : memref<f64>
+  %ret = call @f(%alloc) : (memref<f64>) -> memref<f64>
+  test.copy(%ret, %alloc2) : (memref<f64>, memref<f64>)
+  return
+}
+
+// -----
+
 // Memref allocated in `then` region and passed back to the parent if op.
 #set = affine_set<() : (0 >= 0)>
 // CHECK-LABEL:  func @test_affine_if_1
