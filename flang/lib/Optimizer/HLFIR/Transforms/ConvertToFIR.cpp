@@ -42,13 +42,11 @@ static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
   // the RHS.
   // This has the huge benefit of dealing with all cases, including
   // polymorphic entities.
-  mlir::Type fromHeapType = fir::HeapType::get(
-      fir::unwrapRefType(sourceBox.getType().cast<fir::BoxType>().getEleTy()));
+  mlir::Type fromHeapType = fir::HeapType::get(fir::unwrapRefType(
+      sourceBox.getType().cast<fir::BaseBoxType>().getEleTy()));
   mlir::Type fromBoxHeapType = fir::BoxType::get(fromHeapType);
-  auto fromMutableBox = builder.createTemporary(loc, fromBoxHeapType);
-  mlir::Value unallocatedBox =
-      fir::factory::createUnallocatedBox(builder, loc, fromBoxHeapType, {});
-  builder.create<fir::StoreOp>(loc, unallocatedBox, fromMutableBox);
+  mlir::Value fromMutableBox =
+      fir::factory::genNullBoxStorage(builder, loc, fromBoxHeapType);
   fir::runtime::genAssign(builder, loc, fromMutableBox, sourceBox);
   mlir::Value copy = builder.create<fir::LoadOp>(loc, fromMutableBox);
   return copy;
