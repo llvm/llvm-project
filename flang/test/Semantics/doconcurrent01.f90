@@ -66,7 +66,7 @@ end subroutine do_concurrent_test2
 
 subroutine s1()
   use iso_fortran_env
-  type(event_type) :: x[*]
+  type(event_type) :: x
   do concurrent (i = 1:n)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
     event post (x)
@@ -75,7 +75,7 @@ end subroutine s1
 
 subroutine s2()
   use iso_fortran_env
-  type(event_type) :: x[*]
+  type(event_type) :: x
   do concurrent (i = 1:n)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
     event wait (x)
