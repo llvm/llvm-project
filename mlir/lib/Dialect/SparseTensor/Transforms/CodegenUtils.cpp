@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodegenUtils.h"
-#include "SparseTensorStorageLayout.h"
+#include "SparseTensorDescriptor.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
