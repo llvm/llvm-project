@@ -1410,6 +1410,19 @@ genHLFIRIntrinsicRefCore(PreparedActualArguments &loweredActuals,
 
     return {hlfir::EntityWithAttributes{transposeOp.getResult()}};
   }
+  if (intrinsicName == "any") {
+    llvm::SmallVector<mlir::Value> operands = getOperandVector(loweredActuals);
+    assert(operands.size() == 2);
+    // dim argument can be NULL if not given
+    mlir::Value mask = operands[0];
+    mlir::Value dim = operands[1];
+    if (dim)
+      dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+    mlir::Type resultTy = computeResultType(mask, *callContext.resultType);
+    hlfir::AnyOp anyOp = builder.create<hlfir::AnyOp>(loc, resultTy, mask, dim);
+
+    return {hlfir::EntityWithAttributes{anyOp.getResult()}};
+  }
 
   // TODO add hlfir operations for other transformational intrinsics here
 
