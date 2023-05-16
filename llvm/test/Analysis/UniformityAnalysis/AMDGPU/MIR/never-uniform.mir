@@ -97,7 +97,11 @@ body:             |
   bb.0:
     ; CHECK-LABEL: MachineUniformityInfo for function: writelane
     ; CHECK: DIVERGENT: %4
-    ; CHECK: DIVERGENT: %5
+
+    ; Note how %5 is the result of a vector compare, but it is reported as
+    ; uniform because it is stored in an sreg.
+    ; CHECK-NOT: DIVERGENT: %5
+
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:sgpr_32 = V_READFIRSTLANE_B32 %0, implicit $exec

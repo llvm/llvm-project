@@ -286,9 +286,16 @@ public:
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
+  // FIXME: SGPRs are assumed to be uniform, but this is not true for i1 SGPRs
+  // (such as VCC) which hold a wave-wide vector of boolean values. Examining
+  // just the register class is not suffcient; it needs to be combined with a
+  // value type. The next predicate isUniformReg() does this correctly.
   bool isDivergentRegClass(const TargetRegisterClass *RC) const override {
     return !isSGPRClass(RC);
   }
+
+  bool isUniformReg(const MachineRegisterInfo &MRI, const RegisterBankInfo &RBI,
+                    Register Reg) const override;
 
   ArrayRef<int16_t> getRegSplitParts(const TargetRegisterClass *RC,
                                      unsigned EltSize) const;

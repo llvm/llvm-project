@@ -420,6 +420,7 @@ def SI_LOOP : CFPseudoInstSI <
   let Size = 8;
   let isBranch = 1;
   let hasSideEffects = 1;
+  let IsNeverUniform = 1;
 }
 
 } // End isTerminator = 1
