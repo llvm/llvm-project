@@ -517,6 +517,15 @@ TEST_F(FormatTestVerilog, Headers) {
                "    (input var x `a, //\n"
                "                 b);\n"
                "endmodule");
+  // A line comment shouldn't disrupt the indentation of the port list.
+  verifyFormat("extern module x\n"
+               "    (//\n"
+               "     output y);");
+  verifyFormat("extern module x\n"
+               "    #(//\n"
+               "      parameter x)\n"
+               "    (//\n"
+               "     output y);");
   // With a concatenation in the names.
   auto Style = getDefaultStyle();
   Style.ColumnLimit = 40;
