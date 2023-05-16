@@ -2,6 +2,75 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sve2p1 < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -mattr=+sme2 < %s | FileCheck %s
 
+define <vscale x 16 x i1> @pext_b(target("aarch64.svcount") %x) nounwind {
+; CHECK-LABEL: pext_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    pext p0.b, pn8[2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 16 x i1> @llvm.aarch64.sve.pext.nxv16i1(target("aarch64.svcount") %x, i32 2)
+  ret <vscale x 16 x i1> %res
+}
+
+define <vscale x 8 x i1> @pext_h(target("aarch64.svcount") %x) nounwind {
+; CHECK-LABEL: pext_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    pext p0.h, pn8[2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 8 x i1> @llvm.aarch64.sve.pext.nxv8i1(target("aarch64.svcount") %x, i32 2)
+  ret <vscale x 8 x i1> %res
+}
+
+define <vscale x 4 x i1> @pext_s(target("aarch64.svcount") %x) nounwind {
+; CHECK-LABEL: pext_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    pext p0.s, pn8[2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 4 x i1> @llvm.aarch64.sve.pext.nxv4i1(target("aarch64.svcount") %x, i32 2)
+  ret <vscale x 4 x i1> %res
+}
+
+define <vscale x 2 x i1> @pext_d(target("aarch64.svcount") %x) nounwind {
+; CHECK-LABEL: pext_d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    pext p0.d, pn8[2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i1> @llvm.aarch64.sve.pext.nxv2i1(target("aarch64.svcount") %x, i32 2)
+  ret <vscale x 2 x i1> %res
+}
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.pext.nxv16i1(target("aarch64.svcount"), i32)
+declare <vscale x 8 x i1> @llvm.aarch64.sve.pext.nxv8i1(target("aarch64.svcount"), i32)
+declare <vscale x 4 x i1> @llvm.aarch64.sve.pext.nxv4i1(target("aarch64.svcount"), i32)
+declare <vscale x 2 x i1> @llvm.aarch64.sve.pext.nxv2i1(target("aarch64.svcount"), i32)
+
 define target("aarch64.svcount") @ptrue_b() nounwind {
 ; CHECK-LABEL: ptrue_b:
 ; CHECK:       // %bb.0:
