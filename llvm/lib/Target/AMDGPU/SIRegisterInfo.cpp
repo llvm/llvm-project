@@ -2865,6 +2865,16 @@ MCRegister SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
+bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
+                                  const RegisterBankInfo &RBI,
+                                  Register Reg) const {
+  auto *RB = RBI.getRegBank(Reg, MRI, *MRI.getTargetRegisterInfo());
+  if (!RB)
+    return false;
+
+  return !RBI.isDivergentRegBank(RB);
+}
+
 ArrayRef<int16_t> SIRegisterInfo::getRegSplitParts(const TargetRegisterClass *RC,
                                                    unsigned EltSize) const {
   const unsigned RegBitWidth = AMDGPU::getRegBitWidth(*RC->MC);

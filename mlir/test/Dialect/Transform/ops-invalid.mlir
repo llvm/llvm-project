@@ -350,7 +350,7 @@ module attributes { transform.with_named_sequence } {
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !transform.any_op):
     // expected-error @below {{requires attribute 'target'}}
-    "transform.include"() {failure_propagation_mode = 0} : () -> ()
+    "transform.include"() {failure_propagation_mode = 1 : i32} : () -> ()
   }
 }
 

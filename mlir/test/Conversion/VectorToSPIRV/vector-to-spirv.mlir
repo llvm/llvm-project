@@ -183,6 +183,15 @@ func.func @insert(%arg0 : vector<4xf32>, %arg1: f32) -> vector<4xf32> {
 
 // -----
 
+// CHECK-LABEL: @insert_index_vector
+//       CHECK:   spirv.CompositeInsert %{{.+}}, %{{.+}}[2 : i32] : i32 into vector<4xi32>
+func.func @insert_index_vector(%arg0 : vector<4xindex>, %arg1: index) -> vector<4xindex> {
+  %1 = vector.insert %arg1, %arg0[2] : index into vector<4xindex>
+  return %1: vector<4xindex>
+}
+
+// -----
+
 // CHECK-LABEL: @insert_size1_vector
 //  CHECK-SAME: %[[V:.*]]: vector<1xf32>, %[[S:.*]]: f32
 //       CHECK:   %[[R:.+]] = builtin.unrealized_conversion_cast %[[S]]
@@ -398,6 +407,18 @@ func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
 func.func @shuffle(%v0 : vector<1xf32>, %v1: vector<1xf32>) -> vector<4xf32> {
   %shuffle = vector.shuffle %v0, %v1 [0, 1, 1, 0] : vector<1xf32>, vector<1xf32>
   return %shuffle : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:  func @shuffle_index_vector
+//  CHECK-SAME:  %[[ARG0:.+]]: vector<1xindex>, %[[ARG1:.+]]: vector<1xindex>
+//       CHECK:    %[[V0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]]
+//       CHECK:    %[[V1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]]
+//       CHECK:    spirv.CompositeConstruct %[[V0]], %[[V1]], %[[V1]], %[[V0]] : (i32, i32, i32, i32) -> vector<4xi32>
+func.func @shuffle_index_vector(%v0 : vector<1xindex>, %v1: vector<1xindex>) -> vector<4xindex> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 1, 0] : vector<1xindex>, vector<1xindex>
+  return %shuffle : vector<4xindex>
 }
 
 // -----

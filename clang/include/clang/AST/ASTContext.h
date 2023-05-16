@@ -448,7 +448,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
 
   /// This is the top-level (C++20) Named module we are building.
-  Module *CurrentCXXNamedModule = nullptr;
+   Module *CurrentCXXNamedModule = nullptr;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;

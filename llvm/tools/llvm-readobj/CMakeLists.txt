@@ -30,6 +30,8 @@ add_llvm_tool(llvm-readobj
   GENERATE_DRIVER
   )
 
+setup_host_tool(llvm-readobj LLVM_READOBJ llvm_readobj_exe llvm_readobj_target)
+
 add_llvm_tool_symlink(llvm-readelf llvm-readobj)
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
