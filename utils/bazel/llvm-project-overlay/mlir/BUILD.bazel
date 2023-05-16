@@ -8029,6 +8029,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/OpenACC/OpenACCOps.td",
     deps = [
         ":BuiltinDialectTdFiles",
+        ":ControlFlowInterfacesTdFiles",
         ":OpenAccOpsTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
