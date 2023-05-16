@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(llvm.func(mem2reg))' | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(llvm.func(mem2reg{region-simplify=false}))' | FileCheck %s
 
 llvm.func @use(i64)
 llvm.func @use_ptr(!llvm.ptr)

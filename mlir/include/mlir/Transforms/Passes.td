@@ -189,6 +189,21 @@ def Mem2Reg : Pass<"mem2reg"> {
     This pass only supports unstructured control-flow. Promotion of operations
     within subregions will not happen.
   }];
+
+  let options = [
+    Option<"enableRegionSimplification", "region-simplify", "bool",
+       /*default=*/"true",
+       "Perform control flow optimizations to the region tree">,
+  ];
+
+  let statistics = [
+    Statistic<"promotedAmount",
+              "promoted slots",
+              "Number of promoted memory slot">,
+    Statistic<"newBlockArgumentAmount",
+              "new block args",
+              "Total number of block arguments added">,
+  ];
 }
 
 def PrintOpStats : Pass<"print-op-stats"> {
