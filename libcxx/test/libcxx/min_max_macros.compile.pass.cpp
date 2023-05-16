@@ -203,6 +203,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <math.h>
 TEST_MACROS();
+#include <mdspan>
+TEST_MACROS();
 #include <memory>
 TEST_MACROS();
 #include <memory_resource>

@@ -54,9 +54,12 @@ public:
   const Scope *ancestor() const; // for submodule; nullptr for module
   const Scope *parent() const; // for submodule; nullptr for module
   void set_scope(const Scope *);
+  bool isDefaultPrivate() const { return isDefaultPrivate_; }
+  void set_isDefaultPrivate(bool yes = true) { isDefaultPrivate_ = yes; }
 
 private:
   bool isSubmodule_;
+  bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
 };
 
@@ -344,9 +347,13 @@ public:
   explicit ProcBindingDetails(const Symbol &symbol) : symbol_{symbol} {}
   const Symbol &symbol() const { return symbol_; }
   void ReplaceSymbol(const Symbol &symbol) { symbol_ = symbol; }
+  int numPrivatesNotOverridden() const { return numPrivatesNotOverridden_; }
+  void set_numPrivatesNotOverridden(int n) { numPrivatesNotOverridden_ = n; }
 
 private:
   SymbolRef symbol_; // procedure bound to; may be forward
+  // Homonymous private bindings in ancestor types from other modules
+  int numPrivatesNotOverridden_{0};
 };
 
 class NamelistDetails {

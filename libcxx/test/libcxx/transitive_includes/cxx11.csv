@@ -515,6 +515,12 @@ map tuple
 map type_traits
 map utility
 map version
+mdspan array
+mdspan cinttypes
+mdspan concepts
+mdspan cstddef
+mdspan limits
+mdspan span
 memory atomic
 memory compare
 memory concepts

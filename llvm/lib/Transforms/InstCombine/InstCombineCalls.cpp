@@ -813,22 +813,75 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
-/// \returns true if the test performed by llvm.is.fpclass(x, \p Mask) is
-/// equivalent to fcmp oeq x, 0.0 with the floating-point environment assumed
-/// for \p F for type \p Ty
-static bool fpclassTestIsFCmp0(FPClassTest Mask, const Function &F, Type *Ty) {
-  if (Mask == fcZero)
-    return F.getDenormalMode(Ty->getScalarType()->getFltSemantics()).Input ==
-           DenormalMode::IEEE;
+static bool inputDenormalIsIEEE(const Function &F, const Type *Ty) {
+  Ty = Ty->getScalarType();
+  return F.getDenormalMode(Ty->getFltSemantics()).Input == DenormalMode::IEEE;
+}
 
-  if (Mask == (fcZero | fcSubnormal)) {
-    DenormalMode::DenormalModeKind InputMode =
-        F.getDenormalMode(Ty->getScalarType()->getFltSemantics()).Input;
-    return InputMode == DenormalMode::PreserveSign ||
-           InputMode == DenormalMode::PositiveZero;
+static bool inputDenormalIsDAZ(const Function &F, const Type *Ty) {
+  Ty = Ty->getScalarType();
+  return F.getDenormalMode(Ty->getFltSemantics()).inputsAreZero();
+}
+
+/// \returns the compare predicate type if the test performed by
+/// llvm.is.fpclass(x, \p Mask) is equivalent to fcmp o__ x, 0.0 with the
+/// floating-point environment assumed for \p F for type \p Ty
+static FCmpInst::Predicate fpclassTestIsFCmp0(FPClassTest Mask,
+                                              const Function &F, Type *Ty) {
+  switch (static_cast<unsigned>(Mask)) {
+  case fcZero:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OEQ;
+    break;
+  case fcZero | fcSubnormal:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OEQ;
+    break;
+  case fcPositive | fcNegZero:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OGE;
+    break;
+  case fcPositive | fcNegZero | fcNegSubnormal:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OGE;
+    break;
+  case fcPosSubnormal | fcPosNormal | fcPosInf:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OGT;
+    break;
+  case fcNegative | fcPosZero:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OLE;
+    break;
+  case fcNegative | fcPosZero | fcPosSubnormal:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OLE;
+    break;
+  case fcNegSubnormal | fcNegNormal | fcNegInf:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_OLT;
+    break;
+  case fcPosNormal | fcPosInf:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OGT;
+    break;
+  case fcNegNormal | fcNegInf:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_OLT;
+    break;
+  case ~fcZero & ~fcNan:
+    if (inputDenormalIsIEEE(F, Ty))
+      return FCmpInst::FCMP_ONE;
+    break;
+  case ~(fcZero | fcSubnormal) & ~fcNan:
+    if (inputDenormalIsDAZ(F, Ty))
+      return FCmpInst::FCMP_ONE;
+    break;
+  default:
+    break;
   }
 
-  return false;
+  return FCmpInst::BAD_FCMP_PREDICATE;
 }
 
 Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
@@ -905,24 +958,30 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
+  FCmpInst::Predicate PredType = FCmpInst::BAD_FCMP_PREDICATE;
+
+  // Try to replace with an fcmp with 0
+  //
+  // is.fpclass(x, fcZero) -> fcmp oeq x, 0.0
+  // is.fpclass(x, fcZero | fcNan) -> fcmp ueq x, 0.0
+  // is.fpclass(x, ~fcZero & ~fcNan) -> fcmp one x, 0.0
+  // is.fpclass(x, ~fcZero) -> fcmp une x, 0.0
+  //
+  // is.fpclass(x, fcPosSubnormal | fcPosNormal | fcPosInf) -> fcmp ogt x, 0.0
+  // is.fpclass(x, fcPositive | fcNegZero) -> fcmp oge x, 0.0
+  //
+  // is.fpclass(x, fcNegSubnormal | fcNegNormal | fcNegInf) -> fcmp olt x, 0.0
+  // is.fpclass(x, fcNegative | fcPosZero) -> fcmp ole x, 0.0
+  //
   if (!IsStrict && (IsOrdered || IsUnordered) &&
-      fpclassTestIsFCmp0(OrderedMask, *II.getFunction(), Src0->getType())) {
+      (PredType = fpclassTestIsFCmp0(OrderedMask, *II.getFunction(),
+                                     Src0->getType())) !=
+          FCmpInst::BAD_FCMP_PREDICATE) {
     Constant *Zero = ConstantFP::getZero(Src0->getType());
     // Equivalent of == 0.
-    Value *FCmp = IsUnordered ? Builder.CreateFCmpUEQ(Src0, Zero)
-                              : Builder.CreateFCmpOEQ(Src0, Zero);
-    FCmp->takeName(&II);
-    return replaceInstUsesWith(II, FCmp);
-  }
-
-  if (!IsStrict && (IsOrdered || IsUnordered) &&
-      fpclassTestIsFCmp0(OrderedInvertedMask, *II.getFunction(),
-                         Src0->getType())) {
-    Constant *Zero = ConstantFP::getZero(Src0->getType());
-
-    // Equivalent of !(x == 0).
-    Value *FCmp = IsUnordered ? Builder.CreateFCmpUNE(Src0, Zero)
-                              : Builder.CreateFCmpONE(Src0, Zero);
+    Value *FCmp = Builder.CreateFCmp(
+        IsUnordered ? FCmpInst::getUnorderedPredicate(PredType) : PredType,
+        Src0, Zero);
 
     FCmp->takeName(&II);
     return replaceInstUsesWith(II, FCmp);
@@ -2145,7 +2204,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::copysign: {
     Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
-    if (SignBitMustBeZero(Sign, &TLI)) {
+    if (SignBitMustBeZero(Sign, DL, &TLI)) {
       // If we know that the sign argument is positive, reduce to FABS:
       // copysign Mag, +Sign --> fabs Mag
       Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);

@@ -837,6 +837,17 @@ public:
     return getOrderedPredicate(getPredicate());
   }
 
+  /// Returns the unordered variant of a floating point compare.
+  ///
+  /// For example, OEQ -> UEQ, OLT -> ULT, OEQ -> UEQ
+  static Predicate getUnorderedPredicate(Predicate Pred) {
+    return static_cast<Predicate>(Pred | FCMP_UNO);
+  }
+
+  Predicate getUnorderedPredicate() const {
+    return getUnorderedPredicate(getPredicate());
+  }
+
   /// For example, EQ -> NE, UGT -> ULE, SLT -> SGE,
   ///              OEQ -> UNE, UGT -> OLE, OLT -> UGE, etc.
   /// @returns the inverse predicate for predicate provided in \p pred.

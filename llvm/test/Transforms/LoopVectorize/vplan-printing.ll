@@ -630,8 +630,145 @@ exit:
   ret void
 }
 
+define void @print_exact_flags(i64 %n, ptr noalias %x) {
+; CHECK-LABEL: Checking a loop in 'print_exact_flags'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr ir<%x>, vp<[[STEPS]]>
+; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%gep.x>
+; CHECK-NEXT:   WIDEN ir<%div.1> = udiv ir<%lv>, ir<20>
+; CHECK-NEXT:   WIDEN ir<%div.2> = udiv ir<%lv>, ir<60>
+; CHECK-NEXT:   WIDEN ir<%add> = add ir<%div.1>, ir<%div.2>
+; CHECK-NEXT:   WIDEN store ir<%gep.x>, ir<%add>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.x = getelementptr inbounds i32, ptr %x, i64 %iv
+  %lv = load i32, ptr %gep.x, align 4
+  %div.1 = udiv exact i32 %lv, 20
+  %div.2 = udiv i32 %lv, 60
+  %add = add nsw nuw i32 %div.1, %div.2
+  store i32 %add, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
+; CHECK-LABEL: Checking a loop in 'print_call_flags'
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   CLONE ir<%ld.addr> = getelementptr ir<%src>, vp<%2>
+; CHECK-NEXT:   WIDEN ir<%ld.value> = load ir<%ld.addr>
+; CHECK-NEXT:   WIDEN ir<%ifcond> = fcmp oeq ir<%ld.value>, ir<5.000000e+00>
+; CHECK-NEXT:  Successor(s): pred.call
+; CHECK-EMPTY:
+; CHECK-NEXT:  <xVFxUF> pred.call: {
+; CHECK-NEXT:    pred.call.entry:
+; CHECK-NEXT:      BRANCH-ON-MASK ir<%ifcond>
+; CHECK-NEXT:    Successor(s): pred.call.if, pred.call.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.call.if:
+; CHECK-NEXT:      REPLICATE ir<%foo.ret.1> = call @foo(ir<%ld.value>) (S->V)
+; CHECK-NEXT:      REPLICATE ir<%foo.ret.2> = call @foo(ir<%ld.value>) (S->V)
+; CHECK-NEXT:    Successor(s): pred.call.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:    pred.call.continue:
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%foo.ret.1>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%9> = ir<%foo.ret.2>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): if.then.1
+; CHECK-EMPTY:
+; CHECK-NEXT:  if.then.1:
+; CHECK-NEXT:    WIDEN ir<%fadd> = fadd vp<%8>, vp<%9>
+; CHECK-NEXT:    EMIT vp<%11> = not ir<%ifcond>
+; CHECK-NEXT:    BLEND %st.value = ir<%ld.value>/vp<%11> ir<%fadd>/ir<%ifcond>
+; CHECK-NEXT:    CLONE ir<%st.addr> = getelementptr ir<%dest>, vp<%2>
+; CHECK-NEXT:    WIDEN store ir<%st.addr>, ir<%st.value>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.loop ]
+  %ld.addr = getelementptr inbounds float, ptr %src, i64 %iv
+  %ld.value = load float , ptr %ld.addr, align 8
+  %ifcond = fcmp oeq float %ld.value, 5.0
+  br i1 %ifcond, label %if.then, label %for.loop
+
+if.then:
+  %foo.ret.1 = call nnan nsz ninf float @foo(float %ld.value) #0
+  %foo.ret.2 = call float @foo(float %ld.value) #0
+  %fadd = fadd float %foo.ret.1, %foo.ret.2
+  br label %for.loop
+
+for.loop:
+  %st.value = phi float [ %ld.value, %for.body ], [ %fadd, %if.then ]
+  %st.addr = getelementptr inbounds float, ptr %dest, i64 %iv
+  store float %st.value, ptr %st.addr, align 8
+  %iv.next = add nsw nuw i64 %iv, 1
+  %loopcond = icmp eq i64 %iv.next, %n
+  br i1 %loopcond, label %end, label %for.body
+
+end:
+  ret void
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
+
+declare float @foo(float) #0
+declare <2 x float> @vector_foo(<2 x float>, <2 x i1>)
+
+; We need a vector variant in order to allow for vectorization at present, but
+; we want to test scalarization of conditional calls. If we provide a variant
+; with a different number of lanes than the VF we force via
+; "-force-vector-width=4", then it should pass the legality checks but
+; scalarize. TODO: Remove the requirement to have a variant.
+attributes #0 = { readonly nounwind "vector-function-abi-variant"="_ZGV_LLVM_M2v_foo(vector_foo)" }
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
 !1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")

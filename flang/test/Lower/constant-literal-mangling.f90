@@ -9,6 +9,12 @@ type otherType
   integer :: i
 end type
 
+type emptyType1
+end type emptyType1
+
+type emptyType2
+end type emptyType2
+
   print *, [42, 42]
 ! CHECK: fir.address_of(@_QQro.2xi4.0)
 
@@ -68,6 +74,8 @@ end type
   print *, [otherType(42)]
 ! CHECK: fir.address_of(@_QQro.1x_QFTothertype.14)
 
+  print *, [emptyType1()]
+  print *, [emptyType2()]
 end
 
 ! CHECK: fir.global internal @_QQro.1x_QFTsometype.10 constant : !fir.array<1x!fir.type<_QFTsometype{i:i32}>> {
